@@ -138,6 +138,12 @@ class CodexAppServer:
             with self._state_lock:
                 self._initialized = True
 
+    def ensure_started(self) -> None:
+        """Idempotent public alias for the lazy handshake, so a background warm
+        (see module ``warm``) can pay the process spawn + ``initialize`` cost
+        ahead of the user's first message without reaching into a private name."""
+        self._start()
+
     def _read(self, proc: subprocess.Popen) -> None:
         assert proc.stdout is not None
         for line in proc.stdout:
@@ -430,6 +436,42 @@ def complete(*, model: str, system: str, prompt: str, key_env: str = "",
             "cannot be redirected to a custom endpoint")
     return SERVER.complete(model=model, system=system, prompt=prompt,
                            reasoning_effort=reasoning_effort)
+
+
+_warm_lock = threading.Lock()
+_warm_in_flight = False
+
+
+def warm() -> None:
+    """Best-effort, non-blocking pre-start of the Codex App Server.
+
+    A project on the ChatGPT subscription otherwise pays the runtime's cold
+    start — the ``codex app-server`` process spawn plus the ``initialize``
+    handshake, during which Codex refreshes its own model catalogue — on the
+    user's FIRST message, which is why a new conversation feels slow to begin.
+    Kicking the same idempotent ``ensure_started`` off a daemon thread when a
+    project console boots moves that cost off the interactive path; the first
+    real ``thread/start`` then reuses the ready process. Every failure is
+    swallowed and the guard collapses concurrent warms, so warming can never
+    block a daemon, surface an error, or make a project slower than before.
+    """
+    global _warm_in_flight
+    with _warm_lock:
+        if _warm_in_flight:
+            return
+        _warm_in_flight = True
+
+    def _run() -> None:
+        global _warm_in_flight
+        try:
+            SERVER.ensure_started()
+        except Exception:  # noqa: BLE001 -- warming must never crash or notify a daemon
+            pass
+        finally:
+            with _warm_lock:
+                _warm_in_flight = False
+
+    threading.Thread(target=_run, name="codex-warm", daemon=True).start()
 
 
 def account_status() -> dict:
