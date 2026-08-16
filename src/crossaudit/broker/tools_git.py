@@ -19,9 +19,13 @@ import subprocess
 from .. import gitio
 from ..config import Config
 from ..policy.tokens import CapabilityToken
+from . import secretscan
 from .registry import ToolError, ToolRegistry, ToolSpec
 
 MAX_GIT_OUTPUT = 64 * 1024
+#: How much staged diff the secret scanner reads (bounded so a huge diff cannot
+#: stall the commit). The added-lines scan covers the common credential-leak case.
+MAX_SCAN_BYTES = 512 * 1024
 
 
 # ---- Level 1 read-only (auto) ----
@@ -44,11 +48,35 @@ def git_log(cfg: Config, args: dict, token: CapabilityToken) -> dict:
 
 
 # ---- Level 3 local commit (approval-gated) ----
+def _added_lines(cfg: Config) -> str:
+    """The added ('+') lines of the staged diff, bounded, for the secret scan.
+
+    Only additions are scanned so a commit is never blocked by a credential that
+    already existed in the tree — the agent can still remove one.
+    """
+    diff = gitio.git("diff", "--cached", "--no-color", "--unified=0",
+                     cwd=cfg.root, check=False)[:MAX_SCAN_BYTES]
+    return "\n".join(ln[1:] for ln in diff.splitlines()
+                     if ln.startswith("+") and not ln.startswith("+++"))
+
+
 def git_commit(cfg: Config, args: dict, token: CapabilityToken) -> dict:
     msg = str(args.get("message", "")).strip()[:1000]
     if not msg:
         raise ToolError("git_commit needs a non-empty 'message'")
     gitio.git("add", "-A", cwd=cfg.root)
+    # Defense-in-depth: even an approved commit is refused if it would write a
+    # credential into git history — an irreversible leak. The scan reports only
+    # the KIND of secret, never the value, so nothing sensitive is surfaced or
+    # ledgered. On refusal the staging is reset so the tree is left untouched.
+    names = gitio.git("diff", "--cached", "--name-only", cwd=cfg.root,
+                      check=False).splitlines()
+    finding = secretscan.first_finding(_added_lines(cfg), names)
+    if finding:
+        gitio.git("reset", "-q", cwd=cfg.root, check=False)
+        raise ToolError(
+            f"commit refused: the staged changes appear to contain {finding}; "
+            "remove the secret (or add the file to .gitignore) and try again")
     gitio.git("-c", "user.name=CrossAudit Agent",
               "-c", "user.email=agent@crossaudit.local",
               "commit", "-m", msg, cwd=cfg.root)

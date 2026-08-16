@@ -48,7 +48,7 @@ def readonly_catalog() -> list[dict]:
 _EVIDENCE_VIEW_FIELDS = ("tool", "args_sha256", "result_sha256", "status",
                          "allow", "granted", "requires_approval", "level", "reason",
                          "run_id", "path", "existed_before", "pre_sha256",
-                         "post_sha256", "bytes")
+                         "post_sha256", "bytes", "secret_flagged")
 
 
 def evidence_view(cfg: Config) -> list[dict]:

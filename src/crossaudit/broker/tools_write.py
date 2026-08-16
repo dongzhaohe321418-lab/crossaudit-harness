@@ -12,6 +12,7 @@ import hashlib
 
 from ..config import Config
 from ..policy.tokens import CapabilityToken
+from . import secretscan
 from .recovery import RecoveryStore, atomic_write, resolve_in_root
 from .registry import ToolError, ToolRegistry, ToolSpec
 from .tools_readonly import register_readonly
@@ -40,12 +41,18 @@ def file_write(cfg: Config, args: dict, token: CapabilityToken) -> dict:
     recovery = RecoveryStore(cfg)
     record = recovery.snapshot(rel)          # recovery point BEFORE the write
     atomic_write(target, data)
+    # A workspace write is recoverable, so a credential-shaped value does not
+    # block it — but the KIND (never the value) is recorded so the Auditor and
+    # the commit gate both see it. The real leak (into git history) is refused
+    # at git_commit; here it is surfaced early.
+    flagged = secretscan.first_finding(content, [rel])
     return {
         "path": rel,
         "existed_before": record["existed"],
         "pre_sha256": record["pre_sha256"],
         "post_sha256": hashlib.sha256(data).hexdigest(),
         "bytes": len(data),
+        "secret_flagged": flagged,
         "recoverable": True,
     }
 
@@ -55,7 +62,8 @@ def register_write(registry: ToolRegistry) -> ToolRegistry:
     registry.register(ToolSpec(
         name="file_write", level=2, writes=True, needs_network=False,
         handler=file_write, path_args=("path",),
-        evidence_fields=("path", "existed_before", "pre_sha256", "post_sha256", "bytes"),
+        evidence_fields=("path", "existed_before", "pre_sha256", "post_sha256",
+                         "bytes", "secret_flagged"),
         summary="Write a file (recoverable) inside your allowed directories."))
     return registry
 
