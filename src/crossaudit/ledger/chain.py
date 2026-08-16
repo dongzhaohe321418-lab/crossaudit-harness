@@ -94,6 +94,7 @@ class EvidenceLedger:
             raise ConfigDenial("evidence kind must be a non-empty string")
         stamp = ts if ts is not None else _utc_now()
         with self._locked():
+            self._refuse_torn_tail()
             prev_seq, prev_digest = self._head_locked()
             body = {
                 "ledger_schema": LEDGER_SCHEMA,
@@ -128,10 +129,16 @@ class EvidenceLedger:
         return self._head_locked()[1] if self.path.exists() else ""
 
     def entries(self) -> list[dict]:
-        """All complete entries as parsed dicts (including their ``digest``)."""
+        """All complete entries as parsed dicts (including their ``digest``).
+
+        An unterminated final line (a crash mid-append) is NOT returned: a
+        reader must agree with ``head()``/``verify()`` and never surface a torn
+        tail as if it were a durable entry — otherwise it could leak into the
+        Auditor's evidence view.
+        """
         rows: list[dict] = []
-        for _seq, obj, _complete in self._iter_lines():
-            if obj is not None:
+        for _seq, obj, complete in self._iter_lines():
+            if obj is not None and complete:
                 rows.append(obj)
         return rows
 
@@ -181,6 +188,33 @@ class EvidenceLedger:
         return VerifyReport(ok=True, count=count, head=prev_digest)
 
     # -- internals ------------------------------------------------------------
+    def _refuse_torn_tail(self) -> None:
+        """Fail closed if the ledger file has an unterminated final line.
+
+        A file that does not end in a newline carries a torn final entry — an
+        append interrupted by a crash. Extending it would glue new bytes onto
+        the partial line (``O_APPEND`` writes at end-of-file and does not repair
+        the missing newline), physically corrupting the chain. Refusing here
+        surfaces the damage explicitly for recovery instead of writing onto it;
+        the trailing-newline durability signal is never silently trusted or
+        resurrected. (Called under the append lock, so no writer can race it.)
+        """
+        if not self.path.exists():
+            return
+        try:
+            size = self.path.stat().st_size
+        except OSError:
+            return
+        if size == 0:
+            return
+        with open(self.path, "rb") as fh:
+            fh.seek(-1, os.SEEK_END)
+            if fh.read(1) != b"\n":
+                raise LedgerError(
+                    "the evidence ledger has an incomplete final entry (a crash "
+                    "left a torn tail); refusing to append onto a damaged chain "
+                    "until it is recovered")
+
     def _head_locked(self) -> tuple[int, str]:
         """(seq, digest) of the last complete entry; (-1, "") when empty.
 
