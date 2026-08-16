@@ -145,6 +145,19 @@ def _authorizations(cfg: Config | None) -> dict:
         return {"workspace_writes": False}
 
 
+def _project_title(cfg: Config) -> str:
+    """A clean, human name for the top bar — the repository/project name alone,
+    never the ``owner/repo`` GitHub slug. Falls back to the workspace folder."""
+    repo = str(getattr(cfg, "science_repo", "") or "")
+    name = repo.rsplit("/", 1)[-1].strip() if repo else ""
+    if not name:
+        try:
+            name = Path(cfg.root).name
+        except Exception:  # noqa: BLE001 -- the title is cosmetic, never fatal
+            name = ""
+    return name or "project"
+
+
 def app_settings(cfg: Config | None = None) -> dict:
     """Non-secret desktop readiness state for the Settings panel."""
     from .. import _selfid
@@ -613,6 +626,10 @@ def snapshot(cfg: Config) -> dict:
     return {
         "version": __version__,
         "project": cfg.science_repo,
+        # A clean human name for the top bar (repo/project name, not the slug);
+        # the full slug and folder stay available for the tooltip.
+        "title": _project_title(cfg),
+        "folder": Path(cfg.root).name,
         "root": str(cfg.root),
         "authorizations": {"workspace_writes": writes_authorized},
         # A pending per-call approval (what/why/scope/reversibility/cost), or

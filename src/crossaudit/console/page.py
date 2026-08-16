@@ -191,6 +191,17 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
   -webkit-backdrop-filter:blur(20px) saturate(150%);backdrop-filter:blur(20px) saturate(150%)}
 .topbar{grid-column:1/-1;height:44px;margin:8px 8px 0;padding:0 var(--sp-3);z-index:var(--z-chrome)}
 .hub-bar{height:48px;margin:8px 8px 0;padding:0 var(--sp-4);position:sticky;top:8px;z-index:var(--z-chrome)}
+/* One-time shell entrance: plays once when `booted` is set on the first paint,
+   never on an SSE snapshot. The default (no class) is the natural resting
+   state, so a page that never boots is fully visible — no blank-shell risk. */
+@media (prefers-reduced-motion:no-preference){
+  body.booted .topbar{animation:shell-in .46s var(--ease-out) both}
+  body.booted .sidebar{animation:shell-in .5s var(--ease-out) .06s both}
+  body.booted .thread{animation:shell-rise .5s var(--ease-out) .10s both}
+  body.booted .composer-wrap{animation:shell-rise .54s var(--ease-out) .16s both}
+}
+@keyframes shell-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes shell-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .brand{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.01em}
 .brand-button{border:0;background:transparent;padding:0 var(--sp-2) 0 3px;height:34px;
   display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.01em;border-radius:var(--r-md);
@@ -589,6 +600,14 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .run-top{display:flex;align-items:center;gap:8px}
 .run-eyebrow{font-size:var(--fs-caption);color:var(--text-3);font-weight:600}
 .run-top .status{margin-left:auto}
+/* An always-visible Stop while a run is live — sits at the head of the card. */
+.run-stop{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;
+  border:1px solid var(--blocked);border-radius:999px;background:var(--blocked-bg);
+  color:var(--blocked);font-size:var(--fs-caption);font-weight:600;cursor:pointer;
+  transition:background var(--dur-fast) ease,color var(--dur-fast) ease}
+.run-stop:hover{background:var(--blocked);color:var(--inverse-text)}
+.run-stop:disabled{opacity:.6;cursor:wait}
+.run-stop-glyph{width:9px;height:9px;border-radius:2px;background:currentColor;flex:none}
 .run-task{font-size:var(--fs-title);line-height:1.35;font-weight:600;letter-spacing:-.01em;
   margin:8px 0 7px;overflow-wrap:anywhere}
 .run-meta{display:flex;align-items:center;gap:var(--sp-3);color:var(--text-3);font-size:var(--fs-caption)}
@@ -4951,10 +4970,15 @@ function runCard(d){
   const activity = eventRows || '<div class="activity-empty">Live generator and auditor events appear here while '
     + 'a task runs. The gate states above are reconstructed from the Git ledger.</div>';
   const task = p && p.task ? p.task : titleOf(d);
+  const live = p && !p.finished;
+  const stopBtn = live ? '<button type="button" class="run-stop"'
+    + (p.state==='CANCELLING'?' disabled':'') + ' onclick="requestStop()" '
+    + 'aria-label="Stop this task"><span class="run-stop-glyph" aria-hidden="true"></span>'
+    + (p.state==='CANCELLING'?'Stopping…':'Stop') + '</button>' : '';
   return '<section class="run-card ' + esc(tone) + '"' + handoff + ' aria-label="Audit loop">'
     + '<div class="run-overview"><div class="run-top">'
     + '<span class="run-eyebrow">Audit loop</span><span class="status ' + esc(outcome) + '">'
-    + esc(outcome) + '</span></div><div class="run-task">' + esc(task) + '</div><div class="run-meta">'
+    + esc(outcome) + '</span>' + stopBtn + '</div><div class="run-task">' + esc(task) + '</div><div class="run-meta">'
     + '<span>Round <strong>' + esc(round) + '</strong> of ' + esc(roundLimit) + '</span>'
     + '<span><strong>' + reached + '</strong> of ' + pipeline.length + ' gates reached</span>'
     + '<span>' + (p ? p.elapsed + 's elapsed' : 'Ledger snapshot') + '</span></div>'
@@ -5343,6 +5367,11 @@ function maybePromptForHuman(d){
 }
 function render(d){
   lastState = d;
+  // A one-time entrance for the shell (topbar / rail / thread / composer). The
+  // class is added on the first paint only, so it plays once on load and never
+  // replays on an SSE snapshot — no per-frame flicker. Reduced-motion opts out.
+  if(!document.body.classList.contains('booted'))
+    requestAnimationFrame(()=>document.body.classList.add('booted'));
   const chatRows=(d.chats&&d.chats.items)||[];
   if(activeChatId&&!chatRows.some(row=>row.id===activeChatId))activeChatId='';
   if(!activeChatId&&chatRows.length&&!newTaskMode)activeChatId=chatRows[0].id;
@@ -5350,8 +5379,16 @@ function render(d){
   const preview=document.getElementById('contract-preview');preview.className='contract-preview';preview.innerHTML='';
   document.getElementById('version-badge').textContent = 'V' + d.version;
   document.getElementById('hub-version').textContent = 'V' + d.version;
-  document.getElementById('proj').textContent = d.project;
-  document.getElementById('side-project').textContent = d.project;
+  // Top bar shows a clean project name, not the owner/repo GitHub slug; the
+  // full slug + workspace folder stay available on hover.
+  const projName = d.title || d.project;
+  const projEl = document.getElementById('proj');
+  projEl.textContent = projName;
+  const switcher = document.getElementById('project-switcher');
+  if(switcher) switcher.title = d.project + (d.folder ? '  ·  ' + d.folder : '');
+  const branchLabel = document.getElementById('branch-label');
+  if(branchLabel && d.folder) branchLabel.textContent = '/ ' + d.folder;
+  document.getElementById('side-project').textContent = projName;
   const sampleBanner=document.getElementById('sample-banner');if(sampleBanner)sampleBanner.hidden=!d.demo;
   document.body.classList.toggle('is-demo',Boolean(d.demo));
   document.getElementById('tier-label').textContent = d.tier.tier + ' · local controller';
@@ -5405,6 +5442,9 @@ function startStream(){let source;try{source=new EventSource('/api/stream?t='+en
 const form=document.getElementById('f');const say=document.getElementById('say');
 const send=document.getElementById('send');const stopRun=document.getElementById('stop-run');
 const route=document.getElementById('route');
+// One safe path to stop a live run — the run card's Stop reuses the composer's
+// vetted cancellation flow rather than duplicating it.
+function requestStop(){if(stopRun&&!stopRun.hidden&&!stopRun.disabled)stopRun.click();}
 const filesBox=document.getElementById('attachments');const fileInput=document.getElementById('file-input');
 const sidebar=document.querySelector('.sidebar');const inspector=document.getElementById('inspector');
 const scrim=document.getElementById('scrim');
