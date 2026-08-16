@@ -31,8 +31,10 @@ def evidence_path(cfg: Config) -> Path:
     return cfg.root / cfg.state_dir / EVIDENCE_FILE
 
 
-def broker_for(cfg: Config, *, registry: ToolRegistry | None = None) -> ToolBroker:
-    return ToolBroker(registry or default_registry(), EvidenceLedger(evidence_path(cfg)))
+def broker_for(cfg: Config, *, registry: ToolRegistry | None = None,
+               approver: object = None) -> ToolBroker:
+    return ToolBroker(registry or default_registry(),
+                      EvidenceLedger(evidence_path(cfg)), approver=approver)
 
 
 def readonly_catalog() -> list[dict]:
@@ -123,15 +125,21 @@ def build_catalog(cfg: Config) -> list[dict]:
     return write_catalog() if writes_authorized(cfg) else readonly_catalog()
 
 
-def build_broker_and_token(cfg: Config, *, run_id: str,
-                           now_epoch: float) -> tuple[ToolBroker, CapabilityToken]:
+def build_broker_and_token(cfg: Config, *, run_id: str, now_epoch: float,
+                           approver: object = None
+                           ) -> tuple[ToolBroker, CapabilityToken]:
     """A broker + capability token for a build. Writable iff the project is
     authorized; otherwise read-only — so writes happen only after the user's
-    explicit per-project opt-in."""
+    explicit per-project opt-in.
+
+    ``approver`` is the real-time per-call approval gate a live build injects
+    (HumanApprovalGate); absent one, the broker falls back to the standing
+    Approval Service, which never auto-grants Level 3+ (deny-by-default)."""
     if writes_authorized(cfg):
-        return (broker_for(cfg, registry=write_registry()),
+        return (broker_for(cfg, registry=write_registry(), approver=approver),
                 writable_token(cfg, run_id=run_id, now_epoch=now_epoch))
-    return (broker_for(cfg), readonly_token(cfg, run_id=run_id, now_epoch=now_epoch))
+    return (broker_for(cfg, approver=approver),
+            readonly_token(cfg, run_id=run_id, now_epoch=now_epoch))
 
 
 def broker_tool_call(cfg: Config, request: dict, token: CapabilityToken, *,

@@ -209,6 +209,10 @@ class RunCommandService:
         # loop can reference this exact run when it records an escalation.
         emit.heartbeat = lambda: self.journal.heartbeat(run_id)
         emit.run_id = run_id
+        # A blocking per-call approval gate observes cancellation through the
+        # same handle, so a user's Stop while a pending action waits denies it
+        # promptly (deny-by-default) instead of pinning the worker.
+        emit.is_cancelled = lambda: self._cancelled(run_id)
         try:
             code = worker(prepared, emit)
             if self._cancelled(run_id):

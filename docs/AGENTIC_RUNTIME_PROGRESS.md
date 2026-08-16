@@ -91,3 +91,20 @@ NOT YET (remaining to full acceptance):
 
 ## Log
 - iter 16: Phases 4 (tools_hpc), 5 (tools_mcp), 6 (selfimprove) — gated wrappers + full_registry + 5 tests. Full suite 1050, 0 regression. ALL SIX PHASES' CAPABILITIES BUILT & TESTED. Stopping: full §16 acceptance needs the per-call Approval UI (a user-facing design) + full surface funneling — surfaced to the user.
+
+---
+
+## CONTINUED PROGRAM (user: 全部都做 · UX on par with Codex + retain core audit · optimize until perfect · end with an enterprise-grade rigorous test suite)
+Committed so far on v5-redesign (no push): 319ded3 perf · b012a3e runtime core · d8bf988 wiring · d08b8fa docs.
+Order (each: src/ only → tests → FULL suite guard → grouped commit at milestone, NO push → check off + log):
+- [x] **P7 Per-call Approval UI** ✅ — real-time "像 Claude Code" approval. `broker/humanapproval.py`: process-global `ApprovalInbox` + `HumanApprovalGate` (injected as the broker's `approver`). A flagged Level 3+ action PAUSES the live worker in place (the worker stays alive + heartbeats + observes cancel via `emit.is_cancelled`), a pending-action card renders in the thread (what/why/paths·host·cost/reversibility) with Allow once · this run · this project · Deny; the user's decision is recorded to the evidence ledger as the grant and the SAME worker continues. `/api/approval` endpoint → `INBOX.resolve`; `snapshot.pending_approval` (run-scoped); page.py `approvalCard`+`resolveApproval`+CSS. Deny-by-default (cancel/timeout deny); Level 4+ per-call only (no standing grant); Level 6 refused without prompting. **18 tests (test_human_approval.py), full suite 1068/2 skipped, 0 regression.** UNLOCKS L3+ end-to-end.
+- [ ] **P8 Codex-parity UI polish** — lively system-wide entrance motion (the approved B direction); clean top-bar project name (#17, root.name not the GitHub slug); prominent Stop button (#1); apply the warm palette + sans consistently; screenshot-verify the whole app feels Codex/Claude-Code-class.
+- [ ] **P9 Hardening** — route more of the pre-existing ungoverned execution surfaces (Phase 0 §2) through the broker; worktree-isolated writes; secret-scan on commit.
+- [ ] **P10 Optimize-to-perfect pass** — perf, code quality, edge cases, dead-code, consistency.
+- [ ] **P11 ENTERPRISE-GRADE rigorous test suite (FINAL)** — adversarial security (try to: bypass the broker, forge/replay evidence, escape path scope, widen a token, leak a secret into prompt/ledger/receipt, tamper the ledger/receipt, race concurrent writers, self-install, auto-run an L4+); crash-recovery; property-based; stress. Can use a multi-agent workflow.
+- [ ] **P12 Rebuild the app** + user-perspective verification (frozen core), so the user experiences it.
+INVARIANTS unchanged. STOP only for a genuine user decision the guide doesn't answer, a classifier block needing the user, or when it's perfect + enterprise tests pass + rebuilt.
+
+### Log
+- commits: grouped Agentic Runtime work onto v5-redesign (4 commits, no push).
+- P7 (per-call Approval UI): broker/humanapproval.py (ApprovalInbox + HumanApprovalGate) + broker `approver` seam + approval.py per-tool project grants (authorized_tool/add_tool) + commands.py `emit.is_cancelled` handle + build.py/routing.py live-gate wiring + server `/api/approval` endpoint + snapshot.pending_approval + page.py approvalCard/resolveApproval/CSS. Grounded design in the architecture (build worker is a background thread; console serves on other threads → the worker blocks-and-heartbeats while the HTTP thread resolves). 18 tests. **Full suite 1068 passed / 2 skipped (+18, 0 regression).** L3+ now usable end-to-end (an authorized project already advertises git_commit L3 + push/repo L5, now approvable per-call). NEXT: P8 Codex-parity UI polish (motion, top-bar name #17, Stop #1, palette/sans), screenshot-verify.

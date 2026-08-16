@@ -27,6 +27,11 @@ from ..config import Config
 #: Authorization key: the user allowed recoverable file edits in this project.
 WORKSPACE_WRITES = "workspace_writes"
 
+#: Authorization key: a list of tool names the user approved "for this project"
+#: from a per-call approval card (e.g. ``run_check``, ``git_commit``). Only tools
+#: below Level 4 may be added — Level 4+ is always per-call and never persisted.
+APPROVED_TOOLS = "approved_tools"
+
 AUTHORIZATIONS_FILE = "authorizations.json"
 
 
@@ -74,6 +79,21 @@ class AuthorizationStore:
         """Record a per-project string list the user approved (e.g. check commands)."""
         data = self.load()
         data[str(key)] = [str(v) for v in values]
+        self._persist(data)
+
+    def authorized_tool(self, tool: str) -> bool:
+        """Whether the user approved this tool "for this project" from a card."""
+        value = self.load().get(APPROVED_TOOLS)
+        return isinstance(value, list) and str(tool) in value
+
+    def add_tool(self, tool: str) -> None:
+        """Persist a tool the user approved "for this project" (idempotent)."""
+        data = self.load()
+        current = data.get(APPROVED_TOOLS)
+        current = [str(v) for v in current] if isinstance(current, list) else []
+        if str(tool) not in current:
+            current.append(str(tool))
+        data[APPROVED_TOOLS] = current
         self._persist(data)
 
 

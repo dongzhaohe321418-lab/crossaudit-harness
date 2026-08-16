@@ -556,6 +556,31 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .interrupted-actions button{height:30px;border-radius:var(--r-sm);border:1px solid var(--line-strong);
   background:var(--surface);color:var(--text);padding:0 10px;cursor:pointer;font-size:var(--fs-label)}
 .interrupted-actions button:hover{background:var(--hover)}
+/* Per-call approval: a paused Level 3+ action awaiting the user's decision. */
+.approval-card{margin:var(--sp-2) 0 var(--sp-5);padding:var(--sp-3) var(--sp-4);
+  background:var(--state-decide-bg);border:1px solid var(--line);
+  border-left:3px solid var(--state-decide);border-radius:var(--r-md);
+  box-shadow:var(--shadow-1);animation:approval-in .28s var(--ease,ease) both}
+@keyframes approval-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.approval-card{animation:none}}
+.approval-head{display:flex;align-items:center;gap:8px}
+.approval-head b{font-size:var(--fs-label);color:var(--state-decide)}
+.approval-badge{font-size:var(--fs-caption);font-weight:600;color:var(--state-decide);
+  border:1px solid var(--state-decide);border-radius:999px;padding:1px 8px;letter-spacing:.02em}
+.approval-tool{margin-top:7px;font-family:var(--font-mono);font-size:var(--fs-label);
+  color:var(--text);overflow-wrap:anywhere}
+.approval-why{margin:4px 0 0;font-size:var(--fs-caption);color:var(--text-2);line-height:1.45}
+.approval-facts{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+.approval-facts span{font-size:var(--fs-caption);color:var(--text-3)}
+.approval-facts strong{color:var(--text-2);font-weight:600}
+.approval-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.approval-actions button{height:30px;border-radius:var(--r-sm);border:1px solid var(--line-strong);
+  background:var(--surface);color:var(--text);padding:0 12px;cursor:pointer;
+  font-size:var(--fs-label);transition:background .15s ease,border-color .15s ease}
+.approval-actions button:hover{background:var(--hover)}
+.approval-actions button.allow{border-color:var(--state-decide);color:var(--state-decide);font-weight:600}
+.approval-actions button.allow:hover{background:var(--state-decide);color:var(--on-accent,#fff)}
+.approval-actions button.deny:hover{border-color:var(--escalated);color:var(--escalated)}
 /* Live run card: six-state progress over the audited gate pipeline. */
 .run-card{border:1px solid var(--line);margin:var(--sp-1) 0 var(--sp-6);overflow:hidden;
   box-shadow:var(--shadow-2)}
@@ -4948,6 +4973,36 @@ function runCard(d){
     + (p && p.steps ? p.steps.length + ' event' + (p.steps.length===1?'':'s') : 'Ledger-backed state')
     + '</span></div><div class="activity-list">' + activity + '</div></div></section>';
 }
+function approvalCard(d){
+  // A live build proposed a Level 3+ action and paused for the user. The card
+  // states what/why/scope/reversibility/cost; the buttons deliver the decision
+  // (recorded as the grant by the waiting worker). Level 4+ offers only
+  // once/deny — never a standing grant.
+  const a = d && d.pending_approval;
+  if(!a || (a.run_id && chatProgress(d) && chatProgress(d).run_id && a.run_id!==chatProgress(d).run_id)) return '';
+  const label = {once:'Allow once',run:'Allow this run',project:'Allow this project',deny:'Deny'};
+  const buttons = (a.scopes||['once','deny']).map(s =>
+    '<button class="'+(s==='deny'?'deny':'allow')+'" data-decision="'+esc(s)+'" '
+    + 'onclick="resolveApproval(this.getAttribute(\'data-decision\'))">'+esc(label[s]||s)+'</button>').join('');
+  const facts=[];
+  if(a.paths&&a.paths.length) facts.push('<span>Paths <strong>'+esc(a.paths.join(', '))+'</strong></span>');
+  if(a.host) facts.push('<span>Host <strong>'+esc(a.host)+'</strong></span>');
+  if(a.cost_usd) facts.push('<span>Est. cost <strong>$'+esc(a.cost_usd)+'</strong></span>');
+  return '<section class="approval-card" role="alertdialog" aria-label="Approval needed">'
+    + '<div class="approval-head"><span class="approval-badge">Level '+esc(a.level)+'</span>'
+    + '<b>Approval needed</b></div>'
+    + '<div class="approval-tool">'+esc(a.tool)+'</div>'
+    + '<p class="approval-why">'+esc(a.reversibility)+(a.reason?' · '+esc(a.reason):'')+'</p>'
+    + (facts.length?'<div class="approval-facts">'+facts.join('')+'</div>':'')
+    + '<div class="approval-actions">'+buttons+'</div></section>';
+}
+async function resolveApproval(decision){
+  const a = lastState && lastState.pending_approval;
+  if(!a || !a.run_id) return;
+  document.querySelectorAll('.approval-actions button').forEach(b=>b.disabled=true);
+  try{ await api('/api/approval',{run_id:a.run_id,decision}); }
+  catch(e){ document.querySelectorAll('.approval-actions button').forEach(b=>b.disabled=false); }
+}
 function welcome(){
   return '<div class="welcome"><div class="welcome-mark">◇</div><h2>What should CrossAudit work on?</h2>'
     + '<p>Describe what you need or add files. CrossAudit will do the work and independently check the result before showing it here.</p></div>';
@@ -5154,11 +5209,12 @@ function renderConversation(d){
     const messages = allMessages(d);
     const p = chatProgress(d);
     const live = p && !p.finished ? runCard(d) : '';
+    const approval = approvalCard(d);
     const review = reviewCard(d);
     // One protagonist per screen: the welcome empty state renders only when
     // the timeline holds nothing at all, and the delivery band only when no
     // review card already states the outcome of the same cycle.
-    const body = messages.map(m=>turn(m,d)).join('') + live + review
+    const body = messages.map(m=>turn(m,d)).join('') + live + approval + review
       + (review ? '' : deliveryStatus(d));
     html = body || welcome();
   }

@@ -602,11 +602,22 @@ def snapshot(cfg: Config) -> dict:
         writes_authorized = AuthorizationStore(cfg).authorized(WORKSPACE_WRITES)
     except Exception:  # noqa: BLE001 -- snapshot must never fail on an optional field
         writes_authorized = False
+    # A live build that proposed a Level 3+ action is paused waiting for the
+    # user's decision; surface its pending-action card, scoped to this run.
+    try:
+        from ..broker.humanapproval import INBOX
+        _rid = str((progress or {}).get("run_id", "") or "")
+        pending_approval = INBOX.pending(_rid) if _rid else None
+    except Exception:  # noqa: BLE001 -- an optional card must never break the snapshot
+        pending_approval = None
     return {
         "version": __version__,
         "project": cfg.science_repo,
         "root": str(cfg.root),
         "authorizations": {"workspace_writes": writes_authorized},
+        # A pending per-call approval (what/why/scope/reversibility/cost), or
+        # null when nothing is waiting on the user.
+        "pending_approval": pending_approval,
         # The seeded local sample flags every surface as illustrative; the UI
         # shows a persistent "not a real audit" banner whenever this is true.
         "demo": projects.is_demo_project(cfg),
@@ -1154,6 +1165,7 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                                    "/api/providers/validate",
                                    "/api/doctor", "/api/hpc", "/api/mcp", "/api/admit",
                                    "/api/onboarding", "/api/authorization",
+                                   "/api/approval",
                                    "/api/run", "/api/escalation", "/api/interrupted"}:
                 self._deny(404, "no such action")
                 return
@@ -1483,6 +1495,25 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                         self._config(), str(payload.get("cycle_id", "")))
                     STREAM_CHANGES.notify()
                     self._send(json.dumps(result).encode(), "application/json")
+                    return
+                if parsed.path == "/api/approval":
+                    # The user's real-time decision on a paused Level 3+ action.
+                    # It only delivers the choice to the waiting build worker,
+                    # which records it as the grant in the evidence ledger; the
+                    # server never executes the tool itself.
+                    from ..broker.humanapproval import INBOX
+                    run_id = str(payload.get("run_id", ""))
+                    decision = str(payload.get("decision", ""))
+                    if not run_id:
+                        raise ConfigDenial("an approval needs the run it applies to")
+                    resolved = INBOX.resolve(run_id, decision)
+                    if not resolved:
+                        raise ConfigDenial(
+                            "that action is no longer waiting for a decision")
+                    STREAM_CHANGES.notify()
+                    self._send(json.dumps({"resolved": True,
+                                           "decision": decision}).encode(),
+                               "application/json")
                     return
                 if parsed.path == "/api/run":
                     if str(payload.get("action", "")) != "cancel":

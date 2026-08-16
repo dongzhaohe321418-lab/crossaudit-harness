@@ -27,6 +27,7 @@ import re
 import time
 
 from .. import document_export, hpc, mcp
+from ..broker.humanapproval import INBOX, HumanApprovalGate
 from ..broker.routing import (
     BROKER_SERVER_ID, broker_tool_call, build_broker_and_token, build_catalog)
 from .. import generator as gen_mod
@@ -160,6 +161,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     # second command channel.
     heartbeat = getattr(on_event, "heartbeat", None)
     run_id = str(getattr(on_event, "run_id", "") or "")
+    is_cancelled = getattr(on_event, "is_cancelled", None)
 
     def emit(kind: str, actor: str, text: str, detail: str = "", *,
              state: RunState | None = None, waiting_reason: dict | None = None,
@@ -245,8 +247,19 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                         emit("capability_requested", "tool", "running built-in tool",
                              tool_name[:200], state=RunState.WAITING_FOR_CAPABILITY)
                         if broker_obj is None:
+                            # A live run shell (heartbeat handle present) gets the
+                            # real-time per-call approval gate: a flagged action
+                            # pauses in place, surfaces a pending-action card, and
+                            # the user's Allow/Deny — recorded as the grant —
+                            # resumes this same worker. Without a run shell the
+                            # broker stays deny-by-default (standing approval only).
+                            gate = (HumanApprovalGate(
+                                        inbox=INBOX, heartbeat=heartbeat,
+                                        is_cancelled=is_cancelled)
+                                    if heartbeat is not None else None)
                             broker_obj, broker_token = build_broker_and_token(
-                                cfg, run_id=run_id, now_epoch=time.time())
+                                cfg, run_id=run_id, now_epoch=time.time(),
+                                approver=gate)
                         result = broker_tool_call(
                             cfg, outcome.request, broker_token,
                             run_id=run_id, now_epoch=time.time(), broker=broker_obj)

@@ -78,6 +78,12 @@ class ToolResult:
 class ToolBroker:
     registry: ToolRegistry
     ledger: EvidenceLedger
+    #: Optional approver consulted when policy flags an action for approval.
+    #: A live build injects a HumanApprovalGate (real-time per-call approval);
+    #: when absent, the broker falls back to the standing ``approve`` service,
+    #: which never auto-grants Level 3+ — so the broker stays deny-by-default
+    #: and deterministic in every non-interactive context (and in tests).
+    approver: object = None
 
     def execute(self, request: dict, token: CapabilityToken, *,
                 cfg: Config, run_id: str, now_epoch: float) -> ToolResult:
@@ -117,9 +123,15 @@ class ToolBroker:
             return ToolResult("refused", reason=d.reason, tool=tool,
                               evidence=tuple(appended))
         if d.requires_approval:
-            # Policy flagged this for approval; the Approval Service decides from
-            # an explicit, user-granted authorization (never a loosened policy).
-            approval = approve(proposal, d, cfg)
+            # Policy flagged this for approval; the decision comes from an
+            # explicit, user-granted authorization — never a loosened policy.
+            # A live build injects an approver (the real-time HumanApprovalGate);
+            # absent one, the standing Approval Service decides, and it never
+            # auto-grants Level 3+ (deny-by-default).
+            if self.approver is not None:
+                approval = self.approver(proposal, d, cfg, run_id)
+            else:
+                approval = approve(proposal, d, cfg)
             appended.append(self.ledger.append(
                 "approval", run_id=run_id,
                 payload={"tool": tool, "granted": approval.granted,
