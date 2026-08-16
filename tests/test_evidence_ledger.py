@@ -28,6 +28,42 @@ def test_empty_ledger_verifies_and_has_no_head(tmp_path):
     assert r.ok and r.count == 0 and r.head == ""
 
 
+# -- P10: the size-guarded head cache never changes the chain it builds --
+def test_head_cache_is_correct_across_instances(tmp_path):
+    a = _ledger(tmp_path)
+    for i in range(5):
+        a.append("note", run_id="r", payload={"i": i})
+    # A fresh instance has a COLD cache: it must re-derive the true head and
+    # continue the same chain, not fork it.
+    b = EvidenceLedger(tmp_path / "evidence.jsonl")
+    assert b.head() == a.head()
+    b.append("note", run_id="r", payload={"i": 5})
+    assert b.verify().ok and b.verify().count == 6
+
+
+def test_stale_head_cache_is_invalidated_by_a_size_change(tmp_path):
+    a = _ledger(tmp_path)
+    b = EvidenceLedger(tmp_path / "evidence.jsonl")
+    a.append("note", run_id="r", payload={"n": 0})   # a's cache now points at seq 0
+    b.append("note", run_id="r", payload={"n": 1})   # b appends behind a's back
+    # a's cached size no longer matches the file, so a must re-derive the head
+    # and chain onto b's entry — the whole chain stays valid and ordered.
+    a.append("note", run_id="r", payload={"n": 2})
+    report = a.verify()
+    assert report.ok and report.count == 3
+    seqs = [e["seq"] for e in a.entries()]
+    assert seqs == [0, 1, 2]
+
+
+def test_many_appends_stay_chained(tmp_path):
+    led = _ledger(tmp_path)
+    for i in range(200):
+        led.append("note", run_id="r", payload={"i": i})
+    report = led.verify()
+    assert report.ok and report.count == 200
+    assert [e["seq"] for e in led.entries()] == list(range(200))
+
+
 def test_append_chains_and_advances_head(tmp_path):
     led = _ledger(tmp_path)
     d0 = led.append("tool_call", run_id="r1", payload={"tool": "file_read"}, ts="t0")

@@ -65,10 +65,18 @@ class EvidenceLedger:
 
     path: Path
     _lock_path: Path = field(init=False)
+    #: A size-guarded head cache so a build's many appends stay O(1) instead of
+    #: re-scanning the whole file each time. It is trusted ONLY when the file
+    #: size still matches what we last saw; any change on disk (another writer,
+    #: truncation) misses the cache and forces a full, authoritative re-derive.
+    _cached_head: tuple[int, str] | None = field(default=None, init=False)
+    _cached_size: int = field(default=-1, init=False)
 
     def __post_init__(self) -> None:
         self.path = Path(self.path)
         self._lock_path = self.path.with_suffix(self.path.suffix + ".lock")
+        self._cached_head = None
+        self._cached_size = -1
 
     # -- append ---------------------------------------------------------------
     def append(self, kind: str, *, run_id: str, payload: dict,
@@ -105,8 +113,13 @@ class EvidenceLedger:
             try:
                 os.write(fd, line.encode("utf-8"))
                 os.fsync(fd)
+                new_size = os.fstat(fd).st_size
             finally:
                 os.close(fd)
+            # We just wrote the new head; remember it (guarded by the resulting
+            # file size) so the next append does not have to re-scan the file.
+            self._cached_head = (body["seq"], entry_digest)
+            self._cached_size = new_size
             return entry_digest
 
     # -- read -----------------------------------------------------------------
@@ -169,15 +182,34 @@ class EvidenceLedger:
 
     # -- internals ------------------------------------------------------------
     def _head_locked(self) -> tuple[int, str]:
-        """(seq, digest) of the last complete entry; (-1, "") when empty."""
+        """(seq, digest) of the last complete entry; (-1, "") when empty.
+
+        Fast path: if the file is exactly the size we last recorded, the cached
+        head is authoritative (we hold the append lock, and no size change means
+        no writer appended). Otherwise fall back to an authoritative full scan
+        and refresh the cache — so correctness never depends on the cache.
+        """
+        try:
+            size = self.path.stat().st_size if self.path.exists() else 0
+        except OSError:
+            size = 0
+        if size == 0:
+            self._cached_head, self._cached_size = (-1, ""), 0
+            return (-1, "")
+        if self._cached_head is not None and size == self._cached_size:
+            return self._cached_head
         last_obj = None
         for _lineno, obj, complete in self._iter_lines():
             if obj is not None and complete:
                 last_obj = obj
         if last_obj is None:
-            return -1, ""
-        seq = last_obj.get("seq")
-        return (seq if isinstance(seq, int) else -1), str(last_obj.get("digest", ""))
+            head = (-1, "")
+        else:
+            seq = last_obj.get("seq")
+            head = (seq if isinstance(seq, int) else -1,
+                    str(last_obj.get("digest", "")))
+        self._cached_head, self._cached_size = head, size
+        return head
 
     def _iter_lines(self):
         """Yield (lineno, parsed_obj_or_None, complete_bool) for each line.

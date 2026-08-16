@@ -137,6 +137,10 @@ class ApprovalInbox:
         self._decisions: dict[str, _Resolved] = {}
         self._run_grants: set[tuple[str, str]] = set()
 
+    def now(self) -> float:
+        """The inbox's clock (injectable), for stamping a pending action."""
+        return self._clock()
+
     # -- worker side ----------------------------------------------------------
     def run_granted(self, run_id: str, tool: str) -> bool:
         with self._cond:
@@ -265,7 +269,7 @@ class HumanApprovalGate:
             cost_usd=float(proposal.get("estimated_cost_usd", 0.0) or 0.0),
             bytes=int(proposal.get("estimated_bytes", 0) or 0),
             reason=str(getattr(decision, "reason", "") or ""),
-            created=self.inbox._clock(),
+            created=self.inbox.now(),
         )
         self.inbox.open(pending)
         decided = self.inbox.wait(
