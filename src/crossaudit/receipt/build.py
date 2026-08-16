@@ -101,6 +101,24 @@ def isolation_evidence(cfg: Config, *, mode: str, provisioner: str,
     return evidence
 
 
+def _tool_evidence(cfg: Config) -> dict | None:
+    """Bind the project's evidence-ledger head + entry count, if any tools ran.
+
+    Read-only and fail-safe: a missing, empty, or unreadable ledger yields no
+    block, so a tool-free cycle's receipt bytes (and digest) stay exactly what
+    they were in v2 — this can never break receipt assembly.
+    """
+    try:
+        from ..ledger import EvidenceLedger
+        led = EvidenceLedger(cfg.root / cfg.state_dir / "evidence.jsonl")
+        report = led.verify()
+        if not report.ok or report.count < 1:
+            return None
+        return {"ledger_head": report.head, "entries": report.count}
+    except Exception:  # noqa: BLE001 -- evidence binding must never break the receipt
+        return None
+
+
 def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
           constitution_path: str, constitution_bytes: bytes, constitution_commit: str,
           dcl_source_sha256: str, prompt_sha256: str, checks: list[str],
@@ -110,7 +128,7 @@ def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
           mode: str, provisioner: str = "cli", admission: str = "local-controller",
           integrity: str = "OK") -> dict:
     """Assemble a v2 receipt. Every field is derived, none is caller prose."""
-    return {
+    receipt = {
         "receipt_schema": RECEIPT_SCHEMA,
         "subject": {
             "science_repo": cfg.science_repo,
@@ -159,3 +177,10 @@ def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
         "isolation": isolation_evidence(cfg, mode=mode, provisioner=provisioner,
                                         admission=admission, exchange=exchange),
     }
+    # Optional, back-compatible: bind the evidence-ledger head only when this
+    # cycle actually ran governed tools. A tool-free cycle omits the block, so
+    # its receipt bytes and digest are identical to a plain v2 receipt.
+    evidence = _tool_evidence(cfg)
+    if evidence:
+        receipt["tool_evidence"] = evidence
+    return receipt

@@ -160,8 +160,10 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
               on_event=None
               ) -> AuditOutcome:
     dcl = run_checks(files, cfg.checks, notes, cfg.plugins).as_dict()
+    from ..broker.routing import evidence_view
     prompt, bounded, prompt_sha = prompt_mod.build(
-        constitution, constitution_commit, dcl, files, task)
+        constitution, constitution_commit, dcl, files, task,
+        tool_evidence=evidence_view(cfg))
     reply: dict | None = None
     invalid: str | None = None
     provider_failure: str | None = None

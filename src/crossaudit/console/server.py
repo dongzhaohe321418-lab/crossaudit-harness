@@ -59,6 +59,7 @@ from ..controller import StateStore
 from ..dispute import DISPUTES_LOG
 from ..errors import ConfigDenial, Denial, classify_escalation_kind
 from ..gitio import is_ancestor
+from ..providers import codex_subscription
 from ..providers import resilience as provider_resilience
 from ..receipt.verify import admit as admit_receipt
 from ..receipt.verify import load as load_receipt
@@ -133,6 +134,17 @@ def onboarding_state() -> dict:
         return {"completed": False}
 
 
+def _authorizations(cfg: Config | None) -> dict:
+    """The user's per-project standing authorizations (off without a project)."""
+    if cfg is None:
+        return {"workspace_writes": False}
+    try:
+        from ..broker.approval import WORKSPACE_WRITES, AuthorizationStore
+        return {"workspace_writes": AuthorizationStore(cfg).authorized(WORKSPACE_WRITES)}
+    except Exception:  # noqa: BLE001 -- optional field, never fail settings
+        return {"workspace_writes": False}
+
+
 def app_settings(cfg: Config | None = None) -> dict:
     """Non-secret desktop readiness state for the Settings panel."""
     from .. import _selfid
@@ -166,6 +178,7 @@ def app_settings(cfg: Config | None = None) -> dict:
         "doctor": doctor,
         "onboarding": onboarding_state(),
         "model_catalog": projects.model_catalog(),
+        "authorizations": _authorizations(cfg),
     }
 
 
@@ -584,10 +597,16 @@ def snapshot(cfg: Config) -> dict:
         house = [s.name for s in skills_mod.load(cfg.root)]
     except Denial:
         house = []
+    try:
+        from ..broker.approval import WORKSPACE_WRITES, AuthorizationStore
+        writes_authorized = AuthorizationStore(cfg).authorized(WORKSPACE_WRITES)
+    except Exception:  # noqa: BLE001 -- snapshot must never fail on an optional field
+        writes_authorized = False
     return {
         "version": __version__,
         "project": cfg.science_repo,
         "root": str(cfg.root),
+        "authorizations": {"workspace_writes": writes_authorized},
         # The seeded local sample flags every surface as illustrative; the UI
         # shows a persistent "not a real audit" banner whenever this is true.
         "demo": projects.is_demo_project(cfg),
@@ -657,7 +676,7 @@ def start_build(cfg: Config, task: str, *, before_start=None,
     reimplement it, because a second copy could drift on the only thing that
     matters: when the loop stops.
     """
-    from ..cli.build import preflight, resolve_task, run_loop
+    from ..appservice import preflight, resolve_task, run_loop
 
     service = RunCommandService(
         cfg, alive=daemon._pid_alive, on_change=TRACKER.notify)
@@ -721,7 +740,7 @@ def say(cfg: Config, text: str, *, attachments=None,
     explicitly, so a forged or older client cannot silently transmit files.
     """
     from .. import router as router_mod
-    from ..cli import talk as talk_mod
+    from ..appservice import talk as talk_mod
 
     prepared = list(attachments or [])
     if prepared and not attachment_consent:
@@ -1134,7 +1153,7 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                                    "/api/settings", "/api/providers/connect",
                                    "/api/providers/validate",
                                    "/api/doctor", "/api/hpc", "/api/mcp", "/api/admit",
-                                   "/api/onboarding",
+                                   "/api/onboarding", "/api/authorization",
                                    "/api/run", "/api/escalation", "/api/interrupted"}:
                 self._deny(404, "no such action")
                 return
@@ -1204,6 +1223,19 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                         payload.get("pinned") is True)
                     STREAM_CHANGES.notify()
                     self._send(json.dumps({"chat": result}).encode(), "application/json")
+                    return
+                if parsed.path == "/api/authorization":
+                    # The user's explicit per-project opt-in for recoverable file
+                    # edits. It only records the grant; every write still passes
+                    # the token scope, the Approval Service, a recovery point, and
+                    # the Auditor's review.
+                    from ..broker.approval import (WORKSPACE_WRITES,
+                                                   AuthorizationStore)
+                    enabled = payload.get("enabled") is True
+                    AuthorizationStore(self._config()).set(WORKSPACE_WRITES, enabled)
+                    STREAM_CHANGES.notify()
+                    self._send(json.dumps({"workspace_writes": enabled}).encode(),
+                               "application/json")
                     return
                 if parsed.path == "/api/chats/delete":
                     current = self._config()
@@ -1606,6 +1638,14 @@ def make_handler(cfg: Config, token: str, touch) -> type:
     return Handler
 
 
+def _console_uses_codex(cfg: Config) -> bool:
+    """Whether either role (or a generator fallback) runs on the ChatGPT
+    subscription, and so benefits from warming the Codex runtime at boot."""
+    providers = {cfg.auditor.provider, cfg.generator_provider or ""}
+    providers.update(role.provider for role in cfg.generator_fallbacks)
+    return "openai_codex" in providers
+
+
 def serve(cfg: Config, port: int = 0, *,
           idle_timeout: float = IDLE_TIMEOUT_S,
           register: bool = False) -> tuple[str, ThreadingHTTPServer]:
@@ -1663,4 +1703,12 @@ def serve(cfg: Config, port: int = 0, *,
     if register:
         # So a later invocation can find this console rather than start a rival.
         daemon.write_run(cfg, pid=os.getpid(), port=port_in_use, token=token)
+    if _console_uses_codex(cfg):
+        # A ChatGPT-subscription project pays the Codex runtime's cold start
+        # (process spawn + initialize handshake) on the first message, which is
+        # what makes a new conversation feel slow to begin. Warm it in the
+        # background now that the project console is up, so the first generation
+        # reuses a ready runtime. Best-effort: a failure just falls back to the
+        # original lazy start and never blocks or breaks the console boot.
+        codex_subscription.warm()
     return f"http://127.0.0.1:{port_in_use}/?t={token}", httpd

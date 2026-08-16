@@ -88,6 +88,20 @@ def validate(raw: Any) -> dict:
     for key in ("execution", "credential", "provisioner", "admission"):
         if key not in iso:
             raise IntegrityDenial(f"isolation.{key} evidence is missing")
+
+    # Optional evidence-ledger binding: present only on cycles that ran governed
+    # tools. Validated when present, so a plain v2 (tool-free) receipt is never
+    # rejected and stays byte-identical — no schema bump, full back-compat.
+    te = raw.get("tool_evidence")
+    if te is not None:
+        if not isinstance(te, dict):
+            raise IntegrityDenial("tool_evidence must be a mapping")
+        _require(te, ("ledger_head", "entries"), "tool_evidence")
+        if not isinstance(te["ledger_head"], str) or not te["ledger_head"]:
+            raise IntegrityDenial("tool_evidence.ledger_head must be a non-empty string")
+        if (not isinstance(te["entries"], int) or isinstance(te["entries"], bool)
+                or te["entries"] < 1):
+            raise IntegrityDenial("tool_evidence.entries must be a positive integer")
     return raw
 
 

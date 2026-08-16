@@ -36,6 +36,22 @@ def load(path: Path) -> dict:
     return schema.validate(raw)
 
 
+def _verify_tool_evidence(te: dict, ledger_file: Path) -> None:
+    """Re-derive the evidence ledger and confirm the receipt bound a genuine,
+    untampered prefix of it. Raises IntegrityDenial on any mismatch."""
+    from ..ledger import EvidenceLedger
+    led = EvidenceLedger(ledger_file)
+    report = led.verify()
+    if not report.ok:
+        raise IntegrityDenial(f"evidence ledger failed re-derivation: {report.error}")
+    n = int(te["entries"])
+    head = str(te["ledger_head"])
+    rows = led.entries()
+    if n < 1 or n > len(rows) or str(rows[n - 1].get("digest", "")) != head:
+        raise IntegrityDenial(
+            "receipt tool_evidence head does not match the evidence ledger")
+
+
 def verify(receipt: dict, *, science_root: Path, audit_root: Path,
            expect_repo: str, expect_sha: str, cfg: Config | None = None) -> dict:
     """Re-derive every binding. Returns an evidence dict; raises on any mismatch."""
@@ -122,6 +138,17 @@ def verify(receipt: dict, *, science_root: Path, audit_root: Path,
         if short:
             admission_shortfalls.append(
                 f"isolation evidence is missing {short}")
+
+    # Cross-check the bound evidence ledger when it is present locally. The head
+    # is already bound cryptographically (part of the receipt digest); this also
+    # re-derives the ledger chain and confirms the receipt bound an untampered
+    # prefix. Skipped when the ledger file is absent, so offline verification
+    # without the local ledger still succeeds.
+    te = receipt.get("tool_evidence")
+    if te is not None and cfg is not None:
+        ledger_file = cfg.root / cfg.state_dir / "evidence.jsonl"
+        if ledger_file.exists():
+            _verify_tool_evidence(te, ledger_file)
 
     return {
         "receipt_digest": schema.digest(receipt),

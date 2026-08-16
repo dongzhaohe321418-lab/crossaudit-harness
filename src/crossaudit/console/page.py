@@ -29,10 +29,10 @@ PAGE = r"""<!doctype html>
    on calm opaque surfaces so the audit record remains legible. */
 :root,:root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#0C0F14;--panel:rgba(19,24,32,.72);--surface:#161B23;--surface-2:#1E242E;
-  --surface-3:#262D39;--text:#EDF0F5;--text-2:#A6AEBB;--text-3:#6E7684;
-  --line:rgba(228,237,248,.09);--line-strong:rgba(228,237,248,.18);
-  --hover:rgba(148,178,224,.10);--scrim-bg:rgba(6,9,14,.52);
+  --bg:#100F0D;--panel:rgba(28,25,20,.72);--surface:#1A1712;--surface-2:#231F19;
+  --surface-3:#2C271F;--text:#F1EDE6;--text-2:#ADA69B;--text-3:#79726A;
+  --line:rgba(244,237,226,.09);--line-strong:rgba(244,237,226,.17);
+  --hover:rgba(230,206,168,.09);--scrim-bg:rgba(10,8,5,.55);
   --state-understand:#98A1B0;--state-understand-bg:rgba(152,161,176,.12);
   --state-work:#6CA8F8;--state-work-bg:rgba(108,168,248,.14);
   --state-check:#AD97F4;--state-check-bg:rgba(173,151,244,.14);
@@ -49,10 +49,10 @@ PAGE = r"""<!doctype html>
   --shadow-2:0 2px 6px rgba(4,8,16,.28),0 8px 24px rgba(4,8,16,.24);
   --shadow-3:0 4px 12px rgba(3,6,12,.32),0 16px 48px rgba(3,6,12,.30);
   --shadow-4:0 8px 24px rgba(2,4,10,.38),0 32px 90px rgba(2,4,10,.34);
-  --edge-highlight:inset 0 1px 0 rgba(255,255,255,.07);
-  --glass-nav-bg:rgba(19,24,32,.72);--glass-sheet-bg:rgba(22,27,36,.80);
-  --glass-palette-bg:rgba(24,30,39,.86);--glass-border:rgba(255,255,255,.09);
-  --tint-a:rgba(82,151,255,.10);--tint-b:rgba(139,112,226,.07);
+  --edge-highlight:inset 0 1px 0 rgba(255,250,240,.06);
+  --glass-nav-bg:rgba(26,23,18,.74);--glass-sheet-bg:rgba(30,27,21,.82);
+  --glass-palette-bg:rgba(34,30,23,.88);--glass-border:rgba(255,250,242,.08);
+  --tint-a:rgba(108,168,248,.09);--tint-b:rgba(173,151,244,.06);
   /* Legacy aliases: ported flows resolve to the same token system. */
   --muted:var(--text-2);--faint:var(--text-3);
   --blue:var(--accent);--blue-bg:var(--accent-bg);
@@ -68,6 +68,7 @@ PAGE = r"""<!doctype html>
   --send-hover:color-mix(in srgb,var(--accent) 86%,#fff);
   --font-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;
   --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-label:var(--font-ui);
   --fs-caption:0.6875rem;--fs-label:0.75rem;--fs-body:0.8125rem;--fs-prose:0.875rem;
   --fs-title:0.9375rem;--fs-h2:1.125rem;--fs-h1:1.375rem;--fs-display:1.75rem;
   --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;
@@ -199,7 +200,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
   background:var(--surface-2);border:1px solid var(--line);box-shadow:var(--shadow-1)}
 .brand-mark,.welcome-mark{font-size:0}.brand-mark:before,.welcome-mark:before{content:"";width:11px;height:11px;
   border:1.8px solid var(--accent);border-radius:4px;transform:rotate(45deg)}
-.version{font-size:var(--fs-caption);font-family:var(--font-mono);color:var(--text-2);
+.version{font-size:var(--fs-caption);font-family:var(--font-label);color:var(--text-2);
   padding:2px 7px;border-radius:var(--r-pill);background:var(--surface-2)}
 .top-project{height:32px;margin-left:2px;padding:0 var(--sp-3);border:0;border-radius:var(--r-md);
   background:transparent;display:flex;align-items:center;gap:6px;color:var(--text-2);cursor:pointer;
@@ -317,7 +318,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
   cursor:pointer;padding:var(--sp-5) 10px var(--sp-1);font-size:var(--fs-caption);font-weight:600;
   color:var(--text-3);text-align:left}
 .archived-toggle:hover{color:var(--text-2)}
-.archived-count{margin-left:auto;font-family:var(--font-mono);color:var(--text-3)}
+.archived-count{margin-left:auto;font-family:var(--font-label);color:var(--text-3)}
 .archived-chevron{width:12px;height:12px;flex:none;color:var(--text-3);font-size:0;
   transition:transform var(--dur-base) ease}
 .archived-chevron:before{content:"";display:block;width:12px;height:12px;background:currentColor;
@@ -361,7 +362,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
   transition:background var(--dur-base) ease,color var(--dur-base) ease}
 .state-pill .pill-glyph{width:14px;height:14px;flex:none}
 .state-pill .pill-glyph:before{width:14px;height:14px}
-.state-pill .pill-detail{font-family:var(--font-mono);font-size:var(--fs-caption);
+.state-pill .pill-detail{font-family:var(--font-label);font-size:var(--fs-caption);
   font-variant-numeric:tabular-nums;opacity:.8}
 .state-pill.pill-understand{background:var(--state-understand-bg);color:color-mix(in srgb,var(--state-understand) 55%,var(--text))}
 .state-pill.pill-work{background:var(--state-work-bg);color:color-mix(in srgb,var(--state-work) 55%,var(--text))}
@@ -455,14 +456,14 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 13 4 4L19 7'/%3E%3C/svg%3E") center/contain no-repeat;
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 13 4 4L19 7'/%3E%3C/svg%3E") center/contain no-repeat}
 .review-rounds{margin-top:var(--sp-3);font-size:var(--fs-caption);color:var(--text-3)}
-.review-rounds b{font-family:var(--font-mono);font-weight:500;color:var(--text-2)}
+.review-rounds b{font-family:var(--font-label);font-weight:500;color:var(--text-2)}
 .review-detail{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--dur-base) var(--spring)}
 .review-card.open .review-detail{grid-template-rows:1fr}
 .review-detail-inner{min-height:0;overflow:hidden}
 .review-section{border-top:1px solid var(--line);padding:var(--sp-4)}
 .review-section-title{font-size:var(--fs-caption);font-weight:600;color:var(--text-3);margin-bottom:var(--sp-2)}
 .review-round-row{display:flex;align-items:baseline;gap:10px;padding:4px 0;font-size:var(--fs-body)}
-.review-round-row .round-n{font-family:var(--font-mono);font-size:var(--fs-caption);color:var(--text-3);flex:none}
+.review-round-row .round-n{font-family:var(--font-label);font-size:var(--fs-caption);color:var(--text-3);flex:none}
 .review-record{display:grid;gap:6px}
 .review-record-row{display:flex;align-items:center;gap:8px;font-size:var(--fs-label)}
 .review-record-row span:first-child{color:var(--text-2);min-width:88px}
@@ -483,7 +484,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .output-files{margin-top:var(--sp-3)}
 .output-head{display:flex;align-items:center;gap:7px;margin-bottom:6px;
   color:var(--text-2);font-size:var(--fs-caption);font-weight:600}
-.output-count{font-weight:400;color:var(--text-3);font-family:var(--font-mono)}
+.output-count{font-weight:400;color:var(--text-3);font-family:var(--font-label)}
 .artifact-list{display:grid;gap:6px}
 .output-file{min-width:0;border:1px solid var(--line);border-radius:var(--r-lg);padding:0;
   display:flex;align-items:stretch;gap:0;background:var(--surface);color:inherit;
@@ -567,7 +568,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
   margin:8px 0 7px;overflow-wrap:anywhere}
 .run-meta{display:flex;align-items:center;gap:var(--sp-3);color:var(--text-3);font-size:var(--fs-caption)}
 .run-meta span{display:flex;align-items:center;gap:4px}
-.run-meta strong{color:var(--text-2);font-weight:500;font-family:var(--font-mono);
+.run-meta strong{color:var(--text-2);font-weight:500;font-family:var(--font-label);
   font-variant-numeric:tabular-nums}
 .run-handoff{position:relative;height:8px;margin-top:10px;display:none}
 .run-card[data-handoff] .run-handoff{display:block}
@@ -632,7 +633,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .event-line b{font-weight:600;margin-right:6px}
 .event-detail{color:var(--text-3);font-size:var(--fs-caption);line-height:1.4;margin-top:2px;
   white-space:pre-wrap;overflow-wrap:anywhere}
-.event-time{color:var(--text-3);font-size:var(--fs-caption);font-family:var(--font-mono);padding-top:2px}
+.event-time{color:var(--text-3);font-size:var(--fs-caption);font-family:var(--font-label);padding-top:2px}
 .activity-empty{padding:6px 4px;color:var(--text-3);font-size:var(--fs-label);line-height:1.45}
 .audit-evidence-head{display:flex;align-items:baseline;gap:8px;margin:var(--sp-6) 0 var(--sp-3);padding-top:1px}
 .audit-evidence-head h3{margin:0;font-size:var(--fs-body);font-weight:600}
@@ -704,7 +705,7 @@ textarea::placeholder{color:var(--text-3)}
 .composer-meta{display:flex;align-items:center;gap:var(--sp-2);padding:5px 5px 1px;
   color:var(--text-3);font-size:var(--fs-caption)}
 #model-summary{border:0;background:transparent;padding:0;color:var(--text-2);
-  font-family:var(--font-mono);font-size:var(--fs-caption);white-space:nowrap;overflow:hidden;
+  font-family:var(--font-label);font-size:var(--fs-caption);white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;max-width:220px;cursor:pointer}
 #model-summary:hover{color:var(--text)}
 .autonomy-summary{display:inline-flex;align-items:center;gap:4px;border-left:1px solid var(--line);
@@ -760,7 +761,7 @@ textarea::placeholder{color:var(--text-3)}
 .model .role-mark{width:22px;height:22px}
 .model-copy{min-width:0;flex:1}
 .model-role{font-size:var(--fs-caption);color:var(--text-3)}
-.model-name{font-size:var(--fs-caption);font-family:var(--font-mono);margin-top:2px;overflow:hidden;
+.model-name{font-size:var(--fs-caption);font-family:var(--font-label);margin-top:2px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .model-actions-row{display:flex;gap:6px;margin-top:var(--sp-2)}
 .model-actions-row .secondary{flex:1;height:30px;font-size:var(--fs-caption)}
@@ -836,7 +837,7 @@ body.deciding .composer-wrap{display:none}
 .decision-limit p{margin:3px 0 0;color:var(--text-2);font-size:var(--fs-label);line-height:1.45}
 .decision-attempts{margin-top:var(--sp-2);display:grid;gap:2px}
 .decision-attempt{display:flex;align-items:baseline;gap:10px;padding:5px 2px;font-size:var(--fs-body)}
-.decision-attempt .round-n{font-family:var(--font-mono);font-size:var(--fs-caption);color:var(--text-3);flex:none}
+.decision-attempt .round-n{font-family:var(--font-label);font-size:var(--fs-caption);color:var(--text-3);flex:none}
 .decision-attempt .verdict-word{margin-left:auto;font-weight:600;font-size:var(--fs-caption)}
 .decision-attempt .verdict-word.passed{color:var(--pass)}
 .decision-attempt .verdict-word.blocked{color:var(--blocked)}
@@ -1073,7 +1074,7 @@ body.hub-mode .project-hub{display:block}
 .project-progress i{display:block;width:100%;height:100%;border-radius:inherit;background:inherit;
   animation:breathe 2.4s ease-in-out infinite}
 .project-live-copy{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.project-live-time{color:var(--text-3);flex:none;font-family:var(--font-mono)}
+.project-live-time{color:var(--text-3);flex:none;font-family:var(--font-label)}
 .project-recovery{display:flex;align-items:center;gap:7px;margin-top:7px;color:var(--blocked);
   font-size:var(--fs-caption)}
 .retry-setup{border:1px solid var(--blocked);border-radius:var(--r-xs);background:var(--surface);
@@ -2467,6 +2468,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <div id="provider-credentials"></div>
       <p class="settings-empty">Which models each role uses, and fallback routes, are chosen per project.</p>
     </section><section class="form-section settings-pane" data-settings-pane="agent" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Agent behavior</span><h3>Default roles and revision rounds</h3><p>How the generator and independent auditor are set up, and how many rounds run before CrossAudit pauses.</p></div>
+      <label class="toggle-line" style="margin-bottom:12px"><input type="checkbox" id="workspace-writes-toggle"><span><b>Allow the agent to edit files in this project</b><small>The agent may create and modify files in this project's directories. Every change takes a recovery point, is recorded in the audit ledger, and is reviewed by the independent auditor. Off by default.</small></span></label>
       <p class="settings-empty">Roles, reasoning effort, and the revision limit are set per project, not as global defaults yet.</p>
       <div class="settings-jump"><button type="button" class="secondary" data-settings-open="runtime">Open project controls</button><small class="settings-empty" data-scope-note hidden></small></div>
     </section><section class="form-section settings-pane" data-settings-pane="audit" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Audit</span><h3>Constitution and audit rules</h3><p>The rules that govern every audit, and the guarantees CrossAudit always enforces.</p></div>
@@ -3393,6 +3395,15 @@ function renderDoctor(doctor){
 }
 function renderSettings(d){
   settingsState=d;
+  const wwToggle=document.getElementById('workspace-writes-toggle');
+  if(wwToggle){
+    wwToggle.checked=!!(d.authorizations&&d.authorizations.workspace_writes);
+    if(!wwToggle._wired){wwToggle._wired=true;wwToggle.onchange=async function(){
+      const want=this.checked;
+      try{const r=await api('/api/authorization',{enabled:want});this.checked=!!(r&&r.workspace_writes);}
+      catch(e){this.checked=!want;}
+    };}
+  }
   renderProviderCards(d);
   for(const vendor of Object.keys(d.providers||{})){
     const provider=d.providers&&d.providers[vendor]||{};

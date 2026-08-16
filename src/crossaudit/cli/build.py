@@ -24,8 +24,11 @@ import contextlib
 import io
 import os
 import re
+import time
 
 from .. import document_export, hpc, mcp
+from ..broker.routing import (
+    BROKER_SERVER_ID, broker_tool_call, build_broker_and_token, build_catalog)
 from .. import generator as gen_mod
 from .. import skills as skills_mod
 from ..config import Config, heterogeneity, load
@@ -195,6 +198,11 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     tool_results: list[dict] = []
     tool_counts: dict[str, int] = {}
     total_tool_calls = 0
+    broker_token = None                   # broker + token built lazily on 1st tool
+    broker_obj = None
+    # Read-only tools always; write tools too, but only for a project whose user
+    # authorized recoverable edits (build_catalog / build_broker_and_token decide).
+    builtin_tools = build_catalog(cfg)
     build_cycle_id: str | None = continuation_cycle or None
     termination_reason = f"build round budget spent ({cfg.max_rounds})"
     last_round = 0
@@ -219,7 +227,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     deterministic_contract=deterministic_contract,
                     attachments=attachments, compute_hosts=compute_hosts,
                     compute_results=compute_results, mcp_servers=mcp_servers,
-                    tool_results=tool_results)
+                    tool_results=tool_results, builtin_tools=builtin_tools)
                 if isinstance(outcome, gen_mod.Work):
                     work = outcome
                     break
@@ -229,6 +237,24 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                         raise ProviderDenial(
                             "the Generator exceeded the automatic MCP call limit")
                     server_id = str(outcome.request.get("server_id", ""))
+                    if server_id == BROKER_SERVER_ID:
+                        # A built-in read-only tool: route through the Tool Broker
+                        # (policy decision + evidence ledger), never MCP. The
+                        # result is fed back as untrusted context like any tool.
+                        tool_name = str(outcome.request.get("tool", "tool"))
+                        emit("capability_requested", "tool", "running built-in tool",
+                             tool_name[:200], state=RunState.WAITING_FOR_CAPABILITY)
+                        if broker_obj is None:
+                            broker_obj, broker_token = build_broker_and_token(
+                                cfg, run_id=run_id, now_epoch=time.time())
+                        result = broker_tool_call(
+                            cfg, outcome.request, broker_token,
+                            run_id=run_id, now_epoch=time.time(), broker=broker_obj)
+                        tool_results.append(result)
+                        current = _current_work(cfg)
+                        emit("generation_resumed", "generator",
+                             "resuming with tool result", state=RunState.GENERATING)
+                        continue
                     tool_counts[server_id] = tool_counts.get(server_id, 0) + 1
                     tool_name = str(outcome.request.get("tool", "MCP tool"))
                     emit("capability_requested", "tool", "calling MCP tool",
