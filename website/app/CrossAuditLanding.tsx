@@ -24,7 +24,7 @@ type ReleaseInfo = {
 };
 
 const FALLBACK_RELEASE: ReleaseInfo = {
-  tag_name: "v4.14.0",
+  tag_name: "v4.15.0",
   html_url: RELEASES,
   assets: [],
 };
