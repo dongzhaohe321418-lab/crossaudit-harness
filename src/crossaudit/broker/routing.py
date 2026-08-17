@@ -22,6 +22,7 @@ from .tools_command import command_allowlist, register_command
 from .tools_git import register_git_actions, register_git_read
 from .tools_hpc import register_hpc
 from .tools_readonly import register_readonly
+from .tools_research import register_research
 from .tools_write import register_write
 
 #: A tool request whose server_id is this is a built-in, brokered tool (not MCP).
@@ -205,6 +206,9 @@ def live_registry(cfg: Config) -> ToolRegistry:
     when a compute host is configured. Everything above Level 1 is still
     approval-gated by the broker — authorization only makes a tool *proposable*."""
     registry = register_git_read(register_readonly(ToolRegistry()))
+    # Research retrieval is read-only and Level 4 — proposable everywhere, but
+    # every call still stops at the per-call approval gate (never auto-runs).
+    register_research(registry)
     if writes_authorized(cfg):
         register_write(registry)
         register_git_actions(registry)

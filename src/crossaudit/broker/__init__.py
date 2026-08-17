@@ -26,6 +26,7 @@ from .tools_git import register_git_actions, register_git_read
 from .tools_hpc import register_hpc
 from .tools_mcp import register_mcp
 from .tools_readonly import register_readonly
+from .tools_research import register_research
 from .tools_write import register_write
 
 __all__ = ["ToolBroker", "ToolResult", "ToolRegistry", "ToolSpec", "ToolError",
@@ -57,6 +58,7 @@ def full_registry() -> ToolRegistry:
     registry = write_registry()
     register_hpc(registry)
     register_mcp(registry)
+    register_research(registry)
     register_self_improve(registry)
     return registry
 

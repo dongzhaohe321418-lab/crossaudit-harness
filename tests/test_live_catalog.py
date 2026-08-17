@@ -16,7 +16,10 @@ from crossaudit.broker.routing import (
     build_broker_and_token, build_catalog, live_catalog,
     run_commands_authorized)
 
-_READONLY = {"file_read", "search", "git_status", "doctor", "git_diff", "git_log"}
+_READONLY = {"file_read", "search", "git_status", "doctor", "git_diff", "git_log",
+             # Slice B: research retrieval is read-only and ALWAYS per-call
+             # approval-gated (L4 never auto-runs), so it is proposable by default.
+             "paper_search", "web_fetch"}
 
 
 def _names(cfg):
