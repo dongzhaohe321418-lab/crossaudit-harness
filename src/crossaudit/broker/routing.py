@@ -76,6 +76,67 @@ def evidence_view(cfg: Config) -> list[dict]:
         return []
 
 
+#: How many recent governed actions the audit panel shows (bounded so a long
+#: ledger cannot bloat a snapshot frame).
+GOVERNED_ACTIONS_LIMIT = 60
+
+
+def governed_actions(cfg: Config, *, limit: int = GOVERNED_ACTIONS_LIMIT) -> list[dict]:
+    """A human-facing projection of the evidence ledger for the audit panel.
+
+    Walks the allowlisted ``evidence_view`` (hashes / decisions / approvals /
+    statuses — never raw output) and folds each ``tool_call → decision →
+    [approval] → tool_result`` run into one action row, so the user can see every
+    governed action the agent took, under which grant, approved how, and whether
+    it ran. Most-recent first, bounded. Nothing here is raw content — only what
+    the Auditor's evidence view already exposes.
+    """
+    rows = evidence_view(cfg)
+    actions: list[dict] = []
+    cur: dict | None = None
+    for r in rows:
+        kind = r.get("kind")
+        if kind == "tool_call":
+            cur = {"seq": r.get("seq"), "tool": r.get("tool"),
+                   "args_sha256": r.get("args_sha256"), "level": None,
+                   "decision": None, "requires_approval": None,
+                   "approval": None, "status": None, "reason": None,
+                   "path": None, "pre_sha256": None, "post_sha256": None,
+                   "result_sha256": None, "bytes": None, "secret_flagged": None,
+                   "run_id": r.get("run_id")}
+            actions.append(cur)
+        elif cur is None:
+            continue
+        elif kind == "decision":
+            cur["level"] = r.get("level")
+            cur["decision"] = "allow" if r.get("allow") else "deny"
+            cur["requires_approval"] = r.get("requires_approval")
+            cur["reason"] = r.get("reason")
+            if r.get("run_id"):
+                cur["run_id"] = r.get("run_id")
+        elif kind == "approval":
+            cur["approval"] = "granted" if r.get("granted") else "denied"
+            if r.get("reason"):
+                cur["reason"] = r.get("reason")
+        elif kind == "tool_result":
+            cur["status"] = r.get("status")
+            cur["result_sha256"] = r.get("result_sha256")
+            for f in ("path", "pre_sha256", "post_sha256", "bytes", "secret_flagged"):
+                if r.get(f) is not None:
+                    cur[f] = r.get(f)
+    # A display outcome: the tool_result status if it ran, else why it did not.
+    for a in actions:
+        if a["status"]:
+            a["outcome"] = a["status"]
+        elif a["approval"] == "denied":
+            a["outcome"] = "needs_approval"
+        elif a["decision"] == "deny":
+            a["outcome"] = "refused"
+        else:
+            a["outcome"] = "recorded"
+    return list(reversed(actions))[:max(1, int(limit))]
+
+
 def _iso_utc(epoch: float) -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(epoch))
 

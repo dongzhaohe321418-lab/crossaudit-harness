@@ -166,6 +166,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .nav-item[data-view="usage"] .nav-icon{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M5 19V9M12 19V5M19 19v-7'/%3E%3C/svg%3E")}
 .nav-item[data-view="compute"] .nav-icon,.hpc-host-intro-icon{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='3'/%3E%3Cpath d='m7 9 3 3-3 3M13 15h4'/%3E%3C/svg%3E")}
 .nav-item[data-view="tools"] .nav-icon{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='3'/%3E%3Ccircle cx='17' cy='7' r='3'/%3E%3Ccircle cx='7' cy='17' r='3'/%3E%3Cpath d='M14 17h6M17 14v6'/%3E%3C/svg%3E")}
+.nav-item[data-view="evidence"] .nav-icon{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 5 6v5c0 4.5 2.8 7.9 7 10 4.2-2.1 7-5.5 7-10V6l-7-3Z'/%3E%3Cpath d='M9 12h6M12 9v6'/%3E%3C/svg%3E")}
 .project-delete,.task-delete{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6'/%3E%3C/svg%3E")}
 .project-arrow{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E")}
 [data-preview].artifact-action{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12s3.3-6 9-6 9 6 9 6-3.3 6-9 6-9-6-9-6Z'/%3E%3Ccircle cx='12' cy='12' r='2.5'/%3E%3C/svg%3E")}
@@ -591,6 +592,19 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .approval-preview .pl-add{color:var(--pass)}
 .approval-preview .pl-del{color:var(--blocked)}
 .approval-preview .pl-hunk,.approval-preview .pl-meta{color:var(--text-3)}
+/* Governed-actions (evidence) panel: the visible audit trail. */
+.gov-list{display:flex;flex-direction:column;gap:8px}
+.gov-row{padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm)}
+.gov-top{display:flex;align-items:center;gap:8px}
+.gov-top b{font-family:var(--font-mono);font-size:var(--fs-label);color:var(--text);overflow-wrap:anywhere}
+.gov-top .status{margin-left:auto;flex:none}
+.gov-level{font-size:var(--fs-caption);color:var(--text-3);border:1px solid var(--line-strong);
+  border-radius:999px;padding:1px 7px;flex:none}
+.gov-meta{margin-top:5px;font-size:var(--fs-caption);color:var(--text-2)}
+.gov-reason{margin-top:3px;font-size:var(--fs-caption);color:var(--text-3)}
+.gov-hashes{margin-top:5px;font-family:var(--font-mono);font-size:var(--fs-caption);
+  color:var(--text-3);overflow-wrap:anywhere}
+.gov-flag{margin-top:6px;font-size:var(--fs-caption);color:var(--escalated);font-weight:600}
 .approval-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
 .approval-actions button{height:30px;border-radius:var(--r-sm);border:1px solid var(--line-strong);
   background:var(--surface);color:var(--text);padding:0 12px;cursor:pointer;
@@ -2738,7 +2752,8 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <button type="button" class="nav-item" data-view="audits" aria-pressed="false" aria-label="Audit context"><span class="nav-icon" aria-hidden="true"></span>Audit</button>
       <button type="button" class="nav-item" data-view="models" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Models</button>
       <button type="button" class="nav-item" data-view="usage" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Usage</button>
-      <button type="button" class="nav-item" data-view="compute" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Compute</button></nav>
+      <button type="button" class="nav-item" data-view="compute" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Compute</button>
+      <button type="button" class="nav-item" data-view="evidence" aria-pressed="false" aria-label="Governed actions and evidence"><span class="nav-icon" aria-hidden="true"></span>Governed</button></nav>
     <div class="panel-body">
       <div class="panel-pane" id="panel-models" hidden>
         <section class="inspect-section"><div class="inspect-title">Models</div>
@@ -5223,6 +5238,34 @@ function computeView(d){
     +'<section class="compute-section"><div class="compute-section-head"><b>Remote jobs</b><span>'+c.active+' active</span></div>'
     +(jobs||'<div class="compute-empty">No jobs submitted from this project.</div>')+'</section></div>';
 }
+const GOV_LEVELS={0:'infer',1:'read',2:'write',3:'command',4:'network',5:'high-impact',6:'destructive'};
+const GOV_OUTCOME_CLASS={succeeded:'passed',failed:'blocked',refused:'blocked',needs_approval:'escalated',recorded:'running'};
+function evidenceView(d){
+  const rows=(d&&d.governed_actions)||[];
+  const short=h=>h?String(h).slice(0,10):'';
+  const body=rows.map(a=>{
+    const level=(a.level==null?'':'<span class="gov-level">L'+esc(a.level)+' '+esc(GOV_LEVELS[a.level]||'')+'</span>');
+    const meta=[];
+    if(a.decision)meta.push('decision '+esc(a.decision));
+    if(a.approval)meta.push('approval '+esc(a.approval));
+    if(a.path)meta.push('path '+esc(a.path));
+    const hashes=[];
+    if(a.pre_sha256!=null||a.post_sha256!=null)hashes.push('sha '+esc(short(a.pre_sha256)||'∅')+' → '+esc(short(a.post_sha256)));
+    else if(a.result_sha256)hashes.push('result '+esc(short(a.result_sha256)));
+    if(a.args_sha256)hashes.push('args '+esc(short(a.args_sha256)));
+    const flag=a.secret_flagged?'<div class="gov-flag">⚠ flagged: '+esc(a.secret_flagged)+'</div>':'';
+    const cls=GOV_OUTCOME_CLASS[a.outcome]||'running';
+    return '<div class="gov-row"><div class="gov-top"><b>'+esc(a.tool||'?')+'</b>'+level
+      +'<span class="status '+cls+'">'+esc(a.outcome||'')+'</span></div>'
+      +(meta.length?'<div class="gov-meta">'+meta.join(' · ')+'</div>':'')
+      +(a.reason?'<div class="gov-reason">'+esc(a.reason)+'</div>':'')
+      +(hashes.length?'<div class="gov-hashes">'+hashes.join(' · ')+'</div>':'')+flag+'</div>';
+  }).join('');
+  return '<div class="view-heading"><h2>Governed actions</h2><p>Every built-in action the agent proposed, the policy decision, your approval, and the content hashes recorded to the append-only evidence ledger.</p></div>'
+    +'<div class="compute-note"><span>ⓘ</span><div><b>This is the audit trail.</b> The broker writes each proposal, decision, approval and result to a hash-chained ledger the independent auditor reviews and the receipt binds — no raw output is shown or stored, only hashes and decisions. Hashes are truncated for display.</div></div>'
+    +(body?'<div class="gov-list">'+body+'</div>'
+      :'<div class="compute-empty">No governed actions yet. When the agent uses a built-in tool — read, write, run a command, commit, or submit compute — each proposal, decision, approval and result appears here.</div>');
+}
 function toolsView(d){
   const state=d.mcp||{servers:[],calls:[]},skills=((d.runtime_config||{}).skills||[]);
   const servers=(state.servers||[]).map(server=>{const approved=new Set(server.allowed_tools||[]);
@@ -5279,7 +5322,7 @@ function renderConversation(d){
   else thread.scrollTop = Math.min(previousTop,Math.max(0,thread.scrollHeight-thread.clientHeight));
 }
 const PANEL_TITLES={artifacts:'Files',audits:'Audit history',models:'Models',usage:'Usage',
-  compute:'Compute',tools:'Tools & Skills'};
+  compute:'Compute',tools:'Tools & Skills',evidence:'Governed actions'};
 function renderPanelTabs(){
   document.querySelectorAll('.panel-tabs .nav-item').forEach(button=>{
     const selected=button.getAttribute('data-view')===activeView;
@@ -5299,10 +5342,11 @@ function renderPanel(d){
   else if(activeView==='usage')dynamic.innerHTML=usageView(d);
   else if(activeView==='compute')dynamic.innerHTML=computeView(d);
   else if(activeView==='tools')dynamic.innerHTML=toolsView(d);
+  else if(activeView==='evidence')dynamic.innerHTML=evidenceView(d);
   renderPanelTabs();
 }
 function openPanelTab(view){
-  const allowed=['artifacts','audits','models','usage','compute','tools'];
+  const allowed=['artifacts','audits','models','usage','compute','tools','evidence'];
   activeView=allowed.includes(view)?view:'artifacts';
   if(activeView!=='compute')stopComputeTimers();
   closeRail();

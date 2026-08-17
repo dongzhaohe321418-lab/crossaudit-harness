@@ -628,6 +628,13 @@ def snapshot(cfg: Config) -> dict:
         pending_approval = INBOX.pending(_rid) if _rid else None
     except Exception:  # noqa: BLE001 -- an optional card must never break the snapshot
         pending_approval = None
+    # The governed-actions projection of the evidence ledger for the audit panel
+    # (allowlisted — hashes/decisions/approvals/statuses, never raw output).
+    try:
+        from ..broker.routing import governed_actions
+        governed = governed_actions(cfg)
+    except Exception:  # noqa: BLE001 -- the audit panel must never break the snapshot
+        governed = []
     return {
         "version": __version__,
         "project": cfg.science_repo,
@@ -641,6 +648,8 @@ def snapshot(cfg: Config) -> dict:
         # A pending per-call approval (what/why/scope/reversibility/cost), or
         # null when nothing is waiting on the user.
         "pending_approval": pending_approval,
+        # Recent governed actions (allowlisted evidence) for the audit panel.
+        "governed_actions": governed,
         # The seeded local sample flags every surface as illustrative; the UI
         # shows a persistent "not a real audit" banner whenever this is true.
         "demo": projects.is_demo_project(cfg),
