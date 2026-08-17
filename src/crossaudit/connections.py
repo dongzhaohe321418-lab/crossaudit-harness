@@ -38,7 +38,7 @@ class LoginJobs:
         row = {
             "id": uuid.uuid4().hex[:12], "provider": "openai",
             "method": "chatgpt", "status": "running",
-            "detail": "Complete sign in in your browser", "url": auth_url,
+            "detail": "Complete sign-in in your browser", "url": auth_url,
             "started": time.time(), "login_id": login_id,
         }
         with self._lock:

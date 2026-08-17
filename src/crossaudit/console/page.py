@@ -2557,7 +2557,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
     <div class="wizard-body settings-shell"><nav class="settings-nav" aria-label="Settings sections">
       <button type="button" class="settings-nav-button active" data-settings-panel="general" aria-pressed="true"><span class="settings-nav-icon general" aria-hidden="true"></span><span><b>General</b><small>Language and appearance</small></span></button>
       <button type="button" class="settings-nav-button" data-settings-panel="providers" aria-pressed="false"><span class="settings-nav-icon providers" aria-hidden="true"></span><span><b>Providers</b><small>Accounts and credentials</small></span><i id="settings-provider-count">0</i></button>
-      <button type="button" class="settings-nav-button" data-settings-panel="agent" aria-pressed="false"><span class="settings-nav-icon agent" aria-hidden="true"></span><span><b>Agent behavior</b><small>Roles and rounds</small></span></button>
+      <button type="button" class="settings-nav-button" data-settings-panel="agent" aria-pressed="false"><span class="settings-nav-icon agent" aria-hidden="true"></span><span><b>Agent behavior</b><small>Permissions and defaults</small></span></button>
       <button type="button" class="settings-nav-button" data-settings-panel="audit" aria-pressed="false"><span class="settings-nav-icon audit" aria-hidden="true"></span><span><b>Audit</b><small>Constitution and rules</small></span></button>
       <button type="button" class="settings-nav-button" data-settings-panel="files" aria-pressed="false"><span class="settings-nav-icon files" aria-hidden="true"></span><span><b>Files</b><small>Storage on this Mac</small></span></button>
       <button type="button" class="settings-nav-button" data-settings-panel="github" aria-pressed="false"><span class="settings-nav-icon github" aria-hidden="true"></span><span><b>GitHub</b><small>Delivery connection</small></span></button>
@@ -2579,11 +2579,12 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <div class="provider-note"><b>Developer access and consumer subscriptions are different products.</b> CrossAudit only offers web sign-in where the provider publishes a supported third-party inference flow. It never imports browser cookies or CLI session files.</div>
       <div id="provider-credentials"></div>
       <p class="settings-empty">Which models each role uses, and fallback routes, are chosen per project.</p>
-    </section><section class="form-section settings-pane" data-settings-pane="agent" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Agent behavior</span><h3>Default roles and revision rounds</h3><p>How the generator and independent auditor are set up, and how many rounds run before CrossAudit pauses.</p></div>
+    </section><section class="form-section settings-pane" data-settings-pane="agent" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Agent behavior</span><h3>Permissions and per-project defaults</h3><p>How the generator and independent auditor are set up, and how many rounds run before CrossAudit pauses.</p></div>
+      <div class="step-heading settings-heading" id="settings-permissions"><span>Permissions</span><h3>What the agent may do in this project</h3><p>File edits and command runs are off by default. Every grant is recorded in the audit ledger, edits are recoverable, and commands still need your per-call approval.</p></div>
       <label class="toggle-line" style="margin-bottom:12px"><input type="checkbox" id="workspace-writes-toggle"><span><b>Allow the agent to edit files in this project</b><small>The agent may create and modify files in this project's directories. Every change takes a recovery point, is recorded in the audit ledger, and is reviewed by the independent auditor. Off by default.</small></span></label>
       <label class="field" style="margin-bottom:12px"><span>Commands the agent may run</span><input id="allowed-commands-input" maxlength="500" placeholder="e.g. pytest, npm, make"><small class="field-help">Comma-separated executables the agent is allowed to run (tests, build, format). Each run needs your per-call approval and runs as an argv list — never a shell — in this project only. Empty = the agent cannot run any command.</small></label>
       <p class="settings-empty">Roles, reasoning effort, and the revision limit are set per project, not as global defaults yet.</p>
-      <div class="settings-jump"><button type="button" class="secondary" data-settings-open="runtime">Open project controls</button><small class="settings-empty" data-scope-note hidden></small></div>
+      <div class="settings-jump"><button type="button" class="secondary" id="settings-open-runtime" data-settings-open="runtime">Open project controls</button><small class="settings-empty" data-scope-note hidden></small></div>
     </section><section class="form-section settings-pane" data-settings-pane="audit" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Audit</span><h3>Constitution and audit rules</h3><p>The rules that govern every audit, and the guarantees CrossAudit always enforces.</p></div>
       <p class="settings-hint">Admission and source independence are always-on guarantees, not adjustable settings.</p>
       <p class="settings-empty">The constitution is edited inside each project. Evidence retention isn't configurable here yet.</p>
@@ -2738,7 +2739,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
     <button class="icon-button" id="current-project-pin" aria-label="Pin project" title="Pin project">☆</button>
     <span class="spacer"></span>
     <div class="live-pill"><span class="live-dot" id="livedot"></span><span id="conn-text">connecting</span></div>
-    <button class="icon-button" id="palette-open" aria-label="Command palette" title="Command palette">⌘</button>
+    <button class="icon-button" id="palette-open" aria-label="Command palette" title="Command palette · ⌘K">⌘</button>
     <button class="icon-button" id="locale-toggle" aria-label="Switch to Chinese" title="Switch language">中文</button>
     <button class="icon-button" id="settings-open" aria-label="Settings" title="Settings">⚙</button>
     <button class="icon-button" id="theme-toggle" aria-label="Switch to dark theme" title="Toggle theme">◐</button>
@@ -2759,7 +2760,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
 
   <aside class="sidebar" id="sidebar-panel" aria-label="Chats">
     <div class="rail-search"><span class="rail-search-icon" aria-hidden="true"></span>
-      <input id="rail-search" placeholder="Search chats" aria-label="Search chats"><kbd>⌘K</kbd></div>
+      <input id="rail-search" placeholder="Search chats" aria-label="Search chats"></div>
     <button class="new-task" id="new-task"><span aria-hidden="true">＋</span>New chat<span>⌘N</span></button>
     <div class="task-list" id="task-list"></div>
     <div class="sidebar-foot"><b id="side-project">…</b><span id="tier-label">local controller</span></div>
@@ -2862,7 +2863,7 @@ const ZH={
   "Usage and budgets are tracked per project. Export isn't available here yet.":"用量与预算按项目跟踪。此处暂不支持导出。",
   "API keys are stored as write-only macOS Keychain items and are never shown again.":"API 密钥以只写方式存入 macOS 钥匙串，且不会再次显示。",
   "Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.":"供应商路由按项目设置。留存、脱敏与日志控制此处暂不可配置。",
-  "Logs, support bundles, and per-subsystem reset aren't available here yet.":"日志、支持包与分子系统重置此处暂不可用。",
+  "Logs, support bundles, and per-subsystem reset aren't available here yet.":"日志、支持包与按子系统重置此处暂不可用。",
   "No developer settings, experiments, local endpoints, or debug logging are configurable here yet.":"暂无可配置的开发者设置、实验、本地端点或调试日志。",
   "Follow this Mac's light or dark setting.":"跟随此 Mac 的浅色或深色设置。",
   "Appearance":"外观","Light":"浅色","Dark":"深色","Match system":"跟随系统","Language":"语言",
@@ -2890,7 +2891,6 @@ const ZH={
   "A user-facing review that must be accurate, balanced, and delivered as one clear document.":"一份面向用户、准确平衡且以单一清晰文档交付的评审。",
   "Automatic revision limit":"自动修订轮数上限","1 - quick stop":"1 - 快速停止","3 - recommended":"3 - 推荐",
   "5 - persistent":"5 - 持续修订","10 - maximum":"10 - 最大值",
-  "Up to 3 generator → auditor rounds, then the task pauses for you. It never auto-passes.":"最多进行 3 轮生成者 → 审计者循环，随后暂停并等待你决定；绝不会自动通过。",
   "Local workspace folder":"本地工作区文件夹","Local project folder":"本地项目文件夹","Choose folder…":"选择文件夹…","Selected local workspace":"已选择的本地工作区","Selected local project folder":"已选择的本地项目文件夹",
   "Choose where this project's local folder will be created.":"选择创建该项目本地文件夹的位置。","Choose the exact folder CrossAudit should use. The project name will not create another subfolder.":"请选择 CrossAudit 直接使用的文件夹；项目名称不会再创建子文件夹。",
   "Independent roles":"独立角色","Generator":"生成者","Independent auditor":"独立审计者","Provider":"供应商","Connection":"连接方式",
@@ -2920,18 +2920,18 @@ const ZH={
   "＋ Add fallback":"＋ 添加备用路由","Attempts per route":"每条路由尝试次数","Initial retry delay (seconds)":"首次重试延迟（秒）",
   "Maximum retry delay (seconds)":"最大重试延迟（秒）","Honor Retry-After up to (seconds)":"遵循 Retry-After 的最大秒数",
   "Open circuit after failures":"连续失败后打开熔断器","Circuit cooldown (seconds)":"熔断冷却时间（秒）",
-  "Retries stay inside one provider call and never consume Generator → Auditor revision rounds. A fallback is used only after its earlier route fails.":"重试发生在单次供应商调用内部，不消耗生成者 → 审计者修订轮次；只有前序路由失败后才会使用备用路由。",
+  "Retries stay inside one provider call and do not consume Generator → Auditor revision rounds. Fallback routes run only after the route before them fails.":"重试发生在单次供应商调用内部，不消耗生成者 → 审计者修订轮次；只有前一条路由失败后才会使用备用路由。",
   "Usage guardrails":"用量保护线","Daily token warning":"每日 Token 预警","Daily token hard limit":"每日 Token 硬上限",
   "Monthly API-value warning (USD)":"每月 API 价值预警（美元）","Monthly API-value hard limit (USD)":"每月 API 价值硬上限（美元）",
   "No warning":"不预警","No limit":"不限制","Limits are local safeguards; provider billing remains authoritative.":"这些上限是本地保护措施，最终计费以供应商为准。",
   "No fallback. A provider failure pauses safely for you.":"未配置备用路由。供应商失败时会安全暂停并等待你处理。",
   "Project controls updated.":"项目控制已更新。","Recovery routes, usage guardrails, models and loop limits apply to the next provider call.":"恢复路由、用量保护线、模型和循环上限将在下一次供应商调用时生效。",
   "The selected effort is sent on the next provider request.":"所选推理强度会用于下一次供应商请求。",
-  "After this many generator → auditor rounds, the task pauses for your explicit decision. It never auto-passes.":"达到该生成者 → 审计者轮数后，任务会暂停并等待你的明确决定，绝不会自动通过。",
+  "After this many generator → auditor rounds, the task pauses and explains what needs your decision. It never auto-passes.":"达到该生成者 → 审计者轮数后，任务会暂停并说明需要你决定的事项，绝不会自动通过。",
   "Generator guidance":"生成者指导","Edit guidance":"编辑指导","Create new guidance…":"创建新指导…","Name":"名称",
   "Applies to paths (optional)":"适用路径（可选）","Comma-separated project-relative prefixes. Leave blank to apply on every task.":"以逗号分隔的项目相对路径前缀。留空则适用于所有任务。",
   "Instructions for the generator":"给生成者的说明","Describe the tone, output shape, conventions or checklist this project should follow.":"描述此项目应遵循的语气、输出形式、约定或检查清单。",
-  "Guidance changes how the generator works. It never changes the Constitution or what the independent auditor enforces.":"指导只改变生成者的工作方式，不会修改 Constitution 或独立审计者执行的标准。",
+  "Guidance changes how the generator works. It never changes the Constitution or what the independent auditor enforces.":"指导只改变生成者的工作方式，不会修改审计章程或独立审计者执行的标准。",
   "Save guidance":"保存指导","Safe handoff.":"安全交接。",
   "A running audit keeps the models and controls it started with. These changes apply to the next call.":"运行中的审计会保持启动时的模型与控制设置；这些更改从下一次调用生效。",
   "Models and loop limits update crossaudit.yml; generator guidance is versioned in the project. A running audit keeps the controls it started with.":"模型和循环上限会更新 crossaudit.yml；生成者指导在项目中进行版本控制。运行中的审计保持启动时的控制设置。",
@@ -2967,7 +2967,7 @@ const ZH={
   "No audit findings were created because the task paused at a usage limit before producing a reviewable result.":"任务在产出可审查结果前因达到用量上限而暂停，因此没有生成审计问题。",
   "Raise or clear the usage limit and rerun the original task, or stop this task.":"提高或清除用量上限并重新运行原任务，或停止此任务。",
   "Adjust the usage limit in Project controls, then rerun the original task.":"在项目控制中调整用量上限，然后重新运行原任务。",
-  "Open folder":"打开文件夹","Dismiss":"移除此提示","Project creation stopped":"项目创建已暂停",
+  "Open folder":"打开文件夹","Dismiss":"忽略","Project creation stopped":"项目创建已暂停",
   "Review local changes before setup":"设置前请检查本地改动","Checking the project again":"正在重新检查项目",
   "CrossAudit settings":"CrossAudit 设置","Check this Mac, repair setup issues, and connect model providers without using Terminal.":"检查此 Mac、修复设置问题并连接模型供应商，全程无需终端。",
   "Manage this Mac and model connections without using Terminal.":"管理此 Mac 与模型连接，全程无需终端。","Settings sections":"设置分类",
@@ -2988,7 +2988,7 @@ const ZH={
   "Connect a workstation or Slurm cluster through your existing SSH setup.":"通过现有 SSH 配置连接工作站或 Slurm 集群。",
   "CrossAudit does not install anything on the cluster.":"CrossAudit 不会在集群上安装任何内容。",
   "It uses OpenSSH config, keys, ssh-agent and ProxyJump already configured on this Mac, then runs a read-only capability check.":"它使用此 Mac 已配置的 OpenSSH、密钥、ssh-agent 和 ProxyJump，然后执行只读能力检查。",
-  "Connection":"连接","Name the SSH target and choose a shared work directory for durable remote jobs.":"指定 SSH 目标，并为可持续运行的远程任务选择共享工作目录。",
+  "Name the SSH target and choose a shared work directory for durable remote jobs.":"指定 SSH 目标，并为可持续运行的远程任务选择共享工作目录。",
   "Alias from ~/.ssh/config or a reachable hostname.":"~/.ssh/config 中的别名或可访问的主机名。","For Slurm, login and compute nodes must both see this path.":"使用 Slurm 时，登录节点和计算节点必须都能访问此路径。",
   "Parallel jobs":"并行任务数","Project limit":"项目上限","Cluster notes":"集群说明","optional":"可选","Approved partitions, module loads, environment activation, or account policy.":"获准分区、模块加载、环境激活或账户政策。",
   "Generator access":"生成者权限","Manual job submission is always available. Automatic access is optional and constrained by hard ceilings.":"始终可以手动提交任务；自动权限为可选项，并受硬性上限约束。",
@@ -3014,13 +3014,13 @@ const ZH={
   "Job script":"任务脚本","I approve this remote execution":"我批准此次远程执行",
   "The script can access anything my account can read or write on this host. Closing CrossAudit will not stop it.":"脚本可访问我的账户在该主机上有权读写的所有内容。关闭 CrossAudit 不会停止它。","Submit job":"提交任务",
   "Tasks":"任务","New chat":"新对话","＋ New chat":"＋ 新对话","Workspace views":"工作区视图","Chat":"对话","Files":"文件","More":"更多",
-  "Audit history":"审计记录","Usage":"用量","Remote compute":"远程计算","Tools & Skills":"工具与技能",
+  "Audit history":"审计记录","Usage":"用量","Tools & Skills":"工具与技能",
   "Back to projects":"返回项目列表","Pin project":"置顶项目","Settings":"设置","Switch theme":"切换主题","Toggle audit context":"切换审计上下文","Open navigation":"打开导航","Close open panel":"关闭面板",
-  "You":"你","Auditor":"审计者","New task":"新任务","Project controls":"项目控制",
+  "You":"你","Auditor":"审计者","New task":"新任务",
   "Message recipient":"消息接收方","To":"发送给","Auto":"自动","@ Generator":"@ 生成者","@ Auditor":"@ 审计者","Add files":"添加文件","＋ Add files":"＋ 添加文件",
   "Message the group, or @ someone…":"给群组发送消息，或 @ 某一方…","Run task":"运行任务","Generator → Auditor":"生成者 → 审计者","Auto-planning":"自动规划","Generator infers focus, format, tone, and structure unless you specify them.":"除非你明确指定，否则生成者会自动判断重点、格式、语气和结构。","Enter to send · Shift+Enter for new line":"Enter 发送 · Shift+Enter 换行",
   "What should CrossAudit work on?":"希望 CrossAudit 完成什么？","Describe what you need or add files. CrossAudit will do the work and independently check the result before showing it here.":"描述你的需求或添加文件。CrossAudit 会完成工作，并在结果显示到这里之前进行独立检查。",
-  "Audit context":"审计上下文","Close audit context":"关闭审计上下文","Models":"模型","Loop parameters":"循环参数","Maximum rounds":"最大轮数","Current round":"当前轮次","Constitution":"审计章程","Admission tier":"准入级别","Deterministic checks":"确定性检查","Ledger":"账本","Needs attention":"需要处理",
+  "Audit context":"审计上下文","Close audit context":"关闭审计上下文","Loop parameters":"循环参数","Maximum rounds":"最大轮数","Current round":"当前轮次","Constitution":"审计章程","Admission tier":"准入级别","Deterministic checks":"确定性检查","Ledger":"账本",
   "Drop files to add them":"拖放文件以添加","No CrossAudit file-count or file-size quota. Available storage, filesystem limits and provider context still apply.":"CrossAudit 不限制文件数量或大小，但仍受可用存储、文件系统和供应商上下文限制。",
   "Rendered locally and audited from the final binary":"在本地渲染，并从最终二进制文件回读审计","File preview":"文件预览","Preparing preview…":"正在准备预览…","Loading audited deliverable…":"正在加载已审计的交付文件…","Download":"下载","Close preview":"关闭预览","The complete file remains available to download.":"完整文件始终可供下载。","Preview unavailable for this file type. Download the complete file to open it in a compatible app.":"此文件类型无法安全预览。请下载完整文件并使用兼容应用打开。","The reading preview is shortened for responsiveness; the download is complete.":"为保证界面流畅，阅读预览已截短；下载文件是完整的。","Preview is reconstructed from the final audited DOCX binary.":"预览内容从最终通过审计的 DOCX 二进制文件中重建。","HTML preview is isolated from the app and cannot access the network.":"HTML 预览与应用隔离，且无法访问网络。",
   "Search preview":"搜索预览","Search in preview":"在预览中搜索","Previous match":"上一个匹配","Next match":"下一个匹配",
@@ -3053,12 +3053,12 @@ const ZH={
   "xAI's inference API supports API credentials (and documented OAuth tokens for approved integrations), but an X consumer subscription is not automatically an inference entitlement. API key is enabled here.":"xAI 推理 API 支持 API 凭据及获准集成的 OAuth token，但 X 消费者订阅不会自动获得推理权限。请在此使用 API key。",
   "New API key ·":"新 API key ·","Get key ↗":"获取 key ↗","API docs ↗":"API 文档 ↗","Leave blank to keep the saved key":"留空以保留已保存的 key",
   "Remove":"移除","Delete saved key":"删除已保存的 key","Official Codex sign-in.":"官方 Codex 登录。","Connect":"连接","Try again":"重试","Waiting…":"等待中…","Starting…":"正在启动…",
-  "Environment has not been checked":"尚未检查环境","Checking this Mac…":"正在检查此 Mac…","Ready":"就绪","Missing":"缺失","Outdated":"版本过旧","Checking":"检查中",
+  "Environment has not been checked":"尚未检查环境","Checking this Mac…":"正在检查此 Mac…","Ready":"就绪","Missing":"缺失","Outdated":"版本过旧",
   "Embedded Python":"内置 Python","Remote compute client":"远程计算客户端","ChatGPT connection runtime":"ChatGPT 连接运行时",
   "Secure network certificates":"安全网络证书","Project Git ledger":"项目 Git 账本","Git author identity":"Git 作者身份",
   "Add a name and email before creating commits.":"创建提交前请添加姓名和邮箱。","Git author name":"Git 作者姓名","Git author email":"Git 作者邮箱",
   "Save for this project":"保存到此项目","Project configuration":"项目配置","Audit rules":"审计规则","CrossAudit application":"CrossAudit 应用",
-  "Everything required is ready":"所有必需项均已就绪","source":"源码构建","Unknown":"未知","Warning":"警告","Waiting":"等待中",
+  "source":"源码构建","Unknown":"未知","Warning":"警告","Waiting":"等待中",
   "Install Git tools":"安装 Git 工具","Update Git tools":"更新 Git 工具","Open SSH setup guide":"打开 SSH 设置指南",
   "Reinstall CrossAudit":"重新安装 CrossAudit","Download latest":"下载最新版","Download update":"下载更新","Open Software Update":"打开软件更新",
   "Choose another folder":"选择其他文件夹","Initialize safely":"安全初始化","Run again":"重新运行",
@@ -3075,7 +3075,6 @@ const ZH={
   "Review why the loop stopped, then either give concrete guidance for one more round or stop the task.":"检查循环停止原因，然后提供具体指导再进行一轮，或停止任务。",
   "no model audit ran, so the result cannot pass":"没有运行模型审计，因此结果无法通过","the automatic audit loop stopped":"自动审计循环已停止"
   ,"/ project folder":"/ 项目文件夹","local controller":"本地控制器","No chats yet":"尚无对话",
-  "What should CrossAudit work on?":"CrossAudit 应该处理什么？",
   "Describe a task in plain language. A generator will make the change, deterministic checks will run, and an independent model will audit every round before admission.":"用自然语言描述任务。生成者完成修改，系统运行确定性检查，并由独立模型在准入前审计每一轮。",
   "Working":"处理中","The result will appear here when it is ready.":"结果就绪后会显示在这里。",
   "The delivered files passed the independent review.":"交付文件已通过独立审查。","Needs revision":"需要修订",
@@ -3084,19 +3083,26 @@ const ZH={
   "CrossAudit needs a decision before it can continue.":"CrossAudit 需要你作出决定才能继续。","Stopped":"已停止",
   "The task did not complete.":"任务未完成。","View audit details":"查看审计详情",
   "conversational reply · not audited":"对话回复 · 未经审计",
+  "Permissions":"权限","What the agent may do in this project":"智能体在此项目中可以做什么",
+  "File edits and command runs are off by default. Every grant is recorded in the audit ledger, edits are recoverable, and commands still need your per-call approval.":"文件编辑与命令运行默认关闭。每次授权都会记入审计账本，编辑可恢复，命令仍需你逐次批准。",
+  "Allow the agent to edit files in this project":"允许智能体编辑此项目中的文件",
+  "The agent may create and modify files in this project's directories. Every change takes a recovery point, is recorded in the audit ledger, and is reviewed by the independent auditor. Off by default.":"智能体可以在此项目目录内创建和修改文件。每次改动都会先建立恢复点、记入审计账本，并由独立审计者审查。默认关闭。",
+  "Commands the agent may run":"智能体可运行的命令",
+  "Comma-separated executables the agent is allowed to run (tests, build, format). Each run needs your per-call approval and runs as an argv list — never a shell — in this project only. Empty = the agent cannot run any command.":"以逗号分隔的可执行程序清单（测试、构建、格式化）。每次运行都需你逐次批准，并以参数列表方式执行——绝不经过 shell——仅限本项目。留空 = 智能体不能运行任何命令。",
+  "e.g. pytest, npm, make":"例如 pytest、npm、make",
   "Goal & plan":"目标与计划","Goal":"目标","Desired outputs":"预期产出","Constraints":"约束",
   "Success criteria":"成功标准","Plan v1 · the audited loop":"计划 v1 · 受审计的循环","Rounds":"轮次",
   "The stated goal and the audited plan for the current task.":"当前任务的既定目标与受审计的执行计划。",
   "No plan yet — the plan appears when a task starts.":"还没有计划——任务开始后计划会显示在这里。",
-  "Derived from the supervised loop this run actually executes — generator-authored step plans arrive in a later slice.":"由本次运行真实执行的受监督循环推导——生成端自作的分步计划将在后续版本提供。",
+  "Derived from the supervised loop this run actually executes — generator-authored step plans arrive in a later slice.":"由本次运行真实执行的受监督循环推导——生成者自行编写的分步计划将在后续版本提供。",
   "The structured goal record is not available for this run.":"本次运行没有可用的结构化目标记录。",
-  "authorized (recoverable)":"已授权（可恢复）","read-only":"只读","allowlisted":"已允许清单",
+  "authorized (recoverable)":"已授权（可恢复）","read-only":"只读","allowlisted":"已列入允许清单",
   "not authorized":"未授权","configured":"已配置","not configured":"未配置",
   "direct reply · no project files shared":"直接回复 · 未共享项目文件",
-  "Answered.":"已回答。","Admitted.":"已准入。","Not admitted.":"未获准入。","Try again":"重试",
+  "Answered.":"已回答。","Admitted.":"已准入。","Not admitted.":"未获准入。",
   "No work was lost — the report, receipt and ledger are unchanged, and nothing was consumed.":"没有丢失任何工作——报告、收据与账本均未改动，也未消费任何结果。",
   "What would make it admissible":"怎样才能获得准入",
-  "connect a real auditor provider and run the task again — a replayed audit can never admit":"连接真实的审计端 Provider 并重新运行任务——回放的审计永远无法准入",
+  "connect a real auditor provider and run the task again — a replayed audit can never admit":"连接真实的审计者供应商并重新运行任务——回放的审计永远无法准入",
   "give the two roles distinct first-party vendors so independence is attestable":"为两个角色配置不同的第一方厂商，使独立性可被证明",
   "only a PASS can be admitted":"只有 PASS 结果才能准入",
   "run the task again so a fresh receipt is recorded for this cycle":"重新运行任务，让本周期记录一份新的收据",
@@ -3107,14 +3113,14 @@ const ZH={
   "Audit evidence":"审计证据","No audit evidence yet.":"尚无审计证据。","Token usage":"Token 用量",
   "Project-level model consumption, updated with every completion.":"项目级模型用量，每次完成调用时更新。",
   "Today":"今日","This month":"本月","Model calls":"模型调用","Cached tokens":"缓存 Token","Last 7 days":"最近 7 天",
-  "all roles":"全部角色","By role":"按角色","this month":"本月","Model":"模型","Tokens":"Token","Cached":"已缓存","Source":"来源",
+  "all roles":"全部角色","By role":"按角色","this month":"本月","Tokens":"Token","Cached":"已缓存","Source":"来源",
   "Recent calls":"最近调用","counts only · no prompt content":"仅统计数量 · 不包含提示词内容","No model calls this month.":"本月尚无模型调用。",
   "Usage will appear after the first model completion.":"第一次模型调用完成后会显示用量。","No calls recorded yet.":"尚无调用记录。",
-  "Reported":"已报告","Estimated":"估算","Unpriced":"未计价","Remote compute":"远程计算",
+  "Reported":"已报告","Estimated":"估算","Unpriced":"未计价",
   "SSH workstations and Slurm clusters, detached from this Mac.":"与此 Mac 解耦运行的 SSH 工作站和 Slurm 集群。","SSH workstations and Slurm clusters for manual jobs or Generator calculations.":"用于手动作业或生成者计算的 SSH 工作站和 Slurm 集群。",
   "Remote-owned execution.":"远程主机负责执行。","＋ Add SSH host":"＋ 添加 SSH 主机","Refresh now":"立即刷新",
   "CrossAudit stores only host aliases and job identifiers. Keys remain with OpenSSH; remote work continues if the app closes, the Mac sleeps, or the network drops. A host marked as a Generator tool can receive model-authored jobs automatically within its saved policy.":"CrossAudit 只保存主机别名和任务标识；密钥始终由 OpenSSH 管理。即使应用关闭、Mac 休眠或网络中断，远程任务也会继续运行。标记为生成者工具的主机可在已保存政策范围内自动接收模型编写的任务。",
-  "Remote compute":"远程计算","Generator tool":"生成者工具","Generator calculations":"生成者计算",
+  "Generator tool":"生成者工具","Generator calculations":"生成者计算",
   "Compute hosts":"计算主机","Remote jobs":"远程任务","No SSH compute hosts yet.":"尚未添加 SSH 计算主机。",
   "No jobs submitted from this project.":"此项目尚未提交任务。","Probe":"探测","Run job":"运行任务","Live logs":"实时日志","Outputs":"输出",
   "Cancel job":"取消任务","Remote outputs":"远程输出","Updating…":"正在更新…","No remote output files found.":"未找到远程输出文件。",
@@ -3138,10 +3144,10 @@ const ZH={
   "Needs your decision":"需要你决定","Stopping":"正在停止",
   "Audit":"审计","Compute":"计算","Context tabs":"上下文标签","Context panel":"上下文面板",
   "Close context panel":"关闭上下文面板","Change models":"更换模型","Search chats":"搜索对话",
-  "Command palette":"命令面板","Type a command or search…":"输入命令或搜索…","Actions":"操作",
+  "Command palette":"命令面板","Command palette · ⌘K":"命令面板 · ⌘K","Type a command or search…":"输入命令或搜索…","Actions":"操作",
   "Chats":"对话","No matching results.":"没有匹配的结果。","All projects":"全部项目",
   "Open settings":"打开设置","Run Doctor":"运行环境诊断","Switch language":"切换语言",
-  "Stop current task":"停止当前任务","Review":"查看","Goal":"目标","Attempted":"已尝试",
+  "Stop current task":"停止当前任务","Review":"查看","Attempted":"已尝试",
   "Blocked on":"阻塞在","Recommendation":"建议","Suggested":"建议选项",
   "The task this conversation asked for.":"此对话所要求完成的任务。",
   "Independent review":"独立审查","Independent auditor approved the result":"独立审计者已批准该结果",
@@ -3153,12 +3159,12 @@ const ZH={
   "One model does the work. A different model checks it, independently. Everything stays on your Mac — nothing is sent anywhere you didn't choose.":"一个模型完成工作，另一个模型独立检查它。一切都保留在你的 Mac 上——绝不会发送到任何你未选择的地方。",
   "Create your first project":"创建你的第一个项目","Open an existing project":"打开已有项目","Import a folder":"导入文件夹",
   "Explore a local demo":"体验本地演示","— no credentials needed":"— 无需凭据",
-  "System readiness":"系统就绪检查","Re-check the system":"重新检查系统","Re-check":"重新检查","Checking…":"正在检查…",
-  "Checking your Mac…":"正在检查你的 Mac…","Checking required software…":"正在检查所需软件…",
+  "System readiness":"系统就绪检查","Re-check the system":"重新检查系统","Re-check":"重新检查",
+  "Checking your Mac…":"正在检查你的 Mac…",
   "Everything required is ready":"所有必需项都已就绪","Environment ready":"环境已就绪","Environment status unavailable":"无法获取环境状态",
   "Environment status is unavailable — the check could not run. You can continue and re-check later.":"无法获取环境状态——检查未能运行。你可以继续，稍后再重新检查。",
   "Doctor unavailable":"诊断不可用","No checks to show yet. Re-check to inspect this Mac.":"暂无可显示的检查项。重新检查以检测此 Mac。",
-  "Ready":"就绪","Needs attention":"需要处理","Optional enhancement":"可选增强","Optional":"可选",
+  "Needs attention":"需要处理","Optional enhancement":"可选增强","Optional":"可选",
   "Fix automatically":"自动修复","Learn how →":"了解方法 →","Technical detail":"技术细节","Working…":"处理中…",
   "Preflight — probing environment":"预检——正在探测环境","You can re-run these checks any time from Settings.":"你可以随时在设置中重新运行这些检查。",
   "SAMPLE":"示例","Sample demonstration — not a real audit.":"示例演示——并非真实审计。",
@@ -3178,25 +3184,96 @@ const ZH={
   "We picked a recommended pair on two different providers. You can change either one.":"我们在两家不同的供应商上挑选了推荐搭配。你可以随时更换其中任意一个。",
   "Does the work.":"负责完成工作。","Independently checks the work — must run on a different provider.":"独立检查工作——必须运行在不同的供应商上。",
   "Generator provider":"生成者供应商","Generator model":"生成者模型","Auditor provider":"审计者供应商","Auditor model":"审计者模型",
-  "context":"上下文","Vision":"视觉","Structured output":"结构化输出","Reasoning":"推理","/ Mtok":"/ 百万 tok","Price not published":"暂无公开价格","Keychain key":"钥匙串密钥",
+  "context":"上下文","Vision":"视觉","Structured output":"结构化输出","Reasoning":"推理","/ Mtok":"/ 百万 Token","Price not published":"暂无公开价格","Keychain key":"钥匙串密钥",
   "Independent — your auditor runs on a different provider than your generator.":"相互独立——你的审计者运行在与生成者不同的供应商上。",
   "Connect at least two different providers on the previous step to form an independent Generator / Auditor pair.":"请在上一步至少连接两家不同的供应商，以组成独立的生成者 / 审计者搭配。",
   "Generator and auditor must run on different providers. Independent review is the core of the protocol and cannot be turned off.":"生成者和审计者必须运行在不同的供应商上。独立审查是本协议的核心，无法关闭。",
   "You can swap either model later without losing history.":"你之后可以更换任一模型而不丢失历史记录。",
   "Start using CrossAudit":"开始使用 CrossAudit","Paste your API key":"粘贴你的 API key",
-  "Paste a new key to replace the saved one":"粘贴新密钥以替换已保存的密钥","Starting…":"正在启动…",
+  "Paste a new key to replace the saved one":"粘贴新密钥以替换已保存的密钥",
   "Same provider — independent review is not possible.":"同一家供应商——无法进行独立审查。",
   "Your provider setup is saved. Create your first project to put the recommended pair to work.":"你的供应商设置已保存。创建你的第一个项目，即可让推荐搭配开始工作。"
+  ,"Governed":"治理","Governed actions and evidence":"受治理操作与证据","Plan":"计划","Goal and plan":"目标与计划","Governed actions":"受治理操作"
+  ,"Every built-in action the agent proposed, the policy decision, your approval, and the content hashes recorded to the append-only evidence ledger.":"智能体提议的每个内置操作、策略决定、你的批准，以及写入只增证据账本的内容哈希。"
+  ,"This is the audit trail.":"这里是审计轨迹。"
+  ,"The broker writes each proposal, decision, approval and result to a hash-chained ledger the independent auditor reviews and the receipt binds — no raw output is shown or stored, only hashes and decisions. Hashes are truncated for display.":"代理会把每个提议、决定、批准和结果写入哈希链账本，由独立审计者审查并由收据绑定——不显示或存储任何原始输出，只保留哈希与决定。哈希已截断显示。"
+  ,"No governed actions yet. When the agent uses a built-in tool — read, write, run a command, commit, or submit compute — each proposal, decision, approval and result appears here.":"尚无受治理操作。当智能体使用内置工具——读取、写入、运行命令、提交或提交计算任务——每个提议、决定、批准和结果都会显示在这里。"
+  ,"succeeded":"成功","refused":"已拒绝","needs_approval":"待批准","recorded":"已记录"
+  ,"Usage is below the configured thresholds.":"用量低于已配置的阈值。","API-value estimate":"API 价值估算","read + write this month":"本月读取 + 写入","≈ value":"≈ 价值","Audits":"审计","warning":"预警","current":"当前"
+  ,"Scope":"范围","project":"项目","Writes":"写入","Commands":"命令","No gates to show.":"暂无可显示的关卡。","No checks configured":"未配置检查项","workstation":"工作站"
+  ,"Current gate":"当前关卡","Stopped at":"停止于","Next gate":"下一关卡","Completed gate":"已完成关卡","Live activity":"实时活动","Run activity":"运行活动"
+  ,"Live generator and auditor events appear here while a task runs. The gate states above are reconstructed from the Git ledger.":"任务运行时，生成者与审计者的实时事件会显示在这里。上方关卡状态由 Git 账本重建。"
+  ,"Stop":"停止","Stopping…":"正在停止…","Ledger snapshot":"账本快照","Ledger-backed state":"账本支撑的状态","Controller":"控制器","Result":"结果","Round":"第","Audit gates reached":"已到达的审计关卡"
+  ,"passed":"已通过","blocked":"已阻止","escalated":"已升级","consumed":"已准入","interrupted":"已中断","setting_up":"正在设置","setup_failed":"设置失败"
+  ,"PASS":"通过","PASSED":"已通过","BLOCKED":"已阻止","ESCALATED":"已升级","CONSUMED":"已准入","DCL_ONLY":"仅确定性检查"
+  ,"To Auditor":"发给审计者","To Generator":"发给生成者","@ auditor":"@ 审计者","@ generator":"@ 生成者"
+  ,"No findings. The audited increment passed.":"未发现问题。该受审增量已通过。","No structured findings were recorded.":"未记录结构化问题。"
+  ,"Allow once":"仅允许一次","Allow this run":"允许本次运行","Allow this project":"允许此项目","Deny":"拒绝","Approval needed":"需要你批准","Paths":"路径","Host":"主机","Est. cost":"预计成本"
+  ,"no change — reads only":"无更改——仅读取","reversible — a recovery point is saved before the edit":"可恢复——编辑前会先保存恢复点","runs a local command; effects are not automatically undone":"运行本地命令；效果不会自动撤销"
+  ,"reaches the network; may have off-machine effects":"会访问网络；可能产生机外影响","high-impact — not easily reversible":"高影响——不易恢复","destructive / forbidden":"破坏性 / 禁止"
+  ,"Admission result":"准入结果","Admission explanation":"准入说明","local":"本地","remote":"远程","paired":"配对","enforced":"强制"
+  ,"self-review; the history is yours to rewrite":"自我审查；历史可由你随意改写","history out of unilateral control":"历史不受单方控制","privilege separation between the two agents":"两个智能体之间的权限隔离"
+  ,"the verdict is published and checkable, but nothing is refused":"判定已发布且可核查，但不会拒绝任何内容","a failed audit refuses the merge":"审计未通过将拒绝合并"
+  ,"Checks":"检查","Verdict":"判定","Admission":"准入","generator":"生成者","auditor":"审计者"
+  ,"the generator writes and commits":"生成者编写并提交","deterministic layer, no model involved":"确定性检查层，不涉及模型","a different vendor reads the commit":"由另一家供应商读取该提交"
+  ,"code decides; the checks dominate":"由代码判定；检查结果优先","a receipt is consumed, once":"收据只消费一次","clean":"无问题","hard failure — final, no model may waive it":"硬性失败——最终结论，任何模型都不能豁免"
+  ,"no model ran — cannot be PASS":"未运行模型——不能判为 PASS","receipt consumed":"收据已消费","waiting: verify the receipt to admit":"等待中：验证收据后即可准入","not reached":"未到达"
+  ,"writing":"正在撰写","reviewing the commit":"正在审查提交","findings returned to the generator":"问题已返回给生成者","cancelling":"正在取消","dismissed":"已忽略","running built-in tool":"正在运行内置工具"
+  ,"resuming with tool result":"携工具结果继续","resuming with compute result":"携计算结果继续","requesting remote calculation":"正在请求远程计算","note":"备注","document export refused":"文档导出被拒绝"
+  ,"the round could not be committed":"该轮次无法提交","rendering final document locally":"正在本地渲染最终文档","the round reproduced the previous one; nothing new to audit":"本轮与上一轮结果相同；没有新的内容可审计"
+  ,"the loop cannot settle this itself":"循环无法自行解决此问题","this stop is waiting for a human":"此次停止正在等待人工处理"
+  ,"Task started.":"任务已开始。","The result will appear in this conversation.":"结果会显示在此对话中。","Needs clarification.":"需要澄清。","Refused.":"已拒绝。","Message delivered.":"消息已送达。","Sending your files…":"正在发送文件…"
+  ,"Pinned":"已置顶","Recent":"最近","Upload failed":"上传失败","Uploaded":"已上传"
+  ,"Stored in chunks without an app quota. Model inspection depends on file support and context.":"分块存储，应用不设配额。模型能否读取取决于文件支持与上下文。"
+  ,"polling":"轮询中","offline":"离线","reconnecting":"正在重连"
+  ,"Interrupted · open to review and run again":"已中断 · 打开以检查并重新运行","Fix & retry":"修复并重试","GitHub setup stopped":"GitHub 设置已中断","GitHub paired":"已配对 GitHub","Local":"本地"
+  ,"Project ready":"项目已就绪","Setup needs attention":"设置需要处理","Review the settings and retry.":"请检查设置后重试。","Edit repository names":"编辑仓库名称"
+  ,"Could not pin project.":"无法置顶项目。","Could not create chat.":"无法创建对话。","Unpin project":"取消置顶项目","Live project activity":"项目实时活动","Sample demonstration notice":"示例演示提示"
+  ,"Both names are available · one click will create both repositories":"两个名称均可用 · 一键即可创建两个仓库","Checking GitHub…":"正在检查 GitHub…"
+  ,"Scientific projects require the visible metadata.yml/results.json, units, convergence, and provenance contract.":"科学项目要求可见的 metadata.yml/results.json、单位、收敛性与来源追溯契约。"
+  ,"A loop is running. These controls unlock when its current model calls finish.":"循环正在运行。当前模型调用结束后，这些控制才会解锁。"
+  ,"Applies to the next provider request.":"将用于下一次供应商请求。","This model uses its provider-controlled default.":"该模型使用由供应商控制的默认值。","Checking this model…":"正在检查该模型…"
+  ,"Models updated":"模型已更新","Refreshing…":"正在刷新…","Refresh failed":"刷新失败","Connecting…":"正在连接…"
+  ,"Slurm jobs use sbatch; workstations use a detached nohup process. Both survive connection loss.":"Slurm 任务使用 sbatch；工作站使用分离的 nohup 进程。两者都不受连接中断影响。"
+  ,"Submitting…":"正在提交…","Uploading inputs…":"正在上传输入文件…"
+  ,"GitHub connected":"GitHub 已连接","GitHub is not connected":"GitHub 未连接","Copy code":"复制代码","Open GitHub ↗":"打开 GitHub ↗"
+  ,"Sign in, enter the code, and approve GitHub CLI. This page updates automatically.":"登录并输入代码，然后批准 GitHub CLI。此页面会自动更新。","Install GitHub tool ↗":"安装 GitHub 工具 ↗"
+  ,"Enter the code in GitHub. This dialog updates automatically after approval.":"在 GitHub 中输入代码。批准后此对话框会自动更新。","Authorize CrossAudit in GitHub":"在 GitHub 中授权 CrossAudit"
+  ,"Review the repository settings and retry.":"请检查仓库设置后重试。","Authorize permanent repository deletion":"授权永久删除仓库"
+  ,"Exact model ID":"准确的模型 ID","Credential":"凭据","Could not resume setup":"无法恢复设置","Resuming GitHub setup":"正在恢复 GitHub 设置","Research tools":"检索工具","visible to this account":"此账户可见"
+  ,"Open help":"打开帮助","Fix":"修复","Git installation guide":"Git 安装指南"
+  ,"Use the official Codex login and an eligible ChatGPT plan. CrossAudit never receives the OAuth token.":"使用官方 Codex 登录及符合条件的 ChatGPT 套餐。CrossAudit 绝不会接收 OAuth token。"
+  ,"Official ChatGPT subscription sign-in is available through the bundled Codex runtime; CrossAudit never receives its OAuth token.":"可通过内置 Codex 运行时使用官方 ChatGPT 订阅登录；CrossAudit 绝不会接收其 OAuth token。"
+  ,"Run the check to inspect this Mac.":"运行检查以检测此 Mac。"
+  ,"Complete sign-in in your browser":"请在浏览器中完成登录","Complete sign in in your browser":"请在浏览器中完成登录","Open ChatGPT ↗":"打开 ChatGPT ↗"
+  ,"Connected. Usage follows this ChatGPT workspace and plan.":"已连接。用量遵循该 ChatGPT 工作区和套餐。"
+  ,"Use the CrossAudit macOS app to choose a local folder. The browser console cannot read arbitrary folder paths.":"请使用 CrossAudit macOS 应用选择本地文件夹。浏览器控制台无法读取任意文件夹路径。"
+  ,"Search results":"搜索结果","frozen-app":"应用安装包","wheel":"wheel 包","editable":"可编辑安装","unavailable":"不可用"
+  ,"Permissions and per-project defaults":"权限与按项目默认值","Permissions and defaults":"权限与默认值"
+  ,"Apple Command Line Tools are not installed.":"未安装 Apple 命令行工具。","This application bundle must be replaced.":"必须更换此应用安装包。","CrossAudit requires macOS 13 or later.":"CrossAudit 需要 macOS 13 或更高版本。"
+  ,"No trusted certificates are available for provider HTTPS calls.":"没有可用于供应商 HTTPS 调用的受信任证书。","Initialize this folder after Git is ready.":"Git 就绪后再初始化此文件夹。","This project is not initialized as a Git repository.":"此项目尚未初始化为 Git 仓库。"
+  ,"CrossAudit runs on this bundled Python; an older build cannot execute the app reliably.":"CrossAudit 依赖此内置 Python 运行；旧版本无法可靠地运行本应用。"
+  ,"Older macOS releases miss security fixes CrossAudit relies on for the Keychain and network trust.":"较旧的 macOS 缺少 CrossAudit 在钥匙串与网络信任方面依赖的安全修复。"
+  ,"Git records every audit decision as a commit; without it CrossAudit cannot create or audit a project.":"Git 会把每个审计决定记录为提交；没有它，CrossAudit 无法创建或审计项目。"
+  ,"Remote compute runs Generator jobs on a cluster over SSH; needed only if you use one.":"远程计算通过 SSH 在集群上运行生成者任务；仅在你使用集群时需要。"
+  ,"This tool creates and syncs the work and audit repositories; not needed for local-only projects.":"此工具用于创建并同步工作仓库和审计仓库；纯本地项目不需要它。"
+  ,"This runtime powers the official ChatGPT sign-in; needed only if you connect a ChatGPT subscription.":"此运行时支持官方 ChatGPT 登录；仅在你连接 ChatGPT 订阅时需要。"
+  ,"Every provider call is HTTPS; without trusted certificates CrossAudit cannot reach any model safely.":"所有供应商调用都通过 HTTPS；没有受信任的证书，CrossAudit 无法安全连接任何模型。"
+  ,"Projects and their files live in this folder; CrossAudit needs to read and write inside it.":"项目及其文件保存在此文件夹中；CrossAudit 需要在其中读写。"
+  ,"The audit reads commits from this repository; it must be initialized before a run can be recorded.":"审计会读取此仓库中的提交；必须先初始化，才能记录运行。"
+  ,"Every commit needs an author; without a name and email CrossAudit cannot record audit history.":"每个提交都需要作者；没有姓名和邮箱，CrossAudit 无法记录审计历史。"
+  ,"This file defines the project's roles, routes, and rules; the project cannot run without it.":"此文件定义项目的角色、路由和规则；缺少它项目无法运行。"
+  ,"These are the rules the auditor judges against; an audit cannot run without them.":"这些是审计者据以判定的规则；缺少它们无法进行审计。"
 };
 const ZH_PATTERNS=[
   [/^the selected PASS is not ready for admission: (.+)$/,m=>'所选 PASS 尚不满足准入条件：'+m[1]],
   [/^the selected PASS receipt is missing — (.+)$/,m=>'所选 PASS 的收据缺失——'+m[1]],
   [/^there is no unconsumed passing result to admit$/,()=>'没有未消费的 PASS 结果可供准入'],
-  [/^Admission tier (\w+)( · .+)?$/,m=>'准入层级 '+m[1]+(m[2]||'')],
-  [/^receipt ([0-9a-f]+)$/,m=>'收据 '+m[1]],[/^tier (\w+)$/,m=>'层级 '+m[1]],
+  [/^Admission tier ([\w-]+)( · .+)?$/,m=>'准入级别 '+zhValue(m[1])+(m[2]?' · '+zhValue(m[2].slice(3)):'')],
+  [/^receipt ([0-9a-f]+)$/,m=>'收据 '+m[1]],[/^tier ([\w-]+)$/,m=>'级别 '+zhValue(m[1])],
   [/^(\d+) cycles?$/,m=>m[1]+' 个审计循环'],[/^(\d+) chats?$/,m=>m[1]+' 个对话'],
-  [/^(\d+) required items? need fixing$/i,m=>m[1]+' 个必需项需要修复'],
-  [/^(\d+) optional items? need attention$/i,m=>m[1]+' 个可选项需要处理'],
+  [/^(\d+) required items? needs? fixing$/i,m=>m[1]+' 个必需项需要修复'],
+  [/^(\d+) optional items? needs? attention$/i,m=>m[1]+' 个可选项需要处理'],
   [/^(\d+) required items? needs? attention$/i,m=>m[1]+' 个必需项需要处理'],
   [/^(\d+) checks? queued$/i,m=>m[1]+' 项检查排队中'],
   [/^(\d+) checks?$/i,m=>m[1]+' 项检查'],
@@ -3206,8 +3283,11 @@ const ZH_PATTERNS=[
   [/^Updated (.+)$/i,m=>'更新于 '+m[1]],[/^Version (.+) is current\.$/i,m=>'版本 '+m[1]+' 已是最新版。'],
   [/^Version (.+) is available; this app is (.+)\.$/i,m=>'可用版本为 '+m[1]+'；当前应用为 '+m[2]+'。'],
   [/^Version (.+); the update server could not be reached\.$/i,m=>'版本 '+m[1]+'；无法连接更新服务器。'],
+  [/^Version (.+) is installed; CrossAudit requires (.+) or later\.$/i,m=>'已安装版本 '+m[1]+'；CrossAudit 需要 '+m[2]+' 或更高版本。'],
   [/^Version (.+)$/i,m=>'版本 '+m[1]],
   [/^Connected as (.+) · (.+)\. Usage follows this ChatGPT workspace and plan\.$/i,m=>'已连接为 '+m[1]+' · '+m[2]+'。用量遵循该 ChatGPT 工作区和套餐。'],
+  [/^Connected as (.+)\. Usage follows this ChatGPT workspace and plan\.$/i,m=>'已连接为 '+m[1]+'。用量遵循该 ChatGPT 工作区和套餐。'],
+  [/^Connected · (.+)\. Usage follows this ChatGPT workspace and plan\.$/i,m=>'已连接 · '+m[1]+'。用量遵循该 ChatGPT 工作区和套餐。'],
   [/^Connected as (.+)$/i,m=>'已连接为 '+m[1]],[/^Local project: (.+)$/i,m=>'本地项目：'+m[1]],
   [/^(\d+) attachment\(s\) received$/i,m=>'已收到 '+m[1]+' 个附件'],
   [/^(\d+) blocker rules?$/i,m=>m[1]+' 条阻断规则'],
@@ -3244,7 +3324,51 @@ const ZH_PATTERNS=[
   ,[/^last heartbeat (\d+)s ago$/i,m=>'最后心跳 '+m[1]+' 秒前']
   ,[/^no heartbeat for (\d+)s$/i,m=>'已 '+m[1]+' 秒无心跳']
   ,[/^(\d+)([mhd])$/,m=>m[1]+({m:' 分钟前',h:' 小时前',d:' 天前'})[m[2]]]
-  ,[/^The local demo could not be prepared: (.+)$/i,m=>'无法准备本地演示：'+m[1]]
+  ,[/^The local demo could not be prepared: (.+?)( — you can still create or import a project\.)?$/i,m=>'无法准备本地演示：'+m[1]+(m[2]?'——你仍可以创建或导入项目。':'')]
+  ,[/^L(\d) (infer|read|write|command|network|high-impact|destructive)$/,m=>'L'+m[1]+' '+(({infer:'推断',read:'读取',write:'写入',command:'命令',network:'网络','high-impact':'高影响',destructive:'破坏性'})[m[2]]||m[2])]
+  ,[/^⚠ flagged: (.+)$/,m=>'⚠ 已标记：'+m[1]]
+  ,[/^decision (.+)$/,m=>'决定 '+m[1]]
+  ,[/^approval (.+)$/,m=>'批准 '+m[1]]
+  ,[/^path (.+)$/,m=>'路径 '+m[1]]
+  ,[/^Token counts come from the provider runtime when available\. Costs use the (.+) public API price snapshot and are not a provider invoice or subscription charge\.$/,m=>'可用时，Token 数量来自供应商运行时。成本采用 '+zhValue(m[1])+' 公开 API 价格快照，并非供应商账单或订阅扣费。']
+  ,[/^Local metering · (.+)$/,m=>'本地计量 · '+zhValue(m[1])]
+  ,[/^Usage guardrail · (.+)$/,m=>'用量保护线 · '+zhValue(m[1])]
+  ,[/^(\$[\d.,]+|-) API value$/,m=>m[1]+' API 价值']
+  ,[/^(\d+) provider-reported$/,m=>m[1]+' 次由供应商报告']
+  ,[/^([\d.,]+[KM]?) tokens$/,m=>m[1]+' Token']
+  ,[/^(\d+) calls? · (.+) API value$/,m=>m[1]+' 次调用 · '+m[2]+' API 价值']
+  ,[/^unpriced · (.+)$/,m=>'未计价 · '+m[1]]
+  ,[/^(generator|auditor) · (.+), (.+) in \/ (.+) out$/,m=>zhValue(m[1])+' · '+m[2]+'，'+m[3]+' 输入 / '+m[4]+' 输出']
+  ,[/^up to (\d+)$/,m=>'最多 '+m[1]+' 轮']
+  ,[/^round (\d+) · (.+)$/i,m=>'第 '+m[1]+' 轮 · '+m[2]]
+  ,[/^(\d+) \/ (\d+) rounds$/i,m=>m[1]+' / '+m[2]+' 轮']
+  ,[/^(\d+) chats? · (\d+) cycles?$/i,m=>m[1]+' 个对话 · '+m[2]+' 个审计循环']
+  ,[/^Uploading · (\d+)%$/,m=>'正在上传 · '+m[1]+'%']
+  ,[/^(\d+) files? · (.+) · copied to remote inputs\/$/,m=>m[1]+' 个文件 · '+m[2]+' · 将复制到远端 inputs/']
+  ,[/^(\d+) files? · (.+)$/,m=>m[1]+' 个文件 · '+m[2]]
+  ,[/^\+(\d+) more selected$/,m=>'另有 '+m[1]+' 个已选择']
+  ,[/^(.+) · current$/,m=>m[1]+' · 当前']
+  ,[/^Creating (.+)$/,m=>'正在创建 '+m[1]]
+  ,[/^Disconnected: (.+)$/,m=>'连接已断开：'+m[1]]
+  ,[/^Up to (\d+) generator → auditor rounds?, then the task pauses for you\. It never auto-passes\.$/,m=>'最多进行 '+m[1]+' 轮生成者 → 审计者循环，随后暂停并等待你决定；绝不会自动通过。']
+  ,[/^Already exists: (.+)$/,m=>'已存在：'+m[1]]
+  ,[/^Ready to use: (.+)$/,m=>'可直接使用：'+m[1]]
+  ,[/^(.+) · connected$/,m=>m[1]+' · 已连接']
+  ,[/^(.+) · key needed$/,m=>m[1]+' · 需要 key']
+  ,[/^(.+) - visible to this account$/,m=>m[1]+' - 此账户可见']
+  ,[/^Remove (.+)$/,m=>'移除 '+m[1]]
+  ,[/^(.+) was not found\.$/,m=>'未找到 '+m[1]+'。']
+  ,[/^(.+) could not be started\.$/,m=>m[1]+' 无法启动。']
+  ,[/^Doctor could not finish: (.+)$/,m=>'环境诊断未能完成：'+m[1]]
+  ,[/^Level (\d+)$/,m=>'等级 '+m[1]]
+  ,[/^of (\d+)$/,m=>'/ '+m[1]+' 轮']
+  ,[/^of (\d+) gates reached$/,m=>'/ '+m[1]+' 个关卡已到达']
+  ,[/^(\d+)s elapsed$/,m=>'已运行 '+m[1]+' 秒']
+  ,[/^(\d+) events?$/,m=>m[1]+' 个事件']
+  ,[/^(.+): (Complete|Blocked|Active|Pending)$/,m=>zhValue(m[1])+'：'+zhValue(m[2])]
+  ,[/^([0-9a-f]{7,40}) · round (\d+)$/i,m=>m[1]+' · 第 '+m[2]+' 轮']
+  ,[/^(PASS|BLOCKED|ESCALATED|ESCALATE|DCL_ONLY) · (\d+) finding\(s\)$/,m=>zhValue(m[1])+' · '+m[2]+' 项发现']
+  ,[/^cycle (\S+) is waiting for a human$/,m=>'循环 '+m[1]+' 正在等待人工处理']
 ];
 let currentLocale='en';
 const textSources=new WeakMap(),attributeSources=new WeakMap();
@@ -3353,7 +3477,7 @@ async function api(path, body){
 
 let workspacePickerContext='project',selectedProjectFolder='';
 function updateWorkspaceFields(path){
-  const value=path||'Not selected';
+  const value=path||(currentLocale==='zh'?'未选择':'Not selected');
   document.getElementById('project-workspace').value=selectedProjectFolder;
   document.getElementById('settings-workspace').value=value;
   document.getElementById('project-path-preview').textContent=selectedProjectFolder
@@ -3402,8 +3526,9 @@ const SETTINGS_INDEX=[
   {panel:'general',group:'General',label:'Language',anchor:'settings-language',keywords:'locale english chinese'},
   {panel:'providers',group:'Providers',label:'Providers',heading:'Connect the services you use',purpose:'Open only the provider you want to configure. Existing secrets are never displayed again.'},
   {panel:'providers',group:'Providers',label:'Credentials',anchor:'provider-credentials',keywords:'api key openai anthropic keychain validation fallbacks models'},
-  {panel:'agent',group:'Agent behavior',label:'Agent behavior',heading:'Default roles and revision rounds',purpose:'How the generator and independent auditor are set up, and how many rounds run before CrossAudit pauses.'},
-  {panel:'agent',group:'Agent behavior',label:'Revision rounds',keywords:'reasoning effort roles max rounds clarification'},
+  {panel:'agent',group:'Agent behavior',label:'Agent behavior',heading:'Permissions and per-project defaults',purpose:'How the generator and independent auditor are set up, and how many rounds run before CrossAudit pauses.'},
+  {panel:'agent',group:'Agent behavior',label:'Revision rounds',anchor:'settings-open-runtime',keywords:'reasoning effort roles max rounds clarification'},
+  {panel:'agent',group:'Agent behavior',label:'Permissions',anchor:'settings-permissions',keywords:'permissions writes edit files commands allowlist authorization 权限 编辑 文件 命令 授权 写入'},
   {panel:'audit',group:'Audit',label:'Audit',heading:'Constitution and audit rules',purpose:'The rules that govern every audit, and the guarantees CrossAudit always enforces.'},
   {panel:'files',group:'Files',label:'Files',heading:'Local storage',purpose:'Where CrossAudit keeps projects on this Mac.'},
   {panel:'files',group:'Files',label:'Project workspace',anchor:'settings-workspace',keywords:'storage folder indexing preview temp large file'},
@@ -3411,7 +3536,8 @@ const SETTINGS_INDEX=[
   {panel:'compute',group:'Compute',label:'Compute',heading:'Remote compute',purpose:'SSH hosts and the limits on how the generator may use them.'},
   {panel:'compute',group:'Compute',label:'SSH hosts',keywords:'scheduler slurm transfer policy'},
   {panel:'integrations',group:'Integrations',label:'Integrations',heading:'MCP, skills, and tools',purpose:'Capabilities the generator can call while it works.'},
-  {panel:'integrations',group:'Integrations',label:'MCP servers',keywords:'skills tools'},
+  {panel:'integrations',group:'Integrations',label:'MCP servers',keywords:'skills tools 技能 工具 服务器 连接器'},
+  {panel:'integrations',group:'Integrations',label:'Skills',keywords:'skills manage install 技能 管理 安装'},
   {panel:'usage',group:'Usage',label:'Usage',heading:'Usage and budgets',purpose:'Token and cost estimates, and the limits that pause a run.'},
   {panel:'usage',group:'Usage',label:'Budgets',keywords:'estimate cost tokens export'},
   {panel:'security',group:'Security & privacy',label:'Security & privacy',heading:'Security and privacy',purpose:'How credentials are stored and where your data goes.'},
@@ -3422,8 +3548,11 @@ const SETTINGS_INDEX=[
 ];
 function settingsSearchMatch(entry,q){
   const n=String(q||'').trim().toLowerCase();if(!n)return true;
-  return [entry.group,entry.heading,entry.purpose,entry.label,entry.keywords]
-    .some(v=>String(v||'').toLowerCase().indexOf(n)>=0);
+  // Match the English index AND its Chinese translations, so 中文搜索也能命中.
+  const fields=[entry.group,entry.heading,entry.purpose,entry.label,entry.keywords];
+  if(fields.some(v=>String(v||'').toLowerCase().indexOf(n)>=0))return true;
+  const zh=typeof zhValue==='function'?zhValue:(v=>v);
+  return fields.some(v=>String(zh(String(v||''))).toLowerCase().indexOf(n)>=0);
 }
 function filterSettings(){
   const input=document.getElementById('settings-search');const q=input?input.value:'';
@@ -3525,7 +3654,7 @@ function renderDoctor(doctor){
     if(repair.inputs){
       action='<div class="doctor-action"><div class="doctor-identity"><input data-doctor-name maxlength="100" placeholder="Git author name"><input data-doctor-email type="email" maxlength="200" placeholder="Git author email"><button type="button" class="secondary" data-doctor-action="'+esc(repair.action)+'">'+esc(repair.label||'Save')+'</button></div></div>';
     }else if(repair.url){
-      action='<div class="doctor-action"><a class="secondary" href="'+esc(repair.url)+'" target="_blank" rel="noopener">'+esc(repair.label||'Open help')+' ↗</a></div>';
+      action='<div class="doctor-action"><a class="secondary" href="'+esc(repair.url)+'" target="_blank" rel="noopener">'+esc(repair.label||'Open help')+'<span aria-hidden="true"> ↗</span></a></div>';
     }else if(repair.action){
       action='<div class="doctor-action"><button type="button" class="secondary" data-doctor-action="'+esc(repair.action)+'">'+esc(repair.label||'Fix')+'</button></div>';
     }
@@ -3573,11 +3702,14 @@ function renderSettings(d){
   const openai=d.providers&&d.providers.openai||{};const chatgpt=openai.chatgpt||{};
   const login=d.provider_login||{};const button=document.getElementById('connect-chatgpt');
   const detail=document.getElementById('chatgpt-detail');
+  // The subscription block only renders when the provider payload offers it;
+  // a missing element must degrade to "no block", never crash the whole pane.
+  if(detail&&button)
   if(chatgpt.connected){
     detail.textContent='Connected'+(chatgpt.email?' as '+chatgpt.email:'')+(chatgpt.plan?' · '+chatgpt.plan:'')
       +'. Usage follows this ChatGPT workspace and plan.';button.textContent='Connected';button.disabled=true;
   }else if(login.status==='running'){
-    detail.innerHTML=esc(login.detail||'Complete sign in in your browser')
+    detail.innerHTML=esc(login.detail||'Complete sign-in in your browser')
       +(login.url?' · <a class="login-link" href="'+esc(login.url)+'">Open ChatGPT ↗</a>':'');
     button.textContent='Waiting…';button.disabled=true;
   }else{
@@ -4284,7 +4416,7 @@ deleteProjectForm.onsubmit=async ev=>{ev.preventDefault();if(!deleteProjectPrevi
     showInlineError('delete-project-error',e);syncDeleteProject();}};
 function projectModelLabel(role){const select=role==='generator'?generatorModel:auditorModel;
   const vendor=role==='generator'?generatorVendor:auditorVendor;const custom=document.getElementById(role+'-custom');
-  return (vendor.value||'-')+' · '+(select.value==='__custom__'?(custom.value.trim()||'custom model'):(select.value||'not connected'));}
+  return (vendor.value||'-')+' · '+(select.value==='__custom__'?(custom.value.trim()||(currentLocale==='zh'?'自定义模型':'custom model')):(select.value||(currentLocale==='zh'?'未连接':'not connected')));}
 function syncProjectReview(){const host=document.getElementById('project-review');if(!host)return;
   const github=document.getElementById('github-toggle').checked;
   const labels=currentLocale==='zh'
@@ -4934,7 +5066,7 @@ function turn(m,d){
     return '<article class="turn audit"><div class="turn-main">'
       + '<div class="turn-meta"><span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b><span class="status ' + esc(m.verdict) + '">'
       + esc(m.verdict) + '</span><span class="turn-time">' + at(m.t) + '</span></div>'
-      + (fs || '<div class="turn-body">No findings. The audited increment passed.</div>')
+      + (fs || '<div class="turn-body">'+(m.verdict==='PASS'?'No findings. The audited increment passed.':'No structured findings were recorded.')+'</div>')
       + '</div></article>';
   }
   return '<article class="turn"><div class="turn-main">'
@@ -5369,7 +5501,7 @@ function evidenceView(d){
     const cls=GOV_OUTCOME_CLASS[a.outcome]||'running';
     return '<div class="gov-row"><div class="gov-top"><b>'+esc(a.tool||'?')+'</b>'+level
       +'<span class="status '+cls+'">'+esc(a.outcome||'')+'</span></div>'
-      +(meta.length?'<div class="gov-meta">'+meta.join(' · ')+'</div>':'')
+      +(meta.length?'<div class="gov-meta">'+meta.map(v=>'<span>'+v+'</span>').join(' · ')+'</div>':'')
       +(a.reason?'<div class="gov-reason">'+esc(a.reason)+'</div>':'')
       +(hashes.length?'<div class="gov-hashes">'+hashes.join(' · ')+'</div>':'')+flag+'</div>';
   }).join('');
@@ -5404,7 +5536,7 @@ function planView(d){
       +'<p class="plan-note">The structured goal record is not available for this run.</p></section>';
   const gates=(d.pipeline||[]).map(g=>'<div class="plan-step '+esc(g.state)+'"><span class="plan-dot"></span><b>'+esc(g.title)+'</b><span>'+esc(g.detail)+'</span></div>').join('');
   const rounds=(p.steps||[]).filter(s=>['audit_passed','audit_blocked','audit_escalated'].includes(s.kind))
-    .map(s=>'<div class="plan-round">round '+esc(s.round_no)+' — <span class="status '+esc(String(s.text).toLowerCase())+'">'+esc(s.text)+'</span></div>').join('');
+    .map(s=>'<div class="plan-round">round '+esc(s.round_no)+'<span aria-hidden="true"> — </span><span class="status '+esc(String(s.text).toLowerCase())+'">'+esc(s.text)+'</span></div>').join('');
   return '<div class="view-heading"><h2>Goal & plan</h2><p>The stated goal and the audited plan for the current task.</p></div>'
     +goalBlock
     +'<section class="plan-plan"><div class="plan-sec-title">Plan v1 · the audited loop</div>'
@@ -5643,7 +5775,7 @@ function render(d){
   const interruptedChatExists=Boolean(interruptedChat&&(d.chats&&d.chats.items||[]).some(item=>item.id===interruptedChat));
   if(d.interrupted&&(interruptedChat===activeChatId||!interruptedChatExists) && !(chatProgress(d) && !chatProgress(d).finished)){
     const interruptedTask=esc(d.interrupted.task.replace(/\s+/g,' ').slice(0,72));
-    const phaseNames=currentLocale==='zh'?{generator:'生成者',auditor:'审计者',input:'输入',loop:'审计循环',tool:'工具',compute:'远程计算'}:{};
+    const phaseNames=currentLocale==='zh'?{generator:'生成者',auditor:'审计者',input:'输入',loop:'审计循环',tool:'工具',compute:'远程计算',unknown:'未知'}:{};
     const interruptedPhase=esc(phaseNames[d.interrupted.phase]||d.interrupted.phase||'unknown');
     const interruptedDetail=d.interrupted.detail?'<span class="interrupted-detail">'+esc(d.interrupted.detail)+'</span>':'';
     iv.className = 'interrupted on';iv.innerHTML = currentLocale==='zh'
@@ -5735,9 +5867,9 @@ async function uploadFiles(files){const batch=uploadId();let next=0;const worker
   const settled=await Promise.allSettled(workers);const failed=settled.find(result=>result.status==='rejected');
   if(failed)throw failed.reason;return batch;
 }
-const mentionPrefix=/^\s*@(generator|executor|auditor|audit|生成端|执行端|审计端|审计)(?=\s|[,:：-]|$)[\s,:：-]*/i;
+const mentionPrefix=/^\s*@(generator|executor|auditor|audit|生成者|审计者|生成端|执行端|审计端|审计)(?=\s|[,:：-]|$)[\s,:：-]*/i;
 function audienceOf(){const m=say.value.match(mentionPrefix);if(!m)return'auto';
-  return ['generator','executor','生成端','执行端'].includes(m[1].toLowerCase())?'generator':'auditor';}
+  return ['generator','executor','生成者','生成端','执行端'].includes(m[1].toLowerCase())?'generator':'auditor';}
 function syncAudience(){const audience=audienceOf();document.querySelectorAll('.audience-chip').forEach(button=>
   button.classList.toggle('active',button.getAttribute('data-audience')===audience));}
 function setAudience(audience){const body=say.value.replace(mentionPrefix,'').trimStart();
@@ -5781,7 +5913,7 @@ document.getElementById('hpc-agent-enabled').onchange=event=>{
   document.getElementById('hpc-agent-policy').className='hpc-policy'+(event.target.checked?'':' off');};
 function closeComputeJob(){computeJobModal.className='project-modal';computeJobForm.reset();}
 function openComputeJob(hostId){const hosts=(lastState&&lastState.compute&&lastState.compute.hosts)||[];
-  if(!hosts.length){openComputeHost();return;}computeJobForm.reset();computeInputFiles=[];renderComputeInputs();document.getElementById('compute-job-error').className='wizard-error';
+  if(!hosts.length){openComputeHost();return;}computeJobForm.reset();if(currentLocale==='zh')computeJobForm.querySelector('[name="name"]').value='CrossAudit 任务';computeInputFiles=[];renderComputeInputs();document.getElementById('compute-job-error').className='wizard-error';
   const select=document.getElementById('compute-job-host');select.innerHTML=hosts.map(host=>'<option value="'+esc(host.id)+'">'
     +esc(host.alias+' · '+((host.probe||{}).scheduler||'workstation'))+'</option>').join('');
   if(hostId&&hosts.some(host=>host.id===hostId))select.value=hostId;
@@ -5902,7 +6034,7 @@ function handleActionClick(ev){
   const probe=ev.target.closest('[data-hpc-probe]');if(probe){probe.disabled=true;probe.textContent='Probing…';
     api('/api/hpc',{action:'probe',host_id:probe.getAttribute('data-hpc-probe')}).catch(computeSurfaceError)
       .finally(()=>{probe.disabled=false;probe.textContent='Probe';});}
-  const remove=ev.target.closest('[data-hpc-remove]');if(remove&&confirm('Remove this compute host from this project?')){
+  const remove=ev.target.closest('[data-hpc-remove]');if(remove&&confirm(currentLocale==='zh'?'从此项目移除这个计算主机？':'Remove this compute host from this project?')){
     remove.disabled=true;api('/api/hpc',{action:'remove',host_id:remove.getAttribute('data-hpc-remove')})
       .catch(computeSurfaceError).finally(()=>{remove.disabled=false;});}
   const refresh=ev.target.closest('[data-hpc-refresh]');if(refresh){refresh.disabled=true;refresh.textContent='Refreshing…';
