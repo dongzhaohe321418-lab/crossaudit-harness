@@ -427,6 +427,14 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .turn-time{margin-left:auto}
 .turn.user .turn-time{margin-left:0}
 .turn-body{font-size:var(--fs-prose);white-space:pre-wrap;word-break:break-word;line-height:1.6}
+/* The optimistic "working" indicator shown the instant a message is sent. */
+.thinking-dots{display:inline-flex;gap:5px;align-items:center;height:20px}
+.thinking-dots i{width:6px;height:6px;border-radius:50%;background:var(--text-3);
+  animation:think 1.15s ease-in-out infinite}
+.thinking-dots i:nth-child(2){animation-delay:.15s}
+.thinking-dots i:nth-child(3){animation-delay:.3s}
+@keyframes think{0%,70%,100%{opacity:.28;transform:translateY(0)}35%{opacity:1;transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){.thinking-dots i{animation:none;opacity:.55}}
 .turn-sub{margin-top:7px;color:var(--text-2);font-size:var(--fs-label)}
 .role-mark{width:24px;height:24px;border-radius:var(--r-sm);display:grid;place-items:center;flex:none;
   font-size:10px;font-weight:600;background:var(--surface-2);color:var(--text-2)}
@@ -3215,6 +3223,12 @@ let transferBusy = false;
 let activeView = 'artifacts';
 let newTaskMode = false;
 let activeChatId = '';
+// The message the user just sent, shown optimistically (with a working
+// indicator) the instant they press Enter — so the thread reacts immediately
+// like Codex, while routing + the first model token are still in flight. It is
+// cleared the moment the real state takes over (a live run, or the message
+// echoed back in the stream) or the send is refused / needs clarification.
+let optimisticSend = null;
 let archivedExpanded = false;
 const expandedGroups = new Set();
 const expandedReviews = new Set();
@@ -4861,6 +4875,18 @@ function turn(m,d){
     + '<span class="turn-time">' + at(m.t) + '</span></div><div class="turn-body">'
     + esc(m.summary) + '</div>' + artifactList(m.artifacts||m.files,auditStatus(d,m.sha),m.sha) + '</div></article>';
 }
+// The instant, optimistic echo of a just-sent message: the typed text plus a
+// working indicator, so pressing Enter feels immediate.
+function optimisticTurn(text){
+  return '<article class="turn user"><div class="turn-main">'
+    + '<div class="turn-meta"><b>You</b><span class="turn-time">'
+    + (currentLocale==='zh'?'刚刚':'now') + '</span></div>'
+    + '<div class="turn-body">' + esc(text) + '</div></div></article>'
+    + '<article class="turn" aria-live="polite"><div class="turn-main">'
+    + '<div class="turn-meta"><span class="role-mark generator" aria-hidden="true">G</span>'
+    + '<b>Generator</b></div><div class="turn-body"><span class="thinking-dots" role="status" aria-label="'
+    + (currentLocale==='zh'?'处理中':'Working') + '"><i></i><i></i><i></i></span></div></div></article>';
+}
 function modelTag(value){const raw=String(value||'');if(!raw)return '';
   const tail=raw.split(':').pop()||raw;
   return (tail.split(' · ')[0]||'').trim()||raw;}
@@ -5310,10 +5336,20 @@ function renderConversation(d){
     const live = p && !p.finished ? runCard(d) : '';
     const approval = approvalCard(d);
     const review = reviewCard(d);
+    // Optimistic echo: keep the just-sent message + working indicator on screen
+    // until the real state takes over (a live run appears, or the message is
+    // echoed back in the stream), so the send feels instant.
+    let optimistic = '';
+    if(optimisticSend && (!optimisticSend.chat || optimisticSend.chat===(activeChatId||''))){
+      const want=(optimisticSend.text||'').trim();
+      const echoed = messages.some(m=>m.kind==='you' && (m.utterance||'').trim()===want);
+      if((p && !p.finished) || echoed) optimisticSend = null;   // real state took over
+      else optimistic = optimisticTurn(optimisticSend.text);
+    }
     // One protagonist per screen: the welcome empty state renders only when
     // the timeline holds nothing at all, and the delivery band only when no
     // review card already states the outcome of the same cycle.
-    const body = messages.map(m=>turn(m,d)).join('') + live + approval + review
+    const body = messages.map(m=>turn(m,d)).join('') + optimistic + live + approval + review
       + (review ? '' : deliveryStatus(d));
     html = body || welcome();
   }
@@ -6036,18 +6072,22 @@ stopRun.onclick=async()=>{const progress=lastState&&chatProgress(lastState);if(!
 form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!rawText)return;
   const continuing=pendingContinuation.chat===activeChatId&&Boolean(pendingContinuation.cycle);
   const text=rawText;
-  newTaskMode=false;if(lastState)render(lastState);
+  newTaskMode=false;
+  // Echo the message immediately so the thread reacts the instant Enter is
+  // pressed (Codex-style), before routing + the first token return.
+  optimisticSend={text:rawText, chat:activeChatId||'', at:Date.now()};
+  if(lastState)render(lastState);
   send.disabled=true;say.disabled=true;transferBusy=true;document.getElementById('attach').disabled=true;route.className='route on';
   route.textContent=pendingFiles.length?'Sending your files…':'Starting…';
   try{const uploadBatch=pendingFiles.length?await uploadFiles(pendingFiles):null;
     const r=await api('/api/say',{text,chat_id:activeChatId,upload_batch:uploadBatch,attachment_consent:pendingFiles.length>0,
-      continuation_cycle:continuing?pendingContinuation.cycle:''});if(r.asked){route.innerHTML='<b class="ask">Needs clarification.</b> '
-    + esc(r.clarify);}else{activeChatId=r.chat_id||activeChatId;route.innerHTML=r.lane==='generator'
+      continuation_cycle:continuing?pendingContinuation.cycle:''});if(r.asked){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b class="ask">Needs clarification.</b> '
+    + esc(r.clarify);}else{activeChatId=r.chat_id||activeChatId;if(optimisticSend)optimisticSend.chat=activeChatId||'';if(r.lane!=='generator'){optimisticSend=null;}route.innerHTML=r.lane==='generator'
       ?'<b>Task started.</b> The result will appear in this conversation.'
       :'<b>Message delivered.</b>';
     if(r.lane==='generator')pendingContinuation={cycle:'',chat:''};
     if(!pendingFiles.length||r.attachments_accepted){say.value='';pendingFiles=[];uploadProgress=new Map();fileInput.value='';drawFiles();syncAudience();}}}
-  catch(e){route.innerHTML='<b>Refused.</b> '+esc(e.message);}
+  catch(e){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b>Refused.</b> '+esc(e.message);}
   transferBusy=false;document.getElementById('attach').disabled=false;send.disabled=false;say.disabled=false;say.focus();};
 api('/api/state').then(render).catch(e=>{document.getElementById('thread-title').textContent='Disconnected: '+e.message;});
 startStream();
