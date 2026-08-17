@@ -27,6 +27,7 @@ import re
 import time
 
 from .. import document_export, hpc, mcp
+from ..broker import secretscan
 from ..broker.humanapproval import INBOX, HumanApprovalGate
 from ..broker.routing import (
     BROKER_SERVER_ID, broker_tool_call, build_broker_and_token, build_catalog)
@@ -121,6 +122,28 @@ def _stage_generated(cfg: Config, written: list[str]) -> list[str]:
     git("add", "--", *written, cwd=cfg.root)
     return git("diff", "--cached", "--name-only", cwd=cfg.root,
                check=False).splitlines()
+
+
+#: Bound the staged-diff the commit secret-scan reads (mirrors tools_git).
+_MAX_SCAN_BYTES = 512 * 1024
+
+
+def _staged_secret(cfg: Config) -> str:
+    """The KIND of any credential the staged round would commit, or '' if clean.
+
+    The build's per-round commit is CrossAudit's own lifecycle action, not a
+    model-proposed tool call, so it does not pass through the broker. It gets the
+    same defense-in-depth the brokered git_commit has: the generator can never
+    write a credential into the audit history. Only the added lines and committed
+    paths are scanned, and only the secret's KIND (never its value) is returned.
+    """
+    diff = git("diff", "--cached", "--no-color", "--unified=0",
+               cwd=cfg.root, check=False)[:_MAX_SCAN_BYTES]
+    added = "\n".join(ln[1:] for ln in diff.splitlines()
+                      if ln.startswith("+") and not ln.startswith("+++"))
+    names = git("diff", "--cached", "--name-only", cwd=cfg.root,
+                check=False).splitlines()
+    return secretscan.first_finding(added, names)
 
 
 def _last_report(cfg: Config) -> str:
@@ -387,6 +410,18 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                  state=RunState.GENERATING)
             termination_reason = (
                 f"generator produced no new auditable revision in round {round_no}")
+            break
+        # Defense-in-depth: never commit a credential into the audit history. A
+        # round whose generated changes look like a secret is refused (the files
+        # stay on disk, uncommitted) rather than sealed into the ledger.
+        secret = _staged_secret(cfg)
+        if secret:
+            git("reset", "-q", cwd=cfg.root)
+            emit("commit_refused", "loop", "the round could not be committed",
+                 f"the generated changes appear to contain {secret}; the secret "
+                 "was not committed", state=RunState.GENERATING)
+            termination_reason = (
+                f"generator revision would have committed {secret} in round {round_no}")
             break
         try:
             commit_args = ["commit", "-q", "-m",
