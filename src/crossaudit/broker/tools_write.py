@@ -8,6 +8,7 @@ so the Auditor can review exactly what changed without the raw bytes.
 """
 from __future__ import annotations
 
+import difflib
 import hashlib
 
 from ..config import Config
@@ -57,6 +58,27 @@ def file_write(cfg: Config, args: dict, token: CapabilityToken) -> dict:
     }
 
 
+def file_write_preview(cfg: Config, args: dict) -> str:
+    """A unified diff of the current file vs the proposed content, for the card."""
+    rel = str(args.get("path", "") or "")
+    content = args.get("content", "")
+    if not rel or not isinstance(content, str):
+        return ""
+    target = resolve_in_root(cfg.root, rel)
+    old, existed = "", False
+    if target is not None and target.is_file():
+        try:
+            old, existed = target.read_text(encoding="utf-8", errors="replace"), True
+        except OSError:
+            old = ""
+    header = f"write {rel}" + ("" if existed else "  (new file)")
+    diff = list(difflib.unified_diff(
+        old.splitlines(), content.splitlines(),
+        fromfile=(rel if existed else "/dev/null"), tofile=rel, lineterm=""))
+    body = "\n".join(diff[:200])
+    return f"{header}\n{body}" if body else f"{header}\n(no textual change)"
+
+
 def register_write(registry: ToolRegistry) -> ToolRegistry:
     """Register the Level-2 write tools (recoverable workspace edits)."""
     registry.register(ToolSpec(
@@ -64,6 +86,7 @@ def register_write(registry: ToolRegistry) -> ToolRegistry:
         handler=file_write, path_args=("path",),
         evidence_fields=("path", "existed_before", "pre_sha256", "post_sha256",
                          "bytes", "secret_flagged"),
+        preview=file_write_preview,
         summary="Write a file (recoverable) inside your allowed directories."))
     return registry
 

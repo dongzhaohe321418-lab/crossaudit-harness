@@ -40,6 +40,11 @@ class ToolSpec:
     #: ledger, so e.g. a write's before/after hashes are auditable while a read's
     #: raw bytes never enter the ledger.
     evidence_fields: tuple[str, ...] = ()
+    #: optional preview(cfg, args) -> str: a bounded, human-readable summary of
+    #: exactly what this call WOULD do (a diff, a command, a commit message),
+    #: shown ONLY on the approval card so the user sees what they are approving.
+    #: It is never logged or ledgered. Absent → the card shows no preview.
+    preview: Callable | None = None
 
 
 @dataclass

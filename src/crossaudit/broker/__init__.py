@@ -31,6 +31,9 @@ from .tools_write import register_write
 __all__ = ["ToolBroker", "ToolResult", "ToolRegistry", "ToolSpec", "ToolError",
            "default_registry", "register_write", "write_registry", "full_registry"]
 
+#: Approval-card previews are bounded so a huge diff can never bloat a snapshot.
+PREVIEW_LIMIT = 4000
+
 
 def default_registry() -> ToolRegistry:
     """Read-only tools: file/search/git-status/doctor + git diff/log (auto)."""
@@ -128,6 +131,16 @@ class ToolBroker:
             # A live build injects an approver (the real-time HumanApprovalGate);
             # absent one, the standing Approval Service decides, and it never
             # auto-grants Level 3+ (deny-by-default).
+            #
+            # Compute a bounded, human-readable preview of exactly what this call
+            # would do (a diff, a command, a commit message) for the approval
+            # card. It is shown ONLY to the user who is deciding — never logged
+            # or ledgered — so they approve with full sight of the action.
+            if spec.preview is not None:
+                try:
+                    proposal["preview"] = str(spec.preview(cfg, args))[:PREVIEW_LIMIT]
+                except Exception:  # noqa: BLE001 -- a preview must never block a decision
+                    proposal["preview"] = ""
             if self.approver is not None:
                 approval = self.approver(proposal, d, cfg, run_id)
             else:

@@ -86,6 +86,9 @@ class PendingApproval:
     cost_usd: float = 0.0
     bytes: int = 0
     reason: str = ""
+    #: a bounded, human-readable preview of the action (diff/command/message),
+    #: shown on the card only — never logged or ledgered.
+    preview: str = ""
     created: float = 0.0
 
     @property
@@ -109,6 +112,7 @@ class PendingApproval:
             "cost_usd": self.cost_usd,
             "bytes": self.bytes,
             "reason": self.reason,
+            "preview": self.preview,
             "reversibility": reversibility(self.level, self.writes),
             "created": self.created,
             "scopes": self.scopes(),
@@ -269,6 +273,7 @@ class HumanApprovalGate:
             cost_usd=float(proposal.get("estimated_cost_usd", 0.0) or 0.0),
             bytes=int(proposal.get("estimated_bytes", 0) or 0),
             reason=str(getattr(decision, "reason", "") or ""),
+            preview=str(proposal.get("preview", "") or ""),
             created=self.inbox.now(),
         )
         self.inbox.open(pending)

@@ -67,11 +67,20 @@ def run_check(cfg: Config, args: dict, token: CapabilityToken) -> dict:
     }
 
 
+def run_check_preview(cfg: Config, args: dict) -> str:
+    """The exact command line that would run, for the approval card."""
+    argv = args.get("command")
+    if isinstance(argv, list) and argv:
+        return "run: " + " ".join(str(a) for a in argv)
+    return "run: (invalid command)"
+
+
 def register_command(registry: ToolRegistry) -> ToolRegistry:
     """Register the Level-3 run_check tool (always per-call approval-gated)."""
     registry.register(ToolSpec(
         name="run_check", level=3, writes=False, needs_network=False,
         handler=run_check,
         evidence_fields=("command", "exit_code", "stdout_sha256", "stderr_sha256"),
+        preview=run_check_preview,
         summary="Run an approved project check command (test/build/format). Needs approval."))
     return registry

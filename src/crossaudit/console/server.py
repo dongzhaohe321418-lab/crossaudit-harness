@@ -137,12 +137,14 @@ def onboarding_state() -> dict:
 def _authorizations(cfg: Config | None) -> dict:
     """The user's per-project standing authorizations (off without a project)."""
     if cfg is None:
-        return {"workspace_writes": False}
+        return {"workspace_writes": False, "allowed_commands": []}
     try:
         from ..broker.approval import WORKSPACE_WRITES, AuthorizationStore
-        return {"workspace_writes": AuthorizationStore(cfg).authorized(WORKSPACE_WRITES)}
+        from ..broker.tools_command import command_allowlist
+        return {"workspace_writes": AuthorizationStore(cfg).authorized(WORKSPACE_WRITES),
+                "allowed_commands": command_allowlist(cfg)}
     except Exception:  # noqa: BLE001 -- optional field, never fail settings
-        return {"workspace_writes": False}
+        return {"workspace_writes": False, "allowed_commands": []}
 
 
 def _project_title(cfg: Config) -> str:
@@ -612,9 +614,12 @@ def snapshot(cfg: Config) -> dict:
         house = []
     try:
         from ..broker.approval import WORKSPACE_WRITES, AuthorizationStore
+        from ..broker.tools_command import command_allowlist
         writes_authorized = AuthorizationStore(cfg).authorized(WORKSPACE_WRITES)
+        allowed_commands = command_allowlist(cfg)
     except Exception:  # noqa: BLE001 -- snapshot must never fail on an optional field
         writes_authorized = False
+        allowed_commands = []
     # A live build that proposed a Level 3+ action is paused waiting for the
     # user's decision; surface its pending-action card, scoped to this run.
     try:
@@ -631,7 +636,8 @@ def snapshot(cfg: Config) -> dict:
         "title": _project_title(cfg),
         "folder": Path(cfg.root).name,
         "root": str(cfg.root),
-        "authorizations": {"workspace_writes": writes_authorized},
+        "authorizations": {"workspace_writes": writes_authorized,
+                           "allowed_commands": allowed_commands},
         # A pending per-call approval (what/why/scope/reversibility/cost), or
         # null when nothing is waiting on the user.
         "pending_approval": pending_approval,
@@ -1254,17 +1260,36 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                     self._send(json.dumps({"chat": result}).encode(), "application/json")
                     return
                 if parsed.path == "/api/authorization":
-                    # The user's explicit per-project opt-in for recoverable file
-                    # edits. It only records the grant; every write still passes
-                    # the token scope, the Approval Service, a recovery point, and
-                    # the Auditor's review.
+                    # The user's explicit per-project opt-ins. Each only RECORDS a
+                    # grant; every governed action still passes the token scope,
+                    # the Approval Service (per-call for L3+), a recovery point
+                    # (writes), and the Auditor's review. Two grants are handled:
+                    # `enabled` → recoverable file writes; `allowed_commands` →
+                    # the executables run_check may run (argv-only, per-call).
                     from ..broker.approval import (WORKSPACE_WRITES,
                                                    AuthorizationStore)
-                    enabled = payload.get("enabled") is True
-                    AuthorizationStore(self._config()).set(WORKSPACE_WRITES, enabled)
+                    from ..broker.tools_command import (ALLOWED_COMMANDS_KEY,
+                                                        command_allowlist)
+                    store = AuthorizationStore(self._config())
+                    result: dict = {}
+                    if "enabled" in payload:
+                        enabled = payload.get("enabled") is True
+                        store.set(WORKSPACE_WRITES, enabled)
+                        result["workspace_writes"] = enabled
+                    if "allowed_commands" in payload:
+                        raw = payload.get("allowed_commands")
+                        raw = raw if isinstance(raw, list) else []
+                        # De-duplicate, keep only clean non-empty argv[0] names.
+                        seen, cmds = set(), []
+                        for item in raw:
+                            name = str(item).strip()
+                            if name and name not in seen:
+                                seen.add(name)
+                                cmds.append(name)
+                        store.set_list(ALLOWED_COMMANDS_KEY, cmds)
+                        result["allowed_commands"] = command_allowlist(self._config())
                     STREAM_CHANGES.notify()
-                    self._send(json.dumps({"workspace_writes": enabled}).encode(),
-                               "application/json")
+                    self._send(json.dumps(result).encode(), "application/json")
                     return
                 if parsed.path == "/api/chats/delete":
                     current = self._config()

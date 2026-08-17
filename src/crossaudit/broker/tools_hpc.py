@@ -38,6 +38,18 @@ def hpc_submit(cfg: Config, args: dict, token: CapabilityToken) -> dict:
     return {"job_id": job_id, "manifest_sha256": digest(manifest)}
 
 
+def hpc_submit_preview(cfg: Config, args: dict) -> str:
+    """A summary of the job that would be submitted, for the approval card."""
+    manifest = args.get("manifest") or args.get("payload")
+    if not isinstance(manifest, dict):
+        return "submit HPC job (invalid manifest)"
+    host = str(manifest.get("host") or manifest.get("host_id") or "")
+    cmd = str(manifest.get("cmd") or manifest.get("command") or "")[:400]
+    keys = ", ".join(sorted(str(k) for k in manifest))
+    return (f"submit HPC job\nhost: {host or '(default)'}\ncmd: {cmd or '(none)'}\n"
+            f"manifest keys: {keys}")
+
+
 def register_hpc(registry: ToolRegistry) -> ToolRegistry:
     registry.register(ToolSpec(
         name="hpc_status", level=1, writes=False, needs_network=True,
@@ -48,5 +60,6 @@ def register_hpc(registry: ToolRegistry) -> ToolRegistry:
     registry.register(ToolSpec(
         name="hpc_submit", level=5, writes=True, needs_network=True,
         handler=hpc_submit, evidence_fields=("job_id", "manifest_sha256"),
+        preview=hpc_submit_preview,
         summary="Submit an HPC job — costs resources, always needs approval."))
     return registry

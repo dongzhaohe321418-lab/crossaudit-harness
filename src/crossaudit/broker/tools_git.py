@@ -113,11 +113,21 @@ def register_git_read(registry: ToolRegistry) -> ToolRegistry:
     return registry
 
 
+def git_commit_preview(cfg: Config, args: dict) -> str:
+    """The commit message + the files that would be committed, for the card."""
+    msg = str(args.get("message", "")).strip()[:500]
+    status = gitio.git("status", "--porcelain", cwd=cfg.root, check=False)
+    files = "\n".join(status.splitlines()[:100])
+    return (f"commit: {msg}\n\nfiles to be committed:\n{files}" if files.strip()
+            else f"commit: {msg}\n(working tree clean — nothing to commit)")
+
+
 def register_git_actions(registry: ToolRegistry) -> ToolRegistry:
     """Commit (L3) + push/repo-create (L5) — all approval-gated, never auto."""
     registry.register(ToolSpec(
         name="git_commit", level=3, writes=True, needs_network=False,
         handler=git_commit, evidence_fields=("commit", "message"),
+        preview=git_commit_preview,
         summary="Commit the current changes in this project (needs approval)."))
     registry.register(ToolSpec(
         name="git_push", level=5, writes=True, needs_network=True, host_arg=None,

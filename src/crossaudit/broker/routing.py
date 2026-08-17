@@ -12,11 +12,17 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+from .. import hpc
 from ..config import Config
 from ..ledger import EvidenceLedger
 from ..policy import CapabilityToken
 from . import ToolBroker, ToolRegistry, default_registry, write_registry
 from .approval import WORKSPACE_WRITES, AuthorizationStore
+from .tools_command import command_allowlist, register_command
+from .tools_git import register_git_actions, register_git_read
+from .tools_hpc import register_hpc
+from .tools_readonly import register_readonly
+from .tools_write import register_write
 
 #: A tool request whose server_id is this is a built-in, brokered tool (not MCP).
 BROKER_SERVER_ID = "crossaudit"
@@ -114,32 +120,87 @@ def writes_authorized(cfg: Config) -> bool:
     return AuthorizationStore(cfg).authorized(WORKSPACE_WRITES)
 
 
+def run_commands_authorized(cfg: Config) -> bool:
+    """Whether the user allowlisted any commands — the explicit opt-in that makes
+    the Level-3 ``run_check`` tool reachable (each command is still allowlisted by
+    name AND per-call approval-gated before it runs)."""
+    return len(command_allowlist(cfg)) > 0
+
+
+def compute_authorized(cfg: Config) -> bool:
+    """Whether this project has an agent-enabled HPC host configured — the
+    explicit opt-in that makes the HPC tools reachable (submit stays L5, always
+    per-call approval-gated)."""
+    try:
+        return bool(hpc.MANAGER.agent_context(cfg))
+    except Exception:  # noqa: BLE001 -- catalog composition must never fail hard
+        return False
+
+
+def live_registry(cfg: Config) -> ToolRegistry:
+    """The tools this project actually offers a build, composed from what the
+    user authorized: always read-only; + recoverable writes & git actions when
+    writes are authorized; + ``run_check`` when commands are allowlisted; + HPC
+    when a compute host is configured. Everything above Level 1 is still
+    approval-gated by the broker — authorization only makes a tool *proposable*."""
+    registry = register_git_read(register_readonly(ToolRegistry()))
+    if writes_authorized(cfg):
+        register_write(registry)
+        register_git_actions(registry)
+    if run_commands_authorized(cfg):
+        register_command(registry)
+    if compute_authorized(cfg):
+        register_hpc(registry)
+    return registry
+
+
+def live_catalog(cfg: Config) -> list[dict]:
+    """The catalog for the generator — exactly the live registry's tools, so what
+    the model is told it may propose always matches what its token can grant."""
+    return live_registry(cfg).catalog()
+
+
 def write_catalog() -> list[dict]:
     """The read-only + write tool catalog (offered when writes are authorized)."""
     return write_registry().catalog()
 
 
 def build_catalog(cfg: Config) -> list[dict]:
-    """The tool catalog the generator is offered for this project: read-only, or
-    read+write when the project authorized recoverable edits."""
-    return write_catalog() if writes_authorized(cfg) else readonly_catalog()
+    """The tool catalog the generator is offered for this project — the live
+    registry, gated by what the user authorized (read-only by default)."""
+    return live_catalog(cfg)
+
+
+def _scoped_paths(cfg: Config) -> tuple[str, ...]:
+    scope = tuple(cfg.scope_dirs or ())
+    return tuple(f"{str(d).strip('/')}/**" for d in scope if str(d).strip()) or ("**",)
 
 
 def build_broker_and_token(cfg: Config, *, run_id: str, now_epoch: float,
                            approver: object = None
                            ) -> tuple[ToolBroker, CapabilityToken]:
-    """A broker + capability token for a build. Writable iff the project is
-    authorized; otherwise read-only — so writes happen only after the user's
-    explicit per-project opt-in.
+    """A broker + capability token for a build.
+
+    The token's tools ARE the live registry's tools (single source of truth), so
+    every advertised tool is grantable and then approval-gated — never advertised
+    yet refused as "not in this grant". The grant is writable exactly when the
+    live registry contains a writing tool (i.e. the project authorized one), and
+    scoped to the project's directories.
 
     ``approver`` is the real-time per-call approval gate a live build injects
     (HumanApprovalGate); absent one, the broker falls back to the standing
     Approval Service, which never auto-grants Level 3+ (deny-by-default)."""
-    if writes_authorized(cfg):
-        return (broker_for(cfg, registry=write_registry(), approver=approver),
-                writable_token(cfg, run_id=run_id, now_epoch=now_epoch))
-    return (broker_for(cfg, approver=approver),
-            readonly_token(cfg, run_id=run_id, now_epoch=now_epoch))
+    registry = live_registry(cfg)
+    catalog = registry.catalog()
+    token = CapabilityToken(
+        project_id=str(cfg.root),
+        run_id=run_id or "run",
+        tools=frozenset(registry.names()),
+        paths=_scoped_paths(cfg),
+        writable=any(bool(t.get("writes")) for t in catalog),
+        expires_at=_iso_utc(now_epoch + DEFAULT_TTL_SECONDS),
+    )
+    return broker_for(cfg, registry=registry, approver=approver), token
 
 
 def broker_tool_call(cfg: Config, request: dict, token: CapabilityToken, *,

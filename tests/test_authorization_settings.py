@@ -12,7 +12,7 @@ from crossaudit.console.server import _authorizations, snapshot
 
 
 def test_authorizations_helper_defaults_off(cfg):
-    assert _authorizations(None) == {"workspace_writes": False}
+    assert _authorizations(None)["workspace_writes"] is False
     assert _authorizations(cfg)["workspace_writes"] is False
     AuthorizationStore(cfg).set(WORKSPACE_WRITES, True)
     assert _authorizations(cfg)["workspace_writes"] is True

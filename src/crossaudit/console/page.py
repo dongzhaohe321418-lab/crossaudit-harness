@@ -584,6 +584,13 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .approval-facts{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
 .approval-facts span{font-size:var(--fs-caption);color:var(--text-3)}
 .approval-facts strong{color:var(--text-2);font-weight:600}
+.approval-preview{margin:9px 0 0;padding:9px 11px;max-height:220px;overflow:auto;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);
+  font-family:var(--font-mono);font-size:var(--fs-caption);line-height:1.5;color:var(--text-2);
+  white-space:pre;overflow-wrap:normal;tab-size:2}
+.approval-preview .pl-add{color:var(--pass)}
+.approval-preview .pl-del{color:var(--blocked)}
+.approval-preview .pl-hunk,.approval-preview .pl-meta{color:var(--text-3)}
 .approval-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
 .approval-actions button{height:30px;border-radius:var(--r-sm);border:1px solid var(--line-strong);
   background:var(--surface);color:var(--text);padding:0 12px;cursor:pointer;
@@ -2513,6 +2520,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <p class="settings-empty">Which models each role uses, and fallback routes, are chosen per project.</p>
     </section><section class="form-section settings-pane" data-settings-pane="agent" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Agent behavior</span><h3>Default roles and revision rounds</h3><p>How the generator and independent auditor are set up, and how many rounds run before CrossAudit pauses.</p></div>
       <label class="toggle-line" style="margin-bottom:12px"><input type="checkbox" id="workspace-writes-toggle"><span><b>Allow the agent to edit files in this project</b><small>The agent may create and modify files in this project's directories. Every change takes a recovery point, is recorded in the audit ledger, and is reviewed by the independent auditor. Off by default.</small></span></label>
+      <label class="field" style="margin-bottom:12px"><span>Commands the agent may run</span><input id="allowed-commands-input" maxlength="500" placeholder="e.g. pytest, npm, make"><small class="field-help">Comma-separated executables the agent is allowed to run (tests, build, format). Each run needs your per-call approval and runs as an argv list — never a shell — in this project only. Empty = the agent cannot run any command.</small></label>
       <p class="settings-empty">Roles, reasoning effort, and the revision limit are set per project, not as global defaults yet.</p>
       <div class="settings-jump"><button type="button" class="secondary" data-settings-open="runtime">Open project controls</button><small class="settings-empty" data-scope-note hidden></small></div>
     </section><section class="form-section settings-pane" data-settings-pane="audit" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Audit</span><h3>Constitution and audit rules</h3><p>The rules that govern every audit, and the guarantees CrossAudit always enforces.</p></div>
@@ -3446,6 +3454,17 @@ function renderSettings(d){
       const want=this.checked;
       try{const r=await api('/api/authorization',{enabled:want});this.checked=!!(r&&r.workspace_writes);}
       catch(e){this.checked=!want;}
+    };}
+  }
+  const cmdInput=document.getElementById('allowed-commands-input');
+  if(cmdInput){
+    const current=(d.authorizations&&d.authorizations.allowed_commands)||[];
+    if(document.activeElement!==cmdInput) cmdInput.value=current.join(', ');
+    if(!cmdInput._wired){cmdInput._wired=true;cmdInput.onchange=async function(){
+      const list=this.value.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+      try{const r=await api('/api/authorization',{allowed_commands:list});
+        this.value=((r&&r.allowed_commands)||[]).join(', ');}
+      catch(e){}
     };}
   }
   renderProviderCards(d);
@@ -5018,7 +5037,20 @@ function approvalCard(d){
     + '<div class="approval-tool">'+esc(a.tool)+'</div>'
     + '<p class="approval-why">'+esc(a.reversibility)+(a.reason?' · '+esc(a.reason):'')+'</p>'
     + (facts.length?'<div class="approval-facts">'+facts.join('')+'</div>':'')
+    + (a.preview?'<pre class="approval-preview">'+previewHtml(a.preview)+'</pre>':'')
     + '<div class="approval-actions">'+buttons+'</div></section>';
+}
+function previewHtml(text){
+  // Colour a unified diff so removed/added lines read at a glance; non-diff
+  // previews (a command, an HPC summary) have no +/- lines and stay plain.
+  return String(text).split('\n').map(function(line){
+    var cls='';
+    if(/^(\+\+\+|---) /.test(line)) cls='pl-meta';
+    else if(line.charAt(0)==='@') cls='pl-hunk';
+    else if(line.charAt(0)==='+') cls='pl-add';
+    else if(line.charAt(0)==='-') cls='pl-del';
+    return '<span class="pl '+cls+'">'+esc(line)+'</span>';
+  }).join('\n');
 }
 async function resolveApproval(decision){
   const a = lastState && lastState.pending_approval;
