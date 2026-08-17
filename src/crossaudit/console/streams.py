@@ -22,8 +22,11 @@ from ..dispute import DISPUTES_LOG, parse_findings
 from ..router import history as routing_history
 from .chats import LEGACY_CHAT_ID, canonical_id
 
-GENERATOR_LANES = {"generator", "project"}
+GENERATOR_LANES = {"generator", "project", "chat"}
 AUDITOR_LANES = {"auditor", "amendment", "dispute", "resolve", "query"}
+#: The executed-string prefix that marks a direct, unaudited generator reply
+#: (the chat lane's wire contract, mirroring the auditor_chat prefix below).
+GENERATOR_CHAT_PREFIX = "answered by generator: "
 ROUND_RE = re.compile(r"\(round (\d+)\)\s*$")
 NON_GENERATOR_COMMITS = (
     "audit report",
@@ -148,6 +151,16 @@ def generator_stream(cfg: Config, routing: list[dict],
         if r.get("lane") in GENERATOR_LANES:
             stream.append({**r, "kind": "you",
                            "chat_id": canonical_id(r.get("chat_id"))})
+            # A chat routing carries its own unaudited reply; surface it as a
+            # generator_chat turn right after the question (same t — the sort
+            # below is stable, so append order keeps question before answer).
+            executed = str(r.get("executed", ""))
+            if (r.get("lane") == "chat"
+                    and executed.startswith(GENERATOR_CHAT_PREFIX)):
+                stream.append({"kind": "generator_chat", "t": r.get("t", 0),
+                               "chat_id": canonical_id(r.get("chat_id")),
+                               "response": executed[len(GENERATOR_CHAT_PREFIX):],
+                               "addressed_to": "generator"})
     return sorted(stream, key=lambda m: m["t"])[-40:]
 
 

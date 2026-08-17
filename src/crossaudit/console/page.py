@@ -564,6 +564,24 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .delivery-status button{margin-left:auto;border:0;background:transparent;color:var(--text-2);
   font-size:var(--fs-label);flex:none}
 .delivery-status button:hover{color:var(--text)}
+/* §41.9 admission explanation card — a refusal that answers, not a dead end. */
+.admission-card{margin:2px 0 var(--sp-6);border:1px solid var(--line);border-left:3px solid var(--escalated);
+  border-radius:var(--r-md);padding:12px var(--sp-3);background:var(--surface);font-size:var(--fs-label)}
+.admission-card.ok{border-left-color:var(--pass)}
+.admission-head{display:flex;align-items:center;gap:8px}
+.admission-head b{color:var(--text);font-weight:600}
+.admission-head span{color:var(--text-3);font-size:var(--fs-caption)}
+.admission-why{margin:7px 0 0;color:var(--text-2);line-height:1.55}
+.admission-safe{margin:6px 0 0;color:var(--text-3);font-size:var(--fs-caption)}
+.admission-tier{margin:7px 0 0;color:var(--text-2)}
+.admission-options{margin-top:9px}
+.admission-options b{color:var(--text);font-weight:500;font-size:var(--fs-caption)}
+.admission-options ul{margin:5px 0 0;padding-left:18px;color:var(--text-2)}
+.admission-options li{margin-top:3px;line-height:1.5}
+.admission-actions{display:flex;gap:10px;margin-top:11px}
+.admission-actions button{border:1px solid var(--line-strong);background:transparent;color:var(--text-2);
+  border-radius:var(--r-sm);padding:5px 12px;font-size:var(--fs-label)}
+.admission-actions button:hover{color:var(--text);border-color:var(--text-3)}
 .interrupted{margin-bottom:var(--sp-5);padding:var(--sp-3) var(--sp-4);background:var(--surface);
   border:1px solid var(--line);border-left:3px solid var(--escalated);color:var(--text);
   border-radius:var(--r-md);font-size:var(--fs-body);display:none;box-shadow:var(--shadow-1)}
@@ -3043,6 +3061,17 @@ const ZH={
   "Ready for your correction":"已准备接收你的修正","Send the approved guidance to start the human-authorized audited attempt.":"发送已确认的指导，以启动由你授权的受审计尝试。",
   "CrossAudit needs a decision before it can continue.":"CrossAudit 需要你作出决定才能继续。","Stopped":"已停止",
   "The task did not complete.":"任务未完成。","View audit details":"查看审计详情",
+  "conversational reply · not audited":"对话回复 · 未经审计",
+  "direct reply · no project files shared":"直接回复 · 未共享项目文件",
+  "Answered.":"已回答。","Admitted.":"已准入。","Not admitted.":"未获准入。","Try again":"重试",
+  "No work was lost — the report, receipt and ledger are unchanged, and nothing was consumed.":"没有丢失任何工作——报告、收据与账本均未改动，也未消费任何结果。",
+  "What would make it admissible":"怎样才能获得准入",
+  "connect a real auditor provider and run the task again — a replayed audit can never admit":"连接真实的审计端 Provider 并重新运行任务——回放的审计永远无法准入",
+  "give the two roles distinct first-party vendors so independence is attestable":"为两个角色配置不同的第一方厂商，使独立性可被证明",
+  "only a PASS can be admitted":"只有 PASS 结果才能准入",
+  "run the task again so a fresh receipt is recorded for this cycle":"重新运行任务，让本周期记录一份新的收据",
+  "run a real audited task; its receipt is minted automatically":"运行一次真实的受审计任务，收据会自动生成",
+  "run a task and let the audit finish with a PASS first":"先运行一个任务并让审计以 PASS 结束",
   "Delivered files":"交付文件","Only final files that passed independent review.":"仅显示已通过独立审查的最终文件。",
   "No audited deliverables yet.":"尚无经审计的交付物。","Independent verdicts and findings reconstructed from the ledger.":"从账本重建的独立判定与发现。",
   "Audit evidence":"审计证据","No audit evidence yet.":"尚无审计证据。","Token usage":"Token 用量",
@@ -3130,6 +3159,11 @@ const ZH={
   "Your provider setup is saved. Create your first project to put the recommended pair to work.":"你的供应商设置已保存。创建你的第一个项目，即可让推荐搭配开始工作。"
 };
 const ZH_PATTERNS=[
+  [/^the selected PASS is not ready for admission: (.+)$/,m=>'所选 PASS 尚不满足准入条件：'+m[1]],
+  [/^the selected PASS receipt is missing — (.+)$/,m=>'所选 PASS 的收据缺失——'+m[1]],
+  [/^there is no unconsumed passing result to admit$/,()=>'没有未消费的 PASS 结果可供准入'],
+  [/^Admission tier (\w+)( · .+)?$/,m=>'准入层级 '+m[1]+(m[2]||'')],
+  [/^receipt ([0-9a-f]+)$/,m=>'收据 '+m[1]],[/^tier (\w+)$/,m=>'层级 '+m[1]],
   [/^(\d+) cycles?$/,m=>m[1]+' 个审计循环'],[/^(\d+) chats?$/,m=>m[1]+' 个对话'],
   [/^(\d+) required items? need fixing$/i,m=>m[1]+' 个必需项需要修复'],
   [/^(\d+) optional items? need attention$/i,m=>m[1]+' 个可选项需要处理'],
@@ -4859,6 +4893,9 @@ function turn(m,d){
   if(m.kind === 'auditor_chat') return '<article class="turn audit"><div class="turn-main">'
     +'<div class="turn-meta"><span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b><span>direct reply · no project files shared</span>'
     +'<span class="turn-time">'+at(m.t)+'</span></div><div class="turn-body">'+esc(m.response)+'</div></div></article>';
+  if(m.kind === 'generator_chat') return '<article class="turn"><div class="turn-main">'
+    +'<div class="turn-meta"><span class="role-mark generator" aria-hidden="true">G</span><b>Generator</b><span>conversational reply · not audited</span>'
+    +'<span class="turn-time">'+at(m.t)+'</span></div><div class="turn-body">'+esc(m.response)+'</div></div></article>';
   if(m.kind === 'auditor'){
     const fs = (m.findings||[]).map(f => '<div class="finding"><div class="finding-head">'
       + '<span class="severity">' + esc(f.severity) + '</span><span>' + esc(f.rule) + '</span>'
@@ -5114,8 +5151,27 @@ function allMessages(d){
     return ['passed','consumed'].includes(auditStatus(d,m.sha));
   });
   const seen = new Set();
-  return rows.filter(m => {const key = [m.kind,m.t,m.utterance||m.summary||m.verdict].join('|');
+  return rows.filter(m => {const key = [m.kind,m.t,m.utterance||m.summary||m.verdict||m.response||''].join('|');
     if(seen.has(key)) return false;seen.add(key);return true;}).sort((a,b) => a.t-b.t);
+}
+// §41.9 admission explanation — a transient, client-side card that answers:
+// what happened · was work lost · what the system did · options · tech details.
+let lastAdmission=null;
+function admissionCard(){
+  const a=lastAdmission;if(!a||a.chat!==(activeChatId||''))return '';
+  if(a.ok)return '<section class="admission-card ok" aria-label="Admission result">'
+    +'<div class="admission-head"><b>Admitted.</b><span>receipt '+esc(a.receipt||'')+'</span></div>'
+    +(a.tier?'<p class="admission-tier">Admission tier '+esc(a.tier)+(a.tierMeaning?' · '+esc(a.tierMeaning):'')+'</p>':'')
+    +'</section>';
+  const remedies=(a.remediations||[]).map(r=>'<li>'+esc(r)+'</li>').join('');
+  return '<section class="admission-card refused" aria-label="Admission explanation">'
+    +'<div class="admission-head"><b>Not admitted.</b>'+(a.tier?'<span>tier '+esc(a.tier)+'</span>':'')+'</div>'
+    +'<p class="admission-why">'+esc(a.reason||'')+'</p>'
+    +'<p class="admission-safe">No work was lost — the report, receipt and ledger are unchanged, and nothing was consumed.</p>'
+    +(remedies?'<div class="admission-options"><b>What would make it admissible</b><ul>'+remedies+'</ul></div>':'')
+    +'<div class="admission-actions"><button type="button" data-open-audits>View audit details</button>'
+    +(a.cycleId?'<button type="button" data-admit data-admit-cycle="'+esc(a.cycleId)+'">Try again</button>':'')
+    +'</div></section>';
 }
 function deliveryStatus(d){
   const p=chatProgress(d),cycles=chatCycles(d),cycle=cycles.length?cycles[cycles.length-1]:null;
@@ -5350,7 +5406,7 @@ function renderConversation(d){
     // the timeline holds nothing at all, and the delivery band only when no
     // review card already states the outcome of the same cycle.
     const body = messages.map(m=>turn(m,d)).join('') + optimistic + live + approval + review
-      + (review ? '' : deliveryStatus(d));
+      + admissionCard() + (review ? '' : deliveryStatus(d));
     html = body || welcome();
   }
   document.getElementById('conversation').innerHTML = html;
@@ -5791,8 +5847,17 @@ function handleActionClick(ev){
   const cancel=ev.target.closest('[data-hpc-cancel]');if(cancel&&confirm(currentLocale==='zh'?'取消这个远程任务？此操作无法撤销。':'Cancel this remote job? This cannot be undone.')){
     cancel.disabled=true;cancel.textContent='Cancelling…';api('/api/hpc',{action:'cancel',job_id:cancel.getAttribute('data-hpc-cancel')})
       .catch(computeSurfaceError).finally(()=>{cancel.disabled=false;cancel.textContent='Cancel job';});}
-  const admit=ev.target.closest('[data-admit]');if(admit){admit.disabled=true;admit.textContent='Verifying…';
-    api('/api/admit',{cycle_id:admit.getAttribute('data-admit-cycle')}).catch(e=>{route.className='route on';route.innerHTML='<b>Not admitted.</b> '+esc(e.message);});}
+  const admit=ev.target.closest('[data-admit]');if(admit){const admitCycle=admit.getAttribute('data-admit-cycle');admit.disabled=true;admit.textContent='Verifying…';
+    api('/api/admit',{cycle_id:admitCycle}).then(r=>{
+      lastAdmission={ok:true,chat:activeChatId||'',cycleId:admitCycle,receipt:r.receipt||'',tier:r.tier||'',tierMeaning:r.tier_meaning||''};
+      if(lastState)render(lastState);})
+    .catch(e=>{
+      // §41.9: the refusal explains itself in place — and the button recovers.
+      lastAdmission={ok:false,chat:activeChatId||'',cycleId:admitCycle,reason:e.message,
+        remediations:e.remediations||[],why:e.why||null,tier:e.tier||'',tierMeaning:e.tier_meaning||'',receipt:e.receipt||''};
+      admit.disabled=false;admit.textContent='Admit result';
+      route.className='route on';route.innerHTML='<b>Not admitted.</b> '+esc(e.message);
+      if(lastState)render(lastState);});}
 }
 document.getElementById('conversation').onclick=handleActionClick;
 document.getElementById('panel-dynamic').onclick=handleActionClick;
@@ -6082,8 +6147,12 @@ form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!
   try{const uploadBatch=pendingFiles.length?await uploadFiles(pendingFiles):null;
     const r=await api('/api/say',{text,chat_id:activeChatId,upload_batch:uploadBatch,attachment_consent:pendingFiles.length>0,
       continuation_cycle:continuing?pendingContinuation.cycle:''});if(r.asked){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b class="ask">Needs clarification.</b> '
-    + esc(r.clarify);}else{activeChatId=r.chat_id||activeChatId;if(optimisticSend)optimisticSend.chat=activeChatId||'';if(r.lane!=='generator'){optimisticSend=null;}route.innerHTML=r.lane==='generator'
+    + esc(r.clarify);}else{activeChatId=r.chat_id||activeChatId;if(optimisticSend)optimisticSend.chat=activeChatId||'';
+    // chat is synchronous: the echo + reply land in the next snapshot, so the
+    // optimistic bubble stays until the real turns take over (echo-detection).
+    if(r.lane!=='generator'&&r.lane!=='chat'){optimisticSend=null;}route.innerHTML=r.lane==='generator'
       ?'<b>Task started.</b> The result will appear in this conversation.'
+      :r.lane==='chat'?'<b>Answered.</b>'
       :'<b>Message delivered.</b>';
     if(r.lane==='generator')pendingContinuation={cycle:'',chat:''};
     if(!pendingFiles.length||r.attachments_accepted){say.value='';pendingFiles=[];uploadProgress=new Map();fileInput.value='';drawFiles();syncAudience();}}}

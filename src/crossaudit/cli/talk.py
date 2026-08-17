@@ -165,6 +165,55 @@ def lane_auditor(cfg: Config, routing) -> str:
     return "answered by auditor: " + answer[:12000]
 
 
+GENERATOR_CHAT_SYSTEM = """You are the Generator in a supervised project group
+conversation. The project owner asked you something conversational — a question,
+an explanation, a greeting — not a request to produce or change work. Answer it
+directly and concisely. No project files, Constitution, audit records, or
+controller state are disclosed in this direct-chat lane, so do not claim you
+inspected them. No build ran and no audit reviewed this reply; if the owner
+seems to want actual work done, say they can simply ask for it and it will run
+through the audited loop."""
+
+
+def _generator_chat_complete(cfg: Config):
+    """A `complete(system, prompt)` bound to the generator role for direct chat.
+
+    The generator role keeps its own credential (never the auditor's — the two
+    ends of the loop stay separate, P2), and the completion is recorded to usage
+    like any other, but nothing here starts a build or touches the work.
+    """
+    primary = provider_resilience.generator_role(cfg)
+
+    def complete(*, system: str, prompt: str):
+        reply = provider_resilience.complete(
+            cfg, "generator", primary, system=system, prompt=prompt,
+            allow_custom=bool(os.environ.get("CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT")))
+        route = provider_resilience.route_from_reply(reply, primary)
+        record_completion(root=cfg.root, state_dir=cfg.state_dir, role="generator",
+                          phase="control", vendor=route["vendor"],
+                          provider=route["provider"], model=route["model"],
+                          reply=reply, system=system, prompt=prompt,
+                          base_url=route.get("base_url"))
+        return reply
+
+    return complete
+
+
+def lane_chat(cfg: Config, routing) -> str:
+    """A direct, unaudited conversational answer from the generator.
+
+    Transmits only the user's own words (P2); runs no build, writes no files,
+    and mints no receipt — the reply is labeled as unaudited wherever it shows.
+    """
+    reply = _generator_chat_complete(cfg)(system=GENERATOR_CHAT_SYSTEM,
+                                          prompt=routing.restated)
+    answer = reply.text.strip()
+    if not answer:
+        raise ConfigDenial("the generator returned an empty reply")
+    print(f"\n  Generator:\n  {answer}")
+    return "answered by generator: " + answer[:12000]
+
+
 def lane_generator(cfg: Config, routing) -> str:
     """A change to the work goes to the generator, through the same loop `build`
     runs: write, commit, audit, and repeat on findings."""
@@ -306,6 +355,7 @@ def cmd_talk(args) -> int:
     lane_fns = {
         "amendment": lambda: lane_amendment(cfg, routing, assume_yes=args.yes),
         "auditor": lambda: lane_auditor(cfg, routing),
+        "chat": lambda: lane_chat(cfg, routing),
         "query": lambda: lane_query(cfg, routing),
         "generator": lambda: lane_generator(cfg, routing),
         "dispute": lambda: lane_dispute(cfg, routing),

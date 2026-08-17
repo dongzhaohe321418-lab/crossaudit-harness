@@ -30,8 +30,12 @@ from .errors import ProviderDenial
 # an explicit @Auditor mention in route_addressed. A mention selects a
 # recipient, not a privilege — mutations still require a certain
 # amendment/dispute/resolve classification.
+# "chat" is the eighth lane: a direct conversational answer from the generator
+# (a question, an explanation, small talk) that asks for no work, no rule
+# change, and nothing from the records. It runs no build and no audit, and the
+# UI labels the reply as unaudited — a work request must never land here.
 LANES = ("project", "generator", "amendment", "dispute", "resolve", "query",
-         "auditor")
+         "auditor", "chat")
 CONFIDENCE_FLOOR = 0.75
 
 ROUTER_SYSTEM = """You sort one sentence from a project owner into exactly one \
@@ -48,6 +52,13 @@ this particular piece of work.
 - resolve: ruling on something the loop escalated — letting it through, or \
 abandoning it.
 - query: asking about state. Answerable from records; changes nothing.
+- chat: a direct question or conversation that is not a request to produce or \
+change work, not about the standards, and not answerable from project records — \
+"what is 1+1", "explain this concept", a greeting or thanks.
+
+If a sentence could plausibly be a request for work, it is generator, not chat: \
+chat is only for sentences no other lane could execute, because a work request \
+routed to chat would skip the audited loop entirely.
 
 Judge intent, not vocabulary. "This section is too long" is generator: it asks \
 for a change to the work. "Sections should never exceed a page" is amendment: it \
@@ -166,12 +177,14 @@ def apply_safe_default(routing: Routing) -> Routing:
     """
     if routing.certain:
         return routing
-    if routing.lane not in {"generator", "project", "query"}:
+    if routing.lane not in {"generator", "project", "query", "chat"}:
         return routing
-    lane = "generator" if routing.lane in {"generator", "project"} else "query"
+    lane = "generator" if routing.lane in {"generator", "project"} else routing.lane
     reason = routing.reasoning.rstrip(".; ")
     suffix = ("safe autonomy sent this reversible request through the supervised "
               "Generator loop" if lane == "generator"
+              else "safe autonomy answered conversationally without a build; "
+                   "nothing was generated or audited" if lane == "chat"
               else "safe autonomy kept this request read-only")
     return replace(
         routing, lane=lane, clarify="", routing_mode="automatic_safe_default",

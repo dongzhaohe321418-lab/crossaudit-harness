@@ -889,3 +889,135 @@ def test_html_preview_returns_inert_text_for_client_side_sandboxing(deliverables
     # it inside a scriptless sandboxed iframe.
     assert payload["kind"] == "html"
     assert payload["text"] == "<h1>Audited page</h1><script>alert(1)</script>"
+
+
+def test_admission_refusal_explains_why_and_offers_options(tmp_path, monkeypatch):
+    """Slice A (§41.9): a refusal names the failing predicate, says no work was
+    lost, and lists what would make admission possible — without relaxing any
+    of the three gating predicates."""
+    from types import SimpleNamespace
+
+    from crossaudit.console import server as server_mod
+    from crossaudit.errors import ConfigDenial
+
+    sha, digest, cycle_id = "b" * 40, "a" * 64, "cycle-1"
+    receipt_path = tmp_path / "cycles" / f"{sha[:12]}-r1" / "receipt.json"
+    receipt_path.parent.mkdir(parents=True)
+    receipt_path.write_text("{}")
+    state = {
+        "cycles": {cycle_id: {"status": "PASSED", "active_sha": sha,
+                              "round": 1, "parent_receipt": digest}},
+        "history": [{"event": "verdict", "cycle": cycle_id,
+                     "receipt": digest[:16]}],
+    }
+
+    class Store:
+        def __init__(self, _path): pass
+        def snapshot(self): return state
+
+    receipt = {"cycle": {"cycle_id": cycle_id}, "subject": {"sha": sha}}
+    cfg = SimpleNamespace(root=tmp_path, state_dir=".crossaudit",
+                          ledger_dir="cycles", science_repo="owner/project")
+    monkeypatch.setattr(server_mod, "StateStore", Store)
+    monkeypatch.setattr(server_mod, "load_receipt", lambda path: receipt)
+    monkeypatch.setattr(server_mod, "verify_receipt", lambda *a, **k: {
+        "receipt_digest": digest, "admission_ready": False,
+        "admission_shortfalls": ["audit integrity is NON_EVIDENTIAL_PROVIDER"]})
+    monkeypatch.setattr(
+        server_mod, "admit_receipt",
+        lambda *a, **k: pytest.fail("a refused admission must not consume"))
+
+    with pytest.raises(ConfigDenial) as excinfo:
+        server_mod.admit_latest(cfg)
+    d = excinfo.value.as_dict()
+    assert d["denied"] is True and d["kind"] == "config"
+    assert "NON_EVIDENTIAL_PROVIDER" in d["reason"]           # what happened
+    assert d["work_lost"] is False                            # was work lost
+    assert d["why"]["shortfalls"]                             # evidence
+    assert any("real auditor provider" in r for r in d["remediations"])
+    assert d["cycle_id"] == cycle_id and d["receipt"] == digest[:16]
+
+
+def test_admission_refusal_gates_on_every_predicate(tmp_path, monkeypatch):
+    """recorded/latest mismatches refuse with their own explanation, and the
+    consume step is never reached (parametrized over the failing flag)."""
+    from types import SimpleNamespace
+
+    from crossaudit.console import server as server_mod
+    from crossaudit.errors import ConfigDenial
+
+    sha, digest, cycle_id = "b" * 40, "a" * 64, "cycle-1"
+    receipt_path = tmp_path / "cycles" / f"{sha[:12]}-r1" / "receipt.json"
+    receipt_path.parent.mkdir(parents=True)
+    receipt_path.write_text("{}")
+    for wrong in ("recorded", "latest"):
+        state = {
+            "cycles": {cycle_id: {
+                "status": "PASSED", "active_sha": sha, "round": 1,
+                "parent_receipt": digest if wrong != "latest" else "f" * 64}},
+            "history": [{"event": "verdict", "cycle": cycle_id,
+                         "receipt": digest[:16] if wrong != "recorded"
+                         else "0" * 16}],
+        }
+
+        class Store:
+            def __init__(self, _path): pass
+            def snapshot(self, _state=state): return _state
+
+        cfg = SimpleNamespace(root=tmp_path, state_dir=".crossaudit",
+                              ledger_dir="cycles", science_repo="owner/project")
+        monkeypatch.setattr(server_mod, "StateStore", Store)
+        monkeypatch.setattr(server_mod, "load_receipt", lambda path: {
+            "cycle": {"cycle_id": cycle_id}, "subject": {"sha": sha}})
+        monkeypatch.setattr(server_mod, "verify_receipt", lambda *a, **k: {
+            "receipt_digest": digest, "admission_ready": True,
+            "admission_shortfalls": []})
+        monkeypatch.setattr(
+            server_mod, "admit_receipt",
+            lambda *a, **k: pytest.fail("a refused admission must not consume"))
+        with pytest.raises(ConfigDenial) as excinfo:
+            server_mod.admit_latest(cfg)
+        d = excinfo.value.as_dict()
+        assert "not the one recorded" in d["reason"]
+        assert d["work_lost"] is False and d["remediations"]
+
+
+def test_admission_success_disclosres_the_tier(tmp_path, monkeypatch):
+    """A successful local admission is honest about what it means (§23):
+    the payload carries the tier and its meaning, additively."""
+    from types import SimpleNamespace
+
+    from crossaudit.console import server as server_mod
+
+    sha, digest, cycle_id = "b" * 40, "a" * 64, "cycle-1"
+    receipt_path = tmp_path / "cycles" / f"{sha[:12]}-r1" / "receipt.json"
+    receipt_path.parent.mkdir(parents=True)
+    receipt_path.write_text("{}")
+    state = {
+        "cycles": {cycle_id: {"status": "PASSED", "active_sha": sha,
+                              "round": 1, "parent_receipt": digest}},
+        "history": [{"event": "verdict", "cycle": cycle_id,
+                     "receipt": digest[:16]}],
+    }
+
+    class Store:
+        def __init__(self, _path): pass
+        def snapshot(self): return state
+        def capabilities(self): return {"persistent": True, "atomic": True}
+
+    cfg = SimpleNamespace(root=tmp_path, state_dir=".crossaudit",
+                          ledger_dir="cycles", science_repo="owner/project",
+                          audit_repo="")
+    monkeypatch.setattr(server_mod, "StateStore", Store)
+    monkeypatch.setattr(server_mod, "load_receipt", lambda path: {
+        "cycle": {"cycle_id": cycle_id}, "subject": {"sha": sha}})
+    monkeypatch.setattr(server_mod, "verify_receipt", lambda *a, **k: {
+        "receipt_digest": digest, "admission_ready": True,
+        "admission_shortfalls": []})
+    monkeypatch.setattr(server_mod, "admit_receipt", lambda rec, store, evidence,
+                        cfg=None: {"admitted": True, "cycle_id": cycle_id})
+
+    result = server_mod.admit_latest(cfg)
+    assert result["admitted"] and result["verified"]
+    assert result["tier"] == "local"                  # a repo with no remote
+    assert "rewritten" in result["tier_meaning"] or result["tier_meaning"]

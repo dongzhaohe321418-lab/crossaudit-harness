@@ -197,8 +197,29 @@ def app_settings(cfg: Config | None = None) -> dict:
     }
 
 
+def _admission_tier(cfg: Config) -> dict:
+    """The honest label for what an admission MEANS here (offline, never gates)."""
+    try:
+        from .. import admission as adm
+        store = StateStore(cfg.root / cfg.state_dir / "state.json")
+        caps = store.capabilities()
+        tier = adm.assess(root=cfg.root, paired=bool(cfg.audit_repo),
+                          controller_persistent=caps["persistent"],
+                          controller_atomic=caps["atomic"], online=False)
+        return {"tier": tier.tier,
+                "tier_meaning": adm.TIER_MEANING.get(tier.tier, "")}
+    except Exception:  # noqa: BLE001 -- disclosure only, never fail admission
+        return {}
+
+
 def admit_latest(cfg: Config, cycle_id: str = "") -> dict:
-    """Verify and consume the selected, or newest, recorded PASS."""
+    """Verify and consume the selected, or newest, recorded PASS.
+
+    A refusal here answers §41.9's questions rather than dead-ending: the
+    reason names the actual failing predicate, ``detail`` carries the evidence
+    (shortfalls, bindings, tier), and ``remediations`` name what would work.
+    Nothing is relaxed — the same three predicates gate admission as before.
+    """
     store = StateStore(cfg.root / cfg.state_dir / "state.json")
     state = store.snapshot()
     verdicts = [event for event in state.get("history", [])
@@ -226,12 +247,48 @@ def admit_latest(cfg: Config, cycle_id: str = "") -> dict:
                 recorded = event.get("receipt") == digest[:16]
                 latest = cycle.get("parent_receipt") == digest
                 if not (evidence["admission_ready"] and recorded and latest):
-                    raise ConfigDenial("the selected PASS is not ready for admission")
+                    shortfalls = list(evidence.get("admission_shortfalls", []))
+                    if shortfalls:
+                        reason = ("the selected PASS is not ready for admission: "
+                                  + "; ".join(shortfalls))
+                        remedies = []
+                        if any("NON_EVIDENTIAL" in s for s in shortfalls):
+                            remedies.append(
+                                "connect a real auditor provider and run the "
+                                "task again — a replayed audit can never admit")
+                        if any("isolation" in s for s in shortfalls):
+                            remedies.append(
+                                "give the two roles distinct first-party "
+                                "vendors so independence is attestable")
+                        if any("verdict" in s for s in shortfalls):
+                            remedies.append("only a PASS can be admitted")
+                    else:
+                        reason = ("the selected PASS is not ready for admission: "
+                                  "this receipt is not the one recorded for the "
+                                  "cycle — re-run the audit")
+                        remedies = ["run the task again so a fresh receipt is "
+                                    "recorded for this cycle"]
+                    raise ConfigDenial(
+                        reason, remediations=remedies,
+                        why={"shortfalls": shortfalls, "recorded": recorded,
+                             "latest": latest},
+                        work_lost=False,
+                        cycle_id=cycle_id, receipt=digest[:16],
+                        receipt_path=str(path.relative_to(cfg.root)),
+                        **_admission_tier(cfg))
                 result = admit_receipt(receipt, store, evidence, cfg=cfg)
                 return {**result, "verified": True, "sha": sha,
-                        "receipt": digest[:16]}
-            raise ConfigDenial("the selected PASS receipt is missing")
-    raise ConfigDenial("there is no unconsumed passing result to admit")
+                        "receipt": digest[:16], **_admission_tier(cfg)}
+            raise ConfigDenial(
+                "the selected PASS receipt is missing — no receipt file was "
+                "minted for this cycle (sample data never mints one)",
+                remediations=["run a real audited task; its receipt is minted "
+                              "automatically"],
+                work_lost=False, cycle_id=cycle_id, **_admission_tier(cfg))
+    raise ConfigDenial(
+        "there is no unconsumed passing result to admit",
+        remediations=["run a task and let the audit finish with a PASS first"],
+        work_lost=False, **_admission_tier(cfg))
 
 
 class _ChangeSignal:
@@ -844,6 +901,7 @@ def say(cfg: Config, text: str, *, attachments=None,
     lanes = {
         "amendment": lambda: talk_mod.lane_amendment(cfg, routing, assume_yes=True),
         "auditor": lambda: talk_mod.lane_auditor(cfg, routing),
+        "chat": lambda: talk_mod.lane_chat(cfg, routing),
         "query": lambda: talk_mod.lane_query(cfg, routing),
         "generator": generator_lane,
         "dispute": lambda: talk_mod.lane_dispute(cfg, routing),
