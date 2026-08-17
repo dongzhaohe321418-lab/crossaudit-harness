@@ -167,6 +167,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .nav-item[data-view="compute"] .nav-icon,.hpc-host-intro-icon{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='3'/%3E%3Cpath d='m7 9 3 3-3 3M13 15h4'/%3E%3C/svg%3E")}
 .nav-item[data-view="tools"] .nav-icon{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='3'/%3E%3Ccircle cx='17' cy='7' r='3'/%3E%3Ccircle cx='7' cy='17' r='3'/%3E%3Cpath d='M14 17h6M17 14v6'/%3E%3C/svg%3E")}
 .nav-item[data-view="evidence"] .nav-icon{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 5 6v5c0 4.5 2.8 7.9 7 10 4.2-2.1 7-5.5 7-10V6l-7-3Z'/%3E%3Cpath d='M9 12h6M12 9v6'/%3E%3C/svg%3E")}
+.nav-item[data-view="plan"] .nav-icon{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 4h14v16H5z'/%3E%3Cpath d='M9 9h6M9 13h6M9 17h4'/%3E%3C/svg%3E")}
 .project-delete,.task-delete{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6'/%3E%3C/svg%3E")}
 .project-arrow{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E")}
 [data-preview].artifact-action{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12s3.3-6 9-6 9 6 9 6-3.3 6-9 6-9-6-9-6Z'/%3E%3Ccircle cx='12' cy='12' r='2.5'/%3E%3C/svg%3E")}
@@ -631,6 +632,26 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .gov-hashes{margin-top:5px;font-family:var(--font-mono);font-size:var(--fs-caption);
   color:var(--text-3);overflow-wrap:anywhere}
 .gov-flag{margin-top:6px;font-size:var(--fs-caption);color:var(--escalated);font-weight:600}
+/* Goal & plan panel (Slice C): the stated goal + the audited loop as plan v1. */
+.plan-goal,.plan-plan{padding:12px 14px;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-md);margin-bottom:10px;font-size:var(--fs-label)}
+.plan-sec-title{font-size:var(--fs-caption);font-weight:600;color:var(--text-3);
+  text-transform:uppercase;letter-spacing:.04em;margin:10px 0 5px}
+.plan-goal .plan-sec-title:first-child,.plan-plan .plan-sec-title:first-child{margin-top:0}
+.plan-task{margin:0;color:var(--text);line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.plan-list{margin:0;padding-left:18px;color:var(--text-2)}
+.plan-list li{margin-top:3px}
+.plan-const{display:flex;justify-content:space-between;gap:10px;padding:3px 0;color:var(--text-2)}
+.plan-const b{color:var(--text);font-weight:500}
+.plan-note{margin:4px 0 8px;color:var(--text-3);font-size:var(--fs-caption)}
+.plan-step{display:flex;align-items:center;gap:8px;padding:6px 0;color:var(--text-2)}
+.plan-step b{color:var(--text);font-weight:500;flex:none}
+.plan-step span:last-child{font-size:var(--fs-caption);color:var(--text-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plan-dot{width:8px;height:8px;border-radius:50%;background:var(--line-strong);flex:none}
+.plan-step.current .plan-dot{background:var(--accent)}
+.plan-step.done .plan-dot,.plan-step.passed .plan-dot{background:var(--pass)}
+.plan-round{padding:3px 0;color:var(--text-2);font-size:var(--fs-caption)}
 .approval-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
 .approval-actions button{height:30px;border-radius:var(--r-sm);border:1px solid var(--line-strong);
   background:var(--surface);color:var(--text);padding:0 12px;cursor:pointer;
@@ -2779,7 +2800,8 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <button type="button" class="nav-item" data-view="models" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Models</button>
       <button type="button" class="nav-item" data-view="usage" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Usage</button>
       <button type="button" class="nav-item" data-view="compute" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Compute</button>
-      <button type="button" class="nav-item" data-view="evidence" aria-pressed="false" aria-label="Governed actions and evidence"><span class="nav-icon" aria-hidden="true"></span>Governed</button></nav>
+      <button type="button" class="nav-item" data-view="evidence" aria-pressed="false" aria-label="Governed actions and evidence"><span class="nav-icon" aria-hidden="true"></span>Governed</button>
+      <button type="button" class="nav-item" data-view="plan" aria-pressed="false" aria-label="Goal and plan"><span class="nav-icon" aria-hidden="true"></span>Plan</button></nav>
     <div class="panel-body">
       <div class="panel-pane" id="panel-models" hidden>
         <section class="inspect-section"><div class="inspect-title">Models</div>
@@ -3062,6 +3084,14 @@ const ZH={
   "CrossAudit needs a decision before it can continue.":"CrossAudit 需要你作出决定才能继续。","Stopped":"已停止",
   "The task did not complete.":"任务未完成。","View audit details":"查看审计详情",
   "conversational reply · not audited":"对话回复 · 未经审计",
+  "Goal & plan":"目标与计划","Goal":"目标","Desired outputs":"预期产出","Constraints":"约束",
+  "Success criteria":"成功标准","Plan v1 · the audited loop":"计划 v1 · 受审计的循环","Rounds":"轮次",
+  "The stated goal and the audited plan for the current task.":"当前任务的既定目标与受审计的执行计划。",
+  "No plan yet — the plan appears when a task starts.":"还没有计划——任务开始后计划会显示在这里。",
+  "Derived from the supervised loop this run actually executes — generator-authored step plans arrive in a later slice.":"由本次运行真实执行的受监督循环推导——生成端自作的分步计划将在后续版本提供。",
+  "The structured goal record is not available for this run.":"本次运行没有可用的结构化目标记录。",
+  "authorized (recoverable)":"已授权（可恢复）","read-only":"只读","allowlisted":"已允许清单",
+  "not authorized":"未授权","configured":"已配置","not configured":"未配置",
   "direct reply · no project files shared":"直接回复 · 未共享项目文件",
   "Answered.":"已回答。","Admitted.":"已准入。","Not admitted.":"未获准入。","Try again":"重试",
   "No work was lost — the report, receipt and ledger are unchanged, and nothing was consumed.":"没有丢失任何工作——报告、收据与账本均未改动，也未消费任何结果。",
@@ -5348,6 +5378,40 @@ function evidenceView(d){
     +(body?'<div class="gov-list">'+body+'</div>'
       :'<div class="compute-empty">No governed actions yet. When the agent uses a built-in tool — read, write, run a command, commit, or submit compute — each proposal, decision, approval and result appears here.</div>');
 }
+function planView(d){
+  const p=chatProgress(d);
+  if(!p)return '<div class="view-heading"><h2>Goal & plan</h2><p>The stated goal and the audited plan for the current task.</p></div>'
+    +'<div class="compute-empty">No plan yet — the plan appears when a task starts.</div>';
+  // The Goal event is emitted durably at run start; parse defensively and fall
+  // back to the run task so an evicted or corrupt event never blanks the tab.
+  let goal=null;
+  const goalStep=(p.steps||[]).filter(s=>s.kind==='goal').slice(-1)[0];
+  if(goalStep&&goalStep.detail){try{goal=JSON.parse(goalStep.detail);}catch(e){goal=null;}}
+  const cons=goal&&goal.constraints||{};
+  const consRows=goal?[
+    ['Rounds','up to '+esc(cons.max_rounds)],
+    ['Scope',esc((cons.scope_dirs||[]).join(', ')||'project')],
+    ['Writes',cons.writes_authorized?'authorized (recoverable)':'read-only'],
+    ['Commands',cons.commands_authorized?'allowlisted':'not authorized'],
+    ['Compute',cons.compute_authorized?'configured':'not configured'],
+  ].map(r=>'<div class="plan-const"><span>'+r[0]+'</span><b>'+r[1]+'</b></div>').join(''):'';
+  const goalBlock=goal
+    ?'<section class="plan-goal"><div class="plan-sec-title">Goal</div><p class="plan-task">'+esc(goal.task||p.task)+'</p>'
+      +'<div class="plan-sec-title">Desired outputs</div><ul class="plan-list">'+(goal.desired_outputs||[]).map(o=>'<li>'+esc(o)+'</li>').join('')+'</ul>'
+      +'<div class="plan-sec-title">Constraints</div>'+consRows
+      +'<div class="plan-sec-title">Success criteria</div><ul class="plan-list">'+(goal.success_criteria||[]).map(o=>'<li>'+esc(o)+'</li>').join('')+'</ul></section>'
+    :'<section class="plan-goal"><div class="plan-sec-title">Goal</div><p class="plan-task">'+esc(p.task||'')+'</p>'
+      +'<p class="plan-note">The structured goal record is not available for this run.</p></section>';
+  const gates=(d.pipeline||[]).map(g=>'<div class="plan-step '+esc(g.state)+'"><span class="plan-dot"></span><b>'+esc(g.title)+'</b><span>'+esc(g.detail)+'</span></div>').join('');
+  const rounds=(p.steps||[]).filter(s=>['audit_passed','audit_blocked','audit_escalated'].includes(s.kind))
+    .map(s=>'<div class="plan-round">round '+esc(s.round_no)+' — <span class="status '+esc(String(s.text).toLowerCase())+'">'+esc(s.text)+'</span></div>').join('');
+  return '<div class="view-heading"><h2>Goal & plan</h2><p>The stated goal and the audited plan for the current task.</p></div>'
+    +goalBlock
+    +'<section class="plan-plan"><div class="plan-sec-title">Plan v1 · the audited loop</div>'
+    +'<p class="plan-note">Derived from the supervised loop this run actually executes — generator-authored step plans arrive in a later slice.</p>'
+    +(gates||'<div class="compute-empty">No gates to show.</div>')
+    +(rounds?'<div class="plan-sec-title">Rounds</div>'+rounds:'')+'</section>';
+}
 function toolsView(d){
   const state=d.mcp||{servers:[],calls:[]},skills=((d.runtime_config||{}).skills||[]);
   const servers=(state.servers||[]).map(server=>{const approved=new Set(server.allowed_tools||[]);
@@ -5414,7 +5478,7 @@ function renderConversation(d){
   else thread.scrollTop = Math.min(previousTop,Math.max(0,thread.scrollHeight-thread.clientHeight));
 }
 const PANEL_TITLES={artifacts:'Files',audits:'Audit history',models:'Models',usage:'Usage',
-  compute:'Compute',tools:'Tools & Skills',evidence:'Governed actions'};
+  compute:'Compute',tools:'Tools & Skills',evidence:'Governed actions',plan:'Goal & plan'};
 function renderPanelTabs(){
   document.querySelectorAll('.panel-tabs .nav-item').forEach(button=>{
     const selected=button.getAttribute('data-view')===activeView;
@@ -5435,10 +5499,11 @@ function renderPanel(d){
   else if(activeView==='compute')dynamic.innerHTML=computeView(d);
   else if(activeView==='tools')dynamic.innerHTML=toolsView(d);
   else if(activeView==='evidence')dynamic.innerHTML=evidenceView(d);
+  else if(activeView==='plan')dynamic.innerHTML=planView(d);
   renderPanelTabs();
 }
 function openPanelTab(view){
-  const allowed=['artifacts','audits','models','usage','compute','tools','evidence'];
+  const allowed=['artifacts','audits','models','usage','compute','tools','evidence','plan'];
   activeView=allowed.includes(view)?view:'artifacts';
   if(activeView!=='compute')stopComputeTimers();
   closeRail();

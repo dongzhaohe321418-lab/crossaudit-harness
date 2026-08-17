@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import os
 import re
 import time
@@ -30,7 +31,8 @@ from .. import document_export, hpc, mcp
 from ..broker import secretscan
 from ..broker.humanapproval import INBOX, HumanApprovalGate
 from ..broker.routing import (
-    BROKER_SERVER_ID, broker_tool_call, build_broker_and_token, build_catalog)
+    BROKER_SERVER_ID, broker_tool_call, build_broker_and_token, build_catalog,
+    compute_authorized, run_commands_authorized, writes_authorized)
 from .. import generator as gen_mod
 from .. import skills as skills_mod
 from ..config import Config, heterogeneity, load
@@ -168,6 +170,44 @@ class _Args:
         self.allow_custom_endpoint = bool(os.environ.get(ALLOW_CUSTOM_ENV))
 
 
+def derive_goal(cfg: Config, task: str) -> dict:
+    """The structured Goal for this run (§12), derived deterministically.
+
+    Computed from the config and the task text alone — no model call — so the
+    same inputs always describe the same goal, and the goal cannot drift
+    mid-run (§5.6: the task is fixed at start; changing it means a new run).
+    """
+    from ..autonomy import requested_document_format
+
+    scope = [str(d) for d in (cfg.scope_dirs or [])]
+    outputs = ["audited work files"
+               + (f" under {', '.join(scope)}" if scope else "")]
+    # The goal record must never refuse a task the loop itself accepts: format
+    # ambiguity is the loop's question to raise, not the goal derivation's.
+    try:
+        format_name = requested_document_format(task)
+    except Denial:
+        format_name = None
+    if format_name:
+        outputs.append(f"a rendered {format_name.upper()} document")
+    return {
+        "task": task.strip(),
+        "desired_outputs": outputs,
+        "constraints": {
+            "max_rounds": cfg.max_rounds,
+            "scope_dirs": scope,
+            "writes_authorized": writes_authorized(cfg),
+            "commands_authorized": run_commands_authorized(cfg),
+            "compute_authorized": compute_authorized(cfg),
+        },
+        "success_criteria": [
+            "every deterministic check passes",
+            "the independent auditor returns PASS",
+            "the receipt is admission-ready",
+        ],
+    }
+
+
 def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
              chat_id: str = "", continuation_cycle: str = "") -> int:
     """The build loop itself emits typed operational facts.
@@ -232,6 +272,12 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     termination_reason = f"build round budget spent ({cfg.max_rounds})"
     last_round = 0
     provider_wait: ProviderDenial | None = None
+
+    # §12: the run's Goal, stated once and durably before any work happens.
+    # The plan surface (Plan tab) reads this event plus the loop's own gates.
+    emit("goal", "loop", task.strip().splitlines()[0][:80],
+         detail=json.dumps(derive_goal(cfg, task), ensure_ascii=False)[:2000],
+         state=RunState.QUEUED)
 
     for round_no in range(1, cfg.max_rounds + 1):
         current_round = round_no
