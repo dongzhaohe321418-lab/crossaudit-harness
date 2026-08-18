@@ -1047,7 +1047,7 @@ body.deciding .composer-wrap{display:none}
 .usage-row.head{background:var(--surface-2);color:var(--text-3);font-weight:600}
 .usage-model{min-width:0}
 .usage-model b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  font-family:var(--font-mono);font-size:var(--fs-caption);font-weight:500}
+  font-family:var(--font-ui);font-size:var(--fs-caption);font-weight:500}
 .usage-model small{color:var(--text-3);text-transform:capitalize}
 .usage-quality{display:inline-flex;width:max-content;padding:3px 5px;border-radius:var(--r-xs);
   background:var(--pass-bg);color:var(--pass);font-size:var(--fs-caption);font-weight:600}
@@ -1062,7 +1062,7 @@ body.deciding .composer-wrap{display:none}
 .usage-call-mark.auditor{background:var(--role-a-bg);color:var(--role-a)}
 .usage-call-main{min-width:0}
 .usage-call-main b{display:block;font-size:var(--fs-caption);white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;font-family:var(--font-mono);font-weight:500}
+  text-overflow:ellipsis;font-family:var(--font-ui);font-weight:500}
 .usage-call-main span{font-size:var(--fs-caption);color:var(--text-3)}
 .usage-call-value{text-align:right;font-variant-numeric:tabular-nums}
 .usage-call-value b{display:block;font-size:var(--fs-caption);font-family:var(--font-mono)}
@@ -1177,9 +1177,9 @@ body.hub-mode .project-hub{display:block}
 .project-delete:hover{background:var(--blocked-bg);color:var(--blocked)}
 .project-name{display:block;font-weight:600;font-size:var(--fs-body)}
 .project-path{display:block;font-size:var(--fs-caption);color:var(--text-3);margin-top:2px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font-mono)}
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font-ui)}
 .project-models{font-size:var(--fs-caption);color:var(--text-2);white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;font-family:var(--font-mono)}
+  text-overflow:ellipsis;font-family:var(--font-ui)}
 .project-stat{font-size:var(--fs-caption);color:var(--text-2)}
 .project-arrow{color:var(--text-3)}
 .paired-mark{font-size:var(--fs-caption);color:var(--text-2);background:var(--surface-2);
