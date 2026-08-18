@@ -1619,7 +1619,10 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
 .hpc-confirm{display:flex;align-items:flex-start;gap:9px;padding:10px;
   border:1px solid color-mix(in srgb,var(--escalated) 50%,var(--line));border-radius:var(--r-sm);
   background:var(--escalated-bg);font-size:var(--fs-caption);color:var(--text-2)}
-.hpc-confirm input{margin-top:2px;accent-color:var(--accent)}
+/* the label also carries .field, which makes inputs full-width; the checkbox
+   must NOT stretch, or it eats the row and the text collapses to one glyph wide */
+.hpc-confirm input{margin-top:2px;accent-color:var(--accent);flex:none;width:auto}
+.hpc-confirm>span{flex:1;min-width:0}
 .hpc-confirm b{display:block;color:var(--escalated)}
 .mcp-transport-fields.off{display:none}
 
@@ -6084,7 +6087,7 @@ function handleActionClick(ev){
   }
   if(ev.target.closest('[data-hpc-add]'))openComputeHost();
   if(ev.target.closest('[data-mcp-add]'))openMcp();
-  if(ev.target.closest('[data-manage-skills]'))openRuntime();
+  if(ev.target.closest('[data-manage-skills]')){openRuntime();showRuntimePanel('instructions',false);}
   const configureMcp=ev.target.closest('[data-mcp-configure]');if(configureMcp)openMcp(configureMcp.getAttribute('data-mcp-configure'));
   const probeMcp=ev.target.closest('[data-mcp-probe]');if(probeMcp){probeMcp.disabled=true;probeMcp.textContent='Refreshing…';
     api('/api/mcp',{action:'probe',server_id:probeMcp.getAttribute('data-mcp-probe')}).catch(computeSurfaceError)
