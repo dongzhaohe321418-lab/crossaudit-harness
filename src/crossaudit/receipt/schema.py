@@ -118,6 +118,28 @@ def validate(raw: Any) -> dict:
             raise IntegrityDenial("reproduction.locks must be a positive integer")
         if not isinstance(rep["lock_kinds"], list):
             raise IntegrityDenial("reproduction.lock_kinds must be a list")
+
+    # Optional governed-source provenance (A4): present only on cycles that ran a
+    # governed research retrieval. Validated when present; absence keeps the
+    # receipt byte-identical, so no schema bump.
+    src = raw.get("sources")
+    if src is not None:
+        if not isinstance(src, dict):
+            raise IntegrityDenial("sources must be a mapping")
+        _require(src, ("set_sha256", "count", "origins"), "sources")
+        if not isinstance(src["set_sha256"], str) or not src["set_sha256"]:
+            raise IntegrityDenial("sources.set_sha256 must be a non-empty string")
+        if (not isinstance(src["count"], int) or isinstance(src["count"], bool)
+                or src["count"] < 1):
+            raise IntegrityDenial("sources.count must be a positive integer")
+        if not isinstance(src["origins"], list):
+            raise IntegrityDenial("sources.origins must be a list")
+        # A sources block is a re-projection of the tool_evidence-bound prefix, so
+        # it can only exist alongside tool_evidence — otherwise verify would have
+        # no bound prefix to re-derive over (fail cleanly here, not with a later
+        # KeyError).
+        if raw.get("tool_evidence") is None:
+            raise IntegrityDenial("sources present without tool_evidence to bind it")
     return raw
 
 

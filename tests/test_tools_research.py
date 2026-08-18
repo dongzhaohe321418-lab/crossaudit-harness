@@ -100,6 +100,11 @@ def test_arxiv_parser(monkeypatch):
     assert row["url"] == "https://arxiv.org/abs/2401.01234v1"
     assert "degradation" in row["snippet"]
     assert len(out["query_sha256"]) == 64 and len(out["result_sha256"]) == 64
+    # A4: each paper carries a stable per-source provenance id (identity hash),
+    # surfaced both per-result and as the top-level source_ids list.
+    assert row["source_id"] == research._paper_source_id(row["id"], row["url"])
+    assert out["source_ids"] == [row["source_id"]]
+    assert len(row["source_id"]) == 64
 
 
 def test_semantic_scholar_parser(monkeypatch):
@@ -150,6 +155,8 @@ def test_html_text_extraction_skips_script_and_style(monkeypatch):
     assert "Additives slow degradation." in out["text"]
     assert "var ignored" not in out["text"]
     assert out["content_sha256"] and out["chars"] > 0
+    # A4: one fetch is one source; its content address IS its provenance id.
+    assert out["source_ids"] == [out["content_sha256"]]
 
 
 def test_pdf_text_extraction(monkeypatch):

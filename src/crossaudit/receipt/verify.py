@@ -166,6 +166,24 @@ def verify(receipt: dict, *, science_root: Path, audit_root: Path,
             raise IntegrityDenial(
                 "reproduction lock count does not match the audited manifest")
 
+    # Governed-source provenance (A4): re-derive the source-id set from the same
+    # tool_evidence-bound ledger prefix and refuse a mismatch. Gated on the local
+    # ledger being present, so signature-only offline verification still passes.
+    src = receipt.get("sources")
+    if src is not None and cfg is not None:
+        ledger_file = cfg.root / cfg.state_dir / "evidence.jsonl"
+        if ledger_file.exists():
+            from . import sources as sources_mod
+            recomputed = sources_mod.receipt_block(cfg, receipt)
+            if recomputed is None:
+                raise IntegrityDenial(
+                    "receipt claims governed sources but none re-derive from the "
+                    "evidence ledger")
+            if (recomputed["set_sha256"] != src["set_sha256"]
+                    or recomputed["count"] != src["count"]):
+                raise IntegrityDenial(
+                    "governed-source set does not match the evidence ledger")
+
     return {
         "receipt_digest": schema.digest(receipt),
         "sha": subject["sha"],

@@ -191,4 +191,12 @@ def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
     block = reproduction.receipt_block(receipt)
     if block:
         receipt["reproduction"] = block
+    # Optional, back-compatible governed-source provenance (A4): present ONLY when
+    # the cycle retrieved literature through the governed research tools, so a
+    # non-research receipt stays byte-identical. Re-projects the tool_evidence-
+    # bound ledger prefix; verify() re-derives it and refuses a mismatch.
+    from . import sources
+    sblock = sources.receipt_block(cfg, receipt)
+    if sblock:
+        receipt["sources"] = sblock
     return receipt

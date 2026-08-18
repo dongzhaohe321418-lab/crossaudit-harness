@@ -29,6 +29,7 @@ from ..receipt import verify as verify_receipt
 from ..receipt.sign import sign_receipt
 from ..receipt.verify import admit as admit_receipt
 from ..receipt import reproduction as _reproduction
+from ..receipt import sources as _sources
 from . import tui, wizard
 from .talk import cmd_routing, cmd_talk
 
@@ -100,6 +101,23 @@ def _write_reproduction(receipt: dict, cycle_dir: Path) -> bool:
         bundle = _reproduction.build_bundle(receipt)
         (cycle_dir / "reproduction.json").write_text(
             json.dumps(bundle, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8", newline="\n")
+        return True
+    except Exception:  # noqa: BLE001 -- the sidecar is a convenience, never a gate
+        return False
+
+
+def _write_sources(cfg: Config, receipt: dict, cycle_dir: Path) -> bool:
+    """A4: write sources.json (the expanded governed-source provenance list)
+    beside the receipt when the cycle retrieved governed literature. Fail-open."""
+    try:
+        if receipt.get("sources") is None:
+            return False
+        full = _sources.bundle(cfg, receipt)
+        if full is None:
+            return False
+        (cycle_dir / "sources.json").write_text(
+            json.dumps(full, indent=2, sort_keys=True) + "\n",
             encoding="utf-8", newline="\n")
         return True
     except Exception:  # noqa: BLE001 -- the sidecar is a convenience, never a gate
@@ -521,6 +539,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
     # untouched, so unsigned receipts still verify). Fail-open.
     signed_keyid = sign_receipt(cfg, receipt, ledger)
     repro_written = _write_reproduction(receipt, ledger)  # A2 sidecar (fail-open)
+    sources_written = _write_sources(cfg, receipt, ledger)  # A4 sidecar (fail-open)
 
     # Second phase of the ordering rule: the report was committed first so the
     # receipt could bind its commit; now the receipt itself joins the ledger. A
@@ -533,6 +552,8 @@ def cmd_audit(args: argparse.Namespace) -> int:
             git("add", "--", str(rel / "receipt.dsse.json"), cwd=cfg.root, check=False)
         if repro_written:
             git("add", "--", str(rel / "reproduction.json"), cwd=cfg.root, check=False)
+        if sources_written:
+            git("add", "--", str(rel / "sources.json"), cwd=cfg.root, check=False)
         git("commit", "-q", "-m",
             f"audit receipt {sha[:12]} r{cycle['round']} ({outcome.verdict})", cwd=cfg.root)
 
@@ -1176,6 +1197,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         git("add", "--", str(rel / "receipt.dsse.json"), cwd=cfg.root, check=False)
     if _write_reproduction(receipt, ledger):
         git("add", "--", str(rel / "reproduction.json"), cwd=cfg.root, check=False)
+    if _write_sources(cfg, receipt, ledger):
+        git("add", "--", str(rel / "sources.json"), cwd=cfg.root, check=False)
     git("add", "--", str(rel / "receipt.json"), cwd=cfg.root)
     git("commit", "-q", "-m",
         f"audit receipt {sha[:12]} r{cycle['round']} ({outcome.verdict})", cwd=cfg.root)
