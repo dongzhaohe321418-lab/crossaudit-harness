@@ -33,6 +33,14 @@ def command_allowlist(cfg: Config) -> list[str]:
     return [str(c) for c in value if isinstance(c, str)] if isinstance(value, list) else []
 
 
+def _as_text(value) -> str:
+    """Captured stdout/stderr as text, whether the runner handed back str, bytes,
+    or nothing (a timed-out run may return partial bytes)."""
+    if value is None:
+        return ""
+    return value if isinstance(value, str) else value.decode("utf-8", "replace")
+
+
 def _scrubbed_env() -> dict:
     return {k: v for k, v in os.environ.items()
             if not any(h in k.upper() for h in _SECRET_HINTS)}
@@ -46,25 +54,42 @@ def run_check(cfg: Config, args: dict, token: CapabilityToken) -> dict:
         raise ToolError("run_check needs 'command' as a non-empty list of argv strings")
     if argv[0] not in command_allowlist(cfg):
         raise ToolError(f"command {argv[0]!r} is not in this project's allowed commands")
+    def _outcome(stdout, stderr, *, exit_code, signal, timed_out) -> dict:
+        # Orthogonal outcomes: a command can exit cleanly, be killed by a signal,
+        # OR time out — each is reported as its own fact and never collapsed into
+        # another, so the generator and the audit can never read a signal-kill or
+        # a cut-short run as a plain exit code.
+        out = _as_text(stdout)[:MAX_OUTPUT_BYTES]
+        err = _as_text(stderr)[:MAX_OUTPUT_BYTES]
+        return {
+            "command": argv,
+            "exit_code": exit_code,
+            "signal": signal,
+            "timed_out": timed_out,
+            "stdout_sha256": hashlib.sha256(out.encode("utf-8")).hexdigest(),
+            "stderr_sha256": hashlib.sha256(err.encode("utf-8")).hexdigest(),
+            # bounded tails go back to the generator as untrusted context, not the ledger
+            "stdout_tail": out[-_TAIL:],
+            "stderr_tail": err[-_TAIL:],
+        }
     try:
         proc = subprocess.run(                       # a LIST → shell=False, no expansion
             argv, cwd=str(cfg.root), env=_scrubbed_env(),
             capture_output=True, text=True, timeout=MAX_RUNTIME_S)
-    except subprocess.TimeoutExpired:
-        raise ToolError(f"command exceeded the {MAX_RUNTIME_S}s time limit")
+    except subprocess.TimeoutExpired as exc:
+        # A timeout is a definite, auditable outcome — reported structurally with
+        # whatever partial output was captured, not thrown away as an opaque error.
+        return _outcome(exc.stdout, exc.stderr,
+                        exit_code=None, signal=None, timed_out=True)
     except OSError as exc:
         raise ToolError(f"command could not run: {exc}")
-    out = (proc.stdout or "")[:MAX_OUTPUT_BYTES]
-    err = (proc.stderr or "")[:MAX_OUTPUT_BYTES]
-    return {
-        "command": argv,
-        "exit_code": proc.returncode,
-        "stdout_sha256": hashlib.sha256(out.encode("utf-8")).hexdigest(),
-        "stderr_sha256": hashlib.sha256(err.encode("utf-8")).hexdigest(),
-        # bounded tails go back to the generator as untrusted context, not the ledger
-        "stdout_tail": out[-_TAIL:],
-        "stderr_tail": err[-_TAIL:],
-    }
+    rc = proc.returncode
+    # A negative returncode means the process was killed by signal ``-rc``; that
+    # is not an exit code, so the two are surfaced apart (never conflated as -9).
+    return _outcome(proc.stdout, proc.stderr,
+                    exit_code=rc if rc >= 0 else None,
+                    signal=(-rc if rc < 0 else None),
+                    timed_out=False)
 
 
 def run_check_preview(cfg: Config, args: dict) -> str:
@@ -80,7 +105,8 @@ def register_command(registry: ToolRegistry) -> ToolRegistry:
     registry.register(ToolSpec(
         name="run_check", level=3, writes=False, needs_network=False,
         handler=run_check,
-        evidence_fields=("command", "exit_code", "stdout_sha256", "stderr_sha256"),
+        evidence_fields=("command", "exit_code", "signal", "timed_out",
+                         "stdout_sha256", "stderr_sha256"),
         preview=run_check_preview,
         summary="Run an approved project check command (test/build/format). Needs approval."))
     return registry
