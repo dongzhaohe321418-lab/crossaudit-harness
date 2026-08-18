@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .constitution import parse_json_reply
-from .errors import ConfigDenial, ProviderDenial
+from .errors import ConfigDenial, Denial, ProviderDenial
 
 GENERATOR_SYSTEM = """You produce work for a supervised project. Another model \
 from a different vendor audits everything you commit, against rules you will be \
@@ -125,7 +125,8 @@ class Work:
         try:
             files = {str(f["path"]).strip(): str(f["content"]) for f in raw["files"]}
         except (KeyError, TypeError) as exc:
-            raise ProviderDenial(f"the generator returned an unusable shape: {exc}") from exc
+            raise ProviderDenial(f"the generator returned an unusable shape: {exc}",
+                                 category="format") from exc
         return Work(summary=str(raw.get("summary", "work")).strip() or "work",
                     files=files, notes=str(raw.get("notes", "")).strip())
 
@@ -195,13 +196,30 @@ FILE_BLOCK = re.compile(
 
 
 def parse_work_reply(text: str) -> Work:
-    """Parse the raw-file envelope, retaining JSON replies for compatibility."""
+    """Parse the raw-file envelope, retaining JSON replies for compatibility.
+
+    Every parse failure here is a *format* error — the transport succeeded and
+    the model simply replied in the wrong shape — so each denial carries
+    ``category="format"``: the one class of failure ``generate()`` may repair
+    with a single corrective re-ask before anything escalates to a human.
+    """
     if "<<<CROSSAUDIT-OUTPUT-FILE" not in text:
-        return Work.from_json(parse_json_reply(text))
+        try:
+            raw = parse_json_reply(text)
+        except Denial as exc:
+            raise ProviderDenial(
+                "the generator replied in prose instead of the required "
+                "file envelope", category="format") from exc
+        return Work.from_json(raw)
     files: dict[str, str] = {}
     matches = list(FILE_BLOCK.finditer(text))
     if not matches:
-        raise ProviderDenial("the generator returned malformed file blocks")
+        diagnosis = ("the closing <<<END-CROSSAUDIT-OUTPUT-FILE>>> marker is "
+                     "missing" if "<<<END-CROSSAUDIT-OUTPUT-FILE" not in text
+                     else "the opening file marker is malformed")
+        raise ProviderDenial(
+            f"the generator returned malformed file blocks: {diagnosis}",
+            category="format")
     for match in matches:
         path = next(value for value in match.groups()[:3] if value is not None).strip()
         content = match.group(4)
@@ -213,7 +231,8 @@ def parse_work_reply(text: str) -> Work:
             if files[path] == content:
                 continue
             raise ProviderDenial(
-                f"the generator returned conflicting duplicate file {path!r}")
+                f"the generator returned conflicting duplicate file {path!r}",
+                category="format")
         files[path] = content
     prefix = text[:matches[0].start()].strip()
     summary_match = re.search(r"(?:^|\n)SUMMARY:\s*(.+)", prefix)
@@ -315,35 +334,78 @@ def build_prompt(*, task: str, constitution: str, current: dict[str, str],
     return "\n".join(parts)
 
 
+#: The corrective re-ask sent once when a reply could not be parsed. It names
+#: the exact failure and restates the envelope contract — nothing else changes.
+REPAIR_ADDENDUM = """
+
+YOUR PREVIOUS REPLY COULD NOT BE PARSED: {error}.
+Resend your ENTIRE reply now, strictly in the required envelope — every file in
+its own block:
+<<<CROSSAUDIT-OUTPUT-FILE path="relative/path.md">>>
+the entire file, verbatim
+<<<END-CROSSAUDIT-OUTPUT-FILE>>>
+Do not put Markdown fences around the markers, and put nothing outside the
+SUMMARY line, the file blocks, and the NOTES line."""
+
+
+def _parse_reply(text: str) -> Work | ComputeRequest | ToolRequest:
+    compute = parse_compute_request(text)
+    if compute is not None:
+        return compute
+    tool = parse_tool_request(text)
+    if tool is not None:
+        return tool
+    return parse_work_reply(text)
+
+
 def generate(*, task: str, constitution: str, current: dict[str, str],
              complete, findings: str = "",
              allowed_dirs: list[str] | None = None, skills: str = "",
              deterministic_contract: str = "", attachments: str = "",
              compute_hosts=None, compute_results=None, mcp_servers=None,
-             tool_results=None, builtin_tools=None) -> Work | ComputeRequest | ToolRequest:
-    """One round of work. `complete` is a provider bound to the generator role."""
+             tool_results=None, builtin_tools=None,
+             on_repair=None) -> Work | ComputeRequest | ToolRequest:
+    """One round of work. `complete` is a provider bound to the generator role.
+
+    A reply the parsers cannot read is a *format* failure, not a provider
+    failure: the model gets exactly ONE corrective re-ask (the precise error
+    plus the envelope contract, generator-side only — P2 intact) before the
+    denial propagates. ``on_repair(reason)`` is called before the re-ask so the
+    caller can record the adjustment visibly. Path/scope refusals from
+    ``Work.validate`` are never retried — those are refusals, not typos.
+    """
     if not task.strip():
         raise ConfigDenial("the generator needs a task; say what you want built")
-    reply = complete(system=GENERATOR_SYSTEM,
-                     prompt=build_prompt(task=task, constitution=constitution,
-                                         current=current, findings=findings,
-                                         allowed_dirs=allowed_dirs, skills=skills,
-                                         deterministic_contract=deterministic_contract,
-                                         attachments=attachments,
-                                         compute_hosts=compute_hosts,
-                                         compute_results=compute_results,
-                                         mcp_servers=mcp_servers,
-                                         tool_results=tool_results,
-                                         builtin_tools=builtin_tools))
-    compute = parse_compute_request(reply.text)
-    if compute is not None:
-        return compute
-    tool = parse_tool_request(reply.text)
-    if tool is not None:
-        return tool
-    work = parse_work_reply(reply.text)
-    work.validate(allowed_dirs=allowed_dirs)
-    return work
+    prompt = build_prompt(task=task, constitution=constitution,
+                          current=current, findings=findings,
+                          allowed_dirs=allowed_dirs, skills=skills,
+                          deterministic_contract=deterministic_contract,
+                          attachments=attachments,
+                          compute_hosts=compute_hosts,
+                          compute_results=compute_results,
+                          mcp_servers=mcp_servers,
+                          tool_results=tool_results,
+                          builtin_tools=builtin_tools)
+    reply = complete(system=GENERATOR_SYSTEM, prompt=prompt)
+    try:
+        outcome = _parse_reply(reply.text)
+    except ProviderDenial as exc:
+        if str(exc.detail.get("category", "")) != "format":
+            raise
+        if on_repair is not None:
+            on_repair(exc.reason)
+        reply = complete(system=GENERATOR_SYSTEM,
+                         prompt=prompt + REPAIR_ADDENDUM.format(error=exc.reason))
+        try:
+            outcome = _parse_reply(reply.text)
+        except ProviderDenial as second:
+            # The one repair attempt is spent; mark it so the stop explains
+            # itself as "retried and still malformed", not a first strike.
+            second.detail["repair_attempted"] = True
+            raise
+    if isinstance(outcome, Work):
+        outcome.validate(allowed_dirs=allowed_dirs)
+    return outcome
 
 
 def apply(work: Work, root: Path) -> list[str]:

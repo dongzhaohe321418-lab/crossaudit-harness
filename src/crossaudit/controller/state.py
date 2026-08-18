@@ -238,7 +238,7 @@ class StateStore:
             return dict(c, cycle_id=cycle_id)
 
     def escalate(self, cycle_id: str, reason: str, *, task: str = "",
-                 run_id: str = "", kind: str = "") -> dict:
+                 run_id: str = "", kind: str = "", cause: str = "") -> dict:
         """Persist a build-level stop so status and Console expose it.
 
         ``run_id`` links this decision object to the exact journal run whose
@@ -266,6 +266,10 @@ class StateStore:
             c["awaiting_verdict"] = False
             c["escalation_reason"] = reason
             c["escalation_kind"] = kind or classify_escalation_kind(reason)
+            if cause:
+                # A structured, human-renderable cause (e.g. generator_format);
+                # additive — older records without it fall back to the reason.
+                c["escalation_cause"] = cause[:64]
             if run_id:
                 c["escalation_run_id"] = run_id[:64]
             if task.strip():
@@ -277,7 +281,7 @@ class StateStore:
     def record_build_escalation(self, repo: str, sha: str, reason: str,
                                 round_: int, chat_id: str = "",
                                 task: str = "", run_id: str = "",
-                                kind: str = "") -> dict:
+                                kind: str = "", cause: str = "") -> dict:
         """Persist a build that stopped before any auditable revision existed.
 
         Provider refusals can consume the whole generator budget before there is
@@ -313,6 +317,8 @@ class StateStore:
             c.update(round=round_, status=ESCALATED, awaiting_verdict=False,
                      escalation_reason=reason,
                      escalation_kind=kind or classify_escalation_kind(reason))
+            if cause:
+                c["escalation_cause"] = cause[:64]
             if run_id:
                 # The run this decision object records; reconciliation heals
                 # only referenced runs (see escalate()).

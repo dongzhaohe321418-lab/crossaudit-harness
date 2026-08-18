@@ -3083,6 +3083,14 @@ const ZH={
   "CrossAudit needs a decision before it can continue.":"CrossAudit 需要你作出决定才能继续。","Stopped":"已停止",
   "The task did not complete.":"任务未完成。","View audit details":"查看审计详情",
   "conversational reply · not audited":"对话回复 · 未经审计",
+  "Generator reply format problem":"生成者回复格式异常","Generator request refused":"生成者请求被拒",
+  "The generator could not produce auditable work":"生成者未能产出可审计的工作",
+  "The generator was asked twice and still replied outside the required file format, so there was nothing to audit. No result was admitted.":"系统已让生成者重试一次，但两次回复都不符合要求的文件格式，因此没有可审计的内容。未准入任何结果。",
+  "What happened":"发生了什么",
+  "The reply was corrected once automatically and still failed to parse. Technical detail: ":"系统已自动纠正重试一次，回复仍无法解析。技术细节：",
+  "No audit ran because the generator never produced readable work. What usually helps: rewrite the task as one concrete instruction, or switch the generator model in Settings, then run one more round.":"由于生成者始终没有产出可读的工作内容，审计未能进行。通常有效的做法：把任务改写成一条具体的工作指令，或在设置中更换生成者模型，然后再试一轮。",
+  "Rewrite the task as one concrete instruction and run one more round, switch the generator model, or stop this task.":"把任务改写成一条具体指令再试一轮，或更换生成者模型，或停止此任务。",
+  "correcting a malformed reply":"正在纠正格式错误的回复",
   "Permissions":"权限","What the agent may do in this project":"智能体在此项目中可以做什么",
   "File edits and command runs are off by default. Every grant is recorded in the audit ledger, edits are recoverable, and commands still need your per-call approval.":"文件编辑与命令运行默认关闭。每次授权都会记入审计账本，编辑可恢复，命令仍需你逐次批准。",
   "Allow the agent to edit files in this project":"允许智能体编辑此项目中的文件",
@@ -3266,6 +3274,8 @@ const ZH={
   ,"These are the rules the auditor judges against; an audit cannot run without them.":"这些是审计者据以判定的规则；缺少它们无法进行审计。"
 };
 const ZH_PATTERNS=[
+  [/^generator provider failure in round (\d+): (.+)$/,m=>'生成端在第 '+m[1]+' 轮失败：'+m[2]],
+  [/^the generator returned malformed file blocks: (.+)$/,m=>'生成者返回了格式错误的文件块：'+m[1]],
   [/^the selected PASS is not ready for admission: (.+)$/,m=>'所选 PASS 尚不满足准入条件：'+m[1]],
   [/^the selected PASS receipt is missing — (.+)$/,m=>'所选 PASS 的收据缺失——'+m[1]],
   [/^there is no unconsumed passing result to admit$/,()=>'没有未消费的 PASS 结果可供准入'],
@@ -4017,18 +4027,27 @@ function openResolution(value,action='',sha=''){
   // never to review a connection, so it carries its own copy throughout.
   const budget=row.kind==='budget';
   const provider=row.kind==='provider';
-  document.getElementById('resolution-flag').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
-  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':'The audit needs your decision';
+  // The structured cause (additive): a known cause renders a fixed, fully
+  // translatable explanation with concrete next steps; the raw technical
+  // reason is demoted to the detail line instead of leading the screen.
+  const formatCause=row.cause==='generator_format';
+  const refusedCause=row.cause==='generator_refused';
+  document.getElementById('resolution-flag').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
+  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':formatCause?'The generator could not produce auditable work':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
   document.getElementById('resolution-summary').textContent=budget
     ?'CrossAudit stopped before spending past your usage limit. No result was admitted and the original task is ready once you raise or clear the limit.'
     :provider
     ?'CrossAudit stopped before an audit began. No result was admitted and the original task is ready to retry.'
+    :formatCause
+    ?'The generator was asked twice and still replied outside the required file format, so there was nothing to audit. No result was admitted.'
     :row.limit_reached
     ?'CrossAudit used all '+used+' of '+maximum+' automatic rounds without a passing result. Nothing will continue or be admitted until you decide.'
     :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
-  document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':row.limit_reached
+  document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':formatCause?'What happened':row.limit_reached
     ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
-  document.getElementById('resolution-limit-copy').textContent=String(row.stop_reason||row.why||'The audit controller paused this task.');
+  document.getElementById('resolution-limit-copy').textContent=(formatCause
+    ?'The reply was corrected once automatically and still failed to parse. Technical detail: ':'')
+    +String(row.stop_reason||row.why||'The audit controller paused this task.');
   const attemptRows=row.attempts||[];
   document.getElementById('resolution-attempts').innerHTML=attemptRows.map(item=>{
     const word=String(item.verdict||'').toLowerCase();
@@ -4046,11 +4065,15 @@ function openResolution(value,action='',sha=''){
       ?'No audit findings were created because the task paused at a usage limit before producing a reviewable result.'
       :provider
       ?'No audit findings were created because the Generator stopped before producing a reviewable result.'
+      :formatCause
+      ?'No audit ran because the generator never produced readable work. What usually helps: rewrite the task as one concrete instruction, or switch the generator model in Settings, then run one more round.'
       :'No structured findings were recorded. Review the stop reason above before continuing.')+'</div>';
   document.getElementById('resolution-request').textContent=budget
     ?'Raise or clear the usage limit and rerun the original task, or stop this task.'
     :provider
     ?'Retry the same task now, review the model connection first, or stop this task.'
+    :formatCause
+    ?'Rewrite the task as one concrete instruction and run one more round, switch the generator model, or stop this task.'
     :(row.requested||'Choose whether to revise and continue, or stop this task.');
   document.getElementById('resolution-reopen-title').textContent=budget?'Raise the limit & retry':provider?'Retry provider':'Revise and continue';
   document.getElementById('resolution-reopen-copy').textContent=budget

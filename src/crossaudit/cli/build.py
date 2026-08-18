@@ -272,6 +272,9 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     termination_reason = f"build round budget spent ({cfg.max_rounds})"
     last_round = 0
     provider_wait: ProviderDenial | None = None
+    #: The denial that terminated the loop (non-park path), kept so the stop
+    #: can name a structured, human-actionable cause instead of raw prose.
+    terminal_denial: ProviderDenial | None = None
 
     # §12: the run's Goal, stated once and durably before any work happens.
     # The plan surface (Plan tab) reads this event plus the loop's own gates.
@@ -298,7 +301,13 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     deterministic_contract=deterministic_contract,
                     attachments=attachments, compute_hosts=compute_hosts,
                     compute_results=compute_results, mcp_servers=mcp_servers,
-                    tool_results=tool_results, builtin_tools=builtin_tools)
+                    tool_results=tool_results, builtin_tools=builtin_tools,
+                    # A malformed reply gets one visible, recorded repair
+                    # attempt (§24.1) before anything reaches a human.
+                    on_repair=lambda why: emit(
+                        "generation_retried", "generator",
+                        "correcting a malformed reply", str(why)[:200],
+                        state=RunState.GENERATING))
                 if isinstance(outcome, gen_mod.Work):
                     work = outcome
                     break
@@ -402,9 +411,11 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             # gets its next attempt inside the same budget.
             emit("generation_refused", "generator", "refused", exc.reason,
                  state=RunState.GENERATING)
+            scope_note = (f"Return only files inside "
+                          f"{', '.join(cfg.scope_dirs)}/ and try again."
+                          if cfg.scope_dirs else "Try again.")
             findings = (f"[BLOCKER] Your last round was refused before it reached "
-                        f"the auditor: {exc.reason}\nReturn only files inside "
-                        f"{', '.join(cfg.scope_dirs)}/ and try again.")
+                        f"the auditor: {exc.reason}\n{scope_note}")
             # A non-retryable denial (authentication, permission, endpoint,
             # invalid model, an exceeded automation limit) cannot improve by
             # sending the same request for every remaining round. Stop once,
@@ -414,6 +425,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             # — a guardrail stop without one must not burn the whole budget
             # in a zero-call loop.
             if not exc.detail.get("retryable", False):
+                terminal_denial = exc
                 termination_reason = (
                     f"generator provider failure in round {round_no}: "
                     f"{exc.reason[:400]}")
@@ -575,10 +587,22 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                 waiting_kind(str(provider_wait.detail.get("category", ""))))
         else:
             kind = "audit"
+        # The structured cause the Decision Center renders as human guidance
+        # (what happened / what you can do). Additive: old records without it
+        # still render through the raw-reason fallback.
+        if provider_wait is not None:
+            cause = ("budget" if kind == "budget" else "provider_unavailable")
+        elif (terminal_denial is not None
+              and str(terminal_denial.detail.get("category", "")) == "format"):
+            cause = "generator_format"
+        elif terminal_denial is not None:
+            cause = "generator_refused"
+        else:
+            cause = ""
         try:
             if build_cycle_id:
                 store.escalate(build_cycle_id, reason, task=task,
-                               run_id=run_id, kind=kind)
+                               run_id=run_id, kind=kind, cause=cause)
                 return build_cycle_id
             # A provider can refuse every generator attempt before there is
             # a work commit for cmd_run to open. Anchor that stop to the
@@ -588,7 +612,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             anchor = git("rev-parse", "HEAD", cwd=cfg.root)
             cycle = store.record_build_escalation(
                 cfg.science_repo, anchor, reason, last_round, chat_id, task,
-                run_id=run_id, kind=kind)
+                run_id=run_id, kind=kind, cause=cause)
             return cycle["cycle_id"]
         except Denial:
             return ""

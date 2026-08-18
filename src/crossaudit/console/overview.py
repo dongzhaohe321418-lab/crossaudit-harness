@@ -262,6 +262,8 @@ def escalations(cfg: Config) -> list[dict]:
                     "chat_id": s.get("chat_id", ""), "why": why,
                     "stop_reason": stop_reason, "issues": issues,
                     "kind": kind,
+                    # Structured cause (additive) for human-readable rendering.
+                    "cause": str(s.get("escalation_cause", "") or ""),
                     "remediations": escalation_remediations(kind),
                     "task": str(s.get("task", ""))[:12000],
                     "attempts": [{"round": c.round, "verdict": c.verdict,
