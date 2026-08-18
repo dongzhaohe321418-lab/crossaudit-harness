@@ -341,7 +341,9 @@ def test_the_page_javascript_still_contains_its_regexes():
     from crossaudit.console.page import PAGE
 
     assert r"/\s+/g" in PAGE          # would be mangled by a non-raw string
-    assert r"[&<>\"]" in PAGE or '[&<>"]' in PAGE
+    # esc() also escapes the single quote (audit hardening), so attribute values
+    # built with single quotes cannot be broken out of.
+    assert "[&<>\"'" + "]" in PAGE
 
 
 def test_console_has_one_primary_command_composer():

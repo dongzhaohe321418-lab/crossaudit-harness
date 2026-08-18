@@ -560,13 +560,14 @@ class RunJournal:
                 if owner != (current_pid or os.getpid()) and not alive(owner):
                     continue          # a dead owner is recover_abandoned's case
                 run_id = str(row["run_id"])
-                last = db.execute(
-                    "SELECT kind FROM run_events WHERE run_id=? "
-                    "ORDER BY sequence DESC LIMIT 1", (run_id,),
-                ).fetchone()
-                if last is not None and str(last["kind"]) == "run_stalled":
-                    continue
                 beat = row["heartbeat_at"]
+                already = db.execute(
+                    "SELECT 1 FROM run_events WHERE run_id=? AND kind='run_stalled' "
+                    "AND t >= ? LIMIT 1",
+                    (run_id, float(beat) if beat is not None else 0.0),
+                ).fetchone()
+                if already is not None:
+                    continue
                 detail = (f"no heartbeat for {max(0, int(now - float(beat)))}s"
                           if beat is not None else
                           "no heartbeat was ever recorded for this run")
@@ -657,7 +658,8 @@ class RunJournal:
             row = db.execute(
                 "SELECT state FROM runs WHERE run_id=?", (run_id,),
             ).fetchone()
-            if row is None or _state(row["state"]) not in ACTIVE_STATES:
+            st = _state(row["state"]) if row is not None else None
+            if st is None or st not in ACTIVE_STATES or st is RunState.CANCELLING:
                 db.execute("ROLLBACK")
                 raise ValueError("no live run to steer")
             backlog = db.execute(
@@ -1151,6 +1153,12 @@ class RunJournal:
                 (row["run_id"], LATEST_STEP_LIMIT),
             ).fetchall()
             events = list(reversed(events))
+            # Fold the queued-message count into the same connection this
+            # snapshot already opened, rather than opening a second one.
+            queued_count = int(db.execute(
+                "SELECT COUNT(*) AS n FROM run_messages "
+                "WHERE run_id=? AND consumed=0", (row["run_id"],),
+            ).fetchone()["n"])
         steps = [
             {"t": event["t"], "actor": event["actor"], "text": event["text"],
              "detail": event["detail"], "event_id": event["sequence"],
@@ -1177,7 +1185,7 @@ class RunJournal:
             "owner_pid": int(row["owner_pid"]),
             "steps": steps,
             # Owner messages queued for this run and not yet read by the loop.
-            "queued": self.queued_messages(row["run_id"]),
+            "queued": queued_count,
             # A parked run is finished from the worker's point of view: no
             # thread owns it, and only an explicit human command resumes it.
             "finished": state in TERMINAL_STATES or state in PARKED_STATES,

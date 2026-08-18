@@ -210,3 +210,32 @@ def test_page_supports_steering():
                "Queued — read at next round",
                "Send guidance to the running task"):
         assert f'"{en}"' in PAGE, en                       # zh parity entries
+
+
+def test_steering_refused_on_a_stopping_run(tmp_path):
+    """A CANCELLING run has no further round to read guidance — refuse, not queue."""
+    j = _journal(tmp_path)
+    rid = _start(j)
+    j.request_cancel(rid)                                  # → CANCELLING
+    with pytest.raises(ValueError, match="no live run"):
+        j.enqueue_message(rid, "too late")
+
+
+def test_a_queued_event_does_not_double_stall_note(tmp_path):
+    """A guidance_queued event after a stall note must not reset stall dedup."""
+    import time as _t
+    j = _journal(tmp_path)
+    rid = _start(j)
+    old = _t.time() - 10_000
+    with j._connect() as db:                               # backdate heartbeat+lease
+        db.execute("UPDATE runs SET heartbeat_at=?, lease_expires_at=? "
+                   "WHERE run_id=?", (old, old, rid))
+        db.commit()
+    alive = lambda _pid: True                              # owner lives → stall note
+    j.mark_stalled_runs(alive=alive)
+    j.enqueue_message(rid, "a note")                       # inserts guidance_queued
+    j.mark_stalled_runs(alive=alive)                       # must NOT add a 2nd stall
+    with j._connect() as db:
+        n = db.execute("SELECT COUNT(*) AS n FROM run_events WHERE run_id=? "
+                       "AND kind='run_stalled'", (rid,)).fetchone()["n"]
+    assert n == 1

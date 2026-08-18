@@ -3421,8 +3421,8 @@ localeObserver.observe(document.body,{subtree:true,childList:true,characterData:
 document.getElementById('locale-toggle').onclick=()=>applyLocale(currentLocale==='zh'?'en':'zh');
 document.getElementById('hub-locale').onclick=document.getElementById('locale-toggle').onclick;
 applyLocale(storedLocale()==='zh'?'zh':'en',false);
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
-  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const at = t => t ? new Date(t*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
 const MARK = {done:'✓',failed:'×',current:'·',pending:''};
 let lastState = null;
@@ -5285,7 +5285,7 @@ function runCard(d){
     + '<span>Round <strong>' + esc(round) + '</strong> of ' + esc(roundLimit) + '</span>'
     + '<span><strong>' + reached + '</strong> of ' + pipeline.length + ' gates reached</span>'
     + '<span>' + (p ? p.elapsed + 's elapsed' : 'Ledger snapshot') + '</span>'
-    + (p&&p.queued?'<span><strong>'+esc(p.queued)+'</strong> queued</span>':'') + '</div>'
+    + (p&&p.queued&&!p.finished?'<span><strong>'+esc(p.queued)+'</strong> queued</span>':'') + '</div>'
     + '<div class="run-handoff" aria-hidden="true"><i></i></div>'
     + '<div class="run-meter" role="progressbar" aria-label="Audit gates reached" aria-valuemin="0" '
     + 'aria-valuemax="100" aria-valuenow="' + meter + '"><i style="width:' + meter + '%"></i></div></div>'
@@ -5639,7 +5639,7 @@ function renderConversation(d){
     let optimistic = '';
     if(optimisticSend && (!optimisticSend.chat || optimisticSend.chat===(activeChatId||''))){
       const want=(optimisticSend.text||'').trim();
-      const echoed = messages.some(m=>m.kind==='you' && (m.utterance||'').trim()===want);
+      const echoed = messages.some(m=>m.kind==='you' && (m.utterance||'').trim()===want && (m.t||0)>=Math.floor((optimisticSend.at||0)/1000)-2);
       // A queued steering message must NOT be cleared by the live run it is
       // steering — only its own echo in the stream releases it.
       if(optimisticSend.queued ? echoed : ((p && !p.finished) || echoed)) optimisticSend = null;
@@ -6403,7 +6403,7 @@ form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!
       ?'<b>Task started.</b> The result will appear in this conversation.'
       :r.lane==='chat'?'<b>Answered.</b>'
       :'<b>Message delivered.</b>';
-    if(!r.queued&&r.lane==='generator'&&optimisticSend)optimisticSend.queued=false;
+    if(!r.queued&&optimisticSend)optimisticSend.queued=false;
     if(r.lane==='generator')pendingContinuation={cycle:'',chat:''};
     if(!pendingFiles.length||r.attachments_accepted){say.value='';pendingFiles=[];uploadProgress=new Map();fileInput.value='';drawFiles();syncAudience();}}}
   catch(e){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b>Refused.</b> '+esc(e.message);}

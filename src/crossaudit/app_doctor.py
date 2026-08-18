@@ -306,9 +306,9 @@ def collect(cfg: Config, *, online: bool = True) -> dict:
                     for row in checks)
     return {
         "status": "blocked" if blockers else "attention" if attention else "ready",
-        "summary": (f"{blockers} required item{'s' if blockers != 1 else ''} need fixing"
+        "summary": (f"{blockers} required item{'s need' if blockers != 1 else ' needs'} fixing"
                     if blockers else
-                    f"{attention} optional item{'s' if attention != 1 else ''} need attention"
+                    f"{attention} optional item{'s need' if attention != 1 else ' needs'} attention"
                     if attention else "Everything required is ready"),
         "checks": checks, "checked_at": int(time.time()),
         "duration_ms": int((time.time() - started) * 1000),

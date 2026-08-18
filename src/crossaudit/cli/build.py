@@ -452,9 +452,16 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             # in a zero-call loop.
             if not exc.detail.get("retryable", False):
                 terminal_denial = exc
+                # Name the stop by what it actually is (a format or a refused
+                # round), not "provider failure" — the Decision Center reads the
+                # structured cause, and a misleading prefix would send the user
+                # to the wrong remedy. Real provider outages take the park path
+                # above, which keeps its own "provider failure" wording.
+                lead = ("the generator could not produce auditable work"
+                        if str(exc.detail.get("category", "")) == "format"
+                        else "the generator's request was refused")
                 termination_reason = (
-                    f"generator provider failure in round {round_no}: "
-                    f"{exc.reason[:400]}")
+                    f"{lead} in round {round_no}: {exc.reason[:400]}")
                 break
             if round_no == cfg.max_rounds:
                 break

@@ -185,18 +185,39 @@ def test_web_fetch_refuses_private_hosts(monkeypatch):
 
 def test_oversize_fetch_is_refused(monkeypatch):
     class Resp:
-        headers = {}
-        def read(self, n): return b"x" * n
-        def __enter__(self): return self
-        def __exit__(self, *a): return False
+        status = 200
+        def read(self, n=-1): return b"x" * (n if n and n > 0 else 1)
 
-    class Opener:
-        def open(self, req, timeout): return Resp()
+    class Conn:
+        def __init__(self, *a, **k): pass
+        def request(self, *a, **k): pass
+        def getresponse(self): return Resp()
+        def close(self): pass
 
-    monkeypatch.setattr(research.urllib.request, "build_opener",
-                        lambda *a: Opener())
+    monkeypatch.setattr(research, "_resolve_public_ip",
+                        lambda host, port: ("93.184.216.34", 2))
+    monkeypatch.setattr(research, "_PinnedHTTPSConnection", Conn)
     with pytest.raises(ToolError, match="5 MiB"):
         research._http_get("https://example.org/big")
+
+
+def test_web_fetch_pins_and_revets_at_fetch_time_defeating_dns_rebind(monkeypatch):
+    """TOCTOU: even if the URL check passed, the fetch re-resolves and refuses a
+    host that now answers with a private address — and it connects to the vetted
+    IP it resolved, never a value the client could re-resolve."""
+    # First resolution (the early vet in _safe_public_url) is public...
+    calls = {"n": 0}
+
+    def flip(hostname, port, **k):
+        calls["n"] += 1
+        addr = "93.184.216.34" if calls["n"] == 1 else "127.0.0.1"
+        return [(2, 1, 6, "", (addr, port))]
+
+    monkeypatch.setattr(research.socket, "getaddrinfo", flip)
+    assert research._safe_public_url("https://rebind.test/x")   # early check passes
+    # ...but the fetch-time resolution now points at loopback → refused before connect.
+    with pytest.raises(ToolError, match="private or reserved"):
+        research._http_get("https://rebind.test/x")
 
 
 def test_malformed_xml_is_a_clean_refusal(monkeypatch):
@@ -236,3 +257,17 @@ def test_ledger_carries_hashes_never_content(cfg, tmp_path, monkeypatch):
     assert "SECRETQUERY" not in raw                      # query never ledgered
     assert "degradation kinetics" not in raw             # abstract never ledgered
     assert '"result_count":1' in raw.replace(" ", "") or '"result_count": 1' in raw
+
+
+def test_research_tools_show_a_preview_so_approval_is_not_blind():
+    """The approval card must name the destination/query — no blind approval."""
+    reg = full_registry()
+    ps, wf = reg.get("paper_search"), reg.get("web_fetch")
+    assert ps.preview is not None and wf.preview is not None
+    assert "perovskite" in ps.preview(None, {"query": "perovskite",
+                                             "source": "arxiv"})
+    assert "https://arxiv.org/abs/x" in wf.preview(
+        None, {"url": "https://arxiv.org/abs/x"})
+    # Adding the preview must NOT flip the gate: still approval-gated, not denied,
+    # so paper_search must not gain a host_arg (which the token cannot satisfy).
+    assert ps.level == 4 and wf.level == 4 and ps.host_arg is None
