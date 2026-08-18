@@ -499,6 +499,9 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
   background:var(--surface)}
 .finding-head{display:flex;align-items:center;gap:7px;font-size:var(--fs-caption);color:var(--text-2)}
 .severity{font-weight:600;color:var(--blocked)}
+.finding-where{overflow-wrap:anywhere}
+/* the rule id is provenance, not the message — small, dim, out of the way */
+.finding-rule{font-size:var(--fs-micro,10px);color:var(--text-3);font-variant-numeric:tabular-nums;opacity:.75}
 .finding p{margin:5px 0 0;line-height:1.5;font-size:var(--fs-body)}
 
 /* Deliverables: opaque cards, pass-gated, grouped when plural. */
@@ -3223,6 +3226,7 @@ const ZH={
   ,"Current gate":"当前关卡","Stopped at":"停止于","Next gate":"下一关卡","Completed gate":"已完成关卡","Live activity":"实时活动","Run activity":"运行活动"
   ,"Live generator and auditor events appear here while a task runs. The gate states above are reconstructed from the Git ledger.":"任务运行时，生成者与审计者的实时事件会显示在这里。上方关卡状态由 Git 账本重建。"
   ,"Stop":"停止","Stopping…":"正在停止…","Ledger snapshot":"账本快照","Ledger-backed state":"账本支撑的状态","Controller":"控制器","Result":"结果","Round":"第","Audit gates reached":"已到达的审计关卡"
+  ,"Working":"进行中","Passed review":"通过复核","Needs changes":"需要修改","Admitted":"已准入","Needs your input":"需要你处理","Current step":"当前步骤","Next step":"下一步","Completed step":"已完成步骤","Compute":"算力","Tool":"工具","Process":"流程","Done":"完成","Active":"进行中","Waiting":"等待","Stopped":"已停止","Audit steps done":"已完成的审计步骤","The generator and auditor show what they are doing here while a task runs.":"任务运行时，生成者和审计者会在这里显示各自正在做什么。"
   ,"passed":"已通过","blocked":"已阻止","escalated":"已升级","consumed":"已准入","interrupted":"已中断","setting_up":"正在设置","setup_failed":"设置失败"
   ,"PASS":"通过","PASSED":"已通过","BLOCKED":"已阻止","ESCALATED":"已升级","CONSUMED":"已准入","DCL_ONLY":"仅确定性检查"
   ,"To Auditor":"发给审计者","To Generator":"发给生成者","@ auditor":"@ 审计者","@ generator":"@ 生成者"
@@ -3389,6 +3393,7 @@ const ZH_PATTERNS=[
   ,[/^Level (\d+)$/,m=>'等级 '+m[1]]
   ,[/^of (\d+)$/,m=>'/ '+m[1]+' 轮']
   ,[/^of (\d+) gates reached$/,m=>'/ '+m[1]+' 个关卡已到达']
+  ,[/^of (\d+) steps done$/,m=>'/ '+m[1]+' 步已完成']
   ,[/^(\d+)s elapsed$/,m=>'已运行 '+m[1]+' 秒']
   ,[/^(\d+) events?$/,m=>m[1]+' 个事件']
   ,[/^(.+): (Complete|Blocked|Active|Pending)$/,m=>zhValue(m[1])+'：'+zhValue(m[2])]
@@ -4078,8 +4083,8 @@ function openResolution(value,action='',sha=''){
   const issues=row.issues||[];
   document.getElementById('resolution-issue-count').textContent=String(issues.length);
   document.getElementById('resolution-issues').innerHTML=issues.length?issues.map((issue,index)=>
-    '<article class="decision-issue"><div class="decision-issue-head"><span>'+esc(issue.severity||'BLOCKER')+'</span><b>'
-    +esc(issue.rule||'Issue '+(index+1))+'</b></div><p>'+esc(issue.observation||'No explanation was recorded.')+'</p>'
+    '<article class="decision-issue"><div class="decision-issue-head"><span>'+esc(issue.severity||'BLOCKER')+'</span><span class="finding-rule" title="rule id">'
+    +esc(issue.rule||'Issue '+(index+1))+'</span></div><p>'+esc(issue.observation||'No explanation was recorded.')+'</p>'
     +(issue.artifact?'<small>Affects '+esc(issue.artifact)+'</small>':'')+'</article>').join('')
     :'<div class="decision-empty">'+(budget
       ?'No audit findings were created because the task paused at a usage limit before producing a reviewable result.'
@@ -5199,6 +5204,7 @@ function reviewCard(d){
   const related=reports.filter(m=>m.sha&&cycle.sha&&(String(cycle.sha).startsWith(String(m.sha))||String(m.sha).startsWith(String(cycle.sha))));
   const rows=(related.length?related:reports.slice(-Number(cycle.round||1))).slice(-8);
   const passed=status==='passed'||status==='consumed';
+  const statusLabel = ({PASSED:'Passed review',CONSUMED:'Admitted',BLOCKED:'Needs changes',ESCALATED:'Needs your input'})[String(cycle.status||'').toUpperCase()] || cycle.status;
   const open=expandedReviews.has(cycle.id);
   const checks=Object.keys(d.check_contracts||{});
   const roundLines=(rows.length?rows.map(m=>{
@@ -5215,8 +5221,8 @@ function reviewCard(d){
   const findingRows=rows.filter(m=>(m.findings||[]).length).map(m=>
     '<div class="review-round-row"><span class="round-n">round '+esc(m.round)+'</span></div>'
     +(m.findings||[]).map(f=>'<div class="finding"><div class="finding-head">'
-      +'<span class="severity">'+esc(f.severity)+'</span><span>'+esc(f.rule)+'</span>'
-      +'<span class="spacer"></span><span>'+esc(f.artifact)+'</span></div><p>'
+      +'<span class="severity">'+esc(f.severity)+'</span><span class="finding-where">'+esc(f.artifact)+'</span>'
+      +'<span class="spacer"></span><span class="finding-rule" title="rule id">'+esc(f.rule)+'</span></div><p>'
       +esc(f.observation)+'</p></div>').join('')).join('');
   const detail='<div class="review-detail"><div class="review-detail-inner">'
     +'<div class="review-section"><div class="review-section-title">Deterministic checks</div>'
@@ -5237,7 +5243,7 @@ function reviewCard(d){
   return '<section class="review-card'+(open?' open':'')+'" aria-label="Independent review">'
     +'<button type="button" class="review-summary" data-review-toggle="'+esc(cycle.id)+'" aria-expanded="'+(open?'true':'false')+'">'
     +'<div class="review-top"><span class="review-mark" aria-hidden="true"></span><b>Independent review</b>'
-    +'<span class="status '+esc(cycle.status)+'">'+esc(cycle.status)+'</span><span class="review-chevron" aria-hidden="true"></span></div>'
+    +'<span class="status '+esc(cycle.status)+'">'+esc(statusLabel)+'</span><span class="review-chevron" aria-hidden="true"></span></div>'
     +checkLines
     +'<div class="review-rounds">'+roundLines+'</div>'
     +'</button>'+detail
@@ -5253,6 +5259,9 @@ function runCard(d){
   const rawOutcome = p ? (p.finished ? p.outcome : 'running') : statusOf(d);
   const outcome = rawOutcome==='provider_unavailable' ? 'escalated' : rawOutcome;
   const tone = String(outcome||'ready').toLowerCase();
+  // Plain-language status the reader actually understands; the raw enum stays as
+  // the CSS class for colour, but never as the words on screen.
+  const outcomeLabel = ({running:'Working',ready:'Ready',passed:'Passed review',consumed:'Admitted',blocked:'Needs changes',escalated:'Needs your input',failed:'Stopped'})[tone] || outcome;
   const handoff = (Date.now()-handoffAt<700&&handoffDirection)?' data-handoff="'+esc(handoffDirection)+'"':'';
   const reached = pipeline.filter(s => s.state !== 'pending').length;
   const meter = pipeline.length ? Math.round(reached / pipeline.length * 100) : 0;
@@ -5262,10 +5271,10 @@ function runCard(d){
   const roundLimit = roundEvent&&roundEvent.round_limit ? roundEvent.round_limit : d.max_rounds;
   const focus = pipeline.find(s => s.state === 'current') || pipeline.find(s => s.state === 'failed')
     || pipeline.find(s => s.state === 'pending') || pipeline[pipeline.length-1];
-  const focusLabel = focus.state === 'current' ? 'Current gate' : focus.state === 'failed' ? 'Stopped at'
-    : focus.state === 'pending' ? 'Next gate' : 'Completed gate';
-  const stateNames = {done:'Complete',failed:'Blocked',current:'Active',pending:'Pending'};
-  const actorNames = {generator:'Generator',auditor:'Auditor',compute:'Remote compute',tool:'MCP tool',loop:'Controller',done:'Result',input:'You'};
+  const focusLabel = focus.state === 'current' ? 'Current step' : focus.state === 'failed' ? 'Stopped at'
+    : focus.state === 'pending' ? 'Next step' : 'Completed step';
+  const stateNames = {done:'Done',failed:'Stopped',current:'Active',pending:'Waiting'};
+  const actorNames = {generator:'Generator',auditor:'Auditor',compute:'Compute',tool:'Tool',loop:'Process',done:'Result',input:'You'};
   const actorMarks = {generator:'G',auditor:'A',compute:'H',tool:'M',loop:'↻',done:'✓'};
   const eventRows = p && p.steps ? p.steps.slice(-12).map(s => '<div class="audit-event">'
     + '<span class="event-mark ' + esc(s.actor) + '">' + esc(actorMarks[s.actor]||'·') + '</span>'
@@ -5274,8 +5283,7 @@ function runCard(d){
     + (s.detail ? '<div class="event-detail">' + esc(s.detail) + '</div>' : '') + '</div>'
     + '<time class="event-time">' + at(s.t) + '</time></div>').join('') : '';
   const activityTitle = p && !p.finished ? 'Live activity' : 'Run activity';
-  const activity = eventRows || '<div class="activity-empty">Live generator and auditor events appear here while '
-    + 'a task runs. The gate states above are reconstructed from the Git ledger.</div>';
+  const activity = eventRows || '<div class="activity-empty">The generator and auditor show what they are doing here while a task runs.</div>';
   const task = p && p.task ? p.task : titleOf(d);
   const live = p && !p.finished;
   const stopBtn = live ? '<button type="button" class="run-stop"'
@@ -5285,13 +5293,13 @@ function runCard(d){
   return '<section class="run-card ' + esc(tone) + '"' + handoff + ' aria-label="Audit loop">'
     + '<div class="run-overview"><div class="run-top">'
     + '<span class="run-eyebrow">Audit loop</span><span class="status ' + esc(outcome) + '">'
-    + esc(outcome) + '</span>' + stopBtn + '</div><div class="run-task">' + esc(task) + '</div><div class="run-meta">'
+    + esc(outcomeLabel) + '</span>' + stopBtn + '</div><div class="run-task">' + esc(task) + '</div><div class="run-meta">'
     + '<span>Round <strong>' + esc(round) + '</strong> of ' + esc(roundLimit) + '</span>'
-    + '<span><strong>' + reached + '</strong> of ' + pipeline.length + ' gates reached</span>'
+    + '<span><strong>' + reached + '</strong> of ' + pipeline.length + ' steps done</span>'
     + '<span>' + (p ? p.elapsed + 's elapsed' : 'Ledger snapshot') + '</span>'
     + (p&&p.queued&&!p.finished?'<span><strong>'+esc(p.queued)+'</strong> queued</span>':'') + '</div>'
     + '<div class="run-handoff" aria-hidden="true"><i></i></div>'
-    + '<div class="run-meter" role="progressbar" aria-label="Audit gates reached" aria-valuemin="0" '
+    + '<div class="run-meter" role="progressbar" aria-label="Audit steps done" aria-valuemin="0" '
     + 'aria-valuemax="100" aria-valuenow="' + meter + '"><i style="width:' + meter + '%"></i></div></div>'
     + '<div class="loop">' + pipeline.map((s,i) => '<div class="loop-step ' + esc(s.state) + '" '
       + 'aria-label="' + esc(s.title + ': ' + stateNames[s.state]) + '"><div class="loop-track">'
