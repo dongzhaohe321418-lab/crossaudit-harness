@@ -572,6 +572,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .admission-head{display:flex;align-items:center;gap:8px}
 .admission-head b{color:var(--text);font-weight:600}
 .admission-head span{color:var(--text-3);font-size:var(--fs-caption)}
+.admission-signed{border:1px solid var(--pass);border-radius:999px;padding:1px 8px;color:var(--pass);font-size:var(--fs-caption);white-space:nowrap;cursor:default}
 .admission-why{margin:7px 0 0;color:var(--text-2);line-height:1.55}
 .admission-safe{margin:6px 0 0;color:var(--text-3);font-size:var(--fs-caption)}
 .admission-tier{margin:7px 0 0;color:var(--text-2)}
@@ -3235,6 +3236,7 @@ const ZH={
   ,"the generator writes and commits":"生成者编写并提交","deterministic layer, no model involved":"确定性检查层，不涉及模型","a different vendor reads the commit":"由另一家供应商读取该提交"
   ,"code decides; the checks dominate":"由代码判定；检查结果优先","a receipt is consumed, once":"收据只消费一次","clean":"无问题","hard failure — final, no model may waive it":"硬性失败——最终结论，任何模型都不能豁免"
   ,"no model ran — cannot be PASS":"未运行模型——不能判为 PASS","receipt consumed":"收据已消费","waiting: verify the receipt to admit":"等待中：验证收据后即可准入","not reached":"未到达"
+  ,"signed · verifiable offline":"已签名 · 可离线验证"
   ,"writing":"正在撰写","reviewing the commit":"正在审查提交","findings returned to the generator":"问题已返回给生成者","cancelling":"正在取消","dismissed":"已忽略","running built-in tool":"正在运行内置工具"
   ,"resuming with tool result":"携工具结果继续","resuming with compute result":"携计算结果继续","requesting remote calculation":"正在请求远程计算","note":"备注","document export refused":"文档导出被拒绝"
   ,"the round could not be committed":"该轮次无法提交","rendering final document locally":"正在本地渲染最终文档","the round reproduced the previous one; nothing new to audit":"本轮与上一轮结果相同；没有新的内容可审计"
@@ -5367,7 +5369,8 @@ let lastAdmission=null;
 function admissionCard(){
   const a=lastAdmission;if(!a||a.chat!==(activeChatId||''))return '';
   if(a.ok)return '<section class="admission-card ok" aria-label="Admission result">'
-    +'<div class="admission-head"><b>Admitted.</b><span>receipt '+esc(a.receipt||'')+'</span></div>'
+    +'<div class="admission-head"><b>Admitted.</b><span>receipt '+esc(a.receipt||'')+'</span>'
+    +(a.signed?'<span class="admission-signed" title="'+esc('key '+(a.signatureKeyid||''))+'">signed · verifiable offline</span>':'')+'</div>'
     +(a.tier?'<p class="admission-tier">Admission tier '+esc(a.tier)+(a.tierMeaning?' · '+esc(a.tierMeaning):'')+'</p>':'')
     +'</section>';
   const remedies=(a.remediations||[]).map(r=>'<li>'+esc(r)+'</li>').join('');
@@ -6094,7 +6097,7 @@ function handleActionClick(ev){
       .catch(computeSurfaceError).finally(()=>{cancel.disabled=false;cancel.textContent='Cancel job';});}
   const admit=ev.target.closest('[data-admit]');if(admit){const admitCycle=admit.getAttribute('data-admit-cycle');admit.disabled=true;admit.textContent='Verifying…';
     api('/api/admit',{cycle_id:admitCycle}).then(r=>{
-      lastAdmission={ok:true,chat:activeChatId||'',cycleId:admitCycle,receipt:r.receipt||'',tier:r.tier||'',tierMeaning:r.tier_meaning||''};
+      lastAdmission={ok:true,chat:activeChatId||'',cycleId:admitCycle,receipt:r.receipt||'',tier:r.tier||'',tierMeaning:r.tier_meaning||'',signed:!!r.signed,signatureKeyid:r.signature_keyid||''};
       if(lastState)render(lastState);})
     .catch(e=>{
       // §41.9: the refusal explains itself in place — and the button recovers.

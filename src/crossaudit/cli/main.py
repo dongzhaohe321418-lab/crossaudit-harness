@@ -26,6 +26,7 @@ from ..receipt import build as build_receipt
 from ..receipt import digest as receipt_digest
 from ..receipt import load as load_receipt
 from ..receipt import verify as verify_receipt
+from ..receipt.sign import sign_receipt
 from ..receipt.verify import admit as admit_receipt
 from . import tui, wizard
 from .talk import cmd_routing, cmd_talk
@@ -495,6 +496,9 @@ def cmd_audit(args: argparse.Namespace) -> int:
         integrity=outcome.integrity)
     (ledger / "receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True),
                                            encoding="utf-8", newline="\n")
+    # A1: sign the receipt additively (detached sidecar; the receipt bytes are
+    # untouched, so unsigned receipts still verify). Fail-open.
+    signed_keyid = sign_receipt(cfg, receipt, ledger)
 
     # Second phase of the ordering rule: the report was committed first so the
     # receipt could bind its commit; now the receipt itself joins the ledger. A
@@ -503,6 +507,8 @@ def cmd_audit(args: argparse.Namespace) -> int:
     if args.write_ledger:
         rel = ledger.relative_to(cfg.root)
         git("add", "--", str(rel / "receipt.json"), str(rel / "checks.json"), cwd=cfg.root)
+        if signed_keyid:
+            git("add", "--", str(rel / "receipt.dsse.json"), cwd=cfg.root, check=False)
         git("commit", "-q", "-m",
             f"audit receipt {sha[:12]} r{cycle['round']} ({outcome.verdict})", cwd=cfg.root)
 
@@ -549,12 +555,38 @@ def cmd_verify(args: argparse.Namespace) -> int:
     latest = bool(cycle and cycle.get("parent_receipt") == digest)
     ready = bool(evidence["admission_ready"] and recorded and latest
                  and cycle and cycle.get("status") == "PASSED")
+    # A1: report the detached signature, if any, as its own independent fact.
+    from ..receipt.sign import verify_receipt as verify_receipt_sig
+    pin = None
+    if getattr(args, "pubkey", None):
+        import base64 as _b64
+        pem = Path(args.pubkey).read_text(encoding="utf-8")
+        body = "".join(line for line in pem.splitlines()
+                       if line and not line.startswith("-----"))
+        raw = _b64.b64decode(body)
+        pin = raw[-32:] if len(raw) >= 32 else raw   # last 32 bytes of SPKI = the key
+    sig = verify_receipt_sig(receipt, path.parent, expected_pubkey=pin)
+    # A present-but-invalid signature is a hard failure: the record was altered.
+    if sig["signed"] and not sig["verified"]:
+        ready = False
     out = {"verified": True, **evidence, "recorded": recorded,
            "latest_recorded_receipt": latest, "admission_ready": ready,
-           "admitted": False}
+           "admitted": False, "signed": sig["signed"],
+           "signature_verified": sig["verified"],
+           "signature_keyid": sig["keyid"], "signature_reason": sig["reason"]}
+    if args.admit and sig["signed"] and not sig["verified"]:
+        _emit(out, args.json,
+              "SIGNATURE INVALID  the receipt or its signature was altered; "
+              "refusing to admit")
+        return EXIT_DENIED
     if args.admit:
         out.update(admit_receipt(receipt, _state(cfg), evidence, cfg=cfg))
+    sig_line = ("\nSIGNED  " + sig["keyid"] + "  verifiable offline with the "
+                "project public key" if sig["verified"]
+                else "\nSIGNATURE INVALID  " + sig["reason"] if sig["signed"]
+                else "\nUNSIGNED  no signature sidecar (pre-A1 or signing off)")
     human = (f"BINDINGS VERIFIED  receipt {digest[:16]} for {evidence['sha'][:12]}"
+             + sig_line
              + ("\nRECORDED  controller history contains this exact receipt"
                 if recorded else
                 "\nUNRECORDED  controller history does not contain this receipt")
@@ -563,6 +595,24 @@ def cmd_verify(args: argparse.Namespace) -> int:
              + ("\nADMITTED  consumed once; the cycle is closed" if args.admit
                 else "\nDRY RUN  nothing consumed"))
     _emit(out, args.json, human)
+    return EXIT_OK
+
+
+def cmd_export_pubkey(args: argparse.Namespace) -> int:
+    """Print the project's signing public key so a third party can verify
+    receipts offline with openssl / ssh-keygen / cryptography — no key created."""
+    from ..crypto import keys as _keys
+    cfg = load()
+    got = _keys.public_key(cfg)
+    if got is None:
+        _emit({"signed": False}, args.json,
+              "NO SIGNING KEY YET  run an audit first; a key is minted on the "
+              "first signed receipt")
+        return EXIT_CONFIG
+    pub, keyid = got
+    pem = _keys.public_key_pem(pub)
+    _emit({"key_id": keyid, "public_key_pem": pem}, args.json,
+          f"KEY {keyid}\n{pem.rstrip()}")
     return EXIT_OK
 
 
@@ -1054,6 +1104,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         integrity=outcome.integrity)
     (ledger / "receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True),
                                            encoding="utf-8", newline="\n")
+    if sign_receipt(cfg, receipt, ledger):
+        git("add", "--", str(rel / "receipt.dsse.json"), cwd=cfg.root, check=False)
     git("add", "--", str(rel / "receipt.json"), cwd=cfg.root)
     git("commit", "-q", "-m",
         f"audit receipt {sha[:12]} r{cycle['round']} ({outcome.verdict})", cwd=cfg.root)
@@ -1162,7 +1214,14 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--audit-root")
     v.add_argument("--expect-repo")
     v.add_argument("--expect-sha")
+    v.add_argument("--pubkey", help="a public-key PEM to pin the signature "
+                                    "against (third-party offline verification)")
     v.set_defaults(func=cmd_verify)
+
+    ek = sub.add_parser("export-pubkey",
+                        help="print this project's signing public key (PEM) so "
+                             "others can verify its receipts offline")
+    ek.set_defaults(func=cmd_export_pubkey)
 
     s = sub.add_parser("status", help="where each cycle stands")
     s.set_defaults(func=cmd_status)

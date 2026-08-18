@@ -678,6 +678,28 @@ the receipt still matches its commit, Constitution, report, and report verdict;
 `RECORDED` means the controller observed that exact receipt; `ADMISSION READY`
 means it is also the latest unconsumed PASS. Only `--admit` consumes it.
 
+#### Signed, externally verifiable receipts
+
+Each receipt is also signed with the project's own Ed25519 key and the signature
+is stored beside it as a detached `receipt.dsse.json` sidecar (a standard DSSE
+envelope over an in-toto statement). The receipt bytes are untouched, so every
+receipt minted before signing existed still verifies exactly as before —
+`SIGNED` / `UNSIGNED` is reported as its own line, and a present-but-invalid
+signature is refused. Export the public key so anyone can verify offline without
+CrossAudit, and pin it when verifying a receipt you were handed:
+
+```bash
+crossaudit export-pubkey > project.pem
+crossaudit verify cycles/<cycle>/receipt.json --pubkey project.pem
+```
+
+On one machine the operator holds the signing key, so a valid signature proves
+provenance and tamper-evidence — it is not a defence against the key holder, and
+it does not replace the independent cross-vendor audit; it makes that audit's
+record verifiable by an outsider. Verify with any conforming Ed25519 tool (the
+`cryptography` library or a modern OpenSSL 3.x; the `openssl` bundled with macOS
+is LibreSSL and too old for Ed25519).
+
 ## How the build loop behaves
 
 Each task produces a sequence of Git commits rather than silently replacing the
@@ -883,6 +905,7 @@ content from it. An already-exported environment variable takes precedence.
 | `CROSSAUDIT_GENERATOR_PROVIDER` | Override the configured generator provider. |
 | `CROSSAUDIT_GENERATOR_BASE_URL` | Override the generator's provider endpoint. |
 | `CROSSAUDIT_KEYS_FILE` | Use a different credential-file location. |
+| `CROSSAUDIT_SIGNING_KEYFILE` | Directory holding the project's Ed25519 receipt-signing keypair; defaults to `<state-dir>/signing`. Point it at a shared secure location to sign several projects with one key. |
 | `CROSSAUDIT_SHOW_KEYS` | Show key input during setup when explicitly set to `1`; hidden is the secure default. |
 | `CROSSAUDIT_CA_BUNDLE` | Trust a specific CA bundle without disabling TLS verification. |
 | `CROSSAUDIT_GIT_TIMEOUT` | Seconds a single git operation may run before it is abandoned (default `240`). Raise it only for unusually large repositories. |
@@ -1002,7 +1025,8 @@ nothing remotely. Review the plan before creating repositories or secrets.
 | `crossaudit run` | Audit the latest committed increment. |
 | `crossaudit check` | Run deterministic checks only. |
 | `crossaudit audit` | Run one explicit audit cycle. |
-| `crossaudit verify <receipt>` | Recompute and verify receipt bindings. |
+| `crossaudit verify <receipt>` | Recompute and verify receipt bindings; reports the signature and accepts `--pubkey` to pin one. |
+| `crossaudit export-pubkey` | Print the project's receipt-signing public key (PEM) for offline third-party verification. |
 | `crossaudit status` | List cycle states. |
 | `crossaudit watch` | Show live terminal progress. |
 | `crossaudit console` | Start or manage the browser dashboard. |

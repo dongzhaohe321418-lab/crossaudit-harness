@@ -277,9 +277,24 @@ def admit_latest(cfg: Config, cycle_id: str = "") -> dict:
                         cycle_id=cycle_id, receipt=digest[:16],
                         receipt_path=str(path.relative_to(cfg.root)),
                         **_admission_tier(cfg))
+                # A1: a signed receipt is disclosed as verifiable; a present but
+                # INVALID signature means the receipt or sidecar was altered —
+                # fail closed rather than admit a tampered record.
+                from ..receipt.sign import verify_receipt as verify_receipt_sig
+                sig = verify_receipt_sig(receipt, path.parent)
+                if sig["signed"] and not sig["verified"]:
+                    raise ConfigDenial(
+                        "the selected PASS carries a signature that does not "
+                        f"verify: {sig['reason']}; the receipt or its signature "
+                        "was altered after it was minted",
+                        remediations=["run the task again to mint a fresh, "
+                                      "correctly signed receipt"],
+                        work_lost=False, cycle_id=cycle_id, receipt=digest[:16],
+                        **_admission_tier(cfg))
                 result = admit_receipt(receipt, store, evidence, cfg=cfg)
                 return {**result, "verified": True, "sha": sha,
-                        "receipt": digest[:16], **_admission_tier(cfg)}
+                        "receipt": digest[:16], "signed": sig["signed"],
+                        "signature_keyid": sig["keyid"], **_admission_tier(cfg)}
             raise ConfigDenial(
                 "the selected PASS receipt is missing — no receipt file was "
                 "minted for this cycle (sample data never mints one)",
