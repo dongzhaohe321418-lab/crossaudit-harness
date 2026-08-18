@@ -1165,10 +1165,19 @@ body.hub-mode .project-hub{display:block}
 .project-table{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
   overflow:hidden;box-shadow:var(--shadow-2)}
 .project-row{width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;
-  display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(220px,1fr) 92px 100px 116px 28px 28px 28px;
-  align-items:center;gap:14px;padding:15px 18px;text-align:left;cursor:pointer;color:inherit}
+  display:grid;grid-template-columns:minmax(220px,1.6fr) minmax(200px,1fr) 96px 104px 116px 26px 26px 18px;
+  align-items:center;gap:16px;padding:17px 20px;text-align:left;cursor:pointer;color:inherit;
+  border-radius:var(--r-md);transition:background .12s}
 .project-row:last-child{border-bottom:0}
 .project-row:hover{background:var(--hover)}
+/* Calm resting state: row actions appear on hover/focus (a pinned star stays),
+   so the list reads by name + quiet metadata, not a wall of controls. */
+@media (hover:hover){
+  .project-pin,.project-delete,.project-arrow{opacity:0;transition:opacity .12s}
+  .project-row:hover .project-pin,.project-row:hover .project-delete,.project-row:hover .project-arrow,
+  .project-row:focus-within .project-pin,.project-row:focus-within .project-delete,
+  .project-row:focus-within .project-arrow,.project-pin.pinned{opacity:1}
+}
 .project-pin{width:28px;height:28px;border:0;border-radius:var(--r-xs);background:transparent;
   color:var(--text-3);display:grid;place-items:center}
 .project-pin:hover{background:var(--hover);color:var(--text)}
