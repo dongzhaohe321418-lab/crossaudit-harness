@@ -267,7 +267,8 @@ def build_prompt(*, task: str, constitution: str, current: dict[str, str],
                  skills: str = "", deterministic_contract: str = "",
                  attachments: str = "", compute_hosts=None,
                  compute_results=None, mcp_servers=None,
-                 tool_results=None, builtin_tools=None) -> str:
+                 tool_results=None, builtin_tools=None,
+                 owner_guidance: str = "") -> str:
     parts = [f"THE TASK\n{task.strip()}", ""]
     if attachments:
         # The Console's explicit Send action authorizes the selected files;
@@ -284,6 +285,18 @@ def build_prompt(*, task: str, constitution: str, current: dict[str, str],
         # After the rules and visibly separate from them: guidance shapes how the
         # work is done, and can never quietly become what it is judged by.
         parts.append("\n" + skills)
+    if owner_guidance:
+        # Messages the owner sent while the run was already in progress. They
+        # steer HOW the work is done; the task above stays the task, the rules
+        # still win, and nothing here widens where the generator may write.
+        parts.append(
+            "\nOWNER GUIDANCE — messages the owner sent while this run was in "
+            "progress. Supplementary steering only: the task above is "
+            "unchanged, the rules still win over anything here, and nothing "
+            "here widens where you may write. Apply it to how you do the work; "
+            "if it contradicts the task or a rule, say so in `notes` instead "
+            "of following it.\n"
+            f"<<<OWNER-GUIDANCE\n{owner_guidance}\nOWNER-GUIDANCE")
     if allowed_dirs:
         parts.append(f"\nYou may write only inside: {', '.join(allowed_dirs)}/")
     if compute_hosts:
@@ -364,7 +377,7 @@ def generate(*, task: str, constitution: str, current: dict[str, str],
              deterministic_contract: str = "", attachments: str = "",
              compute_hosts=None, compute_results=None, mcp_servers=None,
              tool_results=None, builtin_tools=None,
-             on_repair=None) -> Work | ComputeRequest | ToolRequest:
+             on_repair=None, owner_guidance: str = "") -> Work | ComputeRequest | ToolRequest:
     """One round of work. `complete` is a provider bound to the generator role.
 
     A reply the parsers cannot read is a *format* failure, not a provider
@@ -385,7 +398,8 @@ def generate(*, task: str, constitution: str, current: dict[str, str],
                           compute_results=compute_results,
                           mcp_servers=mcp_servers,
                           tool_results=tool_results,
-                          builtin_tools=builtin_tools)
+                          builtin_tools=builtin_tools,
+                          owner_guidance=owner_guidance)
     reply = complete(system=GENERATOR_SYSTEM, prompt=prompt)
     try:
         outcome = _parse_reply(reply.text)

@@ -213,6 +213,9 @@ class RunCommandService:
         # same handle, so a user's Stop while a pending action waits denies it
         # promptly (deny-by-default) instead of pinning the worker.
         emit.is_cancelled = lambda: self._cancelled(run_id)
+        # The loop drains queued owner guidance at each round boundary through
+        # the same handle convention (consume-once inside the journal).
+        emit.drain_guidance = lambda: self.journal.drain_messages(run_id)
         try:
             code = worker(prepared, emit)
             if self._cancelled(run_id):

@@ -225,6 +225,10 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     heartbeat = getattr(on_event, "heartbeat", None)
     run_id = str(getattr(on_event, "run_id", "") or "")
     is_cancelled = getattr(on_event, "is_cancelled", None)
+    # Owner messages queued while the run is live, delivered by the journal at
+    # round boundaries (consume-once). Absent for foreground CLI builds.
+    drain_guidance = getattr(on_event, "drain_guidance", None)
+    owner_guidance = ""
 
     def emit(kind: str, actor: str, text: str, detail: str = "", *,
              state: RunState | None = None, waiting_reason: dict | None = None,
@@ -272,6 +276,11 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     termination_reason = f"build round budget spent ({cfg.max_rounds})"
     last_round = 0
     provider_wait: ProviderDenial | None = None
+    #: One free corrective re-ask when a round changes nothing (self-heal
+    #: before any human is bothered); a second no-progress round stops with a
+    #: structured cause instead of a bare sentence.
+    no_progress_retry_used = False
+    no_progress_stop = False
     #: The denial that terminated the loop (non-park path), kept so the stop
     #: can name a structured, human-actionable cause instead of raw prose.
     terminal_denial: ProviderDenial | None = None
@@ -287,6 +296,22 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         last_round = round_no
         emit("round_started", "loop", f"round {round_no} of {cfg.max_rounds}",
              state=RunState.GENERATING)
+        # The safe boundary where mid-run owner messages join the work: drained
+        # exactly once, accumulated for every later round, and recorded as a
+        # visible event (steering is auditable, never a whisper). The task and
+        # goal stay fixed; guidance shapes HOW, never WHAT.
+        if drain_guidance is not None:
+            try:
+                fresh_guidance = list(drain_guidance() or [])
+            except Exception:  # noqa: BLE001 -- a queue hiccup must not kill the round
+                fresh_guidance = []
+            if fresh_guidance:
+                joined = "\n\n".join(fresh_guidance)
+                owner_guidance = (owner_guidance + "\n\n" + joined
+                                  if owner_guidance else joined)
+                emit("guidance_received", "input",
+                     f"reading {len(fresh_guidance)} owner message(s)",
+                     joined[:2000], state=RunState.GENERATING)
         emit("generation_started", "generator", "writing",
              state=RunState.GENERATING)
         current = _current_work(cfg)
@@ -302,6 +327,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     attachments=attachments, compute_hosts=compute_hosts,
                     compute_results=compute_results, mcp_servers=mcp_servers,
                     tool_results=tool_results, builtin_tools=builtin_tools,
+                    owner_guidance=owner_guidance,
                     # A malformed reply gets one visible, recorded repair
                     # attempt (§24.1) before anything reaches a human.
                     on_repair=lambda why: emit(
@@ -463,9 +489,28 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         # the commit has nothing staged and fails.
         staged = _stage_generated(cfg, written)
         if not staged:
+            # Self-heal first (§24.1): a round whose bytes match the committed
+            # work is usually the model reproducing content that already landed
+            # (an earlier interrupted run, or a retry). Tell it exactly that,
+            # once, and let it produce an actual revision — only a second
+            # no-progress round escalates, with a structured cause.
+            if not no_progress_retry_used and round_no < cfg.max_rounds:
+                no_progress_retry_used = True
+                emit("revision_retry", "loop",
+                     "the round changed nothing; asking for a real revision",
+                     state=RunState.GENERATING)
+                findings = ("[BLOCKER] Your last reply was byte-identical to the "
+                            "work already committed — nothing new could be "
+                            "audited. Produce an actual revision that addresses "
+                            "the task: change or extend the relevant files. If "
+                            "you believe the committed work already satisfies "
+                            "the task completely, say why in `notes` and make "
+                            "the smallest meaningful improvement instead.")
+                continue
             emit("revision_unchanged", "loop",
                  "the round reproduced the previous one; nothing new to audit",
                  state=RunState.GENERATING)
+            no_progress_stop = True
             termination_reason = (
                 f"generator produced no new auditable revision in round {round_no}")
             break
@@ -597,6 +642,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             cause = "generator_format"
         elif terminal_denial is not None:
             cause = "generator_refused"
+        elif no_progress_stop:
+            cause = "no_progress"
         else:
             cause = ""
         try:

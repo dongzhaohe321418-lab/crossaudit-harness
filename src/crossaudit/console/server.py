@@ -69,6 +69,7 @@ from ..runtime import (
     PreparedRun,
     RunCommandService,
     RunEvent,
+    RunJournal,
     RunLaunch,
     RunState,
     journal_path,
@@ -866,13 +867,32 @@ def say(cfg: Config, text: str, *, attachments=None,
                 "clarify": routing.clarify or "Is this about the work, or about the "
                                               "standards it is judged by?"}
     attachments_accepted = False
+    queued_position = None
 
     if routing.lane == "generator" and not continuation_cycle:
         routing.restated = prepare_task(routing.restated)
 
     def generator_lane() -> str:
-        nonlocal attachments_accepted
+        nonlocal attachments_accepted, queued_position
         if TRACKER.running:
+            # Mid-run steering: the message queues durably for the live run and
+            # joins the generator at the next round boundary — the user never
+            # has to wait for a build to finish before adding information. The
+            # utterance still lands in the routing ledger like every other.
+            if prepared:
+                return ("refused — attachments cannot join a running build; "
+                        "send them when it finishes")
+            live = TRACKER.snapshot() or {}
+            live_id = str(live.get("run_id", "") or "")
+            if live_id and not live.get("finished"):
+                try:
+                    position = RunJournal(journal_path(cfg)).enqueue_message(
+                        live_id, routing.restated)
+                except ValueError as exc:
+                    return f"refused — {exc}"
+                queued_position = position
+                return (f"queued as owner guidance for the running build "
+                        f"(#{position}); it will be read at the next round")
             return ("a build is already running; watch it above, or wait for it "
                     "to finish")
         def record_before_start(resolved: str) -> None:
@@ -917,9 +937,14 @@ def say(cfg: Config, text: str, *, attachments=None,
                 "reasoning": routing.reasoning, "executed": f"refused — {exc.reason}"}
     if not route_recorded:
         talk_mod._record_routing(cfg, routing, executed)
-    return {"asked": False, "lane": routing.lane, "confidence": routing.confidence,
-            "reasoning": routing.reasoning, "executed": executed,
-            "attachments_accepted": attachments_accepted}
+    result = {"asked": False, "lane": routing.lane, "confidence": routing.confidence,
+              "reasoning": routing.reasoning, "executed": executed,
+              "attachments_accepted": attachments_accepted}
+    # Additive: only a live-run steering message carries the queue marker.
+    if queued_position is not None:
+        result["queued"] = True
+        result["position"] = queued_position
+    return result
 
 
 def make_handler(cfg: Config, token: str, touch) -> type:

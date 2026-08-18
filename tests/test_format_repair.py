@@ -153,3 +153,74 @@ def test_new_strings_have_chinese_parity():
                "The generator could not produce auditable work",
                "What happened", "correcting a malformed reply"):
         assert f'"{en}"' in PAGE, en
+
+
+# ---- no-progress self-heal (the second dead-end class the user hit) ----
+def test_unchanged_round_gets_one_corrective_retry_then_succeeds(
+        science, cfg, transcripts, monkeypatch):
+    """Round 1 reproduces committed bytes → the loop re-asks once with the
+    exact correction; a real revision on the retry continues normally."""
+    from crossaudit import generator as generator_mod
+    from crossaudit.cli import build as build_mod
+
+    (science / "experiments" / "demo" / "SUMMARY.md").write_text("same\n")
+    import subprocess
+    subprocess.run(["git", "add", "-A"], cwd=science, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t",
+                    "commit", "-q", "-m", "prior work"], cwd=science, check=True)
+
+    prompts, events = [], []
+
+    def fake_generate(**kwargs):
+        prompts.append(kwargs.get("findings", ""))
+        text = "same\n" if len(prompts) == 1 else "improved\n"
+        return generator_mod.Work(summary="attempt",
+                                  files={"experiments/demo/SUMMARY.md": text})
+
+    monkeypatch.setattr(build_mod, "_generator_complete", lambda *a, **k: object())
+    monkeypatch.setattr(build_mod.gen_mod, "generate", fake_generate)
+    monkeypatch.chdir(science)
+    build_mod.run_loop(cfg, "improve the summary",
+                       on_event=lambda ev: events.append(ev.kind))
+
+    assert len(prompts) >= 2                       # the retry actually re-asked
+    assert "byte-identical" in prompts[1]          # with the exact correction
+    assert "revision_retry" in events              # visibly recorded
+    # The healed round produced a real revision that reached the audit path —
+    # the retry did its job (later rounds may still stop honestly).
+    assert "audit_started" in events
+    assert events.index("audit_started") > events.index("revision_retry")
+
+
+def test_two_unchanged_rounds_escalate_with_no_progress_cause(
+        science, cfg, transcripts, monkeypatch):
+    from crossaudit import generator as generator_mod
+    from crossaudit.cli import build as build_mod
+    from crossaudit.controller import StateStore
+
+    (science / "experiments" / "demo" / "SUMMARY.md").write_text("same\n")
+    import subprocess
+    subprocess.run(["git", "add", "-A"], cwd=science, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t",
+                    "commit", "-q", "-m", "prior work"], cwd=science, check=True)
+
+    def fake_generate(**kwargs):
+        return generator_mod.Work(summary="attempt",
+                                  files={"experiments/demo/SUMMARY.md": "same\n"})
+
+    monkeypatch.setattr(build_mod, "_generator_complete", lambda *a, **k: object())
+    monkeypatch.setattr(build_mod.gen_mod, "generate", fake_generate)
+    monkeypatch.chdir(science)
+    build_mod.run_loop(cfg, "improve the summary")
+
+    cycles = StateStore(cfg.root / cfg.state_dir / "state.json").snapshot()["cycles"]
+    row = next(iter(cycles.values()))
+    assert row["status"] == "ESCALATED"
+    assert row.get("escalation_cause") == "no_progress"
+
+
+def test_page_renders_the_no_progress_cause():
+    from crossaudit.console.page import PAGE
+    assert "The generator repeated the existing work" in PAGE
+    assert "Nothing new to audit" in PAGE
+    assert '"Nothing new to audit"' in PAGE        # zh parity entry exists

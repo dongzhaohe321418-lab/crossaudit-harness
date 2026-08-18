@@ -92,6 +92,10 @@ RETAIN_RECENT_RUNS = 200
 #: within this tail), so the cap changes how much history a frame carries, never
 #: the correctness of the latest state.
 LATEST_STEP_LIMIT = 200
+#: Mid-run steering bounds: one message and the unread backlog both cap,
+#: so queued guidance can never starve the prompt or the journal.
+MAX_STEER_MESSAGE_BYTES = 4096
+MAX_STEER_QUEUE = 8
 
 
 def waiting_kind(category: str) -> str:
@@ -300,6 +304,15 @@ class RunJournal:
                 );
                 CREATE INDEX IF NOT EXISTS run_events_run
                     ON run_events(run_id, sequence);
+                CREATE TABLE IF NOT EXISTS run_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id TEXT NOT NULL REFERENCES runs(run_id),
+                    text TEXT NOT NULL,
+                    created REAL NOT NULL,
+                    consumed INTEGER NOT NULL DEFAULT 0
+                );
+                CREATE INDEX IF NOT EXISTS run_messages_run
+                    ON run_messages(run_id, id);
                 """
             )
             # Additive migration for runtime databases created by earlier
@@ -618,6 +631,82 @@ class RunJournal:
         if row is None:
             raise KeyError(f"unknown run {run_id}")
         return _state(row["state"])
+
+    # -- mid-run steering ----------------------------------------------------
+    # The owner may add information at any time while a run is live; it queues
+    # durably in order and the worker reads it at the next round boundary. The
+    # enqueue also writes one narration event in the same transaction, so the
+    # queued message is visible in the thread and rival consoles wake via the
+    # journal fingerprint. Bounded: a message and the unread backlog both cap.
+
+    def enqueue_message(self, run_id: str, text: str) -> int:
+        """Queue one owner message for a live run; returns its queue position.
+
+        Raises ValueError when the run is not active, the message is empty or
+        oversized, or the unread backlog is full — the caller phrases the
+        refusal for the user; nothing here is silently dropped or truncated.
+        """
+        body = str(text or "").strip()
+        if not body:
+            raise ValueError("the message is empty")
+        if len(body.encode("utf-8")) > MAX_STEER_MESSAGE_BYTES:
+            raise ValueError("the message is too long to queue; shorten it or "
+                             "wait for the current round to finish")
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                "SELECT state FROM runs WHERE run_id=?", (run_id,),
+            ).fetchone()
+            if row is None or _state(row["state"]) not in ACTIVE_STATES:
+                db.execute("ROLLBACK")
+                raise ValueError("no live run to steer")
+            backlog = db.execute(
+                "SELECT COUNT(*) AS n FROM run_messages "
+                "WHERE run_id=? AND consumed=0", (run_id,),
+            ).fetchone()["n"]
+            if int(backlog) >= MAX_STEER_QUEUE:
+                db.execute("ROLLBACK")
+                raise ValueError("the guidance queue is full; the run will "
+                                 "read it at the next round")
+            now = self._clock()
+            db.execute(
+                "INSERT INTO run_messages(run_id,text,created,consumed) "
+                "VALUES(?,?,?,0)", (run_id, body, now))
+            self._insert_event(
+                db, run_id, kind="guidance_queued", actor="input",
+                text="owner guidance queued", detail=body,
+                state=_state(row["state"]), at=now)
+            db.commit()
+            return int(backlog) + 1
+
+    def drain_messages(self, run_id: str) -> list[str]:
+        """Consume every unread owner message for this run, oldest first.
+
+        Exactly-once: rows are marked consumed in the same transaction that
+        reads them, so a crashed worker leaves them unread (redelivered to the
+        next boundary) and a resumed round never re-injects drained text.
+        """
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            rows = db.execute(
+                "SELECT id, text FROM run_messages "
+                "WHERE run_id=? AND consumed=0 ORDER BY id", (run_id,),
+            ).fetchall()
+            if rows:
+                db.execute(
+                    "UPDATE run_messages SET consumed=1 WHERE id IN (%s)"
+                    % ",".join("?" * len(rows)),
+                    [int(r["id"]) for r in rows])
+            db.commit()
+            return [str(r["text"]) for r in rows]
+
+    def queued_messages(self, run_id: str) -> int:
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT COUNT(*) AS n FROM run_messages "
+                "WHERE run_id=? AND consumed=0", (run_id,),
+            ).fetchone()
+        return int(row["n"]) if row else 0
 
     def request_cancel(self, run_id: str | None = None) -> dict:
         """Record one idempotent cancellation request for an active or parked run.
@@ -1087,6 +1176,8 @@ class RunJournal:
             "updated": float(row["updated"]),
             "owner_pid": int(row["owner_pid"]),
             "steps": steps,
+            # Owner messages queued for this run and not yet read by the loop.
+            "queued": self.queued_messages(row["run_id"]),
             # A parked run is finished from the worker's point of view: no
             # thread owns it, and only an explicit human command resumes it.
             "finished": state in TERMINAL_STATES or state in PARKED_STATES,

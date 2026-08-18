@@ -466,8 +466,12 @@ def test_build_duplicate_revision_reports_the_actual_escalation_reason(
     cycles = StateStore(cfg.root / cfg.state_dir / "state.json").snapshot()["cycles"]
     cycle = next(iter(cycles.values()))
     assert cycle["round"] == 1 and cycle["status"] == "ESCALATED"
+    # DELIBERATE UPDATE (no-progress self-heal): round 2 is now the one free
+    # corrective retry, so the honest stop lands in round 3 and carries the
+    # structured no_progress cause the Decision Center renders.
     assert cycle["escalation_reason"] == (
-        "generator produced no new auditable revision in round 2")
+        "generator produced no new auditable revision in round 3")
+    assert cycle.get("escalation_cause") == "no_progress"
 
 
 def test_weakened_constitution_is_refused(science, cfg, transcripts):

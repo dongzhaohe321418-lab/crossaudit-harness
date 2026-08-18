@@ -3083,8 +3083,17 @@ const ZH={
   "CrossAudit needs a decision before it can continue.":"CrossAudit 需要你作出决定才能继续。","Stopped":"已停止",
   "The task did not complete.":"任务未完成。","View audit details":"查看审计详情",
   "conversational reply · not audited":"对话回复 · 未经审计",
+  "Queued.":"已排队。","Will be read at the next generator round":"将在下一轮生成时读取",
+  "Queued — read at next round":"已排队 · 下一轮读取",
+  "Send guidance to the running task":"向运行中的任务发送补充信息",
+  "owner guidance queued":"已排队所有者补充信息",
   "Generator reply format problem":"生成者回复格式异常","Generator request refused":"生成者请求被拒",
   "The generator could not produce auditable work":"生成者未能产出可审计的工作",
+  "Nothing new to audit":"没有新内容可审计",
+  "The generator repeated the existing work":"生成者重复了已有的工作",
+  "The generator was asked twice and both replies matched the already-committed work byte for byte, so there was nothing new to audit. The existing files are untouched. Make the task more specific about what should change, or stop the task if the current work already satisfies it.":"生成者被要求了两次，但两次回复都与已提交的工作逐字节相同，因此没有新内容可审计。现有文件未被改动。请把任务写得更具体、说明希望改动什么；如果现有内容已满足要求，可直接停止此任务。",
+  "One corrective retry was already made automatically. Technical detail: ":"系统已自动进行过一次纠正性重试。技术细节：",
+  "the round changed nothing; asking for a real revision":"本轮没有产生任何改动；正在要求一次真正的修订",
   "The generator was asked twice and still replied outside the required file format, so there was nothing to audit. No result was admitted.":"系统已让生成者重试一次，但两次回复都不符合要求的文件格式，因此没有可审计的内容。未准入任何结果。",
   "What happened":"发生了什么",
   "The reply was corrected once automatically and still failed to parse. Technical detail: ":"系统已自动纠正重试一次，回复仍无法解析。技术细节：",
@@ -3274,6 +3283,9 @@ const ZH={
   ,"These are the rules the auditor judges against; an audit cannot run without them.":"这些是审计者据以判定的规则；缺少它们无法进行审计。"
 };
 const ZH_PATTERNS=[
+  [/^reading (\d+) owner message\(s\)$/,m=>'正在读取 '+m[1]+' 条所有者补充信息'],
+  [/^queued as owner guidance for the running build \(#(\d+)\); it will be read at the next round$/,m=>'已作为所有者补充信息排队（第 '+m[1]+' 位），将在下一轮读取'],
+  [/^(\d+) queued$/,m=>m[1]+' 条排队中'],
   [/^generator provider failure in round (\d+): (.+)$/,m=>'生成端在第 '+m[1]+' 轮失败：'+m[2]],
   [/^the generator returned malformed file blocks: (.+)$/,m=>'生成者返回了格式错误的文件块：'+m[1]],
   [/^the selected PASS is not ready for admission: (.+)$/,m=>'所选 PASS 尚不满足准入条件：'+m[1]],
@@ -4032,21 +4044,25 @@ function openResolution(value,action='',sha=''){
   // reason is demoted to the detail line instead of leading the screen.
   const formatCause=row.cause==='generator_format';
   const refusedCause=row.cause==='generator_refused';
-  document.getElementById('resolution-flag').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
-  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':formatCause?'The generator could not produce auditable work':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
+  const noProgress=row.cause==='no_progress';
+  document.getElementById('resolution-flag').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
+  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
   document.getElementById('resolution-summary').textContent=budget
     ?'CrossAudit stopped before spending past your usage limit. No result was admitted and the original task is ready once you raise or clear the limit.'
     :provider
     ?'CrossAudit stopped before an audit began. No result was admitted and the original task is ready to retry.'
     :formatCause
     ?'The generator was asked twice and still replied outside the required file format, so there was nothing to audit. No result was admitted.'
+    :noProgress
+    ?'The generator was asked twice and both replies matched the already-committed work byte for byte, so there was nothing new to audit. The existing files are untouched. Make the task more specific about what should change, or stop the task if the current work already satisfies it.'
     :row.limit_reached
     ?'CrossAudit used all '+used+' of '+maximum+' automatic rounds without a passing result. Nothing will continue or be admitted until you decide.'
     :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
-  document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':formatCause?'What happened':row.limit_reached
+  document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':(formatCause||noProgress)?'What happened':row.limit_reached
     ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
   document.getElementById('resolution-limit-copy').textContent=(formatCause
-    ?'The reply was corrected once automatically and still failed to parse. Technical detail: ':'')
+    ?'The reply was corrected once automatically and still failed to parse. Technical detail: '
+    :noProgress?'One corrective retry was already made automatically. Technical detail: ':'')
     +String(row.stop_reason||row.why||'The audit controller paused this task.');
   const attemptRows=row.attempts||[];
   document.getElementById('resolution-attempts').innerHTML=attemptRows.map(item=>{
@@ -5099,7 +5115,12 @@ function turn(m,d){
 }
 // The instant, optimistic echo of a just-sent message: the typed text plus a
 // working indicator, so pressing Enter feels immediate.
-function optimisticTurn(text){
+function optimisticTurn(text, queued){
+  if(queued) return '<article class="turn user"><div class="turn-main">'
+    + '<div class="turn-meta"><b>You</b><span class="direct-mark">'
+    + (currentLocale==='zh'?'已排队 · 下一轮读取':'Queued — read at next round') + '</span>'
+    + '<span class="turn-time">' + (currentLocale==='zh'?'刚刚':'now') + '</span></div>'
+    + '<div class="turn-body">' + esc(text) + '</div></div></article>';
   return '<article class="turn user"><div class="turn-main">'
     + '<div class="turn-meta"><b>You</b><span class="turn-time">'
     + (currentLocale==='zh'?'刚刚':'now') + '</span></div>'
@@ -5240,7 +5261,7 @@ function runCard(d){
   const focusLabel = focus.state === 'current' ? 'Current gate' : focus.state === 'failed' ? 'Stopped at'
     : focus.state === 'pending' ? 'Next gate' : 'Completed gate';
   const stateNames = {done:'Complete',failed:'Blocked',current:'Active',pending:'Pending'};
-  const actorNames = {generator:'Generator',auditor:'Auditor',compute:'Remote compute',tool:'MCP tool',loop:'Controller',done:'Result'};
+  const actorNames = {generator:'Generator',auditor:'Auditor',compute:'Remote compute',tool:'MCP tool',loop:'Controller',done:'Result',input:'You'};
   const actorMarks = {generator:'G',auditor:'A',compute:'H',tool:'M',loop:'↻',done:'✓'};
   const eventRows = p && p.steps ? p.steps.slice(-12).map(s => '<div class="audit-event">'
     + '<span class="event-mark ' + esc(s.actor) + '">' + esc(actorMarks[s.actor]||'·') + '</span>'
@@ -5263,7 +5284,8 @@ function runCard(d){
     + esc(outcome) + '</span>' + stopBtn + '</div><div class="run-task">' + esc(task) + '</div><div class="run-meta">'
     + '<span>Round <strong>' + esc(round) + '</strong> of ' + esc(roundLimit) + '</span>'
     + '<span><strong>' + reached + '</strong> of ' + pipeline.length + ' gates reached</span>'
-    + '<span>' + (p ? p.elapsed + 's elapsed' : 'Ledger snapshot') + '</span></div>'
+    + '<span>' + (p ? p.elapsed + 's elapsed' : 'Ledger snapshot') + '</span>'
+    + (p&&p.queued?'<span><strong>'+esc(p.queued)+'</strong> queued</span>':'') + '</div>'
     + '<div class="run-handoff" aria-hidden="true"><i></i></div>'
     + '<div class="run-meter" role="progressbar" aria-label="Audit gates reached" aria-valuemin="0" '
     + 'aria-valuemax="100" aria-valuenow="' + meter + '"><i style="width:' + meter + '%"></i></div></div>'
@@ -5618,8 +5640,10 @@ function renderConversation(d){
     if(optimisticSend && (!optimisticSend.chat || optimisticSend.chat===(activeChatId||''))){
       const want=(optimisticSend.text||'').trim();
       const echoed = messages.some(m=>m.kind==='you' && (m.utterance||'').trim()===want);
-      if((p && !p.finished) || echoed) optimisticSend = null;   // real state took over
-      else optimistic = optimisticTurn(optimisticSend.text);
+      // A queued steering message must NOT be cleared by the live run it is
+      // steering — only its own echo in the stream releases it.
+      if(optimisticSend.queued ? echoed : ((p && !p.finished) || echoed)) optimisticSend = null;
+      else optimistic = optimisticTurn(optimisticSend.text, optimisticSend.queued);
     }
     // One protagonist per screen: the welcome empty state renders only when
     // the timeline holds nothing at all, and the delivery band only when no
@@ -5785,7 +5809,8 @@ function render(d){
   renderDecisionBanner(d);
   document.getElementById('model-summary').textContent = modelTag(d.generator) + ' → ' + modelTag(d.auditor);
   const activeRun=chatProgress(d),canCancel=Boolean(activeRun&&!activeRun.finished);
-  stopRun.hidden=!canCancel;send.hidden=canCancel;
+  stopRun.hidden=!canCancel;send.hidden=false;
+  send.setAttribute('aria-label',canCancel?(currentLocale==='zh'?'向运行中的任务发送补充信息':'Send guidance to the running task'):(currentLocale==='zh'?'运行任务':'Run task'));send.title=send.getAttribute('aria-label');
   stopRun.disabled=Boolean(activeRun&&activeRun.state==='CANCELLING');
   stopRun.setAttribute('aria-label',currentLocale==='zh'?'停止正在运行的任务':'Cancel running task');
   stopRun.title=stopRun.getAttribute('aria-label');
@@ -6360,7 +6385,7 @@ form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!
   newTaskMode=false;
   // Echo the message immediately so the thread reacts the instant Enter is
   // pressed (Codex-style), before routing + the first token return.
-  optimisticSend={text:rawText, chat:activeChatId||'', at:Date.now()};
+  optimisticSend={text:rawText, chat:activeChatId||'', at:Date.now(), queued:Boolean(lastState&&chatProgress(lastState)&&!chatProgress(lastState).finished&&audienceOf()!=='auditor')};
   if(lastState)render(lastState);
   send.disabled=true;say.disabled=true;transferBusy=true;document.getElementById('attach').disabled=true;route.className='route on';
   route.textContent=pendingFiles.length?'Sending your files…':'Starting…';
@@ -6370,10 +6395,15 @@ form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!
     + esc(r.clarify);}else{activeChatId=r.chat_id||activeChatId;if(optimisticSend)optimisticSend.chat=activeChatId||'';
     // chat is synchronous: the echo + reply land in the next snapshot, so the
     // optimistic bubble stays until the real turns take over (echo-detection).
-    if(r.lane!=='generator'&&r.lane!=='chat'){optimisticSend=null;}route.innerHTML=r.lane==='generator'
+    if(r.lane!=='generator'&&r.lane!=='chat'){optimisticSend=null;}route.innerHTML=r.queued
+      ?'<b>Queued.</b> Will be read at the next generator round'+(r.position?' · #'+esc(r.position):'')
+      :(r.lane==='generator'&&String(r.executed||'').indexOf('refused')===0)
+      ?'<b>Refused.</b> '+esc(String(r.executed).slice(10))
+      :r.lane==='generator'
       ?'<b>Task started.</b> The result will appear in this conversation.'
       :r.lane==='chat'?'<b>Answered.</b>'
       :'<b>Message delivered.</b>';
+    if(!r.queued&&r.lane==='generator'&&optimisticSend)optimisticSend.queued=false;
     if(r.lane==='generator')pendingContinuation={cycle:'',chat:''};
     if(!pendingFiles.length||r.attachments_accepted){say.value='';pendingFiles=[];uploadProgress=new Map();fileInput.value='';drawFiles();syncAudience();}}}
   catch(e){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b>Refused.</b> '+esc(e.message);}
