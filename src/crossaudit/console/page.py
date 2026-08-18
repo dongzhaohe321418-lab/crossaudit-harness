@@ -503,6 +503,17 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 /* the rule id is provenance, not the message — small, dim, out of the way */
 .finding-rule{font-size:var(--fs-micro,10px);color:var(--text-3);font-variant-numeric:tabular-nums;opacity:.75}
 .finding p{margin:5px 0 0;line-height:1.5;font-size:var(--fs-body)}
+/* .dt — a reusable clean data table (Claude-Code-style: muted header, hairline
+   rows, hover, generous rows). Used for Skills, Connectors/MCP, and other lists. */
+.dt{width:100%;border-collapse:collapse;margin-top:6px;font-size:var(--fs-body)}
+.dt th{text-align:left;font-weight:500;color:var(--text-3);font-size:var(--fs-caption);
+  letter-spacing:.01em;padding:7px 12px;border-bottom:1px solid var(--line)}
+.dt td{padding:12px;border-bottom:1px solid var(--line);color:var(--text-2);vertical-align:middle}
+.dt tbody tr:last-child td{border-bottom:0}
+.dt tbody tr:hover{background:var(--hover)}
+.dt .dt-name{color:var(--text);font-weight:500}
+.dt .dt-muted{color:var(--text-3);font-size:var(--fs-caption)}
+.dt .dt-num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* Deliverables: opaque cards, pass-gated, grouped when plural. */
 .output-files{margin-top:var(--sp-3)}
@@ -5633,8 +5644,8 @@ function toolsView(d){
   const calls=(state.calls||[]).map(call=>'<div class="mcp-call"><b>'+esc(call.tool)+' · '+esc(call.server)+'</b><span class="status '
     +esc(call.status)+'">'+esc(call.status)+'</span><small>'+new Date(call.started*1000).toLocaleString()+'</small><small>'
     +Math.round(Number(call.duration_ms||0))+' ms</small></div>').join('');
-  const skillRows=skills.map(skill=>'<div class="skill-row"><b>'+esc(skill.name)+'</b><p>'
-    +esc((skill.applies_to||[]).length?'Applies to '+skill.applies_to.join(', '):'Applies to every task')+'</p></div>').join('');
+  const skillRows=skills.map(skill=>'<tr><td class="dt-name">'+esc(skill.name)+'</td><td class="dt-muted">'
+    +esc((skill.applies_to||[]).length?skill.applies_to.join(', '):'Every task')+'</td></tr>').join('');
   return '<div class="view-heading"><h2>Tools & Skills</h2><p>Project-scoped MCP capabilities and committed Generator guidance.</p></div>'
     +'<div class="compute-note"><span>ⓘ</span><div><b>Explicit capability boundaries.</b> MCP servers and Skills are invisible until you configure them. Approved MCP output remains untrusted data; Skills guide only the Generator and never change the Constitution.</div></div>'
     +'<div class="compute-message" id="mcp-message" role="alert"></div><div class="compute-toolbar">'
@@ -5644,7 +5655,7 @@ function toolsView(d){
     +'<section class="compute-section"><div class="compute-section-head"><b>Recent tool calls</b><span>'+(state.calls||[]).length+' recorded</span></div>'
     +(calls||'<div class="compute-empty">No MCP tools called in this project.</div>')+'</section>'
     +'<section class="compute-section"><div class="compute-section-head"><b>Skills</b><span>'+skills.length+' committed</span></div>'
-    +(skillRows||'<div class="compute-empty">No project Skills yet.</div>')+'</section></div>';
+    +(skills.length?'<table class="dt"><thead><tr><th>Skill</th><th>Applies to</th></tr></thead><tbody>'+skillRows+'</tbody></table>':'<div class="compute-empty">No project Skills yet.</div>')+'</section></div>';
 }
 function renderConversation(d){
   const thread = document.getElementById('thread');
