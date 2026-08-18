@@ -222,12 +222,15 @@ def load(path: Path | None = None) -> Config:
                                    or not all(isinstance(d, str) and d for d in scope_dirs)):
         raise ConfigDenial("scope.dirs must be a list of directory names", file=str(p))
 
-    # Missing checks use the safe domain-neutral pack. An explicit empty list
-    # means exactly that; `or` previously made it impossible to disable checks.
-    checks = (raw["checks"] if "checks" in raw else
-              ["parseable", "declared", "internal", "complete"])
-    if not isinstance(checks, list) or not all(isinstance(c, str) for c in checks):
-        raise ConfigDenial("checks must be a list of names", file=str(p))
+    # `checks:` selects the deterministic rigor: a named profile ("general" —
+    # the light default; "science"; "off"), or an explicit list of check names
+    # (a custom mix). Missing → the light general profile; an explicit empty list
+    # means exactly "no checks".
+    from .dcl.profiles import DEFAULT_PROFILE, resolve as _resolve_checks
+    try:
+        checks = _resolve_checks(raw["checks"] if "checks" in raw else DEFAULT_PROFILE)
+    except ConfigDenial as exc:
+        raise ConfigDenial(str(exc), file=str(p)) from exc
 
     resilience_raw = raw.get("resilience") or {}
     if not isinstance(resilience_raw, dict):

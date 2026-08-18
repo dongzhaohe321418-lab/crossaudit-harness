@@ -163,9 +163,20 @@ def test_a_declaration_that_resolves_is_not_flagged():
     assert run_checks(files, NEUTRAL).hard_failures == 0
 
 
-def test_a_placeholder_left_in_the_work_is_a_blocker():
+def test_a_placeholder_left_in_the_work_is_advisory_by_default():
+    # The light default reports a leftover placeholder but does not fail on it,
+    # so everyday / work-in-progress use is not blocked by a stray TODO.
     r = run_checks({"work/intro.md": b"# Intro\n\nTODO: write this\n"}, NEUTRAL)
     assert any(f.rule == "CA-FILE-004" for f in r.findings)
+    assert r.hard_failures == 0
+
+
+def test_complete_strict_makes_a_placeholder_a_blocker():
+    # The opt-in upgrade: a project that wants no placeholder to survive adds it.
+    r = run_checks({"work/intro.md": b"# Intro\n\nTODO: write this\n"},
+                   ["complete-strict"])
+    assert any(f.rule == "CA-FILE-004" for f in r.findings)
+    assert r.hard_failures == 1
 
 
 def test_a_broken_internal_link_is_advisory_not_blocking():

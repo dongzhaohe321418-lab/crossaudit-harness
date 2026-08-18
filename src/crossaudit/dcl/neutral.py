@@ -9,9 +9,16 @@ pack asks only what holds for any project whose output is files:
     internal     internal links and references point at something that exists
     complete     no placeholder left where content was promised
 
-None of these needs a model, all of them fail loudly, and each one catches a
-class of defect that models are unreliable at noticing precisely because it is
-boring: a broken link, a stray TODO, a JSON file that stopped being JSON.
+None of these needs a model, and each one catches a class of defect that models
+are unreliable at noticing precisely because it is boring: a broken link, a stray
+TODO, a JSON file that stopped being JSON.
+
+The default draws an honest line by severity: structural integrity is a blocker
+(`parseable`, `declared` — a file that does not parse or a declaration pointing
+at nothing), while quality reminders are advisory (`internal` broken links,
+`complete` leftover placeholders) — visible, but they do not fail an otherwise
+sound increment, so the light default suits everyday and work-in-progress use. A
+project that wants placeholders to hard-fail adds the `complete-strict` check.
 
 Where a domain pack exists, it adds to this. Where none does, this is what
 stands between the model audit and nothing — and the honest consequence, stated
@@ -117,8 +124,7 @@ def check_internal(files: Mapping[str, bytes]) -> list[Finding]:
     return out
 
 
-def check_complete(files: Mapping[str, bytes]) -> list[Finding]:
-    """No placeholder may survive into audited work."""
+def _placeholder_findings(files: Mapping[str, bytes], severity: str) -> list[Finding]:
     out: list[Finding] = []
     for path, data in files.items():
         if not path.endswith(TEXT_SUFFIXES):
@@ -128,11 +134,24 @@ def check_complete(files: Mapping[str, bytes]) -> list[Finding]:
             continue
         for m in PLACEHOLDERS.finditer(text):
             line = text[:m.start()].count("\n") + 1
-            out.append(Finding(BLOCKER, "CA-FILE-004", path,
+            out.append(Finding(severity, "CA-FILE-004", path,
                                f"line {line}: {m.group(1).strip()!r} left in place of "
                                f"content that was promised"))
             break                                      # one per file is enough
     return out
+
+
+def check_complete(files: Mapping[str, bytes]) -> list[Finding]:
+    """A leftover placeholder is reported, but advisory in the light default —
+    visible without failing an otherwise sound increment (so everyday and
+    work-in-progress use is not blocked by a stray TODO)."""
+    return _placeholder_findings(files, ADVISORY)
+
+
+def check_complete_strict(files: Mapping[str, bytes]) -> list[Finding]:
+    """The strict opt-in: a leftover placeholder is a blocker — for projects that
+    demand no placeholder survive into audited work."""
+    return _placeholder_findings(files, BLOCKER)
 
 
 register("parseable", check_parseable, "Every UTF-8 JSON or YAML file parses according "
@@ -141,8 +160,11 @@ register("declared", check_declared, "Every local path listed under inputs, sour
          "requires, or depends_on exists in the audited scope.")
 register("internal", check_internal, "Every relative Markdown link resolves inside the "
          "audited scope; a broken link is advisory.")
-register("complete", check_complete, "Text artifacts contain no TODO, TBD, FIXME, XXX, "
-         "lorem ipsum, or placeholder marker where content was promised.")
+register("complete", check_complete, "Text artifacts are checked for a leftover TODO, "
+         "TBD, FIXME, XXX, lorem ipsum, or placeholder marker; reported as advisory in "
+         "the default pack (visible, non-blocking).")
+register("complete-strict", check_complete_strict, "The strict opt-in: a leftover "
+         "TODO, TBD, FIXME, XXX, lorem ipsum, or placeholder marker is a blocker.")
 
 #: The pack `init` writes when the project is not obviously scientific.
 NEUTRAL_PACK = ["parseable", "declared", "internal", "complete"]

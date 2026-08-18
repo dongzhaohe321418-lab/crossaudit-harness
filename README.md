@@ -855,6 +855,27 @@ scope:
 checks: [schema, units, convergence, provenance]
 ```
 
+### How strict the deterministic layer is (a dial, not the identity)
+
+CrossAudit's identity is always on and domain-agnostic: an independent
+cross-vendor audit, a tamper-evident evidence ledger, signed receipts, and
+per-call human approval. The deterministic checks are an **optional rigor layer**
+on top — minimal by default, as strict as you choose. `checks:` takes a **profile
+name** or an explicit list:
+
+| `checks:` | What runs | Fits |
+| --- | --- | --- |
+| `off` | core audit chain only | "give me a trustworthy record, never mind format" |
+| `general` (default) | the domain-neutral pack — parses, dangling declarations, broken links (advisory), leftover placeholders (advisory) | code · docs · web · contracts · everyday |
+| `science` | `schema` · `units` · `convergence` · `provenance` | structured computational science |
+| a list, e.g. `[parseable, declared, complete-strict]` | exactly those checks | a custom mix |
+
+The default draws an honest line by severity: structural integrity is a blocker
+(`parseable`, `declared`), while quality reminders are advisory (`internal`
+broken links, `complete` leftover placeholders) — so a stray `TODO` is surfaced
+but does not fail work in progress. A project that wants placeholders to hard-fail
+adds `complete-strict`.
+
 All of these controls are available in **Project controls**; editing YAML is
 optional. Provider retries stay inside a single model turn and never consume an
 audit revision round. HTTP `Retry-After` is honored up to the configured cap,
