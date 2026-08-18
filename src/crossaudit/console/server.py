@@ -292,9 +292,16 @@ def admit_latest(cfg: Config, cycle_id: str = "") -> dict:
                         work_lost=False, cycle_id=cycle_id, receipt=digest[:16],
                         **_admission_tier(cfg))
                 result = admit_receipt(receipt, store, evidence, cfg=cfg)
+                # A2: disclose the reproducibility bundle when the audited tree
+                # pinned a dependency environment (locks count + ecosystems).
+                rep = receipt.get("reproduction") or {}
                 return {**result, "verified": True, "sha": sha,
                         "receipt": digest[:16], "signed": sig["signed"],
-                        "signature_keyid": sig["keyid"], **_admission_tier(cfg)}
+                        "signature_keyid": sig["keyid"],
+                        "reproducible": bool(rep),
+                        "repro_locks": int(rep.get("locks", 0)),
+                        "repro_kinds": list(rep.get("lock_kinds", [])),
+                        **_admission_tier(cfg)}
             raise ConfigDenial(
                 "the selected PASS receipt is missing — no receipt file was "
                 "minted for this cycle (sample data never mints one)",

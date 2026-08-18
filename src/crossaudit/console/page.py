@@ -569,10 +569,11 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .admission-card{margin:2px 0 var(--sp-6);border:1px solid var(--line);border-left:3px solid var(--escalated);
   border-radius:var(--r-md);padding:12px var(--sp-3);background:var(--surface);font-size:var(--fs-label)}
 .admission-card.ok{border-left-color:var(--pass)}
-.admission-head{display:flex;align-items:center;gap:8px}
+.admission-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .admission-head b{color:var(--text);font-weight:600}
 .admission-head span{color:var(--text-3);font-size:var(--fs-caption)}
 .admission-signed{border:1px solid var(--pass);border-radius:999px;padding:1px 8px;color:var(--pass);font-size:var(--fs-caption);white-space:nowrap;cursor:default}
+.admission-repro{border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--text-2);font-size:var(--fs-caption);white-space:nowrap;cursor:default}
 .admission-why{margin:7px 0 0;color:var(--text-2);line-height:1.55}
 .admission-safe{margin:6px 0 0;color:var(--text-3);font-size:var(--fs-caption)}
 .admission-tier{margin:7px 0 0;color:var(--text-2)}
@@ -3295,6 +3296,7 @@ const ZH_PATTERNS=[
   [/^there is no unconsumed passing result to admit$/,()=>'没有未消费的 PASS 结果可供准入'],
   [/^Admission tier ([\w-]+)( · .+)?$/,m=>'准入级别 '+zhValue(m[1])+(m[2]?' · '+zhValue(m[2].slice(3)):'')],
   [/^receipt ([0-9a-f]+)$/,m=>'收据 '+m[1]],[/^tier ([\w-]+)$/,m=>'级别 '+zhValue(m[1])],
+  [/^reproducible · (\d+) locks?$/,m=>'可复现 · '+m[1]+' 个依赖锁'],
   [/^(\d+) cycles?$/,m=>m[1]+' 个审计循环'],[/^(\d+) chats?$/,m=>m[1]+' 个对话'],
   [/^(\d+) required items? needs? fixing$/i,m=>m[1]+' 个必需项需要修复'],
   [/^(\d+) optional items? needs? attention$/i,m=>m[1]+' 个可选项需要处理'],
@@ -5370,7 +5372,8 @@ function admissionCard(){
   const a=lastAdmission;if(!a||a.chat!==(activeChatId||''))return '';
   if(a.ok)return '<section class="admission-card ok" aria-label="Admission result">'
     +'<div class="admission-head"><b>Admitted.</b><span>receipt '+esc(a.receipt||'')+'</span>'
-    +(a.signed?'<span class="admission-signed" title="'+esc('key '+(a.signatureKeyid||''))+'">signed · verifiable offline</span>':'')+'</div>'
+    +(a.signed?'<span class="admission-signed" title="'+esc('key '+(a.signatureKeyid||''))+'">signed · verifiable offline</span>':'')
+    +(a.reproducible?'<span class="admission-repro" title="'+esc((a.reproKinds||[]).join(', '))+'">reproducible · '+esc(String(a.reproLocks||0))+' lock'+((a.reproLocks===1)?'':'s')+'</span>':'')+'</div>'
     +(a.tier?'<p class="admission-tier">Admission tier '+esc(a.tier)+(a.tierMeaning?' · '+esc(a.tierMeaning):'')+'</p>':'')
     +'</section>';
   const remedies=(a.remediations||[]).map(r=>'<li>'+esc(r)+'</li>').join('');
@@ -6097,7 +6100,7 @@ function handleActionClick(ev){
       .catch(computeSurfaceError).finally(()=>{cancel.disabled=false;cancel.textContent='Cancel job';});}
   const admit=ev.target.closest('[data-admit]');if(admit){const admitCycle=admit.getAttribute('data-admit-cycle');admit.disabled=true;admit.textContent='Verifying…';
     api('/api/admit',{cycle_id:admitCycle}).then(r=>{
-      lastAdmission={ok:true,chat:activeChatId||'',cycleId:admitCycle,receipt:r.receipt||'',tier:r.tier||'',tierMeaning:r.tier_meaning||'',signed:!!r.signed,signatureKeyid:r.signature_keyid||''};
+      lastAdmission={ok:true,chat:activeChatId||'',cycleId:admitCycle,receipt:r.receipt||'',tier:r.tier||'',tierMeaning:r.tier_meaning||'',signed:!!r.signed,signatureKeyid:r.signature_keyid||'',reproducible:!!r.reproducible,reproLocks:r.repro_locks||0,reproKinds:r.repro_kinds||[]};
       if(lastState)render(lastState);})
     .catch(e=>{
       // §41.9: the refusal explains itself in place — and the button recovers.

@@ -700,6 +700,25 @@ record verifiable by an outsider. Verify with any conforming Ed25519 tool (the
 `cryptography` library or a modern OpenSSL 3.x; the `openssl` bundled with macOS
 is LibreSSL and too old for Ed25519).
 
+#### Reproducibility bundle
+
+When the audited commit carries a dependency lock (`requirements.txt`,
+`poetry.lock`, `uv.lock`, `package-lock.json`, `Cargo.lock`, `go.sum`, and the
+like), the receipt also names that pinned environment and how to re-run. The lock
+hashes come straight from the already-verified input manifest, so they are bound
+into the receipt digest — and, under signing, the signature — for free; a
+`reproduction.json` sidecar expands them into a self-contained bundle. `crossaudit
+reproduce` shows the pinned locks, whether your working tree still matches them,
+and the concrete re-run steps:
+
+```bash
+crossaudit reproduce cycles/<cycle>/receipt.json
+```
+
+Honest scope: the bundle re-derives the audited bindings and pins the dependency
+environment. Bit-for-bit reproducibility of the research result itself depends on
+the audited project's own determinism, which CrossAudit does not control.
+
 ## How the build loop behaves
 
 Each task produces a sequence of Git commits rather than silently replacing the
@@ -1027,6 +1046,7 @@ nothing remotely. Review the plan before creating repositories or secrets.
 | `crossaudit audit` | Run one explicit audit cycle. |
 | `crossaudit verify <receipt>` | Recompute and verify receipt bindings; reports the signature and accepts `--pubkey` to pin one. |
 | `crossaudit export-pubkey` | Print the project's receipt-signing public key (PEM) for offline third-party verification. |
+| `crossaudit reproduce <receipt>` | Show a receipt's pinned dependency locks, working-tree drift, and re-run steps. |
 | `crossaudit status` | List cycle states. |
 | `crossaudit watch` | Show live terminal progress. |
 | `crossaudit console` | Start or manage the browser dashboard. |

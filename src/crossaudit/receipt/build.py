@@ -183,4 +183,12 @@ def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
     evidence = _tool_evidence(cfg)
     if evidence:
         receipt["tool_evidence"] = evidence
+    # Optional, back-compatible reproducibility bundle (A2): present ONLY when the
+    # audited tree carries a dependency lock, so a lock-free receipt's bytes and
+    # digest stay identical to a pre-A2 receipt. The bundle's own digest is bound
+    # here; verify() re-derives it from the tree and refuses a mismatch.
+    from . import reproduction
+    block = reproduction.receipt_block(receipt)
+    if block:
+        receipt["reproduction"] = block
     return receipt

@@ -102,6 +102,22 @@ def validate(raw: Any) -> dict:
         if (not isinstance(te["entries"], int) or isinstance(te["entries"], bool)
                 or te["entries"] < 1):
             raise IntegrityDenial("tool_evidence.entries must be a positive integer")
+
+    # Optional reproducibility bundle (A2): present only on cycles whose audited
+    # tree carried a dependency lock. Validated when present, so a plain v2
+    # receipt without it stays byte-identical and is never rejected — no bump.
+    rep = raw.get("reproduction")
+    if rep is not None:
+        if not isinstance(rep, dict):
+            raise IntegrityDenial("reproduction must be a mapping")
+        _require(rep, ("bundle_sha256", "locks", "lock_kinds"), "reproduction")
+        if not isinstance(rep["bundle_sha256"], str) or not rep["bundle_sha256"]:
+            raise IntegrityDenial("reproduction.bundle_sha256 must be a non-empty string")
+        if (not isinstance(rep["locks"], int) or isinstance(rep["locks"], bool)
+                or rep["locks"] < 1):
+            raise IntegrityDenial("reproduction.locks must be a positive integer")
+        if not isinstance(rep["lock_kinds"], list):
+            raise IntegrityDenial("reproduction.lock_kinds must be a list")
     return raw
 
 

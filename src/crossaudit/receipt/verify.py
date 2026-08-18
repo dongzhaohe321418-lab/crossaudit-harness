@@ -150,6 +150,22 @@ def verify(receipt: dict, *, science_root: Path, audit_root: Path,
         if ledger_file.exists():
             _verify_tool_evidence(te, ledger_file)
 
+    # Reproducibility bundle (A2): the manifest was just re-derived from the git
+    # tree above, so recomputing the bundle and comparing its digest confirms the
+    # named dependency locks are exactly the audited ones. A tampered lock in the
+    # tree already fails the manifest check; this also catches a forged block.
+    rep = receipt.get("reproduction")
+    if rep is not None:
+        from . import reproduction
+        recomputed = reproduction.build_bundle(receipt)
+        if reproduction.bundle_digest(recomputed) != rep["bundle_sha256"]:
+            raise IntegrityDenial(
+                "reproduction bundle digest does not match the receipt")
+        locks = reproduction.detect_locks(inputs["manifest"])
+        if len(locks) != rep["locks"]:
+            raise IntegrityDenial(
+                "reproduction lock count does not match the audited manifest")
+
     return {
         "receipt_digest": schema.digest(receipt),
         "sha": subject["sha"],

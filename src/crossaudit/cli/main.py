@@ -28,6 +28,7 @@ from ..receipt import load as load_receipt
 from ..receipt import verify as verify_receipt
 from ..receipt.sign import sign_receipt
 from ..receipt.verify import admit as admit_receipt
+from ..receipt import reproduction as _reproduction
 from . import tui, wizard
 from .talk import cmd_routing, cmd_talk
 
@@ -83,6 +84,26 @@ def _skills_manifest(cfg: Config) -> dict:
         return skills_mod.manifest(skills_mod.load(cfg.root))
     except Denial:
         return {}                     # a broken skill is reported by doctor, not here
+
+
+def _sha256_file(path: Path) -> str:
+    return __import__("hashlib").sha256(path.read_bytes()).hexdigest()
+
+
+def _write_reproduction(receipt: dict, cycle_dir: Path) -> bool:
+    """A2: write reproduction.json beside the receipt when the audited tree
+    carried a dependency lock. Fail-open — a write problem never blocks an audit,
+    it just leaves the (still fully-bound) receipt without its expanded sidecar."""
+    try:
+        if receipt.get("reproduction") is None:
+            return False
+        bundle = _reproduction.build_bundle(receipt)
+        (cycle_dir / "reproduction.json").write_text(
+            json.dumps(bundle, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8", newline="\n")
+        return True
+    except Exception:  # noqa: BLE001 -- the sidecar is a convenience, never a gate
+        return False
 
 
 def _state(cfg: Config) -> StateStore:
@@ -499,6 +520,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
     # A1: sign the receipt additively (detached sidecar; the receipt bytes are
     # untouched, so unsigned receipts still verify). Fail-open.
     signed_keyid = sign_receipt(cfg, receipt, ledger)
+    repro_written = _write_reproduction(receipt, ledger)  # A2 sidecar (fail-open)
 
     # Second phase of the ordering rule: the report was committed first so the
     # receipt could bind its commit; now the receipt itself joins the ledger. A
@@ -509,6 +531,8 @@ def cmd_audit(args: argparse.Namespace) -> int:
         git("add", "--", str(rel / "receipt.json"), str(rel / "checks.json"), cwd=cfg.root)
         if signed_keyid:
             git("add", "--", str(rel / "receipt.dsse.json"), cwd=cfg.root, check=False)
+        if repro_written:
+            git("add", "--", str(rel / "reproduction.json"), cwd=cfg.root, check=False)
         git("commit", "-q", "-m",
             f"audit receipt {sha[:12]} r{cycle['round']} ({outcome.verdict})", cwd=cfg.root)
 
@@ -613,6 +637,50 @@ def cmd_export_pubkey(args: argparse.Namespace) -> int:
     pem = _keys.public_key_pem(pub)
     _emit({"key_id": keyid, "public_key_pem": pem}, args.json,
           f"KEY {keyid}\n{pem.rstrip()}")
+    return EXIT_OK
+
+
+def cmd_reproduce(args: argparse.Namespace) -> int:
+    """Show what it takes to reproduce a receipt's result: the pinned dependency
+    environment, whether the working tree still matches it, and the re-run steps.
+
+    Honest by construction: it reports the pinned locks and any drift, and hands
+    back a concrete recipe. It does not claim the research result is bit-for-bit
+    reproducible — that depends on the audited project's own determinism.
+    """
+    cfg = load()
+    path = Path(args.receipt).resolve()
+    receipt = load_receipt(path)
+    bundle = _reproduction.build_bundle(receipt)
+    recorded = bundle["environment"]["locks"]
+    drift = []
+    for rel, want in sorted(recorded.items()):
+        p = cfg.root / rel
+        if not p.is_file():
+            state = "missing"
+        else:
+            state = "match" if _sha256_file(p) == want else "changed"
+        drift.append({"path": rel, "state": state})
+    env_matches = bool(recorded) and all(d["state"] == "match" for d in drift)
+    out = {"cycle_id": receipt["cycle"]["cycle_id"], "commit": bundle["subject"]["commit"],
+           "locks": drift, "lock_kinds": bundle["environment"]["kinds"],
+           "environment_matches": env_matches, "rerun": bundle["rerun"]}
+    if not recorded:
+        head = ("NO DEPENDENCY LOCK RECORDED  the audited scope carried no lock "
+                "file, so the environment is not pinned by this receipt")
+    elif env_matches:
+        head = (f"ENVIRONMENT MATCHES  {len(recorded)} lock file(s) "
+                f"[{', '.join(bundle['environment']['kinds'])}] are byte-identical "
+                f"to the audited commit")
+    else:
+        changed = ", ".join(f"{d['path']} ({d['state']})" for d in drift
+                            if d["state"] != "match")
+        head = f"ENVIRONMENT DRIFTED  {changed}"
+    recipe = (f"\nTO REPRODUCE\n  1. {bundle['rerun']['checkout']}"
+              f"\n  2. {bundle['rerun']['restore']}"
+              f"\n  3. {bundle['rerun']['verify']}"
+              f"\n\n{bundle['rerun']['note']}")
+    _emit(out, args.json, head + recipe)
     return EXIT_OK
 
 
@@ -1106,6 +1174,8 @@ def cmd_run(args: argparse.Namespace) -> int:
                                            encoding="utf-8", newline="\n")
     if sign_receipt(cfg, receipt, ledger):
         git("add", "--", str(rel / "receipt.dsse.json"), cwd=cfg.root, check=False)
+    if _write_reproduction(receipt, ledger):
+        git("add", "--", str(rel / "reproduction.json"), cwd=cfg.root, check=False)
     git("add", "--", str(rel / "receipt.json"), cwd=cfg.root)
     git("commit", "-q", "-m",
         f"audit receipt {sha[:12]} r{cycle['round']} ({outcome.verdict})", cwd=cfg.root)
@@ -1222,6 +1292,12 @@ def build_parser() -> argparse.ArgumentParser:
                         help="print this project's signing public key (PEM) so "
                              "others can verify its receipts offline")
     ek.set_defaults(func=cmd_export_pubkey)
+
+    rp = sub.add_parser("reproduce",
+                        help="show the pinned environment, drift, and re-run steps "
+                             "for a receipt")
+    rp.add_argument("receipt")
+    rp.set_defaults(func=cmd_reproduce)
 
     s = sub.add_parser("status", help="where each cycle stands")
     s.set_defaults(func=cmd_status)
