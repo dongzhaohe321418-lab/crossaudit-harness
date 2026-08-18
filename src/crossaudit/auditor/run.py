@@ -159,7 +159,14 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
               allow_custom_endpoint: bool = False, retention: str = "sealed",
               on_event=None
               ) -> AuditOutcome:
-    dcl = run_checks(files, cfg.checks, notes, cfg.plugins).as_dict()
+    # A4/C.2: the opt-in source-provenance check needs the governed source-id set
+    # from the evidence ledger; build it only when that check is enabled.
+    ctx = None
+    if "source_provenance" in cfg.checks:
+        from ..dcl.framework import CheckContext
+        from ..receipt.sources import governed_source_ids
+        ctx = CheckContext(governed_source_ids=governed_source_ids(cfg))
+    dcl = run_checks(files, cfg.checks, notes, cfg.plugins, context=ctx).as_dict()
     from ..broker.routing import evidence_view
     prompt, bounded, prompt_sha = prompt_mod.build(
         constitution, constitution_commit, dcl, files, task,

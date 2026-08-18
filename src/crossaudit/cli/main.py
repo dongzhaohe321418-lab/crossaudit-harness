@@ -407,7 +407,12 @@ def cmd_check(args: argparse.Namespace) -> int:
             files[rel] = kept[rel]
         notes.extend(f"unread (too large): {rel}" for rel in sorted(oversized))
         where = f"{', '.join(str(root) for root, _ in roots)} (working tree)"
-    result = run_checks(files, cfg.checks, notes, cfg.plugins).as_dict()
+    # A4/C.2: give the opt-in source-provenance check the governed source-id set.
+    ctx = None
+    if "source_provenance" in cfg.checks:
+        from ..dcl.framework import CheckContext
+        ctx = CheckContext(governed_source_ids=_sources.governed_source_ids(cfg))
+    result = run_checks(files, cfg.checks, notes, cfg.plugins, context=ctx).as_dict()
     human = [f"deterministic layer over {where}",
              f"verdict: {result['verdict']}  ({result['total_hard_failures']} hard failures)"]
     for f in result["findings"]:

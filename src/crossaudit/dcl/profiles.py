@@ -25,6 +25,9 @@ PROFILES: dict[str, list[str]] = {
     "off": [],
     "general": ["parseable", "declared", "internal", "complete"],
     "science": ["schema", "units", "convergence", "provenance"],
+    # The general pack plus the opt-in, deterministic citation-provenance check:
+    # a report may only cite sources it fetched through a governed research tool.
+    "research": ["parseable", "declared", "internal", "complete", "source_provenance"],
 }
 
 DEFAULT_PROFILE = "general"

@@ -81,6 +81,32 @@ def _collect(cfg, prefix_count: int) -> tuple[list[str], list[str], list[str]]:
     return sorted(ids), sorted(origins), sorted(tools)
 
 
+def governed_source_ids(cfg) -> frozenset:
+    """Every per-source provenance id currently in the evidence ledger (from a
+    SUCCEEDED governed-research row). Read at check time — over the live ledger,
+    not a bound prefix — to tell the deterministic source-provenance check which
+    sources were actually retrieved through a governed tool. Fail-safe: a missing
+    or unreadable ledger yields the empty set."""
+    try:
+        from ..ledger import EvidenceLedger
+        rows = EvidenceLedger(cfg.root / cfg.state_dir / "evidence.jsonl").entries()
+    except Exception:  # noqa: BLE001 -- absence of evidence is simply "nothing governed"
+        return frozenset()
+    ids: set[str] = set()
+    for row in rows:
+        if row.get("kind") != "tool_result":
+            continue
+        payload = row.get("payload") or {}
+        if payload.get("tool") not in RESEARCH_TOOLS:
+            continue
+        if payload.get("status") != "succeeded":
+            continue
+        for sid in payload.get("source_ids") or []:
+            if isinstance(sid, str) and sid:
+                ids.add(sid)
+    return frozenset(ids)
+
+
 def bundle(cfg, receipt: dict) -> dict | None:
     """The expanded, human/tool-facing ``sources.json`` sidecar, or ``None`` when
     the cycle retrieved no governed literature source."""

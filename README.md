@@ -868,6 +868,7 @@ name** or an explicit list:
 | `off` | core audit chain only | "give me a trustworthy record, never mind format" |
 | `general` (default) | the domain-neutral pack — parses, dangling declarations, broken links (advisory), leftover placeholders (advisory) | code · docs · web · contracts · everyday |
 | `science` | `schema` · `units` · `convergence` · `provenance` | structured computational science |
+| `research` | the general pack + `source_provenance` | literature reports whose citations must trace to governed retrieval |
 | a list, e.g. `[parseable, declared, complete-strict]` | exactly those checks | a custom mix |
 
 The default draws an honest line by severity: structural integrity is a blocker
@@ -875,6 +876,25 @@ The default draws an honest line by severity: structural integrity is a blocker
 broken links, `complete` leftover placeholders) — so a stray `TODO` is surfaced
 but does not fail work in progress. A project that wants placeholders to hard-fail
 adds `complete-strict`.
+
+The opt-in `source_provenance` check (the `research` profile) enforces that a
+report only cites sources it actually retrieved through the governed research
+tools. The report declares its cited sources by their per-source provenance id in
+a fenced block, and any id with no governed-tool evidence is a non-overridable
+blocker:
+
+````markdown
+```crossaudit-sources
+["<64-hex source_id>", "<64-hex source_id>"]
+```
+````
+
+Each `web_fetch` / `paper_search` result carries its `source_id`; the check
+confirms every declared id against the evidence ledger. It enforces that declared
+citations were governed-fetched and internally consistent — it does not judge
+whether a cited claim is true. A `research` project asks the generator to emit
+that block (via a house skill or the task's acceptance criteria); the correction
+loop then surfaces any ungoverned citation as a blocker until it is fixed.
 
 All of these controls are available in **Project controls**; editing YAML is
 optional. Provider retries stay inside a single model turn and never consume an

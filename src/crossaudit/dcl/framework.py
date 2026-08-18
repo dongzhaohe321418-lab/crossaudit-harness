@@ -17,6 +17,18 @@ BLOCKER, ADVISORY = "BLOCKER", "ADVISORY"
 
 
 @dataclass(frozen=True)
+class CheckContext:
+    """Read-only facts a check may need beyond the increment bytes.
+
+    Most checks are a pure function of the files; a few (e.g. source provenance)
+    also need what the run actually did — here, the set of per-source provenance
+    ids retrieved through the governed research tools. Empty by default, so a
+    caller that has no such context (or no evidence ledger) is always safe.
+    """
+    governed_source_ids: frozenset = frozenset()
+
+
+@dataclass(frozen=True)
 class Finding:
     severity: str
     rule: str
@@ -56,11 +68,14 @@ class CheckResult:
 CheckFn = Callable[[Mapping[str, bytes]], list[Finding]]
 _REGISTRY: dict[str, CheckFn] = {}
 _CONTRACTS: dict[str, str] = {}
+_WANTS_CONTEXT: dict[str, bool] = {}
 
 
-def register(name: str, fn: CheckFn, contract: str = "") -> None:
+def register(name: str, fn: CheckFn, contract: str = "", *,
+             wants_context: bool = False) -> None:
     _REGISTRY[name] = fn
     _CONTRACTS[name] = " ".join((contract or fn.__doc__ or "").split())
+    _WANTS_CONTEXT[name] = wants_context
 
 
 def available() -> list[str]:
@@ -73,7 +88,7 @@ def contracts(names: list[str]) -> dict[str, str]:
     Importing here keeps the registry lazy while ensuring this view and the
     runner can never disagree about which implementation is enabled.
     """
-    from . import builtin, neutral  # noqa: F401
+    from . import builtin, neutral, provenance  # noqa: F401
 
     missing = [n for n in names if n not in _REGISTRY]
     if missing:
@@ -93,18 +108,27 @@ def describe(names: list[str]) -> str:
 
 def run_checks(files: Mapping[str, bytes], names: list[str],
                notes: list[str] | None = None,
-               plugins: list[str] | None = None) -> CheckResult:
-    """Run the named checks. An unknown name denies rather than being skipped."""
-    from . import builtin, neutral  # noqa: F401  (registration on import)
+               plugins: list[str] | None = None,
+               context: CheckContext | None = None) -> CheckResult:
+    """Run the named checks. An unknown name denies rather than being skipped.
+
+    A check registered with ``wants_context=True`` is called ``fn(files, ctx)``;
+    every other check stays ``fn(files)``. ``context`` is optional and defaults to
+    an empty ``CheckContext``, so existing callers are unaffected.
+    """
+    from . import builtin, neutral, provenance  # noqa: F401  (registration on import)
     from .plugins import load_allowed
 
     load_allowed(plugins)
+    ctx = context if context is not None else CheckContext()
     missing = [n for n in names if n not in _REGISTRY]
     if missing:
         raise ConfigDenial(f"unknown checks {missing}; available: {available()}")
     result = CheckResult(notes=list(notes or []), contracts=contracts(names))
     for name in names:
-        result.findings.extend(replace(f, check=name) for f in _REGISTRY[name](files))
+        fn = _REGISTRY[name]
+        findings = fn(files, ctx) if _WANTS_CONTEXT.get(name) else fn(files)
+        result.findings.extend(replace(f, check=name) for f in findings)
     # Final office documents are opaque containers, so this integrity boundary
     # is mandatory rather than a project-selectable quality rule.
     from . import documents
