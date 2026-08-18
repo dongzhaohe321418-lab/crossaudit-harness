@@ -170,7 +170,7 @@ def writable_token(cfg: Config, *, run_id: str, now_epoch: float,
     return CapabilityToken(
         project_id=str(cfg.root),
         run_id=run_id or "run",
-        tools=frozenset(READONLY_TOOLS + ("file_write",)),
+        tools=frozenset(READONLY_TOOLS + ("file_write", "file_edit")),
         paths=paths,
         writable=True,
         expires_at=_iso_utc(now_epoch + ttl_seconds),
