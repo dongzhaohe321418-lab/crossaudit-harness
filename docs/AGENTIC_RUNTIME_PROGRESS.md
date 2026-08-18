@@ -64,6 +64,7 @@ without the user.
 ---
 
 ### Log
+- HUMANE ESCALATION (user principle: break-down screens only when clear + user-actionable; else self-heal; commit c000d61): generator parse failures are now category="format" with sharpened diagnoses; generate() does ONE corrective re-ask (exact error + envelope contract, P2 intact), visible as a generation_retried run event (§24.1); only a spent repair escalates, recording escalation_cause (generator_format/generator_refused/provider_unavailable/budget, additive through StateStore.escalate/record_build_escalation → overview.escalations.cause); the Decision Center renders the format cause as fixed translated guidance (what happened / three concrete actions) with the raw reason demoted to a detail line; zh parity + "generator provider failure in round N:" pattern. Latent bug fixed en route: refused-round findings crashed (join(None)) on projects without scope_dirs. 8 tests (test_format_repair.py). **Full suite 1367 passed / 2 skipped (+8, 0 regression).** Screenshot-verified in zh; app rebuilt + reinstalled.
 - iter 1: Phase 0 inventory (docs/AGENTIC_RUNTIME_PHASE0.md) + verified load-bearing claims.
 - iter 2: ledger/chain.py + policy/tokens.py + policy/engine.py + 31 tests. Next: broker/registry.py + tools_readonly.py.
 - iter 3: broker/{registry,tools_readonly,__init__}.py — Tool Broker chokepoint + 4 read-only tools + 7 tests (proof loop: in-scope runs+ledgered, out-of-scope/unknown/write refused pre-exec, tamper caught). Total new-module tests: 38. Next: appservice/ + wiring (full suite before/after).
