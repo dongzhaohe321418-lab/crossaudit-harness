@@ -194,6 +194,51 @@ FILE_BLOCK = re.compile(
     r'<<<CROSSAUDIT-OUTPUT-FILE\s+path=(?:"([^"]+)"|\'([^\']+)\'|([^\s>]+))>>>'
     r'\n?(.*?)\n?<<<END-CROSSAUDIT-OUTPUT-FILE>>>', re.DOTALL)
 
+#: The opening marker on its own — used to recover the common, harmless case
+#: where a model wrote the whole file but forgot the closing marker.
+FILE_OPEN = re.compile(
+    r'<<<CROSSAUDIT-OUTPUT-FILE\s+path=(?:"([^"]+)"|\'([^\']+)\'|([^\s>]+))>>>')
+FILE_END = re.compile(r'<<<END-CROSSAUDIT-OUTPUT-FILE>>>')
+_NOTES_RE = re.compile(r'(?:^|\n)NOTES:')
+
+
+def _extract_file_blocks(text: str) -> list[tuple[str, str, int, int]]:
+    """(path, content, open_start, block_end) for each file, tolerant of a
+    missing closing marker.
+
+    The strict path (a matched open…END pair) is preferred; when a file's END
+    marker is absent, its content runs to the next file's opening marker, or to
+    the ``NOTES:`` line, or to the end of the reply. The path is only ever read
+    from the ``path="…"`` attribute — never inferred — so recovery cannot invent
+    a target, and ``Work.validate`` still guards every path afterwards.
+    """
+    opens = list(FILE_OPEN.finditer(text))
+    if not opens:
+        return []
+    ends = [m.start() for m in FILE_END.finditer(text)]
+    notes = _NOTES_RE.search(text)
+    notes_pos = notes.start() if notes else None
+    blocks: list[tuple[str, str, int, int]] = []
+    for i, om in enumerate(opens):
+        start = om.end()
+        next_open = opens[i + 1].start() if i + 1 < len(opens) else len(text)
+        end_here = next((p for p in ends if p >= start), None)
+        if end_here is not None and end_here < next_open:
+            boundary, block_end = end_here, end_here + len("<<<END-CROSSAUDIT-OUTPUT-FILE>>>")
+        else:
+            boundary = block_end = next_open
+        # NOTES only bounds the final block (a NOTES: deep in file content is
+        # left alone unless nothing else terminated the block).
+        if boundary == len(text) and notes_pos is not None and start <= notes_pos < boundary:
+            boundary = block_end = notes_pos
+        path = next(g for g in om.groups() if g is not None)
+        content = text[start:boundary]
+        if content.startswith("\n"):
+            content = content[1:]         # drop the newline right after the marker
+        content = content.rstrip("\n")    # and the one before the (possibly absent) END
+        blocks.append((path, content, om.start(), block_end))
+    return blocks
+
 
 def parse_work_reply(text: str) -> Work:
     """Parse the raw-file envelope, retaining JSON replies for compatibility.
@@ -212,17 +257,15 @@ def parse_work_reply(text: str) -> Work:
                 "file envelope", category="format") from exc
         return Work.from_json(raw)
     files: dict[str, str] = {}
-    matches = list(FILE_BLOCK.finditer(text))
-    if not matches:
-        diagnosis = ("the closing <<<END-CROSSAUDIT-OUTPUT-FILE>>> marker is "
-                     "missing" if "<<<END-CROSSAUDIT-OUTPUT-FILE" not in text
-                     else "the opening file marker is malformed")
+    blocks = _extract_file_blocks(text)
+    if not blocks:
+        # An opening marker exists (checked above) but carries no readable
+        # path — that is genuinely malformed and cannot be recovered.
         raise ProviderDenial(
-            f"the generator returned malformed file blocks: {diagnosis}",
-            category="format")
-    for match in matches:
-        path = next(value for value in match.groups()[:3] if value is not None).strip()
-        content = match.group(4)
+            "the generator returned malformed file blocks: the opening file "
+            "marker is missing its path", category="format")
+    for path, content, _open_start, _block_end in blocks:
+        path = path.strip()
         if path in files:
             # Providers occasionally repeat the exact same block while trying to
             # emphasise that only one deliverable exists. Identical bytes are one
@@ -234,10 +277,10 @@ def parse_work_reply(text: str) -> Work:
                 f"the generator returned conflicting duplicate file {path!r}",
                 category="format")
         files[path] = content
-    prefix = text[:matches[0].start()].strip()
+    prefix = text[:blocks[0][2]].strip()
     summary_match = re.search(r"(?:^|\n)SUMMARY:\s*(.+)", prefix)
     summary = summary_match.group(1).strip() if summary_match else "work"
-    suffix = text[matches[-1].end():].strip()
+    suffix = text[blocks[-1][3]:].strip()
     notes_match = re.search(r"(?:^|\n)NOTES:\s*(.*)", suffix, re.DOTALL)
     notes = notes_match.group(1).strip() if notes_match else ""
     return Work(summary=summary or "work", files=files, notes=notes)

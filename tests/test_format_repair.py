@@ -22,8 +22,10 @@ VALID = (
     "hello\n"
     "<<<END-CROSSAUDIT-OUTPUT-FILE>>>\n"
     "NOTES:")
-MALFORMED = ('<<<CROSSAUDIT-OUTPUT-FILE path="experiments/demo/SUMMARY.md">>>\n'
-             "hello but the end marker never comes")
+# Genuinely unrecoverable: an opening marker with NO path attribute (a missing
+# END marker is now recovered, so it no longer exercises the repair path).
+MALFORMED = ('<<<CROSSAUDIT-OUTPUT-FILE>>>\n'
+             "hello but there is no path and no end marker")
 
 
 @dataclass
@@ -51,7 +53,7 @@ def test_a_malformed_reply_is_repaired_once_and_the_round_succeeds():
         allowed_dirs=["experiments"], on_repair=repairs.append)
     assert isinstance(work, gen.Work) and "experiments/demo/SUMMARY.md" in work.files
     assert len(calls) == 2                                # exactly one re-ask
-    assert len(repairs) == 1 and "END-CROSSAUDIT-OUTPUT-FILE" in repairs[0]
+    assert len(repairs) == 1 and "malformed file blocks" in repairs[0]
     # The corrective re-ask names the error and restates the envelope contract.
     assert "COULD NOT BE PARSED" in calls[1]
     assert '<<<CROSSAUDIT-OUTPUT-FILE path="relative/path.md">>>' in calls[1]
@@ -99,8 +101,8 @@ def test_build_loop_records_the_structured_cause(science, cfg, transcripts,
 
     def fake_generate(**_kwargs):
         raise ProviderDenial(
-            "the generator returned malformed file blocks: the closing "
-            "<<<END-CROSSAUDIT-OUTPUT-FILE>>> marker is missing",
+            "the generator returned malformed file blocks: the opening file "
+            "marker is missing its path",
             category="format", repair_attempted=True)
 
     monkeypatch.setattr(build_mod, "_generator_complete",
@@ -224,3 +226,49 @@ def test_page_renders_the_no_progress_cause():
     assert "The generator repeated the existing work" in PAGE
     assert "Nothing new to audit" in PAGE
     assert '"Nothing new to audit"' in PAGE        # zh parity entry exists
+
+
+# ---- tolerant parser: recover the common "missing END marker" case ----
+# The screenshot bug: the model wrote the whole review but omitted the closing
+# <<<END-CROSSAUDIT-OUTPUT-FILE>>>, so the strict parser failed twice and
+# escalated. The content was all there — recover it instead of wasting the round.
+def test_missing_end_marker_is_recovered_not_escalated():
+    from crossaudit.generator import parse_work_reply
+    reply = ('SUMMARY: photocatalysis review\n'
+             '<<<CROSSAUDIT-OUTPUT-FILE path="experiments/demo/review.md">>>\n'
+             '# Photocatalysis\n\nA thorough review [1][2].\nNOTES: done')
+    work = parse_work_reply(reply)
+    assert work.summary == "photocatalysis review"
+    body = work.files["experiments/demo/review.md"]
+    assert body.startswith("# Photocatalysis") and "[1][2]" in body
+    assert "END-CROSSAUDIT-OUTPUT-FILE" not in body    # no marker bled in
+    assert work.notes == "done"                        # NOTES still bounds it
+
+
+def test_second_file_missing_end_is_not_dropped():
+    from crossaudit.generator import parse_work_reply
+    reply = ('<<<CROSSAUDIT-OUTPUT-FILE path="a.md">>>\nAAA\n'
+             '<<<END-CROSSAUDIT-OUTPUT-FILE>>>\n'
+             '<<<CROSSAUDIT-OUTPUT-FILE path="b.md">>>\nBBB')
+    work = parse_work_reply(reply)
+    assert work.files == {"a.md": "AAA", "b.md": "BBB"}   # both, not just the first
+
+
+def test_recovery_never_bypasses_the_path_escape_guard():
+    from crossaudit.generator import parse_work_reply
+    from crossaudit.errors import ProviderDenial
+    # A marker with no END that also escapes scope must still be refused when
+    # validated — recovery reads the path only from the marker, never invents it.
+    work = parse_work_reply('<<<CROSSAUDIT-OUTPUT-FILE path="../evil.md">>>\nx')
+    with pytest.raises(ProviderDenial, match="escapes the project"):
+        work.validate(allowed_dirs=["experiments"])
+
+
+def test_conflicting_duplicate_still_fails_closed_after_recovery():
+    from crossaudit.generator import parse_work_reply
+    from crossaudit.errors import ProviderDenial
+    reply = ('<<<CROSSAUDIT-OUTPUT-FILE path="a.md">>>\nONE\n'
+             '<<<END-CROSSAUDIT-OUTPUT-FILE>>>\n'
+             '<<<CROSSAUDIT-OUTPUT-FILE path="a.md">>>\nTWO')
+    with pytest.raises(ProviderDenial, match="conflicting duplicate"):
+        parse_work_reply(reply)
