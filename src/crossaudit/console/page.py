@@ -1143,10 +1143,6 @@ body.deciding .composer-wrap{display:none}
 .mcp-call:last-child{border-bottom:0}
 .mcp-call b{font-size:var(--fs-caption);font-weight:600}
 .mcp-call small{color:var(--text-3);font-size:var(--fs-caption)}
-.skill-row{padding:11px 12px;border-bottom:1px solid var(--line)}
-.skill-row:last-child{border-bottom:0}
-.skill-row b{font-size:var(--fs-label);font-weight:600}
-.skill-row p{margin:4px 0 0;color:var(--text-2);font-size:var(--fs-caption)}
 .tools-grid .compute-section:last-child{grid-column:auto}
 
 /* Project hub: the quiet control plane. */
