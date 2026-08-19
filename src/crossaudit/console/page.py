@@ -1529,16 +1529,22 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
 .settings-wizard>.wizard-head,.settings-wizard>.wizard-foot{flex:none}
 .settings-shell{min-height:0;flex:1;padding:0;display:grid;grid-template-columns:210px minmax(0,1fr);
   overflow:hidden}
-.settings-nav{display:flex;flex-direction:column;gap:5px;padding:13px;border-right:1px solid var(--line)}
-.settings-nav-button{position:relative;width:100%;min-height:52px;padding:8px 9px;border:0;
+.settings-nav{display:flex;flex-direction:column;gap:3px;padding:13px;border-right:1px solid var(--line)}
+/* Claude-Code-style scope headers grouping the sections. */
+.settings-nav-group{margin:14px 8px 4px;font-size:var(--fs-caption);font-weight:600;
+  letter-spacing:.045em;text-transform:uppercase;color:var(--text-3)}
+.settings-nav-group:first-child{margin-top:2px}
+/* Single-line nav items (icon + title): cleaner, Claude-Code-like; the pane's
+   own heading carries the description the subtitle used to. */
+.settings-nav-button{position:relative;width:100%;min-height:38px;padding:7px 9px;border:0;
   border-radius:var(--r-md);display:grid;grid-template-columns:28px minmax(0,1fr) auto;
   align-items:center;gap:9px;background:transparent;color:var(--text-2);text-align:left;
   transition:background var(--dur-instant) ease}
 .settings-nav-button:hover{background:var(--hover);color:var(--text)}
 .settings-nav-button:active{transform:scale(.98)}
 .settings-nav-button.active{background:var(--surface-2);color:var(--text);box-shadow:var(--shadow-1)}
-.settings-nav-button b{display:block;font-size:var(--fs-label);font-weight:600}
-.settings-nav-button small{display:block;margin-top:2px;color:var(--text-3);font-size:var(--fs-caption)}
+.settings-nav-button b{display:block;font-size:var(--fs-label);font-weight:500}
+.settings-nav-button small{display:none}
 .settings-nav-button i{min-width:20px;padding:2px 5px;border-radius:var(--r-pill);
   background:var(--surface-2);color:var(--text-2);font-size:var(--fs-caption);font-style:normal;
   text-align:center;font-family:var(--font-mono)}
@@ -2583,15 +2589,20 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
     <p>Manage this Mac and model connections without using Terminal.</p></div>
     <span class="spacer"></span><button type="button" class="icon-button" id="close-settings" aria-label="Close settings">×</button></div>
     <div class="wizard-body settings-shell"><nav class="settings-nav" aria-label="Settings sections">
+      <div class="settings-nav-group">General</div>
       <button type="button" class="settings-nav-button active" data-settings-panel="general" aria-pressed="true"><span class="settings-nav-icon general" aria-hidden="true"></span><span><b>General</b><small>Language and appearance</small></span></button>
       <button type="button" class="settings-nav-button" data-settings-panel="providers" aria-pressed="false"><span class="settings-nav-icon providers" aria-hidden="true"></span><span><b>Providers</b><small>Accounts and credentials</small></span><i id="settings-provider-count">0</i></button>
+      <div class="settings-nav-group">Audit &amp; agent</div>
       <button type="button" class="settings-nav-button" data-settings-panel="agent" aria-pressed="false"><span class="settings-nav-icon agent" aria-hidden="true"></span><span><b>Agent behavior</b><small>Permissions and defaults</small></span></button>
       <button type="button" class="settings-nav-button" data-settings-panel="audit" aria-pressed="false"><span class="settings-nav-icon audit" aria-hidden="true"></span><span><b>Audit</b><small>Constitution and rules</small></span></button>
+      <div class="settings-nav-group">Workspace</div>
       <button type="button" class="settings-nav-button" data-settings-panel="files" aria-pressed="false"><span class="settings-nav-icon files" aria-hidden="true"></span><span><b>Files</b><small>Storage on this Mac</small></span></button>
       <button type="button" class="settings-nav-button" data-settings-panel="github" aria-pressed="false"><span class="settings-nav-icon github" aria-hidden="true"></span><span><b>GitHub</b><small>Delivery connection</small></span></button>
       <button type="button" class="settings-nav-button" data-settings-panel="compute" aria-pressed="false"><span class="settings-nav-icon compute" aria-hidden="true"></span><span><b>Compute</b><small>Remote hosts</small></span></button>
+      <div class="settings-nav-group">Capabilities</div>
       <button type="button" class="settings-nav-button" data-settings-panel="integrations" aria-pressed="false"><span class="settings-nav-icon integrations" aria-hidden="true"></span><span><b>Integrations</b><small>MCP, skills, tools</small></span></button>
       <button type="button" class="settings-nav-button" data-settings-panel="usage" aria-pressed="false"><span class="settings-nav-icon usage" aria-hidden="true"></span><span><b>Usage</b><small>Budgets and estimates</small></span></button>
+      <div class="settings-nav-group">System</div>
       <button type="button" class="settings-nav-button" data-settings-panel="security" aria-pressed="false"><span class="settings-nav-icon security" aria-hidden="true"></span><span><b>Security &amp; privacy</b><small>Keychain and data</small></span></button>
       <button type="button" class="settings-nav-button" data-settings-panel="diagnostics" aria-pressed="false"><span class="settings-nav-icon diagnostics" aria-hidden="true"></span><span><b>Diagnostics</b><small>Doctor and versions</small></span><i id="settings-diagnostics-state">…</i></button>
       <button type="button" class="settings-nav-button" data-settings-panel="advanced" aria-pressed="false"><span class="settings-nav-icon advanced" aria-hidden="true"></span><span><b>Advanced</b><small>Developer options</small></span></button>
