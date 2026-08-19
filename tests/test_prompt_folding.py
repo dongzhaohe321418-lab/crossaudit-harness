@@ -8,7 +8,12 @@ into it — and it must not promise a recall path (raw output is retained nowher
 """
 from __future__ import annotations
 
-from crossaudit.cli.build import KEEP_RECENT_RESULTS, _fold_results
+from crossaudit.cli.build import (
+    KEEP_RECENT_RESULTS,
+    MAX_GUIDANCE_BYTES,
+    _bound_guidance,
+    _fold_results,
+)
 
 
 def _run(seed: str) -> list[dict]:
@@ -49,3 +54,17 @@ def test_marker_does_not_leak_the_volatile_id():
 def test_marker_note_does_not_promise_ledger_recovery():
     marker = next(x for x in _fold_results(_run("a")) if x.get("elided"))
     assert "ledger" not in marker["note"].lower()   # raw output is not retained
+
+
+def test_short_owner_guidance_is_unchanged():
+    text = "keep it under 500 words\n\nuse British spelling"
+    assert _bound_guidance(text) == text
+
+
+def test_long_owner_guidance_keeps_the_recent_tail_bounded():
+    recent = "\n\nMOST RECENT: switch the title to bold"
+    text = ("old steering line\n\n" * 5000) + recent
+    out = _bound_guidance(text)
+    assert len(out.encode("utf-8")) <= MAX_GUIDANCE_BYTES + 200
+    assert "MOST RECENT: switch the title to bold" in out   # recent kept
+    assert "earlier owner guidance folded" in out           # older elided, marked

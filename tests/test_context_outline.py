@@ -97,6 +97,37 @@ def test_a_pathological_huge_outline_is_itself_capped():
     assert len(val.encode("utf-8")) <= MAX_OUTLINE_BYTES + 500
 
 
+def test_hard_ceiling_is_actually_enforced_by_stubbing():
+    # Even outlined, 40 * ~40KB files would be ~640KB > budget. Pass 3 stubs the
+    # least-relevant until the whole set is truly within MAX_WORK_BYTES.
+    body = "\n".join("z" * 1000 for _ in range(40)) + "\n"        # ~40KB, kept full
+    files = {f"work/f{i:03d}.md": body for i in range(40)}         # ~1.6MB raw
+    shaped = shape_work(files)
+    total = sum(len(v.encode("utf-8")) for v in shaped.values())
+    assert total <= MAX_WORK_BYTES                                 # a real ceiling
+    assert set(shaped) == set(files)                               # every path kept
+    assert any("not shown this round" in v for v in shaped.values())   # some stubbed
+
+
+def test_relevance_spends_recall_on_the_least_related_files_first():
+    filler = "\n".join("lorem ipsum dolor " * 60 for _ in range(40)) + "\n"   # ~40KB
+    relevant = "# QLED review\n" + "\n".join("qled review analysis " * 40
+                                             for _ in range(40))               # ~40KB
+    # Enough files that even fully outlined they exceed budget, so pass 3 (stub)
+    # runs and its relevance ordering is actually exercised.
+    files = {f"work/other{i:02d}.md": filler for i in range(40)}
+    files.update({f"work/qled{i:02d}.md": relevant for i in range(5)})
+    shaped = shape_work(files, task="write a detailed review of qled")
+    total = sum(len(v.encode("utf-8")) for v in shaped.values())
+    assert total <= MAX_WORK_BYTES
+    qled_stubbed = sum("not shown this round" in shaped[p]
+                       for p in files if "qled" in p)
+    other_stubbed = sum("not shown this round" in shaped[p]
+                        for p in files if "other" in p)
+    assert qled_stubbed == 0        # task-relevant files are not the ones dropped
+    assert other_stubbed > 0        # the irrelevant ones are dropped first
+
+
 def test_pass_two_outlining_shrinks_never_grows():
     # ~40KB files with <=40 very long lines: head_outline returns the whole body,
     # so a naive elide would GROW them (header + full body). With the outline cap

@@ -140,6 +140,22 @@ def _fold_results(results: list[dict]) -> list[dict]:
     return folded + list(results[-KEEP_RECENT_RESULTS:])
 
 
+#: Owner steering accumulates across every round of a run; keep the most-recent
+#: bytes verbatim (recent steering is what still applies) and mark that older
+#: guidance was folded, so a very long run cannot grow this block without bound.
+MAX_GUIDANCE_BYTES = 16_000
+
+
+def _bound_guidance(text: str) -> str:
+    """Keep the recent tail of accumulated owner guidance; note older elisions."""
+    raw = text or ""
+    if len(raw.encode("utf-8")) <= MAX_GUIDANCE_BYTES:
+        return raw
+    tail = raw.encode("utf-8")[-MAX_GUIDANCE_BYTES:].decode("utf-8", errors="ignore")
+    return ("<earlier owner guidance folded to keep context bounded; the most "
+            "recent guidance follows>\n" + tail)
+
+
 def _conversation_context(cfg: Config, chat_id: str, run_id: str) -> str:
     """A compact, read-only transcript of this chat's earlier turns.
 
@@ -176,14 +192,16 @@ def _conversation_context(cfg: Config, chat_id: str, run_id: str) -> str:
     return "\n".join(lines)
 
 
-def _current_work(cfg: Config) -> dict[str, str]:
+def _current_work(cfg: Config, task: str = "") -> dict[str, str]:
     """The work as it stands, read from the working tree inside the scope dirs.
 
     Small files are inlined verbatim (the common case); a large file's body is
     replaced with a structural outline (shape_work) so a big or file-heavy
-    project does not re-dump its entire tree into every round's prompt. Every
-    path stays present and the generator can pull any elided file in full with
-    the audited file_read tool, so this shrinks context without losing recall.
+    project does not re-dump its entire tree into every round's prompt. When even
+    the outlined set is over budget, shape_work spends recall on the files least
+    relevant to `task` first. Every path stays present and the generator can pull
+    any elided file in full with the audited file_read tool, so this shrinks
+    context without losing recall.
     """
     out: dict[str, str] = {}
     for d in (cfg.scope_dirs or []):
@@ -201,7 +219,7 @@ def _current_work(cfg: Config) -> dict[str, str]:
                     rendered = document_export.current_document_text(p)
                     if rendered is not None:
                         out[p.relative_to(cfg.root).as_posix()] = rendered
-    return shape_work(out)
+    return shape_work(out, task)
 
 
 def _stage_generated(cfg: Config, written: list[str]) -> list[str]:
@@ -412,7 +430,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                      joined[:2000], state=RunState.GENERATING)
         emit("generation_started", "generator", "writing",
              state=RunState.GENERATING)
-        current = _current_work(cfg)
+        current = _current_work(cfg, task)
         in_force = skills_mod.select(house, list(current) or cfg.scope_dirs)
         try:
             while True:
@@ -427,7 +445,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     mcp_servers=mcp_servers,
                     tool_results=_fold_results(tool_results),
                     builtin_tools=builtin_tools,
-                    owner_guidance=owner_guidance, conversation=conversation,
+                    owner_guidance=_bound_guidance(owner_guidance),
+                    conversation=conversation,
                     # A malformed reply gets one visible, recorded repair
                     # attempt (§24.1) before anything reaches a human.
                     on_repair=lambda why: emit(
@@ -468,7 +487,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                             cfg, outcome.request, broker_token,
                             run_id=run_id, now_epoch=time.time(), broker=broker_obj)
                         tool_results.append(result)
-                        current = _current_work(cfg)
+                        current = _current_work(cfg, task)
                         emit("generation_resumed", "generator",
                              "resuming with tool result", state=RunState.GENERATING)
                         continue
@@ -489,7 +508,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                         emit("capability_refused", "tool", "refused",
                              exc.reason[:300], state=RunState.WAITING_FOR_CAPABILITY)
                     tool_results.append(result)
-                    current = _current_work(cfg)
+                    current = _current_work(cfg, task)
                     emit("generation_resumed", "generator", "resuming with tool result",
                          state=RunState.GENERATING)
                     continue
@@ -516,7 +535,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     emit("capability_refused", "compute", "refused",
                          exc.reason[:300], state=RunState.WAITING_FOR_CAPABILITY)
                 compute_results.append(result)
-                current = _current_work(cfg)
+                current = _current_work(cfg, task)
                 emit("generation_resumed", "generator",
                      "resuming with compute result", state=RunState.GENERATING)
         except ProviderDenial as exc:

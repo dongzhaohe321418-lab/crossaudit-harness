@@ -51,21 +51,47 @@ def _elide(path: str, text: str) -> str:
             f"--- outline ---\n{body}")
 
 
-def shape_work(files: dict[str, str],
-               total_budget: int = MAX_WORK_BYTES) -> dict[str, str]:
-    """Inline small files verbatim; outline what won't fit.
+def _terms(task: str) -> list[str]:
+    """The distinct word-ish tokens of the task, for lexical relevance scoring."""
+    return sorted({w for w in re.findall(r"[a-z0-9]{3,}", (task or "").lower())})
 
-    Two deterministic passes: (1) any file over ``MAX_FILE_BYTES`` is replaced by
-    a bounded structural outline; (2) if the working set still exceeds
-    ``total_budget``, the largest still-full files are outlined largest-first
-    (path as a stable tie-break), skipping any file an outline would not actually
-    shrink, until the set fits or nothing more can help. Every path stays present
-    and the full file is one audited file_read away, so this shrinks context
-    without losing recall and never touches the auditor, the ledger, or the
-    committed bytes. Best-effort: with very many files it can settle above budget,
-    but it never *grows* the set and every value is individually bounded. Pure and
-    side-effect free.
+
+def _relevance(path: str, text: str, terms: list[str]) -> int:
+    """How strongly a file relates to the task — path + a head of its content.
+
+    A cheap, deterministic lexical overlap (no embeddings, no native dep): the
+    total occurrences of any task term in the path and the file's first ~2KB. 0
+    when the task is empty, so behaviour with no task is size-ordered as before.
     """
+    if not terms:
+        return 0
+    hay = (path.lower() + "\n" + text[:2000].lower())
+    return sum(hay.count(t) for t in terms)
+
+
+def _stub(path: str, text: str) -> str:
+    return (f"<file not shown this round to keep context within budget: "
+            f"{len(text.encode('utf-8'))} bytes. Use the file_read tool to load "
+            f"it if it is relevant to the task.>")
+
+
+def shape_work(files: dict[str, str], task: str = "",
+               total_budget: int = MAX_WORK_BYTES) -> dict[str, str]:
+    """Inline small files verbatim; outline, then (last resort) stub what won't fit.
+
+    Deterministic passes, each keeping every path present and the full file one
+    audited file_read away — so this shrinks context without losing recall, and
+    never touches the auditor, the ledger, or the committed bytes:
+      1. any file over ``MAX_FILE_BYTES`` is replaced by a bounded outline;
+      2. if the set still exceeds ``total_budget``, full files are outlined
+         least-relevant-and-biggest first (relevance = lexical overlap with the
+         task), skipping any an outline would not shrink;
+      3. if it STILL exceeds budget, the least-relevant files are reduced to a
+         one-line stub until it fits — a real ceiling, spending recall on what
+         the task cares about least first.
+    A pure, side-effect-free function; with no task it degrades to size-ordering.
+    """
+    terms = _terms(task)
     shaped: dict[str, str] = {}
     full: dict[str, int] = {}                 # path -> byte size, for files kept full
     for path, text in files.items():
@@ -78,9 +104,10 @@ def shape_work(files: dict[str, str],
     total = sum(len(v.encode("utf-8")) for v in shaped.values())
     if total <= total_budget:
         return shaped
-    # Outline the biggest full files first; skip any where outlining would not
-    # shrink it (so `total` only ever decreases). Stop once it fits.
-    for path in sorted(full, key=lambda p: (-full[p], p)):
+    rel = {p: _relevance(p, files[p], terms) for p in files}
+    # Pass 2: outline full files, least-relevant then biggest first; skip any
+    # where outlining would not shrink it (so `total` only ever decreases).
+    for path in sorted(full, key=lambda p: (rel[p], -full[p], p)):
         if total <= total_budget:
             break
         elided = _elide(path, files[path])
@@ -88,6 +115,17 @@ def shape_work(files: dict[str, str],
         if gain <= 0:
             continue
         shaped[path] = elided
+        total -= gain
+    # Pass 3 (hard ceiling): stub the least-relevant files until it fits. A goal-
+    # relevant file is only stubbed once every less-relevant one already is.
+    for path in sorted(files, key=lambda p: (rel[p], -len(files[p].encode("utf-8")), p)):
+        if total <= total_budget:
+            break
+        stub = _stub(path, files[path])
+        gain = len(shaped[path].encode("utf-8")) - len(stub.encode("utf-8"))
+        if gain <= 0:
+            continue
+        shaped[path] = stub
         total -= gain
     return shaped
 
