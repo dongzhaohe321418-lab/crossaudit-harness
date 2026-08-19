@@ -14,6 +14,7 @@ from crossaudit.context import (
     outline,
     shape_work,
 )
+from crossaudit.context.outline import MAX_OUTLINE_BYTES
 
 
 def _big(seed: str) -> str:
@@ -85,3 +86,27 @@ def test_total_budget_pass_is_deterministic():
     each = "# d\n" + ("x line\n" * 4000)
     files = {f"work/f{i}.md": each for i in range(40)}
     assert shape_work(files) == shape_work(files)
+
+
+def test_a_pathological_huge_outline_is_itself_capped():
+    # 60k one-line defs: without a cap the "outline" would be ~1MB and blow the
+    # budget it was meant to shrink. The outline is bounded instead.
+    src = "".join(f"def f{i}(): pass\n" for i in range(60_000))
+    val = shape_work({"pkg/huge.py": src})["pkg/huge.py"]
+    assert "large file elided" in val and "outline truncated" in val
+    assert len(val.encode("utf-8")) <= MAX_OUTLINE_BYTES + 500
+
+
+def test_pass_two_outlining_shrinks_never_grows():
+    # ~40KB files with <=40 very long lines: head_outline returns the whole body,
+    # so a naive elide would GROW them (header + full body). With the outline cap
+    # the elided form is strictly smaller, and the total only ever decreases.
+    body = "\n".join("y" * 1000 for _ in range(40)) + "\n"        # ~40KB, <=40 lines
+    files = {f"work/f{i:02d}.csv": body for i in range(12)}        # ~480KB > budget
+    raw_total = sum(len(v.encode("utf-8")) for v in files.values())
+    assert raw_total > MAX_WORK_BYTES
+    shaped = shape_work(files)
+    total = sum(len(v.encode("utf-8")) for v in shaped.values())
+    assert total <= raw_total                 # never grew
+    assert total <= MAX_WORK_BYTES            # and actually bounded now
+    assert set(shaped) == set(files)          # every path kept

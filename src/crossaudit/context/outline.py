@@ -29,12 +29,26 @@ MAX_WORK_BYTES = 400_000
 #: Leading lines shown by the fallback outline.
 HEAD_LINES = 40
 
+#: An outline itself is capped, so a pathological file (e.g. tens of thousands of
+#: one-line defs) cannot produce a huge "outline" that blows the budget it was
+#: meant to shrink. Kept well below MAX_FILE_BYTES so an elided form is always
+#: strictly smaller than any file large enough to be elided.
+MAX_OUTLINE_BYTES = 16_000
+
+
+def _fit_bytes(text: str, room: int) -> str:
+    """Longest prefix of `text` whose UTF-8 encoding is <= `room` bytes."""
+    return text.encode("utf-8")[:max(0, room)].decode("utf-8", errors="ignore")
+
 
 def _elide(path: str, text: str) -> str:
     size = len(text.encode("utf-8"))
+    body = outline(path, text)
+    if len(body.encode("utf-8")) > MAX_OUTLINE_BYTES:
+        body = _fit_bytes(body, MAX_OUTLINE_BYTES) + "\n... (outline truncated)"
     return (f"<large file elided: {size} bytes. Structural outline only — use the "
             f"file_read tool to load the full contents before editing this file.>\n"
-            f"--- outline ---\n{outline(path, text)}")
+            f"--- outline ---\n{body}")
 
 
 def shape_work(files: dict[str, str],
@@ -42,12 +56,15 @@ def shape_work(files: dict[str, str],
     """Inline small files verbatim; outline what won't fit.
 
     Two deterministic passes: (1) any file over ``MAX_FILE_BYTES`` is replaced by
-    a structural outline; (2) if the working set still exceeds ``total_budget``,
-    the largest still-full files are outlined largest-first (path as a stable
-    tie-break) until it fits. Every path stays present, and the generator can
-    pull any elided file in full with the audited file_read tool — so this
-    shrinks context without losing recall, and never touches the auditor, the
-    ledger, or the committed bytes. Pure and side-effect free.
+    a bounded structural outline; (2) if the working set still exceeds
+    ``total_budget``, the largest still-full files are outlined largest-first
+    (path as a stable tie-break), skipping any file an outline would not actually
+    shrink, until the set fits or nothing more can help. Every path stays present
+    and the full file is one audited file_read away, so this shrinks context
+    without losing recall and never touches the auditor, the ledger, or the
+    committed bytes. Best-effort: with very many files it can settle above budget,
+    but it never *grows* the set and every value is individually bounded. Pure and
+    side-effect free.
     """
     shaped: dict[str, str] = {}
     full: dict[str, int] = {}                 # path -> byte size, for files kept full
@@ -61,13 +78,17 @@ def shape_work(files: dict[str, str],
     total = sum(len(v.encode("utf-8")) for v in shaped.values())
     if total <= total_budget:
         return shaped
-    # Outline the biggest full files first until the set fits (or none remain).
+    # Outline the biggest full files first; skip any where outlining would not
+    # shrink it (so `total` only ever decreases). Stop once it fits.
     for path in sorted(full, key=lambda p: (-full[p], p)):
         if total <= total_budget:
             break
-        before = len(shaped[path].encode("utf-8"))
-        shaped[path] = _elide(path, files[path])
-        total -= before - len(shaped[path].encode("utf-8"))
+        elided = _elide(path, files[path])
+        gain = len(shaped[path].encode("utf-8")) - len(elided.encode("utf-8"))
+        if gain <= 0:
+            continue
+        shaped[path] = elided
+        total -= gain
     return shaped
 
 

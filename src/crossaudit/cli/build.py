@@ -100,32 +100,42 @@ def _generator_complete(cfg: Config, allow_custom: bool, on_event=None,
 KEEP_RECENT_RESULTS = 6
 
 
-def _fold_results(results: list[dict]) -> list[dict]:
-    """Keep the most-recent results verbatim; elide older ones deterministically.
+#: Fields that vary run-to-run (a fresh random id, a per-run ordinal) and would
+#: otherwise make the folded marker non-deterministic. Stripped before the
+#: fingerprint/preview so an identical run folds to identical text.
+_VOLATILE_RESULT_FIELDS = ("call_id", "id", "ordinal")
 
-    Each elided entry is replaced by a compact placeholder carrying the tool
-    name, byte length, and content hash — the full output stays in the
-    append-only evidence ledger and is recoverable by that hash. This only
-    shapes what the GENERATOR re-reads each round; the auditor never sees these
-    (it gets the hashes-only evidence projection), so nothing here touches the
-    audit. A pure function of the input list — deterministic and replayable.
+
+def _fold_results(results: list[dict]) -> list[dict]:
+    """Keep the most-recent results verbatim; condense older ones deterministically.
+
+    Each older entry becomes a compact marker: the tool name, its byte length, a
+    stable content fingerprint, and a short preview — so a long, tool-heavy run
+    stops re-serializing every past result into every later prompt. The recent
+    tail stays verbatim; if the generator needs an older result in full it
+    re-runs the tool (the raw bytes are not retained anywhere — the evidence
+    ledger keeps only hashes and policy decisions). Only shapes what the
+    GENERATOR re-reads; the auditor never sees these. A pure, deterministic
+    function of the input list.
     """
     if len(results) <= KEEP_RECENT_RESULTS:
         return results
     folded: list[dict] = []
     for item in results[:-KEEP_RECENT_RESULTS]:
-        blob = json.dumps(item, ensure_ascii=False, sort_keys=True)
-        digest = (item.get("result_sha256") or item.get("post_sha256")
-                  or hashlib.sha256(blob.encode("utf-8")).hexdigest())
-        label = (item.get("tool") or item.get("name") or item.get("server_id")
-                 or item.get("host_id") or "result")
+        stable = {k: v for k, v in item.items()
+                  if k not in _VOLATILE_RESULT_FIELDS}
+        blob = json.dumps(stable, ensure_ascii=False, sort_keys=True)
+        label = (stable.get("tool") or stable.get("name")
+                 or stable.get("server_id") or stable.get("host_id") or "result")
         folded.append({
             "elided": True,
             "tool": str(label),
-            "status": item.get("status"),
+            "status": stable.get("status"),
             "bytes": len(blob.encode("utf-8")),
-            "sha256": digest,
-            "note": "full output retained in the evidence ledger; re-request if needed",
+            "fingerprint": hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16],
+            "preview": blob[:300] + ("…" if len(blob) > 300 else ""),
+            "note": "earlier result condensed to save context; re-run the tool if "
+                    "you need it in full",
         })
     return folded + list(results[-KEEP_RECENT_RESULTS:])
 

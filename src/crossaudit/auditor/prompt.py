@@ -111,14 +111,17 @@ def render_increment(files: Mapping[str, bytes]) -> tuple[str, bool]:
             bounded = True
             parts.append(f"--- {path} ---\n<omitted: increment exceeds the prompt bound>\n")
             continue
-        text_bytes = len(text.encode("utf-8"))
-        if text_bytes > room:
+        if len(text.encode("utf-8")) > room:
             bounded = True
             text = _fit_bytes(text, room) + "\n<truncated at the prompt bound>"
-            used += room
-        else:
-            used += text_bytes
-        parts.append(f"--- {path} ---\n{text}\n")
+        chunk = f"--- {path} ---\n{text}\n"
+        # Meter the WHOLE rendered chunk (its framing too, symmetric with the
+        # binary branch), so a flood of tiny files cannot inflate the increment
+        # past the cap while `used` stays low and `bounded` never trips.
+        used += len(chunk.encode("utf-8"))
+        if used > MAX_INCREMENT_BYTES:
+            bounded = True
+        parts.append(chunk)
     return "\n".join(parts), bounded
 
 
