@@ -128,6 +128,21 @@ def test_relevance_spends_recall_on_the_least_related_files_first():
     assert other_stubbed > 0        # the irrelevant ones are dropped first
 
 
+def test_relevance_matches_whole_words_not_substrings_and_drops_stopwords():
+    from crossaudit.context.outline import _relevance, _terms
+    terms = _terms("add the user login and the password reset flow")
+    # generic verbs and function words carry no signal
+    assert "the" not in terms and "and" not in terms and "add" not in terms
+    assert "login" in terms and "password" in terms
+    # a decoy stuffed with words that merely CONTAIN the letters must score 0,
+    # while a file with the real whole words scores > 0 — the inversion the review
+    # found is gone.
+    decoy = "theme candidate standard additional brand " * 50
+    real = "login screen: password reset flow for the user login and profile"
+    assert _relevance("themes/config.txt", decoy, terms) == 0
+    assert _relevance("auth/login.py", real, terms) > 0
+
+
 def test_pass_two_outlining_shrinks_never_grows():
     # ~40KB files with <=40 very long lines: head_outline returns the whole body,
     # so a naive elide would GROW them (header + full body). With the outline cap

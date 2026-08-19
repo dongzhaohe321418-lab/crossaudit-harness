@@ -13,6 +13,22 @@ from __future__ import annotations
 
 import ast
 import re
+from collections import Counter
+
+#: Generic task verbs and function words carry no relevance signal — kept out of
+#: the term set so a file merely full of common words cannot outrank a real
+#: match. Deliberately excludes domain nouns (review, report, paper, data, …).
+_STOPWORDS = frozenset("""
+the a an and or nor but for yet so of to in on at by with from into onto upon off
+out over under again further then once this that these those it its is are was
+were be been being do does did doing done have has had having will would shall
+should can could may might must not no nor yes please
+add make made write writes writing wrote create creates created creating build
+built update updates use uses used using get gets got set sets new all any some
+more most also just only very much many few any about above below between during
+each other same such your you our their them they what when where which who whom
+why how than too if as it is
+""".split())
 
 #: Files whose UTF-8 size is at or under this are inlined verbatim (the common
 #: case); larger ones are outlined. Generous on purpose — a conservative start,
@@ -52,21 +68,26 @@ def _elide(path: str, text: str) -> str:
 
 
 def _terms(task: str) -> list[str]:
-    """The distinct word-ish tokens of the task, for lexical relevance scoring."""
-    return sorted({w for w in re.findall(r"[a-z0-9]{3,}", (task or "").lower())})
+    """The distinct, meaningful word tokens of the task, for relevance scoring."""
+    return sorted({w for w in re.findall(r"[a-z0-9]{3,}", (task or "").lower())
+                   if w not in _STOPWORDS})
 
 
 def _relevance(path: str, text: str, terms: list[str]) -> int:
-    """How strongly a file relates to the task — path + a head of its content.
+    """How strongly a file relates to the task — a whole-word lexical overlap.
 
-    A cheap, deterministic lexical overlap (no embeddings, no native dep): the
-    total occurrences of any task term in the path and the file's first ~2KB. 0
-    when the task is empty, so behaviour with no task is size-ordered as before.
+    Cheap and deterministic (no embeddings, no native dep): the total WHOLE-WORD
+    occurrences of any task term across the path and the file's content. Matching
+    whole words (not substrings) stops a file full of words that merely *contain*
+    a task-token's letters ("theme" for "the") from scoring, and scanning the
+    whole content — not just a head — stops a keyword past an arbitrary cutoff
+    from being missed. 0 when the task is empty, so with no task shape_work is
+    size-ordered exactly as before.
     """
     if not terms:
         return 0
-    hay = (path.lower() + "\n" + text[:2000].lower())
-    return sum(hay.count(t) for t in terms)
+    counts = Counter(re.findall(r"[a-z0-9]{3,}", (path + "\n" + text).lower()))
+    return sum(counts[t] for t in terms)
 
 
 def _stub(path: str, text: str) -> str:
@@ -87,9 +108,12 @@ def shape_work(files: dict[str, str], task: str = "",
          least-relevant-and-biggest first (relevance = lexical overlap with the
          task), skipping any an outline would not shrink;
       3. if it STILL exceeds budget, the least-relevant files are reduced to a
-         one-line stub until it fits — a real ceiling, spending recall on what
-         the task cares about least first.
-    A pure, side-effect-free function; with no task it degrades to size-ordering.
+         one-line stub, spending recall on what the task cares about least first.
+    The loop always terminates and never grows the set. It drives the total down
+    toward the budget but does not guarantee it: the reachable floor is the sum
+    of each file's stub, so a project with pathologically many files can settle
+    above budget (every path is still present and one file_read away). A pure,
+    side-effect-free function; with no task it degrades to size-ordering.
     """
     terms = _terms(task)
     shaped: dict[str, str] = {}
