@@ -3123,6 +3123,7 @@ const ZH={
   "Send guidance to the running task":"向运行中的任务发送补充信息",
   "owner guidance queued":"已排队所有者补充信息",
   "Generator reply format problem":"生成者回复格式异常","Generator request refused":"生成者请求被拒",
+  "CrossAudit answered":"CrossAudit 已回应","CrossAudit answered, but made no audited deliverable":"CrossAudit 已回应,但没有产出受审计的交付物","CrossAudit reply":"CrossAudit 的回应","This request could not become an audited deliverable — often because it refers to something that is not in the project. CrossAudit reply is shown below. Refine the task and run again, or stop it.":"这个请求无法变成受审计的交付物——通常是因为它指向了项目里不存在的东西。CrossAudit 的回应见下方。请把任务写得更具体后重跑,或直接停止。",
   "The generator could not produce auditable work":"生成者未能产出可审计的工作",
   "Nothing new to audit":"没有新内容可审计",
   "The generator repeated the existing work":"生成者重复了已有的工作",
@@ -4085,12 +4086,15 @@ function openResolution(value,action='',sha=''){
   const formatCause=row.cause==='generator_format';
   const refusedCause=row.cause==='generator_refused';
   const noProgress=row.cause==='no_progress';
-  document.getElementById('resolution-flag').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
-  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
+  const answered=row.cause==='answered';
+  document.getElementById('resolution-flag').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
+  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
   document.getElementById('resolution-summary').textContent=budget
     ?'CrossAudit stopped before spending past your usage limit. No result was admitted and the original task is ready once you raise or clear the limit.'
     :provider
     ?'CrossAudit stopped before an audit began. No result was admitted and the original task is ready to retry.'
+    :answered
+    ?'This request could not become an audited deliverable — often because it refers to something that is not in the project. CrossAudit reply is shown below. Refine the task and run again, or stop it.'
     :formatCause
     ?'The generator was asked twice and still replied outside the required file format, so there was nothing to audit. No result was admitted.'
     :noProgress
@@ -4098,7 +4102,7 @@ function openResolution(value,action='',sha=''){
     :row.limit_reached
     ?'CrossAudit used all '+used+' of '+maximum+' automatic rounds without a passing result. Nothing will continue or be admitted until you decide.'
     :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
-  document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':(formatCause||noProgress)?'What happened':row.limit_reached
+  document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress)?'What happened':row.limit_reached
     ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
   document.getElementById('resolution-limit-copy').textContent=(formatCause
     ?'The reply was corrected once automatically and still failed to parse. Technical detail: '

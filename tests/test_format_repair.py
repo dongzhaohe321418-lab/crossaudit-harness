@@ -26,6 +26,11 @@ VALID = (
 # END marker is now recovered, so it no longer exercises the repair path).
 MALFORMED = ('<<<CROSSAUDIT-OUTPUT-FILE>>>\n'
              "hello but there is no path and no end marker")
+# A plain conversational reply (no file envelope, not JSON): the generator
+# answering a request it cannot turn into an audited deliverable — e.g. the
+# thing asked for is not in the project.
+PROSE = ("I could not find anything called 'eled' in this project. The files "
+         "here are report.md and data.csv — did you mean the report?")
 
 
 @dataclass
@@ -43,6 +48,36 @@ def _complete_seq(replies, calls):
         return Reply(seq[len(calls) - 1] if len(calls) <= len(seq) else seq[-1])
 
     return complete
+
+
+def test_persistent_prose_becomes_a_conversational_answer_not_a_format_failure():
+    # The user asked to review something that does not exist. The generator
+    # answers in prose; after the one repair it answers in prose again — so it is
+    # surfaced as a conversational reply (a useful answer), not a hard format stop.
+    calls = []
+    with pytest.raises(ProviderDenial) as exc:
+        gen.generate(task="review the eled", constitution="rules", current={},
+                     complete=_complete_seq([PROSE, PROSE], calls),
+                     allowed_dirs=["experiments"])
+    assert exc.value.detail.get("conversational") is True
+    assert exc.value.detail.get("category") == "conversational"
+    assert "eled" in exc.value.reason           # the generator's own answer, verbatim
+    assert len(calls) == 2                       # one repair re-ask, then surfaced
+
+
+def test_a_one_off_prose_slip_is_still_repaired_to_work():
+    # A single prose reply that then produces valid work is a format slip, NOT a
+    # conversational answer — it must still repair, not surface as a reply.
+    calls = []
+    work = gen.generate(task="write it", constitution="rules", current={},
+                        complete=_complete_seq([PROSE, VALID], calls),
+                        allowed_dirs=["experiments"])
+    assert isinstance(work, gen.Work)
+
+
+def test_the_decision_center_renders_the_answered_cause():
+    assert "row.cause==='answered'" in PAGE
+    assert "CrossAudit answered" in PAGE
 
 
 def test_a_malformed_reply_is_repaired_once_and_the_round_succeeds():

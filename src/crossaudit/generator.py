@@ -254,7 +254,7 @@ def parse_work_reply(text: str) -> Work:
         except Denial as exc:
             raise ProviderDenial(
                 "the generator replied in prose instead of the required "
-                "file envelope", category="format") from exc
+                "file envelope", category="format", prose=True) from exc
         return Work.from_json(raw)
     files: dict[str, str] = {}
     blocks = _extract_file_blocks(text)
@@ -459,6 +459,16 @@ def generate(*, task: str, constitution: str, current: dict[str, str],
             # The one repair attempt is spent; mark it so the stop explains
             # itself as "retried and still malformed", not a first strike.
             second.detail["repair_attempted"] = True
+            # Prose that PERSISTS through the repair is not a format slip: the
+            # generator is answering conversationally because it cannot turn this
+            # request into an audited deliverable (a false premise, a missing
+            # referent, a question). Surface that answer to the person instead of
+            # a bare "could not produce auditable work" failure — the loop reads
+            # `conversational` and presents the reply, not a hard format stop.
+            answer = (reply.text or "").strip()
+            if second.detail.get("prose") and answer:
+                raise ProviderDenial(answer, category="conversational",
+                                     conversational=True) from second
             raise
     if isinstance(outcome, Work):
         outcome.validate(allowed_dirs=allowed_dirs)

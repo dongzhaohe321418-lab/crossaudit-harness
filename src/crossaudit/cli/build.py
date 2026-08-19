@@ -452,16 +452,23 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             # in a zero-call loop.
             if not exc.detail.get("retryable", False):
                 terminal_denial = exc
-                # Name the stop by what it actually is (a format or a refused
-                # round), not "provider failure" — the Decision Center reads the
-                # structured cause, and a misleading prefix would send the user
-                # to the wrong remedy. Real provider outages take the park path
-                # above, which keeps its own "provider failure" wording.
-                lead = ("the generator could not produce auditable work"
-                        if str(exc.detail.get("category", "")) == "format"
-                        else "the generator's request was refused")
-                termination_reason = (
-                    f"{lead} in round {round_no}: {exc.reason[:400]}")
+                # A conversational answer (the generator could not make an audited
+                # deliverable and explained why — e.g. a false premise) is NOT a
+                # failure: surface its reply verbatim so the person gets a useful
+                # answer, not a "could not produce auditable work" stop.
+                if exc.detail.get("conversational"):
+                    termination_reason = exc.reason[:2000]
+                else:
+                    # Name the stop by what it actually is (a format or a refused
+                    # round), not "provider failure" — the Decision Center reads the
+                    # structured cause, and a misleading prefix would send the user
+                    # to the wrong remedy. Real provider outages take the park path
+                    # above, which keeps its own "provider failure" wording.
+                    lead = ("the generator could not produce auditable work"
+                            if str(exc.detail.get("category", "")) == "format"
+                            else "the generator's request was refused")
+                    termination_reason = (
+                        f"{lead} in round {round_no}: {exc.reason[:400]}")
                 break
             if round_no == cfg.max_rounds:
                 break
@@ -644,6 +651,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         # still render through the raw-reason fallback.
         if provider_wait is not None:
             cause = ("budget" if kind == "budget" else "provider_unavailable")
+        elif terminal_denial is not None and terminal_denial.detail.get("conversational"):
+            cause = "answered"
         elif (terminal_denial is not None
               and str(terminal_denial.detail.get("category", "")) == "format"):
             cause = "generator_format"
