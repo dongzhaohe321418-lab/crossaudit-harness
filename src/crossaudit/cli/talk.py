@@ -67,8 +67,11 @@ def _record_routing(cfg: Config, routing, executed: str) -> Path:
     return path
 
 
-def _context(cfg: Config) -> str:
-    """What the router needs to judge a sentence: the rules and the loop's state."""
+def _context(cfg: Config, chat_id: str = "") -> str:
+    """What the router needs to judge a sentence: the rules, the loop's state,
+    and — when a chat is known — its recent turns, so a follow-up like "make it
+    about that instead" is read against what came before rather than in a vacuum.
+    """
     bits = []
     const = cfg.root / cfg.constitution
     if const.is_file():
@@ -82,6 +85,17 @@ def _context(cfg: Config) -> str:
         pending = [f"{cid[:8]}:{c['status']}" for cid, c in cycles.items()
                    if c["status"] in ("OPEN", "BLOCKED", "ESCALATED")]
         bits.append("OPEN CYCLES: " + (", ".join(pending) if pending else "none"))
+    if chat_id:
+        try:
+            from ..runtime import RunJournal, journal_path
+            turns = RunJournal(journal_path(cfg)).chat_history(chat_id, limit=4)
+        except Exception:  # noqa: BLE001 -- context is best-effort, never blocking
+            turns = []
+        recent = [" ".join(str(t.get("task", "")).split())[:120] for t in turns]
+        recent = [line for line in recent if line]
+        if recent:
+            bits.append("RECENT IN THIS CHAT (oldest first): "
+                        + " | ".join(recent))
     return "\n".join(bits)
 
 

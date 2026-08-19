@@ -191,6 +191,52 @@ def apply_safe_default(routing: Routing) -> Routing:
         reasoning=f"{reason}; {suffix}" if reason else suffix)
 
 
+# A follow-up whose whole content is "just keep going" — in the languages this
+# product is used in, plus the punctuation and filler people actually type. Such
+# a message names no new subject, so on its own it would leave a continuation run
+# with a vacuous goal ("continue"), and the deliverable would be judged against
+# nothing. When one of these is all the person said, the WHAT must come from the
+# conversation, not from whatever files sit in the working tree.
+_BARE_CONTINUATION = frozenset({
+    "continue", "continues", "continued", "go on", "go ahead", "goahead",
+    "keep going", "carry on", "proceed", "resume", "next", "more", "again",
+    "finish", "finish it", "keep it up", "ok", "okay", "k", "yes", "yep", "yeah",
+    "sure", "please continue", "please go on", "do it",
+    "继续", "接着", "接着做", "接着干", "接著", "繼續", "接下去", "往下", "往下做",
+    "接下来", "接著做", "好", "好的", "好吧", "行", "嗯", "可以", "对", "是的",
+    "继续吧", "接着写", "写完", "写下去", "接着说",
+})
+
+
+def _is_bare_continuation(text: str) -> bool:
+    """True when the message is only a "keep going" nudge with no new subject."""
+    stripped = re.sub(r"[\s。，,.!！?？~、;:；：\-—…\"'’“”()（）]+", " ",
+                      (text or "").strip().lower()).strip()
+    if not stripped:
+        return True
+    if stripped in _BARE_CONTINUATION:
+        return True
+    # A short phrase built only from bare-continuation words (e.g. "ok continue",
+    # "好 继续") is still bare; anything with a substantive word is not.
+    words = stripped.split()
+    return len(words) <= 3 and all(w in _BARE_CONTINUATION for w in words)
+
+
+def resolve_continuation(text: str, prior_intent: str) -> str:
+    """The task a continuation should actually run.
+
+    "continue" (and its kin) means *continue the conversation's real request*,
+    not "invent a goal from the working tree". When that is all the person said
+    and a prior substantive intent exists, inherit it; otherwise the person gave
+    a fresh instruction, so honor their words. Deterministic and side-effect
+    free — no model call, so the goal it yields cannot drift mid-run.
+    """
+    prior = (prior_intent or "").strip()
+    if prior and _is_bare_continuation(text):
+        return prior
+    return text
+
+
 def record(path: Path, routing: Routing, executed: str) -> Path:
     """Append the decision to the routing ledger. Called for every utterance,
     including the ones that were only clarified and never acted on."""

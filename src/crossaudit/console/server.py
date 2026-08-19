@@ -872,15 +872,29 @@ def say(cfg: Config, text: str, *, attachments=None,
             f"the configured generator ({cfg.generator_vendor or 'unknown vendor'})")
 
     if continuation_cycle:
+        # A continuation inherits the conversation's real request. Left alone,
+        # "continue" would be committed as the run's task verbatim — a goal that
+        # names no subject, so the generator would fill it from whatever files
+        # sit in the working tree and the auditor would have nothing to judge the
+        # subject against (CA-TASK-001 needs a stated subject to enforce). Read
+        # the chat's latest substantive intent back and resolve against it, so a
+        # bare "continue" continues what was actually asked, not a stale artifact.
+        prior_intent = ""
+        if chat_id:
+            try:
+                prior_intent = RunJournal(journal_path(cfg)).latest_intent(chat_id)
+            except Exception:  # noqa: BLE001 -- context is best-effort; never block a send
+                prior_intent = ""
+        resolved_text = router_mod.resolve_continuation(text, prior_intent)
         routing = router_mod.Routing(
             utterance=text, lane="generator", confidence=1.0,
             reasoning="the owner authorized a correction to an escalated cycle",
-            restated=text, t=int(time.time()), addressed_to="generator",
+            restated=resolved_text, t=int(time.time()), addressed_to="generator",
             routing_mode="human_continuation", chat_id=chat_id)
     else:
         routing = router_mod.apply_safe_default(router_mod.route_addressed(
             text, complete=talk_mod._auditor_complete(cfg),
-            context=talk_mod._context(cfg)))
+            context=talk_mod._context(cfg, chat_id)))
         routing.chat_id = chat_id
     if not routing.certain:
         talk_mod._record_routing(cfg, routing, "asked for clarification")

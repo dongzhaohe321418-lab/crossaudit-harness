@@ -1134,6 +1134,48 @@ class RunJournal:
                  "task": str(row["task"]), "chat_id": str(row["chat_id"]),
                  "started": float(row["started"])} for row in rows]
 
+    def latest_intent(self, chat_id: str) -> str:
+        """The chat's most recent *substantive* request — the durable WHAT.
+
+        A follow-up like "continue" is stored as a continuation run whose own
+        task names no subject; the real intent lives in the newest NON-
+        continuation run of the same chat (its task was normalized from the
+        person's words). Reading it back is how a continuation inherits the
+        conversation's goal instead of guessing it from whatever files happen to
+        be lying in the working tree. Read-only; returns "" when the chat has no
+        prior substantive request.
+        """
+        if not chat_id:
+            return ""
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT task FROM runs WHERE chat_id=? AND continuation_cycle=='' "
+                "AND trim(task)<>'' ORDER BY started DESC, rowid DESC LIMIT 1",
+                (chat_id[:64],),
+            ).fetchone()
+        return str(row["task"]).strip() if row is not None else ""
+
+    def chat_history(self, chat_id: str, *, limit: int = 6,
+                     exclude_run_id: str = "") -> list[dict]:
+        """Recent turns of one chat, oldest-first, for read-only grounding.
+
+        Each entry is {task, outcome, state}; the current run is excluded so a
+        run never quotes itself back to the generator. This is disambiguating
+        context only — never a second source of the deliverable's subject.
+        """
+        if not chat_id:
+            return []
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT run_id,task,outcome,state FROM runs WHERE chat_id=? "
+                "AND trim(task)<>'' ORDER BY started DESC, rowid DESC LIMIT ?",
+                (chat_id[:64], max(1, int(limit)) + 1),
+            ).fetchall()
+        out = [{"task": str(r["task"]).strip(), "outcome": str(r["outcome"]),
+                "state": str(r["state"])}
+               for r in rows if str(r["run_id"]) != exclude_run_id]
+        return list(reversed(out[:limit]))
+
     def latest(self) -> dict | None:
         with self._connect() as db:
             row = db.execute(

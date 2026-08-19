@@ -47,7 +47,9 @@ from ..runtime import (
     PreparedRun,
     RunCommandService,
     RunEvent,
+    RunJournal,
     RunState,
+    journal_path,
     waiting_kind,
 )
 from ..usage import record_completion
@@ -88,6 +90,33 @@ def _generator_complete(cfg: Config, allow_custom: bool, on_event=None,
 
     complete.last_route = None
     return complete
+
+
+def _conversation_context(cfg: Config, chat_id: str, run_id: str) -> str:
+    """A compact, read-only transcript of this chat's earlier turns.
+
+    Grounding for the generator so a task that refers back to the conversation
+    ("continue", "make it about that") resolves to what the person meant rather
+    than to whatever files happen to sit in the working tree. Best-effort: a
+    missing journal or an empty chat simply yields no context, and it never
+    becomes a second source of the deliverable's subject (THE TASK stays that).
+    """
+    if not chat_id:
+        return ""
+    try:
+        turns = RunJournal(journal_path(cfg)).chat_history(
+            chat_id, exclude_run_id=run_id)
+    except Exception:  # noqa: BLE001 -- context is best-effort; never fail a round
+        return ""
+    lines = []
+    for turn in turns:
+        subject = " ".join(str(turn.get("task", "")).split())[:200]
+        if not subject:
+            continue
+        note = str(turn.get("outcome") or turn.get("state") or "").lower()
+        tail = f"  [{note}]" if note and note not in ("", "none") else ""
+        lines.append(f"- the person asked: {subject}{tail}")
+    return "\n".join(lines)
 
 
 def _current_work(cfg: Config) -> dict[str, str]:
@@ -291,6 +320,11 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
          detail=json.dumps(derive_goal(cfg, task), ensure_ascii=False)[:2000],
          state=RunState.QUEUED)
 
+    # Read-only grounding: earlier turns of this same chat, so a task that refers
+    # back to them resolves to the person's real intent instead of to stale files
+    # in the tree. Stable for the run; THE TASK remains the authoritative subject.
+    conversation = _conversation_context(cfg, chat_id, run_id)
+
     for round_no in range(1, cfg.max_rounds + 1):
         current_round = round_no
         last_round = round_no
@@ -327,7 +361,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     attachments=attachments, compute_hosts=compute_hosts,
                     compute_results=compute_results, mcp_servers=mcp_servers,
                     tool_results=tool_results, builtin_tools=builtin_tools,
-                    owner_guidance=owner_guidance,
+                    owner_guidance=owner_guidance, conversation=conversation,
                     # A malformed reply gets one visible, recorded repair
                     # attempt (§24.1) before anything reaches a human.
                     on_repair=lambda why: emit(
