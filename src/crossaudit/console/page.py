@@ -3168,7 +3168,7 @@ const ZH={
   "No audited deliverables yet.":"尚无经审计的交付物。","Independent verdicts and findings reconstructed from the ledger.":"从账本重建的独立判定与发现。",
   "Audit evidence":"审计证据","No audit evidence yet.":"尚无审计证据。","Token usage":"Token 用量",
   "Project-level model consumption, updated with every completion.":"项目级模型用量，每次完成调用时更新。",
-  "Today":"今日","This month":"本月","Model calls":"模型调用","Cached tokens":"缓存 Token","Last 7 days":"最近 7 天",
+  "Today":"今日","This month":"本月","Model calls":"模型调用","Cached tokens":"缓存 Token","Last 7 days":"最近 7 天","Audits run":"已跑审计",
   "all roles":"全部角色","By role":"按角色","this month":"本月","Tokens":"Token","Cached":"已缓存","Source":"来源",
   "Recent calls":"最近调用","counts only · no prompt content":"仅统计数量 · 不包含提示词内容","No model calls this month.":"本月尚无模型调用。",
   "Usage will appear after the first model completion.":"第一次模型调用完成后会显示用量。","No calls recorded yet.":"尚无调用记录。",
@@ -3428,6 +3428,7 @@ const ZH_PATTERNS=[
   ,[/^of (\d+)$/,m=>'/ '+m[1]+' 轮']
   ,[/^of (\d+) gates reached$/,m=>'/ '+m[1]+' 个关卡已到达']
   ,[/^of (\d+) steps done$/,m=>'/ '+m[1]+' 步已完成']
+  ,[/^(\d+) passed review$/,m=>m[1]+' 次通过复核']
   ,[/^(\d+)s elapsed$/,m=>'已运行 '+m[1]+' 秒']
   ,[/^(\d+) events?$/,m=>m[1]+' 个事件']
   ,[/^(.+): (Complete|Blocked|Active|Pending)$/,m=>zhValue(m[1])+'：'+zhValue(m[2])]
@@ -5485,6 +5486,10 @@ function usageQuality(row){
 function usageView(d){
   const u=d.usage||{};const today=u.today||{};const month=u.month||{},guard=u.budget||{};
   const days=u.days||[];const peak=Math.max(1,...days.map(day=>Number(day.tokens||0)));
+  // Audit-runtime metric the token-only view lacked: how many audits ran, and
+  // how many passed the independent review.
+  const cycleList=Object.values(d.cycles||{});const auditCount=cycleList.length;
+  const passedAudits=cycleList.filter(c=>['passed','consumed'].includes(String(c.status||'').toLowerCase())).length;
   const dayBars=days.map(day=>{const date=new Date(day.date+'T00:00:00');
     return '<div class="usage-day"><span class="usage-day-value">'+formatTokens(day.tokens)+'</span>'
       +'<span class="usage-bar-track"><i class="usage-bar" style="height:'
@@ -5511,7 +5516,9 @@ function usageView(d){
     +'<div class="usage-note"><span>ⓘ</span><div><b>Local metering · '+esc(u.cost_label||'API-value estimate')+'</b><br>'
     +'Token counts come from the provider runtime when available. Costs use the '+esc(u.price_snapshot||'current')
     +' public API price snapshot and are not a provider invoice or subscription charge.</div></div>'+guardrail
-    +'<div class="usage-cards"><div class="usage-card"><div class="usage-card-label">Today</div><div class="usage-card-value">'
+    +'<div class="usage-cards"><div class="usage-card"><div class="usage-card-label">Audits run</div><div class="usage-card-value">'
+    +auditCount+'</div><div class="usage-card-detail">'+passedAudits+' passed review</div></div>'
+    +'<div class="usage-card"><div class="usage-card-label">Today</div><div class="usage-card-value">'
     +formatTokens(today.tokens)+'</div><div class="usage-card-detail">'+formatUsd(today.api_value_usd)+' API value</div></div>'
     +'<div class="usage-card"><div class="usage-card-label">This month</div><div class="usage-card-value">'
     +formatTokens(month.tokens)+'</div><div class="usage-card-detail">'+formatUsd(month.api_value_usd)+' API value</div></div>'
