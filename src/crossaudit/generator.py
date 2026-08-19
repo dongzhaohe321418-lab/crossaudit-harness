@@ -146,22 +146,45 @@ HPC_BLOCK = re.compile(
     re.DOTALL)
 
 
+def _conversational_answer(text: str) -> str | None:
+    """The generator's own words, once the machine envelopes are removed.
+
+    A reply that will not parse as work / tool / compute but still carries a
+    substantive natural-language message is the generator *answering* — it could
+    not turn the request into an audited deliverable (a false premise, a missing
+    referent, a question, or it narrated a tool call outside the envelope). Return
+    that message so it can be surfaced to the person; return ``None`` when only
+    machine scaffolding (an empty or malformed envelope) remains.
+    """
+    prose = re.sub(r"<<<CROSSAUDIT-[A-Z-]+>>>.*?<<<END-CROSSAUDIT-[A-Z-]+>>>",
+                   " ", text or "", flags=re.S)
+    prose = re.sub(r"<<<[^\n]*", " ", prose)          # any lone / partial marker line
+    prose = re.sub(r"\s+", " ", prose).strip()
+    if sum(ch.isalpha() for ch in prose) < 40:        # too little to be a real message
+        return None
+    return prose
+
+
 def parse_compute_request(text: str) -> ComputeRequest | None:
     matches = list(HPC_BLOCK.finditer(text))
     if not matches:
         return None
     if len(matches) != 1 or "<<<CROSSAUDIT-OUTPUT-FILE" in text:
         raise ProviderDenial(
-            "the generator must return exactly one compute request and no files")
+            "the generator must return exactly one compute request and no files",
+            category="format")
     outside = (text[:matches[0].start()] + text[matches[0].end():]).strip()
     if outside:
-        raise ProviderDenial("the compute request envelope must be the entire reply")
+        raise ProviderDenial("the compute request envelope must be the entire reply",
+                             category="format")
     try:
         request = json.loads(matches[0].group(1))
     except (TypeError, ValueError) as exc:
-        raise ProviderDenial(f"the generator returned invalid compute JSON: {exc}") from exc
+        raise ProviderDenial(f"the generator returned invalid compute JSON: {exc}",
+                             category="format") from exc
     if not isinstance(request, dict):
-        raise ProviderDenial("the generator compute request must be a JSON object")
+        raise ProviderDenial("the generator compute request must be a JSON object",
+                             category="format")
     return ComputeRequest(request=request)
 
 
@@ -177,16 +200,20 @@ def parse_tool_request(text: str) -> ToolRequest | None:
     if (len(matches) != 1 or "<<<CROSSAUDIT-OUTPUT-FILE" in text or
             "<<<CROSSAUDIT-HPC-JOB" in text):
         raise ProviderDenial(
-            "the generator must return exactly one MCP tool request and no other envelope")
+            "the generator must return exactly one MCP tool request and no other envelope",
+            category="format")
     outside = (text[:matches[0].start()] + text[matches[0].end():]).strip()
     if outside:
-        raise ProviderDenial("the MCP tool request envelope must be the entire reply")
+        raise ProviderDenial("the MCP tool request envelope must be the entire reply",
+                             category="format")
     try:
         request = json.loads(matches[0].group(1))
     except (TypeError, ValueError) as exc:
-        raise ProviderDenial(f"the generator returned invalid MCP tool JSON: {exc}") from exc
+        raise ProviderDenial(f"the generator returned invalid MCP tool JSON: {exc}",
+                             category="format") from exc
     if not isinstance(request, dict):
-        raise ProviderDenial("the generator MCP tool request must be a JSON object")
+        raise ProviderDenial("the generator MCP tool request must be a JSON object",
+                             category="format")
     return ToolRequest(request=request)
 
 
@@ -459,16 +486,20 @@ def generate(*, task: str, constitution: str, current: dict[str, str],
             # The one repair attempt is spent; mark it so the stop explains
             # itself as "retried and still malformed", not a first strike.
             second.detail["repair_attempted"] = True
-            # Prose that PERSISTS through the repair is not a format slip: the
-            # generator is answering conversationally because it cannot turn this
-            # request into an audited deliverable (a false premise, a missing
-            # referent, a question). Surface that answer to the person instead of
-            # a bare "could not produce auditable work" failure — the loop reads
-            # `conversational` and presents the reply, not a hard format stop.
-            answer = (reply.text or "").strip()
-            if second.detail.get("prose") and answer:
-                raise ProviderDenial(answer, category="conversational",
-                                     conversational=True) from second
+            # A shape that PERSISTS through the repair is not a one-off format
+            # slip: when the reply still will not parse as work / tool / compute
+            # yet carries a substantive natural-language message, the generator is
+            # answering — it cannot turn this request into an audited deliverable
+            # (a false premise, a missing referent, a question, or it narrated a
+            # tool call in prose outside the envelope). Surface that answer to the
+            # person instead of a bare "could not produce auditable work" failure;
+            # the loop reads `conversational` and presents the reply. Gated to
+            # format-class failures so a genuine path/scope refusal still stops.
+            if str(second.detail.get("category", "")) == "format":
+                answer = _conversational_answer(reply.text or "")
+                if answer is not None:
+                    raise ProviderDenial(answer, category="conversational",
+                                         conversational=True) from second
             raise
     if isinstance(outcome, Work):
         outcome.validate(allowed_dirs=allowed_dirs)

@@ -31,6 +31,17 @@ MALFORMED = ('<<<CROSSAUDIT-OUTPUT-FILE>>>\n'
 # thing asked for is not in the project.
 PROSE = ("I could not find anything called 'eled' in this project. The files "
          "here are report.md and data.csv — did you mean the report?")
+# The screenshot case: the generator narrates its intent in prose AND emits a
+# tool envelope, so the reply parses as neither pure prose nor a clean tool call
+# ("the ... envelope must be the entire reply"). The message is still a real
+# answer and must surface as one, not as a cryptic refusal.
+PROSE_WITH_TOOL = (
+    "I need to read the repository before I can write a detailed review, but no "
+    "MCP tool is configured for that here. Point me at the files to review and I "
+    "will go through them.\n"
+    "<<<CROSSAUDIT-MCP-TOOL>>>\n"
+    '{"tool": "read_repo", "args": {}}\n'
+    "<<<END-CROSSAUDIT-MCP-TOOL>>>")
 
 
 @dataclass
@@ -63,6 +74,25 @@ def test_persistent_prose_becomes_a_conversational_answer_not_a_format_failure()
     assert exc.value.detail.get("category") == "conversational"
     assert "eled" in exc.value.reason           # the generator's own answer, verbatim
     assert len(calls) == 2                       # one repair re-ask, then surfaced
+
+
+def test_prose_wrapping_a_tool_envelope_surfaces_as_an_answer():
+    # The exact reported failure: "write a detailed review" of a thing that needs
+    # a tool the run does not have. The generator explains this in prose beside a
+    # tool envelope, so the reply "envelope must be the entire reply". After the
+    # one repair it does the same — surface the explanation, not a bare refusal.
+    calls = []
+    with pytest.raises(ProviderDenial) as exc:
+        gen.generate(task="write a detailed review", constitution="rules",
+                     current={}, mcp_servers=[{"name": "repo", "tools": []}],
+                     complete=_complete_seq([PROSE_WITH_TOOL, PROSE_WITH_TOOL],
+                                            calls),
+                     allowed_dirs=["experiments"])
+    assert exc.value.detail.get("conversational") is True
+    assert exc.value.detail.get("category") == "conversational"
+    assert "review" in exc.value.reason              # the generator's own words
+    assert "CROSSAUDIT-MCP-TOOL" not in exc.value.reason   # scaffolding stripped
+    assert len(calls) == 2                            # one repair, then surfaced
 
 
 def test_a_one_off_prose_slip_is_still_repaired_to_work():
