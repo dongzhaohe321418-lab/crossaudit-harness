@@ -427,6 +427,16 @@ def build_prompt(*, task: str, constitution: str, current: dict[str, str],
         parts.append(f"\nTHE AUDITOR BLOCKED THE LAST ROUND WITH THESE FINDINGS\n"
                      f"<<<FINDINGS\n{findings}\nFINDINGS\n\n"
                      f"Address every BLOCKER. Return the whole of each file you change.")
+    # Recite the authoritative task last, where the model's attention is
+    # strongest, so it does not drift after a long RULES / WORK / FINDINGS body
+    # (the lost-in-the-middle failure behind the qled->Transformer incident). A
+    # pure re-read of THE TASK above — never a summary that could compete with
+    # it — so it can only reinforce the subject the auditor judges against.
+    parts.append(
+        "\nSTAY ON TASK — before you answer, re-read the single request this "
+        "work is judged against, and make sure your reply delivers exactly it "
+        "(not a neighbouring topic, not the previous contents of a file you are "
+        f"continuing):\n<<<TASK-ANCHOR\n{task.strip()}\nTASK-ANCHOR")
     return "\n".join(parts)
 
 

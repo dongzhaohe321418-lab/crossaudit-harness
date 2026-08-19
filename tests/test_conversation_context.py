@@ -62,6 +62,16 @@ def test_latest_intent_empty_when_no_prior_request(tmp_path):
     assert _journal(tmp_path).latest_intent("") == ""
 
 
+def test_chat_turn_count_counts_every_substantive_turn(tmp_path):
+    j = _journal(tmp_path)
+    _turn(j, "Write a detailed review.")
+    _turn(j, "Replace the incorrect prior content with qled.")
+    _turn(j, "continue", continuation_cycle="3336749bf5158e67", outcome="passed")
+    assert j.chat_turn_count(CHAT) == 3          # continuation counts as a turn too
+    assert j.chat_turn_count("aaaaaaaaaaaaaaaa") == 0
+    assert j.chat_turn_count("") == 0
+
+
 # ---- chat_history: oldest-first grounding, excluding the current run ----
 def test_chat_history_is_oldest_first_and_excludes_the_current_run(tmp_path):
     j = _journal(tmp_path)

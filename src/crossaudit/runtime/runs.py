@@ -1176,6 +1176,19 @@ class RunJournal:
                for r in rows if str(r["run_id"]) != exclude_run_id]
         return list(reversed(out[:limit]))
 
+    def chat_turn_count(self, chat_id: str) -> int:
+        """How many substantive turns this chat has — so a rolling digest can say
+        how many older turns it is not showing, instead of silently forgetting
+        them on a long conversation."""
+        if not chat_id:
+            return 0
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT COUNT(*) AS n FROM runs WHERE chat_id=? AND trim(task)<>''",
+                (chat_id[:64],),
+            ).fetchone()
+        return int(row["n"]) if row is not None else 0
+
     def latest(self) -> dict | None:
         with self._connect() as db:
             row = db.execute(

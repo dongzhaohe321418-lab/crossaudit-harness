@@ -21,6 +21,7 @@ Two things this verb refuses to do, both deliberate:
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
 import json
 import os
@@ -29,6 +30,7 @@ import time
 
 from .. import document_export, hpc, mcp
 from ..broker import secretscan
+from ..context import shape_work
 from ..broker.humanapproval import INBOX, HumanApprovalGate
 from ..broker.routing import (
     BROKER_SERVER_ID, broker_tool_call, build_broker_and_token, build_catalog,
@@ -92,6 +94,42 @@ def _generator_complete(cfg: Config, allow_custom: bool, on_event=None,
     return complete
 
 
+#: How many of the most-recent tool / compute results are kept verbatim in the
+#: generator prompt. Older ones are folded to a hash+length marker so a long,
+#: tool-heavy run stops re-serializing every past result into every later round.
+KEEP_RECENT_RESULTS = 6
+
+
+def _fold_results(results: list[dict]) -> list[dict]:
+    """Keep the most-recent results verbatim; elide older ones deterministically.
+
+    Each elided entry is replaced by a compact placeholder carrying the tool
+    name, byte length, and content hash — the full output stays in the
+    append-only evidence ledger and is recoverable by that hash. This only
+    shapes what the GENERATOR re-reads each round; the auditor never sees these
+    (it gets the hashes-only evidence projection), so nothing here touches the
+    audit. A pure function of the input list — deterministic and replayable.
+    """
+    if len(results) <= KEEP_RECENT_RESULTS:
+        return results
+    folded: list[dict] = []
+    for item in results[:-KEEP_RECENT_RESULTS]:
+        blob = json.dumps(item, ensure_ascii=False, sort_keys=True)
+        digest = (item.get("result_sha256") or item.get("post_sha256")
+                  or hashlib.sha256(blob.encode("utf-8")).hexdigest())
+        label = (item.get("tool") or item.get("name") or item.get("server_id")
+                 or item.get("host_id") or "result")
+        folded.append({
+            "elided": True,
+            "tool": str(label),
+            "status": item.get("status"),
+            "bytes": len(blob.encode("utf-8")),
+            "sha256": digest,
+            "note": "full output retained in the evidence ledger; re-request if needed",
+        })
+    return folded + list(results[-KEEP_RECENT_RESULTS:])
+
+
 def _conversation_context(cfg: Config, chat_id: str, run_id: str) -> str:
     """A compact, read-only transcript of this chat's earlier turns.
 
@@ -104,8 +142,9 @@ def _conversation_context(cfg: Config, chat_id: str, run_id: str) -> str:
     if not chat_id:
         return ""
     try:
-        turns = RunJournal(journal_path(cfg)).chat_history(
-            chat_id, exclude_run_id=run_id)
+        journal = RunJournal(journal_path(cfg))
+        turns = journal.chat_history(chat_id, exclude_run_id=run_id)
+        total = journal.chat_turn_count(chat_id)
     except Exception:  # noqa: BLE001 -- context is best-effort; never fail a round
         return ""
     lines = []
@@ -116,11 +155,26 @@ def _conversation_context(cfg: Config, chat_id: str, run_id: str) -> str:
         note = str(turn.get("outcome") or turn.get("state") or "").lower()
         tail = f"  [{note}]" if note and note not in ("", "none") else ""
         lines.append(f"- the person asked: {subject}{tail}")
+    if not lines:
+        return ""
+    # A long chat keeps only its recent turns verbatim; say how many older ones
+    # exist so the digest is honestly bounded, not silently amnesiac. (total
+    # counts this run too, so the earlier-than-window count discounts it.)
+    earlier = total - len(lines) - 1
+    if earlier > 0:
+        lines.insert(0, f"(+{earlier} earlier turn(s) in this chat, not shown)")
     return "\n".join(lines)
 
 
 def _current_work(cfg: Config) -> dict[str, str]:
-    """The work as it stands, read from the working tree inside the scope dirs."""
+    """The work as it stands, read from the working tree inside the scope dirs.
+
+    Small files are inlined verbatim (the common case); a large file's body is
+    replaced with a structural outline (shape_work) so a big or file-heavy
+    project does not re-dump its entire tree into every round's prompt. Every
+    path stays present and the generator can pull any elided file in full with
+    the audited file_read tool, so this shrinks context without losing recall.
+    """
     out: dict[str, str] = {}
     for d in (cfg.scope_dirs or []):
         base = cfg.root / d
@@ -137,7 +191,7 @@ def _current_work(cfg: Config) -> dict[str, str]:
                     rendered = document_export.current_document_text(p)
                     if rendered is not None:
                         out[p.relative_to(cfg.root).as_posix()] = rendered
-    return out
+    return shape_work(out)
 
 
 def _stage_generated(cfg: Config, written: list[str]) -> list[str]:
@@ -359,8 +413,10 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     skills=skills_mod.render(in_force),
                     deterministic_contract=deterministic_contract,
                     attachments=attachments, compute_hosts=compute_hosts,
-                    compute_results=compute_results, mcp_servers=mcp_servers,
-                    tool_results=tool_results, builtin_tools=builtin_tools,
+                    compute_results=_fold_results(compute_results),
+                    mcp_servers=mcp_servers,
+                    tool_results=_fold_results(tool_results),
+                    builtin_tools=builtin_tools,
                     owner_guidance=owner_guidance, conversation=conversation,
                     # A malformed reply gets one visible, recorded repair
                     # attempt (§24.1) before anything reaches a human.
