@@ -96,7 +96,13 @@ def _stub(path: str, text: str) -> str:
             f"it if it is relevant to the task.>")
 
 
-def shape_work(files: dict[str, str], task: str = "",
+#: Relevance bonus for a file the auditor's findings name: it is exactly what the
+#: generator must fix this round, so it is reduced last and never stubbed while
+#: any un-named file remains.
+_FINDINGS_PIN = 1_000_000
+
+
+def shape_work(files: dict[str, str], task: str = "", findings: str = "",
                total_budget: int = MAX_WORK_BYTES) -> dict[str, str]:
     """Inline small files verbatim; outline, then (last resort) stub what won't fit.
 
@@ -105,17 +111,21 @@ def shape_work(files: dict[str, str], task: str = "",
     never touches the auditor, the ledger, or the committed bytes:
       1. any file over ``MAX_FILE_BYTES`` is replaced by a bounded outline;
       2. if the set still exceeds ``total_budget``, full files are outlined
-         least-relevant-and-biggest first (relevance = lexical overlap with the
-         task), skipping any an outline would not shrink;
+         least-relevant-and-biggest first, skipping any an outline would not
+         shrink;
       3. if it STILL exceeds budget, the least-relevant files are reduced to a
          one-line stub, spending recall on what the task cares about least first.
-    The loop always terminates and never grows the set. It drives the total down
-    toward the budget but does not guarantee it: the reachable floor is the sum
-    of each file's stub, so a project with pathologically many files can settle
-    above budget (every path is still present and one file_read away). A pure,
-    side-effect-free function; with no task it degrades to size-ordering.
+    Relevance is a whole-word lexical overlap with the task, with a large bonus
+    for any file the auditor's ``findings`` name (the files the generator is being
+    told to fix are kept fullest). The loop always terminates and never grows the
+    set. It drives the total down toward the budget but does not guarantee it: the
+    reachable floor is the sum of each file's stub, so a project with
+    pathologically many files can settle above budget (every path is still present
+    and one file_read away). A pure, side-effect-free function; with no task it
+    degrades to size-ordering.
     """
     terms = _terms(task)
+    named = (findings or "").lower()
     shaped: dict[str, str] = {}
     full: dict[str, int] = {}                 # path -> byte size, for files kept full
     for path, text in files.items():
@@ -128,7 +138,8 @@ def shape_work(files: dict[str, str], task: str = "",
     total = sum(len(v.encode("utf-8")) for v in shaped.values())
     if total <= total_budget:
         return shaped
-    rel = {p: _relevance(p, files[p], terms) for p in files}
+    rel = {p: _relevance(p, files[p], terms)
+           + (_FINDINGS_PIN if p.lower() in named else 0) for p in files}
     # Pass 2: outline full files, least-relevant then biggest first; skip any
     # where outlining would not shrink it (so `total` only ever decreases).
     for path in sorted(full, key=lambda p: (rel[p], -full[p], p)):

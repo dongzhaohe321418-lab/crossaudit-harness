@@ -143,6 +143,21 @@ def test_relevance_matches_whole_words_not_substrings_and_drops_stopwords():
     assert _relevance("auth/login.py", real, terms) > 0
 
 
+def test_findings_named_files_are_kept_fullest():
+    # A file the auditor flagged must be reduced last / never stubbed while any
+    # un-named file remains — it is exactly what the generator is told to fix.
+    body = "\n".join("z" * 1000 for _ in range(40)) + "\n"        # ~40KB, kept full
+    files = {f"work/f{i:03d}.md": body for i in range(30)}
+    fixme = "work/f015.md"
+    findings = f"CA-DATA-001 in {fixme}: the table does not match the text."
+    shaped = shape_work(files, task="fix the data", findings=findings)
+    total = sum(len(v.encode("utf-8")) for v in shaped.values())
+    assert total <= MAX_WORK_BYTES
+    # the flagged file is never the one dropped to a stub
+    assert "not shown this round" not in shaped[fixme]
+    assert any("not shown this round" in shaped[p] for p in files if p != fixme)
+
+
 def test_pass_two_outlining_shrinks_never_grows():
     # ~40KB files with <=40 very long lines: head_outline returns the whole body,
     # so a naive elide would GROW them (header + full body). With the outline cap

@@ -192,14 +192,15 @@ def _conversation_context(cfg: Config, chat_id: str, run_id: str) -> str:
     return "\n".join(lines)
 
 
-def _current_work(cfg: Config, task: str = "") -> dict[str, str]:
+def _current_work(cfg: Config, task: str = "", findings: str = "") -> dict[str, str]:
     """The work as it stands, read from the working tree inside the scope dirs.
 
     Small files are inlined verbatim (the common case); a large file's body is
     replaced with a structural outline (shape_work) so a big or file-heavy
     project does not re-dump its entire tree into every round's prompt. When even
     the outlined set is over budget, shape_work spends recall on the files least
-    relevant to `task` first. Every path stays present and the generator can pull
+    relevant to `task` first, keeping any file the auditor's `findings` name (the
+    ones being fixed) fullest. Every path stays present and the generator can pull
     any elided file in full with the audited file_read tool, so this shrinks
     context without losing recall.
     """
@@ -219,7 +220,7 @@ def _current_work(cfg: Config, task: str = "") -> dict[str, str]:
                     rendered = document_export.current_document_text(p)
                     if rendered is not None:
                         out[p.relative_to(cfg.root).as_posix()] = rendered
-    return shape_work(out, task)
+    return shape_work(out, task, findings)
 
 
 def _stage_generated(cfg: Config, written: list[str]) -> list[str]:
@@ -430,7 +431,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                      joined[:2000], state=RunState.GENERATING)
         emit("generation_started", "generator", "writing",
              state=RunState.GENERATING)
-        current = _current_work(cfg, task)
+        current = _current_work(cfg, task, findings)
         in_force = skills_mod.select(house, list(current) or cfg.scope_dirs)
         try:
             while True:
@@ -487,7 +488,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                             cfg, outcome.request, broker_token,
                             run_id=run_id, now_epoch=time.time(), broker=broker_obj)
                         tool_results.append(result)
-                        current = _current_work(cfg, task)
+                        current = _current_work(cfg, task, findings)
                         emit("generation_resumed", "generator",
                              "resuming with tool result", state=RunState.GENERATING)
                         continue
@@ -508,7 +509,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                         emit("capability_refused", "tool", "refused",
                              exc.reason[:300], state=RunState.WAITING_FOR_CAPABILITY)
                     tool_results.append(result)
-                    current = _current_work(cfg, task)
+                    current = _current_work(cfg, task, findings)
                     emit("generation_resumed", "generator", "resuming with tool result",
                          state=RunState.GENERATING)
                     continue
@@ -535,7 +536,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     emit("capability_refused", "compute", "refused",
                          exc.reason[:300], state=RunState.WAITING_FOR_CAPABILITY)
                 compute_results.append(result)
-                current = _current_work(cfg, task)
+                current = _current_work(cfg, task, findings)
                 emit("generation_resumed", "generator",
                      "resuming with compute result", state=RunState.GENERATING)
         except ProviderDenial as exc:

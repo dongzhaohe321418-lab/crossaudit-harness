@@ -51,6 +51,14 @@ def test_oversized_dcl_output_forces_bounded():
     assert bounded is True
 
 
+def test_oversized_constitution_forces_bounded():
+    fat_const = "CA-RULE\n" + ("n" * (pm.MAX_CONSTITUTION_BYTES + 10_000))
+    _prompt, bounded, _sha = pm.build(fat_const, "abc123",
+                                      {"total_hard_failures": 0},
+                                      {"work/a.md": b"ok\n"})
+    assert bounded is True
+
+
 def test_oversized_evidence_projection_forces_bounded():
     fat_evidence = [{"tool": "web.fetch", "reason": "r" * 2000}
                     for _ in range(200)]
