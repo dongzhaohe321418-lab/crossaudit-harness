@@ -214,9 +214,10 @@ def _current_work(cfg: Config, task: str = "", findings: str = "",
     project does not re-dump its entire tree into every round's prompt. When even
     the outlined set is over budget, shape_work spends recall on the files least
     relevant to `task` first, keeping any file the auditor's `findings` name (the
-    ones being fixed) fullest. Every path stays present and the generator can pull
-    any elided file in full with the audited file_read tool, so this shrinks
-    context without losing recall.
+    ones being fixed) fullest. Every path stays represented. The observer is
+    told which reduced paths exist in the committed tree (and are therefore
+    available to file_read as committed versions) and which exist only in the
+    working tree.
     """
     out: dict[str, str] = {}
     for d in (cfg.scope_dirs or []):
@@ -234,7 +235,30 @@ def _current_work(cfg: Config, task: str = "", findings: str = "",
                     rendered = document_export.current_document_text(p)
                     if rendered is not None:
                         out[p.relative_to(cfg.root).as_posix()] = rendered
-    return shape_work(out, task, findings, on_condense=on_condense)
+    if on_condense is None:
+        return shape_work(out, task, findings)
+
+    # file_read deliberately reads HEAD, never the working tree. Classify the
+    # paths against that same boundary so the user-facing recovery notice cannot
+    # promise access to an uncommitted file. A failed/empty git query degrades
+    # safely to "working tree only" rather than overclaiming recoverability.
+    committed_raw = git(
+        "ls-tree", "-r", "--name-only", "-z", "HEAD", "--",
+        *(cfg.scope_dirs or []), cwd=cfg.root, check=False)
+    committed = {path for path in committed_raw.split("\0") if path}
+
+    def report_condensation(report: dict) -> None:
+        projected = dict(report)
+        if projected.get("reduction") == "work_files":
+            reduced = [*projected.get("outlined", []),
+                       *projected.get("stubbed", [])]
+            projected["file_readable"] = [path for path in reduced
+                                          if path in committed]
+            projected["working_tree_only"] = [path for path in reduced
+                                               if path not in committed]
+        on_condense(projected)
+
+    return shape_work(out, task, findings, on_condense=report_condensation)
 
 
 def _stage_generated(cfg: Config, written: list[str]) -> list[str]:
@@ -390,14 +414,31 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         if reduction == "work_files":
             outlined = list(report.get("outlined") or [])
             stubbed = list(report.get("stubbed") or [])
-            if outlined:
+            file_readable = set(report.get("file_readable") or [])
+            readable_outlines = [path for path in outlined
+                                 if path in file_readable]
+            working_outlines = [path for path in outlined
+                                if path not in file_readable]
+            readable_stubs = [path for path in stubbed
+                              if path in file_readable]
+            working_stubs = [path for path in stubbed
+                             if path not in file_readable]
+            if readable_outlines:
                 context_notice(
-                    "Project files outlined; full content remains one file_read away",
-                    labels(outlined))
-            if stubbed:
+                    "Tracked project files outlined; file_read can retrieve the committed version",
+                    labels(readable_outlines))
+            if working_outlines:
                 context_notice(
-                    "Project files briefly stubbed; full content remains one file_read away",
-                    labels(stubbed))
+                    "Working-tree-only project files outlined; content is not available to file_read",
+                    labels(working_outlines))
+            if readable_stubs:
+                context_notice(
+                    "Tracked project files briefly stubbed; file_read can retrieve the committed version",
+                    labels(readable_stubs))
+            if working_stubs:
+                context_notice(
+                    "Working-tree-only project files briefly stubbed; content is not available to file_read",
+                    labels(working_stubs))
         elif reduction == "tool_results":
             context_notice(
                 "Earlier tool results condensed to previews; rerun the tool for full output",
@@ -552,7 +593,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                             cfg, outcome.request, broker_token,
                             run_id=run_id, now_epoch=time.time(), broker=broker_obj)
                         tool_results.append(result)
-                        current = _current_work(cfg, task, findings)
+                        current = _current_work(
+                            cfg, task, findings, context_report)
                         emit("generation_resumed", "generator",
                              "resuming with tool result", state=RunState.GENERATING)
                         continue
@@ -573,7 +615,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                         emit("capability_refused", "tool", "refused",
                              exc.reason[:300], state=RunState.WAITING_FOR_CAPABILITY)
                     tool_results.append(result)
-                    current = _current_work(cfg, task, findings)
+                    current = _current_work(cfg, task, findings, context_report)
                     emit("generation_resumed", "generator", "resuming with tool result",
                          state=RunState.GENERATING)
                     continue
@@ -600,7 +642,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     emit("capability_refused", "compute", "refused",
                          exc.reason[:300], state=RunState.WAITING_FOR_CAPABILITY)
                 compute_results.append(result)
-                current = _current_work(cfg, task, findings)
+                current = _current_work(cfg, task, findings, context_report)
                 emit("generation_resumed", "generator",
                      "resuming with compute result", state=RunState.GENERATING)
         except ProviderDenial as exc:

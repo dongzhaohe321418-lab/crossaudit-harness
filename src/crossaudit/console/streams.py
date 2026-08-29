@@ -163,9 +163,10 @@ def generator_stream(cfg: Config, routing: list[dict],
                                "chat_id": canonical_id(r.get("chat_id")),
                                "response": executed[len(GENERATOR_CHAT_PREFIX):],
                                "addressed_to": "generator"})
-    # Context shaping is operational rather than audit evidence, but its event
-    # is durable in the run journal. Mirror it into the generator conversation
-    # so a completed run cannot make the reduction look like silent data loss.
+    # Context shaping is operational rather than audit evidence. Mirror notices
+    # from the latest run projection into its generator conversation. The event
+    # remains durable in SQLite, but older runs are not synthesized into this
+    # latest-run-only stream after a newer run starts.
     for event in context_events(progress):
         text_i18n = dict(event.get("text_i18n") or {})
         detail_i18n = dict(event.get("detail_i18n") or {})

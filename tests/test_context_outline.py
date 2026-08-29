@@ -3,8 +3,9 @@
 The generator used to receive every scope-dir file in full every round. Small
 files still are (the common case); a large file's body is replaced by a compact,
 deterministic structural outline plus a marker telling the generator to pull the
-full contents with the audited file_read tool — bounding context without losing
-recall, and without touching the auditor or the committed bytes.
+committed version of tracked files with the audited file_read tool — bounding
+context without touching the auditor or the committed bytes. Working-tree-only
+files are not falsely promised through that committed-tree tool.
 """
 from __future__ import annotations
 
@@ -41,7 +42,7 @@ def test_a_large_markdown_file_is_reduced_to_its_headings():
     assert "padding line\npadding line" not in shaped   # the bulk body is gone
 
 
-def test_condensation_observer_names_outlined_and_stubbed_files():
+def test_condensation_observer_reports_the_final_stub_representation():
     reports = []
     body = "\n".join(f"line {i}" for i in range(200))
     files = {"work/a.txt": body, "work/b.txt": body}
@@ -50,10 +51,23 @@ def test_condensation_observer_names_outlined_and_stubbed_files():
     assert len(reports) == 1
     report = reports[0]
     assert report["reduction"] == "work_files"
-    assert set(report["outlined"]) == {"work/a.txt", "work/b.txt"}
+    assert report["outlined"] == []
     assert set(report["stubbed"]) == {"work/a.txt", "work/b.txt"}
+    assert set(report["outlined"]).isdisjoint(report["stubbed"])
     assert report["before_bytes"] > report["after_bytes"]
-    assert report["recovery"] == "file_read"
+    assert report["recovery"] == "committed_file_read_only"
+
+
+def test_stubbed_paths_supersede_their_earlier_outline_classification():
+    reports = []
+    files = {f"work/file-{index:02d}.txt": "content line\n" * 200
+             for index in range(30)}
+
+    shape_work(files, total_budget=4_000, on_condense=reports.append)
+
+    report = reports[0]
+    assert len(report["stubbed"]) > 0
+    assert set(report["outlined"]).isdisjoint(report["stubbed"])
 
 
 def test_a_large_python_file_is_reduced_to_its_symbols():

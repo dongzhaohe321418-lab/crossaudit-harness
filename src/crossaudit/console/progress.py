@@ -8,6 +8,7 @@ mutation.
 """
 from __future__ import annotations
 
+import re
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -16,13 +17,17 @@ from ..runtime import ACTIVE_STATES, RunJournal, RunState
 
 
 # Fixed event copy is translated here because run events are also consumed by
-# non-page clients. Dynamic details are paths, tool labels, or byte counts and
-# therefore remain identical in both locales.
+# non-page clients. Dynamic paths/tool labels are locale-neutral; byte counts
+# translate their unit explicitly.
 CONTEXT_CONDENSATION_ZH = {
-    "Project files outlined; full content remains one file_read away":
-        "已用结构化大纲精简项目文件；完整内容仍可通过一次 file_read 读取",
-    "Project files briefly stubbed; full content remains one file_read away":
-        "已将部分项目文件暂时缩为简短占位；完整内容仍可通过一次 file_read 读取",
+    "Tracked project files outlined; file_read can retrieve the committed version":
+        "已用结构化大纲精简已跟踪的项目文件；file_read 可读取其已提交版本",
+    "Working-tree-only project files outlined; content is not available to file_read":
+        "已用结构化大纲精简仅存在于工作区的项目文件；file_read 无法读取其内容",
+    "Tracked project files briefly stubbed; file_read can retrieve the committed version":
+        "已将已跟踪的项目文件暂时缩为简短占位；file_read 可读取其已提交版本",
+    "Working-tree-only project files briefly stubbed; content is not available to file_read":
+        "已将仅存在于工作区的项目文件暂时缩为简短占位；file_read 无法读取其内容",
     "Earlier tool results condensed to previews; rerun the tool for full output":
         "已将较早的工具结果精简为预览；如需完整输出可重新运行该工具",
     "Earlier compute results condensed to previews; rerun compute for full output":
@@ -30,6 +35,13 @@ CONTEXT_CONDENSATION_ZH = {
     "Earlier owner guidance condensed; full messages remain in the run record":
         "已精简较早的用户补充说明；完整消息仍保存在运行记录中",
 }
+
+
+def _detail_i18n(detail: str) -> dict[str, str]:
+    """Translate generated units while leaving paths/tool labels untouched."""
+    match = re.fullmatch(r"(\d+) bytes", detail)
+    return {"en": detail,
+            "zh": f"{match.group(1)} 字节" if match else detail}
 
 
 def _project_context_step(step: dict) -> dict:
@@ -43,7 +55,7 @@ def _project_context_step(step: dict) -> dict:
         "en": text,
         "zh": CONTEXT_CONDENSATION_ZH.get(text, text),
     }
-    projected["detail_i18n"] = {"en": detail, "zh": detail}
+    projected["detail_i18n"] = _detail_i18n(detail)
     return projected
 
 
