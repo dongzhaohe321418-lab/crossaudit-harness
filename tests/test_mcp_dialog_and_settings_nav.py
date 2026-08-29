@@ -249,3 +249,128 @@ def test_generated_approval_counter_is_translated_by_pattern():
     # rather than a dictionary key.
     assert r"/^(\d+) of (\d+) approved$/i" in PAGE
     assert "已批准 " in PAGE
+
+
+# ------------------------------- reopening a saved stdio server (regression)
+# Configure -> Save on an unchanged saved stdio server used to fail with HTTP
+# 400 "approve the exact local MCP command before it runs": openMcp() calls
+# mcpForm.reset(), which clears approve_local_code, and an existing server opens
+# on step 2 where that checkbox is not rendered, so submit sent false. Editing a
+# timeout was therefore impossible. The client now carries the approval the
+# person already gave for that exact command, and re-asks the moment it changes.
+def test_a_saved_stdio_server_carries_its_standing_command_approval():
+    assert "let mcpApprovedCommand=null;" in PAGE
+    assert "function mcpCommandUnchanged(){" in PAGE
+    # openMcp adopts the stored row's command as the standing approval...
+    assert "mcpApprovedCommand=(server&&(server.transport||'stdio')==='stdio')" in PAGE
+    # ...and the submit sends it only for an identical stdio command.
+    assert ("payload.approve_local_code=fd.has('approve_local_code')\n"
+            "    ||(payload.transport==='stdio'&&mcpCommandUnchanged());") in PAGE
+
+
+def test_the_standing_approval_is_shown_not_implied():
+    # The asymmetry has to be visible in the form, not discovered as a denial.
+    assert 'id="mcp-approve-box"' in PAGE
+    assert 'id="mcp-approved-note"' in PAGE
+    assert "This exact command is already approved" in PAGE
+    assert ("You approved this executable and these arguments when you connected "
+            "the server. Editing either one asks you to approve the new command.") in PAGE
+    assert "function syncMcpApprovalState(){" in PAGE
+    # Editing either field re-evaluates, so the checkbox returns as you type.
+    assert ("for(const id of ['mcp-command','mcp-args'])\n"
+            "  document.getElementById(id).addEventListener('input',syncMcpApprovalState);") in PAGE
+    # Consent is never left pre-ticked underneath the "already approved" state.
+    assert "if(approved)box.querySelector('[name=\"approve_local_code\"]').checked=false;" in PAGE
+
+
+def test_closing_the_dialog_drops_the_standing_approval():
+    # The approval belongs to one dialog session on one server row; it must not
+    # survive into the next thing the person opens.
+    assert "mcpApprovedCommand=null;\n  setMcpStep('connect');syncMcpApprovalState();" in PAGE
+
+
+def _extract_fn(signature: str) -> str:
+    """Extract one JS function by brace counting.
+
+    ``_extract`` above matches up to a line-leading ``}``; these helpers close
+    with ``;}`` on their last line, so they need real brace matching.
+    """
+    start = PAGE.index(signature)
+    depth, i = 0, PAGE.index("{", start)
+    while i < len(PAGE):
+        if PAGE[i] == "{":
+            depth += 1
+        elif PAGE[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return PAGE[start:i + 1]
+        i += 1
+    raise AssertionError(signature)
+
+
+def test_command_approval_carries_only_for_an_identical_command():
+    """Both directions, executed: unchanged carries, changed re-requires."""
+    node = shutil.which("node")
+    if not node:  # Python-only machines still run the rest of the suite.
+        return
+    harness = _extract_fn("function mcpArgsValue()") + "\n" + \
+        _extract_fn("function mcpCommandUnchanged()") + """
+const A = (cond, msg) => { if (!cond) { throw new Error(msg); } };
+let FIELDS = {command: '', args: ''};
+globalThis.document = {getElementById: id => ({
+  get value() { return id === 'mcp-command' ? FIELDS.command : FIELDS.args; },
+})};
+// The exact expression the submit handler uses.
+const approveSent = (transport, ticked) =>
+  ticked || (transport === 'stdio' && mcpCommandUnchanged());
+
+globalThis.mcpApprovedCommand = {command: '/usr/local/bin/mcp', args: ['-y', 'server']};
+
+// 1. unchanged command + args -> the standing approval carries (the bug).
+FIELDS = {command: '/usr/local/bin/mcp', args: '-y\\nserver'};
+A(mcpCommandUnchanged(), 'identical command must count as approved');
+A(approveSent('stdio', false) === true, 'unchanged stdio save must not need a re-tick');
+
+// 2. changed command -> re-required.
+FIELDS = {command: '/usr/local/bin/other', args: '-y\\nserver'};
+A(!mcpCommandUnchanged(), 'a changed command must not carry the approval');
+A(approveSent('stdio', false) === false, 'changed command must send approve=false');
+A(approveSent('stdio', true) === true, 'ticking the box approves the new command');
+
+// 3. changed arguments -> equally re-required.
+FIELDS = {command: '/usr/local/bin/mcp', args: '-y\\nOTHER'};
+A(!mcpCommandUnchanged(), 'changed arguments must not carry the approval');
+FIELDS = {command: '/usr/local/bin/mcp', args: '-y'};
+A(!mcpCommandUnchanged(), 'dropping an argument must not carry the approval');
+FIELDS = {command: '/usr/local/bin/mcp', args: '-y\\nserver\\nextra'};
+A(!mcpCommandUnchanged(), 'adding an argument must not carry the approval');
+
+// 4. whitespace-only edits are the same command, not a new one.
+FIELDS = {command: '  /usr/local/bin/mcp  ', args: '-y\\n\\nserver\\n'};
+A(mcpCommandUnchanged(), 'trimming/blank lines must not count as a change');
+
+// 5. a brand-new server has no standing approval at all.
+globalThis.mcpApprovedCommand = null;
+FIELDS = {command: '/usr/local/bin/mcp', args: '-y\\nserver'};
+A(!mcpCommandUnchanged(), 'a new server must never carry an approval');
+A(approveSent('stdio', false) === false, 'a new server must send approve=false unticked');
+
+// 6. a remote server never sends a local-command approval.
+globalThis.mcpApprovedCommand = {command: '/usr/local/bin/mcp', args: []};
+FIELDS = {command: '/usr/local/bin/mcp', args: ''};
+A(approveSent('http', false) === false, 'http transport must never send approve=true');
+console.log('ok');
+"""
+    result = subprocess.run([node, "-e", harness], text=True, capture_output=True)
+    assert result.returncode == 0, result.stderr
+    assert "ok" in result.stdout
+
+
+def test_the_new_approval_strings_have_chinese_parity():
+    for pair in (
+        '"This exact command is already approved":"此命令已获批准"',
+        '"You approved this executable and these arguments when you connected the '
+        'server. Editing either one asks you to approve the new command.":'
+        '"你在连接此服务器时已批准该可执行文件与这些参数。修改其中任何一项都会要求你重新批准新的命令。"',
+    ):
+        assert pair in PAGE, pair

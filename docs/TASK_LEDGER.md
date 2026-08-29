@@ -5,7 +5,8 @@ Agents update their own row's state; the reviewer appends the review verdict.
 
 | # | Task | Owner | Reviewer | Branch | State |
 |---|---|---|---|---|---|
-| A1 | MCP add-dialog redesign + settings navigation | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | implemented, suite green — **awaiting independent review** |
+| A1 | MCP add-dialog redesign + settings navigation | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | reviewed; S6/S7 verified by the orchestrator |
+| A1-fix | Reopening a saved stdio server was refused (codex S1) | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | fixed, suite green — **awaiting independent review** |
 | B1 | Transparent context-condensation run events | Agent B (Codex) | Agent A (Claude Code) | `agentB/context-condensation-events` | in progress |
 
 ---
@@ -252,3 +253,71 @@ with a stdlib stdio MCP server fixture advertising three tools
   Flagged rather than silently re-run — the reviewer should know it can trip.
 - `node --check` over the extracted page script parses clean; no JS console
   errors observed during the live walkthrough.
+
+---
+
+## A1-fix — change contract
+
+```
+TASK:        Fix codex's S1: Configure -> Save on a saved stdio MCP server was
+             refused with HTTP 400 "approve the exact local MCP command before
+             it runs", so no field of an existing local server could be edited.
+
+SURFACE:     src/crossaudit/console/page.py (MCP dialog markup/CSS/JS + i18n)
+             tests/test_mcp_dialog_and_settings_nav.py (5 new tests)
+             Audit core touched? NO. src/crossaudit/mcp.py is UNCHANGED — the
+             server-side rule that a local command must be approved before it
+             runs keeps refusing exactly as before.
+
+INVARIANTS:  §1.1 non-bypassable core — the fix is entirely client-side and
+             makes the client agree with the server's deny-by-default rule
+             rather than relaxing it; the refusal path is proven still live.
+             §1.5 never overclaim — consent is not fabricated. What is sent is
+             either the box the person just ticked, or the approval they already
+             gave for that identical command and arguments (read from the stored
+             server row). Change the executable or any argument and it reverts
+             to false, the checkbox returns unticked, and the server refuses.
+
+ACCEPTANCE:  1. Configure + Save with no change succeeds.
+             2. A timeout-only edit succeeds with no fresh command approval.
+             3. Editing the command restores the unticked consent box and the
+                server still refuses without it.
+             4. Both directions covered by tests.
+             5. ZH parity for both new strings.
+             6. Full suite green.
+
+UX EVIDENCE: Driven against a live console with headless Chromium (the vendored
+             playwright in website/node_modules), stdio MCP fixture advertising
+             search_papers + fetch_record (read-only) and purge_cache
+             (destructive). Before the fix, reproduced the exact defect:
+             step=tools, approve_local_code unchecked, Save -> 400, modal stays
+             open, "approve the exact local MCP command before it runs".
+             After: all six assertions pass, JS console clean.
+
+REVIEWER:    codex — independent of the author (AGENTS.md §0).
+```
+
+### What was driven vs. tested
+
+**Driven in a real browser (headless Chromium, live console), both directions:**
+- add server -> consent box shown, approved-note hidden;
+- Configure + Save unchanged -> modal closes, no error (the reported bug);
+- saved server on step 1 -> "already approved" shown, checkbox hidden;
+- timeout 30 -> 45 -> accepted, tool ticks preserved, `allowed_tools` and
+  `enabled` intact afterwards;
+- edit the command -> consent box returns unticked;
+- Save with the changed command unticked -> still refused by the server.
+
+**Covered by test only:** the node-level truth table for `mcpCommandUnchanged`
+(whitespace-insensitivity, argument add/drop/change, new server, http
+transport). The server-side refusal itself was already covered by
+`tests/test_mcp.py::test_stdio_requires_exact_command_consent_and_never_uses_a_shell`,
+which is untouched.
+
+**Note on a related behaviour, unchanged and deliberate:** the timeout, calls
+per task, command and arguments all live on step 1, so editing one routes
+through Connect, which re-probes the server and asks for a Save on step 2 before
+the change is stored. Between Connect and Save the stored row is disabled with
+no approved tools. That is the fail-closed re-connect path documented in the
+first commit, not a regression — but it means a timeout edit is two clicks, not
+one, and a reviewer may reasonably want that revisited separately.

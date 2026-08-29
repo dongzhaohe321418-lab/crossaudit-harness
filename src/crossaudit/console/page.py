@@ -1695,6 +1695,11 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
   color:var(--blocked);background:var(--blocked-bg)}
 .mcp-risk.readonly{border-color:color-mix(in srgb,var(--pass) 40%,var(--line));color:var(--pass)}
 .mcp-empty{margin:0;padding:15px 13px;font-size:var(--fs-label);color:var(--text-2)}
+.mcp-approved{padding:11px 13px;border-radius:var(--r-md);
+  border:1px solid color-mix(in srgb,var(--pass) 32%,var(--line));background:var(--pass-bg)}
+.mcp-approved b{display:block;font-size:var(--fs-label);font-weight:600;color:var(--pass)}
+.mcp-approved small{display:block;margin-top:3px;font-size:var(--fs-caption);
+  color:var(--text-2);line-height:1.5}
 .mcp-link{border:0;background:none;padding:0;font:inherit;font-size:var(--fs-caption);
   color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .mcp-link:disabled{color:var(--text-3);cursor:default;text-decoration:none}
@@ -2795,7 +2800,8 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
         <div class="field full mcp-transport-fields" id="mcp-stdio-fields"><div class="form-grid">
           <label class="field"><span>Executable</span><input name="command" id="mcp-command" maxlength="1000" placeholder="npx" autocomplete="off"></label>
           <label class="field"><span>Arguments</span><textarea name="args_text" id="mcp-args" maxlength="32000" placeholder="-y&#10;@example/mcp-server"></textarea><small class="field-help">One argument per line. CrossAudit never invokes a shell.</small></label>
-          <label class="hpc-confirm field full"><input name="approve_local_code" type="checkbox"><span><b>I approve this exact local command</b>A local MCP server runs with this app's user permissions and may access files or the network. Verify its publisher and arguments.</span></label>
+          <label class="hpc-confirm field full" id="mcp-approve-box"><input name="approve_local_code" type="checkbox"><span><b>I approve this exact local command</b>A local MCP server runs with this app's user permissions and may access files or the network. Verify its publisher and arguments.</span></label>
+          <div class="field full mcp-approved" id="mcp-approved-note" hidden><b>This exact command is already approved</b><small>You approved this executable and these arguments when you connected the server. Editing either one asks you to approve the new command.</small></div>
         </div></div>
         <div class="field full mcp-transport-fields off" id="mcp-http-fields"><div class="form-grid">
           <label class="field full"><span>MCP endpoint</span><input name="url" id="mcp-url" maxlength="2000" placeholder="Secure MCP endpoint URL"></label>
@@ -3264,6 +3270,8 @@ const ZH={
   "Call limits":"调用限制","Seconds to wait for one response.":"等待单次响应的秒数。",
   "How many times a single task may call this server.":"单个任务可以调用此服务器的次数。",
   "Connecting only reads the server's tool list. Nothing can be called until you approve it in the next step.":"连接只会读取服务器的工具列表。在你于下一步批准之前，任何工具都不会被调用。",
+  "This exact command is already approved":"此命令已获批准",
+  "You approved this executable and these arguments when you connected the server. Editing either one asks you to approve the new command.":"你在连接此服务器时已批准该可执行文件与这些参数。修改其中任何一项都会要求你重新批准新的命令。",
   "Save":"保存","Saving…":"正在保存…","Select all":"全选","Clear all":"全部清除",
   "Read-only":"只读","May change data":"可能修改数据","No description provided.":"未提供说明。",
   "This server advertised no tools, so there is nothing to approve.":"此服务器未公布任何工具，因此没有可批准的内容。",
@@ -6200,12 +6208,35 @@ computeJobForm.onsubmit=async ev=>{ev.preventDefault();const button=document.get
 function syncMcpTransport(){const stdio=document.getElementById('mcp-transport').value==='stdio';
   document.getElementById('mcp-stdio-fields').classList.toggle('off',!stdio);
   document.getElementById('mcp-http-fields').classList.toggle('off',stdio);
-  document.getElementById('mcp-command').required=stdio;document.getElementById('mcp-url').required=!stdio;}
+  document.getElementById('mcp-command').required=stdio;document.getElementById('mcp-url').required=!stdio;
+  if(stdio)syncMcpApprovalState();}
 // The dialog walks the same lifecycle /api/mcp already enforces: connect and
 // read the tool list first, approve named tools second, and only then may the
 // Generator be let near them. Step 1 never approves or enables anything, so a
 // half-finished dialog always leaves the server switched off.
 let mcpStep='connect';let mcpTools=[];let mcpApproved=new Set();let mcpReconnected=false;
+// The exact local command the person has ALREADY approved for this server
+// ({command, args}), or null when nothing is approved yet. A saved server
+// carries the approval its owner gave when they connected it; that approval
+// stays valid for that command and those arguments and for nothing else, so
+// editing a timeout does not demand a fresh ritual while editing the command
+// does. It is never invented: it comes from a stored server row or from the
+// checkbox the person just ticked.
+let mcpApprovedCommand=null;
+function mcpArgsValue(){return document.getElementById('mcp-args').value
+  .split('\n').map(value=>value.trim()).filter(Boolean);}
+function mcpCommandUnchanged(){if(!mcpApprovedCommand)return false;
+  const args=mcpArgsValue(),prior=mcpApprovedCommand.args||[];
+  return document.getElementById('mcp-command').value.trim()===mcpApprovedCommand.command
+    &&args.length===prior.length&&args.every((value,index)=>value===prior[index]);}
+// Show the standing approval, or ask for a new one — so the rule the server
+// enforces is visible in the form instead of arriving later as a denial.
+function syncMcpApprovalState(){const approved=mcpCommandUnchanged();
+  const box=document.getElementById('mcp-approve-box');
+  const note=document.getElementById('mcp-approved-note');
+  if(!box||!note)return;
+  box.hidden=approved;note.hidden=!approved;
+  if(approved)box.querySelector('[name="approve_local_code"]').checked=false;}
 function mcpText(id,text){const node=document.getElementById(id);if(node)node.textContent=text;}
 function setMcpStep(step){mcpStep=step==='tools'?'tools':'connect';
   document.querySelectorAll('[data-mcp-step]').forEach(pane=>pane.hidden=pane.dataset.mcpStep!==mcpStep);
@@ -6253,19 +6284,25 @@ function openMcp(serverId=''){mcpForm.reset();document.getElementById('mcp-error
   document.getElementById('mcp-title').textContent=server?'Configure MCP server':'Add MCP server';
   document.getElementById('mcp-server-id').value=server?server.id:'';
   mcpTools=server?(server.tools||[]):[];mcpApproved=new Set(server?(server.allowed_tools||[]):[]);mcpReconnected=false;
+  // A stored stdio row is proof its owner approved that exact command already.
+  mcpApprovedCommand=(server&&(server.transport||'stdio')==='stdio')
+    ?{command:server.command||'',args:(server.args||[]).slice()}:null;
   if(server){document.getElementById('mcp-name').value=server.name||'';document.getElementById('mcp-transport').value=server.transport||'stdio';
     document.getElementById('mcp-command').value=server.command||'';document.getElementById('mcp-args').value=(server.args||[]).join('\n');
     document.getElementById('mcp-url').value=server.url||'';mcpForm.elements.timeout.value=server.timeout||30;
     mcpForm.elements.max_calls_per_task.value=server.max_calls_per_task||5;
     mcpForm.elements.enabled.checked=Boolean(server.enabled);mcpForm.elements.allow_private_network.checked=Boolean(server.allow_private_network);}
-  syncMcpTransport();renderMcpConnected(server);renderMcpTools();
+  syncMcpTransport();syncMcpApprovalState();renderMcpConnected(server);renderMcpTools();
   // An already-connected server opens on its tool list; a new one starts at step 1.
   setMcpStep(server?'tools':'connect');
   mcpModal.className='project-modal on';
   setTimeout(()=>document.getElementById(server?'mcp-select-all':'mcp-name').focus(),0);}
 function closeMcp(){mcpModal.className='project-modal';mcpForm.reset();
-  mcpTools=[];mcpApproved=new Set();mcpReconnected=false;setMcpStep('connect');}
+  mcpTools=[];mcpApproved=new Set();mcpReconnected=false;mcpApprovedCommand=null;
+  setMcpStep('connect');syncMcpApprovalState();}
 document.getElementById('mcp-transport').onchange=syncMcpTransport;
+for(const id of ['mcp-command','mcp-args'])
+  document.getElementById(id).addEventListener('input',syncMcpApprovalState);
 document.getElementById('close-mcp').onclick=closeMcp;document.getElementById('cancel-mcp').onclick=closeMcp;
 document.getElementById('mcp-back').onclick=()=>setMcpStep('connect');
 document.getElementById('mcp-tool-approve').addEventListener('change',ev=>{
@@ -6278,9 +6315,16 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
   mcpText('save-mcp',connecting?'Connecting…':'Saving…');
   document.getElementById('mcp-error').className='wizard-error';const fd=new FormData(mcpForm);
   const payload=Object.fromEntries(fd.entries());payload.action='register';
-  payload.args=document.getElementById('mcp-args').value.split('\n').map(value=>value.trim()).filter(Boolean);
+  payload.args=mcpArgsValue();
   payload.timeout=Number(payload.timeout);payload.max_calls_per_task=Number(payload.max_calls_per_task);
-  for(const name of ['approve_local_code','allow_private_network'])payload[name]=fd.has(name);
+  payload.allow_private_network=fd.has('allow_private_network');
+  // Deny-by-default is the server's rule and stays the server's rule. What is
+  // sent is either the box the person just ticked, or the approval they already
+  // gave for this identical command and arguments — never an approval invented
+  // because a row happens to exist. Change the command and this goes false, the
+  // checkbox comes back, and the server refuses until it is ticked.
+  payload.approve_local_code=fd.has('approve_local_code')
+    ||(payload.transport==='stdio'&&mcpCommandUnchanged());
   // Step 1 is a pure connect: approve nothing, enable nothing. Step 2 sends the
   // exact set of ticked tools — never a blanket "all", so what is stored is
   // always the list the person actually saw.
@@ -6290,6 +6334,14 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
   try{const server=await api('/api/mcp',payload);
     if(lastState){lastState.mcp=await api('/api/state').then(state=>state.mcp);render(lastState);}
     if(connecting){document.getElementById('mcp-server-id').value=server.id||'';
+      // Adopt what was actually stored (the resolved executable), and show it, so
+      // the field, the standing approval and the server row all agree.
+      if((server.transport||'stdio')==='stdio'){
+        document.getElementById('mcp-command').value=server.command||'';
+        document.getElementById('mcp-args').value=(server.args||[]).join('\n');
+        mcpApprovedCommand={command:server.command||'',args:(server.args||[]).slice()};
+      }else mcpApprovedCommand=null;
+      syncMcpApprovalState();
       mcpTools=server.tools||[];const advertised=new Set(mcpTools.map(tool=>tool.name));
       // Keep prior approvals only where the server still advertises them.
       const kept=[...mcpApproved].filter(name=>advertised.has(name));
