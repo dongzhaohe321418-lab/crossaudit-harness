@@ -4,16 +4,18 @@ When a file is too large to inline in the generator prompt, we send a compact
 STRUCTURAL outline instead of its whole body: Python via ``ast`` (exact defs,
 classes, imports), Markdown/reST and LaTeX via a heading regex, structured data
 (JSON/YAML/TOML/INI) via top-level keys, and a leading-lines fallback for
-everything else. The generator is told it can pull the full file with the
-audited ``file_read`` tool, so nothing is lost — only deferred. Pure functions:
-identical input always yields the identical outline (so a run stays replayable),
-and none of this touches the auditor, the ledger, or the committed bytes.
+everything else. For tracked paths, audited ``file_read`` can retrieve the
+committed version; working-tree-only files are named honestly by the runtime
+because that tool cannot read them. Pure functions: identical input always yields the
+identical outline (so a run stays replayable), and none of this touches the
+auditor, the ledger, or the committed bytes.
 """
 from __future__ import annotations
 
 import ast
 import re
 from collections import Counter
+from collections.abc import Callable
 
 #: Generic task verbs and function words carry no relevance signal — kept out of
 #: the term set so a file merely full of common words cannot outrank a real
@@ -62,8 +64,9 @@ def _elide(path: str, text: str) -> str:
     body = outline(path, text)
     if len(body.encode("utf-8")) > MAX_OUTLINE_BYTES:
         body = _fit_bytes(body, MAX_OUTLINE_BYTES) + "\n... (outline truncated)"
-    return (f"<large file elided: {size} bytes. Structural outline only — use the "
-            f"file_read tool to load the full contents before editing this file.>\n"
+    return (f"<large file elided: {size} bytes. Structural outline only — "
+            f"file_read can retrieve a committed version; working-tree-only content "
+            f"is not available to that tool.>\n"
             f"--- outline ---\n{body}")
 
 
@@ -92,8 +95,8 @@ def _relevance(path: str, text: str, terms: list[str]) -> int:
 
 def _stub(path: str, text: str) -> str:
     return (f"<file not shown this round to keep context within budget: "
-            f"{len(text.encode('utf-8'))} bytes. Use the file_read tool to load "
-            f"it if it is relevant to the task.>")
+            f"{len(text.encode('utf-8'))} bytes. file_read can retrieve a committed "
+            f"version; working-tree-only content is not available to that tool.>")
 
 
 #: Relevance bonus for a file the auditor's findings name: it is exactly what the
@@ -103,12 +106,15 @@ _FINDINGS_PIN = 1_000_000
 
 
 def shape_work(files: dict[str, str], task: str = "", findings: str = "",
-               total_budget: int = MAX_WORK_BYTES) -> dict[str, str]:
+               total_budget: int = MAX_WORK_BYTES,
+               on_condense: Callable[[dict], None] | None = None,
+               ) -> dict[str, str]:
     """Inline small files verbatim; outline, then (last resort) stub what won't fit.
 
-    Deterministic passes, each keeping every path present and the full file one
-    audited file_read away — so this shrinks context without losing recall, and
-    never touches the auditor, the ledger, or the committed bytes:
+    Deterministic passes keep every path present; file_read can retrieve the
+    committed version of tracked paths while the runtime separately reports
+    working-tree-only reductions. This function never touches the auditor, the
+    ledger, or the committed bytes:
       1. any file over ``MAX_FILE_BYTES`` is replaced by a bounded outline;
       2. if the set still exceeds ``total_budget``, full files are outlined
          least-relevant-and-biggest first, skipping any an outline would not
@@ -121,13 +127,35 @@ def shape_work(files: dict[str, str], task: str = "", findings: str = "",
     set. It drives the total down toward the budget but does not guarantee it: the
     reachable floor is the sum of each file's stub, so a project with
     pathologically many files can settle above budget (every path is still present
-    and one file_read away). A pure, side-effect-free function; with no task it
-    degrades to size-ordering.
+    and represented by a stub). The returned mapping is pure and deterministic;
+    an optional observer receives deterministic metadata only when a reduction
+    occurred, so the runtime can narrate shaping without inspecting markers.
+    With no task the selection degrades to size-ordering.
     """
     terms = _terms(task)
     named = (findings or "").lower()
+    original_total = sum(len(text.encode("utf-8")) for text in files.values())
     shaped: dict[str, str] = {}
     full: dict[str, int] = {}                 # path -> byte size, for files kept full
+    outlined: list[str] = []
+    stubbed: list[str] = []
+
+    def notify(total: int) -> None:
+        if on_condense is not None and (outlined or stubbed):
+            stubbed_set = set(stubbed)
+            on_condense({
+                "reduction": "work_files",
+                # Pass 3 supersedes an earlier outline. Report only the final
+                # representation so narration never calls a one-line stub an
+                # outline as well.
+                "outlined": [path for path in outlined
+                             if path not in stubbed_set],
+                "stubbed": list(stubbed),
+                "before_bytes": original_total,
+                "after_bytes": total,
+                "recovery": "committed_file_read_only",
+            })
+
     for path, text in files.items():
         size = len(text.encode("utf-8"))
         if size <= MAX_FILE_BYTES:
@@ -135,8 +163,10 @@ def shape_work(files: dict[str, str], task: str = "", findings: str = "",
             full[path] = size
         else:
             shaped[path] = _elide(path, text)
+            outlined.append(path)
     total = sum(len(v.encode("utf-8")) for v in shaped.values())
     if total <= total_budget:
+        notify(total)
         return shaped
     rel = {p: _relevance(p, files[p], terms)
            + (_FINDINGS_PIN if p.lower() in named else 0) for p in files}
@@ -150,6 +180,7 @@ def shape_work(files: dict[str, str], task: str = "", findings: str = "",
         if gain <= 0:
             continue
         shaped[path] = elided
+        outlined.append(path)
         total -= gain
     # Pass 3 (hard ceiling): stub the least-relevant files until it fits. A goal-
     # relevant file is only stubbed once every less-relevant one already is.
@@ -161,7 +192,9 @@ def shape_work(files: dict[str, str], task: str = "", findings: str = "",
         if gain <= 0:
             continue
         shaped[path] = stub
+        stubbed.append(path)
         total -= gain
+    notify(total)
     return shaped
 
 

@@ -106,7 +106,7 @@ KEEP_RECENT_RESULTS = 6
 _VOLATILE_RESULT_FIELDS = ("call_id", "id", "ordinal")
 
 
-def _fold_results(results: list[dict]) -> list[dict]:
+def _fold_results(results: list[dict], on_condense=None) -> list[dict]:
     """Keep the most-recent results verbatim; condense older ones deterministically.
 
     Each older entry becomes a compact marker: the tool name, its byte length, a
@@ -137,7 +137,14 @@ def _fold_results(results: list[dict]) -> list[dict]:
             "note": "earlier result condensed to save context; re-run the tool if "
                     "you need it in full",
         })
-    return folded + list(results[-KEEP_RECENT_RESULTS:])
+    shaped = folded + list(results[-KEEP_RECENT_RESULTS:])
+    if on_condense is not None:
+        on_condense({
+            "reduction": "results",
+            "count": len(folded),
+            "labels": [str(item.get("tool") or "result") for item in folded],
+        })
+    return shaped
 
 
 #: Owner steering accumulates across every round of a run; keep the most-recent
@@ -146,12 +153,18 @@ def _fold_results(results: list[dict]) -> list[dict]:
 MAX_GUIDANCE_BYTES = 16_000
 
 
-def _bound_guidance(text: str) -> str:
+def _bound_guidance(text: str, on_condense=None) -> str:
     """Keep the recent tail of accumulated owner guidance; note older elisions."""
     raw = text or ""
-    if len(raw.encode("utf-8")) <= MAX_GUIDANCE_BYTES:
+    raw_bytes = len(raw.encode("utf-8"))
+    if raw_bytes <= MAX_GUIDANCE_BYTES:
         return raw
     tail = raw.encode("utf-8")[-MAX_GUIDANCE_BYTES:].decode("utf-8", errors="ignore")
+    if on_condense is not None:
+        on_condense({
+            "reduction": "owner_guidance",
+            "condensed_bytes": raw_bytes - len(tail.encode("utf-8")),
+        })
     return ("<earlier owner guidance folded to keep context bounded; the most "
             "recent guidance follows>\n" + tail)
 
@@ -192,7 +205,8 @@ def _conversation_context(cfg: Config, chat_id: str, run_id: str) -> str:
     return "\n".join(lines)
 
 
-def _current_work(cfg: Config, task: str = "", findings: str = "") -> dict[str, str]:
+def _current_work(cfg: Config, task: str = "", findings: str = "",
+                  on_condense=None) -> dict[str, str]:
     """The work as it stands, read from the working tree inside the scope dirs.
 
     Small files are inlined verbatim (the common case); a large file's body is
@@ -200,9 +214,10 @@ def _current_work(cfg: Config, task: str = "", findings: str = "") -> dict[str, 
     project does not re-dump its entire tree into every round's prompt. When even
     the outlined set is over budget, shape_work spends recall on the files least
     relevant to `task` first, keeping any file the auditor's `findings` name (the
-    ones being fixed) fullest. Every path stays present and the generator can pull
-    any elided file in full with the audited file_read tool, so this shrinks
-    context without losing recall.
+    ones being fixed) fullest. Every path stays represented. The observer is
+    told which reduced paths exist in the committed tree (and are therefore
+    available to file_read as committed versions) and which exist only in the
+    working tree.
     """
     out: dict[str, str] = {}
     for d in (cfg.scope_dirs or []):
@@ -220,7 +235,30 @@ def _current_work(cfg: Config, task: str = "", findings: str = "") -> dict[str, 
                     rendered = document_export.current_document_text(p)
                     if rendered is not None:
                         out[p.relative_to(cfg.root).as_posix()] = rendered
-    return shape_work(out, task, findings)
+    if on_condense is None:
+        return shape_work(out, task, findings)
+
+    # file_read deliberately reads HEAD, never the working tree. Classify the
+    # paths against that same boundary so the user-facing recovery notice cannot
+    # promise access to an uncommitted file. A failed/empty git query degrades
+    # safely to "working tree only" rather than overclaiming recoverability.
+    committed_raw = git(
+        "ls-tree", "-r", "--name-only", "-z", "HEAD", "--",
+        *(cfg.scope_dirs or []), cwd=cfg.root, check=False)
+    committed = {path for path in committed_raw.split("\0") if path}
+
+    def report_condensation(report: dict) -> None:
+        projected = dict(report)
+        if projected.get("reduction") == "work_files":
+            reduced = [*projected.get("outlined", []),
+                       *projected.get("stubbed", [])]
+            projected["file_readable"] = [path for path in reduced
+                                          if path in committed]
+            projected["working_tree_only"] = [path for path in reduced
+                                               if path not in committed]
+        on_condense(projected)
+
+    return shape_work(out, task, findings, on_condense=report_condensation)
 
 
 def _stage_generated(cfg: Config, written: list[str]) -> list[str]:
@@ -341,6 +379,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     # round boundaries (consume-once). Absent for foreground CLI builds.
     drain_guidance = getattr(on_event, "drain_guidance", None)
     owner_guidance = ""
+    reported_condensations: set[tuple[str, str]] = set()
 
     def emit(kind: str, actor: str, text: str, detail: str = "", *,
              state: RunState | None = None, waiting_reason: dict | None = None,
@@ -352,6 +391,66 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                 kind=kind, actor=actor, text=text, detail=detail,
                 state=operational_state, round_no=current_round,
                 round_limit=cfg.max_rounds, waiting_reason=waiting_reason))
+
+    def context_notice(text: str, detail: str = "") -> None:
+        """Emit each distinct shaping fact once, without flooding later turns."""
+        key = (text, detail)
+        if key in reported_condensations:
+            return
+        reported_condensations.add(key)
+        emit("context_condensed", "generator", text, detail,
+             state=RunState.GENERATING)
+
+    def context_report(report: dict) -> None:
+        """Turn deterministic shaping metadata into honest human narration."""
+        reduction = str(report.get("reduction") or "")
+
+        def labels(values) -> str:
+            items = [str(value)[:160] for value in (values or [])]
+            shown = items[:10]
+            suffix = f" … (+{len(items) - len(shown)})" if len(items) > len(shown) else ""
+            return ", ".join(shown) + suffix
+
+        if reduction == "work_files":
+            outlined = list(report.get("outlined") or [])
+            stubbed = list(report.get("stubbed") or [])
+            file_readable = set(report.get("file_readable") or [])
+            readable_outlines = [path for path in outlined
+                                 if path in file_readable]
+            working_outlines = [path for path in outlined
+                                if path not in file_readable]
+            readable_stubs = [path for path in stubbed
+                              if path in file_readable]
+            working_stubs = [path for path in stubbed
+                             if path not in file_readable]
+            if readable_outlines:
+                context_notice(
+                    "Tracked project files outlined; file_read can retrieve the committed version",
+                    labels(readable_outlines))
+            if working_outlines:
+                context_notice(
+                    "Working-tree-only project files outlined; content is not available to file_read",
+                    labels(working_outlines))
+            if readable_stubs:
+                context_notice(
+                    "Tracked project files briefly stubbed; file_read can retrieve the committed version",
+                    labels(readable_stubs))
+            if working_stubs:
+                context_notice(
+                    "Working-tree-only project files briefly stubbed; content is not available to file_read",
+                    labels(working_stubs))
+        elif reduction == "tool_results":
+            context_notice(
+                "Earlier tool results condensed to previews; rerun the tool for full output",
+                labels(report.get("labels")))
+        elif reduction == "compute_results":
+            context_notice(
+                "Earlier compute results condensed to previews; rerun compute for full output",
+                labels(report.get("labels")))
+        elif reduction == "owner_guidance":
+            context_notice(
+                "Earlier owner guidance condensed; full messages remain in the run record",
+                f"{int(report.get('condensed_bytes') or 0)} bytes")
 
     def generator_provider_event(actor: str, text: str, detail: str = "") -> None:
         emit("provider_recovery", actor, text, detail,
@@ -431,7 +530,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                      joined[:2000], state=RunState.GENERATING)
         emit("generation_started", "generator", "writing",
              state=RunState.GENERATING)
-        current = _current_work(cfg, task, findings)
+        current = _current_work(cfg, task, findings, context_report)
         in_force = skills_mod.select(house, list(current) or cfg.scope_dirs)
         try:
             while True:
@@ -442,11 +541,17 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     skills=skills_mod.render(in_force),
                     deterministic_contract=deterministic_contract,
                     attachments=attachments, compute_hosts=compute_hosts,
-                    compute_results=_fold_results(compute_results),
+                    compute_results=_fold_results(
+                        compute_results,
+                        lambda report: context_report(
+                            {**report, "reduction": "compute_results"})),
                     mcp_servers=mcp_servers,
-                    tool_results=_fold_results(tool_results),
+                    tool_results=_fold_results(
+                        tool_results,
+                        lambda report: context_report(
+                            {**report, "reduction": "tool_results"})),
                     builtin_tools=builtin_tools,
-                    owner_guidance=_bound_guidance(owner_guidance),
+                    owner_guidance=_bound_guidance(owner_guidance, context_report),
                     conversation=conversation,
                     # A malformed reply gets one visible, recorded repair
                     # attempt (§24.1) before anything reaches a human.
@@ -488,7 +593,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                             cfg, outcome.request, broker_token,
                             run_id=run_id, now_epoch=time.time(), broker=broker_obj)
                         tool_results.append(result)
-                        current = _current_work(cfg, task, findings)
+                        current = _current_work(
+                            cfg, task, findings, context_report)
                         emit("generation_resumed", "generator",
                              "resuming with tool result", state=RunState.GENERATING)
                         continue
@@ -509,7 +615,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                         emit("capability_refused", "tool", "refused",
                              exc.reason[:300], state=RunState.WAITING_FOR_CAPABILITY)
                     tool_results.append(result)
-                    current = _current_work(cfg, task, findings)
+                    current = _current_work(cfg, task, findings, context_report)
                     emit("generation_resumed", "generator", "resuming with tool result",
                          state=RunState.GENERATING)
                     continue
@@ -536,7 +642,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     emit("capability_refused", "compute", "refused",
                          exc.reason[:300], state=RunState.WAITING_FOR_CAPABILITY)
                 compute_results.append(result)
-                current = _current_work(cfg, task, findings)
+                current = _current_work(cfg, task, findings, context_report)
                 emit("generation_resumed", "generator",
                      "resuming with compute result", state=RunState.GENERATING)
         except ProviderDenial as exc:

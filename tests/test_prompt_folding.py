@@ -28,6 +28,18 @@ def test_a_short_list_is_returned_unchanged():
     assert _fold_results(res) == res
 
 
+def test_result_folding_reports_what_was_reduced_only_when_it_happens():
+    reports = []
+    assert _fold_results(_run("short")[:2], reports.append) == _run("short")[:2]
+    assert reports == []
+    _fold_results(_run("long"), reports.append)
+    assert reports == [{
+        "reduction": "results",
+        "count": 3,
+        "labels": ["web.fetch", "web.fetch", "web.fetch"],
+    }]
+
+
 def test_recent_tail_is_kept_verbatim():
     res = _run("aaa")
     out = _fold_results(res)
@@ -68,3 +80,12 @@ def test_long_owner_guidance_keeps_the_recent_tail_bounded():
     assert len(out.encode("utf-8")) <= MAX_GUIDANCE_BYTES + 200
     assert "MOST RECENT: switch the title to bold" in out   # recent kept
     assert "earlier owner guidance folded" in out           # older elided, marked
+
+
+def test_guidance_folding_reports_the_older_bytes_and_preserves_short_input():
+    reports = []
+    assert _bound_guidance("short", reports.append) == "short"
+    assert reports == []
+    _bound_guidance("old guidance\n" * 4000, reports.append)
+    assert reports[0]["reduction"] == "owner_guidance"
+    assert reports[0]["condensed_bytes"] > 0

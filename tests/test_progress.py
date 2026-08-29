@@ -1,12 +1,13 @@
 """Live progress is a read-only projection of the durable Run journal."""
 from __future__ import annotations
 
+import sqlite3
 import threading
 import time
 
 import pytest
 
-from crossaudit.console.progress import Tracker
+from crossaudit.console.progress import CONTEXT_CONDENSATION_ZH, Tracker
 from crossaudit.errors import EXIT_OK, ConfigDenial
 from crossaudit.runtime import (
     PreparedRun,
@@ -50,6 +51,70 @@ def test_steps_accumulate_in_order_while_a_run_is_in_flight(tmp_path):
     assert t.running and not snap["finished"]
     assert [s["actor"] for s in snap["steps"]] == ["generator", "auditor"]
     assert snap["task"] == "write the section"
+
+
+def test_context_condensation_is_durable_localized_and_in_generator_stream(cfg):
+    from crossaudit.console.streams import generator_stream
+
+    journal = RunJournal(journal_path(cfg))
+    run_id = journal.start("review the large project", chat_id="history")
+    text = "Tracked project files outlined; file_read can retrieve the committed version"
+    journal.append(run_id, RunEvent(
+        actor="generator", text=text, detail="experiments/large.md",
+        state=RunState.GENERATING, kind="context_condensed", round_no=1,
+        round_limit=3))
+    guidance_text = (
+        "Earlier owner guidance condensed; full messages remain in the run record")
+    journal.append(run_id, RunEvent(
+        actor="generator", text=guidance_text, detail="24000 bytes",
+        state=RunState.GENERATING, kind="context_condensed", round_no=1,
+        round_limit=3))
+
+    # A fresh projection proves this is SQLite-backed, not process memory.
+    tracker = Tracker()
+    tracker.bind(journal.path)
+    snap = tracker.snapshot()
+    step = next(row for row in snap["steps"]
+                if row["kind"] == "context_condensed")
+    assert step["text_i18n"] == {"en": text,
+                                  "zh": CONTEXT_CONDENSATION_ZH[text]}
+    assert step["detail_i18n"]["zh"] == "experiments/large.md"
+    guidance = next(row for row in snap["steps"]
+                    if row.get("text") == guidance_text)
+    assert guidance["detail_i18n"] == {"en": "24000 bytes",
+                                        "zh": "24000 字节"}
+
+    row = next(item for item in generator_stream(
+        cfg, [], commits=[], progress=snap)
+               if item["kind"] == "context_condensed")
+    assert row["chat_id"] == "history"
+    assert "experiments/large.md" in row["summary"]
+    assert CONTEXT_CONDENSATION_ZH[text] in row["summary_i18n"]["zh"]
+
+
+def test_generator_stream_projection_is_explicitly_latest_run_only(cfg):
+    """A newer run replaces the progress projection; old events stay in SQLite."""
+    from crossaudit.console.progress import context_events
+
+    journal = RunJournal(journal_path(cfg))
+    first = journal.start("first", chat_id="first-chat")
+    journal.append(first, RunEvent(
+        actor="generator", text="old condensation", kind="context_condensed",
+        state=RunState.GENERATING))
+    journal.finish(first, "refused")
+    second = journal.start("second", chat_id="second-chat")
+
+    tracker = Tracker()
+    tracker.bind(journal.path)
+    snap = tracker.snapshot()
+
+    assert snap["run_id"] == second
+    assert context_events(snap) == []
+    with sqlite3.connect(journal.path) as db:
+        stored = db.execute(
+            "SELECT COUNT(*) FROM run_events WHERE run_id=? AND kind=?",
+            (first, "context_condensed")).fetchone()[0]
+    assert stored == 1
 
 
 def test_finishing_records_the_outcome_and_stops_the_run(tmp_path):
