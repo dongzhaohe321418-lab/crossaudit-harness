@@ -15,6 +15,55 @@ from pathlib import Path
 from ..runtime import ACTIVE_STATES, RunJournal, RunState
 
 
+# Fixed event copy is translated here because run events are also consumed by
+# non-page clients. Dynamic details are paths, tool labels, or byte counts and
+# therefore remain identical in both locales.
+CONTEXT_CONDENSATION_ZH = {
+    "Project files outlined; full content remains one file_read away":
+        "已用结构化大纲精简项目文件；完整内容仍可通过一次 file_read 读取",
+    "Project files briefly stubbed; full content remains one file_read away":
+        "已将部分项目文件暂时缩为简短占位；完整内容仍可通过一次 file_read 读取",
+    "Earlier tool results condensed to previews; rerun the tool for full output":
+        "已将较早的工具结果精简为预览；如需完整输出可重新运行该工具",
+    "Earlier compute results condensed to previews; rerun compute for full output":
+        "已将较早的计算结果精简为预览；如需完整输出可重新运行计算",
+    "Earlier owner guidance condensed; full messages remain in the run record":
+        "已精简较早的用户补充说明；完整消息仍保存在运行记录中",
+}
+
+
+def _project_context_step(step: dict) -> dict:
+    """Add locale-ready display copy without changing the durable event."""
+    if step.get("kind") != "context_condensed":
+        return step
+    text = str(step.get("text") or "")
+    detail = str(step.get("detail") or "")
+    projected = dict(step)
+    projected["text_i18n"] = {
+        "en": text,
+        "zh": CONTEXT_CONDENSATION_ZH.get(text, text),
+    }
+    projected["detail_i18n"] = {"en": detail, "zh": detail}
+    return projected
+
+
+def project_snapshot(row: dict | None) -> dict | None:
+    """Enrich context notices in a journal projection for user-facing clients."""
+    if row is None:
+        return None
+    projected = dict(row)
+    projected["steps"] = [_project_context_step(step)
+                          for step in row.get("steps", [])]
+    return projected
+
+
+def context_events(row: dict | None) -> list[dict]:
+    """The durable condensation notices that belong in the generator stream."""
+    projected = project_snapshot(row)
+    return [step for step in (projected or {}).get("steps", [])
+            if step.get("kind") == "context_condensed"]
+
+
 class Tracker:
     """One run projection with optional durable journal backing."""
 
@@ -61,7 +110,8 @@ class Tracker:
 
     def snapshot(self) -> dict | None:
         with self._lock:
-            return self._journal.latest() if self._journal is not None else None
+            row = self._journal.latest() if self._journal is not None else None
+        return project_snapshot(row)
 
     def interruption(self) -> dict | None:
         with self._lock:

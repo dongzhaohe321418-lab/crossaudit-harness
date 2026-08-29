@@ -21,6 +21,7 @@ from ..config import Config
 from ..dispute import DISPUTES_LOG, parse_findings
 from ..router import history as routing_history
 from .chats import LEGACY_CHAT_ID, canonical_id
+from .progress import context_events
 
 GENERATOR_LANES = {"generator", "project", "chat"}
 AUDITOR_LANES = {"auditor", "amendment", "dispute", "resolve", "query"}
@@ -127,7 +128,8 @@ def _artifact(cfg: Config, relative: str) -> dict:
 
 
 def generator_stream(cfg: Config, routing: list[dict],
-                     commits: list[dict] | None = None) -> list[dict]:
+                     commits: list[dict] | None = None,
+                     progress: dict | None = None) -> list[dict]:
     """What the generator did, plus the user's words that were meant for it."""
     stream: list[dict] = []
     scope = tuple((cfg.scope_dirs or []))
@@ -161,6 +163,29 @@ def generator_stream(cfg: Config, routing: list[dict],
                                "chat_id": canonical_id(r.get("chat_id")),
                                "response": executed[len(GENERATOR_CHAT_PREFIX):],
                                "addressed_to": "generator"})
+    # Context shaping is operational rather than audit evidence, but its event
+    # is durable in the run journal. Mirror it into the generator conversation
+    # so a completed run cannot make the reduction look like silent data loss.
+    for event in context_events(progress):
+        text_i18n = dict(event.get("text_i18n") or {})
+        detail_i18n = dict(event.get("detail_i18n") or {})
+        detail = str(event.get("detail") or "")
+
+        def summary(locale: str) -> str:
+            text = str(text_i18n.get(locale) or event.get("text") or "")
+            localized_detail = str(detail_i18n.get(locale) or detail)
+            return text + (f": {localized_detail}" if localized_detail else "")
+
+        stream.append({
+            "kind": "context_condensed",
+            "t": event.get("t", 0),
+            "chat_id": canonical_id((progress or {}).get("chat_id")),
+            "round": event.get("round_no") or None,
+            "summary": summary("en"),
+            "summary_i18n": {"en": summary("en"), "zh": summary("zh")},
+            "notes": detail,
+            "event_id": event.get("event_id"),
+        })
     return sorted(stream, key=lambda m: m["t"])[-40:]
 
 
@@ -225,6 +250,7 @@ def auditor_stream(cfg: Config, routing: list[dict],
 
 
 def bundle(cfg: Config, reports: list[tuple[Path, str]] | None = None,
+           progress: dict | None = None,
            ) -> tuple[list[dict], list[dict], dict[str, str]]:
     """Build both streams and the commit association map with one Git read.
 
@@ -234,7 +260,7 @@ def bundle(cfg: Config, reports: list[tuple[Path, str]] | None = None,
     routing = routing_history(cfg.root / cfg.ledger_dir / "routing.jsonl", 60)
     commits = _commits(cfg.root)
     chat_map = _chat_map(cfg.root)
-    return (generator_stream(cfg, routing, commits),
+    return (generator_stream(cfg, routing, commits, progress),
             auditor_stream(cfg, routing, commits, chat_map, reports), chat_map)
 
 

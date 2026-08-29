@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from crossaudit.console.progress import Tracker
+from crossaudit.console.progress import CONTEXT_CONDENSATION_ZH, Tracker
 from crossaudit.errors import EXIT_OK, ConfigDenial
 from crossaudit.runtime import (
     PreparedRun,
@@ -52,6 +52,33 @@ def test_steps_accumulate_in_order_while_a_run_is_in_flight(tmp_path):
     assert snap["task"] == "write the section"
 
 
+def test_context_condensation_is_durable_localized_and_in_generator_stream(cfg):
+    from crossaudit.console.streams import generator_stream
+
+    journal = RunJournal(journal_path(cfg))
+    run_id = journal.start("review the large project", chat_id="history")
+    text = "Project files outlined; full content remains one file_read away"
+    journal.append(run_id, RunEvent(
+        actor="generator", text=text, detail="experiments/large.md",
+        state=RunState.GENERATING, kind="context_condensed", round_no=1,
+        round_limit=3))
+
+    # A fresh projection proves this is SQLite-backed, not process memory.
+    tracker = Tracker()
+    tracker.bind(journal.path)
+    snap = tracker.snapshot()
+    step = next(row for row in snap["steps"]
+                if row["kind"] == "context_condensed")
+    assert step["text_i18n"] == {"en": text,
+                                  "zh": CONTEXT_CONDENSATION_ZH[text]}
+    assert step["detail_i18n"]["zh"] == "experiments/large.md"
+
+    row = next(item for item in generator_stream(
+        cfg, [], commits=[], progress=snap)
+               if item["kind"] == "context_condensed")
+    assert row["chat_id"] == "history"
+    assert "experiments/large.md" in row["summary"]
+    assert CONTEXT_CONDENSATION_ZH[text] in row["summary_i18n"]["zh"]
 def test_finishing_records_the_outcome_and_stops_the_run(tmp_path):
     journal = RunJournal(tmp_path / "runtime.sqlite3")
     run_id = journal.start("x")

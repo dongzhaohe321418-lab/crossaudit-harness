@@ -26,12 +26,34 @@ def test_small_files_pass_through_verbatim():
     assert shape_work(files) == files                 # byte-identical, no change
 
 
+def test_condensation_observer_is_silent_for_unchanged_files():
+    reports = []
+    files = {"work/a.md": "# Note\n\nshort body\n"}
+    assert shape_work(files, on_condense=reports.append) == files
+    assert reports == []
+
+
 def test_a_large_markdown_file_is_reduced_to_its_headings():
     body = _big("# Review\n## Overview\nlots\n## Method\nlots\n### Detail\n")
     shaped = shape_work({"work/review.md": body})["work/review.md"]
     assert "large file elided" in shaped and "file_read" in shaped
     assert "## Overview" in shaped and "## Method" in shaped and "### Detail" in shaped
     assert "padding line\npadding line" not in shaped   # the bulk body is gone
+
+
+def test_condensation_observer_names_outlined_and_stubbed_files():
+    reports = []
+    body = "\n".join(f"line {i}" for i in range(200))
+    files = {"work/a.txt": body, "work/b.txt": body}
+    observed = shape_work(files, total_budget=1, on_condense=reports.append)
+    assert observed == shape_work(files, total_budget=1)
+    assert len(reports) == 1
+    report = reports[0]
+    assert report["reduction"] == "work_files"
+    assert set(report["outlined"]) == {"work/a.txt", "work/b.txt"}
+    assert set(report["stubbed"]) == {"work/a.txt", "work/b.txt"}
+    assert report["before_bytes"] > report["after_bytes"]
+    assert report["recovery"] == "file_read"
 
 
 def test_a_large_python_file_is_reduced_to_its_symbols():

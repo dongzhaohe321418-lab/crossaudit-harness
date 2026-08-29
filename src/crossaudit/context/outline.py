@@ -14,6 +14,7 @@ from __future__ import annotations
 import ast
 import re
 from collections import Counter
+from collections.abc import Callable
 
 #: Generic task verbs and function words carry no relevance signal — kept out of
 #: the term set so a file merely full of common words cannot outrank a real
@@ -103,7 +104,9 @@ _FINDINGS_PIN = 1_000_000
 
 
 def shape_work(files: dict[str, str], task: str = "", findings: str = "",
-               total_budget: int = MAX_WORK_BYTES) -> dict[str, str]:
+               total_budget: int = MAX_WORK_BYTES,
+               on_condense: Callable[[dict], None] | None = None,
+               ) -> dict[str, str]:
     """Inline small files verbatim; outline, then (last resort) stub what won't fit.
 
     Deterministic passes, each keeping every path present and the full file one
@@ -121,13 +124,30 @@ def shape_work(files: dict[str, str], task: str = "", findings: str = "",
     set. It drives the total down toward the budget but does not guarantee it: the
     reachable floor is the sum of each file's stub, so a project with
     pathologically many files can settle above budget (every path is still present
-    and one file_read away). A pure, side-effect-free function; with no task it
-    degrades to size-ordering.
+    and one file_read away). The returned mapping is pure and deterministic;
+    an optional observer receives deterministic metadata only when a reduction
+    occurred, so the runtime can narrate shaping without inspecting markers.
+    With no task the selection degrades to size-ordering.
     """
     terms = _terms(task)
     named = (findings or "").lower()
+    original_total = sum(len(text.encode("utf-8")) for text in files.values())
     shaped: dict[str, str] = {}
     full: dict[str, int] = {}                 # path -> byte size, for files kept full
+    outlined: list[str] = []
+    stubbed: list[str] = []
+
+    def notify(total: int) -> None:
+        if on_condense is not None and (outlined or stubbed):
+            on_condense({
+                "reduction": "work_files",
+                "outlined": list(outlined),
+                "stubbed": list(stubbed),
+                "before_bytes": original_total,
+                "after_bytes": total,
+                "recovery": "file_read",
+            })
+
     for path, text in files.items():
         size = len(text.encode("utf-8"))
         if size <= MAX_FILE_BYTES:
@@ -135,8 +155,10 @@ def shape_work(files: dict[str, str], task: str = "", findings: str = "",
             full[path] = size
         else:
             shaped[path] = _elide(path, text)
+            outlined.append(path)
     total = sum(len(v.encode("utf-8")) for v in shaped.values())
     if total <= total_budget:
+        notify(total)
         return shaped
     rel = {p: _relevance(p, files[p], terms)
            + (_FINDINGS_PIN if p.lower() in named else 0) for p in files}
@@ -150,6 +172,7 @@ def shape_work(files: dict[str, str], task: str = "", findings: str = "",
         if gain <= 0:
             continue
         shaped[path] = elided
+        outlined.append(path)
         total -= gain
     # Pass 3 (hard ceiling): stub the least-relevant files until it fits. A goal-
     # relevant file is only stubbed once every less-relevant one already is.
@@ -161,7 +184,9 @@ def shape_work(files: dict[str, str], task: str = "", findings: str = "",
         if gain <= 0:
             continue
         shaped[path] = stub
+        stubbed.append(path)
         total -= gain
+    notify(total)
     return shaped
 
 

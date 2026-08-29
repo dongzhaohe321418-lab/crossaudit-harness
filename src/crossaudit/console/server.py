@@ -654,13 +654,14 @@ def snapshot(cfg: Config) -> dict:
     # (inside bundle) and read_cycles below both derive from it, so a snapshot
     # reads each report.md a single time instead of twice.
     report_texts = overview.read_report_texts(cfg)
-    gen_stream, aud_stream, commit_chats = bundle(cfg, reports=report_texts)
+    progress = TRACKER.snapshot()
+    gen_stream, aud_stream, commit_chats = bundle(
+        cfg, reports=report_texts, progress=progress)
     cycles = _ordered_cycles(controller_state, commit_chats)
     known_chats = {str(row.get("chat_id", ""))
                    for row in (*gen_stream, *aud_stream, *cycles)
                    if row.get("chat_id")}
     chat_state = chats.snapshot(cfg, known_chats)
-    progress = TRACKER.snapshot()
     for row in chat_state["items"]:
         related = [cycle for cycle in cycles if cycle["chat_id"] == row["id"]]
         row["cycles"] = len(related)
