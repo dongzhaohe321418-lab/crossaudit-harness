@@ -6,7 +6,8 @@ Agents update their own row's state; the reviewer appends the review verdict.
 | # | Task | Owner | Reviewer | Branch | State |
 |---|---|---|---|---|---|
 | A1 | MCP add-dialog redesign + settings navigation | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | reviewed; S6/S7 verified by the orchestrator |
-| A1-fix | Reopening a saved stdio server was refused (codex S1) | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | fixed, suite green — **awaiting independent review** |
+| A1-fix | Reopening a saved stdio server was refused (codex S1) | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | superseded — shipped an S0, see A1-fix-2 |
+| A1-fix-2 | Consent bypass in A1-fix (codex S0) + legacy-argument break (S1) | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | fixed, 18/18 attack cases, suite green — **awaiting independent review** |
 | B1 | Transparent context-condensation run events | Agent B (Codex) | Agent A (Claude Code) | `agentB/context-condensation-events` | in progress |
 
 ---
@@ -321,3 +322,93 @@ the change is stored. Between Connect and Save the stored row is disabled with
 no approved tools. That is the fail-closed re-connect path documented in the
 first commit, not a regression — but it means a timeout edit is two clicks, not
 one, and a reviewer may reasonably want that revisited separately.
+
+---
+
+## A1-fix-2 — change contract
+
+```
+TASK:        Fix the S0 consent bypass codex found in A1-fix (a tick given for
+             command B was sent as approval for a later command C, which the
+             server then launched), and the S1 backward-compatibility break that
+             made a legacy row with an empty or whitespace argument unsaveable.
+
+SURFACE:     src/crossaudit/console/page.py (MCP dialog JS only — no markup, no
+             copy, no translation changed)
+             tests/test_mcp_dialog_and_settings_nav.py
+             Audit core touched? NO. src/crossaudit/mcp.py UNCHANGED.
+
+INVARIANTS:  §1.1 deny-by-default — approve_local_code is now derived solely
+             from vector equality with something a human granted; there is no
+             path that sends true for a command nobody ticked. §1.5 never
+             overclaim — the app can no longer assert an approval the person did
+             not give. §1.2 additive — a stored row with lossy arguments
+             round-trips verbatim instead of being silently rewritten.
+
+ACCEPTANCE:  1. The original S0 sequence sends approve_local_code=false and
+                launches nothing (execution sentinel stays unfired).
+             2. Legacy rows with empty / whitespace / blank-only arguments save
+                unchanged, byte-for-byte.
+             3. 18 adversarial cases pass.
+             4. Regression tests assert what is SENT, not what is displayed.
+             5. Full suite green.
+
+UX EVIDENCE: Driven with headless Chromium against a live console. The S0 was
+             first reproduced on 4071a4d with an execution sentinel: a script
+             the user never approved ran and wrote a file. After the fix the
+             same script is never launched.
+
+REVIEWER:    codex — independent of the author (AGENTS.md §0).
+```
+
+### The reasoning class that shipped the S0
+
+Not a typo — a modelling error, and worth naming so the third version does not
+repeat it.
+
+I modelled consent as **a boolean plus one baseline**, and reasoned only about
+the single edge between "the form matches the stored row" and "it does not". The
+checkbox's own state was treated as inert. So the clearing branch fired only
+while the form still matched the row; once it had diverged, the tick was frozen
+and rode along to every later command.
+
+Two habits produced that:
+
+1. **I tested the transitions the bug report named, not the state machine.** The
+   brief gave two directions — unchanged saves, changed re-requires — and I
+   verified exactly those two and stopped. A stateful control needs sequences,
+   not endpoints. The break needs three hops (A -> B -> approve -> C); no
+   two-step test can see it.
+2. **I asserted on displayed state.** My browser checks read `checked` and
+   `hidden`. Displayed state was *correct* at every step of the S0 sequence
+   until the last one — what was wrong was the value put on the wire. Assertions
+   belong on what is sent.
+
+The fix removes the class rather than the instance: consent is stored **as the
+{command, args} vector it was granted for**, and `approve_local_code=true` is
+emitted only when the live vector equals a vector a human approved. There is no
+"clear it under condition X" branch left to get wrong — a mismatch is simply
+unapproved, so the failure mode is a refused save rather than an unapproved
+launch.
+
+### Adversarial cases executed (18/18 pass, headless Chromium, live console)
+
+untouched form · **A->B->approve->C** · **A->B->approve->C->approve->D** ·
+reorder args · add arg · drop arg · middle-change arg · case change on command ·
+symlink to the same binary · trailing slash · ".." traversal to the same file ·
+empty argument line · whitespace-padded argument · tick then untick ·
+tick for B then restore A · transport stdio->http->stdio · reopen dialog after
+ticking · binary edited on disk after render.
+
+Plus the three legacy shapes driven end-to-end: `["server.py",""]`,
+`["  padded  "]`, `["a","   "]` — each saved unchanged with stored == sent ==
+stored-after.
+
+### Known limit, stated rather than papered over
+
+"binary edited on disk after render" keeps the standing approval, because the
+vector (path + arguments) is unchanged. A person approves *a path*, not the
+bytes currently at it; that gap exists between any approval and any later
+launch, and the client cannot close it. `mcp.py` re-resolves and re-checks the
+executable at launch. Flagged because a reviewer should decide whether it is
+acceptable rather than discover it.

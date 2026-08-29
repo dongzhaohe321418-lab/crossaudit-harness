@@ -259,13 +259,13 @@ def test_generated_approval_counter_is_translated_by_pattern():
 # timeout was therefore impossible. The client now carries the approval the
 # person already gave for that exact command, and re-asks the moment it changes.
 def test_a_saved_stdio_server_carries_its_standing_command_approval():
-    assert "let mcpApprovedCommand=null;" in PAGE
+    assert "let mcpApprovedCommand=null;let mcpTickedFor=null;" in PAGE
     assert "function mcpCommandUnchanged(){" in PAGE
     # openMcp adopts the stored row's command as the standing approval...
     assert "mcpApprovedCommand=(server&&(server.transport||'stdio')==='stdio')" in PAGE
-    # ...and the submit sends it only for an identical stdio command.
-    assert ("payload.approve_local_code=fd.has('approve_local_code')\n"
-            "    ||(payload.transport==='stdio'&&mcpCommandUnchanged());") in PAGE
+    # ...and the submit sends it only for a vector a person actually granted.
+    assert ("payload.approve_local_code=payload.transport==='stdio'"
+            "&&mcpApprovalGranted();") in PAGE
 
 
 def test_the_standing_approval_is_shown_not_implied():
@@ -280,13 +280,14 @@ def test_the_standing_approval_is_shown_not_implied():
     assert ("for(const id of ['mcp-command','mcp-args'])\n"
             "  document.getElementById(id).addEventListener('input',syncMcpApprovalState);") in PAGE
     # Consent is never left pre-ticked underneath the "already approved" state.
-    assert "if(approved)box.querySelector('[name=\"approve_local_code\"]').checked=false;" in PAGE
+    assert "if(approved&&input){input.checked=false;mcpTickedFor=null;}" in PAGE
 
 
 def test_closing_the_dialog_drops_the_standing_approval():
     # The approval belongs to one dialog session on one server row; it must not
     # survive into the next thing the person opens.
-    assert "mcpApprovedCommand=null;\n  setMcpStep('connect');syncMcpApprovalState();" in PAGE
+    assert ("mcpApprovedCommand=null;\n  mcpTickedFor=null;mcpRendered=null;\n"
+            "  setMcpStep('connect');syncMcpApprovalState();") in PAGE
 
 
 def _extract_fn(signature: str) -> str:
@@ -313,17 +314,21 @@ def test_command_approval_carries_only_for_an_identical_command():
     node = shutil.which("node")
     if not node:  # Python-only machines still run the rest of the suite.
         return
-    harness = _extract_fn("function mcpArgsValue()") + "\n" + \
-        _extract_fn("function mcpCommandUnchanged()") + """
+    harness = "\n".join(_extract_fn(sig) for sig in (
+        "function mcpArgsValue()", "function mcpSameTuple(left,right)",
+        "function mcpLiveTuple()", "function mcpCommandUnchanged()",
+    )) + """
 const A = (cond, msg) => { if (!cond) { throw new Error(msg); } };
 let FIELDS = {command: '', args: ''};
 globalThis.document = {getElementById: id => ({
   get value() { return id === 'mcp-command' ? FIELDS.command : FIELDS.args; },
 })};
-// The exact expression the submit handler uses.
+// The stdio half of the expression the submit handler uses. (The ticked-consent
+// half has its own test; this one pins the standing-approval half.)
 const approveSent = (transport, ticked) =>
   ticked || (transport === 'stdio' && mcpCommandUnchanged());
 
+globalThis.mcpRendered = null;
 globalThis.mcpApprovedCommand = {command: '/usr/local/bin/mcp', args: ['-y', 'server']};
 
 // 1. unchanged command + args -> the standing approval carries (the bug).
@@ -374,3 +379,144 @@ def test_the_new_approval_strings_have_chinese_parity():
         '"你在连接此服务器时已批准该可执行文件与这些参数。修改其中任何一项都会要求你重新批准新的命令。"',
     ):
         assert pair in PAGE, pair
+
+
+# ------------------------- consent binds to one execution vector (S0 regression)
+# The first version of this fix modelled consent as a boolean plus one baseline
+# and only cleared the checkbox while the form still MATCHED the stored row.
+# Once the form had diverged, a tick given for command B rode along to command C
+# untouched, and the client POSTed approve_local_code=true for an executable no
+# human had ever seen — which the server then launched. Consent is now stored AS
+# the {command, args} vector it was granted for, and anything sent must equal a
+# vector a person actually approved.
+def test_consent_is_stored_as_the_vector_it_was_granted_for():
+    assert "let mcpApprovedCommand=null;let mcpTickedFor=null;" in PAGE
+    assert "function mcpSameTuple(left,right){" in PAGE
+    assert "function mcpLiveTuple(){" in PAGE
+    assert "function mcpApprovalGranted(){" in PAGE
+    # The submit asks one question, and never trusts the raw form flag.
+    assert ("payload.approve_local_code=payload.transport==='stdio'&&mcpApprovalGranted();"
+            in PAGE)
+    assert "fd.has('approve_local_code')" not in PAGE
+    # A tick is only ever recorded together with its vector.
+    assert "mcpTickedFor=event.target.checked?mcpLiveTuple():null;" in PAGE
+    # ...and revoked as soon as the form no longer describes that vector.
+    assert ("if(input&&input.checked&&!mcpSameTuple(mcpLiveTuple(),mcpTickedFor)){\n"
+            "    input.checked=false;mcpTickedFor=null;}" in PAGE)
+
+
+def test_untouched_legacy_arguments_round_trip_verbatim():
+    """A stored row with an empty or whitespace argument stays saveable (S1)."""
+    assert "let mcpRendered=null;" in PAGE
+    # The live vector is the stored row itself while the fields are untouched.
+    assert ("if(mcpRendered&&commandText===mcpRendered.commandText"
+            "&&argsText===mcpRendered.argsText)" in PAGE)
+    # ...and that vector is what gets sent, not a re-parse of the lossy textarea.
+    assert "payload.args=vector.args;" in PAGE
+
+
+def test_a_tick_never_carries_to_another_command_or_argument_list():
+    """Executes the state machine, asserting what would be SENT.
+
+    Display state is what fooled the first version, so every assertion here is
+    on ``mcpApprovalGranted()`` — the single value the submit puts on the wire.
+    """
+    node = shutil.which("node")
+    if not node:  # Python-only machines still run the rest of the suite.
+        return
+    harness = "\n".join(_extract_fn(sig) for sig in (
+        "function mcpArgsValue()", "function mcpSameTuple(left,right)",
+        "function mcpLiveTuple()", "function mcpCommandUnchanged()",
+        "function mcpApprovalGranted()", "function syncMcpApprovalState()",
+    )) + """
+const A = (cond, msg) => { if (!cond) { throw new Error(msg); } };
+let FIELDS = {command: '', args: ''};
+const BOX = {hidden: false, checked: false};
+const NOTE = {hidden: true};
+const INPUT = {get checked(){return BOX.checked;}, set checked(v){BOX.checked=v;}};
+globalThis.document = {
+  getElementById: id => id === 'mcp-command' ? {get value(){return FIELDS.command;}}
+    : id === 'mcp-args' ? {get value(){return FIELDS.args;}}
+    : id === 'mcp-approve-box' ? {...BOX, querySelector: () => INPUT,
+        get hidden(){return BOX.hidden;}, set hidden(v){BOX.hidden=v;}}
+    : id === 'mcp-approved-note' ? NOTE : null,
+  querySelector: () => INPUT,
+};
+// Typing is what revokes a stale tick, so every edit goes through the handler.
+const type = (command, args) => { FIELDS = {command, args}; syncMcpApprovalState(); };
+const tick = () => { BOX.checked = true; globalThis.mcpTickedFor = mcpLiveTuple(); };
+
+// A saved server: its stored row proves its owner approved vector A.
+globalThis.mcpApprovedCommand = {command: '/bin/A', args: ['-y', 'server']};
+globalThis.mcpRendered = {commandText: '/bin/A', argsText: '-y\\nserver',
+                          command: '/bin/A', args: ['-y', 'server']};
+globalThis.mcpTickedFor = null;
+type('/bin/A', '-y\\nserver');
+A(mcpApprovalGranted() === true, 'the stored vector must stay approved');
+
+// === THE S0 SEQUENCE: A -> B -> approve B -> C ===
+type('/bin/B', '-y\\nserver');
+A(mcpApprovalGranted() === false, 'B is not approved yet');
+tick();
+A(mcpApprovalGranted() === true, 'B is approved once ticked');
+type('/bin/C', '-y\\nserver');
+A(BOX.checked === false, 'the tick must be revoked when the command changes');
+A(mcpApprovalGranted() === false, 'S0: a tick for B must NEVER be sent for C');
+// The counterfactual, kept so this test pins the BEHAVIOUR and not merely the
+// presence of a function: the shipped-and-broken logic was
+// `fd.has('approve_local_code') || mcpCommandUnchanged()`, and the old handler
+// left the box ticked once the form had diverged from the stored row — so it
+// would have put approve_local_code=true on the wire for /bin/C.
+const OLD_LOGIC = (boxStillChecked) => boxStillChecked || mcpCommandUnchanged();
+A(OLD_LOGIC(true) === true, 'the old logic did approve C; that is the bug pinned here');
+A(mcpApprovalGranted() !== OLD_LOGIC(true), 'the fix must disagree with the old logic here');
+
+// === the longer hop the first fix would also have failed ===
+type('/bin/B', '-y\\nserver'); tick();
+type('/bin/C', '-y\\nserver'); tick();
+type('/bin/D', '-y\\nserver');
+A(mcpApprovalGranted() === false, 'S0: a tick for C must NEVER be sent for D');
+
+// changing only the ARGUMENTS revokes just as hard
+type('/bin/B', '-y\\nserver'); tick();
+type('/bin/B', '-y\\nOTHER');
+A(mcpApprovalGranted() === false, 'a tick must not carry to different arguments');
+for (const args of ['server\\n-y', '-y', '-y\\nserver\\nextra']) {
+  type('/bin/B', '-y\\nserver'); tick(); type('/bin/B', args);
+  A(mcpApprovalGranted() === false, 'reorder/drop/add must revoke: ' + args);
+}
+
+// returning to a previously approved vector is approved again, by equality
+type('/bin/B', '-y\\nserver'); tick();
+type('/bin/A', '-y\\nserver');
+A(mcpApprovalGranted() === true, 'the stored vector is approved by its own row');
+// unticking removes consent outright
+type('/bin/B', '-y\\nserver'); tick(); BOX.checked = false;
+A(mcpApprovalGranted() === false, 'unticking must withdraw consent');
+// a brand-new server (no stored row) is never approved without a tick
+globalThis.mcpApprovedCommand = null; globalThis.mcpRendered = null;
+globalThis.mcpTickedFor = null; BOX.checked = false;
+type('/bin/NEW', '');
+A(mcpApprovalGranted() === false, 'a new server must never be pre-approved');
+
+// === S1: an untouched legacy row keeps its exact stored arguments ===
+globalThis.mcpApprovedCommand = {command: '/bin/A', args: ['server.py', '']};
+globalThis.mcpRendered = {commandText: '/bin/A', argsText: 'server.py\\n',
+                          command: '/bin/A', args: ['server.py', '']};
+globalThis.mcpTickedFor = null; BOX.checked = false;
+FIELDS = {command: '/bin/A', args: 'server.py\\n'};
+A(JSON.stringify(mcpLiveTuple().args) === JSON.stringify(['server.py', '']),
+  'S1: an untouched empty argument must survive the lossy textarea');
+A(mcpApprovalGranted() === true, 'S1: an unchanged legacy row must stay saveable');
+globalThis.mcpApprovedCommand = {command: '/bin/A', args: ['  padded  ']};
+globalThis.mcpRendered = {commandText: '/bin/A', argsText: '  padded  ',
+                          command: '/bin/A', args: ['  padded  ']};
+FIELDS = {command: '/bin/A', args: '  padded  '};
+A(JSON.stringify(mcpLiveTuple().args) === JSON.stringify(['  padded  ']),
+  'S1: whitespace-bearing arguments must survive untouched');
+A(mcpApprovalGranted() === true, 'S1: a whitespace argument row must stay saveable');
+console.log('ok');
+"""
+    result = subprocess.run([node, "-e", harness], text=True, capture_output=True)
+    assert result.returncode == 0, result.stderr
+    assert "ok" in result.stdout

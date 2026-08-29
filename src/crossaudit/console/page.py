@@ -6222,21 +6222,59 @@ let mcpStep='connect';let mcpTools=[];let mcpApproved=new Set();let mcpReconnect
 // editing a timeout does not demand a fresh ritual while editing the command
 // does. It is never invented: it comes from a stored server row or from the
 // checkbox the person just ticked.
-let mcpApprovedCommand=null;
+// An approval is a claim about ONE execution vector, so it is stored AS that
+// vector, never as a bare flag:
+//   mcpApprovedCommand — what the stored server row proves its owner approved
+//                        when they connected it (null for a new server);
+//   mcpTickedFor       — the exact command+args on screen at the moment the
+//                        person ticked the consent box.
+// Both are {command, args}. approve_local_code=true is sent only when the live
+// form equals one of them, so anything sent is traceable to a human looking at
+// that exact vector. A tick can never ride along to a command it was not given
+// for; a mismatch is simply unapproved, and the server refuses.
+let mcpApprovedCommand=null;let mcpTickedFor=null;
+// What was rendered into the fields when the dialog opened, kept alongside the
+// stored values so an UNTOUCHED form round-trips the row byte-for-byte. The
+// textarea is lossy (it trims and drops blank lines), so a legacy row with an
+// empty or whitespace-bearing argument must not be re-derived from the text.
+let mcpRendered=null;
 function mcpArgsValue(){return document.getElementById('mcp-args').value
   .split('\n').map(value=>value.trim()).filter(Boolean);}
-function mcpCommandUnchanged(){if(!mcpApprovedCommand)return false;
-  const args=mcpArgsValue(),prior=mcpApprovedCommand.args||[];
-  return document.getElementById('mcp-command').value.trim()===mcpApprovedCommand.command
-    &&args.length===prior.length&&args.every((value,index)=>value===prior[index]);}
+function mcpSameTuple(left,right){
+  if(!left||!right)return false;
+  const a=left.args||[],b=right.args||[];
+  return left.command===right.command&&a.length===b.length
+    &&a.every((value,index)=>value===b[index]);}
+// The vector the form currently describes. While the fields still hold exactly
+// what was rendered, that is the stored row itself — not a re-parse of it.
+function mcpLiveTuple(){
+  const commandText=document.getElementById('mcp-command').value;
+  const argsText=document.getElementById('mcp-args').value;
+  if(mcpRendered&&commandText===mcpRendered.commandText&&argsText===mcpRendered.argsText)
+    return {command:mcpRendered.command,args:(mcpRendered.args||[]).slice()};
+  return {command:commandText.trim(),args:mcpArgsValue()};}
+function mcpCommandUnchanged(){
+  return Boolean(mcpApprovedCommand)&&mcpSameTuple(mcpLiveTuple(),mcpApprovedCommand);}
+// The single question the submit asks. Both branches require the live vector to
+// equal something a person actually granted.
+function mcpApprovalGranted(){
+  const live=mcpLiveTuple();
+  if(mcpSameTuple(live,mcpApprovedCommand))return true;
+  const box=document.querySelector('#mcp-approve-box [name="approve_local_code"]');
+  return Boolean(box&&box.checked&&mcpSameTuple(live,mcpTickedFor));}
 // Show the standing approval, or ask for a new one — so the rule the server
-// enforces is visible in the form instead of arriving later as a denial.
+// enforces is visible in the form instead of arriving later as a denial. A tick
+// whose vector no longer matches the form is revoked here as you type, so the
+// screen can never show consent that the submit would not honour.
 function syncMcpApprovalState(){const approved=mcpCommandUnchanged();
   const box=document.getElementById('mcp-approve-box');
   const note=document.getElementById('mcp-approved-note');
   if(!box||!note)return;
-  box.hidden=approved;note.hidden=!approved;
-  if(approved)box.querySelector('[name="approve_local_code"]').checked=false;}
+  const input=box.querySelector('[name="approve_local_code"]');
+  if(input&&input.checked&&!mcpSameTuple(mcpLiveTuple(),mcpTickedFor)){
+    input.checked=false;mcpTickedFor=null;}
+  if(approved&&input){input.checked=false;mcpTickedFor=null;}
+  box.hidden=approved;note.hidden=!approved;}
 function mcpText(id,text){const node=document.getElementById(id);if(node)node.textContent=text;}
 function setMcpStep(step){mcpStep=step==='tools'?'tools':'connect';
   document.querySelectorAll('[data-mcp-step]').forEach(pane=>pane.hidden=pane.dataset.mcpStep!==mcpStep);
@@ -6287,6 +6325,9 @@ function openMcp(serverId=''){mcpForm.reset();document.getElementById('mcp-error
   // A stored stdio row is proof its owner approved that exact command already.
   mcpApprovedCommand=(server&&(server.transport||'stdio')==='stdio')
     ?{command:server.command||'',args:(server.args||[]).slice()}:null;
+  mcpTickedFor=null;
+  mcpRendered=server?{commandText:server.command||'',argsText:(server.args||[]).join('\n'),
+                      command:server.command||'',args:(server.args||[]).slice()}:null;
   if(server){document.getElementById('mcp-name').value=server.name||'';document.getElementById('mcp-transport').value=server.transport||'stdio';
     document.getElementById('mcp-command').value=server.command||'';document.getElementById('mcp-args').value=(server.args||[]).join('\n');
     document.getElementById('mcp-url').value=server.url||'';mcpForm.elements.timeout.value=server.timeout||30;
@@ -6299,10 +6340,15 @@ function openMcp(serverId=''){mcpForm.reset();document.getElementById('mcp-error
   setTimeout(()=>document.getElementById(server?'mcp-select-all':'mcp-name').focus(),0);}
 function closeMcp(){mcpModal.className='project-modal';mcpForm.reset();
   mcpTools=[];mcpApproved=new Set();mcpReconnected=false;mcpApprovedCommand=null;
+  mcpTickedFor=null;mcpRendered=null;
   setMcpStep('connect');syncMcpApprovalState();}
 document.getElementById('mcp-transport').onchange=syncMcpTransport;
 for(const id of ['mcp-command','mcp-args'])
   document.getElementById(id).addEventListener('input',syncMcpApprovalState);
+// The tick is only ever recorded together with the vector it was given for.
+document.querySelector('#mcp-approve-box [name="approve_local_code"]')
+  .addEventListener('change',event=>{
+    mcpTickedFor=event.target.checked?mcpLiveTuple():null;});
 document.getElementById('close-mcp').onclick=closeMcp;document.getElementById('cancel-mcp').onclick=closeMcp;
 document.getElementById('mcp-back').onclick=()=>setMcpStep('connect');
 document.getElementById('mcp-tool-approve').addEventListener('change',ev=>{
@@ -6315,7 +6361,11 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
   mcpText('save-mcp',connecting?'Connecting…':'Saving…');
   document.getElementById('mcp-error').className='wizard-error';const fd=new FormData(mcpForm);
   const payload=Object.fromEntries(fd.entries());payload.action='register';
-  payload.args=mcpArgsValue();
+  const vector=mcpLiveTuple();
+  // An untouched legacy row keeps its stored arguments verbatim — the textarea
+  // trims and drops blank lines, so re-deriving them would silently rewrite a
+  // working configuration (and make it unsaveable).
+  payload.args=vector.args;
   payload.timeout=Number(payload.timeout);payload.max_calls_per_task=Number(payload.max_calls_per_task);
   payload.allow_private_network=fd.has('allow_private_network');
   // Deny-by-default is the server's rule and stays the server's rule. What is
@@ -6323,8 +6373,7 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
   // gave for this identical command and arguments — never an approval invented
   // because a row happens to exist. Change the command and this goes false, the
   // checkbox comes back, and the server refuses until it is ticked.
-  payload.approve_local_code=fd.has('approve_local_code')
-    ||(payload.transport==='stdio'&&mcpCommandUnchanged());
+  payload.approve_local_code=payload.transport==='stdio'&&mcpApprovalGranted();
   // Step 1 is a pure connect: approve nothing, enable nothing. Step 2 sends the
   // exact set of ticked tools — never a blanket "all", so what is stored is
   // always the list the person actually saw.
@@ -6340,7 +6389,10 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
         document.getElementById('mcp-command').value=server.command||'';
         document.getElementById('mcp-args').value=(server.args||[]).join('\n');
         mcpApprovedCommand={command:server.command||'',args:(server.args||[]).slice()};
-      }else mcpApprovedCommand=null;
+        mcpRendered={commandText:server.command||'',argsText:(server.args||[]).join('\n'),
+                     command:server.command||'',args:(server.args||[]).slice()};
+      }else{mcpApprovedCommand=null;mcpRendered=null;}
+      mcpTickedFor=null;
       syncMcpApprovalState();
       mcpTools=server.tools||[];const advertised=new Set(mcpTools.map(tool=>tool.name));
       // Keep prior approvals only where the server still advertises them.
