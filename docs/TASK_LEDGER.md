@@ -457,6 +457,120 @@ The gap is now stated in the product itself rather than only here: the approval
 copy says the approval follows the path and arguments, not the file's contents,
 and that software at that path may change before a later run.
 
+## A3 — change contract (the first three minutes)
+
+Recorded here late, and that is the point: batches 1-3 carried their contracts
+only in commit messages, so an auditor opening this file found the fix round and
+nothing it was fixing. The contract belongs where the reviewer looks.
+
+```
+TASK:        Close the D6 walkthrough's setup findings: init and doctor
+             contradicting each other, green ticks on untested lines, a
+             constitution written and committed unseen, the laboratory contract
+             given to a prose project, and a front door that omits half the
+             product. Batch 4 adds the science inference as a PROPOSAL WITH ITS
+             GROUNDS (SPEC 3 §3.5), which was left last because it needs a
+             provider to fire.
+
+SURFACE:     src/crossaudit/cli/{main,wizard,tui,build}.py, config.py, errors.py
+             tests/test_{first_three_minutes,constitution_moment,doctor,tui,
+             science_proposal}.py
+             Audit core touched? NO. Nothing under auditor/, broker/, ledger/,
+             policy/, dcl/, receipt/ or controller/ is read or written. The
+             deterministic pack is SELECTED here; its implementations are not
+             touched.
+
+INVARIANTS:  §1.5 never overclaim, which is the whole slice. Also §1.2: the
+             machine contract is unchanged — EXIT_CONFIG still returns 20,
+             `--json` still carries kind and reason, `doctor --all` still prints
+             every line, and `as_dict()` gains no key.
+
+CHINESE PARITY: **NOT APPLICABLE — the CLI has no i18n mechanism at all, tracked
+             as D16.** `LANG=zh_CN.UTF-8` renders English on every CLI surface;
+             there is no gettext, no reachable translation table, and nothing
+             that maps a CLI string to Chinese. Adding ZH entries here would
+             produce data nothing reads, which is a §1.5 overclaim wearing a
+             translation's clothes. This slice therefore reports parity as not
+             applicable rather than as satisfied, per D16, and no console string
+             changed. Design has ruled that CLI i18n wave 1 is the ENTIRE init
+             wizard rather than the constitution moment alone; the extraction
+             notes below are written for that wave.
+
+ACCEPTANCE:  Batches 1-3 as recorded in ff947ae, 0f99e1f and 134a881.
+             Batch 4 (this round):
+             1. The pack is proposed only where the DRAFTED RULES supply the
+                reasons; one incidental term match is not a shape.
+             2. The grounds name the person's own rule and, where the drafting
+                model attributed it, quote their own words. Nothing is invented.
+             3. Accepting it reaches `checks:` in crossaudit.yml; refusing it
+                leaves the general pack and keeps the drafted rules.
+             4. A prose project is never asked at all.
+             5. With no terminal, nothing is proposed and the written config is
+                unchanged — silence still never selects the laboratory contract.
+             6. Two D10 counterfactuals, each mutating the shipped code.
+             7. Full suite green.
+
+REVIEWER:    codex (w3) — cross-vendor, independent of this author
+UX REVIEW:   design (w4) — CLI screens; returned MERGE AFTER FIXES on batches
+             1-2, all four items closed at c5fb6bb
+AUDIT:       auditor — honesty audit in progress, scoped shallow by the manager
+```
+
+### What batch 4 actually changes, stated precisely
+
+It does **not** pick a constitution. On the drafted path the constitution is
+already the person's, distilled from their own sentence. What batch 4 proposes
+is the deterministic `checks:` list — the half batch 2 left welded to a starting
+point that nothing revisits after the draft succeeds.
+
+That weld was a real defect and this is the fix for it. Before batch 2 the CLI
+gave every project the science pack, which is what the walkthrough met as seven
+BLOCKERs about `metadata.yml`. Batch 2 made it always general, which is right for
+a prose review and silently wrong for real science: the rules get drafted from
+the description, and the machine checks that would verify those very rules never
+run. Worse, the only route to the science pack — "Use a different starting
+point" — DISCARDS the draft, so "rules drafted from what I said" and "the science
+checks" were mutually exclusive. They no longer are.
+
+### Note for CLI i18n wave 1 — where the strings will and will not come out
+
+Written now, while in the file, because the cost is very unevenly distributed.
+
+**Cheap.** `STARTING_POINTS` — labels, hints, consequence lines and the new
+per-point `frame` — is already module-level data keyed by starting point. It
+extracts to a table almost mechanically. `SEVERITIES`, the option labels in
+`_show_and_agree`, and the four `tui.Option` labels are short and self-contained.
+
+**Moderate.** Nearly every sentence in `run()` is an inline f-string inside a
+`tui.note`/`tui.warn` call, interpolating a path, an env var name or a vendor.
+Each needs to become a keyed template with named slots. There are on the order of
+forty of them and they are mechanical but individually hand-checked, because
+several read as one sentence across two calls.
+
+**Genuinely awkward, flag it before wave 1 starts.**
+
+1. `tui.select`'s hint is built in `tui.py` as
+   `f"↑↓ to move · enter to choose · or type 1-{typeable}"`. It is one string
+   shared by every menu in the product, and the count is interpolated. It needs a
+   plural-aware template, and it is the string a translator will meet first.
+2. The new grounds line interpolates a rule ID, a rule TITLE and the person's own
+   words — all three model-generated and untranslatable — into a sentence whose
+   word order differs in Chinese. It has to become a template with three slots
+   rather than a concatenation, or the Chinese will read as English with Chinese
+   words in it.
+3. `_reason_inside_setup` interpolates the same env var name twice into one
+   sentence. Fine in English; in Chinese the second mention usually drops.
+4. `tui.fingerprint` returns `"{n} chars, ending {tail}"` and is embedded in a
+   larger sentence by its caller, so two strings must be translated as one unit
+   or neither will read correctly.
+5. Width. `tui.WIDTH` is 72 and the wrapper counts display columns, which the
+   existing `test_wrapping_does_not_overflow_on_chinese` already pins — but the
+   boxes in `run()` size themselves from English content. Chinese is roughly half
+   the character count at double the width; the boxes want re-measuring, not
+   re-wrapping.
+
+---
+
 ## A3-fix — change contract (first-three-minutes, design review round 1)
 
 ```

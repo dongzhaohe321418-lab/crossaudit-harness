@@ -19,6 +19,7 @@ import os
 import shlex
 import shutil
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 from ..config import CONFIG_NAME
@@ -292,6 +293,88 @@ DEFAULT_STARTING_POINT = "general"
 #: app.py and console/projects.py already choose per project type; this makes the
 #: CLI agree with them and with dcl/profiles.py, which calls "general" the
 #: default. A sweep confirmed DEFAULT_CHECKS had no consumer outside this module.
+#: What each science-pack check mechanically verifies, in the words a rule that
+#: needed it would use. A term counts as GROUNDS only where it appears in the
+#: DRAFTED RULES — the model's structured statement about this project — never
+#: in the raw description. A person can mention units in passing while writing a
+#: prose review; a rule that says every quantity carries a unit is a commitment,
+#: and only a commitment justifies turning a machine check on.
+SCIENCE_GROUNDS: dict[str, tuple[str, ...]] = {
+    "schema": ("metadata.yml", "results.json"),
+    "units": ("unit", "units"),
+    "convergence": ("converge", "convergence", "threshold"),
+    "provenance": ("provenance", "code_version", "input file", "inputs", "revision"),
+}
+
+#: How many of the four must be grounded before the pack is proposed at all.
+#: One incidental match is not a shape, and proposing on one would make the
+#: proposal noise that people learn to dismiss without reading — which is worse
+#: than not proposing, because the next one is real.
+SCIENCE_GROUNDS_REQUIRED = 2
+
+
+@dataclass(frozen=True)
+class CheckPackProposal:
+    """A proposed deterministic pack and the person's own reasons for it."""
+
+    key: str
+    checks: tuple[str, ...]
+    instead_of: tuple[str, ...]
+    #: One entry per GROUNDING RULE, not per check: a single rule can justify
+    #: two checks ("each entry in results.json has a unit" grounds both schema
+    #: and units), and printing it twice reads as a bug and tells nobody
+    #: anything. (rule id, title, the person's own words or "", checks grounded)
+    grounds: tuple[tuple[str, str, str, tuple[str, ...]], ...]
+
+
+def infer_check_pack(drafted, chosen: str) -> CheckPackProposal | None:
+    """Propose the science pack when the drafted rules already ask for it.
+
+    SPEC 3 §3.5. The walkthrough's harm was a laboratory contract arriving
+    unasked and surfacing later as a BLOCKER about `metadata.yml` — the moment
+    the audit stopped reading as a second opinion and started reading as
+    obstruction. Batch 2 fixed that by always defaulting to general, which is
+    correct for a prose review and silently wrong for real science: the rules
+    get drafted from the person's description, and the machine checks that would
+    verify those very rules never run.
+
+    So the inference is made, but as a PROPOSAL WITH ITS GROUNDS rather than a
+    choice taken on the person's behalf. It returns None unless the draft itself
+    supplies the reasons, and the reasons it returns are quotable back to the
+    person: a rule they can read, and where the drafting model attributed it,
+    the fragment of their own sentence it came from.
+
+    Nothing here changes the constitution — that is already drafted from what
+    they said. What is proposed is the deterministic `checks:` list, which is
+    the half batch 2 left welded to a starting point nobody revisits.
+    """
+    if drafted is None or chosen != DEFAULT_STARTING_POINT:
+        # An explicit choice — including `--profile` — is not ours to revisit.
+        return None
+    proposed = STARTING_CHECKS["science"]
+    claimed: set[str] = set()
+    by_rule: list[tuple[str, str, str, list[str]]] = []
+    for rule in drafted.rules:
+        text = f"{rule.title} {rule.criterion}".lower()
+        grounds_here = [check for check in proposed
+                        if check not in claimed
+                        and any(term in text
+                                for term in SCIENCE_GROUNDS.get(check, ()))]
+        if not grounds_here:
+            continue
+        claimed.update(grounds_here)
+        by_rule.append((rule.id, rule.title.strip().rstrip("."),
+                        str(getattr(rule, "from_user", "")).strip(), grounds_here))
+    if len(claimed) < SCIENCE_GROUNDS_REQUIRED:
+        return None
+    return CheckPackProposal(
+        key="science",
+        checks=tuple(proposed),
+        instead_of=tuple(STARTING_CHECKS[DEFAULT_STARTING_POINT]),
+        grounds=tuple((rid, title, said, tuple(checks))
+                      for rid, title, said, checks in by_rule))
+
+
 STARTING_CHECKS: dict[str, list[str]] = {
     "general": GENERAL_CHECKS,
     "science": SCIENCE_CHECKS,
@@ -400,7 +483,54 @@ def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
             drafted = None
             tui.ok("edits loaded — showing them again before committing")
             continue
+        chosen = _propose_check_pack(drafted, chosen)
         return body, chosen
+
+
+def _propose_check_pack(drafted, chosen: str) -> str:
+    """Show the inference, with its grounds, and let the person refuse it.
+
+    Only ever shown to somebody who can answer. A proposal made into a pipe is
+    not a proposal — the default would be taken by silence, and batch 2's rule
+    that silence never selects the laboratory contract is exactly what stopped
+    the walkthrough's harm. So with no terminal the pack is left alone and this
+    returns unchanged, which also keeps every non-interactive path byte-identical.
+
+    "Edit them first" and "Use a different starting point" both drop the draft,
+    and after that there is no structured rule set left to read grounds out of —
+    so no proposal is made. That is deliberate rather than a gap: the reasons
+    have to come from somewhere, and markdown a person has just hand-edited is
+    not somewhere we can honestly quote.
+
+    The grounds are quoted rather than summarised. "Because you said X" is only
+    printed where the drafting model actually attributed the rule to a fragment
+    of the person's sentence; where it did not, the rule itself is the reason and
+    the line says so. An invented reason for a real choice is the §1.5 failure
+    this whole slice exists to remove.
+    """
+    proposal = infer_check_pack(drafted, chosen)
+    if proposal is None or not tui.interactive():
+        return chosen
+
+    tui.note("Your rules ask for things CrossAudit can check mechanically:")
+    for rule_id, title, from_user, checks in proposal.grounds:
+        said = (f'\n        from what you said: "{from_user}"' if from_user else "")
+        print(f"      · {rule_id} {title} → {', '.join(checks)}{said}")
+    tui.note(f"So it proposes the {STARTING_POINTS[proposal.key]['label'].lower()} "
+             f"automatic checks. They run before any model reads the work, and "
+             f"they never change what your rules say.")
+
+    picked = tui.select("Automatic checks:", [
+        tui.Option(proposal.key, f"Use the {STARTING_POINTS[proposal.key]['label']} checks",
+                   ", ".join(proposal.checks)),
+        tui.Option(chosen, f"Keep the {STARTING_POINTS[chosen]['label']} checks",
+                   ", ".join(proposal.instead_of)),
+    ], default=0)
+    if picked != chosen:
+        tui.note("You can change these at any time by editing `checks:` in "
+                 "crossaudit.yml. Like the rules, a change takes effect only "
+                 "between cycles.")
+    return picked
 
 
 def _reason_inside_setup(exc: Denial) -> str:
