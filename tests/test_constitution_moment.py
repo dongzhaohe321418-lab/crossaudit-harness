@@ -52,15 +52,39 @@ def _flat(text: str) -> str:
     return re.sub(r"\s+", " ", text)
 
 
-def _init(tmp_path, monkeypatch, capsys, name="proj", **over):
+def _init(tmp_path, monkeypatch, capsys, name="proj", describe="", **over):
     project = tmp_path / name
     project.mkdir()
     monkeypatch.setenv("HOME", str(tmp_path / f"home-{name}"))
+    # `keys_file()` resolves DEFAULT_KEYS_FILE, which was computed from the real
+    # home at import, so setting HOME does not move it. Point it at the sandbox
+    # explicitly: without this a developer who happens to have a credentials
+    # file gets a different refusal here than CI does, and the test below is
+    # about exactly which refusal is printed.
+    monkeypatch.setenv("CROSSAUDIT_KEYS_FILE", str(tmp_path / f"keys-{name}.env"))
     for env in ("CROSSAUDIT_AUDITOR_KEY", "CROSSAUDIT_GENERATOR_KEY"):
         monkeypatch.delenv(env, raising=False)
+    if describe:
+        # Non-interactively `tui.text` returns its default, and the default for
+        # the description is empty — so `_distil` is never called and the
+        # keyless draft failure never happens. Typing something is what reaches
+        # it, so the test types something.
+        spoken = wizard.tui.text
+
+        def typed(prompt, default="", **kw):
+            if "your project" in prompt:
+                return describe
+            return spoken(prompt, default, **kw)
+
+        monkeypatch.setattr(wizard.tui, "text", typed)
     monkeypatch.chdir(project)
     main.cmd_init(_args(project, **over))
     return project, capsys.readouterr().out
+
+
+#: A sentence long enough to be a real description, so `_distil` is attempted.
+_DESCRIPTION = ("a review of the PV industry; every figure must trace to a "
+                "source")
 
 
 # --------------------------------------------------------------- shown, then written
@@ -102,6 +126,153 @@ def test_amend_is_not_offered_in_the_state_where_it_cannot_run(
     _project, out = _init(tmp_path, monkeypatch, capsys, name="noamend")
     shown = _flat(out[out.index("[4/4]"):])
     assert "crossaudit amend" not in shown
+
+
+# ------------------------------------ the remedy has to work from where you are
+def test_setup_never_sends_you_to_the_command_you_are_already_running(
+        tmp_path, monkeypatch, capsys):
+    """The keyless draft failure printed the provider's own remedy verbatim.
+
+    That remedy is `crossaudit init`, which is correct from a shell and useless
+    here: the person is inside `crossaudit init`, and step 3 offered them the
+    key one screen ago. Executed, because the defect is in what a real run of a
+    real command prints (AGENTS.md §3.5).
+    """
+    _project, out = _init(tmp_path, monkeypatch, capsys, name="remedy",
+                          describe=_DESCRIPTION)
+    flat = _flat(out)
+    # The failure is reported at all — otherwise the rest asserts over silence.
+    assert "could not draft rules from your description" in flat
+
+    # No line sends them to bare `crossaudit init`. `--force` is a different
+    # command: it is the one that re-runs setup and stores a key.
+    stray = re.findall(r"`crossaudit init`", flat)
+    assert not stray, f"setup told the person to run the command they are in: {flat}"
+
+    # And what it says instead is reachable from here, both ways.
+    assert "export $CROSSAUDIT_AUDITOR_KEY" in flat
+    assert "crossaudit init --force" in flat
+
+
+def test_a_refusal_this_screen_does_not_understand_is_passed_through(
+        tmp_path, monkeypatch, capsys):
+    """Only the missing-key remedy is replaced; nothing else is rewritten.
+
+    The rewrite keys on what the refusal CARRIES, so a refusal that carries
+    something else must arrive intact. Otherwise a future provider error would
+    be quietly reworded into a sentence about API keys.
+    """
+    from crossaudit.errors import ConfigDenial as _Denial
+
+    def unrelated(*_a, **_k):
+        raise _Denial("the model returned nothing this run", env="X_KEY",
+                      keys_file="/somewhere/keys.env")
+
+    monkeypatch.setattr(wizard, "_distil", unrelated)
+    _project, out = _init(tmp_path, monkeypatch, capsys, name="passthrough",
+                          describe=_DESCRIPTION)
+    assert "the model returned nothing this run" in _flat(out)
+
+
+# ------------------------------- the fact you need comes before the decision
+def test_the_sentence_that_makes_editing_safe_is_read_before_the_choice(
+        tmp_path, monkeypatch, capsys):
+    """D8's sentence is what makes editing safe to OFFER, so it precedes the offer.
+
+    Printed after the choice it is a reassurance about a decision already taken;
+    printed before, it is the fact the person needs in order to take it.
+    """
+    _project, out = _init(tmp_path, monkeypatch, capsys, name="ordering")
+    flat = _flat(out)
+    assert flat.index("Changing the rules never changes a decision already made") \
+        < flat.index("These rules:")
+
+
+def test_the_remedy_guard_fails_when_the_provider_wording_comes_back(
+        tmp_path, monkeypatch, capsys):
+    """Mutate the real product, run the real guard, watch it catch it (D10).
+
+    Mutation: `_reason_inside_setup` becomes the identity — which is precisely
+    what shipped, `tui.warn(... exc.reason)`. Compared against a live unmutated
+    run rather than a recorded snapshot.
+    """
+    _project, honest = _init(tmp_path, monkeypatch, capsys, name="remedybase",
+                             describe=_DESCRIPTION)
+    assert not re.findall(r"`crossaudit init`", _flat(honest))
+
+    monkeypatch.setattr(wizard, "_reason_inside_setup", lambda exc: exc.reason)
+    _project2, mutated = _init(tmp_path, monkeypatch, capsys, name="remedybad",
+                               describe=_DESCRIPTION)
+    assert re.findall(r"`crossaudit init`", _flat(mutated)), (
+        "the mutation did not take; this demonstration proves nothing")
+
+
+def test_the_ordering_guard_fails_when_the_sentence_moves_back(
+        tmp_path, monkeypatch, capsys):
+    """Mutation: hold the sentence back until after the choice, as it was.
+
+    The real stream is mutated rather than a copy of the wizard re-implemented,
+    so what the guard runs against is the real product printing in the old
+    order.
+    """
+    real_note, real_ok = wizard.tui.note, wizard.tui.ok
+    held: list[str] = []
+
+    def hold(text: str) -> None:
+        if "Changing the rules never" in text:
+            held.append(text)
+            return
+        real_note(text)
+
+    def release(text: str) -> None:
+        while held:
+            real_note(held.pop())
+        real_ok(text)
+
+    monkeypatch.setattr(wizard.tui, "note", hold)
+    monkeypatch.setattr(wizard.tui, "ok", release)
+    _project, mutated = _init(tmp_path, monkeypatch, capsys, name="orderbad")
+    flat = _flat(mutated)
+    assert flat.index("Changing the rules never changes a decision already made") \
+        > flat.index("These rules:"), (
+            "the mutation did not take; this demonstration proves nothing")
+
+
+# ------------------------- a frame must not promise a check it does not make
+def test_the_frame_never_promises_a_check_over_a_list_of_what_is_not_checked(
+        tmp_path, monkeypatch, capsys):
+    """"It will check that nothing will be gated" is not a check (§1.5).
+
+    The empty starting point gates nothing, so the sentence its consequences are
+    read under says that, rather than promising checking over a list describing
+    the absence of it.
+    """
+    _project, out = _init(tmp_path, monkeypatch, capsys, name="ownframe",
+                          profile="own")
+    flat = _flat(out)
+    assert "There are no rules to check yet, so until you write one:" in flat
+    assert "nothing will be blocked, whatever the work says" in flat
+    assert wizard.GATING_FRAME not in flat, (
+        "the empty standard checks nothing; it must not say it will")
+
+    # The gating frame is not merely deleted — it is still used where it is true.
+    _project2, gated = _init(tmp_path, monkeypatch, capsys, name="generalframe")
+    assert wizard.GATING_FRAME in _flat(gated)
+
+
+def test_the_frame_guard_fails_when_the_gating_promise_comes_back(
+        tmp_path, monkeypatch, capsys):
+    """Mutate the real table, run the real guard, watch it catch it (D10)."""
+    _project, honest = _init(tmp_path, monkeypatch, capsys, name="framebase",
+                             profile="own")
+    assert wizard.GATING_FRAME not in _flat(honest)
+
+    monkeypatch.setitem(wizard.STARTING_POINTS["own"], "frame",
+                        wizard.GATING_FRAME)
+    _project2, mutated = _init(tmp_path, monkeypatch, capsys, name="framebad",
+                               profile="own")
+    assert wizard.GATING_FRAME in _flat(mutated), (
+        "the mutation did not take; this demonstration proves nothing")
 
 
 # ------------------------------------------------------------- the right shape

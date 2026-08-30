@@ -243,11 +243,18 @@ def commit_setup(target: Path, paths: list[str]) -> str:
 #: until you write it. It is a legitimate choice — the constitution is the
 #: STANDARD and the audit is the MECHANISM, so a trivial standard produces an
 #: honest audit of a trivial standard, not a weak audit (Ledger D8).
+#: The sentence the consequence lines are read under. It is per starting point
+#: because one of them gates nothing: "it will check that nothing will be gated"
+#: is not a check, and a frame that promises checking over a list describing its
+#: ABSENCE is the overclaim shape this slice exists to remove (AGENTS.md §1.5).
+GATING_FRAME = "Before CrossAudit accepts any work, it will check that:"
+
 STARTING_POINTS: dict[str, dict] = {
     "general": {
         "label": "General",
         "hint": "any deliverable — prose, documents, code",
         "template": "GENERAL_AUDIT_RULES.md",
+        "frame": GATING_FRAME,
         "consequences": [
             "it does what you asked for",
             "it is finished — no TODO or placeholder text left in",
@@ -258,6 +265,7 @@ STARTING_POINTS: dict[str, dict] = {
         "label": "Science & data",
         "hint": "numerical results with declared inputs and units",
         "template": "AUDIT_RULES.md",
+        "frame": GATING_FRAME,
         "consequences": [
             "every result declares the inputs and code version it came from",
             "every number carries a unit and a traceable source",
@@ -269,8 +277,9 @@ STARTING_POINTS: dict[str, dict] = {
         "label": "Only what I write myself",
         "hint": "no rules yet; nothing is gated until you add some",
         "template": None,
+        "frame": "There are no rules to check yet, so until you write one:",
         "consequences": [
-            "nothing will be gated until you add a rule",
+            "nothing will be blocked, whatever the work says",
             "the automatic checks still run, and every result is still recorded",
         ],
     },
@@ -323,15 +332,20 @@ def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
     Returns (markdown, starting_point_key).
 
     Accessibility note: this is a terminal, so there is no aria-live to add. The
-    equivalent obligation is that every line reads correctly in linear order with
-    no meaning carried by colour, position or box drawing — a screen reader gets
-    the numbered options, their names and their consequences as text, and the
-    outcome is announced in words rather than implied by a glyph.
+    equivalent obligation is that every line reads correctly in linear order and
+    that nothing needed to operate the moment is carried only by colour, position
+    or box drawing. `tui.select` numbers its options and accepts the number as
+    input (Ledger D17), so a screen reader gets the options, their names and
+    their consequences as text and can choose without tracking a marker; the
+    green `❯` and the bold weight are redundant emphasis on top of that number.
+    The chosen option is then said in words when the menu closes rather than
+    left implied by a glyph.
     """
     while True:
         point = STARTING_POINTS[chosen]
         if drafted is not None:
             attributed = [r for r in drafted.rules if getattr(r, "from_user", "")]
+            frame = GATING_FRAME
             header = (f"Rules drafted from what you said · {len(drafted.rules)} rules"
                       + (f", {len(attributed)} from your description"
                          if attributed else ""))
@@ -341,11 +355,12 @@ def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
         else:
             # The word "drafted" may appear only when a draft happened.
             header = f"A starting point — not drafted from your description · {point['label']}"
+            frame = point["frame"]
             consequences = point["consequences"]
             body = (_empty_constitution(target.name) if point["template"] is None
                     else _substitute_project(read(point["template"]), target.name))
 
-        tui.note("Before CrossAudit accepts any work, it will check that:")
+        tui.note(frame)
         for line in consequences:
             print(f"      · {line}")
         print()
@@ -358,6 +373,14 @@ def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
             tui.Option("edit", "Edit them first", "opens the file in your editor"),
             tui.Option("show", "Show the full rules", "every rule, in full"),
         ]
+        # Said BEFORE the choice, not after it. This is the sentence that makes
+        # editing safe to offer freely (Ledger D8) — it is true because every
+        # audit cites the constitution commit and rule changes take effect only
+        # between cycles. Read after the person has already chosen, it is a
+        # reassurance about a decision they have made; read before, it is the
+        # fact they need in order to make it.
+        tui.note("You can change these at any time. Changing the rules never "
+                 "changes a decision already made.")
         picked = tui.select("These rules:", options, default=0)
 
         if picked == "show":
@@ -377,10 +400,32 @@ def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
             drafted = None
             tui.ok("edits loaded — showing them again before committing")
             continue
-        # "use": say the thing that makes free editing safe to offer.
-        tui.note("You can change these at any time. Changing the rules never "
-                 "changes a decision already made.")
         return body, chosen
+
+
+def _reason_inside_setup(exc: Denial) -> str:
+    """The refusal, with a remedy that is true where it is being read.
+
+    A provider refusal names ``crossaudit init`` as the way to store a key. That
+    is right everywhere except inside ``crossaudit init``, which is where this
+    one is printed — the person is already in it, and step 3 offered them the
+    key a moment ago. Sending them to the command they are running is a dead
+    end at the moment they are trying to act.
+
+    The missing-key refusal is recognised by what it CARRIES rather than by
+    matching its prose: it names an environment variable and no keys file,
+    because no keys file held the key. The other refusal from the same function
+    — a key that is in the file but not in this process — carries ``keys_file``
+    as well, and its remedy is already correct here, so it passes through
+    untouched. So does anything else, which keeps this from quietly rewriting
+    refusals it does not understand.
+    """
+    env = str(exc.detail.get("env", ""))
+    if not env or "keys_file" in exc.detail:
+        return exc.reason
+    return (f"there is no key in ${env} yet — export ${env}, or re-run setup "
+            f"with `crossaudit init --force` to store one. The rest of setup "
+            f"does not need it")
 
 
 def _open_in_editor(path: Path) -> None:
@@ -588,8 +633,10 @@ def run(target: Path, *, mode: str, force: bool = False,
         except Denial as exc:
             # Honest about what did not happen, and it does NOT offer
             # `crossaudit amend` as the remedy: that is provider-backed and
-            # cannot run in exactly the state this message appears in.
-            tui.warn(f"could not draft rules from your description: {exc.reason}")
+            # cannot run in exactly the state this message appears in. Nor does
+            # it offer `crossaudit init`, which is what the person is inside.
+            tui.warn(f"could not draft rules from your description: "
+                     f"{_reason_inside_setup(exc)}")
             tui.note("Showing a starting point instead — you can edit it here, "
                      "or pick a different one.")
 

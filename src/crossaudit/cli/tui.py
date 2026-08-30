@@ -160,6 +160,20 @@ def decode(raw: bytes) -> str:
     return OTHER
 
 
+def chosen_number(raw: bytes) -> int | None:
+    """The 1-based option a keypress names, or None if it names none.
+
+    Separate from `decode` and pure for the same reason: a menu that can be
+    driven by number is the part of `select` that does not depend on a marker
+    being visible, so it is the part that has to be testable without a terminal.
+    Only the single digits 1-9 arrive as one byte, which bounds direct entry;
+    `select` says so in its hint rather than offering a key that does nothing.
+    """
+    if len(raw) != 1 or not raw.isdigit() or raw == b"0":
+        return None
+    return int(raw)
+
+
 def read_key() -> tuple[str, bytes]:
     """Block for one keypress. Only called when `interactive()`."""
     fd = sys.stdin.fileno()
@@ -190,40 +204,84 @@ class Option:
     hint: str = ""
 
 
+def option_row(index: int, option: Option, *, current: bool) -> str:
+    """One rendered option: its number first, then its name and its hint.
+
+    The number leads because it is the part that survives having no colour, no
+    bold and no marker — it names the option as text and it is what a person
+    types to choose it. The marker and the weight are emphasis on top of that,
+    not the identity of the row (Ledger D17).
+    """
+    marker = green("❯") if current else " "
+    label = bold(option.label) if current else option.label
+    tail = dim(f"  {option.hint}") if option.hint else ""
+    return f"{marker} {index + 1}) {label}{tail}"
+
+
+def outcome_line(index: int, option: Option) -> str:
+    """What was chosen, said in words.
+
+    A marker left standing on a list that is about to scroll away is not an
+    answer anyone can report or scroll back to, so the menu states its result
+    before it hands control back.
+    """
+    return f"{dim('→')} chose {index + 1}) {option.label}"
+
+
 def select(title: str, options: list[Option], *, default: int = 0,
            footer: str = "") -> str:
-    """Arrow-key choice, with a typed fallback when the terminal is not ours."""
+    """Numbered choice, drivable by arrows or by number (Ledger D17).
+
+    The options are numbered and each can be chosen by typing its number, so
+    nothing needed to OPERATE the menu is carried only by the green marker, the
+    bold weight or the row's position: those are redundant emphasis on top of a
+    number that is plain text. When the menu closes it says which option was
+    chosen, in words, rather than leaving the answer implied by a marker on a
+    list that has already scrolled away.
+
+    That matters for a screen reader, which gets a stable "3) Edit them first"
+    to read and a spoken outcome, and it is also faster for everyone else.
+
+    Direct entry covers 1-9, which is what arrives as a single byte; the hint
+    names the range it actually accepts rather than implying more. Longer lists
+    stay fully reachable with the arrows.
+    """
     if not interactive():
         chosen = options[default]
-        print(f"  {title} {dim('→')} {chosen.label} {dim('(default)')}")
+        print(f"  {title} {dim('→')} {default + 1}) {chosen.label} "
+              f"{dim('(default)')}")
         return chosen.value
 
     index = max(0, min(default, len(options) - 1))
     print(f"  {title}")
-    hint = footer or "↑↓ to move · enter to choose"
+    typeable = min(9, len(options))
+    hint = footer or (f"↑↓ to move · enter to choose · or type 1-{typeable}"
+                      if typeable > 1 else "enter to choose")
     print(dim(f"  {hint}"))
 
     def render(first: bool = False) -> None:
         if not first:
             sys.stdout.write(f"\033[{len(options)}A")
         for i, opt in enumerate(options):
-            marker = green("❯") if i == index else " "
-            label = bold(opt.label) if i == index else opt.label
-            tail = dim(f"  {opt.hint}") if opt.hint else ""
-            sys.stdout.write(f"\r\033[K  {marker} {label}{tail}\n")
+            sys.stdout.write(f"\r\033[K  {option_row(i, opt, current=i == index)}\n")
         sys.stdout.flush()
 
     sys.stdout.write("\033[?25l")                     # hide the cursor
     try:
         render(first=True)
         while True:
-            key, _raw = read_key()
+            key, raw = read_key()
+            number = chosen_number(raw)
+            if number is not None and number <= len(options):
+                index = number - 1
+                render()
+                break
             if key == UP:
                 index = (index - 1) % len(options)
             elif key == DOWN:
                 index = (index + 1) % len(options)
             elif key == ENTER:
-                return options[index].value
+                break
             elif key == ESCAPE:
                 raise KeyboardInterrupt
             else:
@@ -232,6 +290,9 @@ def select(title: str, options: list[Option], *, default: int = 0,
     finally:
         sys.stdout.write("\033[?25h")                 # and always give it back
         sys.stdout.flush()
+    picked = options[index]
+    print(f"  {outcome_line(index, picked)}")
+    return picked.value
 
 
 def text(prompt: str, default: str = "", *, placeholder: str = "") -> str:
