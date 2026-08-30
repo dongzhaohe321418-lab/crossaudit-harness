@@ -5610,7 +5610,22 @@ function reviewCard(d){
   const cycle=cycles[cycles.length-1];
   const status=String(cycle.status||'').toLowerCase();
   if(!['passed','consumed','blocked','escalated'].includes(status))return '';
-  const p=chatProgress(d);if(p&&!p.finished)return '';
+  // R3. This card was suppressed for the whole duration of ANY run. The
+  // suppression predates F1 and F7 — the run card takes the stage — but F1
+  // attaches the report provenance to this card, so that line vanished
+  // exactly while the surface is busiest. A person watching a live draft over a
+  // completed cycle is precisely the person who needs to know what was reviewed
+  // and against what. The F1 property held except while streaming, which is
+  // except when it matters most.
+  //
+  // NARROWED, not removed. A run that is continuing THIS cycle is producing a
+  // verdict that supersedes the one on this card, and showing the old outcome
+  // while it is being replaced would be a false statement about what is
+  // current. A run on anything else is different work: this card stays a true
+  // statement about a settled cycle, it carries that cycle id in its Record,
+  // and the run card directly above it says what is live.
+  const p=chatProgress(d);
+  if(p&&!p.finished&&String(p.continuation_cycle||'')===String(cycle.id||''))return '';
   const reports=d.auditor_stream.filter(m=>m.kind==='auditor'&&(m.chat_id||'history')===activeChatId);
   const related=reports.filter(m=>m.sha&&cycle.sha&&(String(cycle.sha).startsWith(String(m.sha))||String(m.sha).startsWith(String(cycle.sha))));
   const rows=(related.length?related:reports.slice(-Number(cycle.round||1))).slice(-8);

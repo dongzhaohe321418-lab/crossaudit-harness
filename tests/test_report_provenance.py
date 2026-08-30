@@ -296,3 +296,38 @@ def test_the_console_renders_the_note_where_the_person_reads_the_verdict():
             ("This report is not committed yet, so it cannot be verified yet.",
              "这份报告尚未提交，因此暂时无法核验。")):
         assert f'"{english}":"{chinese}"' in PAGE
+
+
+def test_the_review_card_survives_a_run_that_is_not_superseding_it():
+    """R3 — the F1/F7 interaction, driven instead of argued about.
+
+    I reported this interaction as "named" and marked the combined screen
+    "reasoned about, not observed". The cross-vendor audit built the state and
+    it failed: with a completed cycle AND an active stream, Chromium showed the
+    live draft and no review card, so the provenance line went with it.
+
+    The cause predates both fixes — the card was suppressed for the duration of
+    ANY run, because the run card takes the stage. F1 attached the provenance to
+    that card and inherited the suppression, and F7 made the state reachable
+    enough to see. The property held except while streaming, which is except
+    when the surface is busiest and a person most needs to know what was
+    reviewed.
+
+    NARROWED rather than removed, and both edges are pinned here because a
+    one-sided guard would be satisfied by deleting the line: a run CONTINUING
+    this cycle is producing a verdict that supersedes the card, and must still
+    hide it; a run on anything else must not.
+
+    Driven, both edges and both mutations, in `_ui_findings/f1f7-coexist/`.
+    """
+    from crossaudit.console.page import PAGE
+
+    card = PAGE[PAGE.index("function reviewCard(d){"):]
+    card = card[:card.index("\nfunction ")]
+    assert "String(p.continuation_cycle||'')===String(cycle.id||'')" in card, (
+        "the review card is suppressed for the whole of any run again, so the "
+        "report's provenance disappears exactly while a draft is streaming")
+    # ...and it is still suppressed for the case that would state a superseded
+    # outcome. Removing the guard entirely is the other way to get this wrong.
+    assert "if(p&&!p.finished&&" in card
+    assert "if(p&&!p.finished)return '';" not in card
