@@ -433,6 +433,9 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
    speaker name — because nothing said this; attributing it to the generator
    would be a claim about who produced the words. */
 .turn.system-note{margin-bottom:var(--sp-5)}
+.report-provenance{margin:10px 0 0;padding:8px 10px;border-radius:var(--r-sm);
+  background:var(--surface-2);color:var(--text-2);font-size:var(--fs-caption);
+  border-left:2px solid var(--warn,var(--line-strong))}
 .turn.system-note .turn-main{border-left:2px solid var(--line-strong);
   padding:2px 0 2px var(--sp-4)}
 .turn.system-note .turn-meta{margin-bottom:4px;color:var(--text-3)}
@@ -3483,6 +3486,8 @@ const ZH={
   "Connect at least two different providers on the previous step to form an independent Generator / Auditor pair.":"请在上一步至少连接两家不同的供应商，以组成独立的生成者 / 审计者搭配。",
   "Generator and auditor must run on different providers. Independent review is the core of the protocol and cannot be turned off.":"生成者和审计者必须运行在不同的供应商上。独立审查是本协议的核心，无法关闭。",
   "You can swap either model later without losing history.":"你之后可以更换任一模型而不丢失历史记录。",
+  "The copy of this report on disk differs from the audited one shown here. Run crossaudit verify to check the record.":"磁盘上的这份报告与此处显示的已审计版本不同。请运行 crossaudit verify 核对记录。",
+  "This report is not committed yet, so it cannot be verified yet.":"这份报告尚未提交，因此暂时无法核验。",
   "Start using CrossAudit":"开始使用 CrossAudit","Paste your API key":"粘贴你的 API key",
   "Paste a new key to replace the saved one":"粘贴新密钥以替换已保存的密钥",
   "Same provider — independent review is not possible.":"同一家供应商——无法进行独立审查。",
@@ -5484,6 +5489,14 @@ function turn(m,d){
       + '<div class="turn-meta"><span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b><span class="status ' + esc(m.verdict) + '">'
       + esc(m.verdict) + '</span><span class="turn-time">' + at(m.t) + '</span></div>'
       + (fs || '<div class="turn-body">'+(m.verdict==='PASS'?'No findings. The audited increment passed.':'No structured findings were recorded.')+'</div>')
+      // F1. What is shown above is the AUDITED report, read from the commit the
+      // receipt cites. When the copy on disk says something else the person is
+      // told, rather than silently corrected: they may have edited it for a
+      // good reason, and the one thing worth handing them is the command that
+      // settles it. Deliberately OUTSIDE the findings list — inside it, this
+      // would read as something the auditor observed, which is the exact
+      // confusion this whole fix exists to end.
+      + (m.report_note ? '<p class="report-provenance">'+esc(m.report_note)+'</p>' : '')
       + '</div></article>';
   }
   if(m.kind === 'context_condensed'){
@@ -5627,6 +5640,13 @@ function reviewCard(d){
     +'<div role="list" aria-labelledby="review-checks-title-'+esc(cycle.id)+'">'+renderCheckRows(checks)+'</div>'
     +'<div class="review-rounds">'+esc(d.rules)+(d.rules===1?' rule':' rules')+'</div></div>'
     +(findingRows?'<div class="review-section"><div class="review-section-title">Findings</div>'+findingRows+'</div>':'')
+    // F1. The review card is the surface a person actually reads for the audit
+    // result, so the provenance of the bytes above belongs here and not only in
+    // the Audits view. One line per distinct note, because several rounds of one
+    // cycle share the same edited file and repeating it would read as several
+    // problems.
+    +([...new Set(rows.map(m=>m.report_note).filter(Boolean))]
+        .map(note=>'<p class="report-provenance">'+esc(note)+'</p>').join(''))
     +'<div class="review-section"><div class="review-section-title">Record</div><div class="review-record">'
     +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
     +'<div class="review-record-row"><span>Cycle</span><code>'+esc(cycle.id)+'</code></div>'
