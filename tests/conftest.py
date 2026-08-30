@@ -16,6 +16,53 @@ from crossaudit.config import load
 from crossaudit.scaffold import read as read_template
 
 
+#: Loopback and unix sockets are the suite's own servers and are always allowed.
+_LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "0.0.0.0", ""}
+
+
+@pytest.fixture(autouse=True)
+def _no_credentials_and_no_outbound_network(monkeypatch, tmp_path_factory):
+    """No test may reach the developer's credentials or the open network.
+
+    Both channels were open and both produced real defects.
+
+    CREDENTIALS. `wizard.keys_file()` resolves `DEFAULT_KEYS_FILE`, computed
+    from the real home at import, so setting `HOME` does not move it. Exactly
+    one test file was sandboxing it; every other test could load the developer's
+    real keys. A suite whose behaviour depends on whether the developer happens
+    to have credentials is not a suite.
+
+    NETWORK. With a key loaded, provider code makes live calls. Three
+    consecutive full runs failed with three DIFFERENT tests in
+    `test_projects_ui.py`, and one failure was `http.client.RemoteDisconnected`
+    — not load, a real socket. A test that passes when the network is up and
+    fails when it blinks is non-deterministic for a reason nobody was looking
+    at, and re-running it in isolation "to confirm the flake" confirmed only
+    that the network was up again.
+
+    Loopback stays open, because the console tests serve on it.
+    """
+    import socket
+
+    monkeypatch.setenv(
+        "CROSSAUDIT_KEYS_FILE",
+        str(tmp_path_factory.mktemp("keys") / "crossaudit-keys.env"))
+
+    real_connect = socket.socket.connect
+
+    def guarded(self, address):
+        host = address[0] if isinstance(address, tuple) else None
+        if host is not None and str(host) not in _LOCAL_HOSTS:
+            raise AssertionError(
+                f"a test tried to open a network connection to {host!r}. Tests "
+                f"must not reach the network: stub the provider, or use the "
+                f"`replay` provider, which ships for exactly this.")
+        return real_connect(self, address)
+
+    monkeypatch.setattr(socket.socket, "connect", guarded)
+    yield
+
+
 @pytest.fixture(autouse=True)
 def _reset_progress_tracker():
     """The progress tracker is a process-global singleton. A test that leaves a

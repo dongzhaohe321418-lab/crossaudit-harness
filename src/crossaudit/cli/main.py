@@ -94,14 +94,40 @@ def _emit(obj: dict, as_json: bool, human: str = "") -> None:
         print(human)
 
 
-def _skills_manifest(cfg: Config) -> dict:
-    """House skills in force, by path and hash, for the receipt."""
+def _skills_manifest(cfg: Config, sha: str = "") -> dict:
+    """House skills as the SUBJECT COMMIT holds them, by path and hash.
+
+    This read the working directory, so a receipt named and hashed
+    `skills/late.md` as guidance that "shaped this round" when that file was
+    created after the audited commit and existed in no tree. A receipt claiming
+    a skill informed work that predates the skill is a provenance falsehood, and
+    it is the constitution defect wearing different clothes: the field names a
+    source of truth and the writer reads whatever is on disk.
+
+    Deliberately the SAME idea as the constitution rather than a second
+    mechanism — the receipt's inputs are derived from the commit being judged. A
+    skill absent from that commit cannot be attested, exactly as an uncommitted
+    rule cannot be cited. Under-claiming is the honest direction; the
+    alternative is an unverifiable claim about the past.
+
+    `sha` is optional so sample and legacy callers keep working; an empty one
+    falls back to the disk read and is the only path that still can.
+    """
     from .. import skills as skills_mod
 
+    if not sha:
+        try:
+            return skills_mod.manifest(skills_mod.load(cfg.root))
+        except Denial:
+            return {}
     try:
-        return skills_mod.manifest(skills_mod.load(cfg.root))
+        files, _notes = materialise(cfg.root, sha, skills_mod.SKILLS_DIR)
     except Denial:
-        return {}                     # a broken skill is reported by doctor, not here
+        return {}
+    import hashlib
+
+    return {rel: hashlib.sha256(data).hexdigest()
+            for rel, data in sorted(files.items()) if rel.endswith(".md")}
 
 
 def _sha256_file(path: Path) -> str:
@@ -578,7 +604,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
         cycle=cycle, manifest=manifest, constitution_path=cfg.constitution,
         constitution_bytes=constitution_bytes, constitution_commit=const_commit,
         dcl_source_sha256=dcl_source_digest(), prompt_sha256=outcome.prompt_sha256,
-        checks=cfg.checks, skills=_skills_manifest(cfg),
+        checks=cfg.checks, skills=_skills_manifest(cfg, sha),
         verdict=outcome.verdict, exchange=outcome.exchange,
         retention=args.retention, report_bytes=report_path.read_bytes(),
         report_commit=report_commit, cycle_path=ledger.relative_to(cfg.root).as_posix(),
@@ -611,7 +637,8 @@ def cmd_audit(args: argparse.Namespace) -> int:
     status = store.record_verdict(cycle["cycle_id"], sha, outcome.verdict,
                                   receipt_digest(receipt), cfg.max_rounds,
                                   escalation_reason=_provider_stop_reason(outcome),
-                                  escalation_kind=_provider_stop_kind(outcome))
+                                  escalation_kind=_provider_stop_kind(outcome),
+                                  constitution_commit=const_commit)
     result = {"verdict": outcome.verdict, "cycle_status": status,
               "cycle_id": cycle["cycle_id"], "round": cycle["round"],
               "integrity": outcome.integrity, "receipt": str(ledger / "receipt.json"),
@@ -1181,8 +1208,17 @@ def cmd_run(args: argparse.Namespace) -> int:
         return EXIT_ESCALATED
     if not cycle.get("awaiting_verdict") and cycle["active_sha"] == sha:
         print(f"  Already audited (round {cycle['round']}, status {cycle['status']}).")
-        print(f"  Commit a fix and run again. To re-audit this same commit (a dispute "
-              f"or second opinion), use: crossaudit audit --sha {sha[:12]}")
+        # It used to advertise `crossaudit audit --sha <sha>` here as a dispute
+        # or second-opinion route. Since a decided commit is refused, that
+        # advice pointed at a guaranteed failure. The two routes below are the
+        # ones that work, and they are the same two the `audit` refusal names —
+        # one sentence for one truth. It does NOT invent a dispute route: there
+        # is no such verb, and replacing a false promise with a vaguer one would
+        # be the same defect in softer language.
+        print("  Commit a revision and run again to continue this cycle, or start "
+              "a new increment to be judged under the current rules.")
+        print("  Re-running this same commit will not produce a different "
+              "decision: a decision already made is not replaced by repeating it.")
         return EXIT_OK
 
     # Continuations use the standard pinned when their cycle opened. New cycles
@@ -1242,7 +1278,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         cycle=cycle, manifest=manifest, constitution_path=cfg.constitution,
         constitution_bytes=const_bytes, constitution_commit=const_commit,
         dcl_source_sha256=dcl_source_digest(), prompt_sha256=outcome.prompt_sha256,
-        checks=cfg.checks, skills=_skills_manifest(cfg),
+        checks=cfg.checks, skills=_skills_manifest(cfg, sha),
         verdict=outcome.verdict, exchange=outcome.exchange,
         retention="sealed", report_bytes=outcome.report.encode(),
         report_commit=report_commit, cycle_path=str(rel),
@@ -1262,7 +1298,8 @@ def cmd_run(args: argparse.Namespace) -> int:
     status = store.record_verdict(cycle["cycle_id"], sha, outcome.verdict,
                                   receipt_digest(receipt), cfg.max_rounds,
                                   escalation_reason=_provider_stop_reason(outcome),
-                                  escalation_kind=_provider_stop_kind(outcome))
+                                  escalation_kind=_provider_stop_kind(outcome),
+                                  constitution_commit=const_commit)
     _done("report + receipt committed")
 
     print()

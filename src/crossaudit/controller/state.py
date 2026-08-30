@@ -371,7 +371,8 @@ class StateStore:
 
     def record_verdict(self, cycle_id: str, sha: str, verdict: str,
                        receipt_hash: str, max_rounds: int,
-                       escalation_reason: str = "", escalation_kind: str = "") -> str:
+                       escalation_reason: str = "", escalation_kind: str = "", *,
+                       constitution_commit: str = "") -> str:
         """Record one round's verdict; ``escalation_reason`` names the stop.
 
         When the round's failure was infrastructural (the model audit could
@@ -393,6 +394,35 @@ class StateStore:
                 # An admitted cycle is closed; a late verdict cannot reopen it.
                 self._log(state, "verdict_after_admission_ignored", cycle=cycle_id, sha=sha)
                 return c["status"]
+            # The standard this round was ACTUALLY judged against, which is the
+            # only thing the verdict row may honestly name. The class sweep found
+            # a round whose controller record said C0 while its receipt said C1
+            # and the Auditor received neither: one decision, two commits and a
+            # third byte source. A judgment that names its standard cannot
+            # disagree with the cycle it belongs to, so:
+            #   · a cycle with no pin ADOPTS this one — the first judgment is
+            #     what establishes it, which is how a pre-revision or legacy
+            #     cycle acquires a standard at the moment it first needs one;
+            #   · a cycle with a pin REFUSES a different one, rather than
+            #     recording a row that contradicts its own cycle.
+            # Callers that judge nothing and mint no receipt (the sample project,
+            # the pre-revision escalation producers) pass nothing and keep their
+            # previous behaviour exactly. That distinction is deliberate and the
+            # sweep classified those five paths as unpinned BY DESIGN.
+            if constitution_commit:
+                pinned = (c.get("constitution_commit") or "").strip()
+                if not pinned:
+                    c["constitution_commit"] = constitution_commit
+                elif pinned != constitution_commit:
+                    self._log(state, "constitution_divergence_refused",
+                              cycle=cycle_id, sha=sha, pinned=pinned[:12],
+                              offered=constitution_commit[:12])
+                    raise IntegrityDenial(
+                        f"this cycle is judged against {pinned[:12]}, but the "
+                        f"round was audited against {constitution_commit[:12]}; "
+                        f"a decision cannot name a standard its cycle does not",
+                        cycle_id=cycle_id, pinned=pinned,
+                        offered=constitution_commit)
             if _recorded_verdict(c, c["round"], sha) is not None:
                 # Superseded, never erased (D36). A second verdict for a round
                 # that already reached one would overwrite the record rather
@@ -426,7 +456,10 @@ class StateStore:
             c.setdefault("verdicts", []).append({
                 "round": c["round"], "sha": sha, "verdict": verdict,
                 "status": c["status"], "receipt": receipt_hash[:16],
-                "constitution_commit": c.get("constitution_commit", "")})
+                # The standard the ROUND was judged against, not a copy of the
+                # cycle's stored value: copying is what let the two drift.
+                "constitution_commit": (constitution_commit
+                                        or c.get("constitution_commit", ""))})
             self._log(state, "verdict", cycle=cycle_id, sha=sha, verdict=verdict,
                       round=c["round"], status=c["status"], receipt=receipt_hash[:16])
             return c["status"]
