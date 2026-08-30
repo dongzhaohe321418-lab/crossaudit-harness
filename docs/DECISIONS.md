@@ -3720,3 +3720,47 @@ mechanism**, and it is the answer to the thing I asked for: *the next person
 who adds a third condensation mechanism should not find the same empty cell.*
 
 Routed to the UI engineer with SPEC-20.
+
+## D92 — Two instruments for the unmapped half
+
+The blind-spot map (D86) named eight modes the four structural sweeps cannot
+see, and six instruments needed. Two now exist in some form.
+
+**The watchdog — bounded time-to-explanation.** Audited **DO NOT MERGE**, and
+the two failures were the two I named as most likely when dispatching it:
+
+- **`explanation_bar=presence`.** I wrote: *"if a bare progress element counts,
+  it will pass on exactly the screens that produced the original defect."* It
+  counts. That is the accessibility law in another form — *containers present,
+  contents absent.*
+- **`uncovered_actions=36`.** Eighteen CLI verbs covered; the console — **where
+  the founding defect happened** — is in the uncovered set. An instrument
+  guarding only the half where the defect never occurred is a green light.
+
+What held is the load-bearing half: **`runs_in_product=verified`**, not
+claimed; the terminal fallback names the action; suppressing it reddened the
+guard and named `crossaudit doctor`; `bound_ref=stable`, so it does not inherit
+the class it detects. And its own 18-action matrix **found `talk` silent** — it
+can already see a real silence it is not yet acting on. The auditor's summary:
+*"the missing piece is enforcement."*
+
+**The contract test — shared-assumption disagreement.** Designed, `verdict=
+viable`, `pairs=5`, `corpus=derived`, and **`catches_primitive_case=yes`** —
+the acceptance test I set was whether it would have caught the two-primitives
+case, where two engineers independently grew a byte-reading primitive and the
+adopted one **rejected missing paths and committed symlinks the other
+mishandled.** Two correct-looking implementations, one silently weaker, caught
+by an auditor noticing while checking something else.
+
+Its answer to the tax question is the design's real content:
+
+> **Semantic tuples are compared while locale, wording, layout, and explicitly
+> declared presentation adapters are exempt.**
+
+A CLI and a GUI may legitimately present one state differently; an instrument
+that flags that becomes a tax and gets abandoned. **"Explicitly declared" is
+the honest half** — a declared exemption is auditable, an implicit one rots.
+
+Dispatched to build, with the same warning the watchdog earned: **the easy half
+here is the pairs that already share a serialiser**, and the watchdog came back
+`presence` and 36-uncovered precisely because the easy half was done first.
