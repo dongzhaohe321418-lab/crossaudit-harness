@@ -584,3 +584,77 @@ smoother experience with a weaker audit core, a silent truncation, or a reassuri
 sentence that is not true. Where a genuinely better experience appears to require
 weakening an invariant, that is a decision to escalate, not a trade to make
 quietly.
+
+### D6 — First-contact walkthrough: the roadmap is re-ordered around what it found
+
+The design/UX engineer walked the product from an empty directory as a person who
+had never seen it. Its findings outrank everything currently queued, so the
+roadmap moves. Recorded in full because these are the defects that decide whether
+anyone gets far enough to care about the rest.
+
+**P0 — the console silently eats your first message.** Hit at roughly sixty
+seconds. Type a task, press Send, nothing happens: no spinner, no error, the
+thread still reading "What should CrossAudit work on?". The server is not silent —
+`POST /api/say` returns HTTP 400 with a plain reason naming the missing
+credential. The client discards it. Worse, the send creates a rail entry titled
+with the person's own sentence, which opens onto the same empty placeholder;
+three attempts produced three identical empty chats. A person concludes the
+product is broken, or that they typed something wrong. The fix is to render the
+reason that already comes back.
+
+**P0 — four green ✓ for verification that never happened.** On screen at first
+paint: "Deterministic checks ✓ convergence ✓ provenance ✓ schema ✓ units", four
+lines above "Ledger: 0 Audits 0 Passed 0 Blocked", with zero artifacts, zero
+receipts, and the generator never run. The ✓ has no not-yet-run state. Two more of
+the same family: the panel reports "8 blocker rules" for a constitution holding 7
+BLOCKER and 1 ADVISORY, and `doctor` prints [PASS] on a line whose own text says a
+guarantee is not being enforced. This is §1.5 at the exact point where the product
+makes its central claim, and D5 goal 2 says a product that overclaims teaches
+people to distrust the parts that are true.
+
+**P1 — setup says Ready, and the next command it recommends says not ready.** One
+command apart, with the product routing people between them. `init` does warn
+about the missing key, but as one line scrolling above a large green box, and it
+then recommends `build`, which cannot work either. It also prints "Run crossaudit
+init" while the person is inside `crossaudit init`. And `doctor`, whose tagline is
+"check everything", never checks the generator key — the one that stops `build` in
+round one.
+
+**P1 — the person's constitution is somebody else's, and they never saw it.** A
+plain-prose task produced `# Constitution — <PROJECT>` with the placeholder
+unreplaced and 7 BLOCKERs about metadata.yml, results.json, quantities and
+convergence. The same screen promised the constitution would be "drafted from
+this, shown to you, and committed only if you agree". It was not drafted, not
+shown, and committed anyway. Their first real build is then blocked for lacking a
+file a prose review would never contain — which is the moment the audit stops
+reading as a second opinion and starts reading as obstruction.
+
+**P2** — the Decision Center offers every action except the one that works
+("Retry provider" fails identically on a missing credential, while the route that
+does reach an API-key field is unlabelled); jargon on the surfaces newcomers are
+sent to first; and the front door headlines `crossaudit run` while omitting
+`build` and `console`, so the generation half of the product is missing from the
+first thing anyone reads.
+
+**Re-ordering, per D5.** These displace the MCP dialog batch and the streaming
+slice. Streaming was going to be the next speed investment; the walkthrough's
+answer to that question was that finding 1 is silence with *no work happening at
+all*, so streaming would not have moved that pixel, and a first-timer cannot even
+reach the state streaming improves until the send path renders its errors. Fix the
+send path first. Streaming remains the right investment after it.
+
+**What the walkthrough could not reach**, and did not infer: the false-premise and
+correction scenario, long conversations, live context condensation, and three of
+the four escalation causes. All need a live generator and auditor, which means
+provider calls. The engineer found the owner's real keys present and deliberately
+did not use them, on the grounds that a live run spends the owner's money and
+sends project content to third parties. That judgement was correct and the request
+is with the owner.
+
+**A correction to the manager's own record.** AGENTS.md §3.5 was committed to the
+wrong branch — it landed on `agentA/mcp-dialog-settings-nav` rather than on
+v5-redesign, because the manager's shell working directory had drifted. The design
+engineer caught it while reading the rule it had been told to follow. It is now
+cherry-picked onto v5-redesign and the stray commit removed from the branch that
+had already been reviewed at 293110b. The rule that a claim must be checked rather
+than assumed applies to the person writing the rules.
