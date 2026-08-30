@@ -1,0 +1,197 @@
+"""The constitution is shown and chosen before it is committed (Ledger D6 #4, D8).
+
+The walkthrough typed a plain-prose task and received `# Constitution —
+<PROJECT>` with the placeholder unreplaced and 7 BLOCKERs about `metadata.yml`,
+`results.json`, quantities and convergence — while the screen one step earlier
+promised the rules would be "drafted from this, shown to you, and committed only
+if you agree". It was not drafted, not shown, and committed anyway, and the first
+real build was then blocked for lacking a file a prose review would never
+contain.
+
+Three separate defects wearing one bug number, and they are fixed separately:
+
+* **not shown** — the show-and-agree step existed but ran only on the drafted
+  path; the fallback wrote and committed silently. It now runs on every path.
+* **wrong shape** — the CLI wrote the laboratory contract and the science check
+  pack for any project. `app.py` and `console/projects.py` already chose per
+  project type; the CLI was the outlier.
+* **`<PROJECT>`** — substituted only by `draft.render()`, never on the template
+  path.
+
+Every test executes the real `init` and reads what it printed and wrote
+(AGENTS.md §3.5). The last one mutates the product on purpose and demonstrates
+the guard fails (Ledger D10).
+"""
+from __future__ import annotations
+
+import argparse
+import re
+
+import pytest
+
+from crossaudit.cli import main, wizard
+
+
+def _args(project, **over) -> argparse.Namespace:
+    base = dict(path=str(project), github=False, force=True, no_console=True,
+                json=False, auditor_vendor="anthropic",
+                auditor_model="claude-opus-4", generator_vendor="openai",
+                generator_model="gpt-5", profile=None)
+    base.update(over)
+    return argparse.Namespace(**base)
+
+
+def _flat(text: str) -> str:
+    """Collapse whitespace before matching.
+
+    `tui.note` wraps, so a sentence the person plainly reads is split across
+    lines and indented in the raw stream. Asserting on the raw text would miss
+    it — the same shape as the phrase-split-across-an-<em> evasion that defeated
+    an earlier guard. Match what is read, not how it was laid out.
+    """
+    return re.sub(r"\s+", " ", text)
+
+
+def _init(tmp_path, monkeypatch, capsys, name="proj", **over):
+    project = tmp_path / name
+    project.mkdir()
+    monkeypatch.setenv("HOME", str(tmp_path / f"home-{name}"))
+    for env in ("CROSSAUDIT_AUDITOR_KEY", "CROSSAUDIT_GENERATOR_KEY"):
+        monkeypatch.delenv(env, raising=False)
+    monkeypatch.chdir(project)
+    main.cmd_init(_args(project, **over))
+    return project, capsys.readouterr().out
+
+
+# --------------------------------------------------------------- shown, then written
+def test_the_rules_are_shown_and_chosen_before_anything_is_committed(
+        tmp_path, monkeypatch, capsys):
+    project, out = _init(tmp_path, monkeypatch, capsys)
+
+    # What will be required of their work, in plain language, before the choice.
+    flat = _flat(out)
+    assert "Before CrossAudit accepts any work, it will check that:" in flat
+    assert "it does what you asked for" in flat
+    # A choice among named alternatives, not a bare agreement.
+    assert "These rules:" in flat
+    assert "Use these rules" in flat
+    # Shown BEFORE the file is reported written — the ordering is the fix.
+    assert flat.index("Before CrossAudit accepts any work") < flat.index(
+        "written and committed")
+    # The sentence that makes free editing safe to offer.
+    assert "Changing the rules never changes a decision already made" in flat
+
+
+def test_the_promise_does_not_say_drafted_when_no_draft_happened(
+        tmp_path, monkeypatch, capsys):
+    """Keyless: `_distil` cannot run, so nothing was drafted from anything."""
+    _project, out = _init(tmp_path, monkeypatch, capsys, name="nodraft")
+
+    shown = _flat(out[out.index("[4/4]"):])
+    assert "A starting point — not drafted from your description" in shown
+    # The word may appear only in the failure notice explaining what could not
+    # happen, never as a claim that it did.
+    for line in shown.splitlines():
+        if "drafted" in line and "not drafted" not in line:
+            assert "could not draft" in line, f"claims a draft that did not happen: {line}"
+
+
+def test_amend_is_not_offered_in_the_state_where_it_cannot_run(
+        tmp_path, monkeypatch, capsys):
+    """`crossaudit amend` is provider-backed; the keyless path must not route to it."""
+    _project, out = _init(tmp_path, monkeypatch, capsys, name="noamend")
+    shown = _flat(out[out.index("[4/4]"):])
+    assert "crossaudit amend" not in shown
+
+
+# ------------------------------------------------------------- the right shape
+def test_a_prose_project_is_not_given_the_laboratory_contract(
+        tmp_path, monkeypatch, capsys):
+    project, _out = _init(tmp_path, monkeypatch, capsys, name="prose")
+
+    rules = (project / "AUDIT_RULES.md").read_text(encoding="utf-8")
+    config = (project / "crossaudit.yml").read_text(encoding="utf-8")
+    # The exact artifacts the walkthrough was blocked for.
+    for artefact in ("metadata.yml", "results.json", "convergence", "quantities"):
+        assert artefact not in rules, f"a prose review must not be gated on {artefact}"
+    assert "checks: [parseable, declared, internal, complete]" in config
+    assert "schema" not in config.split("checks:")[1].splitlines()[0]
+
+
+def test_no_placeholder_token_survives_into_a_committed_file(
+        tmp_path, monkeypatch, capsys):
+    project, _out = _init(tmp_path, monkeypatch, capsys, name="named")
+    text = (project / "AUDIT_RULES.md").read_text(encoding="utf-8")
+    assert "<PROJECT>" not in text
+    assert text.splitlines()[0] == "# Constitution — named"
+
+
+@pytest.mark.parametrize("profile,expected_checks,marker", [
+    ("science", "schema, units, convergence, provenance", "metadata.yml"),
+    ("general", "parseable, declared, internal, complete", "TODO"),
+])
+def test_an_explicit_profile_is_honoured(tmp_path, monkeypatch, capsys,
+                                         profile, expected_checks, marker):
+    """Science users keep their path; silence never selects it for them."""
+    project, _out = _init(tmp_path, monkeypatch, capsys, name=profile,
+                          profile=profile)
+    assert f"checks: [{expected_checks}]" in (
+        project / "crossaudit.yml").read_text(encoding="utf-8")
+    assert marker in (project / "AUDIT_RULES.md").read_text(encoding="utf-8")
+
+
+def test_only_what_i_write_myself_is_offered_and_is_not_a_defect(
+        tmp_path, monkeypatch, capsys):
+    """An empty standard is a legitimate choice (D8), so doctor must not fail it."""
+    project, _out = _init(tmp_path, monkeypatch, capsys, name="own", profile="own")
+    rules = (project / "AUDIT_RULES.md").read_text(encoding="utf-8")
+    assert "No rules yet." in rules
+    assert not [ln for ln in rules.splitlines() if ln.startswith("### CA-")], (
+        "the empty starting point must contain no rule headings; naming the "
+        "heading FORMAT in the instructions is not a rule")
+    # And the claim it makes about itself is true: checks are configured
+    # separately from the constitution, so they still run.
+    assert "checks: [" in (project / "crossaudit.yml").read_text(encoding="utf-8")
+
+    from crossaudit.config import load as load_cfg
+    monkeypatch.setattr(main._selfid, "identity", lambda: {
+        "install_mode": "wheel", "code_digest_sha256": "a" * 64,
+        "project": "crossaudit", "version": "4.0.0", "lock_digest_sha256": None})
+    monkeypatch.setenv("CROSSAUDIT_AUDITOR_KEY", "a")
+    monkeypatch.setenv("CROSSAUDIT_GENERATOR_KEY", "g")
+    load_cfg(project / "crossaudit.yml")
+    main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False))
+    doctor_out = capsys.readouterr().out
+    assert "[FAIL] constitution rules" not in doctor_out
+    assert "[INFO] constitution rules" in doctor_out
+    assert "nothing is gated until you add one" in doctor_out
+
+
+# ------------------------------------------------- D10: demonstrate it fails
+def test_the_guard_fails_if_the_moment_stops_running(tmp_path, monkeypatch, capsys):
+    """Mutate the real product, run the real guard, watch it catch it.
+
+    Mutation: `_show_and_agree` returns the template without showing anything —
+    the exact behaviour that shipped, where the constitution was written and
+    committed silently. Compared against a live run of the unmutated code rather
+    than a recorded snapshot, so a collector that quietly stopped looking cannot
+    pass this vacuously.
+    """
+    _project, honest = _init(tmp_path, monkeypatch, capsys, name="baseline")
+    assert "Before CrossAudit accepts any work" in honest
+
+    real = wizard._show_and_agree
+
+    def silent(*, target, const_path, const_name, drafted, chosen, description):
+        from crossaudit.scaffold import read
+        return wizard._substitute_project(read("AUDIT_RULES.md"), target.name), chosen
+
+    monkeypatch.setattr(wizard, "_show_and_agree", silent)
+    _project2, mutated = _init(tmp_path, monkeypatch, capsys, name="mutated")
+    monkeypatch.setattr(wizard, "_show_and_agree", real)
+
+    assert "Before CrossAudit accepts any work" not in _flat(mutated), (
+        "the mutation did not take; this demonstration proves nothing")
+    # The assertions the other tests make would fail against this mutation,
+    # which is what makes them guards rather than descriptions.
+    assert "Changing the rules never changes a decision" not in _flat(mutated)

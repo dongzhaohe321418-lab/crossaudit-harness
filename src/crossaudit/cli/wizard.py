@@ -23,7 +23,8 @@ from pathlib import Path
 
 from ..config import CONFIG_NAME
 from ..errors import ConfigDenial, Denial
-from ..scaffold import (AUDIT_TREE, CONFIG_TEMPLATE, DEFAULT_CHECKS, SCIENCE_TREE,
+from ..scaffold import (AUDIT_TREE, CONFIG_TEMPLATE, GENERAL_CHECKS,
+                        SCIENCE_CHECKS, SCIENCE_TREE,
                         read, write_tree)
 from ..providers.specs import SPECS
 from . import tui
@@ -232,6 +233,177 @@ def commit_setup(target: Path, paths: list[str]) -> str:
                           capture_output=True, text=True, check=True).stdout.strip()
 
 
+#: The starting points a person chooses between, per SPEC 3 §4.2. Each carries
+#: its own plain-language consequence lines: the rule criteria are written for an
+#: auditor to apply, and reading four of them is not how somebody decides whether
+#: a standard is the one they want. The consequences are what the rules mean.
+#:
+#: "Only what I write myself" is named for what it gives up. "Minimal" or "Empty"
+#: would read as a lighter version of the same thing; this says you get nothing
+#: until you write it. It is a legitimate choice — the constitution is the
+#: STANDARD and the audit is the MECHANISM, so a trivial standard produces an
+#: honest audit of a trivial standard, not a weak audit (Ledger D8).
+STARTING_POINTS: dict[str, dict] = {
+    "general": {
+        "label": "General",
+        "hint": "any deliverable — prose, documents, code",
+        "template": "GENERAL_AUDIT_RULES.md",
+        "consequences": [
+            "it does what you asked for",
+            "it is finished — no TODO or placeholder text left in",
+            "nothing it states contradicts the sources you gave it",
+        ],
+    },
+    "science": {
+        "label": "Science & data",
+        "hint": "numerical results with declared inputs and units",
+        "template": "AUDIT_RULES.md",
+        "consequences": [
+            "every result declares the inputs and code version it came from",
+            "every number carries a unit and a traceable source",
+            "anything reported as converged actually met its threshold",
+            "the prose does not disagree with the data files",
+        ],
+    },
+    "own": {
+        "label": "Only what I write myself",
+        "hint": "no rules yet; nothing is gated until you add some",
+        "template": None,
+        "consequences": [
+            "nothing will be gated until you add a rule",
+            "the automatic checks still run, and every result is still recorded",
+        ],
+    },
+}
+DEFAULT_STARTING_POINT = "general"
+
+#: The deterministic pack that belongs with each starting point. The CLI used
+#: DEFAULT_CHECKS (= SCIENCE_CHECKS), so a prose review was blocked twice over:
+#: 7 BLOCKER rules about metadata.yml AND four checks demanding the same files.
+#: app.py and console/projects.py already choose per project type; this makes the
+#: CLI agree with them and with dcl/profiles.py, which calls "general" the
+#: default. A sweep confirmed DEFAULT_CHECKS had no consumer outside this module.
+STARTING_CHECKS: dict[str, list[str]] = {
+    "general": GENERAL_CHECKS,
+    "science": SCIENCE_CHECKS,
+    "own": GENERAL_CHECKS,
+}
+
+
+def _substitute_project(text: str, project: str) -> str:
+    """No placeholder token survives into a committed file.
+
+    `draft.render()` already did this; the template path did not, which is how a
+    live `# Constitution — <PROJECT>` reached a person's repository.
+    """
+    return text.replace("<PROJECT>", project)
+
+
+def _empty_constitution(project: str) -> str:
+    """A constitution with no rules yet, and honest about what that means."""
+    return _substitute_project(
+        "# Constitution — <PROJECT>\n\n"
+        "Version this file in git. Every audit cites the commit that carried it.\n"
+        "Rule changes take effect only between cycles, so work is never judged\n"
+        "against a target that moved underneath it.\n\n"
+        "No rules yet. Nothing is gated until you add one. Add a rule with a\n"
+        "`### CA-AREA-NNN` heading, a **BLOCKER.** or **ADVISORY.** marker, and a\n"
+        "criterion someone else could check by reading the work.\n", project)
+
+
+def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
+                    drafted, chosen: str, description: str) -> tuple[str, str]:
+    """The constitution moment: show what will be required, then ask.
+
+    Runs on EVERY path, including the keyless one. Previously the drafted path
+    showed its rules and asked, and the fallback path wrote and committed a
+    document the person never saw — while the screen one step earlier promised it
+    would be "shown to you, and committed only if you agree" (Ledger D6).
+
+    Returns (markdown, starting_point_key).
+
+    Accessibility note: this is a terminal, so there is no aria-live to add. The
+    equivalent obligation is that every line reads correctly in linear order with
+    no meaning carried by colour, position or box drawing — a screen reader gets
+    the numbered options, their names and their consequences as text, and the
+    outcome is announced in words rather than implied by a glyph.
+    """
+    while True:
+        point = STARTING_POINTS[chosen]
+        if drafted is not None:
+            attributed = [r for r in drafted.rules if getattr(r, "from_user", "")]
+            header = (f"Rules drafted from what you said · {len(drafted.rules)} rules"
+                      + (f", {len(attributed)} from your description"
+                         if attributed else ""))
+            consequences = [r.title.strip().rstrip(".").lower()
+                            for r in drafted.rules if r.severity == "BLOCKER"][:4]
+            body = _substitute_project(drafted.render(target.name), target.name)
+        else:
+            # The word "drafted" may appear only when a draft happened.
+            header = f"A starting point — not drafted from your description · {point['label']}"
+            consequences = point["consequences"]
+            body = (_empty_constitution(target.name) if point["template"] is None
+                    else _substitute_project(read(point["template"]), target.name))
+
+        tui.note("Before CrossAudit accepts any work, it will check that:")
+        for line in consequences:
+            print(f"      · {line}")
+        print()
+        tui.note(header)
+
+        options = [
+            tui.Option("use", "Use these rules", "writes and commits them"),
+            tui.Option("switch", "Use a different starting point",
+                       "general, science & data, or only what you write"),
+            tui.Option("edit", "Edit them first", "opens the file in your editor"),
+            tui.Option("show", "Show the full rules", "every rule, in full"),
+        ]
+        picked = tui.select("These rules:", options, default=0)
+
+        if picked == "show":
+            tui.panel(f"{const_name} — in full", body.splitlines())
+            continue
+        if picked == "switch":
+            chosen = tui.select("Starting point:", [
+                tui.Option(key, item["label"], item["hint"])
+                for key, item in STARTING_POINTS.items()],
+                default=list(STARTING_POINTS).index(chosen))
+            drafted = None          # an explicit choice replaces the draft
+            continue
+        if picked == "edit":
+            const_path.write_text(body, encoding="utf-8", newline="\n")
+            _open_in_editor(const_path)
+            body = const_path.read_text(encoding="utf-8")
+            drafted = None
+            tui.ok("edits loaded — showing them again before committing")
+            continue
+        # "use": say the thing that makes free editing safe to offer.
+        tui.note("You can change these at any time. Changing the rules never "
+                 "changes a decision already made.")
+        return body, chosen
+
+
+def _open_in_editor(path: Path) -> None:
+    """$EDITOR, or print the path.
+
+    `crossaudit amend` is provider-backed, so it cannot run in the keyless state
+    that this moment is most often met in. Offering it there would be offering a
+    route that does not exist; plain file editing needs no provider.
+    """
+    import os
+    import subprocess
+
+    editor = os.environ.get("EDITOR") or os.environ.get("VISUAL")
+    if not editor or not tui.interactive():
+        tui.note(f"edit it here, then re-run setup: {path}")
+        return
+    try:
+        subprocess.run([*editor.split(), str(path)], check=False)
+    except OSError as exc:  # noqa: BLE001 -- an editor that will not start is not fatal
+        tui.warn(f"could not start {editor}: {exc}")
+        tui.note(f"edit it here instead: {path}")
+
+
 def _missing_credentials(target: Path, keys_file) -> list[tuple[str, str]]:
     """Which role credentials are absent, as (env var, human role name).
 
@@ -297,7 +469,8 @@ def _distil(description: str, provider: str, model: str, base_url: str, *,
 def run(target: Path, *, mode: str, force: bool = False,
         auditor_vendor: str | None = None, auditor_model: str | None = None,
         generator_vendor: str | None = None,
-        generator_model: str | None = None) -> dict:
+        generator_model: str | None = None,
+        profile: str = "") -> dict:
     """Guided setup. Returns a summary of what was written."""
     requested_generator_model = generator_model
     target = target.resolve()
@@ -391,8 +564,12 @@ def run(target: Path, *, mode: str, force: bool = False,
 
     # ---- 4. the rules, spoken rather than written --------------------------
     tui.step(4, 4, "What this is, and what would be a mistake")
-    tui.note("Say it in your own words. The rules are drafted from this, shown to "
-             "you, and committed only if you agree — you never write markdown.")
+    # True on EVERY path. "Drafted" was promised before it was known whether a
+    # draft could happen, and on the keyless path none does — so the promise was
+    # broken by the state, not by the code. What is always true is that the
+    # rules are shown and chosen before anything is committed.
+    tui.note("Say it in your own words. You will see the rules before anything "
+             "is committed, and you choose — you never write markdown.")
     const_name = "AUDIT_RULES.md"
     const_path = target / const_name
     description = tui.text(
@@ -400,33 +577,29 @@ def run(target: Path, *, mode: str, force: bool = False,
         placeholder="e.g. a review of the PV industry; every figure must trace "
                     "to a source")
 
-    drafted = False
+    # An explicit --profile skips the proposal entirely; otherwise the default
+    # is general, and silence never selects the laboratory contract.
+    starting_point = profile if profile in STARTING_POINTS else DEFAULT_STARTING_POINT
+    draft = None
     if description.strip():
         try:
             draft = _distil(description, provider, model or default_model, base_url,
                             usage_root=target, vendor=auditor_vendor or "unknown")
-            rows = [draft.project_summary, tui.dim(f"domain: {draft.domain}"), ""]
-            for r in draft.rules:
-                mark = (tui.red("BLOCKER") if r.severity == "BLOCKER"
-                        else tui.dim("advisory"))
-                rows.append(f"{tui.bold(r.id)}  [{mark}]  {r.title}")
-                rows.append(f"    {r.criterion}")
-                if r.from_user:
-                    rows.append(tui.dim(f'    from you: "{r.from_user}"'))
-            tui.panel("Drafted rules", rows)
-            if tui.confirm("Commit these as the project's rules?", default=True):
-                const_path.write_text(draft.render(target.name), encoding="utf-8",
-                                      newline="\n")
-                drafted = True
-                tui.ok(f"{const_name} written — change it any time by saying so: "
-                       f'crossaudit amend "from now on ..."')
         except Denial as exc:
-            tui.warn(f"could not draft rules: {exc.reason}")
-            tui.note("Falling back to the starter template; edit it, or use "
-                     "`crossaudit amend` once a key is in place.")
-    if not drafted and not const_path.exists():
-        const_path.write_text(read(const_name), encoding="utf-8", newline="\n")
-        tui.ok(f"{const_name} written from the starter template")
+            # Honest about what did not happen, and it does NOT offer
+            # `crossaudit amend` as the remedy: that is provider-backed and
+            # cannot run in exactly the state this message appears in.
+            tui.warn(f"could not draft rules from your description: {exc.reason}")
+            tui.note("Showing a starting point instead — you can edit it here, "
+                     "or pick a different one.")
+
+    # Shown and agreed on every path, which is what the step-4 promise said and
+    # only the drafted path delivered.
+    constitution_text, starting_point = _show_and_agree(
+        target=target, const_path=const_path, const_name=const_name,
+        drafted=draft, chosen=starting_point, description=description)
+    const_path.write_text(constitution_text, encoding="utf-8", newline="\n")
+    tui.ok(f"{const_name} written and committed with the rest of setup")
 
     # ---- configuration and shape -------------------------------------------
     science_repo = tui.text("Project name (owner/name, or a label)", target.name)
@@ -453,7 +626,7 @@ def run(target: Path, *, mode: str, force: bool = False,
         permissive_minimum="false" if mode == "local" else "true",
         state_dir=".crossaudit",
         scope_dirs="experiments",
-        checks=", ".join(DEFAULT_CHECKS),
+        checks=", ".join(STARTING_CHECKS[starting_point]),
     ), encoding="utf-8", newline="\n")
     tui.ok(f"{CONFIG_NAME} written")
     from ..dcl import describe as describe_checks
@@ -465,7 +638,7 @@ def run(target: Path, *, mode: str, force: bool = False,
         "`crossaudit.yml`. These machine checks run before model review and are "
         "not changed by `crossaudit amend`. Edit `checks:` between cycles to change "
         "the enabled contract.\n\n```text\n"
-        + describe_checks(DEFAULT_CHECKS)
+        + describe_checks(STARTING_CHECKS[starting_point])
         + "\n```\n", encoding="utf-8", newline="\n")
     owned = [CONFIG_NAME, const_name, contract_name]
     if not gitignore_existed:

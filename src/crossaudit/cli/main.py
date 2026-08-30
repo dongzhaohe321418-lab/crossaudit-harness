@@ -302,9 +302,24 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     if const.is_file():
         from ..auditor import known_rules
         rules = known_rules(const.read_text(encoding="utf-8"))
-        add("constitution rules", bool(rules),
-            f"{len(rules)} rule IDs parsed" if rules else "no CA-* rule headings found",
-            "each rule needs a '### CA-AREA-NNN' heading, or every citation is unknown")
+        # A constitution with no rules is a legitimate choice, not a broken
+        # file: the constitution is the STANDARD and the audit is the MECHANISM,
+        # so an empty standard produces an honest audit of an empty standard
+        # (Ledger D8). `init` offers it by name — "Only what I write myself" —
+        # so doctor must not then call the person's choice a defect. A file that
+        # meant to have rules and parsed none is still worth flagging, and the
+        # difference is whether it says so.
+        deliberately_empty = "No rules yet." in const.read_text(encoding="utf-8")
+        if rules or not deliberately_empty:
+            add("constitution rules", bool(rules),
+                f"{len(rules)} rule IDs parsed" if rules
+                else "no CA-* rule headings found",
+                "each rule needs a '### CA-AREA-NNN' heading, or every citation "
+                "is unknown")
+        else:
+            note("constitution rules",
+                 "no rules yet — nothing is gated until you add one; the "
+                 "automatic checks still run")
 
     # These are the CONFIGURED contracts, printed so a person can read what the
     # deterministic layer will enforce. Nothing has run: doctor is offline and
@@ -1095,7 +1110,8 @@ def cmd_init(args: argparse.Namespace) -> int:
                          auditor_vendor=getattr(args, "auditor_vendor", None),
                          auditor_model=getattr(args, "auditor_model", None),
                          generator_vendor=getattr(args, "generator_vendor", None),
-                         generator_model=getattr(args, "generator_model", None))
+                         generator_model=getattr(args, "generator_model", None),
+                         profile=getattr(args, "profile", "") or "")
 
     # Finish by opening the console, because the setup ends exactly where the
     # work begins and asking someone to find the next command themselves is a
@@ -1424,6 +1440,8 @@ def build_parser() -> argparse.ArgumentParser:
                         "(default: here)")
     i.add_argument("--github", action="store_true", help="also plan the repository pair")
     i.add_argument("--force", action="store_true", help="overwrite an existing config")
+    i.add_argument("--profile", choices=("general", "science", "own"),
+                   help="pick the constitution starting point without being asked")
     i.add_argument("--no-console", action="store_true",
                    help="do not start or open the console when setup finishes")
     i.add_argument("--auditor-vendor", choices=tuple(wizard.VENDORS),

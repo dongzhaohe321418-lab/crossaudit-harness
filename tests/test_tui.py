@@ -219,7 +219,11 @@ def test_setup_versions_the_rules_and_scaffold(tmp_path: Path, monkeypatch):
     target = tmp_path / "project"
     monkeypatch.setenv("CROSSAUDIT_KEYS_FILE", str(tmp_path / "keys.env"))
 
-    summary = wizard.run(target, mode="local")
+    # Exercises the SCIENCE starting point explicitly: the assertions below
+    # are about path@revision, provenance and convergence. The CLI default is
+    # now the general pack, so inheriting it would silently change what this
+    # test covers.
+    summary = wizard.run(target, mode="local", profile="science")
 
     contract = (target / "DETERMINISTIC_CHECKS.md").read_text()
     assert "path@revision" in contract and "provenance" in contract
@@ -306,7 +310,11 @@ def test_default_check_uses_the_declared_scope_and_skips_the_scaffold(
 
     target = tmp_path / "project"
     monkeypatch.setenv("CROSSAUDIT_KEYS_FILE", str(tmp_path / "keys.env"))
-    wizard.run(target, mode="local")
+    # The increment below is science-shaped — metadata.yml, results.json with
+    # units and sources — so it needs the science pack to be judged as intended.
+    # The CLI default is now the general pack, so the profile is stated rather
+    # than inherited.
+    wizard.run(target, mode="local", profile="science")
     increment = target / "experiments" / "demo"
     increment.mkdir()
     (increment / "metadata.yml").write_text(
