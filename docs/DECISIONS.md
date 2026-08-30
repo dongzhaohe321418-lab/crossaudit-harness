@@ -1865,3 +1865,53 @@ produced exactly one winner and one verdict row; SIGKILL on both sides of the
 atomic replacement produced intact state and never partial or erased; both
 test inversions were judged justified with reasons; the permitted direction
 genuinely works; the suite count matched at the SHA.
+
+## D50 — Holding one branch changed the safety of another
+
+The codex engineer, asked to justify inverting a test, traced the property
+that test protected — "a receipt is rejected when the working-tree
+constitution differs from what was audited" — and then refused to assume it
+had landed somewhere else: *"if the merged 27b5653 doctor fix is not present
+in integration, this is an open gap rather than a disappeared requirement."*
+
+I checked. **`constitution_commit_state` exists only on
+`agentA/first-three-minutes`, which is unmerged because I am holding it** —
+for an unrelated reason, a sentence in it that is currently false. That hold
+is still right. But it means merging the verifier branch as it stands would
+leave the drift-detection property **living nowhere in the product**.
+
+The security auditor reached the same conclusion independently from the other
+branch: *"the drift property is now formally homeless while the branch that
+would house it is unmerged... that's a sequencing decision rather than a code
+one, and it's yours."* Two agents, two directions, same gap.
+
+**My process could not have caught this.** I evaluate each branch against
+v5-redesign in isolation. Nothing looks at what a *hold* removes from a
+branch that is otherwise ready. A hold is not neutral — it is an edit to the
+integration branch's future contents, and its effects land on other people's
+work.
+
+RULE: when holding a branch, ask what that branch is the only home for. When
+clearing a branch that relocates a property, name where the property now
+lives and verify it is reachable **in the integration branch**, not merely
+somewhere in the repository.
+
+Resolution: the `constitution_commit_state` check is being extracted as its
+own slice that can land independently of everything blocking
+first-three-minutes. The verifier branch's stated behaviour change — *"the
+verifier ignores post-audit working-tree drift and validates the immutable
+commit named by the receipt; drift remains a separate doctor concern"* — is
+sequenced behind that extraction, because until it lands the sentence
+describes a check that does not exist (D43).
+
+### Two more from the same audit
+
+- **F5 is against my own template.** The change-contract commit messages
+  contain literal `\n`, so `REVIEWER:` and `AUDIT:` are not real git
+  trailers — `%(trailers)` returns nothing. The contract mechanism I built
+  to make review provenance machine-readable has never been machine-readable.
+- The auditor applied D35 to itself: the remaining findings are hardening,
+  scheduled not gated, *"because F3 is exactly the kind of small,
+  newly-introduced defect it would be easy to hold a strictly-dominating
+  branch for."* It also asked that F3 be recorded as **introduced here, not
+  inherited**, so it is not later mistaken for pre-existing.
