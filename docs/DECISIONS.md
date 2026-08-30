@@ -1327,3 +1327,50 @@ rounds; two merged carrying a known open S0 under the "strictly dominates" argum
 the third closes the boundary end to end for every failure mode the product can
 produce, and leaves three S3 hardening items — one of which is the last instance of
 the very discipline the whole arc was about, and is one line.
+
+### D36 — D34's ruling was directionally right, wrong in mechanism, and too broad
+
+The engineer taking the cycle-integrity fix read the code before building to my
+ruling, and came back with a correction in three parts. All three are adopted; my
+version of D34 is superseded by this one.
+
+**1. Where the harm actually lives.** I ruled "a cycle that has reached a verdict is
+closed against constitution changes." That closes the auditor's repro, because
+`const_commit` is resolved as `git log -1 -- cfg.constitution` — current HEAD, pinned
+by nothing — so pinning at cycle open and auditing the pinned commit in later rounds
+makes round 2 face the strict constitution and stay BLOCKED.
+
+But that is one route, not the defect. `open_or_advance` finds a status in
+(OPEN, BLOCKED) on the same SHA, sets status back to OPEN and increments the round;
+the verdict recorder then assigns the cycle's status from the new round
+**unconditionally**. So:
+
+> **The BLOCKED decision is not superseded. It is erased.**
+
+And the engineer's framing, which is better than mine: *what makes the audit advisory
+is not that new work can be judged under new rules — it is that the old decision
+stops existing.* Pinning blocks one path to that erasure. It does not make a reached
+verdict immutable, so any other path that advances a round can still flip a recorded
+BLOCK.
+
+**2. My rule as stated would over-restrict.** "Closed against constitution changes"
+would prevent a legitimate case: a person who loosens a rule *because the rule was
+wrong* must still be able to re-audit that work. D8 explicitly permits a weak standard
+to produce an honest audit of a weak standard — that is the whole of D8 — and my D34
+wording would have made D8's permitted case impossible while fixing the abuse of it.
+
+**3. So the rule is: a reached verdict is IMMUTABLE. It is superseded, never erased.**
+A later round may produce a new verdict under a new constitution; the earlier one
+remains in the record, with what it was judged against. That satisfies the sentence we
+ship — changing the rules never changes a decision already made, because the decision
+still exists and still says what it said — and it leaves the legitimate re-audit
+available, because a new decision is a new decision rather than an overwrite.
+
+Both clauses get built: pin the constitution at cycle open so a round is judged
+against the standard its cycle opened under, AND make a recorded verdict immutable so
+no path that advances a round can erase one. The first closes the demonstrated repro;
+the second closes the class.
+
+Recorded because the correction matters more than the fix: I gave a rule that would
+have closed the reported bug and quietly broken a case D8 exists to protect, and the
+engineer found it by reading the code before building to my words rather than after.
