@@ -15,8 +15,8 @@ run journal, real named frames, no credentials. Its mutation runner is
 result key, including the headline one: delete the `addEventListener` line and
 `listener` goes `registered` -> `ABSENT`.
 
-Two corrections that runner forced, recorded because they are the interesting
-part:
+Corrections this guard has needed, recorded because they are the interesting
+part — three found by the mutation runner, one by the cross-vendor audit:
 
 1. The sweep's `listener` key first asked `typeof draftChunk === 'function'`,
    which stays TRUE when the subscription is deleted. A source-shaped check
@@ -26,6 +26,25 @@ part:
    overwrote the draft with the same fresh initialisation. A mutant that did not
    mutate, reported as SURVIVED. "The guard did not catch it" was a statement
    about the mutation, not about the guard.
+3. The markup check matched the word "delivery" in its own explanatory comment.
+4. **The audit's S3, and the worst of them.** The live-growth step never
+   asserted growth at all: it reported the body AFTER the append and nothing
+   compared it to the body before, so before and after could be identical and
+   the step still passed. Worse in Chinese, where it also appended an ENGLISH
+   token — proving growth in one locale while reporting it in another — and
+   where a run-scoped acknowledgement counter that restarted at 0 could be
+   satisfied by the acknowledgement the English run had left on disk, so the
+   fixture appended nothing and the step passed anyway.
+
+   Three separate ways for the same step to pass without the property holding.
+   Now: a per-run nonce on every acknowledgement; the appended text is the
+   locale under test; and growth is asserted BETWEEN TWO DISTINCT OBSERVATIONS
+   — `after` must start with `before` and the remainder must be exactly the
+   token sent. If before and after can be identical and still pass, it is not a
+   growth assertion. That is the rule from the locale-timing class, arriving in
+   the guard rather than the product. A fifth mutation pins it: make the draft
+   replace instead of accumulate and `grew` goes true -> false, changing no
+   other key.
 
 **What THIS file does** is pin the wiring, so the browser guard cannot silently
 stop having anything to find: the listener is registered by name, the draft is
