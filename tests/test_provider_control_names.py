@@ -11,7 +11,31 @@ person alike.
 An accessible name is computed by the browser, so G1–G8 are driven in Chromium
 against its own accessibility tree and live in
 `_ui_findings/spec13/browser_spec13.mjs`, with the mutation runner beside them
-(`mutate.py`). Every one of the eight was observed to fail against its mutation.
+(`mutate.py`).
+
+**SEVEN of the eight are proven by their OWN mutation. G8 is not, and saying
+otherwise was an overclaim.** This module used to say all eight were
+mutation-proven. G8's specified mutation — remove the group labelling and the
+per-control names together — reddens **G2**, and a reader auditing by this
+module's own claim would tick G8 off and move on. We have deleted fourteen
+checks that did not check; this is a check that checks something real, filed
+under the name of a different property, which is worse to find and easier to
+miss. D64 says a guard is specified with its mutation; a guard specified with
+someone ELSE'S mutation is the version of that rule nobody had anticipated.
+
+**G8 cannot be given an isolating mutation on this surface, and that is a fact
+about the property rather than a failure to try.** G2 asserts that the number of
+distinct accessible names equals the number of controls. Any two controls
+sharing a name — adjacent or not — reduces the distinct count and reddens G2.
+G8 asserts that no two CONSECUTIVE stops share a name, which is a strictly
+weaker statement: every state G8 rejects, G2 already rejects. So no mutation can
+redden G8 while leaving G2 green.
+
+G8 is kept because it costs nothing and would separate from G2 if the two ever
+measured different sets — G2's denominator is the DOM control count and G8 reads
+the accessibility tree in order, so a control present in one and not the other
+would show up in G8 alone. Until that happens it is a subsumed restatement, and
+this module says so rather than counting it as evidence it does not supply.
 
 **Which seam each guard stops at, stated rather than implied.** A suite's
 verdict is a claim about the seam it stops at — thirty streaming tests passed
