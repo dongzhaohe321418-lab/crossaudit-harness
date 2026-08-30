@@ -1133,3 +1133,71 @@ engineer: a cell is not covered until it has been observed in the FROZEN BUNDLE.
 Source mode remains the fast loop for iterating; the bundle is what a person runs. If
 driving the bundle is materially harder, we build the instrumentation — I would
 rather pay for good evidence than accept comfortable evidence from the wrong artifact.
+
+### D31 — The shipped DMG has no command line, so every CLI surface we built is unreachable
+
+The design engineer paused before a review it had been given, to surface this,
+because the cost of deciding late was compounding — another engineer is stacking
+i18n wave 2 on wave 1 right now. Pausing to say so was the right call and it is worth
+more than the review would have been.
+
+**What it found, by driving the installed bundle rather than reading the build
+script.** `Resources/core/CrossAuditCore` hangs on `doctor` with zero output. The
+bundle's entry point is `crossaudit.app.main`, not `crossaudit.cli.main`, and
+`app.main()` handles exactly two argv forms — `--self-test` and `--project-console`.
+Everything else falls through, sets `CROSSAUDIT_APP_MODE=1`, and blocks serving the
+console. So `--version`, `doctor`, `init` and `build` are all silently ignored. My
+two frozen defects and its one are a single defect.
+
+And the consequence is much larger than a hung terminal. The build script's only
+symlink is `/Applications` inside the DMG. **There is no CLI shim. The DMG ships a
+GUI app and no command line.** The `crossaudit` on this machine's PATH is a pip
+install from 3 August — not the bundle.
+
+**So every CLI surface this team has designed is unreachable from the installed
+product**: SPEC-6's front door, doctor's verdict-first restructure, the constitution
+moment in `cli/wizard.py`, and CLI i18n waves 1 and 2. All of it lives behind
+`cli.main`, which the bundle never calls.
+
+**Decided, in three parts.**
+
+1. **`app.main` dispatches CLI argv shapes to `cli.main`.** This is the work already
+   in flight, and it just became the most valuable thing on the board rather than a
+   tidy-up: it is what makes a large body of correct, reviewed work reachable at all.
+2. **The bundle does not silently install anything onto PATH.** A command-line tool
+   appears when a person asks for it, through an explicit action they consent to —
+   which is the same rule this product applies to every other capability it acquires.
+   Writing to a user's PATH at install time because it is convenient would contradict
+   the consent model in the product's own dialogs.
+3. **The GUI onboarding path gets the treatment the CLI got.** If DMG users are
+   GUI-first, then the four-step onboarding I sampled today is their first three
+   minutes, and nobody has walked it as a first-timer except me, once. That is now a
+   design commission, not an assumption.
+
+**Nothing built is wasted, and I am not treating it as such.** The CLI work is
+already real for source and pip users, who the design engineer correctly noted are
+real users, and it becomes real for DMG users the moment (1) lands. But the ORDER was
+wrong: we translated and restructured surfaces before checking they were reachable in
+the artifact we ship. That is D30's front door lesson arriving a second time, one
+level up — nobody had run the installed product the way a person runs it.
+
+### D32 — No anchoring of audit findings to draft passages
+
+Same engineer, on the stream-then-BLOCK question it had flagged in SPEC-10 §5: it
+checked the schema instead of asking me. A finding is severity, rule, artifact path
+and prose observation — **no span, no quote** — so anchoring findings to passages of
+streamed draft is impossible without changing what the auditor emits, which touches
+`auditor/prompt.py`.
+
+**Decided: do not change it.** Its reasoning, adopted: asking a model for character
+offsets into a rendered increment is exactly the kind of thing it gets confidently
+wrong, and **a wrong anchor is worse than none — it would highlight the innocent
+passage with total assurance.** That is the §1.5 failure with extra steps, bought at
+the cost of touching the auditor's output contract.
+
+The cheaper design gets most of the value: show the finding's observation prominently
+against the collapsed draft, with the artifact named, rather than in a findings list.
+No new auditor output and no new failure mode. The engineer also downgraded its own
+earlier "better than silence" judgement rather than leaving it standing — not to
+neutral, since an observation is prose describing what and why and self-locates
+better than it had assumed, but honestly less than it had hoped.
