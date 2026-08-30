@@ -3613,3 +3613,110 @@ from an absence into a detectable event, which is the entire point: the class
 that produced this workstream's founding defect — *a send that failed while the
 interface showed nothing* — is the one class no suite and no structural sweep
 can reach.
+
+## D89 — Containers present, contents absent: three incidents, one law
+
+`READINESS TREE: CONFIRMED-S2-FIX-BEFORE-MERGE, completable=no,
+cause=missing-markup, locales=2, pattern=systemic.`
+
+I asked whether three accessibility findings tonight were incidents or a
+pattern. The answer:
+
+> **Three tonight, one law: live regions present and never containing text; a
+> listbox container whose children carry no option role; the readiness list as
+> one continuous node.**
+
+**Containers present, contents absent.** That is the accessibility form of the
+class this codebase is made of — correct at the producer, wrong at the
+consumer — and it is *systemic*, so it is one spec item rather than three
+fixes.
+
+**`completable=no` is the part that matters most.** A screen-reader user cannot
+complete readiness. Every `names_computed` check we have passes on this surface:
+the row names are all computed and present. **Name presence is what our guards
+assert; whether a person can navigate item by item is a different property and
+nobody had measured it** until it was driven.
+
+This connects three things already in the record:
+- *"Eight empty regions prove wiring, not speech"* (D74) — the same law, stated
+  one instrument earlier.
+- **Condition 4** was reported as partially shown on the strength of *0 unnamed
+  of 261 computed names*. That number is true and it does not establish a
+  screen-reader user can complete anything. Another case of evidence being real
+  and about something adjacent.
+- The seam sweep predicted exactly this: **no suite spans runtime event through
+  browser DOM and accessibility tree**, so a DOM-level pass says nothing about
+  the tree a person meets.
+
+RULE: an accessibility guard asserts what a container **contains** and whether
+the structure is **navigable**, never that names exist. Presence of names on an
+unusable structure is the failure mode all three instances share.
+
+## D90 — The rule answered the shortage, so I did not spawn
+
+Seven branches queued behind two codex auditors. My reflex was a third codex
+auditor — I have spawned three times tonight and each was justified by a
+measurable, recurring backlog.
+
+**This time the existing rule answers it.** D26 set a **topic split**:
+audit-core work goes to a codex auditor for vendor independence, everything
+else to a claude auditor. **The hard law is no-self-review.** UI and
+accessibility work is not audit-core, so a claude auditor who did not write it
+satisfies the law fully.
+
+So: codex auditors stay on audit-core — watchdog, receipt verification, doctor
+parity. **Claude auditors take the UI branches.** Existing capacity rather than
+added coordination.
+
+**This is not the relaxation I refused earlier.** I refused to let a
+claude-authored *audit-core* branch merge on two claude verdicts, and held it
+until a codex auditor cleared it. That refusal and this routing are the same
+rule read correctly: vendor independence is strongest where the product's
+premise lives, and no-self-review is absolute everywhere.
+
+### Four branches from one engineer, one surface
+
+`ux/live-regions`, `ux/send-refusal`, `ux/report-provenance`,
+`ux/condense-affordance` — each on its own worktree, none merged. That is
+precisely where **`assumed_by_other`** lives: four changes to one surface, each
+reviewed against integration as it stood before the others.
+
+### Independently caught, twice
+
+The UI engineer caught my misattribution of `f6ad8c0` in the same minutes I did,
+and named the reason: *"re-derive rather than match a title."* Two people
+reaching the same correction from the same instinct is worth more than either
+correction — it means the rule has transferred rather than been obeyed.
+
+## D91 — The announcement is not in a live region at all
+
+SPEC-20 delivered with all four constraints met — `shape=matches-ui-branch`,
+`zh=catalogue`, `mutation=stated`, **`one_contract=yes`** — and recorded a
+finding wider than the slice it was written for:
+
+> The announcement appears in **visible page text, not in a live region** —
+> for this notice **and the pre-existing file-outlining one**. The announcing
+> path **may not reach a screen reader at all, for any reduction.** Older and
+> wider than this slice.
+
+So the three condensation states established as distinguishable are
+distinguishable **visually**, and possibly **none of them is announced** to a
+screen-reader user.
+
+**This is D89 one layer deeper.** That law was *containers present, contents
+absent* — live regions that never contain text, a listbox whose children carry
+no option role, a readiness list as one node. **This instance has no container
+at all**: the text is on the page and nothing announces it.
+
+And it is **older than tonight's work.** The file-outlining notice has the same
+shape and predates every merge in this cycle, which means the property "a
+person is told when context was reduced" has never held for screen-reader users
+on any path — while every visual check we have has passed.
+
+The `one_contract=yes` result matters more because of this. Two condensation
+mechanisms were about to get two signal paths; they now share one. **A single
+contract is the only reason this finding is one fix rather than one per
+mechanism**, and it is the answer to the thing I asked for: *the next person
+who adds a third condensation mechanism should not find the same empty cell.*
+
+Routed to the UI engineer with SPEC-20.
