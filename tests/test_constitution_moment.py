@@ -160,7 +160,9 @@ def test_only_what_i_write_myself_is_offered_and_is_not_a_defect(
     monkeypatch.setenv("CROSSAUDIT_AUDITOR_KEY", "a")
     monkeypatch.setenv("CROSSAUDIT_GENERATOR_KEY", "g")
     load_cfg(project / "crossaudit.yml")
-    main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False))
+    # Per-line classification lives in the full view now (SPEC 6 §4).
+    main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False,
+                                       all=True))
     doctor_out = capsys.readouterr().out
     assert "[FAIL] constitution rules" not in doctor_out
     assert "[INFO] constitution rules" in doctor_out

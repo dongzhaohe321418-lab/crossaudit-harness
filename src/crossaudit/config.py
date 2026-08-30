@@ -151,7 +151,14 @@ def find(start: Path | None = None) -> Path:
     for d in [cur, *cur.parents]:
         if (d / CONFIG_NAME).is_file():
             return d / CONFIG_NAME
-    raise ConfigDenial(f"no {CONFIG_NAME} found from {cur} upward — run `crossaudit init`")
+    # The "and every directory above it" clause is kept deliberately: it is what
+    # tells someone standing in a subdirectory why their existing project was
+    # not found, and dropping it for brevity would cost a real diagnosis.
+    raise ConfigDenial(
+        f"no {CONFIG_NAME} found from {cur} upward — run `crossaudit init`",
+        human=("No CrossAudit project here.\n\n"
+               f"    Looked for {CONFIG_NAME} in {cur} and every directory above it.\n\n"
+               "    crossaudit init     set one up, right here"))
 
 
 def load(path: Path | None = None) -> Config:

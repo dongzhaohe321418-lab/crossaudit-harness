@@ -29,7 +29,12 @@ import pytest
 from crossaudit.cli import main
 from crossaudit.errors import EXIT_CONFIG, EXIT_OK
 
-_ARGS = dict(fix=False, online=False, json=False)
+#: The per-line view. The default view now leads with a verdict and collapses
+#: the passing majority (SPEC 6 §4); `--all` is the stable full surface, and it
+#: is what the classification tests below read, because classification is
+#: exactly what it shows.
+_ARGS = dict(fix=False, online=False, json=False, all=True)
+_BRIEF = dict(fix=False, online=False, json=False, all=False)
 
 
 def _wheel(monkeypatch):
@@ -216,5 +221,106 @@ def test_the_front_door_names_the_generation_half_of_the_product(capsys):
     assert "crossaudit console" in out, "the browser loop is not mentioned"
     assert "crossaudit run" in out, "auditing an existing commit is still offered"
     # build is introduced before run: it is what most people arrive wanting.
-    assert out.index("crossaudit build") < out.index(
-        "crossaudit run               audit your latest commit")
+    assert out.index("crossaudit build") < out.index("crossaudit run")
+
+
+# ===================== SPEC 6: the CLI's first three screens =================
+# Acceptance executed against real invocations, never asserted against source
+# strings. §7 names the exit-code regression as the one that would silently
+# break scripting, so it is checked explicitly rather than assumed.
+def test_the_un_initialised_refusal_reads_as_setup_not_permission(
+        tmp_path, monkeypatch, capsys):
+    """DENIED is a permission word for what is only "not set up yet"."""
+    from crossaudit.errors import ConfigDenial
+
+    empty = tmp_path / "bare"
+    empty.mkdir()
+    monkeypatch.chdir(empty)
+    code = main.main(["console"])
+    err = capsys.readouterr().err
+
+    assert "DENIED" not in err, "the human stream must not use a permission word"
+    assert "No CrossAudit project here." in err
+    # The diagnosis that tells someone in a subdirectory why their project was
+    # not found is kept, not trimmed for brevity.
+    assert "and every directory above it" in err
+    assert "crossaudit init" in err
+    # The machine contract is untouched: scripts depend on this exit code.
+    assert code == EXIT_CONFIG
+
+    # ...and the machine-readable form still carries kind and reason.
+    payload = ConfigDenial("x", human="friendly").as_dict()
+    assert "human" not in payload, "the human sentence must stay out of --json"
+    assert payload["kind"] and payload["reason"]
+
+
+def test_doctor_leads_with_the_verdict_and_collapses_the_passing_majority(
+        cfg, monkeypatch, capsys):
+    monkeypatch.delenv(cfg.generator_key_env or "CROSSAUDIT_GENERATOR_KEY",
+                       raising=False)
+    monkeypatch.delenv(cfg.auditor.key_env, raising=False)
+    monkeypatch.chdir(cfg.root)
+    _wheel(monkeypatch)
+    main.cmd_doctor(argparse.Namespace(**_BRIEF))
+    out = capsys.readouterr().out
+    body = [ln for ln in out.splitlines() if ln.strip()]
+
+    # The verdict is the first thing after the title, not the last line.
+    assert body[1].strip().startswith("Not ready —")
+    # Failures carry a consequence and then a remedy, in that order. The
+    # auditor credential may legitimately be present from a keys file on the
+    # machine running the suite, so the generator — which this fixture always
+    # clears — is the one asserted on.
+    assert "✗ No generator API key" in out
+    assert out.index("CrossAudit cannot write anything without one.") < out.index(
+        "export CROSSAUDIT_GENERATOR_KEY")
+    # Posture carries ℹ and is not a verdict.
+    assert "ℹ How much this project's history proves" in out
+    # The passing majority collapses, and says how to see it.
+    assert "other checks passed" in out and "--all to list them" in out
+
+
+def test_doctor_all_still_prints_every_line(cfg, monkeypatch, capsys):
+    """`--all` is the stable surface: CI and scripts keep the full list."""
+    monkeypatch.setenv(cfg.auditor.key_env, "a")
+    monkeypatch.setenv(cfg.generator_key_env or "CROSSAUDIT_GENERATOR_KEY", "g")
+    monkeypatch.chdir(cfg.root)
+    _wheel(monkeypatch)
+    main.cmd_doctor(argparse.Namespace(**_ARGS))
+    full = capsys.readouterr().out
+    rows = _lines(full)
+    assert len(rows) > 10, "the full list must still be printed"
+    assert full.rstrip().endswith("ready")
+
+
+def test_the_collapsed_count_equals_the_checks_actually_run(cfg, monkeypatch, capsys):
+    """A count that does not match the list is the tally defect again."""
+    import re as _re
+    monkeypatch.setenv(cfg.auditor.key_env, "a")
+    monkeypatch.setenv(cfg.generator_key_env or "CROSSAUDIT_GENERATOR_KEY", "g")
+    monkeypatch.chdir(cfg.root)
+    _wheel(monkeypatch)
+    main.cmd_doctor(argparse.Namespace(**_BRIEF))
+    brief = capsys.readouterr().out
+    main.cmd_doctor(argparse.Namespace(**_ARGS))
+    rows = _lines(capsys.readouterr().out)
+
+    claimed = int(_re.search(r"✓ (\d+) other check", brief).group(1))
+    actually_passed = len([r for r in rows if r[0] == "PASS"])
+    assert claimed == actually_passed, (
+        f"the collapsed line claims {claimed} but {actually_passed} checks passed")
+
+
+def test_the_front_door_names_the_mechanism_not_just_the_action():
+    """Precision over friendliness: the gloss says what makes it worth anything."""
+    import io
+    import contextlib
+
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        main.main([])
+    out = buffer.getvalue()
+    assert "a second model from a different vendor" in " ".join(out.split())
+    assert "crossaudit build" in out and "crossaudit console" in out
+    # `run` is offered for what it is for, not as the one command to remember.
+    assert "one command to remember" not in out

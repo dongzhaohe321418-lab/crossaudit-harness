@@ -74,14 +74,15 @@ requirements. It writes keys to a 0600 file outside the repository.
     crossaudit init              guided setup, right here
     crossaudit init --github     the same, plus the two-repository plan
 
-Then, the two commands most people want:
+Then, two ways to work:
 
-    crossaudit build "..."       say what to build; it writes, then audits it
-    crossaudit console           the same loop in a browser, live
+    crossaudit build "..."       say what you need; CrossAudit writes it, then a
+                                 second model from a different vendor checks the
+                                 result before you see it
+    crossaudit console           the same loop in a browser, live, and it
+                                 outlives the window
 
-and the one to remember when you already have a commit to judge:
-
-    crossaudit run               audit your latest commit; everything else is automatic
+    crossaudit run               already have a commit? audit that instead
 
 It reads the increment from the commit itself, runs the deterministic checks,
 runs the model audit when a key is present, writes the ledger, and tells you
@@ -288,7 +289,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         cfg = load()
     except ConfigDenial as exc:
         add("config", False, exc.reason, f"run `crossaudit init` to write {CONFIG_NAME}")
-        print(_render_doctor(checks, False))
+        print(_render_doctor(checks, False, getattr(args, "all", False)))
         if _offer(args, "run the setup wizard here"):
             wizard.run(Path("."), mode="local", force=False)
             print("\nSetup written — running doctor again:\n")
@@ -452,20 +453,103 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
     _emit({"ok": ok, "checks": checks, "verifier": ident,
            "admission": verdict.as_dict()}, args.json,
-          _render_doctor(checks, ok))
+          _render_doctor(checks, ok, getattr(args, "all", False)))
     return EXIT_OK if ok else EXIT_CONFIG
 
 
-def _render_doctor(checks: list[dict], ok: bool) -> str:
+#: Plain language for the checks a newcomer meets first, with the rule id kept.
+#: Precision over friendliness (SPEC 6 §4): renaming without the id would break
+#: a person's ability to trace a verdict back to their own constitution and to
+#: the receipt, so the id stays in parentheses rather than being replaced.
+#: A missing entry keeps the raw name — this table adds clarity, it is never
+#: required for a line to render.
+DOCTOR_COPY: dict[str, tuple[str, str]] = {
+    "auditor connection": ("No auditor API key",
+                           "CrossAudit cannot run an audit without one."),
+    "generator connection": ("No generator API key",
+                             "CrossAudit cannot write anything without one."),
+    "heterogeneity (I1)": ("Generator and auditor are different vendors (I1)", ""),
+    "admission tier": ("How much this project's history proves", ""),
+    "  toward enforced": ("", ""),
+    "automatic: schema": ("Results file has the required structure (schema)", ""),
+    "automatic: units": ("Every number carries a unit and a source (units)", ""),
+    "automatic: convergence": ("Anything reported as converged met its threshold "
+                               "(convergence)", ""),
+    "automatic: provenance": ("Every source traces to a declared input "
+                              "(provenance)", ""),
+    "admission-capable": ("This install cannot admit receipts",
+                          "It can generate, audit and verify; it cannot consume a "
+                          "receipt as admitted evidence."),
+    "constitution rules": ("Your rules", ""),
+}
+
+
+def _doctor_label(check: dict) -> tuple[str, str]:
+    """(label, consequence). An entry mapping to "" means a continuation line."""
+    if check["check"] in DOCTOR_COPY:
+        return DOCTOR_COPY[check["check"]]
+    return check["check"], ""
+
+
+def _render_doctor(checks: list[dict], ok: bool, show_all: bool = False) -> str:
     """[PASS] tested and held · [FAIL] tested and did not · [INFO] not a test.
 
     An INFO line reports a posture, a mode or a configured contract. It carries
     no verdict and is not counted, so the tally below means what it says.
     """
+    if show_all:
+        return _render_doctor_full(checks, ok)
+    failed = [c for c in checks if c.get("kind") != "info" and not c["ok"]]
+    info = [c for c in checks if c.get("kind") == "info"]
+    passed = [c for c in checks if c.get("kind") != "info" and c["ok"]]
+
+    lines = ["crossaudit doctor", ""]
+    # The verdict is the FIRST line. It used to be the last, so a person read
+    # twenty-one lines before learning the answer.
+    if failed:
+        n = len(failed)
+        lines.append(f"  Not ready — {n} thing{'' if n == 1 else 's'} "
+                     f"need{'s' if n == 1 else ''} attention.")
+    else:
+        lines.append("  Ready.")
+    lines.append("")
+    for c in failed:
+        label, consequence = _doctor_label(c)
+        lines.append(f"  ✗ {label}")
+        # Consequence before remedy: what you cannot do, then what to type.
+        lines.append(f"      {consequence or c['detail']}")
+        if c["fix"]:
+            lines.append(f"      → {c['fix']}")
+    if failed:
+        lines.append("")
+    # The configured deterministic contracts are reference material, not
+    # something a person needs at first contact, so they collapse the same way
+    # the passing checks do. What stays visible is the posture — the thing that
+    # changes what this project can prove.
+    contracts = [c for c in info if c["check"].startswith("automatic: ")]
+    posture = [c for c in info if not c["check"].startswith("automatic: ")]
+    for c in posture:
+        label, _consequence = _doctor_label(c)
+        if label:
+            lines.append(f"  ℹ {label}")
+        lines.append(f"      {c['detail']}")
+    if posture:
+        lines.append("")
+    if contracts:
+        lines.append(f"  ℹ {len(contracts)} automatic check"
+                     f"{'' if len(contracts) == 1 else 's'} configured"
+                     "   (they run on your first task)")
+    # The passing majority collapses to a count. `--all` prints every line
+    # unchanged, so nothing is lost and CI keeps a stable surface.
+    lines.append(f"  ✓ {len(passed)} other check"
+                 f"{'' if len(passed) == 1 else 's'} passed"
+                 "        (crossaudit doctor --all to list them)")
+    return "\n".join(lines)
+
+
+def _render_doctor_full(checks: list[dict], ok: bool) -> str:
+    """Every line, unchanged. `--all` is the stable surface for CI and scripts."""
     lines = ["crossaudit doctor", "=" * 60]
-    # Width from the longest label, so the detail column stays aligned and is
-    # always separated by at least two spaces. A fixed 22 silently collided
-    # whenever a name reached it, leaving one space and a ragged column.
     width = max([len(c["check"]) for c in checks] or [22]) + 1
     for c in checks:
         mark = "INFO" if c.get("kind") == "info" else ("PASS" if c["ok"] else "FAIL")
@@ -1466,6 +1550,8 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--online", action="store_true", help="also probe gh")
     d.add_argument("--fix", action="store_true",
                    help="offer to repair each failure interactively")
+    d.add_argument("--all", action="store_true",
+                   help="list every check instead of collapsing the passing ones")
     d.set_defaults(func=cmd_doctor)
 
     c = sub.add_parser("check", help="run the deterministic layer, no model involved")
@@ -1537,6 +1623,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     b = sub.add_parser("build", help='say what to build; the loop writes and audits it')
     b.add_argument("words", nargs="*")
+    b.add_argument("--verbose", action="store_true",
+                   help="also print the run goal payload and other internal state")
     b.set_defaults(func=_cmd_build)
 
     tk = sub.add_parser("talk", help="say what you want; the program routes it")
@@ -1592,6 +1680,12 @@ def main(argv: list[str] | None = None) -> int:
     except Denial as exc:
         if getattr(args, "json", False):
             print(json.dumps(exc.as_dict(), indent=2, sort_keys=True))
+        elif getattr(exc, "human", ""):
+            # Some refusals are only "not set up yet". DENIED is a permission
+            # word and reads as a wall. The machine contract is unchanged: the
+            # exit code and --json still carry kind and reason, because scripts
+            # depend on them and a human-readable sentence is not a contract.
+            print(exc.human, file=sys.stderr)
         else:
             print(f"DENIED ({exc.kind}): {exc.reason}", file=sys.stderr)
         return exc.exit_code

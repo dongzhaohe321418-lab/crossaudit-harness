@@ -1,4 +1,9 @@
-"""Doctor must include its own deployment constraints in the final verdict."""
+"""Doctor must include its own deployment constraints in the final verdict.
+
+`doctor` now leads with a verdict and collapses the passing majority (SPEC 6
+§4). These tests assert per-line classification, which is what `--all` shows, so
+they request it. `--all` is the stable full surface and its output is unchanged.
+"""
 from __future__ import annotations
 
 import argparse
@@ -12,7 +17,7 @@ def test_non_admissible_install_makes_doctor_not_ready(cfg, monkeypatch, capsys)
     monkeypatch.setattr(main._selfid, "identity", lambda: {
         "install_mode": "editable", "code_digest_sha256": "a" * 64,
         "project": "crossaudit", "version": "4.0.0", "lock_digest_sha256": None})
-    code = main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False))
+    code = main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False, all=True))
     out = capsys.readouterr().out
     assert code == EXIT_CONFIG
     assert "[FAIL] admission-capable" in out and "not ready" in out
@@ -31,7 +36,7 @@ def test_doctor_catches_impossible_shared_key_isolation(cfg, monkeypatch, capsys
     monkeypatch.setenv(strict.auditor.key_env, "auditor-secret")
     monkeypatch.setenv(strict.generator_key_env or "CROSSAUDIT_GENERATOR_KEY",
                        "generator-secret")
-    code = main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False))
+    code = main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False, all=True))
     out = capsys.readouterr().out
     assert code == EXIT_CONFIG
     assert "[FAIL] isolation minimum" in out and "both roles' keys" in out
@@ -60,7 +65,7 @@ def test_doctor_accepts_every_registered_provider(cfg, monkeypatch, capsys):
     # it the run is genuinely not ready and doctor is right to say so.
     monkeypatch.setenv(gemini.generator_key_env or "CROSSAUDIT_GENERATOR_KEY",
                        "generator-present-for-preflight")
-    code = main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False))
+    code = main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False, all=True))
     out = capsys.readouterr().out
     assert "[PASS] provider" in out and "[FAIL] provider" not in out
     assert code == main.EXIT_OK
@@ -77,7 +82,7 @@ def test_doctor_still_names_the_registry_on_an_unknown_provider(cfg, monkeypatch
     monkeypatch.setattr(main._selfid, "identity", lambda: {
         "install_mode": "wheel", "code_digest_sha256": "a" * 64,
         "project": "crossaudit", "version": "4.0.0", "lock_digest_sha256": None})
-    code = main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False))
+    code = main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False, all=True))
     out = capsys.readouterr().out
     assert code == EXIT_CONFIG
     assert "[FAIL] provider" in out and "auditor.provider" in out
@@ -95,7 +100,7 @@ def test_doctor_reports_a_clone_without_git_identity(cfg, monkeypatch, capsys):
             return ""
         return real_git(*args, **kwargs)
     monkeypatch.setattr(main, "git", no_identity)
-    code = main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False))
+    code = main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False, all=True))
     out = capsys.readouterr().out
     assert code == EXIT_CONFIG
     assert "[FAIL] git identity" in out and "git config user.name" in out
