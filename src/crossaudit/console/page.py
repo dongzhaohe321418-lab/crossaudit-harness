@@ -989,7 +989,12 @@ textarea::placeholder{color:var(--text-3)}
 
 /* Human decision screen: what was wanted, tried, blocked, and suggested. */
 .decision{display:none;position:fixed;left:var(--sidebar);right:0;top:calc(var(--topbar-h) + 14px);
-  bottom:0;z-index:var(--z-sheet);background:var(--surface);overflow:auto;
+  bottom:0;background:var(--surface);overflow:auto;
+  /* The inspector shares --z-sheet and comes later in the DOM, so it won the
+     tie and covered this surface: the close button rendered, looked live and
+     did nothing. A modal that announces itself and cannot be dismissed is
+     worse than one that does neither, so the decision sits one level above. */
+  z-index:calc(var(--z-sheet) + 1);
   margin:0 8px 8px;border:1px solid var(--line);border-radius:var(--r-xl)}
 .decision.on{display:block}
 body.deciding .composer-wrap{display:none}
@@ -2692,7 +2697,8 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
   </form>
 </div>
 
-<div class="decision" id="resolution-modal" aria-label="Human decision">
+<div class="decision" id="resolution-modal" role="dialog" aria-modal="true"
+  aria-labelledby="resolution-flag resolution-title" aria-describedby="resolution-summary">
   <form class="decision-body" id="resolution-form"><header class="decision-head">
     <span class="decision-glyph" aria-hidden="true"></span><div>
     <div class="decision-flag" id="resolution-flag">Automatic loop paused</div>
@@ -3442,6 +3448,8 @@ const ZH={
   "The task this conversation asked for.":"此对话所要求完成的任务。",
   "Independent review":"独立审查","Independent auditor approved the result":"独立审计者已批准该结果",
   "No blocking findings":"没有阻断性问题","Recorded in the audit ledger":"已记录到审计账本",
+  // SPEC-9 slice 1 — spoken, not seen. A screen reader hears these; nothing renders them.
+  "A task is waiting for your decision.":"有一个任务正在等待你的决定。",
   // SPEC-2 verification states. The section line is the only thing a person
   // who does not know what a deterministic check is has to read.
   "Not run yet — these run automatically on your first task.":"尚未运行——它们会在你的第一个任务中自动运行。",
@@ -3680,6 +3688,7 @@ const ZH_PATTERNS=[
   ,[/^([0-9a-f]{7,40}) · round (\d+)$/i,m=>m[1]+' · 第 '+m[2]+' 轮']
   ,[/^(PASS|BLOCKED|ESCALATED|ESCALATE|DCL_ONLY) · (\d+) finding\(s\)$/,m=>zhValue(m[1])+' · '+m[2]+' 项发现']
   ,[/^cycle (\S+) is waiting for a human$/,m=>'循环 '+m[1]+' 正在等待人工处理']
+  ,[/^(\d+) tasks are waiting for your decision\.$/,m=>'有 '+m[1]+' 个任务正在等待你的决定。']
   ,[/^MCP executable (.+) was not found or is not executable$/,m=>'未找到 MCP 可执行文件 '+m[1]+'，或它不可执行']
   ,[/^MCP server could not start: (.+)$/,m=>'MCP 服务器无法启动：'+m[1]]
   ,[/^MCP server closed its input\.(.*)$/,m=>'MCP 服务器关闭了输入。'+m[1].trim()]
@@ -4507,11 +4516,32 @@ function openResolution(value,action='',sha=''){
   resolutionChoice(action||'reopen');
   document.getElementById('resolution-error').className='wizard-error';
   resolutionModal.classList.add('on');document.body.classList.add('deciding');
+  // Being told a modal opened and not being told what it is about are the same
+  // failure, so the flag and the title are announced as ONE sentence — the same
+  // words that name the dialog, so what is heard and what is read agree.
+  setDecidingInert(true);
+  // Deferred one tick on purpose. The flag and the title were just written and
+  // the locale observer translates them on the next microtask, so announcing
+  // synchronously speaks the English source to a Chinese reader while the
+  // name of the dialog — built from the same nodes — is already translated.
+  setTimeout(()=>announce(decisionSentence()),0);
   if(lastState)renderDecisionBanner(lastState);
   setTimeout(()=>{const target=action?document.getElementById('resolution-reason')
     :resolutionForm.querySelector('input[name="resolution-choice"]');if(target)target.focus();},0);
 }
+function decisionSentence(){
+  const flag=String((document.getElementById('resolution-flag')||{}).textContent||'').trim();
+  const title=String((document.getElementById('resolution-title')||{}).textContent||'').trim();
+  return flag&&title?flag+' \u2014 '+title:(title||flag);}
+// The rest of the console is not merely covered while a decision is open, it is
+// removed from the accessibility tree and from the tab order. aria-modal alone
+// tells a screen reader the boundary exists; inert is what makes it true.
+function setDecidingInert(on){
+  const shell=document.querySelector('.app');
+  if(!shell)return;
+  if(on)shell.setAttribute('inert','');else shell.removeAttribute('inert');}
 function closeResolution(){resolutionModal.classList.remove('on');document.body.classList.remove('deciding');
+  setDecidingInert(false);
   resolutionForm.reset();activeResolution=null;resolutionChoice('');
   if(lastState)renderDecisionBanner(lastState);}
 resolutionForm.querySelectorAll('input[name="resolution-choice"]').forEach(input=>input.onchange=()=>resolutionChoice(input.value));
@@ -6250,6 +6280,18 @@ function renderCheckRows(rows){
       +'" aria-label="'+esc(row.name+': '+ui.word)+'">'
       +'<span class="check-glyph" aria-hidden="true">'+ui.glyph+'</span>'
       +'<span class="check-name">'+esc(row.name)+'</span></div>';}).join('');}
+// Which decisions this client has already spoken about. Announcing on the
+// COUNT would re-announce whenever one was resolved and another arrived in the
+// same snapshot; announcing on identity does not.
+let announcedEscalations=new Set();
+function announceEscalations(rows){
+  const ids=(rows||[]).map(row=>String(row.cycle_id||''));
+  const fresh=ids.filter(id=>id&&!announcedEscalations.has(id));
+  announcedEscalations=new Set(ids);
+  if(!fresh.length)return;
+  announce(fresh.length===1
+    ?'A task is waiting for your decision.'
+    :fresh.length+' tasks are waiting for your decision.');}
 function renderInspector(d){
   document.getElementById('runtime-generator').textContent = d.generator;
   document.getElementById('runtime-auditor').textContent = d.auditor;
@@ -6273,6 +6315,7 @@ function renderInspector(d){
     + '<div class="mini-value">' + esc(m.value ?? '-') + '</div><div class="mini-label">'
     + esc(m.label) + '</div></div>').join('');
   const escalations=currentEscalations(d);
+  announceEscalations(escalations);
   document.getElementById('escalations').innerHTML = escalations.length ? escalations.map(e =>
     '<div class="escalation"><b>' +(e.limit_reached?'Automatic limit reached · ':'')+esc(e.round)+' / '+esc(e.max_rounds)+' rounds</b><p>'
     + esc(e.why) + '</p><small>'+(e.issues||[]).length+' remaining issue'+((e.issues||[]).length===1?'':'s')+'</small>'
