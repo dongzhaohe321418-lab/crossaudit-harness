@@ -2889,3 +2889,43 @@ localStorage has a quota, and a draft large enough to exceed it fails
 somewhere. **If that failure is silent, the cap has returned wearing a
 different hat** — D56's exact shape. The findings file must say what happens
 and whether the person can tell.
+
+## D70 — I praised a boundary report that was wrong
+
+The escalation-fixture boundary report claimed *"no testable page-render
+endpoint from the Python test seam; adding one would be a product/test seam
+change."* I acted on it: recorded it (D58 addendum), concluded the presentation
+axes need a browser rather than pytest (D60), and told its author it had
+**turned a dead `0/4` into three quarters** and that it was its best work of
+the evening.
+
+Cross-vendor audit:
+
+> **The render boundary is reported incorrectly.** `serve(cfg, port=0)` already
+> exposes the exact-SHA console to Playwright. **Five production-shaped states
+> rendered across 40 locale/theme/width cells with zero page errors.**
+
+The endpoint existed. The auditor did not argue the point — it rendered forty
+cells.
+
+**I praised that report because it was well-formed, not because it was
+verified.** It named a mechanism, priced a fix, and distinguished per-cause
+results, and every one of those virtues is orthogonal to whether the central
+claim is true. It came from the same engineer whose *other* boundary report
+(the `answered` generator gate) I had also acted on — and which the audit
+confirms. One held, one did not, and I could not tell them apart by their
+shape.
+
+RULE: **a boundary claim gets verified like any other capability claim.** "This
+cannot be done from here" is exactly as checkable as "this test proves X", and
+it is more attractive to accept because it closes a question instead of opening
+one. I demanded execution behind every guard-existence claim today and took a
+non-existence claim on its prose.
+
+Also re-confirmed: deleting the real `generator_format` render branch still
+yields 32 passed, 1 skipped — the axis assertions remain tautological (D59).
+
+**The unlock is real**: the escalation coverage hole that has ended three
+separate sweeps with *"three of four causes unreached, needs a funded run"* can
+close, with a method already demonstrated. Detached suite on that branch:
+1,772 collected, 1,769 passed, 3 skipped, 0 failed.
