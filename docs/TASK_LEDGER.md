@@ -781,3 +781,53 @@ came for.
 are the same rule wearing two hats. If they ship as separate slices they will
 diverge. Remediations are minted ONCE, server-side, in order, and both surfaces
 consume them.
+
+### D10 — A guard must be shown to fail, and a semantic guard must not be attempted
+
+Four instances today, across three engineers and four slices, of a test that
+looked like it checked something and did not:
+
+  - source-string assertions standing in for rendered behaviour (twice);
+  - three independent renders standing in for a locale TRANSITION;
+  - a doctor-output parser that assumed a fixed column width and silently dropped
+    every row whose label reached it — precisely the rows the file existed to
+    check. The tests passed while checking nothing. Its author found it only
+    because a test it EXPECTED to fail did not.
+
+That last one is the important one, because it names the technique.
+
+**The technique, now required.** A test whose job is to guard a property must be
+demonstrated to FAIL against a deliberate mutation of the thing it guards. Write
+the guard, then break the product on purpose, then watch the guard catch it. If it
+does not fail, it is not a guard, whatever it is named. Record in the test what
+mutation was used — a guard whose counterfactual is written down can be re-checked
+by the next person; one whose counterfactual lives in the author's head cannot.
+This generalises what one engineer already did voluntarily for the consent
+regression test, and it is exactly the method the independent auditor uses when it
+attacks a guard instead of reading it.
+
+**And the harder half: some properties must not be guarded mechanically at all.**
+The consent slice tried to assert that *no rendered copy implies a stronger
+protection than the code provides*. Three successive implementations were defeated
+by the auditor — a phrase split across an `<em>`; then a paraphrase appended to
+runtime-generated copy by the real callback; then an `aria-label` that Chromium's
+accessibility tree exposed as the checkbox's spoken name. None of the last two used
+any blacklisted phrasing.
+
+They will keep being defeated, because the property is SEMANTIC and the space of
+paraphrase is unbounded. No extractor closes it. Continuing to patch the guard
+would be building a thing whose name is a lie, which is the §1.5 failure it exists
+to prevent, committed by the guard itself.
+
+**Decided:** stop trying to detect a forbidden MEANING. Detect any CHANGE to consent
+copy instead — an approval test over the complete accessible rendered text of every
+consent surface, including runtime-generated text and `title` / `aria-label`, since
+those were the two escape hatches. The claim then becomes *consent copy cannot
+change without a deliberate update to this fixture and a human re-reading it*,
+which is true, checkable, and does what we actually need: it forces a person to
+look at the wording every time it moves. Name the test for what it does. Do not
+name it for what we wish it did.
+
+The general principle: when a guard is defeated three times, ask whether the
+property is mechanically decidable at all. If it is not, replace the guarantee with
+one that is, and say plainly which guarantee you now have.
