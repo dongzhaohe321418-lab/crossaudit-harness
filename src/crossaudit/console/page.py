@@ -884,11 +884,18 @@ textarea::placeholder{color:var(--text-3)}
 .inspector.open{transform:translateX(0);visibility:visible;transition:transform var(--dur-slow) var(--spring)}
 .inspect-head{display:flex;align-items:center;min-height:48px;padding:0 var(--sp-3) 0 var(--sp-4);flex:none}
 .inspect-head h2{font-size:var(--fs-body);margin:0;font-weight:600}
-.panel-tabs{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;padding:0 var(--sp-2) var(--sp-2);flex:none}
+.panel-tabs{display:flex;flex-wrap:wrap;gap:2px;padding:0 var(--sp-2) var(--sp-2);flex:none}
 /* flex-basis:auto, not 0: a tab is never narrower than its own label. Eight
    tabs at a 318px panel width give 36px each, and "Governed" needs 52 — with
    an equal-share basis the labels bled into each other rather than wrapping.
-   They now take a second row instead of being clipped. */
+   They now take a second row instead of being clipped. The rows start at the
+   same edge: centred, the second row floated in the middle aligned to nothing
+   above it, which reads as leftovers rather than as a grid.
+   English is two rows at EVERY desktop width, not only narrow ones — the strip
+   never exceeds 398px — so this is the permanent English layout, not an edge
+   case. Chinese is one row everywhere. The inspector getting NARROWER as the
+   screen gets wider (398px at 1280, 318px at 1440-1920) is what makes one row
+   impossible in English; that inversion belongs to whoever owns the inspector. */
 .panel-tabs .nav-item{flex:0 1 auto;min-width:0;height:40px;padding:0 7px;border:0;border-radius:var(--r-sm);
   background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:2px;color:var(--text-2);font-size:var(--fs-caption);text-align:center}
@@ -2874,7 +2881,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <input type="hidden" name="server_id" id="mcp-server-id">
       <input type="hidden" name="allowed_tools_text" id="mcp-allowed-tools">
       <section class="mcp-step" data-mcp-step="connect" tabindex="-1"><div class="form-grid">
-        <label class="field"><span>Server name</span><input name="name" id="mcp-name" maxlength="80" required placeholder="Research tools" aria-describedby="mcp-name-help"><small class="field-help" id="mcp-name-help">A label for this project. ASCII letters, digits, spaces and . _ - only.</small></label>
+        <label class="field"><span>Server name</span><input name="name" id="mcp-name" maxlength="80" required placeholder="Research tools" aria-describedby="mcp-name-help"><small class="field-help" id="mcp-name-help">A label for this project. ASCII letters, digits, spaces and . _ - only, and it must start with a letter or digit.</small></label>
         <label class="field"><span>Transport</span><select name="transport" id="mcp-transport"><option value="stdio">Local stdio</option><option value="http">Streamable HTTP</option></select></label>
         <div class="field full mcp-transport-fields" id="mcp-stdio-fields"><div class="form-grid">
           <label class="field"><span>Executable</span><input name="command" id="mcp-command" maxlength="1000" placeholder="npx" autocomplete="off"></label>
@@ -3367,9 +3374,9 @@ const ZH={
   // detail_i18n / summary_i18n), so it is deliberately NOT duplicated here —
   // the old ZH_PATTERNS/dictionary handoff for these strings is superseded.
   "Context reduced":"上下文已精简","round":"轮次",
-  "A label for this project. ASCII letters, digits, spaces and . _ - only.":"本项目中的标识名称。仅限 ASCII 字母、数字、空格和 . _ -。",
+  "A label for this project. ASCII letters, digits, spaces and . _ - only, and it must start with a letter or digit.":"本项目中的标识名称。仅限 ASCII 字母、数字、空格和 . _ -，且必须以字母或数字开头。",
   "Connect runs this command on your Mac, so the approval above is required before it can run.":"连接会在你的 Mac 上运行此命令，因此必须先勾选上方的批准。",
-  "Server names use ASCII letters, digits, spaces and . _ - only. Rename this server to continue.":"服务器名称仅支持 ASCII 字母、数字、空格和 . _ -。请修改名称后继续。",
+  "Server names use ASCII letters, digits, spaces and . _ - only, and must start with a letter or digit. Rename this server to continue.":"服务器名称仅支持 ASCII 字母、数字、空格和 . _ -，且必须以字母或数字开头。请修改名称后继续。",
   "This project already has an MCP server with that name. Choose a different name, or configure the existing one.":"此项目已存在同名的 MCP 服务器。请换一个名称，或直接配置已有的服务器。",
   "This project already has an MCP server running that exact command. Configure the existing one instead.":"此项目已存在运行该命令的 MCP 服务器。请直接配置已有的服务器。",
   "Not saved yet — Cancel removes this connection.":"尚未保存 —— 取消将移除此连接。",
@@ -6684,6 +6691,17 @@ for(const id of ['mcp-command','mcp-args'])
 document.querySelector('#mcp-approve-box [name="approve_local_code"]')
   .addEventListener('change',event=>{
     mcpTickedFor=event.target.checked?mcpLiveTuple():null;syncMcpApprovalState();});
+// Cancel, Escape, x and the backdrop all run closeMcp, which deletes the draft.
+// Closing the TAB runs none of them, so the same intent — leaving without
+// saving — left the row behind. This is best effort by construction: the page
+// is going away and the browser may cut the request, so it uses keepalive and
+// makes no promise it always lands. It only ever fires when a draft exists.
+window.addEventListener('pagehide',()=>{
+  if(!mcpCreatedId)return;
+  const id=mcpCreatedId;mcpCreatedId='';
+  try{fetch('/api/mcp?t='+encodeURIComponent(T),{method:'POST',keepalive:true,
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({action:'remove',server_id:id})});}catch(e){}});
 document.getElementById('close-mcp').onclick=closeMcp;document.getElementById('cancel-mcp').onclick=closeMcp;
 document.getElementById('mcp-back').onclick=()=>setMcpStep('connect');
 document.getElementById('mcp-tool-approve').addEventListener('change',ev=>{
@@ -6710,7 +6728,7 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
     const name=String(payload.name||'').trim();
     if(!MCP_NAME_RE.test(name)){
       nameField.setAttribute('aria-invalid','true');
-      showInlineError('mcp-error',new Error('Server names use ASCII letters, digits, spaces and . _ - only. Rename this server to continue.'));
+      showInlineError('mcp-error',new Error('Server names use ASCII letters, digits, spaces and . _ - only, and must start with a letter or digit. Rename this server to continue.'));
       nameField.focus();return;}
     const clash=mcpDuplicate(name,vector,priorId);
     if(clash){nameField.setAttribute('aria-invalid','true');

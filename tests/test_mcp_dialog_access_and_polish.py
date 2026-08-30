@@ -96,9 +96,16 @@ def test_the_eighth_tab_does_not_squeeze_the_labels_into_each_other():
     """An equal-share basis gave each tab 36px at a 318px panel; "Governed"
     needs 52 and "Compute" 49, so the labels bled together (already true at
     seven tabs, worse at eight). Basis auto plus wrapping means a tab is never
-    narrower than its own label."""
-    assert (".panel-tabs{display:flex;flex-wrap:wrap;justify-content:center;"
+    narrower than its own label.
+
+    The rows also start at the same edge. Centred, row two floated in the middle
+    of the strip aligned to nothing above it, which reads as leftovers rather
+    than as a grid — and English wraps at EVERY desktop width, so that is the
+    permanent layout and not an edge case.
+    """
+    assert (".panel-tabs{display:flex;flex-wrap:wrap;"
             "gap:2px;padding:0 var(--sp-2) var(--sp-2);flex:none}") in PAGE
+    assert "justify-content:center" not in PAGE.split(".panel-tabs{")[1].split("}")[0]
     assert ".panel-tabs .nav-item{flex:0 1 auto;min-width:0;height:40px;padding:0 7px;" in PAGE
 
 

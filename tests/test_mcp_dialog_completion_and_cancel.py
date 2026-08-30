@@ -32,10 +32,11 @@ def test_the_server_name_example_is_one_the_backend_accepts():
 def test_the_name_rule_is_stated_before_typing_and_in_both_languages():
     assert 'id="mcp-name-help"' in PAGE
     assert 'aria-describedby="mcp-name-help"' in PAGE
-    assert ("A label for this project. ASCII letters, digits, spaces and . _ - only."
-            in PAGE)
-    assert ('"A label for this project. ASCII letters, digits, spaces and . _ - only.":'
-            '"本项目中的标识名称。仅限 ASCII 字母、数字、空格和 . _ -。"') in PAGE
+    assert ("A label for this project. ASCII letters, digits, spaces and . _ - only, "
+            "and it must start with a letter or digit.") in PAGE
+    assert ('"A label for this project. ASCII letters, digits, spaces and . _ - only, '
+            'and it must start with a letter or digit.":'
+            '"本项目中的标识名称。仅限 ASCII 字母、数字、空格和 . _ -，且必须以字母或数字开头。"') in PAGE
 
 
 def test_the_client_side_name_check_is_exactly_the_servers_rule():
@@ -45,8 +46,13 @@ def test_the_client_side_name_check_is_exactly_the_servers_rule():
     assert mirror, "the client-side server-name mirror is gone"
     assert mirror.group(1) == mcp.SERVER_NAME.pattern
     assert "MCP_NAME_RE.test(name)" in PAGE
-    assert ("Server names use ASCII letters, digits, spaces and . _ - only. "
+    # The rule that actually bites is POSITIONAL — [A-Za-z0-9] first — so the
+    # copy names it. ".config tools" satisfies the character set and is still
+    # refused; a message that only described the set left that person stuck.
+    assert ("Server names use ASCII letters, digits, spaces and . _ - only, "
+            "and must start with a letter or digit. "
             "Rename this server to continue.") in PAGE
+    assert "且必须以字母或数字开头" in PAGE
     # The field, not just the error box, is marked and focused.
     assert "nameField.setAttribute('aria-invalid','true')" in PAGE
     assert "nameField.focus()" in PAGE
@@ -71,6 +77,16 @@ def test_every_constant_mcp_denial_has_a_chinese_translation():
 
 
 # ------------------------------------------------------------------------- D2
+def test_leaving_by_closing_the_tab_also_discards_the_draft():
+    """Cancel, Escape, x and the backdrop run closeMcp; closing the tab runs
+    none of them and left the row behind. Best effort by construction — the page
+    is going away — so it uses keepalive and claims nothing more."""
+    assert "window.addEventListener('pagehide'," in PAGE
+    assert "if(!mcpCreatedId)return;" in PAGE
+    assert "keepalive:true" in PAGE
+    assert "action:'remove',server_id:id" in PAGE
+
+
 def test_cancelling_step_two_deletes_the_row_step_one_had_to_create():
     assert "let mcpCreatedId='';" in PAGE
     assert "function discardMcpDraft(){const id=mcpCreatedId;if(!id)return;mcpCreatedId='';" in PAGE
