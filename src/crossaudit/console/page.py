@@ -3757,22 +3757,43 @@ applyLocale(storedLocale()==='zh'?'zh':'en',false);
 // several times between frames, so without both a person hears the transcript
 // on a loop.
 let announcedText='';let announceTimer=null;
+// SPEC-9, the locale-timing rule as a MECHANISM rather than a habit.
+//
+// Every live region has the same problem the announcer has, not just the
+// announcer itself: it announces what IS there, not what is about to be.
+// Writing an English source into one and letting the locale observer translate
+// it a microtask later means a Chinese reader is SPOKEN the English while the
+// screen shows Chinese.
+//
+// Measured, not reasoned about. Driving frUpdateIndependence — the function
+// this page itself uses for the first-run provider step — in a Chinese page,
+// and sampling the role=alert node #fr-role-msg at the write, at the next
+// microtask and after a task, gave: English, then Chinese, then Chinese. The
+// alert fires on the first of those. The sweep found nine live regions with
+// this shape; two writes carried a string with a translation, both here.
+//
+// So: write, then translate in the SAME TASK. The English source is still what
+// was written, so a later locale switch re-translates it the ordinary way —
+// driven and confirmed, zh then en then zh, not assumed. One function rather
+// than a rule each caller has to remember, because the defect this closes is
+// precisely a canonicalisation applied at one point and not at the next.
+function liveText(node,value){
+  if(!node)return;
+  node.textContent=String(value==null?'':value);
+  if(typeof localizeTree==='function')localizeTree(node);}
+function liveHTML(node,markup){
+  if(!node)return;
+  node.innerHTML=String(markup==null?'':markup);
+  if(typeof localizeTree==='function')localizeTree(node);}
 function announce(sentence){
   const text=String(sentence==null?'':sentence).trim();
   if(!text||text===announcedText)return false;
   announcedText=text;
   if(announceTimer)clearTimeout(announceTimer);
   announceTimer=setTimeout(()=>{announceTimer=null;
-    const node=document.getElementById('announcer');
-    if(!node)return;
-    node.textContent=text;
-    // Translate SYNCHRONOUSLY, in the same task as the write. The locale
-    // observer would do it a microtask later, which leaves a window in which
-    // the node holds the English source while the person is reading Chinese —
-    // and a live region announces what is there, not what is about to be. The
-    // English source is still what was written, so switching locale later
-    // re-translates it the ordinary way.
-    if(typeof localizeTree==='function')localizeTree(node);},120);
+    // Through the same helper as every other live region, so the rule has one
+    // implementation and cannot hold true here while drifting elsewhere.
+    liveText(document.getElementById('announcer'),text);},120);
   return true;}
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -7529,11 +7550,11 @@ function frUpdateIndependence(){
   const _g=banner.querySelector('svg path');if(_g)_g.setAttribute('d',same?'M6 6 14 14M14 6 6 14':'M4 10.5 8.2 14.5 16 6');
   if(same){banner.classList.add('bad');
     document.getElementById('fr-independent-text').textContent='Same provider — independent review is not possible.';
-    msg.className='fr-role-msg';msg.textContent='Generator and auditor must run on different providers. Independent review is the core of the protocol and cannot be turned off.';
+    msg.className='fr-role-msg';liveText(msg,'Generator and auditor must run on different providers. Independent review is the core of the protocol and cannot be turned off.');
     if(cont)cont.disabled=true;
   }else{banner.classList.remove('bad');
     document.getElementById('fr-independent-text').textContent='Independent — your auditor runs on a different provider than your generator.';
-    msg.className='fr-role-msg';msg.textContent='';if(cont)cont.disabled=false;}
+    msg.className='fr-role-msg';liveText(msg,'');if(cont)cont.disabled=false;}
 }
 function renderFirstRunRoles(){
   if(firstRunStep!==4)return;
@@ -7544,7 +7565,7 @@ function renderFirstRunRoles(){
   if(!frRoles||!configured.includes(frRoles.gen.vendor)||!configured.includes(frRoles.aud.vendor)
      ||frRoles.gen.vendor===frRoles.aud.vendor){frRoles=frRecommendRoles();}
   if(!frRoles){pair.hidden=true;banner.hidden=true;
-    msg.className='fr-role-msg';msg.textContent='Connect at least two different providers on the previous step to form an independent Generator / Auditor pair.';
+    msg.className='fr-role-msg';liveText(msg,'Connect at least two different providers on the previous step to form an independent Generator / Auditor pair.');
     if(cont)cont.disabled=true;return;}
   pair.hidden=false;
   const label=v=>(cat[v]&&cat[v].label)||(providers[v]&&providers[v].label)||v;
@@ -7592,7 +7613,7 @@ async function frFinishOnboarding(){
                               auditor_model:keep('auditor',frRoles.aud)});
     await frEnterHub('complete');
   }catch(e){
-    if(e&&e.issue==='runtime_busy'){cont.disabled=false;msg.className='fr-role-msg';msg.textContent=e.message;return;}
+    if(e&&e.issue==='runtime_busy'){cont.disabled=false;msg.className='fr-role-msg';liveText(msg,e.message);return;}
     // No writable project yet (first launch may have no repo). Do not fabricate a
     // config write — finish onboarding honestly and let them create their first.
     await frEnterHub('complete',true);

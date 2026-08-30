@@ -130,12 +130,20 @@ def test_the_thread_announces_arrival_once_and_never_its_contents():
 def test_the_announcement_is_translated_in_the_same_task_as_the_write():
     """The boss's rule from slice 1, generalised: anything announced must be in
     the locale the person is reading, not the locale the DOM held a microtask
-    ago. A live region announces what is there, not what is about to be."""
+    ago. A live region announces what is there, not what is about to be.
+
+    The rule now lives in `liveText`, because the sweep found it is a property of
+    every live region and not of the announcer — so this guard follows it there
+    rather than being deleted. The class-level version, with the collection
+    surface and the same-task check, is `test_live_region_locale_timing.py`.
+    """
     announce = _extract("function announce(sentence)")
-    assert "node.textContent=text;" in announce
-    assert "if(typeof localizeTree==='function')localizeTree(node);" in announce
+    assert "liveText(document.getElementById('announcer'),text);" in announce
+    write = _extract("function liveText(node,value)")
+    assert "node.textContent=String(value==null?'':value);" in write
+    assert "if(typeof localizeTree==='function')localizeTree(node);" in write
     # ...and in that order: translating before the write would translate nothing.
-    assert announce.index("node.textContent=text;") < announce.index("localizeTree(node)")
+    assert write.index("node.textContent=") < write.index("localizeTree(node)")
 
 
 def test_the_conversation_itself_never_becomes_a_live_region():
@@ -183,7 +191,14 @@ def test_the_delta_guard_is_shown_to_fail(why, before, after):
 SOURCE_MUTATIONS = (
     ("the announcement stops being translated in the same task, so a Chinese "
      "reader hears the English source",
-     "    if(typeof localizeTree==='function')localizeTree(node);", "    "),
+     "  node.textContent=String(value==null?'':value);\n"
+     "  if(typeof localizeTree==='function')localizeTree(node);}",
+     "  node.textContent=String(value==null?'':value);}"),
+    ("the announcer stops going through the shared rule and writes the node "
+     "itself, which is how the rule held here and drifted everywhere else",
+     "    liveText(document.getElementById('announcer'),text);},120);",
+     "    const node=document.getElementById('announcer');\n"
+     "    if(node)node.textContent=text;},120);"),
     ("aria-live is attached to the conversation — the mutation SPEC-9 §6.6 and "
      "slice 0 exist to catch",
      "document.getElementById('conversation').innerHTML = html;",
