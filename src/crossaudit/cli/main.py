@@ -108,6 +108,15 @@ def _sha256_file(path: Path) -> str:
     return __import__("hashlib").sha256(path.read_bytes()).hexdigest()
 
 
+def constitution_commit_state(cfg) -> tuple[bool, bool]:
+    """Return (tracked, dirty) for the constitution path."""
+    tracked = bool(git("log", "-1", "--format=%H", "--", cfg.constitution,
+                       cwd=cfg.root, check=False))
+    dirty = bool(git("status", "--porcelain", "--", cfg.constitution,
+                     cwd=cfg.root, check=False).strip())
+    return tracked, dirty
+
+
 def _write_reproduction(receipt: dict, cycle_dir: Path) -> bool:
     """A2: write reproduction.json beside the receipt when the audited tree
     carried a dependency lock. Fail-open — a write problem never blocks an audit,
@@ -308,15 +317,19 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             else "this clone has no effective user.name/user.email",
             "set them for this repository with `git config user.name NAME` and "
             "`git config user.email EMAIL`")
-        const_committed = bool(git("log", "-1", "--format=%H", "--", cfg.constitution,
-                                   cwd=cfg.root, check=False))
+        const_tracked, const_dirty = constitution_commit_state(cfg)
+        const_committed = const_tracked and not const_dirty
         if not const_committed and _offer(args, f"commit {cfg.constitution} so audits "
                                                 f"can cite its version"):
             git("add", "--", cfg.constitution, cwd=cfg.root)
             git("commit", "-q", "-m", "constitution: initial version", cwd=cfg.root)
             const_committed = True
         add("constitution committed", const_committed,
-            "audits cite the commit that versioned the rules (I3)",
+            "audits cite the commit that versioned the rules (I3)"
+            if const_committed else
+            (f"{cfg.constitution} has uncommitted changes; an audit would cite "
+             "the committed version, not what is on disk" if const_tracked else
+             f"{cfg.constitution} is not tracked by git"),
             f"git add {cfg.constitution} && git commit")
 
     if args.online:
