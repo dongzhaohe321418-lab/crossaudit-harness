@@ -1292,3 +1292,38 @@ report verbatim; that report is unavailable in this restarted session, and infer
 equivalence would recreate D29's false-all-clear risk."* Third agent today to decline
 a plausible claim it could not verify, and the first to cite a decision number while
 doing it.
+
+### D35 — A gate that can never be satisfied is as broken as one that always is
+
+The security auditor closed the D24 arc with MERGE, and it guarded against a failure
+mode I had not thought to name — my own.
+
+D24 bound me: three consecutive merges carrying an open S0 on the same boundary and
+the "strictly dominates" justification is spent. The auditor found three S3 hardening
+items on this round and explicitly refused to convert any of them into a gate:
+
+> "D24's justification was spent on open S0s, and there is no open S0 here. Refusing
+> to merge over a two-bytecode ordering nit reachable only by Ctrl-C would make the
+> gate unfalsifiable — **there is always a narrower window** — and that failure mode
+> is the mirror image of the one D24 exists to prevent."
+
+That is right and it is the correction D24 needed. A rule written to stop a manager
+shipping indefinitely can, applied without judgement, stop a manager shipping at all
+— and a reviewer can always find a narrower window, so an unfalsifiable gate is not
+rigour, it is paralysis wearing rigour's clothes.
+
+It also declined to make its own one-line remedy a condition, on the grounds that
+"that would be me holding a strictly-dominating branch for a perfect answer, which is
+what I told you not to do" — applying its own earlier advice against itself.
+
+**So D24 gains its missing half:** the bar is an open S0 on the boundary, not the
+absence of every conceivable narrowing. A finding that does not name a reachable
+failure the product can produce is hardening, and hardening is scheduled, not gated.
+The distinction is exactly the one this project keeps making elsewhere: what the
+evidence establishes, versus what could conceivably be true.
+
+**And the arc, recorded honestly because the merge commit should carry it:** three
+rounds; two merged carrying a known open S0 under the "strictly dominates" argument;
+the third closes the boundary end to end for every failure mode the product can
+produce, and leaves three S3 hardening items — one of which is the last instance of
+the very discipline the whole arc was about, and is one line.
