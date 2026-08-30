@@ -2754,3 +2754,49 @@ the codex engineer is on **analysis only** — sweeps, boundary location,
 adversarial reasoning. The `app_doctor` fixes moved to the engineer already
 inside that file. It is not a demotion dressed as a reassignment; it is routing
 to where the evidence says work lands.
+
+## D67 — Rebuild small on integration rather than replay five commits
+
+The `read_committed_bytes` / `git_bytes` conflict (D65) is resolved, by the
+author, in the direction that costs it most:
+
+> Abandon the rebase of `fix/cycle-integrity` and cut a small branch on current
+> integration carrying only those four, **adopting `_committed_constitution`
+> and `read_committed_bytes` rather than reintroducing anything of mine.**
+> ... That is smaller, drops my weaker primitive entirely, and avoids a
+> five-commit replay whose main effect would be to **undo someone else's
+> better work.**
+
+I had explicitly offered the other direction — if `git_bytes` were the better
+primitive it would replace the merged one, since landing first does not make a
+thing the winner. The author has been in those bytes longer than anyone here,
+looked, and said no.
+
+Its reasoning on safety is also right: resolving hunk by hunk toward HEAD
+reaches the same code with far more chances to get one hunk wrong. A smaller
+branch carrying only the four properties is a smaller thing to audit, and this
+project has gone better every time the unit got smaller.
+
+### A count that would be true of nothing
+
+> I have not run a suite count, because a count from `5a0a8eb` describes a
+> branch I'm proposing to abandon and one from a half-rebased tree would be
+> the mistake you just corrected in yourself.
+
+**It refused to produce a number that would be true of nothing.** That is D39
+and D54 internalised rather than obeyed — and the absence of exactly this
+discipline cost two other authors their credibility on counts tonight.
+
+The stale D10 test is deleted at `5a0a8eb` and recorded in the findings file
+rather than quietly: a removed test changes what is guarded and belongs in the
+record.
+
+### The cost, stated
+
+**The R3 audit was against a branch being abandoned.** It verified the four
+properties on code now being rewritten against different helpers. The new
+branch needs a fresh cross-vendor audit — "same properties, different code" is
+precisely the assumption I would refuse from anyone else. Faster, though: the
+auditor knows the four routes and the exact table to reproduce, pin / auditor
+bytes / receipt hash / receipt commit agreeing on the cited object in all four
+rows rather than only the two pinned ones.
