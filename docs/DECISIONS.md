@@ -990,3 +990,49 @@ and commit". Everything FROM publication onward holds. Publication itself is the
 link that does not, and it is inherited rather than authored here — so the claim is
 narrower than the sentence, and the sentence gets corrected rather than the claim
 quietly enlarged.
+
+### D28 — The deliverable bar, written down because "ship-quality" is not checkable and this is
+
+The owner asked for a continuous improvement loop, running until CrossAudit is a
+genuinely deliverable product of the quality that earns a wide audience.
+
+**What I cannot do, stated first.** I cannot produce or verify a star count. Stars
+follow from publishing, from an audience, and from luck, and publishing is
+outward-facing and requires the owner's approval — it is outside what the manager
+may do. A loop that claimed to be driving toward a number it cannot measure would be
+the exact overclaim this project spends its days removing. So the loop drives toward
+a bar I CAN check, and the owner decides separately whether and when to publish.
+
+**The bar. Each line is checkable, and none of them is "it feels finished".**
+
+1. **No open S0 or S1 against merged code.** Not "none known" — none open, with the
+   audit trail showing each was closed by construction or explicitly accepted with
+   its reason.
+2. **A fresh-user walkthrough of the FROZEN BUNDLE passes**, not source mode. Clean
+   HOME, empty project, no credentials. No silence on any action, no raw traceback
+   on any path a person can reach, and no claim on screen that the code does not
+   support. Today's packaged 4.15.0 fails this on all three counts.
+3. **Every UX_TEST_PLAN scenario S1–S7 OBSERVED**, in both themes, both locales,
+   desktop and narrow. Observed means screenshot plus page structure, per §2 of that
+   plan — a cell reasoned about is not covered.
+4. **A screen-reader user can complete first contact.** The ten silent containers
+   closed, live regions correct by the slice-0 rule, and the path driven rather than
+   inspected. Per D25 this is not polish: for that population the product is
+   currently unusable, not merely worse.
+5. **The first three minutes work in Chinese.** CLI i18n waves 1 and 2 complete, and
+   no contract claiming parity on a surface that does not have it.
+6. **Full suite green, and every guard demonstrated to fail** under a deliberate
+   mutation recorded in the test (D10). A green suite that would stay green under a
+   broken implementation is worth nothing, and we have found that seven times today.
+7. **The invariants hold and are demonstrated**, not asserted: the audit core stays
+   non-bypassable, the auditor sees evidence only, bounding is fail-closed, and
+   nothing on screen or in a docstring promises more than the code delivers.
+
+**What is deliberately NOT on this list:** feature count, benchmark numbers, and
+anything measured in stars. A product that meets the seven above is one I would put
+in front of a stranger. Whether strangers arrive is the owner's call and the world's.
+
+**How the loop ends.** It ends when 1–7 hold simultaneously on a packaged build, and
+the evidence for each is on record rather than remembered. If it stops making
+progress — the same class of defect surviving three rounds, per D7 — that is a
+finding to surface, not a reason to keep grinding.
