@@ -21,6 +21,7 @@ from crossaudit.document_export import (
     validate_export_work,
 )
 from crossaudit.errors import ProviderDenial
+from crossaudit import generator
 
 
 SOURCE = """# Verified report
@@ -60,6 +61,25 @@ def test_render_export_yields_only_one_valid_final_binary(
     view = extract_document(written[0], final.read_bytes())
     assert view.valid and "Verified report" in view.text
     assert "中文" in view.text and len(view.digest) == 64
+
+
+@pytest.mark.parametrize("format_name", ["pdf", "docx"])
+def test_export_transfers_binding_into_same_receipt_scope(
+        science: Path, format_name: str):
+    task = "Write the report" + export_instructions(format_name)
+    relative = f"experiments/scoped{SOURCE_SUFFIX}"
+    receipt = generator.apply(
+        generator.bind_file_identities(generator.Work("source", {
+            relative: SOURCE,
+        }), science, ["experiments"]), science, ["experiments"])
+
+    rendered = render_export(science, receipt, task)
+    assert rendered is receipt
+    final = science / rendered[0]
+    assert final.exists() and not (science / relative).exists()
+
+    rendered.rollback()
+    assert not final.exists() and not (science / relative).exists()
 
 
 def test_export_contract_rejects_extra_files_and_unowned_overwrite(science: Path):

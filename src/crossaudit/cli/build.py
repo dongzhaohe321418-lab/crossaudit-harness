@@ -263,8 +263,30 @@ def _current_work(cfg: Config, task: str = "", findings: str = "",
 
 
 def _stage_authorized(cfg: Config, written: AppliedFiles) -> None:
-    """Put receipt bytes in the index without reopening their pathnames."""
+    """Stage receipt bytes and retain prior tracked entries for round paths."""
     written.verify()
+    paths = [entry.relative for entry in written.entries]
+    prior_index = git_bytes(
+        "ls-files", "--stage", "-z", "--", *paths, cwd=cfg.root)
+    object_format = git("rev-parse", "--show-object-format", cwd=cfg.root)
+    if object_format == "sha1":
+        zero_oid = "0" * 40
+    elif object_format == "sha256":
+        zero_oid = "0" * 64
+    else:
+        raise ConfigDenial(
+            f"git returned an unsupported object format: {object_format!r}")
+    delete_rows = b"".join(
+        f"0 {zero_oid}\t".encode("ascii")
+        + path.encode("utf-8") + b"\0"
+        for path in paths)
+
+    def restore_index() -> None:
+        # Delete every round path first, then replay the exact stage entries
+        # (including unmerged stages) that existed before this round.
+        git_bytes("update-index", "-z", "--index-info", cwd=cfg.root,
+                  input_data=delete_rows + prior_index)
+
     rows: list[bytes] = []
     for entry in written.entries:
         oid = git_bytes("hash-object", "-w", "--stdin", cwd=cfg.root,
@@ -274,6 +296,7 @@ def _stage_authorized(cfg: Config, written: AppliedFiles) -> None:
         rows.append(
             f"{entry.git_mode} {oid}\t".encode("ascii")
             + entry.relative.encode("utf-8") + b"\0")
+    written.register_index_rollback(restore_index)
     # One update-index process takes one index lock for the complete round.
     git_bytes("update-index", "-z", "--index-info", cwd=cfg.root,
               input_data=b"".join(rows))
@@ -733,17 +756,11 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                 break
             continue
 
-        written: list[str] | AppliedFiles | None = None
+        written: AppliedFiles | None = None
         try:
             document_export.validate_export_work(cfg.root, work.files, task)
             written = gen_mod.apply(work, cfg.root, cfg.scope_dirs)
-            if document_export.parse_export_task(task) is not None:
-                emit("document_rendering", "generator",
-                     "rendering final document locally", state=RunState.GENERATING)
-            written = document_export.render_export(cfg.root, written, task)
         except ProviderDenial as exc:
-            if isinstance(written, AppliedFiles):
-                written.rollback()
             emit("document_refused", "generator", "document export refused",
                  exc.reason, state=RunState.GENERATING)
             findings = ("[BLOCKER] The local document export boundary refused the "
@@ -754,86 +771,97 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     f"document export failed in round {round_no}: {exc.reason[:400]}")
                 break
             continue
-        emit("generation_completed", "generator", work.summary,
-             ", ".join(written[:4]), state=RunState.GENERATING)
-        if work.notes:
-            emit("generation_note", "generator", "note", work.notes[:200],
-                 state=RunState.GENERATING)
-
-        # Dirtiness is judged over what will actually be committed. Asking about
-        # the whole tree lets an untracked file elsewhere fake a change, and then
-        # the commit has nothing staged and fails.
-        staged = _stage_generated(cfg, written)
-        if not staged:
-            if isinstance(written, AppliedFiles):
-                written.rollback()
-            # Self-heal first (§24.1): a round whose bytes match the committed
-            # work is usually the model reproducing content that already landed
-            # (an earlier interrupted run, or a retry). Tell it exactly that,
-            # once, and let it produce an actual revision — only a second
-            # no-progress round escalates, with a structured cause.
-            if not no_progress_retry_used and round_no < cfg.max_rounds:
-                no_progress_retry_used = True
-                emit("revision_retry", "loop",
-                     "the round changed nothing; asking for a real revision",
-                     state=RunState.GENERATING)
-                findings = ("[BLOCKER] Your last reply was byte-identical to the "
-                            "work already committed — nothing new could be "
-                            "audited. Produce an actual revision that addresses "
-                            "the task: change or extend the relevant files. If "
-                            "you believe the committed work already satisfies "
-                            "the task completely, say why in `notes` and make "
-                            "the smallest meaningful improvement instead.")
+        # One lexical scope owns every operation after apply.  Explicit
+        # finalize() is the only success exit; every exception/continue/break
+        # restores both filesystem and the prior tracked stage entries.
+        with written:
+            try:
+                if document_export.parse_export_task(task) is not None:
+                    emit("document_rendering", "generator",
+                         "rendering final document locally",
+                         state=RunState.GENERATING)
+                rendered = document_export.render_export(
+                    cfg.root, written, task)
+                if rendered is not written:
+                    raise ConfigDenial(
+                        "document export discarded its authorization receipt")
+            except ProviderDenial as exc:
+                emit("document_refused", "generator", "document export refused",
+                     exc.reason, state=RunState.GENERATING)
+                findings = ("[BLOCKER] The local document export boundary refused the "
+                            f"last round: {exc.reason}\nReturn exactly one valid "
+                            f"*{document_export.SOURCE_SUFFIX} Markdown source and try again.")
+                if round_no == cfg.max_rounds:
+                    termination_reason = (
+                        f"document export failed in round {round_no}: {exc.reason[:400]}")
+                    break
                 continue
-            emit("revision_unchanged", "loop",
-                 "the round reproduced the previous one; nothing new to audit",
-                 state=RunState.GENERATING)
-            no_progress_stop = True
-            termination_reason = (
-                f"generator produced no new auditable revision in round {round_no}")
-            break
-        # Defense-in-depth: never commit a credential into the audit history. A
-        # round whose generated changes look like a secret is refused (the files
-        # stay on disk, uncommitted) rather than sealed into the ledger.
-        secret = _staged_secret(cfg)
-        if secret:
-            git("reset", "-q", cwd=cfg.root)
-            if isinstance(written, AppliedFiles):
-                written.rollback()
-            emit("commit_refused", "loop", "the round could not be committed",
-                 f"the generated changes appear to contain {secret}; the secret "
-                 "was not committed", state=RunState.GENERATING)
-            termination_reason = (
-                f"generator revision would have committed {secret} in round {round_no}")
-            break
-        try:
-            commit_args = ["commit", "-q", "-m",
-                           f"{work.summary} (round {round_no})"]
-            route = getattr(complete, "last_route", None)
-            if isinstance(route, dict):
-                commit_args += ["-m", ("CrossAudit-Generator: "
-                                f"{route['vendor']}/{route['provider']}:{route['model']}; "
-                                f"fallback={str(bool(route.get('fallback'))).lower()}")]
-            if chat_id:
-                # A commit trailer associates durable work/audit evidence with
-                # its UI chat without putting conversation metadata in files.
-                commit_args += ["-m", f"CrossAudit-Chat: {chat_id}"]
-            git(*commit_args, cwd=cfg.root)
-        except ConfigDenial as exc:
-            git("reset", "-q", "HEAD", "--", *written, cwd=cfg.root,
-                check=False)
-            if isinstance(written, AppliedFiles):
-                written.rollback()
-            # git refusing is a refused round, like any other: the loop reports it
-            # and stops cleanly rather than tearing down a run the ledger already
-            # has rounds for.
-            emit("commit_refused", "loop", "the round could not be committed",
-                 exc.reason[:200], state=RunState.GENERATING)
-            termination_reason = (
-                f"generator revision could not be committed in round {round_no}")
-            break
 
-        if isinstance(written, AppliedFiles):
+            emit("generation_completed", "generator", work.summary,
+                 ", ".join(written[:4]), state=RunState.GENERATING)
+            if work.notes:
+                emit("generation_note", "generator", "note", work.notes[:200],
+                     state=RunState.GENERATING)
+
+            # Dirtiness is judged over what will actually be committed. Asking
+            # about the whole tree lets unrelated work fake a change.
+            staged = _stage_generated(cfg, written)
+            if not staged:
+                # Self-heal first (§24.1): a byte-identical round gets one
+                # chance to produce an actual revision before escalation.
+                if not no_progress_retry_used and round_no < cfg.max_rounds:
+                    no_progress_retry_used = True
+                    emit("revision_retry", "loop",
+                         "the round changed nothing; asking for a real revision",
+                         state=RunState.GENERATING)
+                    findings = ("[BLOCKER] Your last reply was byte-identical to the "
+                                "work already committed — nothing new could be "
+                                "audited. Produce an actual revision that addresses "
+                                "the task: change or extend the relevant files. If "
+                                "you believe the committed work already satisfies "
+                                "the task completely, say why in `notes` and make "
+                                "the smallest meaningful improvement instead.")
+                    continue
+                emit("revision_unchanged", "loop",
+                     "the round reproduced the previous one; nothing new to audit",
+                     state=RunState.GENERATING)
+                no_progress_stop = True
+                termination_reason = (
+                    f"generator produced no new auditable revision in round {round_no}")
+                break
+
+            # Defense-in-depth: never commit a credential into audit history.
+            secret = _staged_secret(cfg)
+            if secret:
+                emit("commit_refused", "loop", "the round could not be committed",
+                     f"the generated changes appear to contain {secret}; the secret "
+                     "was not committed", state=RunState.GENERATING)
+                termination_reason = (
+                    f"generator revision would have committed {secret} in round {round_no}")
+                break
+            try:
+                commit_args = ["commit", "-q", "-m",
+                               f"{work.summary} (round {round_no})"]
+                route = getattr(complete, "last_route", None)
+                if isinstance(route, dict):
+                    commit_args += ["-m", ("CrossAudit-Generator: "
+                                    f"{route['vendor']}/{route['provider']}:{route['model']}; "
+                                    f"fallback={str(bool(route.get('fallback'))).lower()}")]
+                if chat_id:
+                    # A commit trailer associates durable work/audit evidence
+                    # with its UI chat without putting conversation metadata in files.
+                    commit_args += ["-m", f"CrossAudit-Chat: {chat_id}"]
+                git(*commit_args, cwd=cfg.root)
+            except ConfigDenial as exc:
+                # The scope restores prior tracked stage entries and the
+                # filesystem; a broad git reset would destroy unrelated staged
+                # user work.
+                emit("commit_refused", "loop", "the round could not be committed",
+                     exc.reason[:200], state=RunState.GENERATING)
+                termination_reason = (
+                    f"generator revision could not be committed in round {round_no}")
+                break
+
             written.finalize()
 
         audit_sha = git("rev-parse", "HEAD", cwd=cfg.root)
