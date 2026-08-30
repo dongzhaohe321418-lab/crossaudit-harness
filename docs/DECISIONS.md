@@ -497,3 +497,51 @@ weaker here, because physical-path and newline-framing assumptions are exactly w
 a different vendor is likelier to challenge — and it says so while having found
 them anyway. The cross-vendor engineering review is still outstanding and slice 1
 does not merge without it.
+
+### D19 — Merge the file-identity fix. All three findings pre-exist, and worse.
+
+The auditor could not answer D18's question: the provider's content filter blocked
+four consecutive turns, because a harness that swaps symlinks and hardlinks to test
+a defensive boundary looks exactly like an exploit regardless of purpose. Its
+session is poisoned for this topic. So I settled it from the code, which is
+stronger than the inference I was trying to avoid.
+
+Integration's `apply()` is four lines:
+
+    for rel, content in sorted(work.files.items()):
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8", newline="\n")
+
+- `mkdir(parents=True)` creates directories through whatever the pathname resolves
+  to at that instant, with no pinning and no no-follow. **Finding 2's exposure
+  pre-exists and is worse there**, because integration has no later comparison to
+  refuse at — it does not notice.
+- `write_text` follows symlinks and writes through them. That IS the original S0.
+- `file_identity.py` is absent and `resolve_file_targets` appears zero times.
+  **Finding 3 cannot be "identity discarded before staging" on integration, because
+  identity is never established** — `_stage_generated` runs `git add --` over raw
+  pathnames. Same exposure, with nothing to discard.
+- Writes are sequential with no rollback, so **finding 1's non-atomicity pre-exists**
+  too. What is new is REACHABILITY: the fix adds mid-write refusals, so a half-round
+  can now occur where previously the round completed.
+
+And that last point inverts once you look at what those refusals replace. The
+conditions that now trigger a mid-write refusal are conditions under which
+integration **silently wrote through and succeeded**. "Half a round on disk after a
+refusal" is what we get instead of "a full escape nobody noticed". That is better,
+not worse.
+
+**Decided: merge.** The newer build is a strictly better posture. It closes a
+passive, no-adversary escape — any project containing a symlink pointing out of
+scope is exposed today, and the auditor cannot see the change — while the remaining
+exposures require winning a race against a boundary that previously did not exist
+at all. The three S0s are queued as the next slice and the DO NOT MERGE verdict
+stands as a description of the work remaining, not as a reason to keep a live
+passive escape in shipped code for another hour.
+
+Recorded honestly: I wanted the auditor's execution and could not get it. A
+code-level determination on four lines whose behaviour is unambiguous is not the
+same as a guess, but it is also not the same as running it, and I would rather say
+which one I had. The auditor is being restarted clean and will confirm or correct
+this after the fact.
