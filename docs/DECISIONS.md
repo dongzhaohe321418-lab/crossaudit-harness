@@ -3219,3 +3219,48 @@ my three gates asks whether the prose in the merge message is true — the
 independent review covers the diff, the suite covers the tests, the tree check
 covers provenance. **The message itself is unaudited**, and it is the artifact
 most likely to be read later as a record of what shipped.
+
+## D80 — No suite reaches the person, and that is why shown was 0 of 7
+
+Sweep of test suites that stop at a seam: **8 suites, 8 stop at a seam, 6 with
+an unheld far-side property, and 8 that would be misread as proving more than
+they do.**
+
+The zero-case is the architectural finding:
+
+> **No suite currently spans provider/runtime event through browser DOM and
+> accessibility tree**; the streaming suite's green result therefore cannot
+> establish visible live drafts.
+
+What each proves versus what we all assumed:
+
+| Suite | Really proves | Readers assumed |
+|---|---|---|
+| streaming (30 tests) | chunks, sequencing, digest, journal events | visible streaming |
+| console API cases | payloads and status codes | modal copy and buttons match |
+| remediation | server mint fields | the UI consumed them |
+| file-edit envelope | parser categories | the full console message path |
+| verifier re-derivation | the verifier refuses | every consumer used the verifier's source |
+| app_doctor / parity | rows in Python | DMG native rendering and parity |
+| verification states | mapping strings | browser tree and screen-reader completion |
+| projects UI | job state transitions | startup and thread timing paths |
+
+**This is the mechanism behind D72's "shown 0/7."** That assessment found my
+evidence adjacent to the conditions rather than establishing them; this
+explains why it had to be. The suite architecturally cannot establish a
+user-facing condition, because **no suite reaches the user-facing layer.**
+Every green result is a true statement about an internal seam.
+
+The worst misread is mine: *"a measured 53 ms TTFT and 30 passing tests were
+treated as proof of a feature that the page never subscribed to"* — and I
+wrote that proof into a merge commit (D79).
+
+**This reframes the fixture work for the third time.** It began as evidence
+gathering after merges, became the primary activity (D72), and is now the
+**missing test tier**: the recorded-provider fixture and the browser/a11y
+harnesses are not a way to observe the product, they are the only layer that
+can hold any far-side property at all. Six unheld properties are waiting on it.
+
+RULE: a suite's verdict is a claim about the seam it stops at. **When quoting a
+green suite as evidence for a user-facing property, name the seam** — and if
+the seam is not the person, the suite is not the evidence.
