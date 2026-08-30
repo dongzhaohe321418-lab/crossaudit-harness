@@ -658,3 +658,61 @@ engineer caught it while reading the rule it had been told to follow. It is now
 cherry-picked onto v5-redesign and the stray commit removed from the branch that
 had already been reviewed at 293110b. The rule that a claim must be checked rather
 than assumed applies to the person writing the rules.
+
+### D7 — When a defect class survives three fix rounds, stop patching it
+
+Speed slice 1 has now been through five review rounds. Every round found a real
+defect, every fix was correct as far as it went, and the same two classes kept
+coming back in a shape nobody had tested:
+
+  R1  a stale OLD block laundered into a fabricated conversational answer, with
+      the lie switching on at 40 characters of payload.
+  R2  a malformed edit block still reaching the conversational gate; an
+      order-dependent parser scan.
+  R3  the fix for R2 broke a protected property — prose that merely NAMED the
+      marker became a hard failure.
+  R4  the fix for R3 restored it, and the sweep was flat.
+  R5  the audit found the SAME fabrication defect in an envelope with no OLD or
+      NEW section at all: format below 40 letters, conversational above. Both
+      earlier sweeps had used a shape that always contained an OLD section, so
+      the test named "No payload size may turn a routed edit failure into
+      model-authored prose" never executed the class it claimed to exclude.
+
+That is not five careless engineers. It is a decision being made by accumulating
+conditions — has it routed to the edit parser, does it carry an OLD section — where
+each condition is correct for the shapes anyone thought to try, and the class is
+never closed because the shape space was never enumerated.
+
+**The rule.** When a defect class survives three fix rounds, the next change may
+not be another condition. It must be a decision that is correct by construction,
+and its acceptance must be an EXHAUSTIVE SHAPE MATRIX rather than a sweep of one
+shape: every combination of the structural dimensions that distinguish the cases,
+crossed with a contiguous sweep of whatever continuous parameter the bug varied
+with. If the matrix cannot be enumerated, the decision is not yet well defined and
+that is the actual finding.
+
+This is §3.5 taken one step further. §3.5 says a test must execute what it claims.
+D7 says that when a claim is about a CLASS, executing one member of the class is
+not executing the class.
+
+**Applied to slice 1**, three things must become correct by construction rather
+than by condition:
+- What counts as a machine-envelope reply, so no payload of any shape or length can
+  be presented to a person as something the model said.
+- File identity: paths are canonicalised at one point and keyed by that. Today
+  `work/a.txt` and `work/./a.txt` validate and resolve independently, both write to
+  the same physical file, and lexical ordering decides which edit survives while the
+  other is silently discarded. An ambiguous reply must refuse, not partially apply.
+- Byte handling: the edit resolver reads with newline translation, so editing one
+  line of a CRLF file rewrites every line ending in it. That makes the slice's
+  central safety claim — the committed tree, and therefore the auditor's view, is
+  byte-identical to the whole-file path — false, and it makes a "surgical" edit a
+  whole-file rewrite in disguise.
+
+**On vendor independence, honestly.** This audit was same-vendor: a codex auditor on
+codex-authored code. Asked which findings a different vendor would more likely have
+caught, it named exactly the two it had just found — the assumption that raw path
+strings identify files uniquely, and that "no trailing newline" was the complete
+boundary of byte identity. It found the blind spot it predicted it would share.
+That is a point in favour of the auditor and not a reason to relax D2: it says
+nothing about what a same-vendor reviewer would still be missing.
