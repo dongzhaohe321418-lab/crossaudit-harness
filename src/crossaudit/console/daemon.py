@@ -244,11 +244,11 @@ def spawn(cfg: Config, port: int) -> dict:
             return running
         env = dict(os.environ, CROSSAUDIT_CONSOLE_CHILD="1")
         log = cfg.root / cfg.state_dir / "console.log"
-        if os.environ.get("CROSSAUDIT_APP_MODE") == "1":
-            command = ([sys.executable, "--project-console", str(cfg.root), str(port)]
-                       if getattr(sys, "frozen", False) else
-                       [sys.executable, "-m", "crossaudit.app", "--project-console",
-                        str(cfg.root), str(port)])
+        if getattr(sys, "frozen", False):
+            command = [sys.executable, "--project-console", str(cfg.root), str(port)]
+        elif os.environ.get("CROSSAUDIT_APP_MODE") == "1":
+            command = [sys.executable, "-m", "crossaudit.app", "--project-console",
+                       str(cfg.root), str(port)]
         else:
             command = [sys.executable, "-m", "crossaudit.cli.main", "console",
                        "--port", str(port), "--foreground"]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import subprocess
@@ -145,6 +146,253 @@ def test_packaged_runtime_self_test_fails_closed_without_a_traceback(
         "ok": False, "error": "RuntimeError", "detail": "broken runtime"}
 
 
+def test_self_test_mode_is_selected_by_argv_prefix_for_future_flags(
+        monkeypatch, capsys):
+    monkeypatch.setattr(app, "self_test", lambda: {"ok": True, "future": True})
+
+    assert app.main(["--self-test", "--future-release-check"]) == 0
+    assert json.loads(capsys.readouterr().out) == {"future": True, "ok": True}
+
+
+def test_frozen_entry_help_and_version_are_finite_informational_modes(
+        monkeypatch, capsys):
+    monkeypatch.setattr(
+        app, "_run_app",
+        lambda: pytest.fail("informational arguments must not start app mode"))
+
+    assert app.main(["--help"]) == 0
+    help_output = capsys.readouterr()
+    assert "usage: crossaudit" in help_output.out
+    assert "doctor" in help_output.out
+    assert "init" in help_output.out
+    assert "build" in help_output.out
+    assert help_output.err == ""
+
+    assert app.main(["--version"]) == 0
+    version_output = capsys.readouterr()
+    assert version_output.out.startswith(
+        f"crossaudit {app.__version__} (receipt schema ")
+    assert version_output.err == ""
+
+
+def test_bare_frozen_entry_is_the_only_implicit_app_mode(monkeypatch, capsys):
+    monkeypatch.setattr(app, "_run_app", lambda: 9)
+
+    assert app.main([]) == 9
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert output.err == ""
+
+
+@pytest.mark.parametrize("argv,expected", [
+    (["--unknown"], 2),
+    (["ordinary-folder"], 2),
+    (["--project-console"], 20),
+    (["--project-console", "one", "two", "three"], 20),
+    (["--project-console", "one", "not-a-port"], 20),
+    (["--project-console", "one", "65536"], 20),
+])
+def test_every_non_mode_argument_shape_is_a_visible_refusal_not_app_mode(
+        argv, expected, monkeypatch, capsys):
+    monkeypatch.setattr(
+        app, "_run_app",
+        lambda: pytest.fail("arguments must never fall through to app mode"))
+
+    assert app.main(argv) == expected
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert output.err
+    assert "Traceback" not in output.err
+
+
+def test_every_public_cli_command_reaches_the_existing_cli_main(
+        monkeypatch, capsys):
+    cli_module = importlib.import_module("crossaudit.cli.main")
+    parser = cli_module.build_parser()
+    verbs = next(
+        action.choices for action in parser._actions  # noqa: SLF001 -- contract enumeration
+        if getattr(action, "choices", None) and action.dest == "verb")
+    observed = []
+    monkeypatch.setattr(cli_module, "main", lambda argv: observed.append(argv) or 73)
+    monkeypatch.setattr(
+        app, "_run_app",
+        lambda: pytest.fail("a CLI command must never start app mode"))
+
+    for verb in verbs:
+        assert app.main([verb]) == 73
+
+    assert observed == [[verb] for verb in verbs]
+    assert set(verbs) == {
+        "init", "run", "doctor", "check", "audit", "verify",
+        "export-pubkey", "reproduce", "status", "watch", "skills",
+        "console", "pair", "build", "talk", "routing", "amend", "resolve",
+    }
+    assert capsys.readouterr().err == ""
+
+
+def test_cli_dispatch_guard_goes_red_if_a_public_command_falls_back_to_app(
+        monkeypatch):
+    cli_module = importlib.import_module("crossaudit.cli.main")
+    reached = []
+    monkeypatch.setattr(cli_module, "main", lambda argv: reached.append(argv) or 0)
+    monkeypatch.setattr(app, "_run_app", lambda: 0)
+
+    def exercise() -> None:
+        reached.clear()
+        assert app.main(["doctor"]) == 0
+        assert reached == [["doctor"]], "doctor did not reach cli.main"
+
+    exercise()
+    with monkeypatch.context() as mutant:
+        original = app._dispatch
+        mutant.setattr(
+            app, "_dispatch",
+            lambda argv: app._run_app() if argv == ["doctor"] else original(argv))
+        with pytest.raises(AssertionError, match="did not reach cli.main"):
+            exercise()
+
+
+def test_project_console_dispatch_accepts_only_its_explicit_shape(
+        tmp_path, monkeypatch, capsys):
+    observed = []
+    monkeypatch.setattr(
+        app, "project_console",
+        lambda root, port=0: observed.append((root, port)) or 7)
+
+    assert app.main(["--project-console", str(tmp_path), "4321"]) == 7
+    assert observed == [(Path(str(tmp_path)), 4321)]
+    assert capsys.readouterr().err == ""
+
+
+def test_frozen_project_console_refuses_a_non_project_without_a_traceback(
+        tmp_path, capsys):
+    empty = tmp_path / "ordinary folder"
+    empty.mkdir()
+
+    assert app.main(["--project-console", str(empty)]) == 20
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert output.err.startswith("DENIED (config): no crossaudit.yml found")
+    assert "crossaudit init" in output.err
+    assert "Traceback" not in output.err
+
+
+@pytest.mark.parametrize("phase,expected", [
+    ("support", "private application data"),
+    ("workspace", "create its workspace"),
+    ("keys", "saved connection settings"),
+    ("controller", "create its workspace"),
+    ("config", "create its workspace"),
+    ("bind", "private local console"),
+])
+def test_every_app_startup_precondition_is_inside_the_no_traceback_boundary(
+        tmp_path, monkeypatch, capsys, phase, expected):
+    for name in ("CROSSAUDIT_APP_MODE", "CROSSAUDIT_APP_SUPPORT",
+                 "CROSSAUDIT_WORKSPACE_ROOT"):
+        monkeypatch.setenv(name, "")
+    support = tmp_path / "support"
+    workspace = tmp_path / "workspace"
+    if phase == "support":
+        support.write_text("not a directory", encoding="utf-8")
+    if phase == "workspace":
+        workspace.write_text("not a directory", encoding="utf-8")
+    monkeypatch.setattr(app, "app_support", lambda: support)
+    monkeypatch.setattr(app, "workspace_root", lambda _support: workspace)
+    monkeypatch.setattr(app, "load_into_environment", lambda: None)
+    monkeypatch.setattr(
+        app, "_controller_project", lambda root: root / ".crossaudit-home")
+    monkeypatch.setattr(app, "load", lambda _path: object())
+    monkeypatch.setattr(
+        app, "serve",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            PermissionError("bind internals")))
+    if phase == "keys":
+        monkeypatch.setattr(
+            app, "load_into_environment",
+            lambda: (_ for _ in ()).throw(PermissionError("key internals")))
+    elif phase == "controller":
+        monkeypatch.setattr(
+            app, "_controller_project",
+            lambda _root: (_ for _ in ()).throw(
+                PermissionError("controller internals")))
+    elif phase == "config":
+        monkeypatch.setattr(
+            app, "load",
+            lambda _path: (_ for _ in ()).throw(
+                PermissionError("config internals")))
+
+    assert app.main([]) == 20
+    output = capsys.readouterr()
+    combined = output.out + output.err
+    assert expected in combined
+    assert "Traceback (most recent call last)" not in combined
+    assert "internals" not in combined
+
+
+@pytest.mark.parametrize("fixture", ["missing_workspace", "existing_workspace"])
+def test_unwritable_workspace_fixtures_return_an_actionable_denial(
+        tmp_path, monkeypatch, capsys, fixture):
+    if os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0):
+        pytest.skip("requires ordinary POSIX directory permissions")
+    for name in ("CROSSAUDIT_APP_MODE", "CROSSAUDIT_APP_SUPPORT",
+                 "CROSSAUDIT_WORKSPACE_ROOT"):
+        monkeypatch.setenv(name, "")
+    support = tmp_path / "support"
+    parent = tmp_path / "Documents"
+    parent.mkdir()
+    workspace = parent / "CrossAudit Projects"
+    locked = parent
+    if fixture == "existing_workspace":
+        workspace.mkdir()
+        locked = workspace
+    monkeypatch.setattr(app, "app_support", lambda: support)
+    monkeypatch.setattr(app, "workspace_root", lambda _support: workspace)
+    monkeypatch.setattr(app, "load_into_environment", lambda: None)
+    locked.chmod(0o500)
+    try:
+        assert app.main([]) == 20
+    finally:
+        locked.chmod(0o700)
+
+    output = capsys.readouterr()
+    combined = output.out + output.err
+    assert "CrossAudit could not create its workspace" in combined
+    assert "Privacy & Security › Files and Folders" in combined
+    assert "choose another location" in combined
+    assert "Traceback (most recent call last)" not in combined
+
+
+def test_frozen_entry_exception_guard_goes_red_when_the_real_boundary_is_removed(
+        tmp_path, monkeypatch, capsys):
+    """D10: bypassing the production boundary fails the no-traceback guard."""
+    internal = "/private/build/crossaudit/config.py"
+    monkeypatch.setattr(
+        app, "project_console",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            FileNotFoundError(internal)))
+
+    def exercise() -> None:
+        leaked = None
+        result = None
+        try:
+            result = app.main(["--project-console", str(tmp_path)])
+        except Exception as exc:  # the assertion records a boundary leak as red
+            leaked = exc
+        assert leaked is None, (
+            f"frozen entry leaked {type(leaked).__name__}: {leaked}")
+        assert result == 20
+
+    exercise()
+    safe_output = capsys.readouterr()
+    assert "Traceback" not in safe_output.err
+    assert internal not in safe_output.err
+
+    with monkeypatch.context() as mutant:
+        mutant.setattr(app, "_entry_boundary", lambda operation: operation())
+        with pytest.raises(AssertionError, match="leaked FileNotFoundError"):
+            exercise()
+
+
 def test_app_workspace_override_is_trusted_process_state(tmp_path, monkeypatch, cfg):
     monkeypatch.setenv("CROSSAUDIT_WORKSPACE_ROOT", str(tmp_path))
     assert projects.workspace_base(cfg) == tmp_path.resolve()
@@ -205,6 +453,16 @@ def test_native_shell_has_bounded_startup_recovery_and_log_retention():
     assert "size > 5 * 1024 * 1024" in source
     assert 'appendingPathExtension("1")' in source
     assert "if self.core === process { self.core = nil }" in source
+
+
+def test_native_shell_surfaces_the_current_core_denial_before_offering_logs():
+    source = (Path(__file__).parents[1] / "packaging" / "macos" /
+              "CrossAuditApp.swift").read_text()
+    assert "launchLogOffset" in source
+    assert "try handle.seek(toOffset: launchLogOffset)" in source
+    assert 'value.hasPrefix("DENIED (")' in source
+    assert 'value.range(of: "): ")' in source
+    assert "showFailure(denial, offersDiagnosticLog: false)" in source
 
 
 def test_native_shell_keeps_projects_running_after_the_window_closes():
@@ -335,6 +593,7 @@ def test_project_console_anchors_process_cwd_to_the_requested_project(
         tmp_path, monkeypatch):
     project = tmp_path / "project"
     project.mkdir()
+    (project / "crossaudit.yml").write_text("fixture\n", encoding="utf-8")
     observed = {}
     # Register the variable with monkeypatch so project_console's direct
     # os.environ assignment is undone after this test.

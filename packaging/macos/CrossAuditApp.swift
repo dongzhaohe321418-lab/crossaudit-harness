@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate,
     private var backgroundStatusItem: NSMenuItem?
     private var isTerminating = false
     private var logURL: URL?
+    private var launchLogOffset: UInt64 = 0
 
     // UI_DESIGN_SPEC.md §1.1 dark `--bg` (#0C0F14). Shared by the native
     // window, the WebView underlay and the inline loading/failure screens so
@@ -234,7 +235,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate,
         rotateLogIfNeeded(logURL)
         _ = FileManager.default.createFile(atPath: logURL.path, contents: nil)
         logHandle = try? FileHandle(forWritingTo: logURL)
-        _ = try? logHandle?.seekToEnd()
+        if let handle = logHandle {
+            launchLogOffset = (try? handle.seekToEnd()) ?? 0
+        } else {
+            launchLogOffset = 0
+        }
 
         let process = Process()
         process.executableURL = executable
@@ -266,7 +271,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate,
                 self.loadedURL = false
                 self.backgroundStatusItem?.title = "Background core stopped"
                 self.statusItem?.button?.toolTip = "CrossAudit needs attention"
-                self.showFailure("CrossAudit core stopped unexpectedly (exit \(process.terminationStatus)). See ~/Library/Application Support/CrossAudit/CrossAudit.log.")
+                try? self.logHandle?.synchronize()
+                if let denial = self.currentLaunchDenial() {
+                    self.showFailure(denial, offersDiagnosticLog: false)
+                } else {
+                    self.showFailure("CrossAudit core stopped unexpectedly (exit \(process.terminationStatus)). Open the diagnostic log for details.")
+                }
                 self.showMainWindow()
                 NSApp.requestUserAttention(.criticalRequest)
             }
@@ -291,6 +301,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate,
         let previous = url.appendingPathExtension("1")
         try? FileManager.default.removeItem(at: previous)
         try? FileManager.default.moveItem(at: url, to: previous)
+    }
+
+    private func currentLaunchDenial() -> String? {
+        guard let logURL,
+              let handle = try? FileHandle(forReadingFrom: logURL) else { return nil }
+        defer { try? handle.close() }
+        do {
+            try handle.seek(toOffset: launchLogOffset)
+            guard let data = try handle.readToEnd(),
+                  let text = String(data: data, encoding: .utf8) else { return nil }
+            for line in text.split(whereSeparator: \.isNewline).reversed() {
+                let value = String(line)
+                guard value.hasPrefix("DENIED ("),
+                      let separator = value.range(of: "): ") else { continue }
+                let reason = String(value[separator.upperBound...])
+                if !reason.isEmpty { return reason }
+            }
+        } catch {
+            return nil
+        }
+        return nil
     }
 
     private func consumeCoreOutput(_ data: Data) {
@@ -332,7 +363,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate,
         """, baseURL: nil)
     }
 
-    private func showFailure(_ message: String) {
+    private func showFailure(_ message: String, offersDiagnosticLog: Bool = true) {
+        let diagnosticAction = offersDiagnosticLog
+            ? "<button class=quiet onclick=\"send('openDiagnosticLog')\">Open diagnostic log</button>"
+            : ""
         webView.loadHTMLString("""
         <!doctype html><meta name=viewport content="width=device-width,initial-scale=1">
         <style>html,body{height:100%;margin:0;background:#0C0F14;color:#EDF0F5;-webkit-font-smoothing:antialiased;
@@ -350,7 +384,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate,
         @media(prefers-reduced-motion:reduce){button:active{transform:none}}</style>
         <main><h1>CrossAudit needs attention</h1><p>\(htmlEscape(message))</p><nav>
         <button class=primary onclick="send('restartCore')">Retry startup</button>
-        <button class=quiet onclick="send('openDiagnosticLog')">Open diagnostic log</button>
+        \(diagnosticAction)
         </nav></main><script>function send(action){window.webkit?.messageHandlers?.crossaudit?.postMessage({action})}</script>
         """, baseURL: nil)
     }

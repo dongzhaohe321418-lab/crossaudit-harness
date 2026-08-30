@@ -94,6 +94,27 @@ def test_spawn_rechecks_liveness_inside_its_start_lock(cfg, monkeypatch):
     assert not (cfg.root / cfg.state_dir / "console-start.lock").exists()
 
 
+def test_frozen_spawn_reenters_the_frozen_dispatch_without_app_mode(
+        cfg, monkeypatch):
+    """Frozen identity, not mutable environment state, selects its child."""
+    observed = []
+    ready = {"pid": 7, "port": 4321, "token": "ready"}
+    monkeypatch.delenv("CROSSAUDIT_APP_MODE", raising=False)
+    monkeypatch.setattr(daemon.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(daemon.sys, "executable", "/bundle/CrossAuditCore")
+    monkeypatch.setattr(daemon, "reusable_for_launch", lambda _cfg: None)
+    monkeypatch.setattr(
+        daemon.subprocess, "Popen",
+        lambda command, **kwargs: observed.append((command, kwargs)))
+    monkeypatch.setattr(daemon, "read_run", lambda _cfg: ready)
+    monkeypatch.setattr(daemon, "responding", lambda _port, _token: True)
+
+    assert daemon.spawn(cfg, 0) == ready
+    command, _kwargs = observed[0]
+    assert command == [
+        "/bundle/CrossAuditCore", "--project-console", str(cfg.root), "0"]
+
+
 def test_run_record_pins_the_worker_runtime_identity(running):
     cfg, _url = running
     info = daemon.read_run(cfg)
