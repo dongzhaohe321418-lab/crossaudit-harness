@@ -1429,3 +1429,37 @@ It also **retracted the larger half of its own finding** once D36 landed — und
 the English becomes true and the Chinese is true the same way — keeping only a
 one-verb precision fix. Fourth time today an agent has narrowed its own claim rather
 than let it stand.
+
+### D38 — Findings go in a file. A pane is a scrollback buffer, not a record.
+
+Three routing failures today, all mine, all the same mechanism.
+
+1. I lost the honesty audit's findings on the first-three-minutes slice and never
+   routed them (D29). Two agents then refused to reconstruct them, correctly.
+2. I told an author to read a reviewer's report rather than relaying it. The author
+   could not — it asked the reviewer directly, got no reply, and sat on it refusing to
+   guess. By the time I went to relay it myself, **the report had scrolled out of what
+   I can read.** So I could not reconstruct it either, and I will not: that would turn
+   a routing gap into a false all-clear, which D29 already established is worse than
+   the gap.
+3. I dispatched a fix for `git()` stripping the pinned constitution's trailing newline
+   to one engineer while another had already fixed it — duplicate work in the same
+   function, which is D14's shape again.
+
+The common cause is not carelessness about any one hand-off. It is that **I have been
+treating agent panes as a record when they are a scrollback buffer.** A finding that
+exists only in a terminal can evaporate, and the person who needs it has no way to
+reach it.
+
+**Decided, effective immediately for every agent:** findings, review reports and audit
+results are WRITTEN TO A FILE, with the path printed in the status line, in addition
+to being printed. Name the file after the sha reviewed. A reviewer's job is not done
+when it has said something; it is done when the author can read it.
+
+And for me: **relay findings verbatim at the moment I have them.** Pointing at a
+location is not routing. I did that twice today and both times the author was left
+holding nothing, refusing to guess — which is the behaviour I want and should not have
+to rely on.
+
+Recorded under my name because all three were mine, and because the pattern only
+became visible when the third one arrived. One is an error; three is a mechanism.
