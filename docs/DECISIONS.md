@@ -2185,3 +2185,35 @@ claude auditor for codex-authored work, and three audit-core branches
 (`receipt-derives-remaining`, `mint-render`, plus this) were queued behind one.
 The backlog was real and recurring, not a reason to grow the team for its own
 sake.
+
+## D56 — A silent cap beneath an absolute promise, twice
+
+Send-path R4 (`baaf3f0`): MERGE AFTER FIXES. Both original S1s closed **by
+execution** — the auditor computed accessible text across both locales, both
+themes and both widths and found no `Not sent` and no 未发送 headline, and all
+normaliser mutations were caught. 1,640 collected, 1,638 passed, 0 failed.
+
+The remaining S1 is the fix's own shadow:
+
+> `rememberUnconfirmed` writes `text.slice(0, 20000)` while the composer has
+> no corresponding input limit, and the UI promises *"nothing you typed is
+> lost."*
+
+The original defect was the draft effectively living in the chat title, which
+truncates at 58 characters. The repair moved it somewhere with room — and the
+new home caps too, under the same unconditional sentence. **Second appearance
+of one class: a silent cap beneath an absolute promise.** 58 became 20,000;
+the promise did not change.
+
+RULING: the fix is not a larger number. Either the composer enforces the limit
+so the promise is true because the text cannot exceed what we keep, or the
+promise states the bound. **A cap the person cannot see, under a sentence that
+admits no exception, is the same defect at every size.** If this class appears
+a third time I stop the workstream and examine the promise rather than the
+storage (D7).
+
+The auditor found it by asking what the *new* storage does rather than whether
+the *old* bug was gone — the difference between verifying a fix and verifying
+a property. That is the same move that caught the audit-core S0 surviving its
+own repair (D54). Two of today's sharpest findings came from auditing the
+remedy rather than the complaint.
