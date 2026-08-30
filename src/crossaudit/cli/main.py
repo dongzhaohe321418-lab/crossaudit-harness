@@ -95,6 +95,33 @@ def _emit(obj: dict, as_json: bool, human: str = "") -> None:
         print(human)
 
 
+#: How each re-derived receipt input is announced. The two check-layer statuses
+#: get their own words on purpose: that comparison is against THIS installation,
+#: not against an object the receipt cites, and a reader must not be able to
+#: mistake it for a re-derivation.
+_DERIVATION_LABEL = {
+    "corroborated": "DERIVED",
+    "diverged": "DIVERGED",
+    "not-derivable": "NOT DERIVABLE",
+    "local-match": "SAME CHECK LAYER",
+    "local-differs": "OTHER CHECK LAYER",
+}
+
+
+def _derivation_lines(evidence: dict) -> str:
+    """What `verify` tells a person about the three inputs it re-derived.
+
+    Rendered from the rows the verifier returned, never re-computed here: a
+    reader of this line and a consumer of the JSON must be looking at the same
+    evidence.
+    """
+    lines = []
+    for row in evidence.get("input_derivations") or ():
+        label = _DERIVATION_LABEL.get(row.get("status", ""), "UNKNOWN")
+        lines.append(f"\n{label}  {row['claim']}: {row['detail']}")
+    return "".join(lines)
+
+
 def _skills_manifest(cfg: Config, sha: str = "") -> dict:
     """House skills as the SUBJECT COMMIT holds them, by path and hash.
 
@@ -704,6 +731,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
              + ("\nRECORDED  controller history contains this exact receipt"
                 if recorded else
                 "\nUNRECORDED  controller history does not contain this receipt")
+             + _derivation_lines(evidence)
              + ("\nADMISSION READY  latest recorded PASS"
                 if ready and not args.admit else "")
              + ("\nADMITTED  consumed once; the cycle is closed" if args.admit
