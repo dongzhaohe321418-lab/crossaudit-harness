@@ -38,6 +38,34 @@ APP="$STAGE/CrossAudit.app"
 DMG_ROOT="$STAGE/dmg-root"
 
 mkdir -p "$BUILD" "$DIST"
+# D47: retain the last shipped artifact before overwriting it.
+# Artifact-to-artifact comparison is the only way to answer "did a late
+# boundary catch a path that used to work", and it has found real defects
+# three times. Keeping exactly one previous build makes that repeatable
+# instead of depending on an old bundle happening to still be on disk.
+PREV="$DIST/previous"
+PREV_DMG="$DIST/CrossAudit-$VERSION-arm64.dmg"
+if [[ -f "$PREV_DMG" ]]; then
+  rm -rf "$PREV"
+  mkdir -p "$PREV"
+  ditto "$PREV_DMG" "$PREV/$(basename "$PREV_DMG")"
+  [[ -f "$PREV_DMG.sha256" ]] && ditto "$PREV_DMG.sha256" "$PREV/"
+  # The .app a reviewer drives must come OUT OF THE PREVIOUS DMG. $APP at
+  # this point is the build we just made, so copying it here would retain
+  # the new artifact under the name of the old one -- worse than retaining
+  # nothing, because it would look like evidence.
+  PREV_MNT="$(mktemp -d)"
+  if hdiutil attach -quiet -nobrowse -readonly -mountpoint "$PREV_MNT" "$PREV/$(basename "$PREV_DMG")"; then
+    ditto "$PREV_MNT/CrossAudit.app" "$PREV/CrossAudit.app"
+    hdiutil detach -quiet "$PREV_MNT"
+  else
+    echo "warning: could not mount the previous DMG; retained the disk image only" >&2
+  fi
+  rmdir "$PREV_MNT" 2>/dev/null || true
+  date -u "+%Y-%m-%dT%H:%M:%SZ" > "$PREV/retained-at.txt"
+  echo "retained previous artifact in $PREV"
+fi
+
 rm -rf "$BUILD/pyinstaller-dist" "$BUILD/pyinstaller-work" "$BUILD/icon.iconset" \
        "$DIST/CrossAudit.app" "$DIST/CrossAudit-$VERSION-arm64.dmg"
 
@@ -147,34 +175,6 @@ plutil -lint "$APP/Contents/Info.plist"
 mkdir -p "$DMG_ROOT"
 ditto "$APP" "$DMG_ROOT/CrossAudit.app"
 ln -s /Applications "$DMG_ROOT/Applications"
-# D47: retain the last shipped artifact before overwriting it.
-# Artifact-to-artifact comparison is the only way to answer "did a late
-# boundary catch a path that used to work", and it has found real defects
-# three times. Keeping exactly one previous build makes that repeatable
-# instead of depending on an old bundle happening to still be on disk.
-PREV="$DIST/previous"
-PREV_DMG="$DIST/CrossAudit-$VERSION-arm64.dmg"
-if [[ -f "$PREV_DMG" ]]; then
-  rm -rf "$PREV"
-  mkdir -p "$PREV"
-  ditto "$PREV_DMG" "$PREV/$(basename "$PREV_DMG")"
-  [[ -f "$PREV_DMG.sha256" ]] && ditto "$PREV_DMG.sha256" "$PREV/"
-  # The .app a reviewer drives must come OUT OF THE PREVIOUS DMG. $APP at
-  # this point is the build we just made, so copying it here would retain
-  # the new artifact under the name of the old one -- worse than retaining
-  # nothing, because it would look like evidence.
-  PREV_MNT="$(mktemp -d)"
-  if hdiutil attach -quiet -nobrowse -readonly -mountpoint "$PREV_MNT" "$PREV/$(basename "$PREV_DMG")"; then
-    ditto "$PREV_MNT/CrossAudit.app" "$PREV/CrossAudit.app"
-    hdiutil detach -quiet "$PREV_MNT"
-  else
-    echo "warning: could not mount the previous DMG; retained the disk image only" >&2
-  fi
-  rmdir "$PREV_MNT" 2>/dev/null || true
-  date -u "+%Y-%m-%dT%H:%M:%SZ" > "$PREV/retained-at.txt"
-  echo "retained previous artifact in $PREV"
-fi
-
 hdiutil create -quiet -volname "CrossAudit $VERSION" -srcfolder "$DMG_ROOT" \
   -ov -format UDZO "$DIST/CrossAudit-$VERSION-arm64.dmg"
 if [[ -n "$NOTARY_PROFILE" ]]; then
