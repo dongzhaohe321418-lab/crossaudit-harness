@@ -1234,3 +1234,61 @@ that **"an author confirming their own fix to the reviewer is §0 by proxy."**
 Adopted. §0 says no agent reviews work it wrote; the corollary nobody had stated is
 that a reviewer accepting the author's demonstration has let the author review itself
 through the reviewer's hands. A reviewer re-runs; it does not receive.
+
+### D34 — "Changing the rules never changes a decision already made" is false, and D8 rested on it
+
+The re-run honesty audit executed the claim instead of reading it, and it does not
+hold. Using the real audit command and controller: one immutable science SHA
+processed as round 1 **BLOCKED**; then the constitution alone was loosened and
+committed; the same SHA re-entered the same cycle as round 2 and became **PASSED**,
+and the cycle's operative status changed from BLOCKED to PASSED. Only the provider
+verdict was substituted locally — commit selection, constitution selection, cycle
+advancement, receipt assembly and status mutation were all the shipped
+implementations.
+
+And the guard: **"The existing guard checks only that the sentence appears before the
+menu — it never tests the behaviour asserted by the sentence."** Ninth instance today
+of a check that looks like a check.
+
+**Why this is more than a wrong sentence.** D8 decided that a person may freely edit
+their own constitution, that the screen SHOWS rather than polices, and that no
+warnings are needed — and the entire argument rested on this being true: because
+every audit cites the constitution commit and rule changes take effect only between
+cycles, **nobody can amend their way out of a decision already made**. That premise
+is false, so the design it justified is currently unsafe. A BLOCK can be undone by
+loosening the standard and re-running, which makes the audit advisory in exactly the
+situation where it matters.
+
+**Decided: make the claim true rather than remove the sentence.** This is not a copy
+fix. A decision already made must not be revisable by weakening the standard it was
+made against — otherwise the audit is a suggestion, and this product's entire thesis
+is that it is not. The sentence is right; the implementation has to catch up to it.
+The rule: a cycle that has reached a verdict is closed against constitution changes.
+A loosened constitution governs the NEXT cycle, not a re-entry into one already
+judged.
+
+D8 stands as a design philosophy — the line is drawn at concealment, not content, and
+a weak standard produces an honest audit of a weak standard. But its safety argument
+gets rebuilt on a premise that is actually true, and until then the free-editing
+design is not safe to ship.
+
+**Two more S1s from the same audit, both the same family:**
+- `init` says Ready in source-mode installs where `doctor` immediately returns exit 20
+  and Not ready, because a source installation cannot admit receipts. The test named
+  `test_init_says_ready_only_when_doctor_would_agree` **never executes doctor**, so it
+  misses a supported install mode. The name asserts the property; the body does not
+  test it.
+- Doctor's 21-line sweep is incomplete: a state-store location that is a regular file
+  still reports [PASS] state store though `state.json` cannot exist beneath it, and
+  modifying the current constitution without committing still reports [PASS]
+  constitution committed — doctor established only that some historical commit touched
+  the path. Both are counted in the tally, so the collapsed output reports 15 other
+  checks passed while counting two false passes, and the visible "check everything"
+  claim stays false.
+
+**And a note on method that I want kept.** The auditor refused to claim its findings
+matched the report I lost: *"I cannot honestly claim these findings match the lost
+report verbatim; that report is unavailable in this restarted session, and inferring
+equivalence would recreate D29's false-all-clear risk."* Third agent today to decline
+a plausible claim it could not verify, and the first to cite a decision number while
+doing it.
