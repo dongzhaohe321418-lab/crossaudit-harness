@@ -1938,3 +1938,41 @@ Two things worth keeping:
 
 MERGED (local): `audit/verifier-rederives-claims`. Verify now confirms what
 the receipt cites.
+
+## D51 — The pin sweep: 3 omissions, 5 by design, and a receipt that backdates skills
+
+Class sweep of every path that opens, advances, or records against a cycle,
+and every receipt field naming a source of truth.
+
+**21 production paths.** 13 pin-establishing or pin-preserving. **5 unpinned
+by design** — three pre-revision escalation producers and two explicitly
+illustrative sample-project mutations. **3 unpinned by omission** — `cmd_run`
+open/advance, continuation, and verdict recording. 0 unclassified, 0 direct
+cycle-JSON bypasses.
+
+The design/omission split is the part that made this worth asking for. I told
+the auditor not to assume an unpinned path is therefore broken: a continuous
+build tracking evolving rules is not obviously wrong, and what is wrong is
+doing it silently while writing an empty commit into a receipt. It came back
+with five defensible and three not, rather than eight problems.
+
+**Scope of the omission is total on the front door:** *"All app, Console,
+CLI-build, talk-generator, and provider-retry surfaces converge on this same
+`cmd_run` path. There is no GUI-only implementation that repairs it."*
+
+**15 receipt claim groups, 13 source-derived, 2 gaps.** One is the known
+constitution S0 — hashes current disk while naming a commit. The other is new:
+
+**S1 — receipts attribute later, uncommitted skills to earlier work.**
+`inputs.skills` included `skills/late.md` across all four judgment routes,
+although that file was absent from the audited subject commit and created
+only afterward. The field records current disk state, not guidance
+demonstrably used to generate the work. A receipt asserting that a skill
+informed work which predates the skill is a provenance falsehood, and it is
+the same shape as the constitution gap: the field names a source of truth and
+the writer reads whatever is on disk.
+
+Positive controls were reported alongside: dirty science stayed excluded from
+the manifest in all four routes, and report hashes matched the written report
+bytes in all four. A sweep that reports only failures cannot be distinguished
+from a sweep that only looked for them.
