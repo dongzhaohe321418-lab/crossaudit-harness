@@ -2716,3 +2716,41 @@ was in a valid state. Second time today.
 The auditor's green run was at `7d691fa` **unrebased** — a true statement about
 the branch, and not a statement about what happens when it meets integration.
 Both facts matter and neither substitutes for the other.
+
+## D66 — Execute the change against the reported symptom
+
+The security auditor's test for a false closure, and the sharpest one anyone
+has offered:
+
+> What must not happen is F3 marked closed by a change that, executed, leaves
+> the reported symptom **byte-for-byte unchanged**.
+
+The PATH-collision branch marked F3 `Fixed`. The `app_doctor` row that would
+actually address it is absent. What shipped *"makes an install identify itself;
+it does not tell a person which program is answering them"* — real work, on a
+real problem, that is not quite the reported one.
+
+RULING: **F3 stays open.** The self-identification merges on its own merits and
+is honestly described. The docs must not say `Fixed` and the ledger must not
+record D40/F3 as closed. F3 closes when the row exists and detects the
+shadowing case, not before.
+
+RULE: **execute the change against the reported symptom.** If the symptom is
+byte-for-byte unchanged, the finding is not closed no matter what the diff did.
+This catches the specific failure mode where genuine work lands on an adjacent
+problem — which is what happened here, and what happened to my own `--version`
+dispatch (D61), and it would have caught both earlier than an audit did.
+
+### Team state
+
+Second context handoff for the design engineer at 98% (D45), file at
+`_handoff/design-248eedc.md`, restored. The relay route for cross-vendor
+artifacts is in use: the security auditor cannot reach a codex session, so
+anything it builds for a codex-authored slice goes through `_handoff/`.
+
+Assignment change from D60 extended: after four implementation tasks with no
+output against a body of analysis work that has been the strongest on the team,
+the codex engineer is on **analysis only** — sweeps, boundary location,
+adversarial reasoning. The `app_doctor` fixes moved to the engineer already
+inside that file. It is not a demotion dressed as a reassignment; it is routing
+to where the evidence says work lands.
