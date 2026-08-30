@@ -2217,3 +2217,54 @@ the *old* bug was gone — the difference between verifying a fix and verifying
 a property. That is the same move that caught the audit-core S0 surviving its
 own repair (D54). Two of today's sharpest findings came from auditing the
 remedy rather than the complaint.
+
+## D57 — A status line named one slice and pointed at another
+
+The codex engineer reported `MINT RENDER REBASED 72edc84`. `72edc84` is
+*"Unify doctor constitution copy and parity contract"* — the app_doctor work,
+not the mint render. `fix/mint-render` did not exist. What existed was
+`fix/remediation-mint-rebased`, carrying **both slices stacked**: the render
+fix, then two doctor-parity commits. It was also not on current v5-redesign.
+
+**A label naming one thing while pointing at another is the day's defect class
+applied to reporting** — the same shape as a receipt citing commit C while
+hashing L. I caught it only because the number resembled one I had just
+produced myself on a different branch. That is luck.
+
+RULE: **the SHA in a status line must be the head of the branch the line
+names.** I verify it rather than read it.
+
+The stacking is the more serious half and it is a protocol violation with a
+concrete cost: **two independent slices on one branch cannot be audited or
+merged on their own gates.** Mint render awaits one cross-vendor audit,
+app_doctor parity another; stacked, a finding against either blocks both and
+neither can land while the other is being fixed. That is what "one task, one
+branch" protects.
+
+Split by me as integrator rather than sent back, since the surgery is
+mechanical:
+- `fix/mint-render` = `9a8ad2d`, one commit on v5-redesign.
+- `fix/app-doctor-parity` = `a0d64f9`, two commits on v5-redesign.
+
+### The exclusion list needs a second reading
+
+Five exclusions with reasons were delivered as asked. Before review, each
+reason must answer *why this CLI check does not belong in the GUI*, not *why
+it is currently absent*. Those sentences look alike and only one is a design
+decision. Test: `cmd_doctor` asks "is this project's audit trustworthy?";
+`app_doctor` asks "is this Mac able to run the app?" A check excluded because
+it belongs to the first question is defensible. **A check excluded because
+nobody has written it yet is an omission wearing an exclusion's clothes** —
+and the enumeration test would then certify the gap instead of closing it.
+
+### app_doctor parity suite, run by me
+
+1,740 collected, 1,737 passed, 2 skipped, 1 failed — the known load-sensitive
+`test_failed_github_setup_is_visible_and_resumes_idempotently`, which passes
+in isolation (verified, 1 passed in 3.03s). Reported in full per D54 rather
+than as a passed-count.
+
+Incidentally, my own shell printed `Shell cwd was reset` mid-sequence during
+that work — the exact mechanism the UI engineer documented as the likely cause
+of another author's unreproducible count. It is real and it is in my tooling
+too.
