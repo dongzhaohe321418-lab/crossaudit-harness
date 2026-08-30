@@ -1976,3 +1976,57 @@ Positive controls were reported alongside: dirty science stayed excluded from
 the manifest in all four routes, and report hashes matched the written report
 bytes in all four. A sweep that reports only failures cannot be distinguished
 from a sweep that only looked for them.
+
+## D52 — An English selector silently truncated a Chinese sweep
+
+The design engineer's D28 sweep of the shipped artifact reported its own
+instrument failure rather than its coverage:
+
+> My harness advanced stages with a `button:has-text("Continue")` selector,
+> and in Chinese that button reads 继续. So the zh cells never left
+> READINESS — zh PROVIDERS and zh ROLES were not observed. That's my
+> instrument, not the product.
+
+The sweep would have reported 32 cells covered and I would have believed it.
+The two cells most load-bearing for i18n would have been unexamined. This is
+the day's dominant defect class — the instrument agreeing with itself while
+missing the person — arriving in **our own tooling**, which is the one place
+we had not looked.
+
+RULE: test instruments are locale-aware **by construction** — a role or a
+stable id — never by adding the next translation to a list. Same shape as
+"compute the accessible name, do not check for an attribute."
+
+### Findings, and a second correction to my own dispatch
+
+- **A readiness item states a false consequence in both languages**: "without
+  a name and email CrossAudit cannot record audit history", while
+  `app.py:98-99` commits with a fallback identity. History *is* recorded.
+  Copy that overclaims a harm is the mirror of a check that overclaims a
+  verification, and we have spent the day deleting the latter.
+- **The CLI front door never renders for a bundle user** — SPEC-6's screen
+  exists only in source mode. I had dispatched the install-mode mismatch to
+  be shown *on the front door*. It does not exist on the DMG path. **Second
+  time today I briefed that task against a surface I had not verified**, the
+  first being an assumption that `doctor` did not already report install
+  mode. Both corrections came from an agent's incidental observation, not
+  from my process.
+
+### The placeholder is regraded
+
+I argued `# Constitution — <PROJECT>` was worse than S3. The design engineer
+gave the argument that settles it: *"a template placeholder survives only in
+a document nobody was ever shown."* It is not a blemish, it is **evidence of
+the silent write** — the defect SPEC-12 exists to remove. Regraded and folded
+into that spec.
+
+### What passed, stated because it is the point of the workstream
+
+Across all 32 cells: **zero ✓ on any onboarding stage**, zero horizontal
+overflow, zero JS page errors, WELCOME with no Latin at all in Chinese, and
+D31 closed **in the artifact** rather than only in the branch. The
+false-verification defect that started this work is absent from first contact
+in the shipped build.
+
+Unreached and explicitly not inferred: S2, S4, S5, three of four escalation
+causes, the demo's inner surfaces — all need a funded run.
