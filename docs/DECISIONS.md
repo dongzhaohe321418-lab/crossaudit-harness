@@ -2850,3 +2850,42 @@ evasive: `record_build_escalation()` genuinely has no `remediation_facts`
 parameter at this SHA."* It then rebuilt the harness against the current
 signature — ~90 seconds, no credentials, **checked in** — *"so the cost of
 actually holding this property is now measured rather than estimated."*
+
+## D69 — The right method on a bad instrument
+
+The UI engineer reported `collected=1690 passed=1662 failed=24` and
+`collected=1643 passed=1611 failed=24`, describing the failures honestly:
+*"byte-identical to the parent, diffed not eyeballed — reported as
+identical-failure-set, never as green."*
+
+I ran v5-redesign myself, detached: **1,740 collected, 1,736 passed, 2 skipped,
+1 failed** — the known load-sensitive GitHub flake, which passes in isolation.
+**Integration is green. The 24 are that engineer's environment.**
+
+The signature is now diagnosable on sight: **a lower collected count plus a
+block of failures.** 1690 and 1643 against 1740. The second auditor found the
+same thing on itself tonight — a venv missing `python-docx` and `pypdf` giving
+1,708 passed / 26 failed / 4 errors, and silently reporting four skips instead
+of two.
+
+**The reporting method was right and is exactly what hid it.** An
+identical-failure-set comparison measures a broken environment against itself:
+**a real regression landing inside those 24 would look identical too.** The
+method is sound; the baseline was not. That distinction is worth keeping — the
+engineer did the right thing on a bad instrument, which is a different failure
+from doing the wrong thing.
+
+RULE: agents run the **shared interpreter** so counts are comparable across the
+team, from a detached checkout with an explicit `cd` in the same command. Third
+instrument artifact today, and the first found by someone other than its own
+operator.
+
+### `cap=removed` — a third option I had not offered
+
+Asked to either enforce the 20,000-character limit at the composer or state it
+in the promise, the engineer removed the cap. That plausibly makes *"nothing
+you typed is lost"* true without adding a limit a person can hit. Outstanding:
+localStorage has a quota, and a draft large enough to exceed it fails
+somewhere. **If that failure is silent, the cap has returned wearing a
+different hat** — D56's exact shape. The findings file must say what happens
+and whether the person can tell.
