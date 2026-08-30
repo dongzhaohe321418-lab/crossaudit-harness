@@ -412,3 +412,74 @@ bytes currently at it; that gap exists between any approval and any later
 launch, and the client cannot close it. `mcp.py` re-resolves and re-checks the
 executable at launch. Flagged because a reviewer should decide whether it is
 acceptable rather than discover it.
+
+---
+
+## Decision record — authority, and the decisions taken under it
+
+The owner has delegated development direction and design direction to the
+engineering manager. Product and design calls are made here and recorded here;
+they do not go back to the owner. What still goes to the owner is a short list of
+things the manager is not permitted to do rather than not competent to decide:
+entering credentials or authenticating an account, pushing or publishing
+anything, and any spend or outward-facing action. Those are boundaries, not
+decisions.
+
+Every decision below is binding on the team until superseded by a later entry in
+this file. A superseded decision is struck with its reason, never quietly edited.
+
+### D1 — The add-MCP dialog: the two-step wizard is the design
+
+A request arrived to lock in "variant A" of three dialog variants. There were no
+three variants. Agent A, asked directly and told explicitly not to reconstruct a
+history to fit the question, reported that it produced exactly one design and
+never offered a choice between alternatives. What exists in threes is review
+rounds: 52b0dd8 (the redesign), 4071a4d (the Configure→Save fix), 293110b (the
+consent-vector rebuild).
+
+**Decided:** the two-step wizard — Connect, then Approve tools — is the design of
+record. It is merged at 47863b6. No variant work is commissioned.
+
+The reasoning is not merely that it is what exists. The dialog's shape is forced
+by the server's own rule: /api/mcp requires connect → read the advertised tools →
+approve named tools before the Generator may call anything. A single flat form
+cannot express that order, which is why both natural paths through the old form
+ended in a raw denial. A design that contradicts the security model it sits on is
+not a stylistic option, so a variant round would have been theatre.
+
+The design/UX engineer's independent assessment stands as the input to the NEXT
+iteration of this surface. Its findings will be triaged and scheduled like any
+other; they do not reopen D1.
+
+### D2 — Auditor vendor: codex now, gemini only if the owner authenticates
+
+True third-vendor independence needs gemini, which requires a one-time Google
+login. That is a credential action, outside what the manager may perform.
+
+**Decided:** the independent auditor is a codex agent that writes no feature code.
+Against claude-authored code this is properly cross-vendor. Against
+codex-authored code it is same-vendor, different-session — weaker, and AGENTS.md
+§2 requires the merge commit to say so rather than gloss it. Where a codex-
+authored slice touches the audit core, it additionally gets an engineering review
+from the claude implementation engineer, so no audit-core change reaches a merge
+on a single vendor's judgement.
+
+### D3 — Roadmap order
+
+Slice 1 (surgical edits as the default write path) merges as soon as S1-2r is
+closed; it is the largest measured win, 229 bytes against 68,117 for the same
+edit. Then slice 2 (streaming), which does not shorten a turn by a millisecond
+but removes the silence — and since local overhead measured under 0.2% of a turn,
+perceived latency is the only latency there is to win. Then slice 4 (auditor
+reasoning effort per tier). Then the mandatory file_read before editing an
+outlined file, whose acceptance criteria are already fixed: mean rounds-to-PASS
+and edit-refusal rate, split by whether the target was inlined or outlined.
+
+Slice 3 as originally briefed — an async or pipelined audit — stays **rejected**.
+The audit is the loop's branch condition, not a side effect: round N+1's prompt
+does not exist until round N's audit produces its findings. The only pipelined
+form is speculative generation, which doubles provider spend on exactly the
+blocked rounds the round budget exists for, and requires showing the user work
+that a late BLOCK then retracts. The replacement experiment — skipping the
+auditor model call when the deterministic tier has already hard-failed, since the
+verdict cannot change — is measurable and stays queued behind the four above.
