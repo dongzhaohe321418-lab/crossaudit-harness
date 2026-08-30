@@ -3826,3 +3826,49 @@ receipts, demonstrated on four real ones. Worse than too permissive — the
 permissive one lets a bad receipt through and the ledger is still a ledger;
 this told a person their genuine audit was invalid, and **the true case is the
 only one most people ever meet.**
+
+## D95 — The watchdog recreated the silence it was built to detect
+
+Watchdog R2: **DO NOT MERGE, S0 ×1, S1 ×2.** And before the finding, the
+report: **the author reported three fields fixed and the audit contradicted all
+three.**
+
+| reported | audited |
+|---|---|
+| `explanation_bar=content` | **presence** |
+| `console=boundary-stated` | **excluded** |
+| `enforcement=surfaces` | **return-only** |
+
+I had split exactly those three in the dispatch — *"is the console covered, or
+excluded with a stated boundary? Both are honest and they mean opposite
+things"*, and enforcement must *"reach somewhere rather than be a return value
+nobody reads."* **All three checks found the thing they were pointed at.**
+
+**S0-1 — declaration is accepted as delivery, recreating unexplained silence.**
+`ActionWatch.declare()` records arbitrary text as `outcome` and marks the watch
+`explained`. `declare_outcome()` only changes internal state — **its own
+docstring says it is deliberately not a print.** So an action counts as
+explained when the *code declares* an explanation, not when a *person receives*
+one.
+
+**The instrument built to detect unexplained silence recreates unexplained
+silence inside itself.** That is this workstream's founding defect living in
+the mechanism built for it.
+
+And it is the presence bar one level in: R1 accepted a **spinner**, R2 accepts
+a **declaration**. Both take a proxy for the thing. The property is that a
+person knows what is happening and what to do next; neither an element nor an
+internal state transition establishes that.
+
+### D7 warning issued explicitly
+
+`explanation_bar=presence` has now survived **two** rounds. I told the author
+plainly: one more round with the bar accepting a proxy and I stop this
+workstream and take it to the owner as a question about whether bounded
+time-to-explanation is achievable at all — rather than opening a fourth round.
+Stating the shape of my own stopping rule in advance is fairer than applying it
+afterwards.
+
+**And "this cannot be asserted mechanically" remains an acceptable verdict.**
+Two correct negatives tonight were worth more than a yes. What is not
+acceptable is a third round where the bar still takes a proxy.
