@@ -2268,3 +2268,45 @@ Incidentally, my own shell printed `Shell cwd was reset` mid-sequence during
 that work — the exact mechanism the UI engineer documented as the likely cause
 of another author's unreproducible count. It is real and it is in my tooling
 too.
+
+## D58 — A tripwire that halts without locating is half a mechanism
+
+The design engineer ended its escalation-fixture spec with a falsification
+condition on its own argument: *"the spec proposes no product change. If
+implementing it requires touching `src/`, that's a signal the seam isn't where
+I've argued it is, and it should come back to me before it's built."*
+
+It built a way for the implementer to discover its reasoning was wrong,
+instead of a way to be proved right. Nobody asked for it. I passed it to the
+codex engineer as a hard instruction rather than a suggestion, because a
+tripwire only works if it is honoured rather than routed around.
+
+**It was honoured.** `causes=0/4 src_touched=STOPPED`. The engineer did not
+make someone else's argument true by changing the product.
+
+**And that is only half the mechanism.** The stop carried no reason: not which
+of the four causes were checked, not what specifically required `src/`, not
+whether the boundary is the same per cause. **The tripwire's purpose is not to
+halt work — it is to convert a wrong assumption into a located finding.** As
+delivered, the assumption is known-wrong and unlocated, which is the one state
+worse than not having asked.
+
+RULE: a stop against a stated boundary must name the boundary. Which cases
+were established versus where the first wall was hit; the specific seam that
+failed (no injection point, a transition only reachable through a network
+call, a module-level singleton); and the price of the smallest honest change,
+to price it rather than to build it. A per-cause answer may salvage a partial
+regression set where an aggregate `0/4` salvages nothing.
+
+This matters beyond the slice: three sweeps have ended with "three of four
+escalation causes unreached, needs a funded run." **If no test-only seam
+exists, that is a fact about the product's testability and belongs in the
+record as one** — not left as a task that quietly failed.
+
+### Suites run by me, reported per D54
+
+- `fix/mint-render` (`9a8ad2d`, split): 1,737 passed, 2 skipped, 0 failed.
+- `fix/app-doctor-parity` (`109170e`, captured): 1,738 passed, 2 skipped,
+  0 failed.
+
+Both await cross-vendor audit.
