@@ -474,14 +474,15 @@ def test_build_duplicate_revision_reports_the_actual_escalation_reason(
     assert cycle.get("escalation_cause") == "no_progress"
 
 
-def test_weakened_constitution_is_refused(science, cfg, transcripts):
+def test_working_tree_constitution_drift_does_not_change_pinned_receipt(science, cfg, transcripts):
     sha = write_increment(science, GOOD_RESULTS, "Fine.", "clean")
     outcome, cycle, _s = _audit(cfg, sha, transcripts, PASS_REPLY)
     receipt, _l = _receipt_for(cfg, sha, cycle, outcome)
     (science / "AUDIT_RULES.md").write_text("### CA-DATA-001\nAnything goes.\n")
-    with pytest.raises(IntegrityDenial, match="constitution content"):
-        verify(receipt, science_root=science, audit_root=science,
-               expect_repo=cfg.science_repo, expect_sha=sha, cfg=cfg)
+    # Verification is against the cited commit's exact bytes, not a mutable
+    # working tree.  The drift is therefore irrelevant to this receipt.
+    verify(receipt, science_root=science, audit_root=science,
+           expect_repo=cfg.science_repo, expect_sha=sha, cfg=cfg)
 
 
 def test_receipt_for_another_commit_is_refused(science, cfg, transcripts):

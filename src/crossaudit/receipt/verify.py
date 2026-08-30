@@ -20,7 +20,8 @@ from .. import _selfid
 from ..config import Config
 from ..controller import StateStore
 from ..errors import IntegrityDenial
-from ..gitio import blob_limit, commit_exists, entries, is_ancestor, read_blob, resolve
+from ..gitio import (blob_limit, commit_exists, entries, is_ancestor, read_blob,
+                     read_committed_bytes, resolve)
 from . import schema
 
 
@@ -50,6 +51,34 @@ def _verify_tool_evidence(te: dict, ledger_file: Path) -> None:
     if n < 1 or n > len(rows) or str(rows[n - 1].get("digest", "")) != head:
         raise IntegrityDenial(
             "receipt tool_evidence head does not match the evidence ledger")
+
+
+def _verify_cycle_record(receipt: dict, cfg: Config | None) -> None:
+    """Re-derive a D36 cycle pin and the verdict row that produced a receipt."""
+    cycle_pin = receipt["cycle"].get("constitution_commit")
+    if not cycle_pin:
+        return                         # old v2 receipts remain readable
+    if cfg is None:
+        raise IntegrityDenial(
+            "cycle-bound receipt verification needs the project's controller state")
+    stored = StateStore(cfg.root / cfg.state_dir / "state.json").cycle(
+        receipt["cycle"]["cycle_id"])
+    if stored is None:
+        raise IntegrityDenial("receipt cycle is absent from the controller state")
+    cy = receipt["cycle"]
+    if (stored.get("root_sha") != cy["root_sha"]
+            or stored.get("constitution_commit") != cycle_pin
+            or cycle_pin != receipt["inputs"]["constitution_commit"]):
+        raise IntegrityDenial("receipt cycle does not match its pinned constitution")
+    match = [row for row in stored.get("verdicts", ())
+             if row.get("round") == cy["round"]
+             and row.get("sha") == cy["active_sha"]
+             and row.get("verdict") == receipt["audit"]["verdict"]]
+    if not match:
+        raise IntegrityDenial("receipt verdict is not recorded for its cycle round")
+    expected = schema.digest(receipt)[:16]
+    if not any(str(row.get("receipt", "")) == expected for row in match):
+        raise IntegrityDenial("receipt is not the controller's recorded verdict")
 
 
 def verify(receipt: dict, *, science_root: Path, audit_root: Path,
@@ -87,24 +116,34 @@ def verify(receipt: dict, *, science_root: Path, audit_root: Path,
         if truncated or _sha256(data) != declared:
             raise IntegrityDenial(f"manifest mismatch for {rel}")
 
-    # Constitution: content hash and the commit that versions it (I3).
+    # Constitution: the cited Git object is the source of truth (I3). Never
+    # substitute the current working-tree path for a receipt's commit pin.
     const_rel = inputs.get("constitution_path", "AUDIT_RULES.md")
-    const_path = audit_root / const_rel
-    if not const_path.is_file():
-        raise IntegrityDenial(f"constitution {const_rel} missing from the audit tree")
-    if _sha256(const_path.read_bytes()) != inputs["constitution_sha256"]:
-        raise IntegrityDenial("constitution content differs from the receipt's hash")
-    if inputs["constitution_commit"] in ("", None, "unversioned"):
+    const_commit = inputs["constitution_commit"]
+    if const_commit in ("", None, "unversioned"):
         raise IntegrityDenial("receipt declares the constitution unversioned")
+    const_bytes = read_committed_bytes(audit_root, const_commit, const_rel)
+    if _sha256(const_bytes) != inputs["constitution_sha256"]:
+        raise IntegrityDenial("constitution content differs from the receipt's hash")
 
-    # Report blob, in the cycle directory the receipt names.
+    # D36: when present, re-derive the controller record and immutable verdict.
+    _verify_cycle_record(receipt, cfg)
+
+    # Report blob, in the cycle directory the receipt names. A cited report
+    # commit is authoritative; the working-tree fallback is retained only for
+    # old receipts that intentionally carried no report commit.
     cycle_dir = audit_root / ledger["cycle_path"]
     report = cycle_dir / "report.md"
-    if not report.is_file():
-        raise IntegrityDenial(f"report missing at {ledger['cycle_path']}/report.md")
-    if _sha256(report.read_bytes()) != ledger["report_sha256"]:
+    if report_commit := ledger["report_commit"]:
+        report_bytes = read_committed_bytes(
+            audit_root, report_commit, f"{ledger['cycle_path']}/report.md")
+    else:
+        if not report.is_file():
+            raise IntegrityDenial(f"report missing at {ledger['cycle_path']}/report.md")
+        report_bytes = report.read_bytes()
+    if _sha256(report_bytes) != ledger["report_sha256"]:
         raise IntegrityDenial("report blob hash mismatch")
-    report_text = report.read_text(encoding="utf-8", errors="replace")
+    report_text = report_bytes.decode("utf-8", errors="replace")
     reported = re.search(r"^\| verdict \| \*\*([A-Z_]+)\*\* \|$",
                          report_text, re.MULTILINE)
     if reported is None:

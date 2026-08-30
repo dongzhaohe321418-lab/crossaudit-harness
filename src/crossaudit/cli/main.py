@@ -1155,7 +1155,8 @@ def cmd_run(args: argparse.Namespace) -> int:
                 f"descend from its active commit {prior['active_sha'][:12]}")
         cycle = store.continue_cycle(continuation, cfg.science_repo, sha)
     else:
-        cycle = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha))
+        cycle = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha),
+                                      constitution_commit=const_commit)
     if cycle.get("already_admitted"):
         print("  This commit was already audited, passed, and admitted. Nothing to do.")
         return EXIT_OK
@@ -1170,6 +1171,11 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"  Commit a fix and run again. To re-audit this same commit (a dispute "
               f"or second opinion), use: crossaudit audit --sha {sha[:12]}")
         return EXIT_OK
+
+    # Continuations use the standard pinned when their cycle opened. New cycles
+    # already carry the current committed standard passed above.
+    const_commit = cycle.get("constitution_commit") or const_commit
+    const_text, const_bytes = _committed_constitution(cfg, const_commit)
 
     total = 2 if offline else 3
     _step(1, total, "deterministic checks")

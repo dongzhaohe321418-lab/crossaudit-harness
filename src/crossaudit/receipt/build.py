@@ -142,6 +142,10 @@ def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
             "active_sha": cycle["active_sha"],
             "parent_receipt": cycle.get("parent_receipt", ""),
             "round": cycle["round"],
+            # D36: new receipts carry the cycle's pinned standard so verification
+            # can re-derive the controller record instead of trusting a storer.
+            # Optional on old cycle dictionaries for receipt compatibility.
+            "constitution_commit": cycle.get("constitution_commit", ""),
         },
         "inputs": {
             "manifest": manifest,

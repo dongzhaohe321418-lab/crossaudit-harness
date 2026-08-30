@@ -14,6 +14,7 @@ from pathlib import Path
 
 from .. import hpc
 from ..config import Config
+from ..errors import IntegrityDenial
 from ..ledger import EvidenceLedger
 from ..policy import CapabilityToken
 from . import ToolBroker, ToolRegistry, default_registry, write_registry
@@ -61,11 +62,17 @@ _EVIDENCE_VIEW_FIELDS = ("tool", "args_sha256", "result_sha256", "status",
 def evidence_view(cfg: Config) -> list[dict]:
     """A read-only, allowlisted projection of the evidence ledger for the Auditor.
 
-    Fail-safe: an absent, empty, or unreadable ledger yields ``[]`` so the audit
-    prompt is unchanged when no governed tools ran.
+    Fail-safe: an absent or empty optional ledger yields ``[]``. A present
+    ledger whose hash chain is broken raises an integrity denial, so corrupted
+    evidence cannot be projected into the auditor input as if it were absent.
     """
     try:
         led = EvidenceLedger(cfg.root / cfg.state_dir / EVIDENCE_FILE)
+        if led.path.exists():
+            report = led.verify()
+            if not report.ok:
+                raise IntegrityDenial(
+                    f"evidence ledger cannot be shown to the Auditor: {report.error}")
         rows: list[dict] = []
         for entry in led.entries():
             payload = entry.get("payload")
@@ -73,7 +80,11 @@ def evidence_view(cfg: Config) -> list[dict]:
             safe = {k: payload[k] for k in _EVIDENCE_VIEW_FIELDS if k in payload}
             rows.append({"seq": entry.get("seq"), "kind": entry.get("kind"), **safe})
         return rows
-    except Exception:  # noqa: BLE001 -- an evidence view must never break the audit
+    except IntegrityDenial:
+        # A present but broken chain is not equivalent to an empty ledger: the
+        # Auditor must never be given a silently laundered evidence view.
+        raise
+    except Exception:  # noqa: BLE001 -- absent/unreadable optional ledger stays empty
         return []
 
 
