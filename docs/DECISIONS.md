@@ -424,3 +424,63 @@ name it for what we wish it did.
 The general principle: when a guard is defeated three times, ask whether the
 property is mechanically decidable at all. If it is not, replace the guarantee with
 one that is, and say plainly which guarantee you now have.
+
+### D11 — Stop slice 1. Build file identity first, as its own slice.
+
+The invariant audit of the rebuilt slice 1 returned DO NOT MERGE with an S0 and
+three S1s. The S0 is the most serious finding this project has produced:
+
+**A surgical edit wrote outside the authorized directory through a symlink.** In a
+temporary project with `allowed_dirs=["work"]`, `work/rules-link.md` pointed at
+`../AUDIT_RULES.md`. An edit targeting the link changed a BLOCKER rule into an
+ADVISORY one. Staging the reported `work/rules-link.md` staged nothing; git showed
+only the out-of-scope `AUDIT_RULES.md` as modified and unstaged. So the person
+authorized `work/`, the generator changed their governing rules, and **the
+auditor's committed-tree input could not see that it had happened**. Validation is
+lexical; the resolver checks project-root containment and returns the unresolved
+path.
+
+The auditor notes the analogous weakness on the whole-file path PREDATES this
+branch. Slice 1 does not create the hole — it makes it reachable through a new
+door. That distinction decides what we do next.
+
+**Decided.** Slice 1 does not merge, and it is not patched a sixth time. The three
+remaining path findings and most of the S0 share one root: the product has no
+canonical FILE IDENTITY boundary. Identity is decided lexically, in more than one
+place, and the filesystem disagrees:
+- two paths to one target via symlink or hardlink both accepted, both resolved
+  against the original bytes, lexical apply order winning and the losing edit
+  vanishing;
+- `Case-alias.txt` and `case-alias.txt`, and NFC versus NFD spellings, addressing
+  the same inode while being accepted as different files;
+- a quoted path ending in a space silently stripped, so `spaced.txt␣` was left
+  untouched and `spaced.txt` was created instead;
+- two dictionary keys differing only by stripped whitespace collapsing silently to
+  the later content.
+
+So file identity gets built ONCE, properly, as its own slice, on its own merits,
+with the S0 as its acceptance case. One place resolves a requested path to a
+physical target and decides authorization against that resolved target. Two
+requests reaching one inode is a REFUSAL, not a merge and not a lexical race.
+Slice 1 then rebases onto a foundation where most of what kept breaking cannot
+occur, and what remains — Unicode line-boundary handling, and byte framing that
+mistakes content for protocol delimiters — is genuinely slice 1's own.
+
+**The exhaustiveness claim is itself struck.** The 31,556 cells execute and all
+three deliberate mutations were caught, so the tests that exist are real tests.
+But the enumeration omits ten material axes, three of which produced live defects.
+Calling that matrix exhaustive is a §1.5 overclaim of exactly the kind D7 was
+written to stop, committed by the artifact D7 asked for. A matrix is a claim about
+COVERAGE, and a coverage claim is checkable: what is enumerated must be stated, and
+what is not enumerated must be stated too.
+
+**Escalated to the owner:** the whole-file symlink weakness is pre-existing, which
+means it is in the merged product and not only on a branch. That is a security
+property of shipped code, so the owner is told plainly rather than having it
+folded into a slice summary.
+
+**Vendor note, again honest:** the auditor states same-vendor review is materially
+weaker here, because physical-path and newline-framing assumptions are exactly what
+a different vendor is likelier to challenge — and it says so while having found
+them anyway. The cross-vendor engineering review is still outstanding and slice 1
+does not merge without it.
