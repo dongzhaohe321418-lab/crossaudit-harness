@@ -1088,3 +1088,48 @@ shipping on a manufactured all-clear.
 
 Recorded also because it is evidence the arrangement works in the direction that
 matters: the agents did not need me to catch this.
+
+### D30 — It was never a packaging problem. It was a front door nobody had reviewed.
+
+The security audit of the frozen bundle closes with a method note that corrects my
+own framing, so it is recorded as the finding rather than as a footnote:
+
+> Three of the four axes I most expected to break — modules, package data, identity
+> digests — came back clean, and the one real first-contact defect was in code that
+> has nothing to do with freezing. **The frozen bundle is not a different product
+> than source. It is the same product with a different front door, and the front
+> door is the part nobody had reviewed.**
+
+I had been calling this a frozen-versus-source gap and commissioning a survey of the
+differences. That was the wrong shape. Freezing is fine. What was never reviewed is
+the ENTRY POINT — what happens before anything a person recognises as the product
+starts — because every piece of work this team has done entered through
+`crossaudit console` in a directory that was already a project, with a home
+directory that already had credentials, run by someone who already knew the
+arguments.
+
+**Two consequences adopted.**
+
+**The boundary, stated once instead of per case:** *no unhandled exception leaves
+`main()`, in any mode* — and the app-mode startup sequence (support dir, workspace
+dir, keys, controller project, config load, bind) is inside it. The auditor found a
+worse instance than the one I had: an unwritable workspace directory produces a
+traceback written into a log **that the failure screen then invites the person to
+open**, so we actively direct them to a stack trace. The remedy is the shape this
+codebase already uses everywhere else — a Denial carrying a reason a person can act
+on, printed where they are looking, with the exit code preserved.
+
+**D28 condition 2 becomes checkable rather than aspirational.** The auditor turned it
+into a guard: *for every argv shape and every startup precondition, stderr contains
+no "Traceback (most recent call last)"*, with the D10 counterfactual being to remove
+one `except` and watch it go red. It built a 61-shape argv matrix and two
+unwritable-directory fixtures and offered them to the author rather than keeping them
+as review artifacts. Evidence written by someone other than the author, before the
+fix exists, is the strongest kind we have, and this is the second time today that has
+decided an outcome.
+
+**And a standing change to how UX evidence counts**, which I have given the design
+engineer: a cell is not covered until it has been observed in the FROZEN BUNDLE.
+Source mode remains the fast loop for iterating; the bundle is what a person runs. If
+driving the bundle is materially harder, we build the instrumentation — I would
+rather pay for good evidence than accept comfortable evidence from the wrong artifact.
