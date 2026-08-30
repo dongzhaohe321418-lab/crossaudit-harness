@@ -2974,3 +2974,66 @@ the auditor that proposed it writes no feature code.
 Fifth of the session (ui ×2, design ×2, eng1, secaudit). **No work lost in
 any.** The mechanism (D45) has now paid for itself five times, and in two of
 them the handoff carried a rule that existed nowhere else in writing.
+
+## D75 — Every gate asked "is this correct?", none could ask "who holds this now?"
+
+The integration audit — commissioned because **nobody audits the integrator** —
+returned MERGE AFTER FIXES with 0 S0, 1 S1, and the three numbers I most wanted:
+**merge_interactions=3, duplicated_paths=2, assumed_by_other=3.**
+
+> Every gate asked "is this change correct?" and none could ask **"who holds
+> this property now?"** — F1 is the sharpest instance because the answer
+> changed from **"verify, by accident" to "nobody"**, and **no diff shows
+> that.**
+
+**F1 (S1).** Before the verifier merge, `verify` read the report from the
+working tree, so a report rewritten after its audit made verification fail —
+**an accidental detector nobody designed.** The merge correctly changed `verify`
+to read from the commit the receipt cites. That removed the detector. Nothing
+replaced it, and `console/streams.py` reads exactly the rewritten file.
+
+This is the same hole the security auditor reached from the opposite end as
+mislead-map #2 — *a user reads a report edited after the cited audit, believing
+post-audit text was independently reviewed*, reachable via a shared audit repo
+**without anyone touching the machine.** One auditor found what the console
+shows; the other found why nothing catches it.
+
+The other two assumed-by-other:
+- **"Drift is a doctor concern."** True — *and there are two doctors.* The
+  verifier work delegated; the drift work delivered to the CLI. (F2)
+- **"The person will find out."** Doctor tells them if they run it; **the audit
+  path, which they do run, does not.** (F3)
+
+Each of the three is a property both sides believed the other held. My gates
+cannot see that class, because each branch is reviewed against integration *as
+it stood before the others landed*. Commissioning this audit was the only way
+it could surface, and it found exactly what it was commissioned to find.
+
+**Nothing here argues for reverting a merge.**
+
+### Two corrections to me
+
+**Integration collects 1739, not 1740** — *"1736+2+1 is self-consistent; no test
+file changed since D69's run."* I have been quoting the wrong figure.
+
+And **my own bench was dirty**: `crossaudit_integ` held an untracked
+`tests/test_verifier_rederives_remaining.py` from the engineer that had been
+working inside the merge gate; a suite run from that directory collects 1751.
+*"It's D39 aimed at your own bench."* The engineer has since carried the file
+onto its own branch and the tree is clean, but the auditor was right to name it.
+
+### Vendor independence, self-declared
+
+> Where vendor independence is weakest: F7 is claude-reviewing-claude. I graded
+> it S3, classified it by-design-with-a-caveat, and it's the one finding I'd
+> want a codex eye on.
+
+Naming the finding whose independence is weakest, unprompted, is the behaviour
+that makes the other eight usable.
+
+### The flake is a class, not a test
+
+Six deadlines in that module, two at 1 second, one polling a background thread.
+A different test in the same module failed once in a full run and passed alone.
+It has been treated as one known flaky test all evening; it is six timing
+deadlines.
