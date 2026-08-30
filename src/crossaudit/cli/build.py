@@ -170,7 +170,17 @@ def _bound_guidance(text: str, on_condense=None) -> str:
             "recent guidance follows>\n" + tail)
 
 
-def _conversation_context(cfg: Config, chat_id: str, run_id: str) -> str:
+#: The earlier-turns condensation notice. Module-level and imported by the
+#: locale catalogue rather than repeated there: the sentence used to exist in
+#: two files with nothing tying them together, so editing one would have left
+#: the other silently falling back to English — the exact i18n gap this notice
+#: exists to prevent, in the notice itself. Found by its own mutation.
+EARLIER_TURNS_NOTICE = ("Earlier turns in this chat were summarised for the "
+                        "generator; the full conversation is still here")
+
+
+def _conversation_context(cfg: Config, chat_id: str, run_id: str,
+                         on_condense=None) -> str:
     """A compact, read-only transcript of this chat's earlier turns.
 
     Grounding for the generator so a task that refers back to the conversation
@@ -203,6 +213,20 @@ def _conversation_context(cfg: Config, chat_id: str, run_id: str) -> str:
     earlier = total - len(lines) - 1
     if earlier > 0:
         lines.insert(0, f"(+{earlier} earlier turn(s) in this chat, not shown)")
+        # S4. The line above told the GENERATOR that turns were folded and told
+        # the person nothing. Every other reduction on this path emits a
+        # `context_condensed` notice; this one computed the same fact, wrote it
+        # into the prompt, and stopped — so a chat past its window condensed
+        # silently and the console had nothing to show because nothing was
+        # sent. That is the absence-of-event class: no artifact to read, no
+        # consumer to check, no identity to assert, and a person who simply is
+        # not told.
+        #
+        # The observer is how the fact leaves this function. It is deliberately
+        # NOT a client-side inference: a page that guesses when condensation
+        # happened is a page that will eventually guess wrong.
+        if on_condense is not None:
+            on_condense({"reduction": "earlier_turns", "earlier": earlier})
     return "\n".join(lines)
 
 
@@ -503,6 +527,16 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             context_notice(
                 "Earlier owner guidance condensed; full messages remain in the run record",
                 f"{int(report.get('condensed_bytes') or 0)} bytes")
+        elif reduction == "earlier_turns":
+            # The count travels in the DETAIL, not in the sentence. That keeps
+            # the sentence a fixed catalogue entry that can never fall back to
+            # English when the number changes, while the number itself is
+            # translated by the counted-unit pattern — which is where counted
+            # strings on this surface belong. The sentence says what was folded
+            # AND that nothing is gone, because "+N" alone is a number and the
+            # point is that the transcript is intact.
+            context_notice(EARLIER_TURNS_NOTICE,
+                           f"{int(report.get('earlier') or 0)} turns")
 
     def generator_provider_event(actor: str, text: str, detail: str = "") -> None:
         emit("provider_recovery", actor, text, detail,
@@ -565,7 +599,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     # Read-only grounding: earlier turns of this same chat, so a task that refers
     # back to them resolves to the person's real intent instead of to stale files
     # in the tree. Stable for the run; THE TASK remains the authoritative subject.
-    conversation = _conversation_context(cfg, chat_id, run_id)
+    conversation = _conversation_context(cfg, chat_id, run_id,
+                                        on_condense=context_report)
 
     for round_no in range(1, cfg.max_rounds + 1):
         current_round = round_no

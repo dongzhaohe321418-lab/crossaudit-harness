@@ -9,6 +9,8 @@ mutation.
 from __future__ import annotations
 
 import re
+
+from ..cli.build import EARLIER_TURNS_NOTICE
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -34,14 +36,28 @@ CONTEXT_CONDENSATION_ZH = {
         "已将较早的计算结果精简为预览；如需完整输出可重新运行计算",
     "Earlier owner guidance condensed; full messages remain in the run record":
         "已精简较早的用户补充说明；完整消息仍保存在运行记录中",
+    EARLIER_TURNS_NOTICE:
+        "已将本对话中较早的轮次概括后提供给生成者；完整对话仍保留在这里",
 }
+
+
+#: Counted units are translated by PATTERN, never as fixed strings: a fixed
+#: entry falls back to English the moment the number changes, and these details
+#: are nothing but numbers. Paths and tool labels are locale-neutral and are
+#: deliberately left alone.
+COUNTED_DETAIL_ZH = (
+    (re.compile(r"(\d+) bytes"), "{0} 字节"),
+    (re.compile(r"(\d+) turns"), "{0} 轮"),
+)
 
 
 def _detail_i18n(detail: str) -> dict[str, str]:
     """Translate generated units while leaving paths/tool labels untouched."""
-    match = re.fullmatch(r"(\d+) bytes", detail)
-    return {"en": detail,
-            "zh": f"{match.group(1)} 字节" if match else detail}
+    for pattern, template in COUNTED_DETAIL_ZH:
+        match = pattern.fullmatch(detail)
+        if match:
+            return {"en": detail, "zh": template.format(match.group(1))}
+    return {"en": detail, "zh": detail}
 
 
 def _project_context_step(step: dict) -> dict:
