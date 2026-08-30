@@ -1821,3 +1821,47 @@ What is actually true, re-derived at the time of writing:
   under cross-vendor audit.
 - Merged and real: streaming (`c34dfd9`), frozen entry boundary (`b5b3ea5`,
   post-merge review now clean), receipt scope guard (`9195ab7`).
+
+## D49 — D36 pinned `audit` and left `run`; and the receipt hashes the wrong file
+
+Cross-vendor audit of `fix/cycle-integrity` (138db3e): **DO NOT MERGE, one
+S0.** Holding this branch was right, and my D48 claim that it had landed was
+wrong in a second way — it is not merely unmerged, it is unmergeable as it
+stands.
+
+**S0.** `cmd_audit` passes the **pinned** constitution text to the auditor and
+passes **`const_path.read_bytes()`** — the current working file — to receipt
+construction. A cycle pinned to strict commit C reaches BLOCKED; the
+constitution is loosened at L; work continues. The auditor correctly judges
+C's bytes. The receipt **cites C and hashes L**. The shipped verifier returns
+`verified=true`, `admission_ready=true`, no shortfall, because it re-reads the
+working file too. A receipt that names one constitution, hashes another, and
+reports an audit against the first clears the binding gate. In this source
+harness it was stopped only by the unrelated rule that source installs may
+verify but never admit — **in a frozen build that last stop is gone.**
+
+**And the larger finding: `cmd_run` has no pin at all.** It calls
+`open_or_advance` without `constitution_commit`, re-reads the working
+constitution every round, and writes the current commit into its receipt.
+Both guided-path verdict records carried an *empty* constitution commit.
+
+D36 pinned `audit` and left `run` — and `run` is the front door. **I accepted
+D36 as done on the strength of the `audit` path.** That is my failure, not the
+author's: I verified the mechanism on the surface where it was demonstrated
+and did not ask which other surfaces open cycles. It is D47's rule turned on
+myself — the working case was the one fewer people meet.
+
+**S1.** `run` still advises "to re-audit this same commit, use `crossaudit
+audit --sha …`", which now always refuses. The change created a dead end with
+no working dispute route.
+
+Interaction: codex's unmerged `audit/verifier-rederives-claims` makes the
+verifier re-derive from the cited commit, turning this S0 from *silently
+accepted* into *caught*. A caught bad receipt is still a bad receipt. Both
+halves are required and neither branch may be treated as covering the other.
+
+What held under attack, and it is most of the branch: 40 two-process races
+produced exactly one winner and one verdict row; SIGKILL on both sides of the
+atomic replacement produced intact state and never partial or erased; both
+test inversions were judged justified with reasons; the permitted direction
+genuinely works; the suite count matched at the SHA.
