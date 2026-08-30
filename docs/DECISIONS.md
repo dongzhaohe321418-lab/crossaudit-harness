@@ -1915,3 +1915,26 @@ describes a check that does not exist (D43).
   newly-introduced defect it would be easy to hold a strictly-dominating
   branch for."* It also asked that F3 be recorded as **introduced here, not
   inherited**, so it is not later mistaken for pre-existing.
+
+### D50 addendum — the tree check fired, and the answer was benign
+
+Merging the verifier branch, the D39 comparison reported merged tree
+`73e85eb` against tested tree `67ec669`. The difference was **exactly one
+file**: `docs/DECISIONS.md`, 50 lines, the D50 entry I committed to
+v5-redesign after creating the test worktree. Source trees identical.
+
+Two things worth keeping:
+
+- The check firing on a benign difference is the check working. A gate that
+  only ever returns "identical" is indistinguishable from one that is not
+  running. This one has now returned both answers.
+- The merge brought in `tests/test_cycle_integrity.py`, which looked for a
+  moment like the DO-NOT-MERGE branch arriving by the back door. It is not:
+  `fix/cycle-integrity` is still unmerged, `const_path.read_bytes()` does not
+  appear in the integration branch, and receipt construction now goes through
+  `read_committed_bytes`. The file is codex's own test for the cycle-record
+  claim (#14) that happens to share a name. **Checked rather than assumed** —
+  a filename is not provenance.
+
+MERGED (local): `audit/verifier-rederives-claims`. Verify now confirms what
+the receipt cites.
