@@ -175,6 +175,34 @@ plutil -lint "$APP/Contents/Info.plist"
 mkdir -p "$DMG_ROOT"
 ditto "$APP" "$DMG_ROOT/CrossAudit.app"
 ln -s /Applications "$DMG_ROOT/Applications"
+# D40. The DMG deliberately installs nothing onto PATH (D31 part 2, on consent
+# grounds). That leaves one thing a person cannot find out for themselves: if
+# they ever `pip install crossaudit`, that older program stays earlier on PATH
+# and answers when they type `crossaudit`. We cannot fix that from inside the
+# app — in that state our CLI never runs — so we say it here, where the person
+# is at the moment they install.
+cat > "$DMG_ROOT/About the crossaudit command.txt" <<'DMGNOTE'
+CrossAudit is a Mac app. Dragging it to Applications does not add a `crossaudit`
+command to your terminal, and that is deliberate: a tool appears on your PATH
+only through an action you take yourself.
+
+If you have ever run `pip install crossaudit`, that installation is still on
+your PATH and will answer when you type `crossaudit` — even after installing
+this app, and even if it is much older. The two are separate programs.
+
+To see which one answers:
+
+    which crossaudit
+    crossaudit --version
+
+The app's own command line lives inside the bundle:
+
+    /Applications/CrossAudit.app/Contents/Resources/core/CrossAuditCore --version
+
+The app also reports this: open it and look at "The `crossaudit` command" in
+its readiness list. It names both programs, and it never runs the other one to
+ask its version.
+DMGNOTE
 hdiutil create -quiet -volname "CrossAudit $VERSION" -srcfolder "$DMG_ROOT" \
   -ov -format UDZO "$DIST/CrossAudit-$VERSION-arm64.dmg"
 if [[ -n "$NOTARY_PROFILE" ]]; then

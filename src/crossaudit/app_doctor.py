@@ -7,6 +7,8 @@ Checks run off the HTTP request thread and repairs are an explicit allowlist.
 """
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
 import platform
@@ -25,6 +27,8 @@ from . import __version__
 from .config import CONFIG_NAME, Config
 from .errors import ConfigDenial
 from .providers.base import tls_context
+from . import _selfid
+from .doctor_shared import constitution_state
 
 LATEST_RELEASE_API = (
     "https://api.github.com/repos/dongzhaohe321418-lab/crossaudit_v4/releases/latest"
@@ -55,6 +59,7 @@ WHY = {
     "workspace": "Projects and their files live in this folder; CrossAudit needs to read and write inside it.",
     "project_repo": "The audit reads commits from this repository; it must be initialized before a run can be recorded.",
     "git_identity": "Every commit needs an author; without a name and email CrossAudit cannot record audit history.",
+    "path_identity": "Another CrossAudit is earlier on your PATH, so typing `crossaudit` in a terminal runs that one instead of this app.",
     "config": "This file defines the project's roles, routes, and rules; the project cannot run without it.",
     "constitution": "These are the rules the auditor judges against; an audit cannot run without them.",
 }
@@ -136,10 +141,168 @@ def _latest_release() -> tuple[str | None, str]:
         return None, LATEST_RELEASE_URL
 
 
+def _other_crossaudit_version(script: Path) -> str:
+    """The version of another install, read from METADATA — never by running it.
+
+    Running an arbitrary `crossaudit` found on PATH would mean executing a
+    program we did not build, in the person's environment, because we found it.
+    §1.1 is allowlist-only loading and no arbitrary code; "we ran it to be
+    helpful" is not an exception to that, and anyone who can write to a PATH
+    directory would get code execution out of a diagnostic.
+
+    A pip console script sits in `<prefix>/bin`, and its distribution metadata
+    sits in `<prefix>/lib/python*/site-packages/crossaudit-<version>.dist-info`.
+    Reading that directory's name is a filesystem lookup. Returns "" when the
+    layout does not match, which the caller says out loud rather than guessing.
+
+    THE DISTRIBUTION MUST OWN THIS EXACT FILE. Taking the first matching
+    dist-info was a confident wrong answer in two real states: a partial
+    `pip uninstall` leaves two dist-info directories, and any program named
+    `crossaudit` sitting in a prefix that merely happens to have CrossAudit
+    installed would be reported at that prefix's version. The second is not a
+    corner case — a foreign program answering to our name is the exact scenario
+    this row exists for. Silence is the designed answer when we cannot tell, so
+    ambiguity has to reach it rather than be resolved by sort order.
+    """
+    try:
+        resolved = script.resolve()
+        prefix = resolved.parent.parent
+        versions = set()
+        for site in sorted(prefix.glob("lib/python*/site-packages")):
+            for dist in sorted(site.glob("crossaudit-*.dist-info")):
+                version = dist.name[len("crossaudit-"):-len(".dist-info")]
+                if version and _distribution_owns(dist, site, resolved):
+                    versions.add(version)
+        if len(versions) == 1:
+            return versions.pop()
+    except OSError:
+        pass
+    return ""
+
+
+def _distribution_owns(dist: Path, site: Path, script: Path) -> bool:
+    """Whether this distribution's RECORD lists THIS file, contents included.
+
+    RECORD is written by the installer and names every file it placed, with a
+    sha256. Comparing the hash means a console script replaced after
+    installation stops being owned by the distribution that once installed it,
+    which is what makes "a foreign program of the same name" answerable from the
+    filesystem. No RECORD, no entry, or no hash means not established — and not
+    established means we say nothing, never a guess.
+    """
+    try:
+        lines = (dist / "RECORD").read_text().splitlines()
+    except OSError:
+        return False
+    for line in lines:
+        parts = line.split(",")
+        if len(parts) < 2 or not parts[0].strip():
+            continue
+        try:
+            if (site / parts[0].strip()).resolve() != script:
+                continue
+        except OSError:
+            continue
+        algorithm, _, digest = parts[1].strip().partition("=")
+        if algorithm != "sha256" or not digest:
+            return False
+        try:
+            blob = script.read_bytes()
+        except OSError:
+            return False
+        actual = base64.urlsafe_b64encode(
+            hashlib.sha256(blob).digest()).rstrip(b"=").decode()
+        return actual == digest
+    return False
+
+
+def path_identity(*, which=None) -> dict:
+    """Whether the `crossaudit` on PATH is this installation (D40).
+
+    The failure this exists for: someone installs the app, types `crossaudit`,
+    and runs an older pip installation that is earlier on PATH. Nothing tells
+    them. It cannot be fixed from the CLI side, because in that state OUR CLI
+    never executes — the stale one does. The app is the one place our code is
+    certainly running, so this looks OUTWARD from here rather than describing
+    itself.
+
+    `which` is injectable so the states can be driven; the default is a plain
+    filesystem lookup and nothing is executed at any point.
+
+    THE VERSION EVIDENCE OUTRANKS THE DIRECTORY HEURISTIC, and it has to. The
+    first version of this asked only whether the script was a sibling of
+    `Path(sys.executable).resolve()`. Executed against the real failure state on
+    the machine that reported it — a 3.2.0 console script in the framework `bin`
+    — it returned "same" and printed no row: `.resolve()` follows a virtualenv's
+    `bin/python` symlink back to the base prefix, which is the very directory
+    the stale script lives in. So the heuristic reported "that is us" about the
+    program the row exists to warn about. Reading the other install's version
+    first settles it from the filesystem, whatever the two paths look like.
+    """
+    import shutil
+
+    resolve = which or (lambda name: shutil.which(name))
+    found = resolve("crossaudit")
+    invoked = Path(sys.executable)
+    mine = invoked.resolve()
+    # What the row REPORTS as "this app" is the interpreter as invoked, which in
+    # a virtualenv is this install and not the base prefix it borrows a binary
+    # from. Sameness is still judged against both forms below.
+    here = str(invoked if invoked.is_absolute() else mine)
+    if not found:
+        return {"state": "absent", "path": "", "version": "", "mine": here}
+    other = Path(found).resolve()
+    version = _other_crossaudit_version(other)
+    if version and version != __version__:
+        return {"state": "different", "path": str(other), "version": version,
+                "mine": here}
+    # Inside this bundle, or beside this interpreter: the command a person types
+    # is us. A pip or source install puts the console script in the same `bin`
+    # as the interpreter running this code, and the frozen bundle has nothing
+    # else beside its core, so the sibling test is right in both. It is asked of
+    # the interpreter AS INVOKED as well as resolved, because those differ in a
+    # virtualenv and the invoked one is the install the person actually has.
+    #
+    # The bias is deliberately toward "same", i.e. toward saying nothing. This
+    # is the surface whose whole purpose is telling somebody which program is
+    # answering them, so a confident wrong "there is another one" is worse than
+    # any other wrong answer in the product. Staying quiet costs a person
+    # nothing they did not already have — and it is now only reached when the
+    # filesystem did not already say the other install is a different version.
+    homes = {mine.parent, invoked.parent}
+    if (other == mine or other.parent in homes
+            or any(home in other.parents for home in homes)):
+        return {"state": "same", "path": str(other), "version": "",
+                "mine": here}
+    return {"state": "different", "path": str(other),
+            "version": version, "mine": here}
+
+
 def collect(cfg: Config, *, online: bool = True) -> dict:
     """Return structured app readiness without exposing credentials."""
     started = time.time()
     checks: list[dict] = []
+    identity = _selfid.identity()
+    checks.append({"id": "install", "label": "Installation identity",
+                   "status": "ready" if identity.get("install_mode") != "unknown" else "missing",
+                   "blocking": identity.get("install_mode") == "unknown",
+                   "detail": identity.get("install_mode", "unknown")})
+
+    shadow = path_identity()
+    if shadow["state"] == "different":
+        # Deliberately a warning, not blocking: the app itself works. What is
+        # broken is the person's expectation about what `crossaudit` means.
+        known = shadow["version"]
+        checks.append({
+            "id": "path_identity", "label": "The `crossaudit` command",
+            "status": "warning", "blocking": False,
+            "detail": (
+                f"Typing `crossaudit` runs {shadow['path']}"
+                + (f" (version {known})." if known else
+                   ". Its version could not be determined without running it, "
+                   "which CrossAudit does not do.")
+                + f" This app is {__version__} at {shadow['mine']}."),
+        })
 
     python_version = sys.version.split()[0]
     checks.append({
@@ -271,14 +434,15 @@ def collect(cfg: Config, *, online: bool = True) -> dict:
 
     config_ready = cfg.path.is_file()
     constitution = cfg.root / cfg.constitution
+    const_status, const_detail = constitution_state(cfg)
     checks.extend(({
         "id": "config", "label": "Project configuration",
         "status": "ready" if config_ready else "missing", "blocking": not config_ready,
         "detail": str(cfg.path),
     }, {
         "id": "constitution", "label": "Audit rules",
-        "status": "ready" if constitution.is_file() else "missing",
-        "blocking": not constitution.is_file(), "detail": str(constitution),
+        "status": const_status,
+        "blocking": const_status != "ready", "detail": const_detail,
     }))
 
     latest, release_url = _latest_release() if online else (None, LATEST_RELEASE_URL)

@@ -18,6 +18,7 @@ from ..auditor import dcl_source_digest, run_audit
 from ..config import CONFIG_NAME, Config, heterogeneity, load
 from ..controller import StateStore
 from ..dcl import run_checks
+from ..doctor_shared import constitution_state, CONSTITUTION_READY_SENTENCE
 from ..errors import (EXIT_BLOCKED, EXIT_CONFIG, EXIT_ESCALATED, EXIT_INTEGRITY,
                       EXIT_OK, ConfigDenial, Denial, IntegrityDenial)
 from ..gitio import (changed_paths, entries, git, is_ancestor, is_repo, materialise,
@@ -132,15 +133,6 @@ def _skills_manifest(cfg: Config, sha: str = "") -> dict:
 
 def _sha256_file(path: Path) -> str:
     return __import__("hashlib").sha256(path.read_bytes()).hexdigest()
-
-
-def constitution_commit_state(cfg) -> tuple[bool, bool]:
-    """Return (tracked, dirty) for the constitution path."""
-    tracked = bool(git("log", "-1", "--format=%H", "--", cfg.constitution,
-                       cwd=cfg.root, check=False))
-    dirty = bool(git("status", "--porcelain", "--", cfg.constitution,
-                     cwd=cfg.root, check=False).strip())
-    return tracked, dirty
 
 
 def _write_reproduction(receipt: dict, cycle_dir: Path) -> bool:
@@ -343,19 +335,18 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             else "this clone has no effective user.name/user.email",
             "set them for this repository with `git config user.name NAME` and "
             "`git config user.email EMAIL`")
-        const_tracked, const_dirty = constitution_commit_state(cfg)
-        const_committed = const_tracked and not const_dirty
-        if not const_committed and _offer(args, f"commit {cfg.constitution} so audits "
-                                                f"can cite its version"):
+        # ONE implementation of "are the rules committed", not two that agree
+        # today. `doctor_shared.constitution_state` already decides the three
+        # states and owns their sentences; this consumed a second helper and
+        # then rebuilt the same wording beside it, which is how the CLI and the
+        # app came to say the same thing in two voices.
+        const_status, const_detail = constitution_state(cfg)
+        if const_status != "ready" and _offer(
+                args, f"commit {cfg.constitution} so audits can cite its version"):
             git("add", "--", cfg.constitution, cwd=cfg.root)
             git("commit", "-q", "-m", "constitution: initial version", cwd=cfg.root)
-            const_committed = True
-        add("constitution committed", const_committed,
-            "audits cite the commit that versioned the rules (I3)"
-            if const_committed else
-            (f"{cfg.constitution} has uncommitted changes; an audit would cite "
-             "the committed version, not what is on disk" if const_tracked else
-             f"{cfg.constitution} is not tracked by git"),
+            const_status, const_detail = constitution_state(cfg)
+        add("constitution committed", const_status == "ready", const_detail,
             f"git add {cfg.constitution} && git commit")
 
     if args.online:
