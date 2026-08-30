@@ -25,6 +25,7 @@ from . import __version__
 from .config import CONFIG_NAME, Config
 from .errors import ConfigDenial
 from .providers.base import tls_context
+from . import _selfid
 from .doctor_shared import constitution_state
 
 LATEST_RELEASE_API = (
@@ -141,6 +142,11 @@ def collect(cfg: Config, *, online: bool = True) -> dict:
     """Return structured app readiness without exposing credentials."""
     started = time.time()
     checks: list[dict] = []
+    identity = _selfid.identity()
+    checks.append({"id": "install", "label": "Installation identity",
+                   "status": "ready" if identity.get("install_mode") != "unknown" else "missing",
+                   "blocking": identity.get("install_mode") == "unknown",
+                   "detail": identity.get("install_mode", "unknown")})
 
     python_version = sys.version.split()[0]
     checks.append({
