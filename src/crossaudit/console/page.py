@@ -3258,7 +3258,7 @@ const ZH={
   "Remove":"移除","Delete saved key":"删除已保存的 key","Official Codex sign-in.":"官方 Codex 登录。","Connect":"连接","Try again":"重试","Waiting…":"等待中…","Starting…":"正在启动…",
   "Environment has not been checked":"尚未检查环境","Checking this Mac…":"正在检查此 Mac…","Ready":"就绪","Missing":"缺失","Outdated":"版本过旧",
   "Embedded Python":"内置 Python","Remote compute client":"远程计算客户端","ChatGPT connection runtime":"ChatGPT 连接运行时",
-  "Secure network certificates":"安全网络证书","Project Git ledger":"项目 Git 账本","Git author identity":"Git 作者身份",
+  "Secure network certificates":"安全网络证书","Project Git ledger":"项目 Git 账本","Git author identity":"Git 作者身份","The `crossaudit` command":"`crossaudit` 命令",
   "Add a name and email before creating commits.":"创建提交前请添加姓名和邮箱。","Git author name":"Git 作者姓名","Git author email":"Git 作者邮箱",
   "Save for this project":"保存到此项目","Project configuration":"项目配置","Audit rules":"审计规则","CrossAudit application":"CrossAudit 应用",
   "source":"源码构建","Unknown":"未知","Warning":"警告","Waiting":"等待中",
@@ -3557,11 +3557,15 @@ const ZH={
   ,"Every provider call is HTTPS; without trusted certificates CrossAudit cannot reach any model safely.":"所有供应商调用都通过 HTTPS；没有受信任的证书，CrossAudit 无法安全连接任何模型。"
   ,"Projects and their files live in this folder; CrossAudit needs to read and write inside it.":"项目及其文件保存在此文件夹中；CrossAudit 需要在其中读写。"
   ,"The audit reads commits from this repository; it must be initialized before a run can be recorded.":"审计会读取此仓库中的提交；必须先初始化，才能记录运行。"
-  ,"Every commit needs an author; without a name and email CrossAudit cannot record audit history.":"每个提交都需要作者；没有姓名和邮箱，CrossAudit 无法记录审计历史。"
+  ,"Every commit needs an author; without a name and email CrossAudit cannot record audit history.":"每个提交都需要作者；没有姓名和邮箱，CrossAudit 无法记录审计历史。","Another CrossAudit is earlier on your PATH, so typing `crossaudit` in a terminal runs that one instead of this app.":"你的 PATH 中有另一个更靠前的 CrossAudit，因此在终端里输入 `crossaudit` 运行的是那一个，而不是这个应用。"
   ,"This file defines the project's roles, routes, and rules; the project cannot run without it.":"此文件定义项目的角色、路由和规则；缺少它项目无法运行。"
   ,"These are the rules the auditor judges against; an audit cannot run without them.":"这些是审计者据以判定的规则；缺少它们无法进行审计。"
 };
 const ZH_PATTERNS=[
+  [/^Typing `crossaudit` runs (.+) \(version (.+)\)\. This app is (.+) at (.+)\.$/,
+   m=>'在终端里输入 `crossaudit` 运行的是 '+m[1]+'（版本 '+m[2]+'）。本应用是 '+m[3]+'，位于 '+m[4]+'。'],
+  [/^Typing `crossaudit` runs (.+)\. Its version could not be determined without running it, which CrossAudit does not do\. This app is (.+) at (.+)\.$/,
+   m=>'在终端里输入 `crossaudit` 运行的是 '+m[1]+'。在不运行它的前提下无法确定其版本，而 CrossAudit 不会运行它。本应用是 '+m[2]+'，位于 '+m[3]+'。'],
   [/^reading (\d+) owner message\(s\)$/,m=>'正在读取 '+m[1]+' 条所有者补充信息'],
   [/^queued as owner guidance for the running build \(#(\d+)\); it will be read at the next round$/,m=>'已作为所有者补充信息排队（第 '+m[1]+' 位），将在下一轮读取'],
   [/^(\d+) queued$/,m=>m[1]+' 条排队中'],

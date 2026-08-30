@@ -57,6 +57,7 @@ WHY = {
     "workspace": "Projects and their files live in this folder; CrossAudit needs to read and write inside it.",
     "project_repo": "The audit reads commits from this repository; it must be initialized before a run can be recorded.",
     "git_identity": "Every commit needs an author; without a name and email CrossAudit cannot record audit history.",
+    "path_identity": "Another CrossAudit is earlier on your PATH, so typing `crossaudit` in a terminal runs that one instead of this app.",
     "config": "This file defines the project's roles, routes, and rules; the project cannot run without it.",
     "constitution": "These are the rules the auditor judges against; an audit cannot run without them.",
 }
@@ -138,6 +139,70 @@ def _latest_release() -> tuple[str | None, str]:
         return None, LATEST_RELEASE_URL
 
 
+def _other_crossaudit_version(script: Path) -> str:
+    """The version of another install, read from METADATA — never by running it.
+
+    Running an arbitrary `crossaudit` found on PATH would mean executing a
+    program we did not build, in the person's environment, because we found it.
+    §1.1 is allowlist-only loading and no arbitrary code; "we ran it to be
+    helpful" is not an exception to that, and anyone who can write to a PATH
+    directory would get code execution out of a diagnostic.
+
+    A pip console script sits in `<prefix>/bin`, and its distribution metadata
+    sits in `<prefix>/lib/python*/site-packages/crossaudit-<version>.dist-info`.
+    Reading that directory's name is a filesystem lookup. Returns "" when the
+    layout does not match, which the caller says out loud rather than guessing.
+    """
+    try:
+        prefix = script.resolve().parent.parent
+        for site in sorted(prefix.glob("lib/python*/site-packages")):
+            for dist in sorted(site.glob("crossaudit-*.dist-info")):
+                version = dist.name[len("crossaudit-"):-len(".dist-info")]
+                if version:
+                    return version
+    except OSError:
+        pass
+    return ""
+
+
+def path_identity(*, which=None) -> dict:
+    """Whether the `crossaudit` on PATH is this installation (D40).
+
+    The failure this exists for: someone installs the app, types `crossaudit`,
+    and runs an older pip installation that is earlier on PATH. Nothing tells
+    them. It cannot be fixed from the CLI side, because in that state OUR CLI
+    never executes — the stale one does. The app is the one place our code is
+    certainly running, so this looks OUTWARD from here rather than describing
+    itself.
+
+    `which` is injectable so the states can be driven; the default is a plain
+    filesystem lookup and nothing is executed at any point.
+    """
+    import shutil
+
+    resolve = which or (lambda name: shutil.which(name))
+    found = resolve("crossaudit")
+    mine = Path(sys.executable).resolve()
+    if not found:
+        return {"state": "absent", "path": "", "version": "", "mine": str(mine)}
+    other = Path(found).resolve()
+    # Inside this bundle, or beside this interpreter: the command a person types
+    # is us. A pip or source install puts the console script in the same `bin`
+    # as the interpreter running this code, and the frozen bundle has nothing
+    # else beside its core, so the sibling test is right in both.
+    #
+    # The bias is deliberately toward "same", i.e. toward saying nothing. This
+    # is the surface whose whole purpose is telling somebody which program is
+    # answering them, so a confident wrong "there is another one" is worse than
+    # any other wrong answer in the product. Staying quiet costs a person
+    # nothing they did not already have.
+    if other == mine or mine.parent in other.parents or other.parent == mine.parent:
+        return {"state": "same", "path": str(other), "version": "",
+                "mine": str(mine)}
+    return {"state": "different", "path": str(other),
+            "version": _other_crossaudit_version(other), "mine": str(mine)}
+
+
 def collect(cfg: Config, *, online: bool = True) -> dict:
     """Return structured app readiness without exposing credentials."""
     started = time.time()
@@ -147,6 +212,22 @@ def collect(cfg: Config, *, online: bool = True) -> dict:
                    "status": "ready" if identity.get("install_mode") != "unknown" else "missing",
                    "blocking": identity.get("install_mode") == "unknown",
                    "detail": identity.get("install_mode", "unknown")})
+
+    shadow = path_identity()
+    if shadow["state"] == "different":
+        # Deliberately a warning, not blocking: the app itself works. What is
+        # broken is the person's expectation about what `crossaudit` means.
+        known = shadow["version"]
+        checks.append({
+            "id": "path_identity", "label": "The `crossaudit` command",
+            "status": "warning", "blocking": False,
+            "detail": (
+                f"Typing `crossaudit` runs {shadow['path']}"
+                + (f" (version {known})." if known else
+                   ". Its version could not be determined without running it, "
+                   "which CrossAudit does not do.")
+                + f" This app is {__version__} at {shadow['mine']}."),
+        })
 
     python_version = sys.version.split()[0]
     checks.append({
