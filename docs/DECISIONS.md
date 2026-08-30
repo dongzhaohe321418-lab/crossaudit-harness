@@ -1483,3 +1483,34 @@ not met and the suite re-runs on the merge commit.
 This is the same shape as D33 and the codex sweep rule: a value verified
 at one point does not transfer to the consumer unless the consumer is the
 thing checked. Here I was the consumer and I nearly exempted myself.
+
+## D40 — The PATH collision is S1, not S0, and the ledger is why
+
+The engineer measured what a DMG user must know to reach the CLI: the exact
+4-component 67-char path inside the .app, that a CLI exists at all, and that
+the `crossaudit` already on their PATH is a *different, older* program. The
+product supplies none of the four. Worse than D37 stated: the discoverable
+name is actively wrong — installing 4.15.0 and typing `crossaudit doctor`
+runs 3.2.0 from August, which predates every S0 fix in this cycle (symlink
+escape, erasable verdict, trimmed constitution reader).
+
+I judged this S0 on the theory that both binaries report `receipt schema 2`,
+so their receipts would be indistinguishable in one ledger — a stale binary
+laundering unaudited work as audited. **That was wrong, and reading
+`_selfid.py` is what corrected it.** Receipts already carry the version, a
+canonical digest over the loaded code, and the install mode; `verify --admit`
+already refuses modes whose code could have changed since digesting. The
+schema number is not the compatibility claim I took it for. The ledger
+distinguishes the two producers today.
+
+So the defect is not ledger integrity. It is that **the person** cannot tell
+which binary answered them. The ledger stays honest while the human is
+misled — S1: a false-premise experience on valid input, not data loss.
+
+RULE: severity is assigned after reading the mechanism that would have to be
+broken, not from the shape of the hazard. I had a plausible S0 and the
+plausibility came from a field name.
+
+Fix scope, accordingly narrow: make install mode and path visible where a
+person meets a mismatch. Not a PATH install — D31 refused that on consent
+grounds and that still holds.
