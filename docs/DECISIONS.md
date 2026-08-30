@@ -1036,3 +1036,39 @@ in front of a stranger. Whether strangers arrive is the owner's call and the wor
 the evidence for each is on record rather than remembered. If it stops making
 progress — the same class of defect surviving three rounds, per D7 — that is a
 finding to surface, not a reason to keep grinding.
+
+### D29 — Two agents refused to manufacture a false all-clear from my routing gap
+
+I dropped the independent honesty audit's findings on the first-three-minutes slice
+— it returned MERGE AFTER FIXES and I never routed them to the author. That is my
+failure, the same shape as D14 and D20: an action that looked complete from where I
+stood and was not.
+
+When I asked the author to pull the findings itself, it could not locate them, so it
+asked another agent. **That agent refused to hand over its own list**, on the grounds
+that its list was the DESIGN review, not the honesty audit, and:
+
+> "I'm not going to paste anything that could be mistaken for it — if you closed my
+> list believing it was w6's, the honesty audit would still be open and you'd think
+> it wasn't."
+
+The author then declined to proceed on the same reasoning: closing the design items
+a second time and reporting "findings closed" **would have converted a routing gap
+into a FALSE ALL-CLEAR, which is worse than the gap**. It asked me to re-run the
+audit rather than guess at it.
+
+Both were right, and the second failure would have been much worse than the first. A
+gap is visible as a gap; a false all-clear is invisible, and it is invisible
+precisely to the person who most needs to see it. This is the project's own thesis —
+that a plausible claim and a verified one are different things — applied to my
+process rather than to the code.
+
+**Decided:** the honesty audit on `agentA/first-three-minutes` is RE-RUN, by the
+cross-vendor auditor, before that slice merges. The consequence is real and I am
+taking it: CLI i18n wave 1 is finished and green at 1714/2/0 and cannot rebase until
+first-three-minutes lands, so my routing gap now costs a delay on the tier D25 ranks
+as exclusion rather than degradation. That cost is mine and it is smaller than
+shipping on a manufactured all-clear.
+
+Recorded also because it is evidence the arrangement works in the direction that
+matters: the agents did not need me to catch this.
