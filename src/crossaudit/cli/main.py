@@ -321,7 +321,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         ok = ok and passed
         checks.append({"check": name, "ok": passed, "detail": detail, "fix": fix,
                        "kind": "verdict", "copy": copy,
-                       "slots": dict(slots or {})})
+                       "slots": {k: str(v) for k, v in (slots or {}).items()}})
 
     def note(name: str, detail: str, *, copy: str = "",
              slots: dict | None = None) -> None:
@@ -336,7 +336,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         """
         checks.append({"check": name, "ok": None, "detail": detail, "fix": "",
                        "kind": "info", "copy": copy,
-                       "slots": dict(slots or {})})
+                       "slots": {k: str(v) for k, v in (slots or {}).items()}})
 
     ident = _selfid.identity()
     add("python", sys.version_info >= (3, 10),
@@ -402,7 +402,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     # which is the same false green as the console panel D6 flagged.
     from ..dcl import contracts as live_contracts
     for name, contract in live_contracts(cfg.checks).items():
-        note(f"automatic: {name}", contract)
+        note(f"machine:{name}", contract)
 
     het_ok, why = heterogeneity(cfg)
     add("heterogeneity (I1)", het_ok, why,
@@ -560,11 +560,11 @@ DOCTOR_COPY: dict[str, tuple[str, str]] = {
     "heterogeneity (I1)": ("Generator and auditor are different vendors (I1)", ""),
     "admission tier": ("How much this project's history proves", ""),
     "  toward enforced": ("", ""),
-    "automatic: schema": ("Results file has the required structure (schema)", ""),
-    "automatic: units": ("Every number carries a unit and a source (units)", ""),
-    "automatic: convergence": ("Anything reported as converged met its threshold "
+    "machine:schema": ("Results file has the required structure (schema)", ""),
+    "machine:units": ("Every number carries a unit and a source (units)", ""),
+    "machine:convergence": ("Anything reported as converged met its threshold "
                                "(convergence)", ""),
-    "automatic: provenance": ("Every source traces to a declared input "
+    "machine:provenance": ("Every source traces to a declared input "
                               "(provenance)", ""),
     "admission-capable": ("This install cannot admit receipts",
                           "It can generate, audit and verify; it cannot consume a "
@@ -646,8 +646,8 @@ def _render_doctor(checks: list[dict], ok: bool, show_all: bool = False) -> str:
     # something a person needs at first contact, so they collapse the same way
     # the passing checks do. What stays visible is the posture — the thing that
     # changes what this project can prove.
-    contracts = [c for c in info if c["check"].startswith("automatic: ")]
-    posture = [c for c in info if not c["check"].startswith("automatic: ")]
+    contracts = [c for c in info if c["check"].startswith("machine:")]
+    posture = [c for c in info if not c["check"].startswith("machine:")]
     for c in posture:
         label, _consequence = _doctor_label(c)
         if label:
