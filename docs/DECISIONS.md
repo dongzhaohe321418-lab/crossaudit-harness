@@ -850,6 +850,22 @@ information, the honest output says so and says nothing more. "Something went wr
 and we do not know what" is a worse sentence to write and a better one to read than a
 precise account of a different problem.
 
+**Extended, by the engineer implementing it.** Reading the audit of its own fix, it
+observed that the rule is symmetric and that we had only written down half of it:
+`{}`, malformed JSON and `204` were all treated as ACCEPTANCE without the response
+ever establishing that anything was accepted. Its formulation, adopted:
+
+> A claim must be derived from what the response actually established — and
+> "delivered" is a claim.
+
+So D23 governs success as well as failure. "We sent it" is exactly as much an
+assertion about the world as "it was refused because X", and an optimistic spinner
+over a message that was never accepted is the same defect wearing a friendlier face —
+worse, in fact, because a person stops watching. It also chose to fix the acceptance
+predicate ONCE rather than patch the two sides separately, on the grounds that a 500
+diagnosed as a refusal is the same defect on the failure side. That is the D7 instinct
+applied without being asked for.
+
 ### D24 — Merge the authorization boundary, and name the limit of this pattern
 
 The cross-vendor engineering review of `fix/authorization-boundary` returned MERGE
