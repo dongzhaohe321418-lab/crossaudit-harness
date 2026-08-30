@@ -884,3 +884,34 @@ and **if a third round arrives still carrying an open S0 on this boundary, the
 justification stops working and the slice stops merging until the boundary is closed
 by construction end to end.** Improvement is not a licence to stay incomplete
 indefinitely; it is a licence to ship the improvement once.
+
+### D25 — Exclusion is not degradation, and it does not queue as polish
+
+The design engineer re-ordered the remaining backlog by what a real person meets
+first, which is what D5 asks for. Its answer corrected how I had been APPLYING D5,
+and the correction matters more than the ordering.
+
+D5 ranks by harm and by how early the harm is hit. I had been reading "a person" as
+an average — so accessibility and language landed near the bottom, filed as polish,
+because for the average user they are a degradation rather than a blocker. That is
+the wrong reading.
+
+For a Chinese-speaking first-timer, an English-only CLI is not a worse experience.
+**It is exclusion.** In the engineer's words: for that population "it isn't
+degradation, it's exclusion". For a screen-reader user, the ten dynamic containers
+that announce nothing are not a missing nicety met at second 90 — they make the
+product **unusable rather than degraded**, and for them that finding is not number
+four on a list, it is number one.
+
+**Decided: accessibility and language form their own tier, ranked by whether a
+population can use the product at all, and that tier is not polish.** Averaging harm
+across users hides exactly the users who are most harmed, because the people who
+cannot use something at all are always a minority of the people who can.
+
+Concretely: the `--text-3` token work and the send-path generic case stay first,
+because they are universal. Then CLI i18n wave 1 and SPEC-9's ten silent containers
+are taken as a TIER of their own rather than as the tail of a polish list — the
+engineer's recommendation, adopted as written.
+
+This does not change D5. It corrects my application of it: "how badly is a person
+hurt" has to be asked about the person most hurt, not about the median one.
