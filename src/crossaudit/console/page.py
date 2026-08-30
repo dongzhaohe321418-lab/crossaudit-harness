@@ -884,8 +884,12 @@ textarea::placeholder{color:var(--text-3)}
 .inspector.open{transform:translateX(0);visibility:visible;transition:transform var(--dur-slow) var(--spring)}
 .inspect-head{display:flex;align-items:center;min-height:48px;padding:0 var(--sp-3) 0 var(--sp-4);flex:none}
 .inspect-head h2{font-size:var(--fs-body);margin:0;font-weight:600}
-.panel-tabs{display:flex;gap:2px;padding:0 var(--sp-2) var(--sp-2);flex:none}
-.panel-tabs .nav-item{flex:1;min-width:0;height:40px;padding:0 2px;border:0;border-radius:var(--r-sm);
+.panel-tabs{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;padding:0 var(--sp-2) var(--sp-2);flex:none}
+/* flex-basis:auto, not 0: a tab is never narrower than its own label. Eight
+   tabs at a 318px panel width give 36px each, and "Governed" needs 52 — with
+   an equal-share basis the labels bled into each other rather than wrapping.
+   They now take a second row instead of being clipped. */
+.panel-tabs .nav-item{flex:0 1 auto;min-width:0;height:40px;padding:0 7px;border:0;border-radius:var(--r-sm);
   background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:2px;color:var(--text-2);font-size:var(--fs-caption);text-align:center}
 .panel-tabs .nav-item:hover{background:var(--hover);color:var(--text)}
@@ -1156,6 +1160,7 @@ body.deciding .composer-wrap{display:none}
 .mcp-tool{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);
   border-radius:var(--r-xs);padding:4px 6px;font-size:var(--fs-caption);color:var(--text-2)}
 .mcp-tool.approved{border-color:color-mix(in srgb,var(--pass) 45%,var(--line));color:var(--pass)}
+.mcp-tool .mcp-risk{margin-left:2px;padding:1px 6px;font-size:10px}
 .mcp-call{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px 12px;
   border-bottom:1px solid var(--line)}
 .mcp-call:last-child{border-bottom:0}
@@ -1671,6 +1676,9 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
    footer pinned so the primary action is never below the fold. */
 .mcp-wizard{display:flex;flex-direction:column;overflow:hidden}
 .mcp-wizard>.wizard-head,.mcp-wizard>.mcp-steps,.mcp-wizard>.wizard-foot{flex:none}
+/* Chinese has no word boundaries, so a squeezed button breaks inside a word
+   (\53d6/\6d88). The label is never the thing that should shrink. */
+.mcp-wizard>.wizard-foot>button{white-space:nowrap;flex:none}
 .mcp-wizard-body{flex:1;min-height:0;overflow:auto}
 .mcp-steps{display:flex;gap:8px;margin:0;padding:11px 24px;list-style:none;
   border-bottom:1px solid var(--line);background:var(--surface-2)}
@@ -1716,6 +1724,30 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
 .mcp-risk.readonly{border-color:color-mix(in srgb,var(--pass) 40%,var(--line));color:var(--pass)}
 .mcp-risk.unlabelled{border-style:dashed;border-color:var(--line-strong);color:var(--text-2);background:none}
 .mcp-caveat{margin:0 0 9px}
+/* The field help under Server name states the rule a person has to satisfy
+   BEFORE typing, and the one under Arguments states how the textarea is
+   read. .field-help's --text-3 measures 2.72:1 light / 3.59:1 dark, so as
+   written neither was legible. Raised to the same tone the step notes use
+   (5.31 / 7.05) inside this dialog. The same shortfall exists wherever else
+   .field-help is used; that is a wider change than this slice and is
+   reported rather than made here. */
+.mcp-wizard .field-help{color:var(--text-2)}
+/* Light-theme AA. Each of these sits on a 10%-tinted wash of its own token,
+   which pulls the token under 4.5:1 against the composited background:
+   "May change data" measured 4.03, the consent heading 3.96 and the Connected
+   heading 4.16 at 11-12px. Darkened here, in light only — dark measured 5.18 /
+   6.76 / 6.38 and is deliberately untouched. Re-measure, do not assume: the
+   backgrounds are alpha-composited down the whole ancestor chain. */
+:root[data-theme="light"] .mcp-risk.destructive{color:#A82F26}
+:root[data-theme="light"] .hpc-confirm b{color:#7F540A}
+:root[data-theme="light"] .mcp-connected b,
+:root[data-theme="light"] .mcp-approved b{color:#14684A}
+/* D7: a consent the person cannot give yet should not be the loudest thing on
+   the step. Until something is approved the box steps back to a plain surface
+   instead of wearing the same alert wash as the live one. */
+.hpc-confirm.awaiting{background:var(--surface-2);
+  border-color:var(--line);color:var(--text-3)}
+:root .hpc-confirm.awaiting b,:root[data-theme="light"] .hpc-confirm.awaiting b{color:var(--text-2)}
 .mcp-empty{margin:0;padding:15px 13px;font-size:var(--fs-label);color:var(--text-2)}
 .mcp-approved{padding:11px 13px;border-radius:var(--r-md);
   border:1px solid color-mix(in srgb,var(--pass) 32%,var(--line));background:var(--pass-bg)}
@@ -1958,6 +1990,11 @@ mark.preview-hit.on{background:var(--preview-mark-on);color:var(--inverse-text)}
   .wizard-head{padding:18px 17px 15px}
   .wizard-body{padding:18px 17px}
   .wizard-foot{padding:13px 17px;padding-bottom:max(13px,env(safe-area-inset-bottom))}
+  /* the footer note was taking ~60% of a 390px row; give it its own row and let
+     the buttons keep their natural width */
+  .mcp-wizard>.wizard-foot{flex-wrap:wrap}
+  .mcp-wizard>.wizard-foot>span{flex-basis:100%;max-width:none;margin:0 0 9px}
+  .mcp-wizard>.wizard-foot>button:nth-of-type(1){margin-left:auto}
   .project-wizard,.settings-wizard{height:100dvh;max-height:100dvh}
   .project-wizard-body{padding:18px 17px}
   .wizard-progress li{grid-template-columns:26px minmax(0,1fr);column-gap:7px}
@@ -2839,14 +2876,14 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
         <p class="mcp-step-note">Connecting only reads the server's tool list. Nothing can be called until you approve it in the next step.</p>
       </section>
       <section class="mcp-step" data-mcp-step="tools" tabindex="-1" hidden>
-        <div class="mcp-connected" id="mcp-connected"></div>
+        <div class="mcp-connected" id="mcp-connected" role="status" aria-live="polite"></div>
         <p class="mcp-step-note mcp-caveat">Tool names, descriptions and risk labels are reported by the server itself and are not verified by CrossAudit. Approve only what you recognise.</p>
-        <div class="mcp-approve-head"><span>Approved tool names</span><small id="mcp-approve-count"></small><button type="button" class="mcp-link" id="mcp-select-all">Select all except destructive</button></div>
+        <div class="mcp-approve-head"><span>Tools this project may use</span><small id="mcp-approve-count" aria-live="polite"></small><button type="button" class="mcp-link" id="mcp-select-all">Select all except destructive</button></div>
         <div class="mcp-approve" id="mcp-tool-approve" role="group" aria-label="Advertised tools"></div>
-        <label class="hpc-confirm field full" style="margin-top:15px"><input name="enabled" type="checkbox" id="mcp-enabled"><span><b>Allow Generator to call the approved tools automatically</b>Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.</span></label>
+        <label class="hpc-confirm field full" style="margin-top:15px"><input name="enabled" type="checkbox" id="mcp-enabled" aria-describedby="mcp-enable-note"><span><b>Allow Generator to call the approved tools automatically</b>Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.</span></label>
         <p class="mcp-step-note" id="mcp-enable-note">Leave this off to keep the server manual-only. You can turn it on later.</p>
       </section>
-      <div class="wizard-error" id="mcp-error"></div></div>
+      <div class="wizard-error" id="mcp-error" role="alert" tabindex="-1"></div></div>
     <div class="wizard-foot"><span id="mcp-foot-note">Bearer tokens are write-only Keychain items. Local commands are stored without secrets.</span>
       <button type="button" class="secondary" id="cancel-mcp">Cancel</button>
       <button type="button" class="secondary" id="mcp-back" hidden>Back</button>
@@ -2938,6 +2975,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <button type="button" class="nav-item" data-view="models" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Models</button>
       <button type="button" class="nav-item" data-view="usage" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Usage</button>
       <button type="button" class="nav-item" data-view="compute" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Compute</button>
+      <button type="button" class="nav-item" data-view="tools" aria-pressed="false" aria-label="Tools &amp; Skills"><span class="nav-icon" aria-hidden="true"></span>Tools</button>
       <button type="button" class="nav-item" data-view="evidence" aria-pressed="false" aria-label="Governed actions and evidence"><span class="nav-icon" aria-hidden="true"></span>Governed</button>
       <button type="button" class="nav-item" data-view="plan" aria-pressed="false" aria-label="Goal and plan"><span class="nav-icon" aria-hidden="true"></span>Plan</button></nav>
     <div class="panel-body">
@@ -3151,7 +3189,7 @@ const ZH={
   "Job script":"任务脚本","I approve this remote execution":"我批准此次远程执行",
   "The script can access anything my account can read or write on this host. Closing CrossAudit will not stop it.":"脚本可访问我的账户在该主机上有权读写的所有内容。关闭 CrossAudit 不会停止它。","Submit job":"提交任务",
   "Tasks":"任务","New chat":"新对话","＋ New chat":"＋ 新对话","Workspace views":"工作区视图","Chat":"对话","Files":"文件","More":"更多",
-  "Audit history":"审计记录","Usage":"用量","Tools & Skills":"工具与技能",
+  "Audit history":"审计记录","Usage":"用量","Tools & Skills":"工具与技能","Tools":"工具",
   "Back to projects":"返回项目列表","Pin project":"置顶项目","Settings":"设置","Switch theme":"切换主题","Toggle audit context":"切换审计上下文","Open navigation":"打开导航","Close open panel":"关闭面板",
   "You":"你","Auditor":"审计者","New task":"新任务",
   "Message recipient":"消息接收方","To":"发送给","Auto":"自动","@ Generator":"@ 生成者","@ Auditor":"@ 审计者","Add files":"添加文件","＋ Add files":"＋ 添加文件",
@@ -3283,7 +3321,7 @@ const ZH={
   "Server name":"服务器名称","Transport":"传输方式","Local stdio":"本地 stdio","Streamable HTTP":"Streamable HTTP","Executable":"可执行文件","Arguments":"参数",
   "One argument per line. CrossAudit never invokes a shell.":"每行一个参数。CrossAudit 绝不会调用 shell。","I approve this exact local command":"我批准此准确的本地命令","A local MCP server runs with this app's user permissions and may access files or the network. Verify its publisher and arguments.":"本地 MCP 服务器使用本应用的用户权限运行，可能访问文件或网络。请核实发布者和参数。",
   "MCP endpoint":"MCP 端点","Secure MCP endpoint URL":"安全的 MCP 端点 URL","Bearer token (optional)":"Bearer token（可选）","Leave blank to keep saved token":"留空以保留已保存的 token","Allow a verified private-network server":"允许已核实的专用网络服务器","Use only for an enterprise hostname you control. Public remote servers must use HTTPS.":"仅用于你所控制的企业主机名。公共远程服务器必须使用 HTTPS。",
-  "Request timeout":"请求超时","Calls per task":"每个任务的调用次数","Approved tool names":"已批准的工具名称","Allow Generator to call the approved tools automatically":"允许生成者自动调用已批准的工具","Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.":"调用会实时显示在任务循环中。工具输出被视为不可信外部数据，绝不会成为审计规则。",
+  "Request timeout":"请求超时","Calls per task":"每个任务的调用次数","Tools this project may use":"本项目可以使用的工具","Allow Generator to call the approved tools automatically":"允许生成者自动调用已批准的工具","Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.":"调用会实时显示在任务循环中。工具输出被视为不可信外部数据，绝不会成为审计规则。",
   "Advertised tools":"公布的工具","Bearer tokens are write-only Keychain items. Local commands are stored without secrets.":"Bearer token 以只写方式存入钥匙串；本地命令不含秘密信息。",
   "Project-scoped MCP capabilities and committed Generator guidance.":"项目级 MCP 能力与已提交的生成者指导。","Explicit capability boundaries.":"明确的能力边界。","MCP servers and Skills are invisible until you configure them. Approved MCP output remains untrusted data; Skills guide only the Generator and never change the Constitution.":"MCP 服务器和技能在你配置前不可见。已批准的 MCP 输出仍是不可信数据；技能只指导生成者，绝不会修改审计章程。",
   "＋ Add MCP server":"＋ 添加 MCP 服务器","Manage Skills":"管理技能","MCP servers":"MCP 服务器","Recent tool calls":"最近工具调用","Skills":"技能","No MCP servers connected to this project.":"此项目尚未连接 MCP 服务器。","No MCP tools called in this project.":"此项目尚未调用 MCP 工具。","No project Skills yet.":"此项目尚无技能。",
@@ -5934,9 +5972,15 @@ function planView(d){
 function toolsView(d){
   const state=d.mcp||{servers:[],calls:[]},skills=((d.runtime_config||{}).skills||[]);
   const servers=(state.servers||[]).map(server=>{const approved=new Set(server.allowed_tools||[]);
-    const tools=(server.tools||[]).map(tool=>{const note=tool.annotations||{},risk=note.destructiveHint?' ⚠':note.readOnlyHint?' ◉':'';
+    // The dialog spells these out; a bare glyph whose meaning lives in a title
+    // attribute is unavailable on touch and unreliable for a screen reader, so
+    // the list says the same words the approval screen said.
+    const tools=(server.tools||[]).map(tool=>{const note=tool.annotations||{};
+      const risk=note.destructiveHint?'<i class="mcp-risk destructive">May change data</i>'
+        :note.readOnlyHint?'<i class="mcp-risk readonly">Read-only</i>'
+        :'<i class="mcp-risk unlabelled">Not labelled by the server</i>';
       return '<span class="mcp-tool'+(approved.has(tool.name)?' approved':'')+'" title="'+esc((tool.description||'')
-        +' · server annotations are untrusted')+'">'+(approved.has(tool.name)?'✓ ':'')+esc(tool.name+risk)+'</span>';}).join('');
+        +' · server annotations are untrusted')+'">'+(approved.has(tool.name)?'✓ ':'')+esc(tool.name)+risk+'</span>';}).join('');
     const endpoint=server.transport==='stdio'?[server.command,...(server.args||[])].join(' '):server.url;
     return '<div class="host-row"><div class="host-top"><b>'+esc(server.name)+'</b>'
       +'<span class="host-kind">'+esc(server.transport)+'</span></div><div class="host-detail">'+esc(endpoint||'')+'</div>'
@@ -6500,6 +6544,8 @@ function syncMcpApproval(){const boxes=[...document.querySelectorAll('[data-mcp-
   // The server refuses "enabled with nothing approved"; say so instead of
   // letting the person find out through a denial.
   enable.disabled=none;if(none)enable.checked=false;
+  const consent=enable.closest('.hpc-confirm');
+  if(consent)consent.classList.toggle('awaiting',none);
   mcpText('mcp-approve-count',mcpApproved.size+' of '+boxes.length+' approved');
   mcpText('mcp-enable-note',none?'Approve at least one tool before the Generator can call this server.'
     :mcpReconnected?'Re-connecting cleared this server\'s approvals. Nothing can be called until you save.'
@@ -6624,7 +6670,7 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
       renderMcpConnected(server);renderMcpTools();setMcpStep('tools');
       setTimeout(()=>document.getElementById('mcp-select-all').focus(),0);}
     else{mcpCreatedId='';closeMcp();}}
-  catch(e){computeError('mcp-error',e);}
+  catch(e){computeError('mcp-error',e);document.getElementById('mcp-error').focus();}
   finally{button.disabled=false;mcpText('save-mcp',mcpStep==='tools'?'Save':'Connect');syncMcpApprovalState();}};
 function stopComputeTimers(except=''){for(const [id,timer] of computeLogTimers){if(id!==except){clearInterval(timer);computeLogTimers.delete(id);}}}
 async function loadComputePanel(jobId,mode){const current=computePanels.get(jobId)||{};computePanels.set(jobId,{...current,open:true,mode,loading:true,error:''});

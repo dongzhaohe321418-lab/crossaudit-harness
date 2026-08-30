@@ -106,7 +106,7 @@ def test_strings_other_tests_depend_on_survive_the_redesign():
     # tests/test_mcp.py pins these; keep them honest and present.
     for text in ('id="mcp-modal"', 'id="mcp-form"', "Add MCP server", "Local stdio",
                  "Streamable HTTP", "I approve this exact local command",
-                 "Approved tool names",
+                 "Tools this project may use",
                  "Allow Generator to call the approved tools automatically",
                  "/api/mcp", "data-mcp-configure"):
         assert text in PAGE, text
