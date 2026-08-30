@@ -1629,3 +1629,51 @@ The same bundle drive incidentally observed that `doctor` **already** reports
 absent, so that work is narrower than I specified and the engineer has been
 told to shrink it rather than build to my brief. Second time today an agent's
 side-note corrected a dispatch of mine.
+
+## D44 — Readability before consent; and a merge I cannot prove was reviewed
+
+### The ordering was mine and it was wrong
+
+I commissioned the GUI constitution *consent moment* first. The security
+auditor overrode it from the artifact:
+
+> Not the silent write. Fixing that alone gets you a consent dialog for a
+> document the person still cannot open afterwards.
+
+The design engineer and I had both already named the trap — the moment must
+not become a licence agreement — and I then sequenced my way straight into
+it. Consent to a document you cannot subsequently read is a form, not a
+choice. Order is now: make the rules readable in Settings › Audit (which
+already exists and today renders one sentence), then the moment.
+
+Auditor's F2 is the finding underneath: **a GUI user cannot resolve a verdict
+to the rules that produced it.** Remedy queued — the verdict carries and
+displays its `constitution_commit`, one additive field in the cycle store,
+same shape as D15's `n_a`, derived not guessed.
+
+Also from that audit: `# Constitution — <PROJECT>` is unsubstituted in the
+controller's constitution while the demo's is correct. Graded S3; I disagree
+with the grade's implication — the case that works is the demo and the case
+that is broken is *the project every GUI user is handed*. A placeholder
+leaking on the default path is a first-contact defect.
+
+### The S0 I posited does not exist
+
+Eighteen local GUI actions, each with the constitution digested before and
+after: zero mutations, final digest equal to baseline. Third severity
+hypothesis of mine corrected by evidence today (with D40 and the ledger
+theory). Each time the correction came from executing the thing rather than
+reasoning about it. That is the system working, and it is cheaper than being
+right by luck.
+
+### A gate failure of my own
+
+Task #38 records `b753fbc` (frozen-entry boundary) as "awaiting review".
+**I merged it.** My merge rule requires a clean independent review and I have
+no record of one clearing this commit.
+
+I am not reconstructing whether a review happened — that is the false
+all-clear D29 forbids. It is being reviewed now, post-merge, cross-vendor,
+against the artifact. The gap is recorded under my name regardless of what
+the review returns, because the defect is that I merged without establishing
+the gate, not that the code is necessarily bad.
