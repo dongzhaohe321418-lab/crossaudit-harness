@@ -111,11 +111,11 @@ def test_no_green_marker_sits_on_a_line_that_reports_a_posture(
     _code, out = _run_doctor(cfg, monkeypatch, capsys)
     rows = _lines(out)
 
-    contract_rows = [r for r in rows if r[1].startswith("automatic:")]
+    contract_rows = [r for r in rows if r[1].startswith("machine:")]
     assert contract_rows, "the configured deterministic contracts should be listed"
 
     posture = [r for r in rows
-               if r[1].startswith("automatic:")
+               if r[1].startswith("machine:")
                or r[1] in ("admission tier", "toward enforced")]
     assert len(posture) >= 3, f"expected the posture lines, saw {[r[1] for r in rows]}"
     for marker, name, _detail in posture:
