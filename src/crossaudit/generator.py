@@ -19,14 +19,14 @@ Three boundaries this module exists to hold:
 from __future__ import annotations
 
 import json
-import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from .constitution import parse_json_reply
 from .errors import ConfigDenial, Denial, ProviderDenial
-from .file_identity import FileTarget, resolve_file_targets
+from .file_identity import (AppliedFiles, FileTarget, apply_bound_files,
+                            resolve_file_targets)
 
 GENERATOR_SYSTEM = """You produce work for a supervised project. Another model \
 from a different vendor audits everything you commit, against rules you will be \
@@ -545,62 +545,9 @@ def generate(*, task: str, constitution: str, current: dict[str, str],
     return outcome
 
 
-def _same_binding(left: FileTarget, right: FileTarget) -> bool:
-    return (left.requested, left.relative, left.physical, left.exists,
-            left.device, left.inode) == (
-                right.requested, right.relative, right.physical, right.exists,
-                right.device, right.inode)
-
-
-def _write_bound_target(target: FileTarget, payload: bytes,
-                        parent_identity: tuple[int, int]) -> None:
-    """Write through a pinned parent fd and refuse link/identity races."""
-    directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
-    nofollow = getattr(os, "O_NOFOLLOW", 0)
-    try:
-        parent_fd = os.open(target.physical.parent, directory_flags | nofollow)
-        try:
-            parent_info = os.fstat(parent_fd)
-            if (parent_info.st_dev, parent_info.st_ino) != parent_identity:
-                raise ProviderDenial(
-                    "refusing a generated file whose parent changed during apply",
-                    category="path_identity", retryable=True)
-            flags = os.O_WRONLY | nofollow
-            if target.exists:
-                fd = os.open(target.physical.name, flags, dir_fd=parent_fd)
-            else:
-                fd = os.open(target.physical.name, flags | os.O_CREAT | os.O_EXCL,
-                             0o666, dir_fd=parent_fd)
-            try:
-                info = os.fstat(fd)
-                if target.exists and ((info.st_dev, info.st_ino)
-                                      != (target.device, target.inode)
-                                      or info.st_nlink != 1):
-                    raise ProviderDenial(
-                        "refusing a generated file that changed during apply",
-                        category="path_identity", retryable=True)
-                os.ftruncate(fd, 0)
-                offset = 0
-                while offset < len(payload):
-                    count = os.write(fd, payload[offset:])
-                    if count <= 0:
-                        raise OSError("generated file write made no progress")
-                    offset += count
-            finally:
-                os.close(fd)
-        finally:
-            os.close(parent_fd)
-    except ProviderDenial:
-        raise
-    except OSError as exc:
-        raise ProviderDenial(
-            f"could not safely write generated file {target.relative!r}",
-            category="path_identity", retryable=True) from exc
-
-
 def apply(work: Work, root: Path,
-          allowed_dirs: list[str] | None = None) -> list[str]:
-    """Write only a physically bound Work and return canonical Git pathspecs."""
+          allowed_dirs: list[str] | None = None) -> AppliedFiles:
+    """Transactionally apply bound work and retain its staging authority."""
     if not work._targets:
         work = bind_file_identities(work, root, allowed_dirs)
     physical_root = root.resolve(strict=True)
@@ -608,44 +555,8 @@ def apply(work: Work, root: Path,
         raise ProviderDenial(
             "refusing file identities bound to a different project",
             category="path_identity", retryable=True)
-    rebound = resolve_file_targets(
-        physical_root, (target.requested for target in work._targets),
-        list(work._allowed_dirs) if work._allowed_dirs is not None else None)
-    if len(rebound) != len(work._targets) or any(
-            not _same_binding(before, after)
-            for before, after in zip(work._targets, rebound)):
-        raise ProviderDenial(
-            "refusing generated files whose physical identity changed before apply",
-            category="path_identity", retryable=True)
-
     encoded = {target.relative: work.files[target.relative].encode("utf-8")
                for target in work._targets}
-    parent_ids: dict[Path, tuple[int, int]] = {}
-    for target in work._targets:
-        target.physical.parent.mkdir(parents=True, exist_ok=True)
-        parent = target.physical.parent.resolve(strict=True)
-        if parent != target.physical.parent:
-            raise ProviderDenial(
-                "refusing a generated file parent whose physical identity changed",
-                category="path_identity", retryable=True)
-        info = parent.stat()
-        parent_ids[parent] = (info.st_dev, info.st_ino)
-
-    # Bind again after creating any new parent directories and before the first
-    # content byte is written.  The same resolver owns both decisions.
-    rebound = resolve_file_targets(
-        physical_root, (target.requested for target in work._targets),
+    return apply_bound_files(
+        physical_root, work._targets, encoded,
         list(work._allowed_dirs) if work._allowed_dirs is not None else None)
-    if len(rebound) != len(work._targets) or any(
-            not _same_binding(before, after)
-            for before, after in zip(work._targets, rebound)):
-        raise ProviderDenial(
-            "refusing generated files whose physical identity changed before write",
-            category="path_identity", retryable=True)
-
-    written: list[str] = []
-    for target in sorted(work._targets, key=lambda item: item.relative):
-        _write_bound_target(target, encoded[target.relative],
-                            parent_ids[target.physical.parent])
-        written.append(target.relative)
-    return written

@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from .errors import ProviderDenial
+from .file_identity import AppliedFiles, apply_file_payloads
 from .gitio import OVERSIZE_DOCUMENT_MARKER
 
 EXPORT_MARKER = "CROSSAUDIT-DOCUMENT-EXPORT"
@@ -770,8 +771,9 @@ def pdf_structure(data: bytes) -> dict:
     return {"pages": pages, "outline": outline}
 
 
-def render_export(root: Path, written: list[str], task: str) -> list[str]:
-    """Replace the temporary source with one validated binary, atomically."""
+def render_export(root: Path, written: list[str] | AppliedFiles,
+                  task: str) -> list[str] | AppliedFiles:
+    """Replace the temporary source with one authorized, validated binary."""
     request = parse_export_task(task)
     if request is None:
         return written
@@ -780,19 +782,22 @@ def render_export(root: Path, written: list[str], task: str) -> list[str]:
     source = _safe_source(written[0])
     source_path = root.joinpath(*source.parts)
     target = _target_for(source, request)
-    target_path = root.joinpath(*target.parts)
+    source_receipt = written if isinstance(written, AppliedFiles) else None
+    target_receipt: AppliedFiles | None = None
     try:
-        raw = source_path.read_bytes()
+        if source_receipt is not None:
+            source_receipt.verify()
+            raw = source_receipt.entries[0].payload
+        else:
+            raw = source_path.read_bytes()
         if not raw:
             raise ProviderDenial("document export source is empty")
         source_text = raw.decode("utf-8")
         expected = semantic_text(source_text)
         if not expected:
             raise ProviderDenial("document export source contains no readable content")
-        target_path.parent.mkdir(parents=True, exist_ok=True)
         descriptor, temporary_name = tempfile.mkstemp(
-            prefix=".crossaudit-export-", suffix=request.suffix,
-            dir=str(target_path.parent))
+            prefix="crossaudit-export-", suffix=request.suffix)
         os.close(descriptor)
         temporary = Path(temporary_name)
         try:
@@ -811,18 +816,33 @@ def render_export(root: Path, written: list[str], task: str) -> list[str]:
                     expected_terms) < 0.90:
                 raise ProviderDenial(
                     f"rendered {request.label} did not preserve enough source text")
-            os.replace(temporary, target_path)
+            target_receipt = apply_file_payloads(
+                root, {target.as_posix(): data},
+                (list(source_receipt.allowed_dirs)
+                 if source_receipt is not None
+                 and source_receipt.allowed_dirs is not None else None))
         finally:
             if temporary.exists():
                 temporary.unlink()
-        source_path.unlink()
-        return [target.as_posix()]
+        if source_receipt is not None:
+            source_receipt.rollback()
+        else:
+            source_path.unlink()
+        return target_receipt
     except ProviderDenial:
-        if source_path.is_file() and not source_path.is_symlink():
+        if target_receipt is not None:
+            target_receipt.rollback()
+        if source_receipt is not None:
+            source_receipt.rollback()
+        elif source_path.is_file() and not source_path.is_symlink():
             source_path.unlink()
         raise
     except Exception as exc:
-        if source_path.is_file() and not source_path.is_symlink():
+        if target_receipt is not None:
+            target_receipt.rollback()
+        if source_receipt is not None:
+            source_receipt.rollback()
+        elif source_path.is_file() and not source_path.is_symlink():
             source_path.unlink()
         raise ProviderDenial(
             f"local {request.label} rendering failed: {type(exc).__name__}: {exc}") from exc

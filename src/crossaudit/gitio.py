@@ -89,6 +89,23 @@ def git(*args: str, cwd: Path, check: bool = True) -> str:
     return proc.stdout.strip()
 
 
+def git_bytes(*args: str, cwd: Path, input_data: bytes = b"",
+              check: bool = True) -> bytes:
+    """Run bounded Git plumbing without decoding paths or blob contents."""
+    timeout = _git_timeout()
+    try:
+        proc = subprocess.run(["git", *args], cwd=str(cwd), input=input_data,
+                              capture_output=True, timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        raise ConfigDenial(
+            f"git {' '.join(args)} did not finish within {timeout:.0f}s and was "
+            "abandoned", cwd=str(cwd)) from exc
+    if check and proc.returncode != 0:
+        reason = proc.stderr.decode("utf-8", errors="replace").strip()[:200]
+        raise ConfigDenial(f"git {' '.join(args)} failed: {reason}", cwd=str(cwd))
+    return proc.stdout
+
+
 def is_repo(path: Path) -> bool:
     return subprocess.run(["git", "-C", str(path), "rev-parse", "--git-dir"],
                           capture_output=True).returncode == 0
