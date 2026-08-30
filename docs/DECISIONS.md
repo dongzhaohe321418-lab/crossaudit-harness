@@ -3764,3 +3764,34 @@ the honest half** — a declared exemption is auditable, an implicit one rots.
 Dispatched to build, with the same warning the watchdog earned: **the easy half
 here is the pairs that already share a serialiser**, and the watchdog came back
 `presence` and 36-uncovered precisely because the easy half was done first.
+
+## D93 — D35 has a categorical exception, not three judgement calls
+
+I have now gated an S2 three times tonight against D35, which makes S2
+schedulable rather than blocking. Each time I justified it separately. The
+three have one shape and it should be stated as a rule rather than re-argued:
+
+1. **D78** — the enumeration test I commissioned to stop fake checks reddened on
+   data injected into an already-computed set, so it could not detect the
+   derivation returning to a tautology.
+2. **The F1 fallback** — the main path stopped presenting a rewritten report as
+   audited; the fallback still did, **and asserted it.**
+3. **The condense affordance** — the guard for *containers present, contents
+   absent* was itself a **presence** check, so it passes on a live region that
+   exists and stays empty. The author reported `region_contains=asserted`; the
+   audit found `presence`.
+
+**RULE: an S2 is schedulable unless the finding is that a guard cannot detect
+the defect it guards.** That is not hardening; it is the mechanism failing
+quietly while reporting success, and its severity comes from what it hides
+rather than from what it breaks.
+
+The third case is the sharpest: **the guard against "presence is not content"
+was a presence check.** The law was named an hour earlier by the same auditor
+that found this, from three separate incidents — live regions never containing
+text, a listbox whose children carry no option role, a readiness list as one
+node with `completable=no`.
+
+`both_mechanisms=yes` holds, so the single signal contract does cover turn
+folding and path reduction. That is the part worth keeping: the next
+condensation mechanism inherits the contract instead of repeating the gap.
