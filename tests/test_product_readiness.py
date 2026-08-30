@@ -84,8 +84,11 @@ def test_static_ui_has_unique_ids_and_named_modal_and_progress_contracts():
     assert len(parser.dialogs) >= 8
     for dialog in parser.dialogs:
         assert dialog.get("aria-modal") == "true"
+        # aria-labelledby is an ID LIST, not a single id: the Decision Center
+        # is named by its flag AND its title, so a person is told what the
+        # decision is about rather than that a container opened.
         label = dialog.get("aria-labelledby")
-        assert label and label in known
+        assert label and all(part in known for part in label.split())
     for progress in parser.progress:
         assert progress.get("aria-label")
     for contract in ("function activeModal()", "function closeActiveModal(modal)",

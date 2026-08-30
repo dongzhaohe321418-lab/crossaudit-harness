@@ -237,8 +237,11 @@ def test_first_run_markers_present_and_page_stays_valid():
     known = set(parser.ids)
     for dialog in parser.dialogs:
         assert dialog.get("aria-modal") == "true"
+        # aria-labelledby is an ID LIST, not a single id: the Decision Center
+        # is named by its flag AND its title, so a person is told what the
+        # decision is about rather than that a container opened.
         label = dialog.get("aria-labelledby")
-        assert label and label in known
+        assert label and all(part in known for part in label.split())
 
 
 def test_every_new_first_run_string_has_chinese_parity():
@@ -296,7 +299,11 @@ def test_first_run_step_3_and_4_markers_present_and_unique():
     known = set(parser.ids)
     for dialog in parser.dialogs:
         assert dialog.get("aria-modal") == "true"
-        assert dialog.get("aria-labelledby") in known
+        # aria-labelledby is an ID LIST, not a single id: the Decision Center
+        # is named by its flag AND its title, so a person is told what the
+        # decision is about rather than that a container opened.
+        assert all(part in known
+                   for part in (dialog.get("aria-labelledby") or "").split())
 
 
 def test_step_3_and_4_new_strings_have_chinese_parity():
