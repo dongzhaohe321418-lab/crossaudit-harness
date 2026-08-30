@@ -538,6 +538,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     task=task, constitution=constitution, current=current,
                     complete=complete, findings=findings,
                     allowed_dirs=cfg.scope_dirs,
+                    root=cfg.root,
                     skills=skills_mod.render(in_force),
                     deterministic_contract=deterministic_contract,
                     attachments=attachments, compute_hosts=compute_hosts,
@@ -560,7 +561,12 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                         "correcting a malformed reply", str(why)[:200],
                         state=RunState.GENERATING))
                 if isinstance(outcome, gen_mod.Work):
-                    work = outcome
+                    # The physical identity boundary precedes every downstream
+                    # document check, write and Git pathspec.  ``generate`` binds
+                    # production replies before returning; this idempotent call
+                    # also protects alternate/test providers that return Work.
+                    work = gen_mod.bind_file_identities(
+                        outcome, cfg.root, cfg.scope_dirs)
                     break
                 if isinstance(outcome, gen_mod.ToolRequest):
                     total_tool_calls += 1
@@ -702,7 +708,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
 
         try:
             document_export.validate_export_work(cfg.root, work.files, task)
-            written = gen_mod.apply(work, cfg.root)
+            written = gen_mod.apply(work, cfg.root, cfg.scope_dirs)
             if document_export.parse_export_task(task) is not None:
                 emit("document_rendering", "generator",
                      "rendering final document locally", state=RunState.GENERATING)

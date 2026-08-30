@@ -319,14 +319,14 @@ def test_second_file_missing_end_is_not_dropped():
     assert work.files == {"a.md": "AAA", "b.md": "BBB"}   # both, not just the first
 
 
-def test_recovery_never_bypasses_the_path_escape_guard():
-    from crossaudit.generator import parse_work_reply
+def test_recovery_never_bypasses_the_path_escape_guard(tmp_path):
+    from crossaudit.generator import bind_file_identities, parse_work_reply
     from crossaudit.errors import ProviderDenial
     # A marker with no END that also escapes scope must still be refused when
     # validated — recovery reads the path only from the marker, never invents it.
     work = parse_work_reply('<<<CROSSAUDIT-OUTPUT-FILE path="../evil.md">>>\nx')
     with pytest.raises(ProviderDenial, match="escapes the project"):
-        work.validate(allowed_dirs=["experiments"])
+        bind_file_identities(work, tmp_path, ["experiments"])
 
 
 def test_conflicting_duplicate_still_fails_closed_after_recovery():
@@ -335,5 +335,5 @@ def test_conflicting_duplicate_still_fails_closed_after_recovery():
     reply = ('<<<CROSSAUDIT-OUTPUT-FILE path="a.md">>>\nONE\n'
              '<<<END-CROSSAUDIT-OUTPUT-FILE>>>\n'
              '<<<CROSSAUDIT-OUTPUT-FILE path="a.md">>>\nTWO')
-    with pytest.raises(ProviderDenial, match="conflicting duplicate"):
+    with pytest.raises(ProviderDenial, match="duplicate file request"):
         parse_work_reply(reply)

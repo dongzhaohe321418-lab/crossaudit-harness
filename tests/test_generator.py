@@ -59,12 +59,12 @@ NOTES: ready
     assert work.notes == "ready"
 
 
-def test_identical_duplicate_file_blocks_collapse_to_one_unambiguous_write():
+def test_identical_duplicate_file_blocks_are_two_requests_and_refused():
     block = '''<<<CROSSAUDIT-OUTPUT-FILE path="work/review.md">>>
 # Review
 <<<END-CROSSAUDIT-OUTPUT-FILE>>>'''
-    work = gen.parse_work_reply("SUMMARY: one file\n" + block + "\n" + block)
-    assert work.files == {"work/review.md": "# Review"}
+    with pytest.raises(ProviderDenial, match="duplicate file request"):
+        gen.parse_work_reply("SUMMARY: one file\n" + block + "\n" + block)
 
 
 def test_conflicting_duplicate_file_blocks_are_refused():
@@ -75,7 +75,7 @@ first
 <<<CROSSAUDIT-OUTPUT-FILE path="work/review.md">>>
 second
 <<<END-CROSSAUDIT-OUTPUT-FILE>>>'''
-    with pytest.raises(ProviderDenial, match="conflicting duplicate"):
+    with pytest.raises(ProviderDenial, match="duplicate file request"):
         gen.parse_work_reply(reply)
 
 
