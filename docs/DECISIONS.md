@@ -3566,3 +3566,50 @@ both do it — so it was correctly left out of the changed/unchanged counts, and
 flagged as *"the kind of thing the seam sweep would catch."* Present names and
 an unusable structure is the accessibility form of correct-at-the-producer,
 wrong-at-the-consumer.
+
+## D88 — A title that fits a concept is not evidence of who wrote it
+
+Two corrections in one turn, both mine, both sent to the two engineers who were
+working from them.
+
+**I attributed `f6ad8c0` to the wrong engineer.** The title — *"Make silence an
+event instead of an absence"* — matched the class we had been discussing, so I
+said it was the UI engineer's affordance. It is the i18n engineer's
+**watchdog**, on `fix/talk-cited-rules`, containing `runtime/watchdog.py`, its
+tests and a findings doc. I never checked the author or the diff.
+
+**And my "zero matches in integration" was a narrow-grep error.** Three phrases
+in one file, and I reported an absence. The context-condensation notice **is**
+in `v5-redesign` — `context_condensed` handled at `page.py:5489`, `.condense-
+paths` styling, a ZH catalogue entry in `progress.py`. That is the A2 work,
+merged long ago. The design engineer's `affordance_in=integration` was right
+and my check was wrong.
+
+**D70 is the rule I wrote after praising someone else's false absence**: a
+non-existence claim is exactly as checkable as any other, and more tempting to
+accept because it closes a question. I then made one from three search terms.
+
+What is actually true, derived rather than remembered:
+- The **condensation notice** (which paths were reduced) is in integration.
+- The **"+N earlier turns" affordance** (how many turns were folded) is a
+  different thing and is genuinely absent; the design engineer's original
+  finding stands and the UI engineer is building it producer-side.
+- Collapsing the two into one question was the error.
+
+Neither engineer's work was affected — I corrected the record, not the work.
+And one thing follows for U3: the three states established as distinguishable
+may be distinguishable **for path reduction** and not yet **for turn folding**,
+which are the two halves of one class with a signal on only one.
+
+### The watchdog is viable
+
+`actions=enumerated, explanation=content, bound=relative, runs_in=product,
+mutation_names_action=yes, verdict=viable.`
+
+Every one of the four hard questions answered in the direction that makes it
+work — and the load-bearing one is **`runs_in=product`**. A watchdog that only
+runs in tests guards the tests. Running in the product is what turns silence
+from an absence into a detectable event, which is the entire point: the class
+that produced this workstream's founding defect — *a send that failed while the
+interface showed nothing* — is the one class no suite and no structural sweep
+can reach.
