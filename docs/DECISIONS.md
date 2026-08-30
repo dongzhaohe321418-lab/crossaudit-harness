@@ -3264,3 +3264,36 @@ can hold any far-side property at all. Six unheld properties are waiting on it.
 RULE: a suite's verdict is a claim about the seam it stops at. **When quoting a
 green suite as evidence for a user-facing property, name the seam** — and if
 the seam is not the person, the suite is not the evidence.
+
+## D81 — Three conditions measured on the artifact for the first time
+
+The recorded-provider fixture, pointed at the packaged core. U6 closed.
+
+- **Condition 3** — S2, S4, S5 and S6 **observed on the artifact.** Those four
+  have ended every sweep for weeks as "needs a funded run."
+- **Condition 5** — frozen GUI parity **measured: 261 vs 261 nodes, 0 unnamed,
+  0 errors, both locales.** This is the condition the D28 assessment singled
+  out with *"CLI reachability and source parity do not prove frozen GUI
+  parity"*; it is now a measurement rather than an inference.
+- **Condition 4, partial** — 0 unnamed of 261 computed accessible names, plus
+  **live-region content after an action** rather than a count of regions,
+  which is the security auditor's rule applied.
+
+Unreached and still named: timing/retry/streaming/cancellation; S5
+stub-and-fold passes; long-conversation turn truncation; S2 in-chat continue;
+live-model behaviour; app-mode onboarding and hub path.
+
+**Framing, held to my own standard: these are measured, not shown.** The
+numbers are the design engineer's and the fixture is under cross-vendor audit
+right now. A condition moves to *shown* when an independent party reproduces
+it — which is the same rule that made me refuse to carry an audit across a
+rebuild (D67) and refuse a merge on a superseded SHA.
+
+**And one item in the unreached list is a finding, not a limit**:
+`FINDING-S4-earlier-turns.md` — the "+N earlier turns" affordance is absent
+from `page.py`, so context condensation is silent to the user. Recorded
+separately, because an unreached list is read as *not yet observed* and this
+one is *observed to be missing*.
+
+This is the first movement on the bar since the assessment returned shown 0/7,
+and it came from the layer D80 identified as missing — not from another merge.
