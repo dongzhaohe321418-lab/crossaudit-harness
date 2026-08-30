@@ -2800,3 +2800,53 @@ precisely the assumption I would refuse from anyone else. Faster, though: the
 auditor knows the four routes and the exact table to reproduce, pin / auditor
 bytes / receipt hash / receipt commit agreeing on the cited object in all four
 rows rather than only the two pinned ones.
+
+## D68 — The disk-vs-cited map: 15 sites, 3 wrong, 5 correct by accident
+
+The sweep of every place in `src/` that reads state which could differ between
+*what is on disk now* and *what was committed or cited*:
+
+**Correct (7)** — receipt verifier constitution and report readers use cited
+Git blobs; manifest checks use audited-tree blobs; `ls-tree` / `diff-tree` path
+consumers are newline-safe; controller cycle pins use `StateStore`; committed
+`TASK` materialisation uses the cited tree; the auditor prompt receives pinned
+constitution bytes.
+
+**Wrong (3)** — the console rule count reads the working-tree constitution
+(known, `server.py:768`); **the console streams read working-tree reports**
+(new); **`cli.talk` reads working-tree rules when amending a constitution
+despite commit-oriented claims** (new — a false claim living in code rather
+than in copy).
+
+**Correct by accident (5)** — doctor dirty-state checks, project
+settings/status reads, skill management reads, demo rendering, and reproduction
+environment checks *are* intentionally about current local state today, **but
+have no general source-vs-cited guard if later reused for receipt claims.**
+
+That third category is the one worth having and it is why I asked for the map
+rather than a fix list: those five are right for a reason that is not written
+down anywhere, so the next refactor that reuses them for a receipt claim
+breaks silently and nothing notices.
+
+**Observable to users: 11 sites. Caught by anything today: 3** — constitution
+bytes, report bytes, evidence-chain projection. Eight observable sites have no
+guard.
+
+### Mint render, second cross-vendor audit: DO NOT MERGE
+
+`renders_executed=no`, `reverted_stays_green=yes`, and **`over_suppression=
+found`** — the direction I asked to be checked because fail-closed is the easy
+half and over-suppression would be the same defect pointed the other way.
+
+Two things the auditor did beyond its brief:
+
+**It reversed the earlier diagnosis.** The first audit found the server right
+and the render wrong. This one: *"the fix for F2 is server-side — change the
+`ESCALATION_REMEDIATIONS` fallback for unknown kinds; the client filter is
+correct and merely has nothing to filter."*
+
+**And it defended the author.** *"The author's `seen_red=no` was accurate, not
+evasive: `record_build_escalation()` genuinely has no `remediation_facts`
+parameter at this SHA."* It then rebuilt the harness against the current
+signature — ~90 seconds, no credentials, **checked in** — *"so the cost of
+actually holding this property is now measured rather than estimated."*
