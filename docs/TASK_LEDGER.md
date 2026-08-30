@@ -7,7 +7,9 @@ Agents update their own row's state; the reviewer appends the review verdict.
 |---|---|---|---|---|---|
 | A1 | MCP add-dialog redesign + settings navigation | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | reviewed; S6/S7 verified by the orchestrator |
 | A1-fix | Reopening a saved stdio server was refused (codex S1) | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | superseded — shipped an S0, see A1-fix-2 |
-| A1-fix-2 | Consent bypass in A1-fix (codex S0) + legacy-argument break (S1) | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | fixed, 18/18 attack cases, suite green — **awaiting independent review** |
+| A1-fix-2 | Consent bypass in A1-fix (codex S0) + legacy-argument break (S1) | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | reviewed CLEAN, merged in 47863b6 |
+| A2 | page.py consumer for the `context_condensed` stream kind | Agent A (Claude Code) | auditor (codex) + design | `agentA/a2-condensation-consumer` | audit findings closed — **awaiting re-review** |
+| S2 | Stream generator output (contract below) | both — split per contract | each other | _(not started)_ | **contract awaiting codex review; no implementation** |
 | B1 | Transparent context-condensation run events | Agent B (Codex) | Agent A (Claude Code) | `agentB/context-condensation-events` | in progress |
 
 ---
@@ -166,28 +168,59 @@ edit it.
 
 ## Cross-boundary requests
 
-### A→B / B→A: Chinese parity for the B1 condensation event
+### ~~A→B / B→A: Chinese parity for the B1 condensation event~~ — SUPERSEDED
 
-B1 acceptance item 3 requires Chinese i18n parity for the new run-stream
-condensation notice. The locale dictionary (`ZH`) and its regex fallbacks
-(`ZH_PATTERNS`) live in `console/page.py`, which Agent A owns this round, and
-`streams.py` / `progress.py` cannot translate on their own — the page localises
-by exact text-node match against that dictionary.
+**Closed. Do not act on this request; it describes a design that was replaced.**
 
-**Resolution (sequential handoff, AGENTS.md §3.1):** Agent B lands its slice with
-the English strings and lists the exact user-visible strings below; Agent A adds
-the matching `ZH` entries to `page.py` in the same round. A generated string
-(one that interpolates a count or a filename) needs a `ZH_PATTERNS` regex rather
-than a dictionary key — flag which kind each string is.
+The original ask was for Agent B to list its user-visible strings so Agent A
+could add matching `ZH` entries to `console/page.py`, because the page localised
+by exact text-node match against a dictionary. Agent B solved the problem better
+instead: the run event now carries its own translations on the wire as
+`text_i18n` / `detail_i18n` / `summary_i18n`, each `{en, zh}`
+(`console/progress.py`). The page selects the active locale from those fields
+and never re-translates prose, so there is **no string table to fill in and no
+`ZH`/`ZH_PATTERNS` entry to add** for the notice copy.
 
-| String (exact English) | Kind | ZH added |
-|---|---|---|
-| _(Agent B to fill in)_ | key / pattern | ☐ |
+What that leaves for the page, and what A2 actually did (`console/page.py`):
 
-Until those entries exist the notice will render in English under 中文, which
-would fail the §7 checklist item "no raw English leaking".
+- select on the active locale with a fallback to the plain `text` / `detail` /
+  `summary` field, via a `localeText` helper;
+- dictionary-translate only the handful of words the *page itself* adds around
+  the notice (its label and the word "round"), which are page copy, not event
+  copy;
+- re-render on a locale change, because wire-localised copy is chosen at render
+  time and the text-node translator cannot reach it by design.
+
+**How this was found and why the record matters.** The stale ask survived two
+rounds because it lived on a branch neither agent could edit from where they
+were working: `docs/TASK_LEDGER.md` existed only on `agentA/mcp-dialog-settings-nav`,
+so Agent B could not strike it without an add/add conflict, and Agent A could not
+strike it from the A2 branch for the same reason. It was filed as **S3-4** in the
+Agent B review, deliberately left open rather than papered over, and closed here
+once the Agent A merge put the file on `v5-redesign`. A reader arriving at this
+section now meets the correction instead of the stale instruction.
 
 ---
+
+### Open owner decision: a command approval binds a path, not the bytes at it
+
+Recorded here because it is referenced from the A1 history and the wording there
+was too strong. **Not decided; nobody builds for it or works around it.**
+
+An approved local MCP command is stored and re-sent as `{command, args}`. That
+approval therefore binds *a path plus its arguments*, not the contents of the
+executable at that path.
+
+**Correction to the A1-fix-2 commit message.** That commit said `mcp.py`
+"re-resolves and re-checks the executable at launch". Codex corrected this in
+review and the correction stands: `_safe_command()` re-resolves during
+**registration**, immediately before the connection probe — but a later
+agent-call session launches the **stored absolute path directly**, without
+re-resolving or hashing it. The gap between approval and execution is therefore
+wider than that commit implied. Flagging the gap was right; the reassurance
+attached to it was not, and this entry is the accurate statement.
+
+
 
 ## A1 — evidence recorded by the author (not a review)
 
