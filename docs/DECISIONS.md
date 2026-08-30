@@ -2482,3 +2482,66 @@ with the current controller API (`record_build_escalation()` no longer accepts
 than asserting one** — the first time tonight. The incompatibility is also a
 finding in its own right: the auditor's harness was written against an older
 tree.
+
+## D62 — The gap is not quality
+
+The design engineer's assessment of what stands between this build and a
+product a person can be handed. Its closing line is the finding:
+
+> **The gap is not quality. It is that the product currently asks to be
+> trusted about the one thing it will not show you.**
+
+That is CrossAudit's own premise stated as a defect. The product is "an
+independent auditor judges against a known standard", and a GUI user cannot
+see the standard.
+
+**Blockers, all re-driven on the 20:35 build:**
+- **Skip permanently destroys the demo** — no route back; every button and
+  link searched. New, and the worst of them.
+- Provider key fields have no accessible name — but *"Reveal the key you just
+  typed"* on the same stage **is** properly named, so the pattern exists and
+  was not applied. **A lapse rather than a gap**, which is a different fix.
+- The CLI is reachable only by a path nothing mentions.
+- The front door never renders for a bundle user.
+
+**False claims:**
+- Settings › Audit says *"The constitution is edited inside each project."*
+  There is no in-project editor or viewer on the GUI path. **The one screen
+  named for the thing sends you somewhere that isn't there.**
+- `# Constitution — <PROJECT>` still unsubstituted in the constitution every
+  GUI user is handed, while the demo's is correct — a **detector**, since
+  substitution happens on the path that renders.
+- The git-identity claim marked **partly driven**: observed in the 18:18
+  bundle in both languages; two queries on the 20:45 build returned nothing,
+  which may mean the copy changed or the query missed collapsed content. *The
+  uncertainty is recorded rather than the convenient reading.*
+
+Six absences, four driven and two reasoned, with the reasoned ones marked
+rather than padding the driven list: no pre-run cost indication on the path a
+person takes to start work; no way to see what changed between builds.
+
+And what is measured-good, so the list is fair: zero false verification ticks
+across 32 cells, zero overflow, zero JS errors, Chinese onboarding with no
+Latin at all on the welcome screen, the demo's honesty banner with full
+parity, and D31 closed in the artifact.
+
+### D61 resolved: build narrow, record the rest as not closable
+
+The engineer proposed, and I approved: a **PATH-identity row in `app_doctor`**
+— the one place our code runs in the failure state, since the person opened
+the app — plus an **install-time line** that a previously pip-installed
+`crossaudit` will shadow it. And **recorded as not closable**: anyone who only
+types `crossaudit` gets the old program and no change of ours reaches them.
+
+Its reason for proposing that shape: *"I'd rather that limit be written down
+than have the slice read as closing a case that stays open — which is exactly
+what my `--version` change would have done if the audit hadn't caught it."*
+
+Two constraints I set: do not execute the foreign binary if the mismatch can
+be established from the resolved path and package metadata, because running a
+program we did not build in the user's environment is a line to cross
+deliberately or not at all; and the row must be **honest when it cannot tell**
+— "there is another `crossaudit` on your PATH; I could not determine its
+version" is a good row, and a confident wrong answer is worse here than
+anywhere else in the product, since telling someone which program is answering
+them is the row's entire purpose.
