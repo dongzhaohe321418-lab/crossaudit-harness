@@ -3516,3 +3516,53 @@ RULE: four sweeps in one night is enough to start mistaking the map for the
 territory. **Asking the mapmaker what its maps exclude is cheap and the answer
 was six missing instruments** — a short list I trust rather than a long one I
 do not.
+
+## D87 — "My instrument was the defect four times"
+
+Packaged walkthrough R2, against a build carrying six merges, with the previous
+artifact retained for comparison. **10 actions, 10 completed, 0 blocked, both
+locales.** And the line that makes the rest of it usable:
+
+> **My instrument was the defect four times, all recorded in §7** — the worst
+> being that all 16 cells shared one HOME, so the first consumed the onboarding
+> and the rest photographed the post-onboarding console. R1 captured one screen
+> twice; **R2 would have captured the second screen sixteen times and called it
+> first contact.**
+
+Sixteen cells of fabricated first-contact evidence, caught by its own operator
+and published in its own report. Fifth instrument artifact self-caught today,
+and the largest.
+
+**Shown**: no silent failure (cond2); computed names with 0 unnamed (cond4);
+**the PATH-identity row rendered and non-executing**; the install-identity row;
+constitution-drift wording. The PATH row matters because the same auditor had
+drawn the limit last time — the R1 walkthrough ran on a clean HOME *"the exact
+state where `path_identity()` is designed to say nothing."* It created that
+state this time and a person sees the text.
+
+**Corrected**: `cond5-chinese-first-contact-NOT-shown-r1-corrected`. It
+withdrew its own earlier position. That independently confirms the withdrawal
+I made in D83 — condition 5 was never shown, and two separate routes reached
+that conclusion.
+
+### Six merges, three visible changes
+
+`vs_previous = changed:3, unchanged:16`, and **four of the six merges are
+unobserved at the surface**: streaming, frozen entry, verifier re-derivation,
+cycle integrity.
+
+That is the correct outcome for audit-core work and it needs saying plainly:
+those merges changed *what is true*, not *what is displayed*. The distinction
+matters because **F7 was the same situation with a claim attached** — real
+transport, real numbers, and a merge message asserting a visible live draft.
+Invisible work is fine. Invisible work described as visible is the defect.
+
+### A new finding it flagged outside its brief
+
+**The readiness list renders as a single text node in the accessible tree.**
+Row names are all computed and present, but a screen-reader user gets one
+continuous blob rather than a list of items. Not a regression — old and new
+both do it — so it was correctly left out of the changed/unchanged counts, and
+flagged as *"the kind of thing the seam sweep would catch."* Present names and
+an unusable structure is the accessibility form of correct-at-the-producer,
+wrong-at-the-consumer.
