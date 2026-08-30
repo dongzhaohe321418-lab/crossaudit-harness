@@ -1589,3 +1589,43 @@ D39 now binds agents as well as me — report the count from the committed
 SHA, in a detached checkout, or do not report one.
 
 Verifying the count paid for itself the first time it was asked for.
+
+## D43 — A claim contingent on work in flight is removed, never hedged
+
+SPEC-12 needs a sentence about what happens between cycles that is only true
+once the constitution pin is enforced where it is *consumed* (D41). The
+design engineer wrote it as a conditional: if the verifier gaps do not
+close, the line **comes out** rather than gets softened.
+
+That is the rule. A hedged claim is how "technically kept and substantively
+broken" happens — which is the same engineer's grade for the current draft
+behaviour, where the promise that the reviewed text governs is honoured in
+form while the bytes are generated after the review.
+
+RULE: when a user-facing claim's truth depends on work not yet landed, ship
+it whole or not at all. Softening it into something defensible is how a false
+sentence survives review.
+
+Status: I cleared the sentence on D36 having landed. The pin is proved where
+it is set and not yet where it is consumed. If D41 does not close, the line
+comes out — it will not ship on a stale clearance from me.
+
+### Two guard-construction rules from the same spec pass
+
+- **Compare against the rendered expanded text, not the variable the renderer
+  was handed.** A guard fed the renderer's own input proves only that the
+  renderer agrees with itself. Reported as having failed that way four times
+  this week, and it is D42's shape from the client side.
+- **Compute from the accessible name, not from the presence of an attribute.**
+  `aria-labelledby` pointing at a missing id yields an empty name: passes an
+  attribute check, fails a person. Its i18n twin — assert on the pattern
+  catalogue, not a fixed string, or every provider whose name is substituted
+  falls back to English.
+
+### Dispatch correction
+
+The same bundle drive incidentally observed that `doctor` **already** reports
+`install: frozen-app` with a code digest. D40 was briefed as if that were
+absent, so that work is narrower than I specified and the engineer has been
+told to shrink it rather than build to my brief. Second time today an agent's
+side-note corrected a dispatch of mine.
