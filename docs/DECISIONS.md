@@ -2134,3 +2134,54 @@ identical once the second half is dropped. RULE: report collected total,
 passed, and failed — never the passed number alone. And an unexpected
 *provider request* on a deletion path is not obviously a flake; it is being
 diagnosed rather than re-run.
+
+## D55 — `app_doctor` omits the half the product exists for
+
+I asked whether `app_doctor` was missing one check or systematically thinner.
+The answer was neither, and it is a product finding rather than a check one:
+
+> `cmd_doctor` asks "is this project's audit trustworthy?"; `app_doctor` asks
+> "is this Mac able to run the app?" Six GUI rows have no CLI twin, so it
+> isn't a subset. **What it omits is the entire audit-integrity half — the
+> half this product exists for.** The GUI can tell someone their Git is too
+> old and cannot tell them their audit is running against rules they've never
+> seen, on an install that may verify but never admit.
+
+The two doctors are not one check apart. They answer different questions, and
+only one of them asks the question CrossAudit is for. A parity **docstring**
+has been asserting otherwise for free — D46's shape (a claim outliving the
+code it describes) living in documentation instead of a contract.
+
+**F3 (S2), found while chasing why the GUI said 0.** `console/server.py:768`
+computes the rule count as `const.read_text().count("\n### ")` on the working
+tree. Two independent defects in one line: it reads the wrong file, and
+`count("\n### ")` **cannot see a heading at byte 0**, so any constitution that
+begins with a rule is under-reported by one, silently and permanently. Per the
+earlier GUI-honesty audit, that integer is *the entire account of the standard
+a GUI user gets.* The "rules = 4" I accepted as correct was correct only
+because that constitution happened not to start with a rule.
+
+Closure, adopted as specified, and the third step is the one that matters:
+1. move the helper to a shared module;
+2. give the constitution row three states (missing / drifted / ready) carrying
+   the CLI's **exact sentence**, so both doctors say the same thing in the
+   same words;
+3. **a test that enumerates `cmd_doctor`'s check names and asserts each is
+   either present in `app_doctor.collect()` or on a named, recorded exclusion
+   list.**
+
+Step three turns the design-versus-omission distinction — the thing that made
+the pin sweep worth asking for — into an executable guard. Steps one and two
+close today's gap; step three is why we would not be back here in a month.
+
+`2017227` stays blocked. The auditor's own note on the cost: *"the block is
+cheap to clear: there's no design decision to overturn here, only an omission
+behind a docstring that claimed otherwise."*
+
+### Team change
+
+Added a second claude auditor (`auditor2`, wA). Cross-vendor review requires a
+claude auditor for codex-authored work, and three audit-core branches
+(`receipt-derives-remaining`, `mint-render`, plus this) were queued behind one.
+The backlog was real and recurring, not a reason to grow the team for its own
+sake.
