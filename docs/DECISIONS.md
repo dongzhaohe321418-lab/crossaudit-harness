@@ -1514,3 +1514,39 @@ plausibility came from a field name.
 Fix scope, accordingly narrow: make install mode and path visible where a
 person meets a mismatch. Not a PATH install — D31 refused that on consent
 grounds and that still holds.
+
+## D41 — `verify` confirms 7 of 15 receipt claims; the gaps are in the verifier
+
+The codex sweep enumerated every handoff on the audit and run paths where a
+value reaches a consumer: **15 paths, 7 checked against source-of-truth
+bytes, 8 gaps.** The gaps are not in production. They are in the *verifier*.
+
+The receipt is a set of claims, and `crossaudit verify` re-derives fewer than
+half of them from the object they cite. The four that let a false receipt
+pass today:
+
+- **#13 constitution** — the verifier hashes the *current working-tree* file,
+  not `<constitution_commit>:<path>`. So the D36 pin is enforced where it is
+  produced and not where it is consumed, and a receipt could cite a commit
+  that does not exist.
+- **#14 cycle record** — verdict immutability and the constitution pin are
+  guaranteed in the controller and proved nowhere at verify time.
+- **#12/#15 report bytes** — `report_commit` ancestry is checked; the bytes
+  are read from the working tree, so a report can be edited after the fact.
+- **#8 evidence ledger** — `evidence_view` projects entries into the auditor
+  prompt without verifying the hash chain; the chain is checked only later,
+  when a bound receipt exists. This one is the auditor's *input*.
+
+This is the same shape as every defect this cycle — correct where stored,
+unchecked where consumed — but at the product's centre rather than its edge.
+"One replayable ledger" is the summary line; a ledger that certifies claims
+it does not re-derive is certifying certification.
+
+Dispatched as `audit/verifier-rederives-claims`, ranked by whether a false
+receipt passes. #9/#10/#11 (DCL digest, checks list, skills manifest) are
+real, queued, and explicitly excluded from that branch so their absence is
+not read as closure.
+
+The sweep is trustworthy *because* it refused to count the constitution path
+as fixed on the strength of the creation-side byte matrix. A sweep that
+rounds toward "covered" is worth nothing.
