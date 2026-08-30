@@ -458,6 +458,24 @@ TRACKER.subscribe(_notify_progress)
 usage.subscribe(STREAM_CHANGES.notify)
 
 
+def _generation_sse_frame(run_id: str, event: dict) -> bytes:
+    """One named, incremental SSE frame; never part of a state snapshot."""
+    payload = json.dumps(
+        {**event, "run_id": run_id}, sort_keys=True,
+        separators=(",", ":"), ensure_ascii=False)
+    return (f"event: generation_chunk\nid: {int(event['event_id'])}\n"
+            f"data: {payload}\n\n").encode()
+
+
+def _same_progress_fact(left: dict | None, right: dict | None) -> bool:
+    """Whether two projections differ only in clocks renewed by chunk writes."""
+    if not isinstance(left, dict) or not isinstance(right, dict):
+        return left is right
+    keys = ("run_id", "state", "finished", "outcome", "error", "queued",
+            "last_event_id", "waiting_reason")
+    return all(left.get(key) == right.get(key) for key in keys)
+
+
 def _ordered_cycles(state: dict, commit_chats: dict[str, str] | None = None) -> list[dict]:
     """Project controller cycles oldest first, following recorded event time.
 
@@ -1251,7 +1269,14 @@ def make_handler(cfg: Config, token: str, touch) -> type:
             change_version = STREAM_CHANGES.current()
             progress_version = PROGRESS_CHANGES.current()
             last_state = None
+            last_progress_refresh = 0.0
             snapshot_cache: dict = {}
+            stream_journal = RunJournal(journal_path(cfg))
+            try:
+                generation_cursor = max(
+                    0, int(self.headers.get("Last-Event-ID", "0") or 0))
+            except (TypeError, ValueError):
+                generation_cursor = 0
             self.server.stream_opened()
             try:
                 while not self.server.stop_event.is_set():
@@ -1269,6 +1294,18 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                         # git/glob/YAML derivation runs only when a cheap
                         # fingerprint shows something actually changed (§32).
                         state = _memoized_snapshot(cfg, snapshot_cache)
+                    # Chunk appends renew heartbeat/lease timestamps in the run
+                    # row. Keep those clock-only changes from turning the whole
+                    # state payload into a second, growing stream; the named SSE
+                    # frames below are the only transport for draft text.
+                    progress_clock = time.monotonic()
+                    if (last_state is not None and _same_progress_fact(
+                            last_state.get("progress"), state.get("progress"))
+                            and progress_clock - last_progress_refresh < 1.0):
+                        state = dict(state)
+                        state["progress"] = last_state.get("progress")
+                    else:
+                        last_progress_refresh = progress_clock
                     progress_version = current_progress_version
                     last_state = state
                     payload = json.dumps(state, sort_keys=True)
@@ -1278,6 +1315,27 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                         self.wfile.write(f"data: {payload}\n\n".encode())
                         self.wfile.flush()
                         last_digest, last_beat = digest, now
+                        touch()
+                    progress = state.get("progress")
+                    run_id = (str(progress.get("run_id") or "")
+                              if isinstance(progress, dict) and
+                              not progress.get("finished") else "")
+                    delivered = False
+                    if run_id:
+                        while True:
+                            chunk_rows = stream_journal.generation_events(
+                                run_id, after_sequence=generation_cursor)
+                            if not chunk_rows:
+                                break
+                            for event in chunk_rows:
+                                self.wfile.write(_generation_sse_frame(run_id, event))
+                                self.wfile.flush()
+                                generation_cursor = int(event["event_id"])
+                                delivered = True
+                            if len(chunk_rows) < 256:
+                                break
+                    if delivered:
+                        last_beat = time.monotonic()
                         touch()
                     elif now - last_beat > STREAM_HEARTBEAT_S:
                         self.wfile.write(b": keepalive\n\n")

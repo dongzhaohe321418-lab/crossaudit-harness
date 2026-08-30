@@ -792,6 +792,62 @@ def test_live_stream_pushes_progress_without_waiting_for_the_poll(console,
     assert latency < 0.25, f"live update took {latency:.3f}s"
 
 
+def test_live_stream_delivers_generation_chunks_as_named_incremental_events(
+        console):
+    """Draft bytes travel once outside the ordinary state snapshot."""
+    from crossaudit.config import load
+    from crossaudit.console.progress import TRACKER
+    from crossaudit.runtime import RunEvent, RunJournal, RunState, journal_path
+
+    stream_url = console.replace("/?t=", "/api/stream?t=")
+    state_url = console.replace("/?t=", "/api/state?t=")
+    _status, raw, _headers = fetch(state_url)
+    cfg = load(Path(json.loads(raw)["root"]) / "crossaudit.yml")
+    journal = RunJournal(journal_path(cfg))
+    sentinel = "SSE-DRAFT-SENTINEL"
+
+    with urllib.request.urlopen(stream_url, timeout=5) as response:
+        assert response.readline().startswith(b"data: ")
+        assert response.readline() == b"\n"
+        run_id = journal.start("stream this")
+        first_id = journal.append(run_id, RunEvent(
+            kind="generation_chunk", actor="generator", text=sentinel,
+            state=RunState.GENERATING,
+            stream={"id": "attempt", "seq": 0, "done": False}))
+        second_id = journal.append(run_id, RunEvent(
+            kind="generation_chunk", actor="generator", text=" final",
+            state=RunState.GENERATING,
+            stream={"id": "attempt", "seq": 1, "done": True,
+                    "outcome": "complete"}))
+        TRACKER.notify()
+
+        named = False
+        payloads = []
+        ordinary_frames = []
+        for _ in range(30):
+            line = response.readline()
+            if line == b"event: generation_chunk\n":
+                named = True
+            elif line.startswith(b"data: "):
+                body = line[len(b"data: "):].strip()
+                if named:
+                    payloads.append(json.loads(body))
+                    named = False
+                    if len(payloads) == 2:
+                        break
+                else:
+                    ordinary_frames.append(body)
+
+    journal.finish(run_id, "passed")
+    TRACKER.notify()
+    assert [payload["event_id"] for payload in payloads] == [first_id, second_id]
+    assert [payload["run_id"] for payload in payloads] == [run_id, run_id]
+    assert [payload["text"] for payload in payloads] == [sentinel, " final"]
+    assert [payload["stream"]["seq"] for payload in payloads] == [0, 1]
+    assert payloads[-1]["stream"]["outcome"] == "complete"
+    assert all(sentinel.encode() not in frame for frame in ordinary_frames)
+
+
 def test_external_process_fallback_is_subsecond():
     from crossaudit.console import server as server_mod
 

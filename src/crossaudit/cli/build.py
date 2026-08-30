@@ -410,6 +410,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
 
     def emit(kind: str, actor: str, text: str, detail: str = "", *,
              state: RunState | None = None, waiting_reason: dict | None = None,
+             stream: dict | None = None,
              ) -> None:
         nonlocal operational_state
         operational_state = state or operational_state
@@ -417,7 +418,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             on_event(RunEvent(
                 kind=kind, actor=actor, text=text, detail=detail,
                 state=operational_state, round_no=current_round,
-                round_limit=cfg.max_rounds, waiting_reason=waiting_reason))
+                round_limit=cfg.max_rounds, waiting_reason=waiting_reason,
+                stream=stream))
 
     def context_notice(text: str, detail: str = "") -> None:
         """Emit each distinct shaping fact once, without flooding later turns."""
@@ -483,9 +485,17 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         emit("provider_recovery", actor, text, detail,
              state=RunState.GENERATING)
 
+    def generation_chunk(text: str, stream: dict) -> None:
+        """Bridge provider-coalesced text into the typed operational stream."""
+        emit("generation_chunk", "generator", text,
+             state=RunState.GENERATING, stream=stream)
+
     # The resilience layer renews the lease before each retry attempt through
-    # the same attribute convention the run shell uses.
+    # the same attribute convention the run shell uses. Its streaming adapter
+    # reads ``on_chunk`` from this callback, keeping existing provider-event
+    # call signatures backward compatible for adapters without streaming.
     generator_provider_event.heartbeat = heartbeat
+    generator_provider_event.on_chunk = generation_chunk
 
     if chat_id and not re.fullmatch(r"(?:history|[a-f0-9]{16})", chat_id):
         raise ConfigDenial("chat id is invalid")
@@ -1039,6 +1049,12 @@ def cmd_build(args) -> int:
 
         def on_event(event: RunEvent) -> None:
             emit(event)
+            # The source-mode console consumes chunks through named SSE events.
+            # A raw edit envelope on stdout has no live-draft affordance yet, so
+            # the CLI keeps its existing phase narration rather than presenting
+            # unaudited structured bytes as a finished-looking result.
+            if event.kind == "generation_chunk":
+                return
             if event.kind == "round_started":
                 label = f"round {event.round_no} of {event.round_limit}"
                 print(f"\n  ── {label} " + "─" * max(0, 44 - len(label)))

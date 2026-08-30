@@ -32,9 +32,10 @@ DATABASE_NAME = "runtime.sqlite3"
 
 #: Databases from earlier builds report lower numbers; version 2 added the
 #: liveness columns (heartbeat_at, lease_expires_at, waiting_reason), version
-#: 3 the owner identity token. The number only rises; opening an old file
+#: 3 the owner identity token, version 4 per-event stream metadata. The number
+#: only rises; opening an old file
 #: migrates additively and never rewrites rows.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 #: A worker renews its lease at every journal write, at every provider-call
 #: boundary, and before each resilience retry attempt. A single clean
@@ -300,7 +301,8 @@ class RunJournal:
                     detail TEXT NOT NULL,
                     state TEXT NOT NULL,
                     round_no INTEGER NOT NULL DEFAULT 0,
-                    round_limit INTEGER NOT NULL DEFAULT 0
+                    round_limit INTEGER NOT NULL DEFAULT 0,
+                    stream_json TEXT
                 );
                 CREATE INDEX IF NOT EXISTS run_events_run
                     ON run_events(run_id, sequence);
@@ -327,6 +329,8 @@ class RunJournal:
                 db.execute(
                     "ALTER TABLE run_events ADD COLUMN round_limit INTEGER "
                     "NOT NULL DEFAULT 0")
+            if "stream_json" not in columns:
+                db.execute("ALTER TABLE run_events ADD COLUMN stream_json TEXT")
             run_columns = {row[1] for row in db.execute("PRAGMA table_info(runs)")}
             added_liveness = "lease_expires_at" not in run_columns
             for name, kind in (("heartbeat_at", "REAL"),
@@ -371,14 +375,65 @@ class RunJournal:
     def _insert_event(db: sqlite3.Connection, run_id: str, *, kind: str,
                       actor: str, text: str, detail: str, state: RunState,
                       at: float, round_no: int = 0,
-                      round_limit: int = 0) -> int:
+                      round_limit: int = 0,
+                      stream: dict | None = None) -> int:
+        # Ordinary narration remains compact. Generation chunks have already
+        # passed RunEvent's strict 8 KiB bound and must stay lossless: truncating
+        # them would silently corrupt the visible draft while seq stayed valid.
+        stored_text = text if kind == "generation_chunk" else text[:400]
         cursor = db.execute(
             "INSERT INTO run_events(run_id,t,kind,actor,text,detail,state,"
-            "round_no,round_limit) VALUES(?,?,?,?,?,?,?,?,?)",
-            (run_id, at, kind[:40], actor[:40], text[:400], detail[:2000],
-             state.value, round_no, round_limit),
+            "round_no,round_limit,stream_json) VALUES(?,?,?,?,?,?,?,?,?,?)",
+            (run_id, at, kind[:40], actor[:40], stored_text, detail[:2000],
+             state.value, round_no, round_limit,
+             (json.dumps(stream, sort_keys=True, separators=(",", ":"))
+              if stream is not None else None)),
         )
         return int(cursor.lastrowid)
+
+    @staticmethod
+    def _validate_stream_sequence(db: sqlite3.Connection, run_id: str,
+                                  stream: dict) -> None:
+        """Enforce contiguous, non-interleaved completion streams at commit."""
+        row = db.execute(
+            "SELECT stream_json FROM run_events WHERE run_id=? "
+            "AND kind='generation_chunk' ORDER BY sequence DESC LIMIT 1",
+            (run_id,),
+        ).fetchone()
+        previous = None
+        if row is not None:
+            try:
+                previous = json.loads(row["stream_json"] or "null")
+            except (TypeError, ValueError):
+                previous = None
+            if not isinstance(previous, dict):
+                raise RuntimeError("the previous generation stream event is corrupt")
+        seq = int(stream["seq"])
+        if previous is None:
+            if seq != 0:
+                raise RuntimeError("a generation stream must begin at sequence 0")
+            return
+        if stream["id"] != previous.get("id"):
+            if not previous.get("done") or seq != 0:
+                raise RuntimeError(
+                    "generation streams cannot interleave or begin out of sequence")
+            earlier = db.execute(
+                "SELECT stream_json FROM run_events WHERE run_id=? "
+                "AND kind='generation_chunk'",
+                (run_id,),
+            ).fetchall()
+            for item in earlier:
+                try:
+                    metadata = json.loads(item["stream_json"] or "null")
+                except (TypeError, ValueError):
+                    metadata = None
+                if isinstance(metadata, dict) and metadata.get("id") == stream["id"]:
+                    raise RuntimeError("a generation stream id cannot be reused")
+            return
+        if previous.get("done"):
+            raise RuntimeError("a terminal generation stream cannot receive more chunks")
+        if seq != int(previous.get("seq", -1)) + 1:
+            raise RuntimeError("generation stream sequence is not contiguous")
 
     @staticmethod
     def _token_refresh(owner_pid: int, stored_token) -> str | None:
@@ -444,6 +499,17 @@ class RunJournal:
 
         if not isinstance(event, RunEvent):
             raise TypeError("RunJournal.append requires a RunEvent")
+        stream = None
+        if event.kind == "generation_chunk":
+            # RunEvent is frozen but its mapping is intentionally JSON-shaped.
+            # Copy and revalidate it at the durable boundary so a caller cannot
+            # mutate a previously validated dict before this transaction.
+            stream = dict(event.stream or {})
+            RunEvent(
+                actor=event.actor, text=event.text, state=event.state,
+                kind=event.kind, detail=event.detail, round_no=event.round_no,
+                round_limit=event.round_limit,
+                waiting_reason=event.waiting_reason, stream=stream)
         now = self._clock()
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -466,10 +532,13 @@ class RunJournal:
                 db.rollback()
                 raise RuntimeError(
                     f"invalid run transition {current.value} -> {target.value}")
+            if event.kind == "generation_chunk":
+                self._validate_stream_sequence(db, run_id, stream)
             sequence = self._insert_event(
                 db, run_id, kind=event.kind, actor=event.actor, text=event.text,
                 detail=event.detail, state=target, at=now,
                 round_no=event.round_no, round_limit=event.round_limit,
+                stream=stream,
             )
             # Every worker write is also a heartbeat and a lease renewal, so a
             # run can only look stale when nothing has actually been recorded.
@@ -1196,14 +1265,16 @@ class RunJournal:
             ).fetchone()
             if row is None:
                 return None
-            # D2: carry only the most-recent slice of the event log per frame.
+            # D2: carry only the most-recent slice of ordinary events per frame.
             # Fetching the tail (newest first, bounded) and re-ordering ascending
             # keeps this an O(LATEST_STEP_LIMIT) read instead of re-reading and
-            # re-serializing the whole log on every snapshot. The newest event is
-            # always in this tail, so last_event_id and the latest round marker
-            # stay correct; the full log remains queryable in the journal.
+            # re-serializing the whole log on every snapshot. Stream chunks use
+            # generation_events() and named SSE frames instead; the latest
+            # ordinary event and round marker stay correct here, and the full
+            # operational log remains queryable in the journal.
             events = db.execute(
                 "SELECT * FROM run_events WHERE run_id=? "
+                "AND kind<>'generation_chunk' "
                 "ORDER BY sequence DESC LIMIT ?",
                 (row["run_id"], LATEST_STEP_LIMIT),
             ).fetchall()
@@ -1247,6 +1318,9 @@ class RunJournal:
             "outcome": row["outcome"],
             "error": row["error"],
             "elapsed": max(0, round(end - float(row["started"]))),
+            # Stream chunks have their own incremental cursor and never make
+            # this ordinary snapshot fingerprint move. This id tracks the
+            # newest event represented in ``steps``.
             "last_event_id": int(events[-1]["sequence"]) if events else 0,
             "heartbeat_at": (float(row["heartbeat_at"])
                              if row["heartbeat_at"] is not None else None),
@@ -1254,6 +1328,40 @@ class RunJournal:
                                  if row["lease_expires_at"] is not None else None),
             "waiting_reason": waiting if isinstance(waiting, dict) else None,
         }
+
+    def generation_events(self, run_id: str, *, after_sequence: int = 0,
+                          limit: int = 256) -> list[dict]:
+        """Incremental display-only chunks, separate from progress snapshots.
+
+        Keeping this query out of ``latest()`` prevents an SSE frame from
+        re-serialising the growing stream tail for every token batch. The rows
+        remain local operational-journal data under the existing retention.
+        """
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT sequence,t,kind,actor,text,state,round_no,round_limit,"
+                "stream_json FROM run_events WHERE run_id=? "
+                "AND kind='generation_chunk' AND sequence>? "
+                "ORDER BY sequence LIMIT ?",
+                (run_id, max(0, int(after_sequence)),
+                 max(1, min(1024, int(limit)))),
+            ).fetchall()
+        out = []
+        for row in rows:
+            try:
+                stream = json.loads(row["stream_json"] or "null")
+            except (TypeError, ValueError):
+                stream = None
+            if not isinstance(stream, dict):
+                continue                 # corruption becomes a detectable gap
+            out.append({
+                "event_id": int(row["sequence"]), "t": float(row["t"]),
+                "kind": str(row["kind"]), "actor": str(row["actor"]),
+                "text": str(row["text"]), "state": str(row["state"]),
+                "round_no": int(row["round_no"]),
+                "round_limit": int(row["round_limit"]), "stream": stream,
+            })
+        return out
 
     def interruption(self) -> dict | None:
         row = self.latest()
