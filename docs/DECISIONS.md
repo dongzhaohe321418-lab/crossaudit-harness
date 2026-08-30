@@ -3468,3 +3468,51 @@ This is also why the rebased-vs-original distinction matters beyond
 bookkeeping: the rebase is exactly where two branches' interaction first
 appears (D75, D82), so the rebased number is the *more* interesting one — it
 just is not the number the audit is about.
+
+## D86 — What four sweeps cannot see: time, agreement, and absence
+
+Asked what its own four maps miss: **8 blind modes. Invisible to disk-vs-cited
+8, orphan 8, identity 8, seam 6. Instruments existing 2, needed 6.**
+
+The zero-case is the honest boundary:
+
+> **None of the four sweeps models shared assumptions or controlled time**, so
+> they cannot establish absence, ordering, or concurrency properties.
+
+Four sweeps mapped consumers, holders, seams and identity — all **static
+structure**. None models *time* or *agreement between correct parties*.
+
+The eight, with the instrument each would need:
+
+| Mode | Instrument needed |
+|---|---|
+| Shared-assumption disagreement — two correct consumers read one enum differently | contract test over both consumers against one generated corpus |
+| Temporal TOCTOU — agree at read, diverge between validation and use | deterministic race harness with barriers |
+| Concurrency lost update — two legitimate runs overwrite a decision | model-check with a controlled scheduler |
+| Second-run contamination — the first run changes the next result | fresh-process repeated-run matrix |
+| User ordering trap — valid actions mislead only after an unusual sequence | browser event-sequence property testing |
+| **Absence-of-event — missing SSE/heartbeat/error leaves a person in silence** | **watchdog asserting bounded time-to-explanation for every initiated action** |
+| Crash-between-boundaries — death after mutation, before publication | kill-point fault injection with replay assertions |
+| Resource exhaustion — OOM/timeout truncates terminal state | size and latency stress with explicit terminal-event checks |
+
+**The worst is the one this entire workstream began with.** The founding S0 was
+*a send that failed while the interface showed nothing* — an absence-of-event
+defect. It was found by a person walking through the product. **None of the
+four sweeps could have found it**, and neither could any suite: there is no
+artifact to read, no consumer to check, no identity to assert.
+
+That reframes the sweeps' value honestly. They found real classes and closed
+real holes — the constitution bytes, the orphaned detector, the transport-only
+suites, the path-resolved identity. **And they are all instruments for looking
+at structure, while the defect that started this is about what never happened.**
+
+The **watchdog** is the candidate I want next after the orphan detector: every
+action a person initiates must produce an explanation within a bounded time, or
+the guard fails. It is the only instrument on this list that addresses the class
+that produced the founding defect, and it is the one a green suite can never
+substitute for.
+
+RULE: four sweeps in one night is enough to start mistaking the map for the
+territory. **Asking the mapmaker what its maps exclude is cheap and the answer
+was six missing instruments** — a short list I trust rather than a long one I
+do not.
