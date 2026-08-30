@@ -139,6 +139,7 @@ def test_run_loop_bridges_provider_chunks_without_entering_other_payloads(
         bridge["provider"].on_chunk(
             "STREAM-ONLY-SENTINEL",
             {"id": "provider-attempt", "seq": 0, "done": False})
+        assert "STREAM-ONLY-SENTINEL" not in repr(_kwargs["tool_results"])
         bridge["provider"].on_chunk(
             "", {"id": "provider-attempt", "seq": 1, "done": True,
                  "outcome": "aborted"})

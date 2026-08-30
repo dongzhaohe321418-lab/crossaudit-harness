@@ -196,10 +196,19 @@ def complete(cfg: Config, role_name: str, primary: Role, *, system: str,
                 if on_event and (attempt > 1 or index > 0):
                     on_event(role_name, "provider recovery",
                              f"{role.vendor}:{role.model} · attempt {attempt}")
-                reply = fn(model=role.model, system=system, prompt=prompt,
-                           key_env=role.key_env, base_url=role.base_url,
-                           allow_custom=allow_custom,
-                           reasoning_effort=role.reasoning_effort)
+                provider_args = {
+                    "model": role.model, "system": system, "prompt": prompt,
+                    "key_env": role.key_env, "base_url": role.base_url,
+                    "allow_custom": allow_custom,
+                    "reasoning_effort": role.reasoning_effort,
+                }
+                chunk_callback = getattr(on_event, "on_chunk", None)
+                if (role_name == "generator"
+                        and role.provider == "openai_compat"
+                        and cfg.generator_streaming
+                        and callable(chunk_callback)):
+                    provider_args["on_chunk"] = chunk_callback
+                reply = fn(**provider_args)
                 _record(cfg, route_id, success=True)
                 if isinstance(reply.raw, dict):
                     reply.raw["_crossaudit_route"] = _route(role, fallback=index > 0)

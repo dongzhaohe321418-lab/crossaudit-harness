@@ -25,6 +25,7 @@ _ALLOWED_TOP = {"version", "science_repo", "audit_repo", "constitution", "max_ro
                 "checks", "plugins", "resilience", "budgets"}
 _ALLOWED_ROLE = {"provider", "model", "base_url", "key_env", "vendor",
                  "reasoning_effort", "fallbacks"}
+_ALLOWED_GENERATOR = _ALLOWED_ROLE | {"streaming"}
 #: Valid ``reasoning_effort`` strings for YAML validation, derived from the one
 #: provider effort catalogue so this schema and the model cards cannot drift.
 #: ``EFFORT_HINTS`` is the single vocabulary of effort levels the system knows:
@@ -87,6 +88,7 @@ class Config:
     ledger_dir: str
     scope_dirs: list[str] | None
     checks: list[str]
+    generator_streaming: bool = False
     plugins: list[str] = field(default_factory=list)
     generator_fallbacks: tuple[Role, ...] = ()
     resilience: Resilience = field(default_factory=Resilience)
@@ -175,10 +177,13 @@ def load(path: Path | None = None) -> Config:
     gen = raw.get("generator") or {}
     if not isinstance(gen, dict):
         raise ConfigDenial("generator must be a mapping", file=str(p))
-    gen_unknown = set(gen) - _ALLOWED_ROLE
+    gen_unknown = set(gen) - _ALLOWED_GENERATOR
     if gen_unknown:
         raise ConfigDenial(f"generator: unknown keys {sorted(gen_unknown)}", file=str(p))
     generator_vendor = gen.get("vendor")
+    generator_streaming = gen.get("streaming", False)
+    if not isinstance(generator_streaming, bool):
+        raise ConfigDenial("generator.streaming must be true or false", file=str(p))
     generator_effort = gen.get("reasoning_effort")
     if generator_effort is not None and generator_effort not in _EFFORT_VALUES:
         raise ConfigDenial(
@@ -302,6 +307,7 @@ def load(path: Path | None = None) -> Config:
         ledger_dir=ledger_dir,
         scope_dirs=scope_dirs,
         checks=checks,
+        generator_streaming=generator_streaming,
         plugins=raw.get("plugins") or [],
         generator_fallbacks=generator_fallbacks,
         resilience=resilience,

@@ -4,10 +4,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import queue
 import socket
 import ssl
 import sys
 import time
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -22,6 +24,9 @@ MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 #: One recv's worth of body at a time, so the total-deadline check below runs
 #: often enough to abort a slow trickle promptly without a busy loop.
 _READ_CHUNK_BYTES = 64 * 1024
+#: Streaming readers wake often enough to flush a pending display chunk at the
+#: D4 200 ms boundary even when the provider pauses between tokens.
+_STREAM_POLL_S = 0.025
 LOOPBACK = {"localhost", "127.0.0.1", "::1"}
 
 
@@ -56,6 +61,70 @@ def _read_body_within_deadline(resp, deadline: float) -> bytes:
             break
         body.extend(chunk)
     return bytes(body)
+
+
+def _stream_body_within_deadline(resp, deadline: float, on_bytes,
+                                 on_idle=None) -> None:
+    """Deliver bounded response bytes incrementally under one wall deadline.
+
+    This is the streaming sibling of :func:`_read_body_within_deadline`.  The
+    byte cap covers the complete HTTP body, while the short readiness poll lets
+    the adapter flush coalesced display text without inventing a page-side
+    timer.  The callback receives transport bytes only; decoding belongs to the
+    adapter and therefore survives arbitrary splits inside UTF-8 sequences.
+    """
+    messages: queue.Queue[tuple[str, object]] = queue.Queue()
+
+    def read_body() -> None:
+        total = 0
+        try:
+            while True:
+                chunk = resp.read1(min(
+                    _READ_CHUNK_BYTES, MAX_RESPONSE_BYTES + 1 - total))
+                if not chunk:
+                    messages.put(("done", None))
+                    return
+                total += len(chunk)
+                if total > MAX_RESPONSE_BYTES:
+                    messages.put(("error", ProviderDenial(
+                        "provider response exceeded the size cap",
+                        category="response")))
+                    return
+                messages.put(("bytes", chunk))
+        except BaseException as exc:  # transported back to the calling thread
+            messages.put(("error", exc))
+
+    reader = threading.Thread(
+        target=read_body, name="crossaudit-provider-stream", daemon=True)
+    reader.start()
+    try:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ProviderDenial(
+                    "provider stopped sending before the response body completed "
+                    "within the time budget",
+                    category="timeout", retryable=True,
+                    remediations=provider_remediations("timeout"))
+            try:
+                kind, value = messages.get(
+                    timeout=min(_STREAM_POLL_S, remaining))
+            except queue.Empty:
+                if on_idle is not None:
+                    on_idle()
+                continue
+            if kind == "done":
+                return
+            if kind == "error":
+                raise value
+            on_bytes(value)
+    finally:
+        if reader.is_alive():
+            try:
+                resp.close()
+            except (AttributeError, OSError):
+                pass
+        reader.join(timeout=0.2)
 
 
 @dataclass
@@ -195,6 +264,38 @@ def request_json(url: str, payload: dict, headers: dict, *, timeout: float = CON
     except json.JSONDecodeError as exc:
         raise ProviderDenial(f"provider returned non-JSON: {exc}",
                              category="response") from exc
+
+
+def request_stream(url: str, payload: dict, headers: dict, *, on_bytes,
+                   on_idle=None, timeout: float = CONNECT_TIMEOUT_S) -> str | None:
+    """POST JSON and expose one bounded response body incrementally.
+
+    Redirect, TLS, HTTP-error, size, and total-deadline handling intentionally
+    match :func:`request_json`.  No response bytes are retained here: the
+    adapter assembles the decoded completion text used by Reply commitments.
+    """
+    body = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        url, body, {"content-type": "application/json", **headers})
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPSHandler(context=tls_context()), _NoRedirect)
+    deadline = time.monotonic() + timeout
+    try:
+        with opener.open(req, timeout=timeout) as resp:
+            rid = resp.headers.get("request-id") or resp.headers.get("x-request-id")
+            _stream_body_within_deadline(
+                resp, deadline, on_bytes=on_bytes, on_idle=on_idle)
+            return rid
+    except urllib.error.HTTPError as exc:
+        try:
+            error_body = exc.read(4096).decode("utf-8", "replace")
+            denial = _http_denial(
+                exc.code, error_body, url, dict(exc.headers or {}))
+        finally:
+            exc.close()
+        raise denial from exc
+    except (urllib.error.URLError, socket.timeout, TimeoutError) as exc:
+        _reraise_transport(exc)
 
 
 def get_json(url: str, headers: dict, *, timeout: float = CONNECT_TIMEOUT_S

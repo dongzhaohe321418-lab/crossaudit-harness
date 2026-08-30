@@ -459,7 +459,20 @@ usage.subscribe(STREAM_CHANGES.notify)
 
 
 def _generation_sse_frame(run_id: str, event: dict) -> bytes:
-    """One named, incremental SSE frame; never part of a state snapshot."""
+    """One named, incremental SSE frame; never part of a state snapshot.
+
+    Held page.py consumer contract (D4): subscribe with
+    ``addEventListener('generation_chunk', ...)`` and key drafts by
+    ``(run_id, stream.id)``.  Accept only ``seq == expected``; on any gap,
+    discard the complete accumulated draft and never concatenate across it.
+    ``done/aborted`` discards the draft, while ``done/complete`` remains visibly
+    provisional until the ordinary state reaches AUDITING (the commit exists),
+    which supersedes it with the committed Generator turn.  Draft presentation
+    has no file card, download, delivery, PASS, or audit styling.  Its exact
+    label copy is ``Generator live draft · not yet audited`` / Chinese
+    ``生成者实时草稿 · 尚未审计``.  Run failure, cancellation, interruption, or
+    stall narration supersedes an open draft without a page-side timeout.
+    """
     payload = json.dumps(
         {**event, "run_id": run_id}, sort_keys=True,
         separators=(",", ":"), ensure_ascii=False)
