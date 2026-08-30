@@ -2545,3 +2545,51 @@ deliberately or not at all; and the row must be **honest when it cannot tell**
 version" is a good row, and a confident wrong answer is worse here than
 anywhere else in the product, since telling someone which program is answering
 them is the row's entire purpose.
+
+## D63 — Verify against the cited object, not against the machine you are on
+
+`audit/receipt-derives-remaining` (`9f54b81`): **DO NOT MERGE.** S0×1, S1×3,
+**gaps closed 0/3** against an author's claimed 3/3 — all established by
+execution.
+
+> The branch introduces a verifier that **denies honest, signed,
+> controller-recorded receipts**, and closes two of the three gaps **against
+> the verifier's own machine** instead of against the object the receipt
+> cites. **#11's production reader can be reverted to the pre-fix working-tree
+> read and the entire 1,742-test suite stays green.**
+
+**F1 is the S0 and it is the urgent half.** A verifier that denies honest
+history — demonstrated on four real signed receipts — is worse than one that
+is too permissive. Too permissive lets a bad receipt through and the ledger is
+still a ledger. This tells a person their genuine, correctly-produced audit is
+invalid: it destroys trust in the true case, and the true case is the only one
+most people will ever have.
+
+**The house name for this codebase's dominant trap, in the auditor's words:**
+*closed against the verifier's own machine instead of against the object the
+receipt cites.* Fourth appearance tonight, across two engineers, including one
+in the audit core (D54) arriving through an otherwise-correct fix. It is not a
+discipline problem particular to anyone — it is the trap this architecture
+sets, and it now has a name.
+
+Rebuild ordered as a change of **order**, not of effort: **write the
+counterfactual first.** For each gap, revert the production reader, write the
+assertion that should redden, and watch it redden *before* writing the fix. If
+the suite stays green with the reader reverted, there is no guard whatever the
+diff says. The same engineer built exactly this discipline for the byte matrix
+— mutate the production boundary back and fail on the named assertion — and it
+was the best work of the day. And for each gap, the contract must name **what
+object is the source of truth and how the verifier obtains it without
+consulting the local working tree.** If a gap cannot be closed without local
+state, that is a finding about the receipt format, not a failure to try.
+
+### A skip count can lie about the environment
+
+The auditor caught its own instrument first: 1,708 passed / 26 failed / 4
+errors from a venv missing `python-docx` and `pypdf` — and noticed it **also
+silently reported four skips instead of two.** A missing-dependency
+environment misreports the *skip count*, so a skip count can describe the
+environment rather than the tests. Third instrument artifact caught by its own
+operator today, and the only one where a secondary symptom nobody was looking
+for got noticed. Re-run with full dependencies reproduced the author's
+1740/2/0 exactly — which is what makes the rest of the numbers usable.
