@@ -542,3 +542,45 @@ Amendments, each of which changes something real:
 Unchanged and non-negotiable: streamed text is unaudited by construction and must
 be unmistakably a live draft — no download, no Files panel, no deliverable
 styling, visibly superseded when the round commits.
+
+### D5 — The ranking metric is human pain, not engineering severity
+
+Direction from the owner: make CrossAudit genuinely good to use, from the point of
+view of the person using it. That is now the top-line goal, and it changes how
+work is ranked rather than merely adding items to the list.
+
+**Operationally, what "good to use" means here.** CrossAudit's honest problem is
+that it does something slow and invisible — it writes, then an independent auditor
+judges — and every second of that is a second the person is looking at nothing. So
+the experience goals, in order:
+
+1. **The person always knows what is happening and what to do next.** No silent
+   waits, no dead ends, no state that needs the source code to interpret.
+2. **Nothing is ever claimed that was not done.** A green check that implies more
+   verification than actually happened is worse than an honest failure. This is
+   §1.5, and it is a usability rule before it is an integrity rule: a product that
+   overclaims teaches people not to trust the parts that are true.
+3. **A bad or incomplete request gets a helpful reply, not a red failure.** The
+   audit exists to judge work, not to punish typing.
+4. **Speed where it is felt.** Local overhead measured under 0.2% of a turn, so
+   perceived latency is the only latency there is to win. Streaming does not make
+   a turn shorter; it removes the silence, which is the whole complaint.
+
+**Re-ranking.** Slices are now ordered by how much a real person is hurt by the
+problem, not by how interesting it is to fix. An engineering S3 that a first-time
+user hits in the first two minutes outranks an engineering S1 buried behind a
+setting nobody reaches. Severity still governs whether something BLOCKS a merge;
+it no longer governs what we work on next.
+
+**Standing commission.** The design/UX engineer owns a recurring first-contact
+walkthrough: approach the product as a person who has never seen it, run the
+UX_TEST_PLAN scenarios end to end, and report where a human actually gets stuck,
+ranked by how badly it hurts them and how early they hit it. Its findings feed the
+roadmap directly. Engineering judgement decides HOW to fix; the human-pain ranking
+decides WHAT gets fixed first.
+
+**What does not change.** §1 is not negotiable for usability. We do not buy a
+smoother experience with a weaker audit core, a silent truncation, or a reassuring
+sentence that is not true. Where a genuinely better experience appears to require
+weakening an invariant, that is a decision to escalate, not a trade to make
+quietly.
