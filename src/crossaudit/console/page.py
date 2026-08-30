@@ -1694,6 +1694,8 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
   border-radius:var(--r-md);background:var(--pass-bg)}
 .mcp-connected b{font-size:var(--fs-label);font-weight:600;color:var(--pass)}
 .mcp-connected small{font-size:var(--fs-caption);color:var(--text-2)}
+.mcp-connected .mcp-draft-note{flex-basis:100%;margin-top:1px}
+.field input[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--blocked)}
 .mcp-approve-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:9px;margin-bottom:8px}
 .mcp-approve-head>span{font-size:var(--fs-label);font-weight:600}
 .mcp-approve-head>small{font-size:var(--fs-caption);color:var(--text-3);margin-right:auto}
@@ -2813,7 +2815,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <input type="hidden" name="server_id" id="mcp-server-id">
       <input type="hidden" name="allowed_tools_text" id="mcp-allowed-tools">
       <section class="mcp-step" data-mcp-step="connect" tabindex="-1"><div class="form-grid">
-        <label class="field"><span>Server name</span><input name="name" id="mcp-name" maxlength="80" required placeholder="Research tools"></label>
+        <label class="field"><span>Server name</span><input name="name" id="mcp-name" maxlength="80" required placeholder="Research tools" aria-describedby="mcp-name-help"><small class="field-help" id="mcp-name-help">A label for this project. ASCII letters, digits, spaces and . _ - only.</small></label>
         <label class="field"><span>Transport</span><select name="transport" id="mcp-transport"><option value="stdio">Local stdio</option><option value="http">Streamable HTTP</option></select></label>
         <div class="field full mcp-transport-fields" id="mcp-stdio-fields"><div class="form-grid">
           <label class="field"><span>Executable</span><input name="command" id="mcp-command" maxlength="1000" placeholder="npx" autocomplete="off"></label>
@@ -3303,6 +3305,54 @@ const ZH={
   // detail_i18n / summary_i18n), so it is deliberately NOT duplicated here —
   // the old ZH_PATTERNS/dictionary handoff for these strings is superseded.
   "Context reduced":"上下文已精简","round":"轮次",
+  "A label for this project. ASCII letters, digits, spaces and . _ - only.":"本项目中的标识名称。仅限 ASCII 字母、数字、空格和 . _ -。",
+  "Server names use ASCII letters, digits, spaces and . _ - only. Rename this server to continue.":"服务器名称仅支持 ASCII 字母、数字、空格和 . _ -。请修改名称后继续。",
+  "This project already has an MCP server with that name. Choose a different name, or configure the existing one.":"此项目已存在同名的 MCP 服务器。请换一个名称，或直接配置已有的服务器。",
+  "This project already has an MCP server running that exact command. Configure the existing one instead.":"此项目已存在运行该命令的 MCP 服务器。请直接配置已有的服务器。",
+  "Not saved yet — Cancel removes this connection.":"尚未保存 —— 取消将移除此连接。",
+  // Denials /api/mcp can return into this dialog. The backend wording is the
+  // contract; these are its Chinese parity, so a refusal is never English-only.
+  "MCP server settings must be an object":"MCP 服务器设置必须是一个对象",
+  "MCP server name uses unsupported characters":"MCP 服务器名称包含不支持的字符",
+  "MCP transport must be stdio or Streamable HTTP":"MCP 传输方式必须是 stdio 或 Streamable HTTP",
+  "invalid MCP server identifier":"无效的 MCP 服务器标识符",
+  "that MCP server is not registered in this project":"该 MCP 服务器未注册在此项目中",
+  "MCP timeout must be a whole number":"MCP 超时必须是整数",
+  "MCP timeout must be between 1 and 300 seconds":"MCP 超时必须在 1 到 300 秒之间",
+  "MCP calls per task must be a whole number":"MCP 每任务调用次数必须是整数",
+  "approve the exact local MCP command before it runs":"请先批准将要运行的这条本地 MCP 命令",
+  "MCP executable is required":"必须填写 MCP 可执行文件",
+  "MCP arguments must be a list":"MCP 参数必须是一个列表",
+  "an MCP argument is invalid or too long":"某个 MCP 参数无效或过长",
+  "MCP arguments are unexpectedly large":"MCP 参数过大",
+  "allowed MCP tools must be a list":"允许的 MCP 工具必须是一个列表",
+  "an allowed MCP tool is not advertised by this server":"某个已允许的 MCP 工具并未由此服务器公布",
+  "select at least one MCP tool before enabling Generator access":"启用生成者访问前，请至少选择一个 MCP 工具",
+  "connect the MCP server without Generator access first, review the advertised tool list, then configure and enable it":"请先在不开放生成者访问的情况下连接 MCP 服务器，复核其公布的工具列表，然后再配置并启用它",
+  "MCP URL must be a plain HTTP(S) endpoint without credentials, query or fragment":"MCP URL 必须是不含凭据、查询串或片段的纯 HTTP(S) 端点",
+  "remote MCP servers require HTTPS; HTTP is allowed only on loopback":"远程 MCP 服务器必须使用 HTTPS；仅回环地址允许使用 HTTP",
+  "the MCP hostname could not be resolved":"无法解析该 MCP 主机名",
+  "the MCP hostname resolves to a private or reserved address; enable private-network access only for a verified enterprise server":"该 MCP 主机名解析到专用或保留地址；请仅对已核实的企业服务器启用专用网络访问",
+  "MCP endpoint redirects are refused; register the final HTTPS URL":"MCP 端点重定向会被拒绝；请直接登记最终的 HTTPS 地址",
+  "MCP server requires authorization. Add a valid bearer token; interactive MCP OAuth is not configured for this server.":"MCP 服务器需要授权。请添加有效的 bearer token；此服务器未配置交互式 MCP OAuth。",
+  "MCP request timed out":"MCP 请求超时",
+  "MCP server wrote non-JSON data to stdout":"MCP 服务器向标准输出写入了非 JSON 数据",
+  "MCP server returned invalid JSON":"MCP 服务器返回了无效的 JSON",
+  "MCP server returned a non-object JSON-RPC message":"MCP 服务器返回了非对象的 JSON-RPC 消息",
+  "MCP server response exceeded the safety limit":"MCP 服务器响应超出安全上限",
+  "MCP event stream ended without the requested response":"MCP 事件流在返回所请求的响应前已结束",
+  "MCP tools/list returned an invalid tool list":"MCP tools/list 返回了无效的工具列表",
+  "MCP server advertised an invalid tool":"MCP 服务器公布了无效的工具",
+  "MCP server advertised more than 1000 tools":"MCP 服务器公布了超过 1000 个工具",
+  "MCP server returned an invalid pagination cursor":"MCP 服务器返回了无效的分页游标",
+  "MCP bearer token is empty or unexpectedly large":"MCP bearer token 为空或过大",
+  "MCP bearer token contains control characters":"MCP bearer token 含有控制字符",
+  "macOS Keychain is unavailable for the MCP credential":"无法使用 macOS 钥匙串保存 MCP 凭据",
+  "Generator MCP request must be an object":"生成者的 MCP 请求必须是一个对象",
+  "this MCP server is not enabled for the Generator":"此 MCP 服务器未对生成者启用",
+  "this MCP tool is not approved for automatic use":"此 MCP 工具未被批准自动使用",
+  "the Generator reached this MCP server's calls-per-task limit":"生成者已达到此 MCP 服务器的每任务调用上限",
+  "MCP tool arguments must be an object":"MCP 工具参数必须是一个对象",
   "Generator enabled":"已为生成者启用","Manual only":"仅手动","Configure":"配置","Refresh tools":"刷新工具","No tools advertised.":"未公布工具。","Applies to every task":"适用于每个任务","MCP tool":"MCP 工具","calling MCP tool":"正在调用 MCP 工具","policy":"政策",
   "Last 64 KB · stdout + stderr":"最近 64 KB · 标准输出 + 标准错误","Remote process finished":"远程进程已完成","Submitted to Slurm":"已提交至 Slurm","Detached on host":"已在远程主机后台启动","Preparing remote job":"正在准备远程任务",
   "Passed":"已通过","Blocked":"已阻止","Waiting on you":"等待你决定","Admitted":"已准入","Complete":"已完成","Active":"正在进行","Pending":"等待中"
@@ -3411,7 +3461,7 @@ const ZH={
   ,"Sign in, enter the code, and approve GitHub CLI. This page updates automatically.":"登录并输入代码，然后批准 GitHub CLI。此页面会自动更新。","Install GitHub tool ↗":"安装 GitHub 工具 ↗"
   ,"Enter the code in GitHub. This dialog updates automatically after approval.":"在 GitHub 中输入代码。批准后此对话框会自动更新。","Authorize CrossAudit in GitHub":"在 GitHub 中授权 CrossAudit"
   ,"Review the repository settings and retry.":"请检查仓库设置后重试。","Authorize permanent repository deletion":"授权永久删除仓库"
-  ,"Exact model ID":"准确的模型 ID","Credential":"凭据","Could not resume setup":"无法恢复设置","Resuming GitHub setup":"正在恢复 GitHub 设置","Research tools":"检索工具","visible to this account":"此账户可见"
+  ,"Exact model ID":"准确的模型 ID","Credential":"凭据","Could not resume setup":"无法恢复设置","Resuming GitHub setup":"正在恢复 GitHub 设置","visible to this account":"此账户可见"
   ,"Open help":"打开帮助","Fix":"修复","Git installation guide":"Git 安装指南"
   ,"Use the official Codex login and an eligible ChatGPT plan. CrossAudit never receives the OAuth token.":"使用官方 Codex 登录及符合条件的 ChatGPT 套餐。CrossAudit 绝不会接收 OAuth token。"
   ,"Official ChatGPT subscription sign-in is available through the bundled Codex runtime; CrossAudit never receives its OAuth token.":"可通过内置 Codex 运行时使用官方 ChatGPT 订阅登录；CrossAudit 绝不会接收其 OAuth token。"
@@ -3550,6 +3600,18 @@ const ZH_PATTERNS=[
   ,[/^([0-9a-f]{7,40}) · round (\d+)$/i,m=>m[1]+' · 第 '+m[2]+' 轮']
   ,[/^(PASS|BLOCKED|ESCALATED|ESCALATE|DCL_ONLY) · (\d+) finding\(s\)$/,m=>zhValue(m[1])+' · '+m[2]+' 项发现']
   ,[/^cycle (\S+) is waiting for a human$/,m=>'循环 '+m[1]+' 正在等待人工处理']
+  ,[/^MCP executable (.+) was not found or is not executable$/,m=>'未找到 MCP 可执行文件 '+m[1]+'，或它不可执行']
+  ,[/^MCP server could not start: (.+)$/,m=>'MCP 服务器无法启动：'+m[1]]
+  ,[/^MCP server closed its input\.(.*)$/,m=>'MCP 服务器关闭了输入。'+m[1].trim()]
+  ,[/^MCP server exited before replying\.(.*)$/,m=>'MCP 服务器在回复前已退出。'+m[1].trim()]
+  ,[/^MCP server returned HTTP (\d+)$/,m=>'MCP 服务器返回 HTTP '+m[1]]
+  ,[/^MCP server connection failed: (.+)$/,m=>'MCP 服务器连接失败：'+m[1]]
+  ,[/^MCP server negotiated unsupported protocol (.+)$/,m=>'MCP 服务器协商了不受支持的协议 '+m[1]]
+  ,[/^MCP (\S+) failed: (.+)$/,m=>'MCP '+m[1]+' 失败：'+m[2]]
+  ,[/^MCP (\S+) returned an invalid result$/,m=>'MCP '+m[1]+' 返回了无效结果']
+  ,[/^MCP calls per task must be between 1 and (\d+)$/,m=>'MCP 每任务调用次数必须在 1 到 '+m[1]+' 之间']
+  ,[/^macOS Keychain refused the MCP credential: (.+)$/,m=>'macOS 钥匙串拒绝了 MCP 凭据：'+m[1]]
+  ,[/^(.+) — the cancelled connection is still listed; remove it there\.$/,m=>zhValue(m[1])+' —— 已取消的连接仍在列表中，请在那里将其移除。']
 ];
 let currentLocale='en';
 const textSources=new WeakMap(),attributeSources=new WeakMap();
@@ -6287,6 +6349,16 @@ function syncMcpTransport(){const stdio=document.getElementById('mcp-transport')
 // Generator be let near them. Step 1 never approves or enables anything, so a
 // half-finished dialog always leaves the server switched off.
 let mcpStep='connect';let mcpTools=[];let mcpApproved=new Set();let mcpReconnected=false;
+// SERVER_NAME from mcp.py, mirrored so the refusal arrives in the field the
+// person is looking at instead of as a round-trip denial. It is only ever a
+// mirror: the
+// server still decides, and this must never be looser than it is.
+const MCP_NAME_RE=/^[A-Za-z0-9][A-Za-z0-9_. -]{0,79}$/;
+// Step 1 has to POST to read the tool list, so a row exists while step 2 is on
+// screen. That row is a draft, not a server the person agreed to keep: this
+// holds its id until they press Save, and every close path deletes it. Declining
+// therefore leaves nothing behind, which is what Cancel has always claimed.
+let mcpCreatedId='';
 // The exact local command the person has ALREADY approved for this server
 // ({command, args}), or null when nothing is approved yet. A saved server
 // carries the approval its owner gave when they connected it; that approval
@@ -6363,8 +6435,30 @@ function setMcpStep(step){mcpStep=step==='tools'?'tools':'connect';
 function renderMcpConnected(server){const host=document.getElementById('mcp-connected');if(!host)return;
   const info=(server&&server.server_info)||{};const named=esc(info.name||(server&&server.name)||'');
   const version=info.version?' '+esc(info.version):'';
+  const draft=mcpCreatedId?'<small class="mcp-draft-note">Not saved yet — Cancel removes this connection.</small>':'';
   host.innerHTML=server?'<b>Connected</b><small>'+named+version+' · MCP '+esc(server.protocol_version||'')
-    +' · '+((server.tools||[]).length)+' tools advertised</small>':'';}
+    +' · '+((server.tools||[]).length)+' tools advertised</small>'+draft:'';}
+// Delete the step-1 draft row. /api/mcp already owns removal; nothing new is
+// invented here. If the delete fails the list is left as it is and the person is
+// told, rather than the dialog closing over a row it silently could not undo.
+function discardMcpDraft(){const id=mcpCreatedId;if(!id)return;mcpCreatedId='';
+  api('/api/mcp',{action:'remove',server_id:id})
+    .then(()=>api('/api/state'))
+    .then(state=>{if(lastState){lastState.mcp=state.mcp;render(lastState);}})
+    .catch(error=>{const reason=(error&&error.message)?error.message:String(error);
+      computeSurfaceError(new Error(reason+' — the cancelled connection is still listed; remove it there.'));});}
+// A row already in this project with the same name, or the same local command,
+// is indistinguishable from the one being added. Say so before creating a
+// second one; the row being edited never counts as its own duplicate.
+function mcpDuplicate(name,vector,selfId){
+  const rows=((lastState&&lastState.mcp&&lastState.mcp.servers)||[]).filter(row=>row.id!==selfId);
+  const wanted=String(name||'').trim().toLowerCase();
+  if(rows.some(row=>String(row.name||'').trim().toLowerCase()===wanted))
+    return 'This project already has an MCP server with that name. Choose a different name, or configure the existing one.';
+  if(document.getElementById('mcp-transport').value==='stdio'&&vector.command
+     &&rows.some(row=>(row.transport||'stdio')==='stdio'&&mcpSameTuple({command:row.command||'',args:(row.args||[]).slice()},vector)))
+    return 'This project already has an MCP server running that exact command. Configure the existing one instead.';
+  return '';}
 function renderMcpTools(){const host=document.getElementById('mcp-tool-approve');if(!host)return;
   if(!mcpTools.length){host.innerHTML='<p class="mcp-empty">This server advertised no tools, so there is nothing to approve.</p>';
     document.getElementById('mcp-select-all').hidden=true;syncMcpApproval();return;}
@@ -6389,7 +6483,9 @@ function syncMcpApproval(){const boxes=[...document.querySelectorAll('[data-mcp-
     :'Leave this off to keep the server manual-only. You can turn it on later.');
   const all=boxes.length>0&&mcpApproved.size===boxes.length;
   mcpText('mcp-select-all',all?'Clear all':'Select all');}
-function openMcp(serverId=''){mcpForm.reset();document.getElementById('mcp-error').className='wizard-error';
+function clearMcpError(){const box=document.getElementById('mcp-error');box.textContent='';box.className='wizard-error';}
+function openMcp(serverId=''){mcpForm.reset();clearMcpError();
+  mcpCreatedId='';document.getElementById('mcp-name').removeAttribute('aria-invalid');
   const server=((lastState&&lastState.mcp&&lastState.mcp.servers)||[]).find(row=>row.id===serverId);
   document.getElementById('mcp-title').textContent=server?'Configure MCP server':'Add MCP server';
   document.getElementById('mcp-server-id').value=server?server.id:'';
@@ -6410,7 +6506,8 @@ function openMcp(serverId=''){mcpForm.reset();document.getElementById('mcp-error
   setMcpStep(server?'tools':'connect');
   mcpModal.className='project-modal on';
   setTimeout(()=>document.getElementById(server?'mcp-select-all':'mcp-name').focus(),0);}
-function closeMcp(){mcpModal.className='project-modal';mcpForm.reset();
+function closeMcp(){discardMcpDraft();mcpModal.className='project-modal';mcpForm.reset();
+  document.getElementById('mcp-name').removeAttribute('aria-invalid');
   mcpTools=[];mcpApproved=new Set();mcpReconnected=false;mcpApprovedCommand=null;
   mcpTickedFor=null;mcpRendered=null;
   setMcpStep('connect');syncMcpApprovalState();}
@@ -6429,11 +6526,26 @@ document.getElementById('mcp-select-all').onclick=()=>{const boxes=[...document.
   const target=!(boxes.length>0&&boxes.every(box=>box.checked));boxes.forEach(box=>{box.checked=target;});syncMcpApproval();};
 mcpModal.addEventListener('click',ev=>{if(ev.target===mcpModal)closeMcp();});
 mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElementById('save-mcp');
-  const connecting=mcpStep==='connect';button.disabled=true;
-  mcpText('save-mcp',connecting?'Connecting…':'Saving…');
-  document.getElementById('mcp-error').className='wizard-error';const fd=new FormData(mcpForm);
+  const connecting=mcpStep==='connect';
+  clearMcpError();const fd=new FormData(mcpForm);
   const payload=Object.fromEntries(fd.entries());payload.action='register';
   const vector=mcpLiveTuple();
+  const priorId=String(payload.server_id||'');
+  const nameField=document.getElementById('mcp-name');
+  if(connecting){
+    // The two refusals a person can hit before anything is even attempted are
+    // answered here, in the field, instead of as a denial after a round trip.
+    nameField.removeAttribute('aria-invalid');
+    const name=String(payload.name||'').trim();
+    if(!MCP_NAME_RE.test(name)){
+      nameField.setAttribute('aria-invalid','true');
+      showInlineError('mcp-error',new Error('Server names use ASCII letters, digits, spaces and . _ - only. Rename this server to continue.'));
+      nameField.focus();return;}
+    const clash=mcpDuplicate(name,vector,priorId);
+    if(clash){nameField.setAttribute('aria-invalid','true');
+      showInlineError('mcp-error',new Error(clash));nameField.focus();return;}}
+  button.disabled=true;
+  mcpText('save-mcp',connecting?'Connecting…':'Saving…');
   // An untouched legacy row keeps its stored arguments verbatim — the textarea
   // trims and drops blank lines, so re-deriving them would silently rewrite a
   // working configuration (and make it unsaveable).
@@ -6455,6 +6567,9 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
   try{const server=await api('/api/mcp',payload);
     if(lastState){lastState.mcp=await api('/api/state').then(state=>state.mcp);render(lastState);}
     if(connecting){document.getElementById('mcp-server-id').value=server.id||'';
+      // Only a row this dialog just created is a draft. Re-connecting an existing
+      // server, or an edit reached through Configure, is not one and is kept.
+      if(!priorId&&server.id)mcpCreatedId=server.id;
       // Adopt what was actually stored (the resolved executable), and show it, so
       // the field, the standing approval and the server row all agree.
       if((server.transport||'stdio')==='stdio'){
@@ -6473,7 +6588,7 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
       mcpApproved=new Set(kept);
       renderMcpConnected(server);renderMcpTools();setMcpStep('tools');
       setTimeout(()=>document.getElementById('mcp-select-all').focus(),0);}
-    else closeMcp();}
+    else{mcpCreatedId='';closeMcp();}}
   catch(e){computeError('mcp-error',e);}
   finally{button.disabled=false;mcpText('save-mcp',mcpStep==='tools'?'Save':'Connect');}};
 function stopComputeTimers(except=''){for(const [id,timer] of computeLogTimers){if(id!==except){clearInterval(timer);computeLogTimers.delete(id);}}}
