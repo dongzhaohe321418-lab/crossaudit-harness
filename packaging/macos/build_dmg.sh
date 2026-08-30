@@ -159,9 +159,18 @@ if [[ -f "$PREV_DMG" ]]; then
   mkdir -p "$PREV"
   ditto "$PREV_DMG" "$PREV/$(basename "$PREV_DMG")"
   [[ -f "$PREV_DMG.sha256" ]] && ditto "$PREV_DMG.sha256" "$PREV/"
-  # The .app is what a reviewer drives; extracting it from the DMG every
-  # time is friction that gets skipped, so keep it unpacked.
-  [[ -d "$APP" ]] && ditto "$APP" "$PREV/CrossAudit.app"
+  # The .app a reviewer drives must come OUT OF THE PREVIOUS DMG. $APP at
+  # this point is the build we just made, so copying it here would retain
+  # the new artifact under the name of the old one -- worse than retaining
+  # nothing, because it would look like evidence.
+  PREV_MNT="$(mktemp -d)"
+  if hdiutil attach -quiet -nobrowse -readonly -mountpoint "$PREV_MNT" "$PREV/$(basename "$PREV_DMG")"; then
+    ditto "$PREV_MNT/CrossAudit.app" "$PREV/CrossAudit.app"
+    hdiutil detach -quiet "$PREV_MNT"
+  else
+    echo "warning: could not mount the previous DMG; retained the disk image only" >&2
+  fi
+  rmdir "$PREV_MNT" 2>/dev/null || true
   date -u "+%Y-%m-%dT%H:%M:%SZ" > "$PREV/retained-at.txt"
   echo "retained previous artifact in $PREV"
 fi
