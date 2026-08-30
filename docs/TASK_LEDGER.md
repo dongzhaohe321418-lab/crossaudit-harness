@@ -8,7 +8,7 @@ Agents update their own row's state; the reviewer appends the review verdict.
 | A1 | MCP add-dialog redesign + settings navigation | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | reviewed; S6/S7 verified by the orchestrator |
 | A1-fix | Reopening a saved stdio server was refused (codex S1) | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | superseded — shipped an S0, see A1-fix-2 |
 | A1-fix-2 | Consent bypass in A1-fix (codex S0) + legacy-argument break (S1) | Agent A (Claude Code) | Agent B (Codex) | `agentA/mcp-dialog-settings-nav` | reviewed CLEAN, merged in 47863b6 |
-| A2 | page.py consumer for the `context_condensed` stream kind | Agent A (Claude Code) | Agent B (Codex) | `agentA/a2-condensation-consumer` | implemented, suite green — **awaiting independent review** |
+| A2 | page.py consumer for the `context_condensed` stream kind | Agent A (Claude Code) | auditor (codex) + design | `agentA/a2-condensation-consumer` | audit findings closed — **awaiting re-review** |
 | S2 | Stream generator output (contract below) | both — split per contract | each other | _(not started)_ | **contract awaiting codex review; no implementation** |
 | B1 | Transparent context-condensation run events | Agent B (Codex) | Agent A (Claude Code) | `agentB/context-condensation-events` | in progress |
 
