@@ -132,6 +132,30 @@ AUDIT:       <required for any audit-core or security-surface slice; the
 
 ---
 
+## 3.5 Testing standard — a test must execute what it claims
+
+Found twice in one day by the independent auditor, in two different slices, so it
+is now a rule rather than a review note.
+
+**A test that inspects source text may not claim to pin rendered behaviour.** If
+the property is "the page never says X", the test must render the page and assert
+over the DOM. A raw-source assertion is a blacklist, and the auditor defeated one
+by splitting the forbidden phrase across an `<em>` element: the negative assertion
+still passed while the live DOM displayed the overclaim. The product was correct
+both times; the evidence was not evidence.
+
+The same applies beyond UI. A test that asserts a sentence appears in an event, a
+docstring, or a log has tested a string. If the claim is that content is
+recoverable, the test calls the recovery and checks what comes back. If the claim
+is that a class of input is refused, the test constructs the inputs and runs them.
+If a fix closes a behaviour that varied with some parameter, the test sweeps that
+parameter contiguously rather than sampling the points the author happened to
+pick — a fix that merely moved a threshold looks correct at any single sample.
+
+This is §1.5 applied to the test suite. A test that overclaims is worse than a
+missing test, because it converts an unknown into a false assurance, and every
+later reader inherits the false assurance.
+
 ## 4. Definition of done
 
 - Full suite green; new behavior has a test; a bug fix has a regression test.
