@@ -232,6 +232,44 @@ def commit_setup(target: Path, paths: list[str]) -> str:
                           capture_output=True, text=True, check=True).stdout.strip()
 
 
+def _missing_credentials(target: Path, keys_file) -> list[tuple[str, str]]:
+    """Which role credentials are absent, as (env var, human role name).
+
+    Read the same way every other command reads them — the environment, plus the
+    keys file if `init` just wrote one — so `init` cannot report a state that
+    `doctor` will contradict a moment later.
+    """
+    import os as _os
+
+    from ..config import load as _load
+
+    present = dict(_os.environ)
+    if keys_file:
+        try:
+            for line in Path(keys_file).read_text(encoding="utf-8").splitlines():
+                line = line.strip().removeprefix("export ").strip()
+                if "=" in line and not line.startswith("#"):
+                    name, _sep, value = line.partition("=")
+                    present.setdefault(name.strip(), value.strip().strip("\"'"))
+        except OSError:
+            pass
+    try:
+        cfg = _load(target / CONFIG_NAME)
+    except Exception:  # noqa: BLE001 -- a report must never break setup
+        return []
+    missing: list[tuple[str, str]] = []
+    from ..providers.registry import NEEDS_KEY
+
+    if NEEDS_KEY.get(cfg.auditor.provider, True) and not present.get(
+            cfg.auditor.key_env, "").strip():
+        missing.append((cfg.auditor.key_env, "auditor"))
+    generator_env = cfg.generator_key_env or "CROSSAUDIT_GENERATOR_KEY"
+    if (cfg.generator_vendor or "").lower() != "human" and not present.get(
+            generator_env, "").strip():
+        missing.append((generator_env, "generator"))
+    return missing
+
+
 def _distil(description: str, provider: str, model: str, base_url: str, *,
             key_env: str = "CROSSAUDIT_AUDITOR_KEY", usage_root: Path | None = None,
             vendor: str = "unknown"):
@@ -440,19 +478,39 @@ def run(target: Path, *, mode: str, force: bool = False,
     tui.ok(f"setup committed — {setup_commit[:12]}")
 
     # ---- what to do next ---------------------------------------------------
-    tui.banner("Ready", str(target))
+    # `init` and `doctor` must not contradict each other one command apart
+    # (Ledger D6, P1). Setup finishing is not the same as the project being able
+    # to run, so the banner reports which of the two happened, and a missing
+    # credential leads the Next list instead of scrolling above a green box.
+    missing = _missing_credentials(target, written)
+    if missing:
+        tui.banner("Setup written — not ready to run yet", str(target))
+    else:
+        tui.banner("Ready", str(target))
     rows = []
-    if written:
-        rows.append(f"source {written}")
-        rows.append(tui.dim("    load the keys into this shell"))
-    rows += [
-        "crossaudit doctor",
-        tui.dim("    check everything, offline and read-only"),
-        'crossaudit build "…"',
-        tui.dim("    say what to build; the loop writes and audits it"),
-        "crossaudit console",
-        tui.dim("    two windows in a browser, live, and it outlives the window"),
-    ]
+    if missing:
+        # Named first, because it is the thing that stops the very next command.
+        for env_name, role in missing:
+            rows.append(f"export {env_name}=...")
+            rows.append(tui.dim(f"    the {role} has no key yet; "
+                                f"`crossaudit build` stops without it"))
+        if written:
+            rows.append(f"source {written}")
+            rows.append(tui.dim("    load the keys you entered into this shell"))
+        rows.append("crossaudit doctor")
+        rows.append(tui.dim("    re-check once a key is in place; it agrees with this"))
+    else:
+        if written:
+            rows.append(f"source {written}")
+            rows.append(tui.dim("    load the keys into this shell"))
+        rows += [
+            "crossaudit doctor",
+            tui.dim("    check everything, offline and read-only"),
+            'crossaudit build "…"',
+            tui.dim("    say what to build; the loop writes and audits it"),
+            "crossaudit console",
+            tui.dim("    two windows in a browser, live, and it outlives the window"),
+        ]
     tui.panel("Next", rows)
 
     if mode != "local":

@@ -54,6 +54,12 @@ def test_doctor_accepts_every_registered_provider(cfg, monkeypatch, capsys):
         "install_mode": "wheel", "code_digest_sha256": "a" * 64,
         "project": "crossaudit", "version": "4.0.0", "lock_digest_sha256": None})
     monkeypatch.setenv("CROSSAUDIT_GOOGLE_KEY", "present-for-preflight")
+    # doctor now also checks the GENERATOR credential — the one that stops
+    # `build` in round one (Ledger D6). This test asserts EXIT_OK as its proxy
+    # for "nothing else objected", so it has to satisfy that check too; without
+    # it the run is genuinely not ready and doctor is right to say so.
+    monkeypatch.setenv(gemini.generator_key_env or "CROSSAUDIT_GENERATOR_KEY",
+                       "generator-present-for-preflight")
     code = main.cmd_doctor(argparse.Namespace(fix=False, online=False, json=False))
     out = capsys.readouterr().out
     assert "[PASS] provider" in out and "[FAIL] provider" not in out

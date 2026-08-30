@@ -74,7 +74,12 @@ requirements. It writes keys to a 0600 file outside the repository.
     crossaudit init              guided setup, right here
     crossaudit init --github     the same, plus the two-repository plan
 
-Then there is one command to remember:
+Then, the two commands most people want:
+
+    crossaudit build "..."       say what to build; it writes, then audits it
+    crossaudit console           the same loop in a browser, live
+
+and the one to remember when you already have a commit to judge:
 
     crossaudit run               audit your latest commit; everything else is automatic
 
@@ -247,9 +252,24 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     ok = True
 
     def add(name: str, passed: bool, detail: str, fix: str = "") -> None:
+        """A tested condition. [PASS] here means it ran and it held."""
         nonlocal ok
         ok = ok and passed
-        checks.append({"check": name, "ok": passed, "detail": detail, "fix": fix})
+        checks.append({"check": name, "ok": passed, "detail": detail, "fix": fix,
+                       "kind": "verdict"})
+
+    def note(name: str, detail: str) -> None:
+        """A posture, a mode or a configured contract — NOT a test result.
+
+        SPEC 2 (design/UX, Ledger D6): ``[PASS]`` means a condition was tested
+        and held. A line that reports how the deployment is *set up* has no
+        pass/fail axis, so it renders as ``[INFO]`` and is excluded from the
+        tally. The defect this removes is a green marker sitting beside text
+        that says a guarantee does not hold — the CLI twin of the console's four
+        green ticks for checks that never ran.
+        """
+        checks.append({"check": name, "ok": None, "detail": detail, "fix": "",
+                       "kind": "info"})
 
     ident = _selfid.identity()
     add("python", sys.version_info >= (3, 10),
@@ -286,10 +306,13 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             f"{len(rules)} rule IDs parsed" if rules else "no CA-* rule headings found",
             "each rule needs a '### CA-AREA-NNN' heading, or every citation is unknown")
 
+    # These are the CONFIGURED contracts, printed so a person can read what the
+    # deterministic layer will enforce. Nothing has run: doctor is offline and
+    # read-only, and there is no increment to judge. They carried [PASS] before,
+    # which is the same false green as the console panel D6 flagged.
     from ..dcl import contracts as live_contracts
     for name, contract in live_contracts(cfg.checks).items():
-        checks.append({"check": f"machine:{name}", "ok": True,
-                       "detail": contract, "fix": ""})
+        note(f"automatic: {name}", contract)
 
     het_ok, why = heterogeneity(cfg)
     add("heterogeneity (I1)", het_ok, why,
@@ -317,8 +340,27 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         ("sign in through CrossAudit Settings" if not key_needed else
          f"source {wizard.keys_file()} or export {cfg.auditor.key_env}"))
 
-    generator_key_present = bool(os.environ.get(
-        cfg.generator_key_env or "CROSSAUDIT_GENERATOR_KEY", "").strip())
+    # The credential that stops `build` in its first round. doctor said "check
+    # everything" while never looking at it, so a person could pass doctor and
+    # then fail on their first task (Ledger D6, P1).
+    generator_env = cfg.generator_key_env or "CROSSAUDIT_GENERATOR_KEY"
+    generator_key_present = bool(os.environ.get(generator_env, "").strip())
+    generator_needs_key = _generator_needs_key(cfg)
+    if generator_needs_key and not generator_key_present and _offer(
+            args, f"enter the generator API key (hidden, saved to {wizard.keys_file()})"):
+        import getpass
+        entered = getpass.getpass("       generator API key: ").strip()
+        if entered:
+            written = wizard.write_keys({generator_env: entered})
+            os.environ[generator_env] = entered
+            generator_key_present = True
+            print(f"       saved; future shells: source {written}")
+    add("generator connection", (not generator_needs_key) or generator_key_present,
+        ("no API key needed for this generator"
+         if not generator_needs_key else
+         f"${generator_env} " + ("present" if generator_key_present else "is empty")),
+        f"source {wizard.keys_file()} or export {generator_env} — "
+        f"without it `crossaudit build` stops in round one")
     if cfg.isolation_minimum.get("permissive") and key_present and generator_key_present:
         add("isolation minimum", False,
             "permissive isolation is required, but this process can reach both roles' keys",
@@ -389,12 +431,9 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     verdict = adm.assess(root=cfg.root, paired=bool(cfg.audit_repo),
                          controller_persistent=caps["persistent"],
                          controller_atomic=caps["atomic"], online=args.online)
-    checks.append({"check": "admission tier", "ok": True,
-                   "detail": f"{verdict.tier} — {adm.TIER_MEANING[verdict.tier]}",
-                   "fix": ""})
-    for s in verdict.shortfalls:
-        checks.append({"check": "  toward enforced", "ok": True, "detail": s,
-                       "fix": ""})
+    note("admission tier", f"{verdict.tier} — {adm.TIER_MEANING[verdict.tier]}")
+    for shortfall in verdict.shortfalls:
+        note("  toward enforced", shortfall)
 
     _emit({"ok": ok, "checks": checks, "verifier": ident,
            "admission": verdict.as_dict()}, args.json,
@@ -403,15 +442,33 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 
 def _render_doctor(checks: list[dict], ok: bool) -> str:
+    """[PASS] tested and held · [FAIL] tested and did not · [INFO] not a test.
+
+    An INFO line reports a posture, a mode or a configured contract. It carries
+    no verdict and is not counted, so the tally below means what it says.
+    """
     lines = ["crossaudit doctor", "=" * 60]
+    # Width from the longest label, so the detail column stays aligned and is
+    # always separated by at least two spaces. A fixed 22 silently collided
+    # whenever a name reached it, leaving one space and a ragged column.
+    width = max([len(c["check"]) for c in checks] or [22]) + 1
     for c in checks:
-        mark = "PASS" if c["ok"] else "FAIL"
-        lines.append(f"[{mark}] {c['check']:22s} {c['detail']}")
-        if not c["ok"] and c["fix"]:
+        mark = "INFO" if c.get("kind") == "info" else ("PASS" if c["ok"] else "FAIL")
+        lines.append(f"[{mark}] {c['check']:{width}s} {c['detail']}")
+        if mark == "FAIL" and c["fix"]:
             lines.append(f"       -> {c['fix']}")
     lines.append("=" * 60)
     lines.append("ready" if ok else "not ready — fix the FAIL lines above")
     return "\n".join(lines)
+
+
+def _generator_needs_key(cfg) -> bool:
+    """Whether this project's generator role needs an API key of its own."""
+    from ..providers.registry import NEEDS_KEY
+    if (cfg.generator_vendor or "").lower() == "human":
+        return False
+    provider = getattr(getattr(cfg, "generator", None), "provider", "") or ""
+    return NEEDS_KEY.get(provider, True) if provider else True
 
 
 # ------------------------------------------------------------------ check
