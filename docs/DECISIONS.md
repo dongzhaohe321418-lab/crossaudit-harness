@@ -3297,3 +3297,51 @@ one is *observed to be missing*.
 
 This is the first movement on the bar since the assessment returned shown 0/7,
 and it came from the layer D80 identified as missing — not from another merge.
+
+## D82 — MERGED: doctor parity and PATH identity; and D39 needed its second half
+
+`agentA/path-identity` merged. Cross-vendor **MERGE** from the auditor that
+gated this branch twice, with **mutation D and D2 both red** — the enumeration
+test now fails because the *derivation* produced a bad set, closing a
+three-layer error whose root was my own under-specification (D64, D78).
+
+A person can now tell which `crossaudit` answered them: installing this build
+while an older pip install owns the name on PATH was **silent**; the row
+detects it without executing the foreign binary and says so honestly when the
+layout is unreadable. **F3 stays open** — the collision itself is not closed,
+and the docs and ledger say so.
+
+### The auditor found the layer I asked it to rule out
+
+I asked for layer four to be ruled out rather than assume there wasn't one.
+`layer_four=found`, graded S3 and scheduled. Asking someone to disprove an
+absence is worth more than asking them to confirm a presence.
+
+### And it drew a limit on evidence I would have miscounted
+
+> The walkthrough does not cover this row either — it ran on a clean HOME with
+> **no stale install on PATH, the exact state where `path_identity()` is
+> designed to say nothing.** Nobody should read that evidence as covering it.
+
+99 files of packaged evidence exist, and none of it touches the row this merge
+is about, because the walkthrough ran in the conditions where the row is
+correctly silent. That is a precise statement of what evidence does *not*
+establish, offered unprompted.
+
+### D39's second half
+
+My tree check reported the merge result differing from the tested tree by
+**1,605 lines**, including a 304-line test file. The cause was legitimate —
+`agentA/path-identity` was cut before cycle-integrity-small merged, so the
+tested tree predates it — but that is exactly the interaction D75 named:
+*every gate asked "is this change correct?" and none could ask "who holds this
+property now?"* Two branches, each green alone, merged without their
+combination ever being run.
+
+So I ran the suite **on the merge commit itself**: 1,767 collected, 1,765
+passed, 2 skipped, **0 failed.**
+
+RULE (D39 completed): compare the merge result to the tested tree, and when
+they differ materially, **the suite runs on the merge commit before the merge
+counts as gated.** Identical trees make the branch run sufficient; different
+trees make it evidence about something that no longer exists.
