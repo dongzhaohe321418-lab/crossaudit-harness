@@ -498,7 +498,199 @@ a different vendor is likelier to challenge — and it says so while having foun
 them anyway. The cross-vendor engineering review is still outstanding and slice 1
 does not merge without it.
 
-### D19 — Merge the file-identity fix. All three findings pre-exist, and worse.
+### D12 — The third text tier does not exist in the light theme; stop pretending it does
+
+The design engineer's token analysis found something better than a fix. `--text-3`
+carries 149 uses, 141 of them `color:` and only 8 decorative — dots, a toggle knob,
+chevron masks, one gradient — so the blast radius of changing it is small and
+known. `--faint` is aliased to it with zero usages and gets deleted.
+
+The uncomfortable part: **in the light theme that tier cannot survive.** No value is
+both readable at 11px and distinguishable from `--text-2`. `#646B79` clears AA at
+4.73 worst-case but sits 0.02 luminance from `--text-2`, which means it is legible
+and no longer a tier. Dark has room — `#9B948A` at 5.46 keeps a genuine third
+level.
+
+**Decided:** stop carrying that hierarchy in COLOUR and carry it in weight, size and
+position. As the engineer put it, pretending the range exists is how we arrived at
+a 2.72 contrast ratio on body copy in the first place. A design system that claims
+three legible tiers in a palette that supports two will keep producing unreadable
+text, and every individual fix will look arbitrary because the real defect is the
+claim, not the value.
+
+This is the same failure this project keeps finding in its code, arriving in the
+visual system: an artifact asserting a property it does not have.
+
+Consequence for in-flight work: the MCP batch fixed `.field-help` locally inside
+`.mcp-wizard` only, which was correct scoping at the time. Once the token is right
+that override must go, or one class renders two different colours depending on
+which component it lands in. Both changes touch `page.py`, so whoever lands second
+removes it.
+
+### D13 — A stale-base diff is not a deletion
+
+The design review of the MCP batch recorded, prominently, that the raw diff shows
+`AGENTS.md -24`, `docs/DECISIONS.md -426` and `test_context_condensation_page.py
+-440` — and that the branch deletes none of them. They are stale-base artifacts.
+
+Recorded as a decision because the person most likely to misread that diff is the
+merge gate, which is me, and because it is a general hazard now that branches live
+long enough to fall behind an integration branch that is moving hourly. A reviewer
+who notices this must say so in the review rather than leave it for the merger to
+work out, and the merger rebases before reading a diff for content.
+
+### D14 — Holding a file must not orphan the other half of a seam
+
+Two findings in one audit, same cause, and the cause is mine.
+
+The verification-state slice built a correct four-state renderer in `page.py` and
+the audit then found that **completed checks are announced as "not run"**: the
+server still sends `{name: contract_string}` and never `{description, state}`, so a
+real passing `checks.json` with a PASS report renders as "parseable: not run yet,
+complete: not run yet". The same audit found the approved `rules_blocking` field
+absent, so the constitution row still reads "N rules".
+
+In both cases the console could only say what it was told, and nobody was assigned
+to make the server tell it. I held `page.py` for one engineer to prevent two large
+branches colliding in it — which was right — and then failed to assign the
+server-side half of the same seam, which was not.
+
+Note the direction of the error: the renderer now UNDER-claims rather than
+over-claims, so no §1.5 line was crossed. But for this product specifically that is
+still a real harm. The design engineer's walkthrough found that a first-timer's
+comprehension of the audit is CrossAudit's genuine strength; a console that reports
+"not run" for checks that ran teaches them the verification never happens. An
+honest under-claim is not automatically a safe one.
+
+**The rule:** when a file is held, the manager assigns the other side of every seam
+that file participates in, in the same breath, or the slice is scoped to include
+both sides. A held file is a scheduling decision, and scheduling decisions that
+strand half a contract are the manager's defect, not the engineer's — the engineer
+that reported "the row states only what it is told" was describing the situation
+correctly and escalating it correctly.
+
+### D15 — Three states, because we have evidence for three
+
+Building the server half of the check-state seam, the engineer stopped before
+editing and reported a contract blocker rather than picking an answer:
+`checks.json` records contracts and findings, so **passed**, **failed** and
+**not run** are all honestly derivable — but it records no APPLICABILITY fact, so
+"does not apply" cannot be distinguished from a check that ran and found nothing.
+Making the fourth state real would require an additive applicability result from
+`dcl/`, which turns a server-side slice into an audit-core change.
+
+**Decided: three states. `n_a` is not sent, because we cannot honestly derive it.**
+
+Rendering "does not apply" for a vacuous pass would assert a fact we do not have,
+which is the exact failure class this team has spent the day removing — and it
+would do it on the surface whose whole purpose is to stop the product claiming
+verification it did not perform. A check that ran and found nothing has run. Saying
+it passed is derivable; saying it did not apply is invention.
+
+The renderer keeps its four-state capability. It is the general treatment and other
+surfaces will have genuine applicability; an unreachable branch that is correct
+costs nothing, while a reachable branch that lies costs everything. But the commit
+and the ledger must state plainly that `n_a` is not currently reachable and why,
+so that a future reader meeting a four-state renderer does not assume all four are
+live.
+
+**And the trade I am refusing explicitly:** expanding into `dcl/` to give a console
+row a fourth badge is the wrong reason to touch the deterministic layer. §1 says an
+audit-core change is a conversation, not a commit. Adding an applicability output
+to DCL may well be a good change — but it has to be justified by what the AUDIT
+needs, not by what a UI wants to display. Logged as a separate candidate to be
+argued on its own merits by someone who wants it for the audit's sake.
+
+### D16 — The CLI has no i18n, and our invariant says it must
+
+The design review of the first-three-minutes slice reports something larger than
+the slice: **the CLI has no i18n mechanism at all.** `LANG=zh_CN.UTF-8` renders
+English. The engineer built to a spec that said English-only, so this is not its
+defect — it is a gap between what §1 of AGENTS.md claims and what the product does.
+
+§1 says every user-facing string needs Chinese parity. The console satisfies it.
+The CLI never has. So that invariant has been, in part, aspirational, and it has
+been reported as satisfied slice after slice because every slice that touched it
+was a console slice. Recorded plainly, because an invariant that is only true of
+the surfaces we happen to work on is not an invariant, and quietly enjoying the
+credit for it is the same failure we keep finding in code.
+
+It also just became materially worse. The constitution moment — a person's
+governing document, shown for agreement sixty seconds in — is a CLI screen. A
+Chinese-speaking first-timer now meets **the most consequential screen in the
+product** in a language they did not choose, at the exact moment they are being
+asked to agree to something. The owner works in Chinese.
+
+**Decided:** CLI i18n becomes its own slice, specified before it is built. Until it
+lands, no slice may report Chinese parity as satisfied on a CLI surface; it reports
+"not applicable — the CLI has no i18n mechanism, tracked as D16" so the gap stays
+visible in every contract that touches it rather than being silently skipped.
+
+### D17 — Number the options rather than soften the sentence
+
+The same review found an accessibility docstring at `wizard.py:325` claiming a
+screen reader receives "the numbered options" when the shipped menu is not
+numbered, and selection is carried by a green `❯`, bold, and position — so the
+claim that no meaning is carried by colour or position is not true of the selection
+marker. Three of its four claims hold.
+
+That is §1.5 sitting inside the slice built to stop the product overclaiming, which
+is now the seventh instance of this shape today.
+
+**Decided: number the options.** Both routes remove the overclaim; only one of them
+also makes the product better, because numbering lets the selected item be
+announced as TEXT rather than as a glyph and a colour. When a claim and the code
+disagree, prefer changing the code to match the claim wherever the claim describes
+something worth having. Softening the sentence is the right move only when the
+claim itself was wrong.
+
+### D18 — Two reviewers disagreed on severity; the deciding fact was missing, so I asked rather than guessed
+
+The file-identity fix drew a MERGE from the cross-vendor engineering review and a
+DO NOT MERGE with three S0s from the invariant audit. Both agree the original S0 is
+closed: the audit independently reproduced it on integration `7454bda` (rules
+changed, nothing staged, only `AUDIT_RULES.md` modified and invisible to the
+auditor) and confirmed the same harness is refused before write on `6dd137e`, with
+directory symlinks, dangling chains, hardlinks, inode aliases, traversal, case and
+Unicode aliases and target swaps all refused.
+
+They disagree about what remains:
+
+- The engineering review framed the non-atomic `apply()` as an atomicity defect,
+  pre-existing, S2, explicitly not worth blocking a security merge for.
+- The audit framed the same code as an S0, because after a multi-file refusal the
+  working tree holds generator-authored bytes from the REFUSED round while the
+  committed tree the auditor reads still holds the old content. That is not only
+  data loss; it is the generator's output living outside what the auditor sees.
+
+**The audit's framing is the better one** and I am adopting it. "Half a round on
+disk" is an engineering description; "the auditor receives one thing while the
+generator's bytes are another" is a non-bypassable-audit violation, and that is the
+invariant this product exists to hold. The same facts, read against §1.1 rather
+than against tidiness, are worse than they looked.
+
+The audit also found two more: parent-directory creation follows a swapped ancestor
+before the later refusal fires, so a model-chosen directory can be created outside
+the project and `allowed_dirs` even though no content escapes; and identity is
+discarded before staging, so replacing a returned pathname with a hardlink to an
+out-of-scope file lets `_stage_generated()` stage bytes from outside scope into the
+committed tree. Both say the same thing: **authorization does not precede every
+filesystem mutation, and it does not survive later pathname operations.**
+
+**The decision I did NOT make:** whether to merge. The fact that decides it is not
+in either report — do findings 2 and 3 reproduce on the INTEGRATION branch, or are
+they introduced by this fix? If they pre-exist, merging closes a passive no-race
+escape and leaves two races exactly as they were: a clear improvement. If this fix
+introduces them, merging trades a passive hole for two racy ones and the arithmetic
+is no longer obvious.
+
+I do not know, and neither report says. So I asked the auditor, which has the
+harness, rather than reasoning my way to a conclusion I would then have to defend.
+A merge gate that guesses on the deciding fact is not a gate. Recorded because the
+temptation to merge on the strength of "it closes an S0" was real, and the honest
+answer was that I did not yet know what I would be trading.
+
+### D19 — Merge the file-identity fix. All three findings pre-exist; ~~and worse~~ two worse, one equal.
 
 The auditor could not answer D18's question: the provider's content filter blocked
 four consecutive turns, because a harness that swaps symlinks and hardlinks to test
@@ -545,3 +737,45 @@ code-level determination on four lines whose behaviour is unambiguous is not the
 same as a guess, but it is also not the same as running it, and I would rather say
 which one I had. The auditor is being restarted clean and will confirm or correct
 this after the fact.
+
+
+**Amendment, from the verification I asked for.** An engineer re-ran this
+comparison by EXECUTION on the pre-merge code, which is what I wanted and could not
+get at the time. The conclusion holds — `holds=yes` — and the four lines behave
+exactly as I read them: on the old code all three findings reproduce with no race
+injection at all and the original escape is silent, while on the merged code the
+original and both non-racy variants are refused.
+
+Two corrections to my own text, and one of them is against me:
+- **Finding 2 is worse on the old code than I claimed.** No race is needed there at
+  all, and the CONTENT escapes too, not merely the directory. I understated it.
+- **Finding 3 is equal, not worse.** The body of this entry says that correctly —
+  "same exposure, with nothing to discard" — but the heading compressed three
+  findings into one adjective and got one of them wrong.
+
+The honest claim is: all three pre-exist, two are worse there, one is unchanged.
+That still leaves merging clearly right, which is why the decision stands and only
+its wording is corrected. Struck in place rather than rewritten, because a record
+that quietly loses its own overclaim teaches nobody anything — and because this
+entry exists to document a case where I acted on reading rather than execution, so
+its own summary being imprecise is exactly the thing worth showing.
+
+### D20 — Manager commits go through `git -C`, not through a working directory
+
+Twice now a decision has been committed to the wrong branch because this shell's
+working directory persists between commands and had drifted into a worktree that
+was not the integration branch. The first time it was AGENTS.md §3.5, caught by the
+design engineer when it went to read the rule it had been told to follow. The second
+time it was D12 through D18, caught by an engineer noticing that the integration
+copy jumps D11 → D19 while D19's text references a D18 that a reader of integration
+cannot find.
+
+Both were invisible from where I was standing: the commit succeeded, the file
+looked right, and the branch it landed on was one nobody was reading. That is the
+same shape as the defects this team keeps finding — an action that reports success
+while doing something other than what was intended — and it is mine.
+
+**The rule: every manager commit uses an explicit `git -C <integration worktree>`.**
+No reliance on where the shell happens to be. And when a decision references an
+earlier one, the reference is a checkable claim like any other: if D19 cites D18,
+D18 must be readable from the same branch.
