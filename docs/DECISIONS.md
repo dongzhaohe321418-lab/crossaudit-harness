@@ -1550,3 +1550,42 @@ not read as closure.
 The sweep is trustworthy *because* it refused to count the constitution path
 as fixed on the strength of the creation-side byte matrix. A sweep that
 rounds toward "covered" is worth nothing.
+
+## D42 — Split the row: producer and consumer get separate verdicts
+
+The mint audit returned MERGE AFTER FIXES on two rows that would have been
+one averaged PASS:
+
+- *Unknown server contract* — empty and unsuggested for all five unfamiliar
+  kinds. **Pass.**
+- *Unknown rendered behaviour* — **positive suggestion remains.**
+
+The server is right: an unrecognised failure kind produces no suggestion,
+which is the fail-closed behaviour specified — when we know least we must
+not sound confident. The Decision Center simply does not read the capability
+fields, so the surface offers optimism the runtime explicitly declined to
+express. A response-shape assertion would have called this green, because
+the response *was* green.
+
+Third occurrence today of correct-at-the-producer meeting wrong-at-the-
+consumer (with the constitution bytes and the mint itself). It is now the
+dominant defect shape in this codebase, and averaging the two into one
+verdict is what hides it.
+
+RULE: when a contract has a producer and a renderer, the audit reports two
+rows. A single verdict over both is not permitted, because the failing half
+is invisible in the average.
+
+### Count divergence — D39 on the author's side
+
+The auditor reported the supplied suite count (1625) not reproducible at the
+SHA, and 1611 reproducible. I ran it independently at 5c34004: **1611
+passed, 2 skipped, 0 failed.** The auditor was right; the author's number did
+not come from the tree it committed.
+
+Same defect as my own merge earlier: citing a suite count is a claim about a
+specific tree, and citing it means establishing which tree. The rule from
+D39 now binds agents as well as me — report the count from the committed
+SHA, in a detached checkout, or do not report one.
+
+Verifying the count paid for itself the first time it was asked for.
