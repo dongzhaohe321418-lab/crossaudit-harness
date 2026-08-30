@@ -3394,3 +3394,48 @@ RULE: **a test harness must assert the identity of the product it loaded.** Not
 its path — its runtime identity. This is D39 and D69 arriving in the apparatus
 that generates evidence, where it is worst: every number it produces inherits
 the error silently.
+
+## D84 — Nine sites resolve identity by path, and five of them are mine
+
+Sweep of every place a product, module, artifact or environment is resolved by
+path or name rather than asserted identity: **12 sites, 3 asserted, 9
+unasserted — and at all nine a wrong resolution produces a plausible
+correct-looking result** rather than silence or an error.
+
+**Five are in my own tooling**, with what a wrong resolution yields:
+
+| Site | Wrong resolution produces |
+|---|---|
+| `CROSSAUDIT_SRC` | matching record/replay from an installed foreign build |
+| shared interpreter | coherent numbers from a different environment |
+| worktree paths | tests passing against a stale or different checkout |
+| detached suite runner | a correct-looking count from the repo parent (262 vs ~1700) |
+| `dist/` selection | UI evidence from an older or newer artifact |
+
+Two of those have already happened tonight to other people: the UI engineer hit
+the 262-instead-of-1700 case twice, and the security auditor's walkthrough
+drove a *second console on another port* showing the same overlay.
+
+**Every number I have gated a merge on tonight rests on those five.**
+
+So I fixed my own instrument before asking anyone else to fix theirs. My
+verification runs now assert, before measuring: the worktree HEAD equals the
+requested SHA; the tree is clean; the shared interpreter exists; and **the
+imported `crossaudit` comes from that worktree's own `src`** rather than an
+installed copy. Verified live on `51b979a` — import origin inside the
+worktree, then 1,855 passed, 2 skipped, 0 failed, matching the author.
+
+RULE: **assert identity before measuring, not after.** A tree hash reported
+alongside a result tells you what you measured; asserting it first stops you
+measuring the wrong thing at all. The remaining unasserted sites — Playwright
+driver, console localhost URL, config and skills loaders, auditor source
+identity — are the walkthrough and product surfaces, and they are queued.
+
+### The receipt disagreement resolved honestly
+
+The author reported `gaps=2/3` where its auditor reported 3/3, and the
+resolution came back **`hash9=format-limit, writeup=yes`**: the DCL source
+digest genuinely cannot be re-derived from the object the receipt cites. That
+is a finding about the receipt format, written up as one rather than left as an
+unfinished item — which is exactly what I asked for and the direction that
+costs the author a closed gap. `reverted_reddens=3/3`.
