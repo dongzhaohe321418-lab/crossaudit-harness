@@ -1740,3 +1740,44 @@ wave 3 lands** — and it is better than either claiming parity or claiming a
 gap. Recording it so the distinction is available to everyone: a string can
 be *present* and deliberately not yet *reachable*, and saying so is not
 hedging (D43) because the claim being made is accurate and complete.
+
+## D47 — Retain the last shipped bundle; artifact regression must not be luck
+
+The post-merge review of `b753fbc` came back essentially clean — 18/18 verbs
+reach the CLI, 0 raw tracebacks across 60 artifact shapes, every refusal
+carrying an actionable `DENIED (config)` line, three known S3s unchanged and
+one of them inherited. So the gate failure recorded in D44 was procedural:
+I merged without establishing the review, and the code holds. The gap stays
+recorded under my name; the code is cleared.
+
+The auditor then raised the thing only its position could see:
+
+> This audit was only possible because two bundles happened to still be
+> sitting on disk.
+
+Answering "did a late boundary catch a legitimate path" requires a
+*before*-artifact, and nothing in our process keeps one — the DMG build
+overwrites into `dist/`. Artifact-to-artifact regression checking has been
+luck three times today, and each time it found something.
+
+DECISION: the last shipped bundle is retained deliberately. Every DMG build
+archives the previous artifact before overwriting `dist/`, so a before/after
+comparison is always available. This pairs with the standing frozen-bundle
+reachability gate adopted from the i18n engineer.
+
+### The general form of the S3 objection
+
+I argued the unsubstituted `# Constitution — <PROJECT>` placeholder was worse
+than its S3 grade because the case that *works* is the demo and the case that
+is *broken* is the project every GUI user is handed. The auditor generalised
+it better than I stated it:
+
+> A defect in the default path wearing a low severity because the working
+> case is the one nobody meets. That asymmetry is the tell — the same shape
+> as this bundle being one commit behind HEAD: the tested thing and the
+> shipped thing drifting apart quietly.
+
+RULE: severity is graded on the path a person actually takes. When the
+correct behaviour lives on a path few reach and the broken one is the
+default, the grade follows the default. This is D39's shape (tested tree vs
+merged tree) restated for users instead of commits.
