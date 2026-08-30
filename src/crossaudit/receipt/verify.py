@@ -16,17 +16,316 @@ import json
 import re
 from pathlib import Path
 
+import yaml
+
 from .. import _selfid
 from ..config import Config
 from ..controller import StateStore
-from ..errors import IntegrityDenial
-from ..gitio import (blob_limit, commit_exists, entries, is_ancestor, read_blob,
-                     read_committed_bytes, resolve)
+from ..errors import ConfigDenial, Denial, IntegrityDenial
+from ..gitio import (blob_limit, commit_exists, entries, is_ancestor,
+                     materialise, read_blob, read_committed_bytes, resolve)
 from . import schema
 
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+#: The project configuration's filename, from `config` rather than restated
+#: here — a transcribed constant drifts from the source it claims to track. The
+#: receipt does not cite a path for it, which is itself a limit of the format.
+from ..config import CONFIG_NAME as CONFIG_FILENAME
+
+#: Distinguishes "the commit has no ``checks:`` key" (which means the default
+#: profile) from "the key is present and null" (which config.load refuses).
+#: config.load makes exactly this distinction; re-deriving without it would
+#: resolve a different list than the one the audit actually ran.
+_ABSENT = object()
+
+
+def _cited_audit_commit(receipt: dict, audit_root: Path) -> str | None:
+    """The audit-repository commit whose tree is this receipt's own evidence for
+    the project configuration and the house skills that shaped the round.
+
+    Resolved from the receipt, and confirmed to exist **in the repository being
+    asked**, never assumed from the science side:
+
+    1. ``ledger.report_commit`` — written in the audit repo during this audit,
+       immediately before the receipt was built, so its tree is the audit repo
+       as it stood at audit time. The strongest pin the format offers.
+    2. ``subject.sha`` — only when that commit actually exists here. In the
+       single-repo layout the audit repo and the science repo are one
+       repository, so the audited commit carries these files. Verifying a
+       receipt against a *separate* audit repo must not look up a science sha in
+       it: that reached a person as ``git ls-tree failed: fatal: not a tree
+       object``.
+    3. Otherwise ``None`` — the claims below are not derivable, and say so.
+    """
+    report_commit = str(receipt["ledger"].get("report_commit") or "")
+    if report_commit and commit_exists(audit_root, report_commit):
+        return report_commit
+    subject_sha = str(receipt["subject"]["sha"])
+    if subject_sha and commit_exists(audit_root, subject_sha):
+        return subject_sha
+    return None
+
+
+def _committed_config_bytes(audit_root: Path, commit: str) -> bytes:
+    """``crossaudit.yml`` exactly as stored in ``commit``.
+
+    Named separately so the working-tree read it replaces cannot creep back in
+    unnoticed: reading the *current* file both denies honest history (edit your
+    config and your ledger is retroactively invalid) and accepts a forged
+    ``inputs.checks`` from anyone who can edit an uncommitted file.
+    """
+    return read_committed_bytes(audit_root, commit, CONFIG_FILENAME)
+
+
+def _resolve_committed_checks(raw) -> list[str]:
+    """Re-run the selection ``config.load`` ran, on the committed value.
+
+    A profile name is expanded through the same ``dcl.profiles.resolve``, so
+    ``checks: general`` in the commit re-derives to the four concrete names a
+    receipt records and a profile whose membership changed is caught.
+    """
+    from ..dcl.profiles import DEFAULT_PROFILE, resolve as _resolve
+    return _resolve(DEFAULT_PROFILE if raw is _ABSENT else raw)
+
+
+def _skills_match(declared: dict, derived: dict) -> tuple[bool, str]:
+    """Whether the recorded manifest is the committed one, and under which of
+    the two shipped digest conventions.
+
+    A convention must hold for EVERY entry: one writer minted one receipt, so a
+    manifest that is parsed-body for one skill and committed-bytes for another
+    was produced by no writer this product ships and is not corroborated.
+    """
+    if set(declared) != set(derived):
+        return False, ""
+    if all(declared[path] == derived[path][0] for path in declared):
+        return True, "the parsed skill body"
+    if all(declared[path] == derived[path][1] for path in declared):
+        return True, "the committed file bytes"
+    return False, ""
+
+
+def _checks_match(declared: list, derived: list) -> bool:
+    """Whether the recorded selection is the committed one — ordered, on purpose.
+
+    ``checks:`` is a list in the committed file and the receipt records it in
+    that order, so a reordered list is a different configuration text and set
+    equality would report two different configurations as the same one. This is
+    stricter than the checks themselves require, which is safe here because the
+    comparison only ever reports and never denies.
+    """
+    return list(declared) == list(derived)
+
+
+def _refuse_oversize_skill(path: str, data: bytes, total: int, skills_mod) -> None:
+    """The skills module's own size policy, applied to committed bytes.
+
+    `materialise` bounds a blob at `blob_limit` — 512 KiB for a .md — while
+    `skills.load` refuses anything over MAX_SKILL_BYTES (60,000). Those are
+    different numbers, so the bound is re-applied here; without it the verifier
+    would derive a skill the shipped disk writer refuses to mint.
+    """
+    if len(data) > skills_mod.MAX_SKILL_BYTES:
+        raise ConfigDenial(
+            f"skill {path} is {len(data)} bytes, over the "
+            f"{skills_mod.MAX_SKILL_BYTES}-byte limit skills.load enforces")
+    if total > skills_mod.MAX_TOTAL_BYTES:
+        raise ConfigDenial(
+            f"the committed skills total more than {skills_mod.MAX_TOTAL_BYTES} bytes")
+
+
+def _committed_skills(audit_root: Path, commit: str) -> dict:
+    """The house-skills manifest ``commit``'s tree implies, whole.
+
+    Reads the tree through **`gitio.materialise`** — the same primitive the
+    shipped writer uses on its subject-commit path. That is deliberate and it is
+    not deference: sharing the reader means producer and verifier refuse the
+    same symlinks and the same submodules by construction, rather than by two
+    hand-rolled mode checks that happen to agree today. My own first version
+    checked only for symlinks and would have silently ignored a submodule under
+    `skills/` that the writer refuses outright.
+
+    The size policy is re-applied on top, because it belongs to `skills` and not
+    to `gitio` — see `_refuse_oversize_skill`.
+
+    Returns ``path -> (parsed-body digest, committed-bytes digest)``, because the
+    product ships BOTH conventions and the receipt does not say which minted it.
+    `cli/main.py:_skills_manifest` hashes `skills.manifest`'s parsed body on its
+    disk path and `sha256` of the raw blob on its subject-commit path, and those
+    differ for any skill with front matter. A verifier that knew only one would
+    call half the product's own honest receipts forged.
+
+    The parsed-body digest comes from the writer's own ``skills._parse`` /
+    ``skills.manifest``, so front-matter stripping and CRLF normalisation are
+    shared by construction rather than reimplemented here.
+    """
+    from .. import skills as skills_mod
+
+    files, _notes = materialise(audit_root, commit, skills_mod.SKILLS_DIR)
+    parsed, blob_digests, total = [], {}, 0
+    for path, data in sorted(files.items()):
+        if not path.endswith(".md"):
+            continue
+        total += len(data)
+        _refuse_oversize_skill(path, data, total, skills_mod)
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ConfigDenial(f"skill {path} is not UTF-8: {exc}") from exc
+        parsed.append(skills_mod._parse(text, Path(path).stem, path))
+        blob_digests[path] = _sha256(data)
+    bodies = skills_mod.manifest(parsed)
+    return {path: (bodies[path], blob_digests[path]) for path in bodies}
+
+
+def _local_dcl_source_digest() -> str | None:
+    """This installation's check-layer digest, or ``None`` if it cannot say.
+
+    A frozen build missing ``crossaudit-build.json`` raises ``ConfigDenial``
+    here; a config error must never reach a person from inside an integrity
+    read, so it is reported as an unavailable comparison instead.
+    """
+    from ..auditor.run import dcl_source_digest
+    try:
+        return dcl_source_digest()
+    except Denial:
+        return None
+
+
+def _derivation(claim: str, source: str, status: str, detail: str) -> dict:
+    return {"claim": claim, "source": source, "status": status, "detail": detail}
+
+
+def _input_derivations(receipt: dict, *, audit_root: Path) -> list[dict]:
+    """Re-derive the three receipt inputs D41 left unchecked, and report them.
+
+    **This never raises on a divergence, by decision.** A verifier that denies
+    honest, signed, controller-recorded receipts is worse than one that is too
+    permissive: too permissive lets a bad receipt through and the ledger is
+    still a ledger, while a false denial tells a person their genuine audit is
+    invalid — and the true case is the only one most people will ever have.
+    None of these three claims is pinned by the *producer*, so no divergence
+    here can be distinguished from an honest one:
+
+    * ``checks`` — ``crossaudit.yml`` is not required to be committed (only the
+      constitution is), so an operator who edits config without committing
+      diverges honestly;
+    * ``skills`` — the shipped writer (``cli/main.py:_skills_manifest``) reads
+      ``skills.load(cfg.root)``, the working directory, so a skill added after
+      the audited commit is genuinely recorded by an honest mint;
+    * ``dcl_source_sha256`` — see below, there is no cited object at all.
+
+    Each becomes enforceable the day its producer pins it, and this returns the
+    status a caller would then promote. ``admit()`` meanwhile still refuses on
+    ``verifier.code_digest_sha256``, a strictly stronger digest over the whole
+    package, at the moment identity must hold.
+    """
+    inputs = receipt["inputs"]
+    rows: list[dict] = []
+    cited = _cited_audit_commit(receipt, audit_root)
+    at = f"{cited[:12]}" if cited else ""
+
+    # --- #10: the configured check list -----------------------------------
+    if cited is None:
+        rows.append(_derivation(
+            "checks", "none", "not-derivable",
+            f"the receipt cites no audit-repository commit that could carry "
+            f"{CONFIG_FILENAME}, so the recorded check selection cannot be "
+            f"re-derived offline"))
+    else:
+        source = f"{at}:{CONFIG_FILENAME}"
+        try:
+            raw_doc = yaml.safe_load(
+                _committed_config_bytes(audit_root, cited).decode("utf-8"))
+            doc = raw_doc if isinstance(raw_doc, dict) else {}
+            derived = _resolve_committed_checks(
+                doc["checks"] if "checks" in doc else _ABSENT)
+        except (Denial, yaml.YAMLError, UnicodeDecodeError) as exc:
+            rows.append(_derivation("checks", source, "not-derivable",
+                             f"{CONFIG_FILENAME} could not be re-derived from "
+                             f"{at}: {exc}"))
+        else:
+            declared = list(inputs.get("checks") or [])
+            if _checks_match(declared, derived):
+                rows.append(_derivation("checks", source, "corroborated",
+                                 f"the recorded check selection re-derives from "
+                                 f"{source}"))
+            else:
+                rows.append(_derivation(
+                    "checks", source, "diverged",
+                    f"the receipt records checks {declared} but {source} selects "
+                    f"{list(derived)}"))
+
+    # --- #11: the house-skills manifest -----------------------------------
+    declared_skills = dict(inputs.get("skills") or {})
+    if cited is None:
+        rows.append(_derivation(
+            "skills", "none", "not-derivable",
+            "the receipt cites no audit-repository commit whose skills/ prefix "
+            "could be re-derived offline"))
+    else:
+        source = f"{at}:skills/"
+        try:
+            derived_skills = _committed_skills(audit_root, cited)
+        except Denial as exc:
+            rows.append(_derivation("skills", source, "not-derivable",
+                             f"the skills manifest could not be re-derived from "
+                             f"{at}: {exc}"))
+        else:
+            matched, convention = _skills_match(declared_skills, derived_skills)
+            if matched:
+                rows.append(_derivation(
+                    "skills", source, "corroborated",
+                    f"all {len(derived_skills)} recorded skills re-derive from "
+                    f"{source}, hashed over {convention}"))
+            else:
+                missing = sorted(set(derived_skills) - set(declared_skills))
+                extra = sorted(set(declared_skills) - set(derived_skills))
+                changed = sorted(k for k in set(declared_skills) & set(derived_skills)
+                                 if declared_skills[k] not in derived_skills[k])
+                parts = []
+                if missing:
+                    parts.append(f"in force but not recorded: {missing}")
+                if extra:
+                    parts.append(f"recorded but not in {source}: {extra}")
+                if changed:
+                    parts.append(f"recorded with a different body: {changed}")
+                rows.append(_derivation("skills", source, "diverged",
+                                 "; ".join(parts)))
+
+    # --- #9: the deterministic-layer source digest -------------------------
+    # There is no cited object and none can exist in this format: the digest
+    # hashes crossaudit/dcl/**.py *of the process that minted the receipt*, plus
+    # any plugin packs it had loaded. That source lives in the installed
+    # program, not in either repository, and the receipt names no repo, commit
+    # or path for it. Comparing it to this host is an identity claim about two
+    # installations, not a re-derivation of the receipt's claim, so it is
+    # labelled with its own vocabulary and can never be read as one.
+    declared_dcl = str(inputs.get("dcl_source_sha256") or "")
+    local = _local_dcl_source_digest()
+    if local is None:
+        rows.append(_derivation(
+            "dcl_source_sha256", "this installation", "not-derivable",
+            "this installation cannot identify its own check layer, so the "
+            "receipt's deterministic-layer digest cannot be compared"))
+    elif declared_dcl == local:
+        rows.append(_derivation(
+            "dcl_source_sha256", "this installation", "local-match",
+            "this receipt was minted by the same check layer this installation "
+            "runs (an identity match, not a re-derivation: no committed object "
+            "pins the check layer)"))
+    else:
+        rows.append(_derivation(
+            "dcl_source_sha256", "this installation", "local-differs",
+            f"this receipt was minted by a different check layer than this "
+            f"installation runs ({declared_dcl[:12] or 'absent'} vs "
+            f"{local[:12]}); expected after any release, and expected on every "
+            f"run where check packs were loaded at audit time"))
+    return rows
 
 
 def load(path: Path) -> dict:
@@ -223,6 +522,13 @@ def verify(receipt: dict, *, science_root: Path, audit_root: Path,
                 raise IntegrityDenial(
                     "governed-source set does not match the evidence ledger")
 
+    # D41 #9/#10/#11, re-derived from the object each receipt cites and
+    # reported. Deliberately additive: it adds no denial and no admission
+    # shortfall, so every receipt that verified and admitted before this still
+    # does — including a plugins: deployment, whose minted check-layer digest
+    # folds in packs a verifier never loads.
+    derivations = _input_derivations(receipt, audit_root=audit_root)
+
     return {
         "receipt_digest": schema.digest(receipt),
         "sha": subject["sha"],
@@ -230,6 +536,7 @@ def verify(receipt: dict, *, science_root: Path, audit_root: Path,
         "verified": True,
         "admission_ready": not admission_shortfalls,
         "admission_shortfalls": admission_shortfalls,
+        "input_derivations": derivations,
     }
 
 
