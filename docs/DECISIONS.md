@@ -2310,3 +2310,31 @@ record as one** — not left as a task that quietly failed.
   0 failed.
 
 Both await cross-vendor audit.
+
+### D58 addendum — the located boundary turned "no" into "three quarters"
+
+Asked to name what it hit, the engineer came back with `causes_checked=4/4`
+and `per_cause=differs`:
+
+> Auditor BLOCK, provider-unavailable, round-budget, and generator-format /
+> no-progress states are constructible through existing controller/build test
+> helpers; the `answered` cause is not: it is assigned inside the generator
+> conversational gate and has no injectable provider/result seam exposed to
+> the console fixture. The blocker is a private/module-level generation path,
+> not the renderer. The smallest honest product change would be one injectable
+> generation outcome (or a factory seam) consumed by the existing loop,
+> leaving transitions unchanged.
+
+So the designer's seam argument was **right for three causes and wrong for
+one**, and we now know which and what it costs. That is worth more than a
+clean success or a clean failure. The aggregate `0/4` would have thrown away a
+24-cell regression set that exists.
+
+Building the three: 3 causes × 2 themes × 2 locales × 2 widths = **24 cells,
+runnable in minutes with no credentials.** `answered` is reported as unreached
+with its reason rather than approximated — an approximated state in a
+regression set is worse than a missing one, because the missing one keeps
+asking to be fixed.
+
+The `answered` seam goes to the designer as a **priced product decision**, not
+to the implementer as a workaround.
