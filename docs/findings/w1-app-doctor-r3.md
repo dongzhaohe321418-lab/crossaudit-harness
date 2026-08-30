@@ -210,3 +210,103 @@ The CLI failure case is still not closable from our side, exactly as recorded in
 `w1-path-identity.md`: a person who types `crossaudit` still reaches 3.2.0, and
 no change of ours executes in that process. What is now true, and was not, is
 that a person who opens the app is told which program that is.
+
+---
+
+# R5 — the security auditor's F5, F6, F7 at `23994a7`
+
+The auditor's own framing of F5 is the finding, and it is right: I commissioned
+nothing here, I *received* a mechanism and fixed it twice, and the hole moved
+down a level each time. The redden test reddened on injected data, not on
+derived data, so `_cli_check_names` could revert to a typed literal — the exact
+D64 defect — with every test in the file green.
+
+Also worth recording because it makes the report readable: the auditor declared
+its own weakest claim. `enumeration_reddens=yes` was verified with mutations the
+auditor itself published in D64, against code a same-vendor author wrote to
+satisfy them. It named that a closed loop, credited mutations B and the PATH
+failure to me as self-reported rather than presenting them as discoveries, and
+then built D and D2 — which neither the spec nor I had named. **The independent
+part of the audit is the part that found something.**
+
+## F5 — CLOSED. The redden case now runs the derivation
+
+Both new tests compile a **real copy of the shipped module with one textual
+change** and run the guard's own helpers against it. Not a stub, not a patched
+return value: the production function plus a mutation. If an anchor stops
+matching, the helper raises rather than silently testing an unmutated module.
+
+* CLI side: a real `add("unmirrored probe", ...)` in a compiled copy of
+  `cmd_doctor`, swapped in via `main.cmd_doctor`, so `_cli_check_names` must
+  actually run it.
+* App side: the `python` row renamed in a compiled copy of `app_doctor.collect`,
+  so `_app_check_ids` must actually run it.
+
+The helpers' bodies are deliberately **unchanged**, so the auditor's `mutate.sh`
+anchors still apply and D/D2 remain runnable verbatim against this tree.
+
+    mutation                                       23994a7      now
+    A  real unmirrored check in cmd_doctor         RED          RED
+    B  app doctor's `python` mirror deleted        RED          RED
+    D  CLI side reverts to a typed literal         green [F5]   RED
+    D2 app side reverts to a typed literal         green [F5]   RED
+    E  exclusion naming a check nobody emits       RED          RED
+    E2 same, PARKED IN THE WAIVER LIST             (green)      RED   [F7]
+
+D and D2 fail on the derivation assertion by name:
+
+    FAILED test_the_guard_reddens_when_cmd_doctor_really_gains_an_unmirrored_check
+    E  the CLI side did not come from running cmd_doctor: the probe was added to
+       a real compiled copy of the shipped function and never arrived.
+
+    FAILED test_the_guard_reddens_when_the_app_doctor_really_loses_a_mirror
+    E  the app side did not come from running app_doctor.collect(): the row was
+       renamed in a real compiled copy and the change never arrived.
+
+The injected-set test is deleted rather than kept alongside. It asserted that a
+set difference does set difference under a name claiming it demonstrated the
+reddening, and §3.5 is explicit that a test whose name overclaims is worse than
+no test.
+
+## F6 — CLOSED. Ownership is established, not assumed
+
+`_other_crossaudit_version` took the first of `sorted(glob(...))`. It now
+requires the distribution's **RECORD to list that exact file, with a matching
+sha256**, and returns "" when more than one distribution claims it.
+
+    two dist-info dirs (9.9.9 + 10.0.0)                   ->  ""   (was "10.0.0")
+    foreign program in a prefix that has crossaudit       ->  ""   (was "1.0.0")
+    console script replaced after installation            ->  ""
+    the live 3.2.0 install on this machine                ->  "3.2.0"  (unchanged)
+
+The hash check is what makes the foreign-program case answerable at all, and it
+costs nothing on the real install: pip's RECORD lists
+`../../../bin/crossaudit,sha256=…,215` and it matches the file on disk. The
+detection did not weaken — the version still resolves in the case the row exists
+for; only the cases where we could not actually tell went quiet.
+
+Sort order is not evidence, and this is the surface where the design says
+silence beats a confident wrong answer.
+
+## F7 — CLOSED. The waiver now excuses reachability, never existence
+
+`test_every_exclusion_names_a_check_that_exists` skipped a hand-maintained
+`unreachable` set and everything prefixed `machine:`, with nothing checking
+those — pre-approved absence at one remove, which is the shape the test exists
+to prevent, one level down. Again.
+
+Existence is now established from the **shipped source**, extracted by regex
+rather than transcribed (the mint-render lesson: a copied list drifts from the
+code it claims to describe and nothing notices). Every `CLI_ONLY` and `ALIASES`
+key must be a name `cmd_doctor` can actually emit — 19 literals plus the
+`machine:` prefix — and no waiver reaches that assertion.
+
+Mutation E2 is the proof: an exclusion for a nonexistent check, parked in
+`unreachable` so the reachability guard cannot see it. Green before, RED now, on
+`test_no_exclusion_names_a_check_the_shipped_code_cannot_emit`.
+
+## The branch-name hazard the auditor caught, restated because it is still true
+
+`fix/app-doctor-parity` still points at `109170e`. Everything in this file is
+reachable only from **`agentA/path-identity`**. Merging the branch named in the
+original dispatch takes a tree without any of it.

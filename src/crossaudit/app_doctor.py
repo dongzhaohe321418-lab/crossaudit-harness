@@ -7,6 +7,8 @@ Checks run off the HTTP request thread and repairs are an explicit allowlist.
 """
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
 import platform
@@ -152,17 +154,66 @@ def _other_crossaudit_version(script: Path) -> str:
     sits in `<prefix>/lib/python*/site-packages/crossaudit-<version>.dist-info`.
     Reading that directory's name is a filesystem lookup. Returns "" when the
     layout does not match, which the caller says out loud rather than guessing.
+
+    THE DISTRIBUTION MUST OWN THIS EXACT FILE. Taking the first matching
+    dist-info was a confident wrong answer in two real states: a partial
+    `pip uninstall` leaves two dist-info directories, and any program named
+    `crossaudit` sitting in a prefix that merely happens to have CrossAudit
+    installed would be reported at that prefix's version. The second is not a
+    corner case — a foreign program answering to our name is the exact scenario
+    this row exists for. Silence is the designed answer when we cannot tell, so
+    ambiguity has to reach it rather than be resolved by sort order.
     """
     try:
-        prefix = script.resolve().parent.parent
+        resolved = script.resolve()
+        prefix = resolved.parent.parent
+        versions = set()
         for site in sorted(prefix.glob("lib/python*/site-packages")):
             for dist in sorted(site.glob("crossaudit-*.dist-info")):
                 version = dist.name[len("crossaudit-"):-len(".dist-info")]
-                if version:
-                    return version
+                if version and _distribution_owns(dist, site, resolved):
+                    versions.add(version)
+        if len(versions) == 1:
+            return versions.pop()
     except OSError:
         pass
     return ""
+
+
+def _distribution_owns(dist: Path, site: Path, script: Path) -> bool:
+    """Whether this distribution's RECORD lists THIS file, contents included.
+
+    RECORD is written by the installer and names every file it placed, with a
+    sha256. Comparing the hash means a console script replaced after
+    installation stops being owned by the distribution that once installed it,
+    which is what makes "a foreign program of the same name" answerable from the
+    filesystem. No RECORD, no entry, or no hash means not established — and not
+    established means we say nothing, never a guess.
+    """
+    try:
+        lines = (dist / "RECORD").read_text().splitlines()
+    except OSError:
+        return False
+    for line in lines:
+        parts = line.split(",")
+        if len(parts) < 2 or not parts[0].strip():
+            continue
+        try:
+            if (site / parts[0].strip()).resolve() != script:
+                continue
+        except OSError:
+            continue
+        algorithm, _, digest = parts[1].strip().partition("=")
+        if algorithm != "sha256" or not digest:
+            return False
+        try:
+            blob = script.read_bytes()
+        except OSError:
+            return False
+        actual = base64.urlsafe_b64encode(
+            hashlib.sha256(blob).digest()).rstrip(b"=").decode()
+        return actual == digest
+    return False
 
 
 def path_identity(*, which=None) -> dict:

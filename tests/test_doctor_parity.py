@@ -15,7 +15,11 @@ check that nobody mirrors and requires the real comparison to raise.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
+import re
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -142,24 +146,83 @@ def test_cli_doctor_checks_are_mirrored_or_named_excluded(cfg, monkeypatch,
         f"— not merely why it is currently absent.")
 
 
-def test_the_parity_guard_reddens_for_an_unmirrored_cli_check(cfg, monkeypatch,
-                                                              capsys):
-    """D64: the deliverable is the test PLUS the observation of it failing.
+def _shipped_module_with(source: str, package: str, name: str,
+                         replacements: list[tuple[str, str]]):
+    """A REAL copy of a shipped module, compiled with one textual change.
 
-    A real CLI check that nobody mirrors and nobody excluded. If adding one does
-    not turn the comparison red, the comparison is not the mechanism whatever it
-    is named — which is exactly what the previous version of this file was.
+    Not a stub and not a monkeypatched return value: the shipped source is read
+    from disk, altered, compiled and executed, so the function under test is the
+    production function plus the mutation. If an anchor stops matching, this
+    raises rather than silently testing an unmutated module — a fixture that
+    quietly stops mutating is the failure mode this whole file exists about.
     """
-    cli = _cli_check_names(cfg, monkeypatch, capsys)
-    app = _app_check_ids(cfg)
-    assert _unmirrored(cli, app) == set(), "baseline is not clean"
+    text = Path(source).read_text()
+    for old_text, new_text in replacements:
+        assert text.count(old_text) >= 1, f"anchor moved: {old_text!r}"
+        text = text.replace(old_text, new_text)
+    spec = importlib.util.spec_from_file_location(name, source)
+    module = importlib.util.module_from_spec(spec)
+    module.__package__ = package
+    sys.modules[name] = module
+    try:
+        exec(compile(text, source, "exec"), module.__dict__)
+    finally:
+        sys.modules.pop(name, None)
+    return module
 
-    with pytest.raises(AssertionError) as caught:
-        missing = _unmirrored(cli | {"nobody mirrors this"}, app)
-        assert missing == set(), (
-            f"CLI doctor checks with no GUI mirror and no named exclusion: "
-            f"{sorted(missing)}")
-    assert "nobody mirrors this" in str(caught.value)
+
+def test_the_guard_reddens_when_cmd_doctor_really_gains_an_unmirrored_check(
+        cfg, monkeypatch, capsys):
+    """D64, and F5: the mutation has to run through the DERIVATION.
+
+    The previous version of this test injected a synthetic name into the
+    already-computed set and asserted that a set difference does set difference.
+    It never touched `cmd_doctor`, so `_cli_check_names` could revert to a typed
+    literal — the exact D64 defect — and this file stayed green (the auditor's
+    mutation D). The check below is added to a real, compiled `cmd_doctor`, and
+    the guard has to derive it by running that function.
+    """
+    probe = "unmirrored probe"
+    mutated = _shipped_module_with(
+        main.__file__, "crossaudit.cli", "crossaudit.cli._main_f5_probe",
+        [('    het_ok, why = heterogeneity(cfg)',
+          f'    add("{probe}", True, "a real CLI check nobody mirrors", "")\n'
+          '    het_ok, why = heterogeneity(cfg)')])
+    monkeypatch.setattr(main, "cmd_doctor", mutated.cmd_doctor)
+
+    cli = _cli_check_names(cfg, monkeypatch, capsys)
+    assert probe in cli, (
+        "the CLI side did not come from running cmd_doctor: the probe was added "
+        "to a real compiled copy of the shipped function and never arrived. The "
+        "derivation is not being exercised, so this file is asserting its own "
+        "helpers rather than parity.")
+
+    app = _app_check_ids(cfg)
+    assert probe in _unmirrored(cli, app), (
+        "an unmirrored CLI check did not turn the comparison red")
+
+
+def test_the_guard_reddens_when_the_app_doctor_really_loses_a_mirror(
+        cfg, monkeypatch, capsys):
+    """The same, from the app side (the auditor's mutation D2).
+
+    A mirror is deleted from a real compiled `app_doctor.collect`, and the guard
+    has to notice by running it. If `_app_check_ids` reverts to a typed literal
+    the deletion is invisible and this reddens.
+    """
+    mutated = _shipped_module_with(
+        app_doctor.__file__, "crossaudit", "crossaudit._app_doctor_f5_probe",
+        [('"id": "python",', '"id": "python_runtime",')])
+    monkeypatch.setattr(app_doctor, "collect", mutated.collect)
+
+    app = _app_check_ids(cfg)
+    assert "python" not in app and "python_runtime" in app, (
+        "the app side did not come from running app_doctor.collect(): the row "
+        "was renamed in a real compiled copy and the change never arrived.")
+
+    cli = _cli_check_names(cfg, monkeypatch, capsys)
+    assert "python" in _unmirrored(cli, app), (
+        "a deleted GUI mirror did not turn the comparison red")
 
 
 def test_every_exclusion_names_a_check_that_exists(cfg, monkeypatch, capsys):
@@ -170,7 +233,9 @@ def test_every_exclusion_names_a_check_that_exists(cfg, monkeypatch, capsys):
     """
     cli = _cli_check_names(cfg, monkeypatch, capsys)
     # Only the checks this fixture can reach are asserted; ones behind --online
-    # or a broken install are listed here so the set stays honest.
+    # or a broken install are listed here so the set stays honest. This list
+    # waives REACHABILITY ONLY — that an entry names a check the shipped code can
+    # emit at all is established from the source below, where no waiver applies.
     unreachable = {"isolation minimum", "admission-capable",
                    "  toward enforced"}
     stale = {name for name in CLI_ONLY
@@ -211,3 +276,47 @@ def test_no_exclusion_is_justified_by_a_mirror_it_does_not_check():
         f"exclusions asserting a mirror that nothing executes: "
         f"{sorted(claims)}. Move each to ALIASES so the app doctor's own output "
         f"has to contain the row.")
+
+
+def _names_cmd_doctor_can_emit() -> tuple[set[str], set[str]]:
+    """Every check name in the shipped `cmd_doctor`, read out of its source.
+
+    Extracted rather than transcribed: a copied list drifts from the code it
+    claims to describe and nothing notices, which is the same failure as a
+    fixture that stops mutating. Returns the literal names and the f-string
+    prefixes (`machine:`), because the deterministic pack is named by
+    interpolation and its entries are real checks.
+    """
+    body = Path(main.__file__).read_text()
+    body = body[body.index("def cmd_doctor("):]
+    end = re.search(r"\ndef ", body)
+    body = body[:end.start()] if end else body
+    literals = (set(re.findall(r'add\(\s*"([^"]+)"', body))
+                | set(re.findall(r'"check":\s*"([^"]+)"', body)))
+    prefixes = (set(re.findall(r'"check":\s*f"([^"{]*)\{', body))
+                | set(re.findall(r'add\(\s*f"([^"{]*)\{', body)))
+    return literals, prefixes
+
+
+def test_no_exclusion_names_a_check_the_shipped_code_cannot_emit():
+    """F7: the staleness guard carried its own unchecked waiver list.
+
+    `test_every_exclusion_names_a_check_that_exists` skips anything parked in
+    `unreachable` or prefixed `machine:`, and nothing verified those. So an
+    exclusion could be pre-approved absence at one remove — the same shape the
+    test exists to prevent, one level down, which is this file's recurring
+    defect. Existence is checked here against the shipped source, where the
+    waiver does not reach: `unreachable` may excuse a check being unreachable
+    from this fixture, never a name that no code emits.
+    """
+    literals, prefixes = _names_cmd_doctor_can_emit()
+    assert literals, "no check names were extracted; the reader has drifted"
+
+    def emitted(name: str) -> bool:
+        return name in literals or any(name.startswith(p) for p in prefixes)
+
+    unknown = sorted(n for n in set(CLI_ONLY) | set(ALIASES) if not emitted(n))
+    assert unknown == [], (
+        f"exclusions or aliases naming checks the shipped cmd_doctor never "
+        f"emits: {unknown}. Being unreachable from the test fixture is not the "
+        f"same as not existing, and only the first is waivable.")

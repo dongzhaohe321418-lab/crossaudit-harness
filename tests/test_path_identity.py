@@ -17,6 +17,7 @@ and which would hand code execution to anyone who can write to a PATH directory.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -28,12 +29,14 @@ def test_no_other_crossaudit_on_path_says_nothing():
     assert app_doctor.path_identity(which=lambda _n: None)["state"] == "absent"
 
 
-def _install(root: Path, version: str | None) -> Path:
-    """A real pip-shaped prefix on disk: `bin/crossaudit` plus its dist-info.
+def _install(root: Path, version: str | None, *, record: bool = True) -> Path:
+    """A real pip-shaped prefix on disk: `bin/crossaudit`, dist-info and RECORD.
 
     Built rather than mocked, because the defect this file now guards was in
     how two real paths relate to each other — a fixture returning a canned
-    state could not have shown it, and did not.
+    state could not have shown it, and did not. The RECORD is written the way an
+    installer writes it, relative to site-packages and carrying the sha256, so
+    the ownership check runs against the real shape rather than a convenient one.
     """
     (root / "bin").mkdir(parents=True, exist_ok=True)
     script = root / "bin" / "crossaudit"
@@ -41,8 +44,22 @@ def _install(root: Path, version: str | None) -> Path:
     site = root / "lib" / "python3.13" / "site-packages"
     site.mkdir(parents=True, exist_ok=True)
     if version:
-        (site / f"crossaudit-{version}.dist-info").mkdir(exist_ok=True)
+        dist = site / f"crossaudit-{version}.dist-info"
+        dist.mkdir(exist_ok=True)
+        if record:
+            _record(dist, site, script)
     return script
+
+
+def _record(dist: Path, site: Path, script: Path) -> None:
+    import base64
+    import hashlib
+
+    digest = base64.urlsafe_b64encode(
+        hashlib.sha256(script.read_bytes()).digest()).rstrip(b"=").decode()
+    relative = os.path.relpath(script, site)
+    (dist / "RECORD").write_text(
+        f"{relative},sha256={digest},{script.stat().st_size}\n")
 
 
 def test_our_own_install_is_not_reported_as_a_stranger(tmp_path, monkeypatch):
@@ -133,7 +150,9 @@ def test_the_other_version_is_read_from_metadata_and_never_executed(tmp_path,
     script.write_text("#!/usr/bin/env python\n")
     site = prefix / "lib" / "python3.13" / "site-packages"
     site.mkdir(parents=True)
-    (site / "crossaudit-3.2.0.dist-info").mkdir()
+    dist = site / "crossaudit-3.2.0.dist-info"
+    dist.mkdir()
+    _record(dist, site, script)
 
     def refuse(*a, **k):
         raise AssertionError("the foreign binary was executed")
@@ -221,3 +240,45 @@ def test_the_guard_goes_red_if_the_row_stops_naming_the_other_program(
     with pytest.raises(AssertionError) as caught:
         property_holds()
     assert "does not name the program" in str(caught.value)
+
+
+def test_a_half_uninstalled_prefix_reports_no_version_rather_than_the_higher_one(
+        tmp_path):
+    """Two dist-info directories is what a partial `pip uninstall` leaves.
+
+    Taking the first of `sorted(...)` answered "10.0.0" with nothing
+    establishing that the script belonged to it. Sort order is not evidence.
+    """
+    script = _install(tmp_path / "half", "9.9.9")
+    site = tmp_path / "half" / "lib" / "python3.13" / "site-packages"
+    other = site / "crossaudit-10.0.0.dist-info"
+    other.mkdir()
+    _record(other, site, script)
+
+    assert app_doctor._other_crossaudit_version(script) == "", (
+        "a version was chosen between two distributions that both claim the file")
+
+
+def test_a_foreign_program_of_the_same_name_is_not_given_our_version(tmp_path):
+    """The scenario the row exists for, and the one it got wrong.
+
+    A prefix that merely happens to have CrossAudit installed, with some other
+    program named `crossaudit` in its `bin`. Reporting that prefix's version for
+    that program is a confident wrong answer about which program answers you.
+    """
+    script = _install(tmp_path / "foreign", "1.0.0", record=False)
+    assert app_doctor._other_crossaudit_version(script) == ""
+
+    row = app_doctor.path_identity(which=lambda _n: str(script))
+    assert row["state"] == "different" and row["version"] == "", (
+        "an unowned script was given a version")
+
+
+def test_a_script_replaced_after_installation_stops_being_owned(tmp_path):
+    """RECORD carries a hash, so a swapped console script is detectable."""
+    script = _install(tmp_path / "swapped", "3.2.0")
+    assert app_doctor._other_crossaudit_version(script) == "3.2.0"
+
+    script.write_text("#!/bin/sh\necho something else entirely\n")
+    assert app_doctor._other_crossaudit_version(script) == "", (
+        "the version survived the file it describes being replaced")
