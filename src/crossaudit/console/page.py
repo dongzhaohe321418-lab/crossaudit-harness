@@ -917,6 +917,26 @@ textarea::placeholder{color:var(--text-3)}
 .model-actions-row .secondary{flex:1;height:30px;font-size:var(--fs-caption)}
 .contract{font-family:var(--font-mono);font-size:var(--fs-caption);padding:4px 0;color:var(--text-2);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* SPEC-2. One verification vocabulary, four states, used by every surface that
+   shows a check result. The glyph carries the state so the row survives
+   greyscale, colour-blindness and a screenshot pasted into a bug report; the
+   colour is a second channel, never the only one. Only .passed may be green.
+   Failed is the only state that takes a background, so a panel of passing rows
+   does not become a wall of colour and one failure stands out.
+   Not-run is --text-2, deliberately NOT --text-3: --text-3 measures 3.06:1
+   light / 3.77:1 dark and would make the honest state the unreadable one. */
+.check-summary{margin:0 0 8px;font-size:var(--fs-caption);color:var(--text-2);line-height:1.5}
+.check-row{display:flex;align-items:baseline;gap:7px;padding:4px 0;
+  font-family:var(--font-mono);font-size:var(--fs-caption);color:var(--text-2);font-weight:400}
+.check-glyph{width:11px;flex:none;text-align:center;font-family:var(--font-label)}
+.check-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.check-row.passed{color:var(--pass);font-weight:500}
+.check-row.failed{color:var(--blocked);font-weight:600;background:var(--blocked-bg);
+  border-radius:var(--r-xs);padding-left:5px;margin:0 -5px}
+/* Measured, not assumed: --blocked on its own 10% wash composites to 4.50:1 in
+   light at 1440 and 4.31:1 at 390, where the panel sits on a different ground.
+   The failed row is the one state that must never be the hard one to read. */
+:root[data-theme="light"] .check-row.failed{color:#A82F26}
 .mini-metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .mini-metric{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm);padding:8px}
 .mini-value{font-size:var(--fs-h2);font-weight:600;letter-spacing:-.02em;font-family:var(--font-mono);
@@ -2990,8 +3010,9 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
           <div class="kv"><span>Current round</span><span id="current-round">-</span></div>
           <div class="kv"><span>Constitution</span><span id="rules-count">…</span></div>
           <div class="kv"><span>Admission tier</span><span id="tier-value">…</span></div></section>
-        <section class="inspect-section"><div class="inspect-title">Deterministic checks</div>
-          <div id="runtime-checks"></div></section>
+        <section class="inspect-section"><div class="inspect-title" id="runtime-checks-title">Automatic checks</div>
+          <p class="check-summary" id="runtime-checks-state"></p>
+          <div id="runtime-checks" role="list" aria-labelledby="runtime-checks-title" aria-describedby="runtime-checks-state"></div></section>
         <section class="inspect-section"><div class="inspect-title">Ledger</div>
           <div class="mini-metrics" id="mini-metrics"></div></section>
         <section class="inspect-section"><div class="inspect-title">Needs attention</div>
@@ -3195,7 +3216,7 @@ const ZH={
   "Message recipient":"消息接收方","To":"发送给","Auto":"自动","@ Generator":"@ 生成者","@ Auditor":"@ 审计者","Add files":"添加文件","＋ Add files":"＋ 添加文件",
   "Message the group, or @ someone…":"给群组发送消息，或 @ 某一方…","Run task":"运行任务","Generator → Auditor":"生成者 → 审计者","Auto-planning":"自动规划","Generator infers focus, format, tone, and structure unless you specify them.":"除非你明确指定，否则生成者会自动判断重点、格式、语气和结构。","Enter to send · Shift+Enter for new line":"Enter 发送 · Shift+Enter 换行",
   "What should CrossAudit work on?":"希望 CrossAudit 完成什么？","Describe what you need or add files. CrossAudit will do the work and independently check the result before showing it here.":"描述你的需求或添加文件。CrossAudit 会完成工作，并在结果显示到这里之前进行独立检查。",
-  "Audit context":"审计上下文","Close audit context":"关闭审计上下文","Loop parameters":"循环参数","Maximum rounds":"最大轮数","Current round":"当前轮次","Constitution":"审计章程","Admission tier":"准入级别","Deterministic checks":"确定性检查","Ledger":"账本",
+  "Audit context":"审计上下文","Close audit context":"关闭审计上下文","Loop parameters":"循环参数","Maximum rounds":"最大轮数","Current round":"当前轮次","Constitution":"审计章程","Admission tier":"准入级别","Automatic checks":"自动检查","Ledger":"账本",
   "Drop files to add them":"拖放文件以添加","No CrossAudit file-count or file-size quota. Available storage, filesystem limits and provider context still apply.":"CrossAudit 不限制文件数量或大小，但仍受可用存储、文件系统和供应商上下文限制。",
   "Rendered locally and audited from the final binary":"在本地渲染，并从最终二进制文件回读审计","File preview":"文件预览","Preparing preview…":"正在准备预览…","Loading audited deliverable…":"正在加载已审计的交付文件…","Download":"下载","Close preview":"关闭预览","The complete file remains available to download.":"完整文件始终可供下载。","Preview unavailable for this file type. Download the complete file to open it in a compatible app.":"此文件类型无法安全预览。请下载完整文件并使用兼容应用打开。","The reading preview is shortened for responsiveness; the download is complete.":"为保证界面流畅，阅读预览已截短；下载文件是完整的。","Preview is reconstructed from the final audited DOCX binary.":"预览内容从最终通过审计的 DOCX 二进制文件中重建。","HTML preview is isolated from the app and cannot access the network.":"HTML 预览与应用隔离，且无法访问网络。",
   "Search preview":"搜索预览","Search in preview":"在预览中搜索","Previous match":"上一个匹配","Next match":"下一个匹配",
@@ -3413,6 +3434,11 @@ const ZH={
   "The task this conversation asked for.":"此对话所要求完成的任务。",
   "Independent review":"独立审查","Independent auditor approved the result":"独立审计者已批准该结果",
   "No blocking findings":"没有阻断性问题","Recorded in the audit ledger":"已记录到审计账本",
+  // SPEC-2 verification states. The section line is the only thing a person
+  // who does not know what a deterministic check is has to read.
+  "Not run yet — these run automatically on your first task.":"尚未运行——它们会在你的第一个任务中自动运行。",
+  "These run with every task; no result has been reported for the latest round.":"它们会随每个任务运行；最近一轮尚未报告结果。",
+  "No checks configured":"未配置任何检查",
   "Findings":"发现的问题","Record":"记录","Commit":"提交","Cycle":"审计循环",
   "Open Files panel":"打开文件面板","now":"刚刚","Human decision":"人工决定",
   "First launch setup":"首次启动设置","Setup steps":"设置步骤","Welcome":"欢迎","Readiness":"就绪检查","Providers":"供应商","Roles":"角色",
@@ -3559,7 +3585,7 @@ const ZH_PATTERNS=[
   [/^Connected · (.+)\. Usage follows this ChatGPT workspace and plan\.$/i,m=>'已连接 · '+m[1]+'。用量遵循该 ChatGPT 工作区和套餐。'],
   [/^Connected as (.+)$/i,m=>'已连接为 '+m[1]],[/^Local project: (.+)$/i,m=>'本地项目：'+m[1]],
   [/^(\d+) attachment\(s\) received$/i,m=>'已收到 '+m[1]+' 个附件'],
-  [/^(\d+) blocker rules?$/i,m=>m[1]+' 条阻断规则'],
+  [/^(\d+) rules?$/i,m=>m[1]+' 条规则'],
   [/^(\d+) reports?$/i,m=>m[1]+' 份报告'],[/^(\d+) connected$/i,m=>'已连接 '+m[1]+' 个'],[/^(\d+) active$/i,m=>m[1]+' 个正在运行'],
   [/^(.+) · local controller$/i,m=>m[1]+' · 本地控制器'],
   [/^(.+) · updated (.+)$/i,m=>m[1]+' · 更新于 '+m[2]],
@@ -3654,6 +3680,12 @@ const ZH_PATTERNS=[
   ,[/^MCP calls per task must be between 1 and (\d+)$/,m=>'MCP 每任务调用次数必须在 1 到 '+m[1]+' 之间']
   ,[/^macOS Keychain refused the MCP credential: (.+)$/,m=>'macOS 钥匙串拒绝了 MCP 凭据：'+m[1]]
   ,[/^(.+) — the cancelled connection is still listed; remove it there\.$/,m=>zhValue(m[1])+' —— 已取消的连接仍在列表中，请在那里将其移除。']
+  ,[/^All (\d+) checks? passed on the latest round\.$/,m=>'最近一轮的 '+m[1]+' 项检查全部通过。']
+  ,[/^(\d+) of (\d+) checks? did not pass on the latest round\.$/,m=>'最近一轮中有 '+m[1]+' 项检查未通过。']
+  ,[/^(\d+) of (\d+) checks? (?:has|have) not run on the latest round\.$/,m=>'最近一轮中有 '+m[1]+' 项检查尚未运行。']
+  ,[/^(\d+) checks? passed, (\d+) had nothing to check\.$/,m=>m[1]+' 项检查通过，'+m[2]+' 项没有可检查的内容。']
+  ,[/^(.+): (passed|did not pass|not run yet|nothing to check)$/,m=>m[1]+'：'
+    +({passed:'已通过','did not pass':'未通过','not run yet':'尚未运行','nothing to check':'没有可检查的内容'})[m[2]]]
 ];
 let currentLocale='en';
 const textSources=new WeakMap(),attributeSources=new WeakMap();
@@ -5556,16 +5588,20 @@ function reviewCard(d){
   const passed=status==='passed'||status==='consumed';
   const statusLabel = ({PASSED:'Passed review',CONSUMED:'Admitted',BLOCKED:'Needs changes',ESCALATED:'Needs your input'})[String(cycle.status||'').toUpperCase()] || cycle.status;
   const open=expandedReviews.has(cycle.id);
-  const checks=Object.keys(d.check_contracts||{});
+  const checks=checkRows(d);
   const roundLines=(rows.length?rows.map(m=>{
     const count=(m.findings||[]).length;
     return '<div class="review-round-row"><span class="round-n">Round '+esc(m.round)+'/'+esc(d.max_rounds)
       +'</span> · <span>'+(count?count+' finding'+(count===1?'':'s'):esc(m.verdict||'PASS'))
       +'</span></div>';}):['<div class="review-round-row"><span class="round-n">Round '
       +esc(cycle.round)+'/'+esc(d.max_rounds)+'</span></div>']).join('');
+  // "N deterministic checks passed" counted the CONFIGURED checks and called
+  // them passed. That is the same fabrication as the ticks below it: the console
+  // is not told which checks ran. The claim is removed rather than restated, and
+  // the check list in the detail carries its real state instead.
   const checkLines=passed
     ?'<ul class="review-checks"><li>Independent auditor approved the result</li>'
-      +(checks.length?'<li>'+checks.length+' deterministic check'+(checks.length===1?'':'s')+' passed</li>':'<li>No blocking findings</li>')
+      +'<li>No blocking findings</li>'
       +'<li>Recorded in the audit ledger</li></ul>'
     :'';
   const findingRows=rows.filter(m=>(m.findings||[]).length).map(m=>
@@ -5575,9 +5611,10 @@ function reviewCard(d){
       +'<span class="spacer"></span><span class="finding-rule" title="rule id">'+esc(f.rule)+'</span></div><p>'
       +esc(f.observation)+'</p></div>').join('')).join('');
   const detail='<div class="review-detail"><div class="review-detail-inner">'
-    +'<div class="review-section"><div class="review-section-title">Deterministic checks</div>'
-    +(checks.length?checks.map(name=>'<div class="contract">✓ '+esc(name)+'</div>').join(''):'<div class="empty">No checks configured</div>')
-    +'<div class="review-rounds">'+esc(d.rules)+' blocker rules</div></div>'
+    +'<div class="review-section"><div class="review-section-title" id="review-checks-title-'+esc(cycle.id)+'">Automatic checks</div>'
+    +'<p class="check-summary">'+esc(checkSummary(checks,auditCount(d)))+'</p>'
+    +'<div role="list" aria-labelledby="review-checks-title-'+esc(cycle.id)+'">'+renderCheckRows(checks)+'</div>'
+    +'<div class="review-rounds">'+esc(d.rules)+(d.rules===1?' rule':' rules')+'</div></div>'
     +(findingRows?'<div class="review-section"><div class="review-section-title">Findings</div>'+findingRows+'</div>':'')
     +'<div class="review-section"><div class="review-section-title">Record</div><div class="review-record">'
     +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
@@ -6129,6 +6166,56 @@ function renderDecisionBanner(d){
   if(show)document.getElementById('decision-banner-text').textContent=
     count+' task'+(count===1?'':'s')+' need'+(count===1?'s':'')+' your decision';
 }
+// SPEC-2 — a claim may not be shown before it is true.
+// Four states, one vocabulary, no surface invents a fifth: a check that ran and
+// held, one that ran and did not, one that has NOT RUN, and one that ran with
+// nothing in scope. The panel used to print a literal '✓' in front of every
+// CONFIGURED check, so a project with zero audits and zero receipts opened on
+// four green ticks claiming verification that had never happened.
+const CHECK_STATES={
+  passed :{glyph:'\u2713',cls:'passed' ,word:'passed'},
+  failed :{glyph:'\u2715',cls:'failed' ,word:'did not pass'},
+  not_run:{glyph:'\u00b7',cls:'not-run',word:'not run yet'},
+  n_a    :{glyph:'\u2013',cls:'n-a'    ,word:'nothing to check'}};
+// The server sends {name: contract}. SPEC-2 asks it to send
+// {name:{description,state}}; that half is server-side and is not in this
+// slice, so both shapes are read here. Anything unrecognised — an absent state,
+// a state this build does not know — is NOT_RUN. Never the other way round: a
+// client that ships ahead of its server has to fail in the honest direction.
+function checkEntry(value){
+  const row=(value&&typeof value==='object'&&!Array.isArray(value))?value:{description:value};
+  const state=Object.prototype.hasOwnProperty.call(CHECK_STATES,row.state)?row.state:'not_run';
+  return {description:String(row.description==null?'':row.description),state:state};}
+function checkRows(d){const contracts=(d&&d.check_contracts)||{};
+  return Object.keys(contracts).map(name=>{const row=checkEntry(contracts[name]);
+    return {name:name,description:row.description,state:row.state};});}
+function auditCount(d){const row=((d&&d.metrics)||[]).find(m=>m.label==='Audits');
+  return Number((row&&row.value)||0);}
+// The glyph alone leaves "· convergence" — quieter and still meaningless to
+// someone who does not know what a deterministic check is. This line is the
+// only thing such a person needs to read, and it never says more than the
+// states it is counting.
+function checkSummary(rows,audits){
+  if(!rows.length)return '';
+  const total=rows.length,count=state=>rows.filter(row=>row.state===state).length;
+  const failed=count('failed'),notRun=count('not_run'),na=count('n_a'),passed=count('passed');
+  const word=n=>n===1?'check':'checks';
+  if(notRun===total)return audits>0
+    ?'These run with every task; no result has been reported for the latest round.'
+    :'Not run yet — these run automatically on your first task.';
+  if(failed)return failed+' of '+total+' '+word(total)+' did not pass on the latest round.';
+  if(notRun)return notRun+' of '+total+' '+word(total)+(notRun===1?' has':' have')+' not run on the latest round.';
+  if(na)return passed+' '+word(passed)+' passed, '+na+' had nothing to check.';
+  return 'All '+total+' '+word(total)+' passed on the latest round.';}
+// Each row states its own state as text: a screen reader must never be left to
+// interpret a bare '·'.
+function renderCheckRows(rows){
+  if(!rows.length)return '<div class="empty">No checks configured</div>';
+  return rows.map(row=>{const ui=CHECK_STATES[row.state];
+    return '<div class="check-row '+ui.cls+'" role="listitem" title="'+esc(row.description)
+      +'" aria-label="'+esc(row.name+': '+ui.word)+'">'
+      +'<span class="check-glyph" aria-hidden="true">'+ui.glyph+'</span>'
+      +'<span class="check-name">'+esc(row.name)+'</span></div>';}).join('');}
 function renderInspector(d){
   document.getElementById('runtime-generator').textContent = d.generator;
   document.getElementById('runtime-auditor').textContent = d.auditor;
@@ -6139,12 +6226,15 @@ function renderInspector(d){
   document.getElementById('current-round').textContent = current
     ? current.round_no + ' / ' + current.round_limit
     : cycles.length ? cycles[cycles.length-1].round + ' / ' + d.max_rounds : '-';
-  document.getElementById('rules-count').textContent = d.rules + ' blocker rules';
+  // The count is every rule in the constitution; how many of them GATE is not
+  // in this payload, so the row no longer calls them all blockers. SPEC-2 4.1
+  // wants "8 rules · 7 blocking"; the blocking half needs one additive server
+  // field and is escalated, not guessed.
+  document.getElementById('rules-count').textContent = d.rules + (d.rules===1?' rule':' rules');
   document.getElementById('tier-value').textContent = d.tier.tier;
-  const contracts = d.check_contracts || {};
-  document.getElementById('runtime-checks').innerHTML = Object.keys(contracts).length
-    ? Object.entries(contracts).map(([k,v]) => '<div class="contract" title="' + esc(v) + '">✓ '
-      + esc(k) + '</div>').join('') : '<div class="empty">No checks configured</div>';
+  const rows = checkRows(d);
+  document.getElementById('runtime-checks-state').textContent = checkSummary(rows, auditCount(d));
+  document.getElementById('runtime-checks').innerHTML = renderCheckRows(rows);
   document.getElementById('mini-metrics').innerHTML = d.metrics.map(m => '<div class="mini-metric">'
     + '<div class="mini-value">' + esc(m.value ?? '-') + '</div><div class="mini-label">'
     + esc(m.label) + '</div></div>').join('');
