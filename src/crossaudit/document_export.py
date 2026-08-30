@@ -825,10 +825,20 @@ def render_export(root: Path, written: list[str] | AppliedFiles,
             if temporary.exists():
                 temporary.unlink()
         if source_receipt is not None:
-            source_receipt.rollback()
+            # Keep the caller's one lexical receipt scope.  Transferring the
+            # derived binary's binding into that object prevents the export
+            # seam from returning an unguarded second lifecycle.
+            source_receipt.replace_with(target_receipt)
+            target_receipt = None
+            return source_receipt
         else:
             source_path.unlink()
-        return target_receipt
+            # Backward-compatible trusted-call path: callers that supplied a
+            # path list have no receipt scope to accept.  Preserve their
+            # historical immediate-apply contract explicitly rather than via
+            # AppliedFiles.__del__.
+            target_receipt.finalize()
+            return list(target_receipt)
     except ProviderDenial:
         if target_receipt is not None:
             target_receipt.rollback()

@@ -207,10 +207,11 @@ NOTES:
     work = generator.parse_work_reply(reply)
     assert list(work.files) == ["work/report.md "]
     bound = generator.bind_file_identities(work, root, ["work"])
-    generator.apply(bound, root, ["work"])
+    receipt = generator.apply(bound, root, ["work"])
 
     assert spaced.read_text(encoding="utf-8") == "spaced-new"
     assert plain.read_text(encoding="utf-8") == "plain-old"
+    receipt.finalize()
 
 
 def test_json_paths_differing_by_trailing_space_do_not_collapse(tmp_path: Path):
@@ -507,3 +508,164 @@ def test_staging_authority_guard_counterfactual_uses_real_stage(
     with monkeypatch.context() as mutant:
         with pytest.raises(AssertionError):
             exercise(tmp_path / "mutant", mutant, mutate_guard=True)
+
+
+def test_publication_identity_is_not_minted_from_a_swapped_destination(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """A post-publication pathname swap cannot acquire receipt authority."""
+    root = _project(tmp_path)
+    target = root / "work" / "a.txt"
+    target.write_text("old\n", encoding="utf-8")
+    impostor = root / "work" / "impostor.tmp"
+    impostor.write_text("unapproved\n", encoding="utf-8")
+    bound = generator.bind_file_identities(generator.Work("round", {
+        "work/a.txt": "generator bytes\n",
+    }), root, ["work"])
+
+    real_replace = identity.os.replace
+    swapped = False
+
+    def swap_after_publication(src, dst, *, src_dir_fd=None, dst_dir_fd=None):
+        nonlocal swapped
+        real_replace(src, dst, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
+        if not swapped and str(src).startswith(".crossaudit-payload-"):
+            swapped = True
+            real_replace(impostor.name, dst, src_dir_fd=src_dir_fd,
+                         dst_dir_fd=dst_dir_fd)
+
+    monkeypatch.setattr(identity.os, "replace", swap_after_publication)
+    receipt = generator.apply(bound, root, ["work"])
+    try:
+        with pytest.raises(ProviderDenial, match="identity changed"):
+            receipt.verify()
+    finally:
+        receipt.rollback()
+
+    assert target.read_text(encoding="utf-8") == "old\n"
+
+
+@pytest.mark.parametrize("failure_point", ["after_apply", "after_stage"])
+def test_receipt_scope_restores_filesystem_and_index_at_each_lifecycle_boundary(
+        tmp_path: Path, failure_point: str):
+    """D24: one lexical receipt makes every pre-commit exit all-or-nothing."""
+    root = _git_project(tmp_path)
+    target = root / "work" / "a.txt"
+    target.write_text("old\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=root, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "fixture"],
+                   cwd=root, check=True)
+    receipt = generator.apply(
+        generator.bind_file_identities(generator.Work("round", {
+            "work/a.txt": "generator bytes\n",
+        }), root, ["work"]), root, ["work"])
+
+    with pytest.raises(RuntimeError, match="injected lifecycle failure"):
+        with receipt:
+            if failure_point == "after_stage":
+                _stage_generated(SimpleNamespace(root=root), receipt)
+            raise RuntimeError("injected lifecycle failure")
+
+    assert target.read_text(encoding="utf-8") == "old\n"
+    assert subprocess.run(
+        ["git", "status", "--porcelain"], cwd=root, check=True,
+        capture_output=True, text=True).stdout == ""
+    assert subprocess.run(
+        ["git", "show", ":work/a.txt"], cwd=root, check=True,
+        capture_output=True, text=True).stdout == "old\n"
+
+
+def test_receipt_scope_restores_exact_prior_staged_entry(tmp_path: Path):
+    """Rollback preserves a user's prior index bytes, not merely HEAD state."""
+    root = _git_project(tmp_path)
+    target = root / "work" / "a.txt"
+    target.write_text("head\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=root, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "fixture"],
+                   cwd=root, check=True)
+    target.write_text("user staged bytes\n", encoding="utf-8")
+    subprocess.run(["git", "add", "--", "work/a.txt"], cwd=root, check=True)
+    target.write_text("head\n", encoding="utf-8")
+
+    receipt = generator.apply(
+        generator.bind_file_identities(generator.Work("round", {
+            "work/a.txt": "generator bytes\n",
+        }), root, ["work"]), root, ["work"])
+    with receipt:
+        _stage_generated(SimpleNamespace(root=root), receipt)
+
+    assert target.read_text(encoding="utf-8") == "head\n"
+    assert subprocess.run(
+        ["git", "show", ":work/a.txt"], cwd=root, check=True,
+        capture_output=True, text=True).stdout == "user staged bytes\n"
+
+
+def test_receipt_scope_guard_counterfactual_runs_real_apply_and_scope(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """D10: the historical implicit accept makes the real S0 assertion fail."""
+    def exercise(base: Path) -> None:
+        root = _project(base)
+        target = root / "work" / "a.txt"
+        target.write_text("old", encoding="utf-8")
+        receipt = generator.apply(
+            generator.bind_file_identities(generator.Work("round", {
+                "work/a.txt": "generator bytes",
+            }), root, ["work"]), root, ["work"])
+        with pytest.raises(RuntimeError, match="journal failed"):
+            with receipt:
+                raise RuntimeError("journal failed")
+        assert target.read_text(encoding="utf-8") == "old"
+
+    with monkeypatch.context():
+        exercise(tmp_path / "safe")
+
+    def historical_exit(self, _exc_type, _exc, _traceback):
+        self.finalize()
+        return False
+
+    with monkeypatch.context() as mutant:
+        mutant.setattr(identity.AppliedFiles, "__exit__", historical_exit)
+        with pytest.raises(AssertionError):
+            exercise(tmp_path / "mutant")
+
+
+@pytest.mark.parametrize("failure_point", [
+    "after_apply", "after_stage", "before_commit",
+])
+def test_run_loop_unexpected_receipt_lifecycle_failure_cannot_leave_unaudited_bytes(
+        science: Path, cfg, monkeypatch: pytest.MonkeyPatch,
+        failure_point: str):
+    """The production loop, not a mirrored sequence, owns the lexical guard."""
+    target = science / "experiments" / "demo" / "generated.txt"
+    monkeypatch.setattr(build_mod, "_generator_complete",
+                        lambda *_args, **_kwargs: object())
+    monkeypatch.setattr(build_mod.gen_mod, "generate", lambda **_kwargs:
+                        generator.Work("round", {
+                            "experiments/demo/generated.txt": "generator bytes\n",
+                        }))
+    if failure_point == "after_stage":
+        monkeypatch.setattr(build_mod, "_staged_secret", lambda _cfg:
+                            (_ for _ in ()).throw(
+                                RuntimeError("secret scan failed after stage")))
+    elif failure_point == "before_commit":
+        real_git = build_mod.git
+
+        def fail_commit(*args, **kwargs):
+            if args and args[0] == "commit":
+                raise RuntimeError("commit failed before acceptance")
+            return real_git(*args, **kwargs)
+
+        monkeypatch.setattr(build_mod, "git", fail_commit)
+    monkeypatch.chdir(science)
+
+    def fail_after_apply(event) -> None:
+        if failure_point == "after_apply" and event.kind == "generation_completed":
+            raise RuntimeError("journal failed after apply")
+
+    with pytest.raises(RuntimeError, match="failed"):
+        build_mod.run_loop(cfg, "produce the experiment",
+                           on_event=fail_after_apply)
+
+    assert not target.exists()
+    assert subprocess.run(
+        ["git", "status", "--porcelain"], cwd=science, check=True,
+        capture_output=True, text=True).stdout == ""

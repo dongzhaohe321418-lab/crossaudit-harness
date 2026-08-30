@@ -18,6 +18,20 @@ scope escape, trailing-space names, and bind/apply races.  Arbitrary kernel or
 hardware failure modes and hostile replacement after the exact-byte index write
 are not exhaustively enumerable; the latter cannot put replacement bytes in the
 index because staging never reopens the pathname.
+
+Receipt-scope change contract (D24): REVIEWER: claude; AUDIT: independent
+auditor.  Closure is by construction, not enumeration: the same AppliedFiles
+object carries the prepared payload's open-file identity through physical
+publication, exact-byte staging, and commit.  It retains the prior tracked
+stage entries for the round's paths as well as the filesystem backups; every
+scope exit rolls both back unless successful commit explicitly calls
+finalize().  Document export transfers its derived binding into that same
+object rather than returning a second unguarded lifecycle.
+Enumerated tests cover failure after apply, after stage, and immediately before
+commit; absent/present prior index entries; source-to-derived export transfer;
+explicit success; and the historical implicit-accept guard mutation.  They do
+not claim process-crash or power-loss rollback: Git and filesystem durability
+remain their respective recovery domains after abrupt process death.
 """
 from __future__ import annotations
 
@@ -29,7 +43,7 @@ import unicodedata
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Iterable
+from typing import Callable, Iterable
 
 from .errors import ProviderDenial
 
@@ -75,6 +89,7 @@ class _PreparedFile:
     parent_fd: int
     payload_name: str | None
     backup_fd: int | None
+    payload_identity: tuple[int, int]
     applied_identity: tuple[int, int] | None = None
 
 
@@ -102,7 +117,53 @@ class AppliedFiles(Sequence[str]):
         self.root = root
         self.allowed_dirs = (tuple(allowed_dirs)
                              if allowed_dirs is not None else None)
+        self._index_rollback: Callable[[], None] | None = None
         self._active = True
+
+    def __enter__(self) -> "AppliedFiles":
+        if not self._active:
+            raise _path_denial("generated file authorization receipt is no longer active")
+        return self
+
+    def __exit__(self, _exc_type, _exc, _traceback) -> bool:
+        # finalize() is the sole success signal.  Every exception, return,
+        # continue, and break that leaves an active scope restores both the
+        # index and filesystem through the retained authorization.
+        if self._active:
+            self.rollback()
+        return False
+
+    def register_index_rollback(self, restore: Callable[[], None]) -> None:
+        """Attach restoration of prior tracked stage entries to this receipt."""
+        if not self._active or self._index_rollback is not None:
+            raise _path_denial("generated file staging receipt is not available")
+        self._index_rollback = restore
+
+    def replace_with(self, replacement: "AppliedFiles") -> "AppliedFiles":
+        """Transfer a derived artifact's bindings into this same live scope.
+
+        Document export replaces its temporary source with a derived binary.
+        The caller's context manager continues to guard this object, so the new
+        receipt must not escape through a different Python object.
+        """
+        if replacement is self:
+            return self
+        if (not self._active or not replacement._active
+                or self.root != replacement.root
+                or self.allowed_dirs != replacement.allowed_dirs):
+            raise _path_denial("cannot transfer a generated file authorization receipt")
+        self.rollback()
+        self._prepared = replacement._prepared
+        self._created = replacement._created
+        self.root = replacement.root
+        self.allowed_dirs = replacement.allowed_dirs
+        self._index_rollback = replacement._index_rollback
+        self._active = True
+        replacement._prepared = []
+        replacement._created = []
+        replacement._index_rollback = None
+        replacement._active = False
+        return self
 
     @property
     def entries(self) -> tuple[AppliedFile, ...]:
@@ -146,7 +207,13 @@ class AppliedFiles(Sequence[str]):
         """Restore the entire pre-round filesystem state through pinned fds."""
         if not self._active:
             return
-        errors: list[OSError] = []
+        errors: list[Exception] = []
+        if self._index_rollback is not None:
+            try:
+                self._index_rollback()
+            except Exception as exc:
+                errors.append(exc)
+            self._index_rollback = None
         for row in reversed(self._prepared):
             try:
                 if row.applied_identity is not None:
@@ -214,7 +281,7 @@ class AppliedFiles(Sequence[str]):
             raise IntegrityDenial(
                 "could not remove generated round transaction material") from errors[0]
 
-    def _remove_created_directories(self, errors: list[OSError]) -> None:
+    def _remove_created_directories(self, errors: list[Exception]) -> None:
         for created in reversed(self._created):
             try:
                 os.rmdir(created.name, dir_fd=created.parent_fd)
@@ -240,14 +307,15 @@ class AppliedFiles(Sequence[str]):
                 os.close(created.parent_fd)
             except OSError:
                 pass
+        self._index_rollback = None
         self._active = False
 
     def __del__(self) -> None:
-        # A caller outside the build loop historically treated apply() as the
-        # commit point.  Abandoning a receipt therefore accepts the writes but
-        # must never leak its hidden rollback files or descriptors.
+        # Abandonment is failure, never implicit acceptance.  __exit__ is the
+        # deterministic guard; this is the fail-closed last resort for callers
+        # that neglect the context-manager contract.
         try:
-            self.finalize()
+            self.rollback()
         except Exception:
             pass
 
@@ -627,12 +695,14 @@ def _prepare_target(target: FileTarget, payload: bytes,
                 os.fchmod(payload_fd, mode)
             _write_all(payload_fd, payload)
             os.fsync(payload_fd)
-            installed_mode = stat.S_IMODE(os.fstat(payload_fd).st_mode)
+            payload_info = os.fstat(payload_fd)
+            installed_mode = stat.S_IMODE(payload_info.st_mode)
+            payload_identity = (payload_info.st_dev, payload_info.st_ino)
         finally:
             os.close(payload_fd)
         git_mode = "100755" if installed_mode & 0o111 else "100644"
         return _PreparedFile(target, payload, git_mode, parent_fd,
-                             payload_name, retained_backup_fd)
+                             payload_name, retained_backup_fd, payload_identity)
     except Exception:
         for temporary in (payload_name, backup_name):
             if temporary is None:
@@ -667,9 +737,7 @@ def _replace_prepared(row: _PreparedFile) -> None:
     os.replace(row.payload_name, row.target.physical.name,
                src_dir_fd=row.parent_fd, dst_dir_fd=row.parent_fd)
     row.payload_name = None
-    info = os.stat(row.target.physical.name, dir_fd=row.parent_fd,
-                   follow_symlinks=False)
-    row.applied_identity = (info.st_dev, info.st_ino)
+    row.applied_identity = row.payload_identity
     os.fsync(row.parent_fd)
 
 
