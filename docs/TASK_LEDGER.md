@@ -1153,3 +1153,67 @@ shape that was defeated three times on consent: that guard chased a forbidden
 MEANING and paraphrase is unbounded, while this one forbids an English CATALOGUE
 sentence — a finite set we own, so its coverage is decidable by construction.
 The open half is the allowlist, which is why it now has a guard of its own.
+
+---
+
+## A6 — change contract (which install is this)
+
+```
+TASK:        D40. Make install mode and resolved path visible where a person
+             meets a mismatch, so `crossaudit 3.2.0 (pip, /Library/...)` beside
+             a 4.15.0 app is self-evident rather than silent. NOT a PATH
+             install: D31 part 2 refused that on consent grounds and it stands.
+
+SURFACE:     src/crossaudit/cli/main.py (running_from, --version, front door,
+             one doctor posture line), src/crossaudit/cli/i18n.py,
+             tests/test_install_origin.py, docs/findings/
+             Audit core touched? NO. `_selfid` is READ, never changed: the
+             receipt path, the code digest and admission are untouched.
+
+WHY S1 AND NOT S0, because it changes the fix. The ledger already tells the two
+             producers apart — receipts carry version, a path-tagged code digest
+             and install mode, and `verify --admit` refuses modes whose code
+             could have changed under them. The person is misled, not the
+             record. So the fix belongs on the surfaces a person reads, and
+             nothing in the receipt path needed to move.
+
+WHAT IT DOES NOT DO, deliberately. It never looks for other installs and never
+             asserts a mismatch. Guessing where a rival copy might live would be
+             inventing evidence on the exact surface that exists to stop us
+             doing that. Two runs printing two versions and two paths is
+             self-evident without anyone claiming it, and a test asserts the
+             output contains no such claim.
+
+SURFACES:    3. `--version` (the thing a person compares), the front door (the
+             first thing they read when nothing is set up), and `doctor` — which
+             is the command a confused person actually runs. In doctor it is an
+             INFO POSTURE line, not a check: "which install is this" has no
+             pass/fail axis, a green marker beside it would be the defect this
+             project has spent the week removing, and posture lines render in
+             the DEFAULT view where the confused person is. A test asserts it
+             does not move the tally.
+
+CHINESE PARITY: translated in the same commit as the English, not retrofitted.
+             The doctor line is REACHABLE in Chinese today, because `doctor`
+             carries `--lang` from wave 2, and a test drives it in both
+             languages. The `--version` and front-door strings are translated
+             and NOT yet reachable, because the front door is D21 wave 3 and
+             `--lang` is deliberately not offered there — one Chinese line in an
+             otherwise English front door is the seam D21 exists to prevent. So:
+             parity satisfied for the doctor surface, present-but-unreachable
+             for the other two, and that is stated rather than counted as done.
+
+ACCEPTANCE:  1. `running_from()` reports this process only, and its path exists.
+             2. `--version`, the front door and doctor all name mode and path.
+             3. Two installs are distinguishable from their own output, with
+                neither output asserting anything about the other.
+             4. The doctor line is INFO and does not move the tally.
+             5. Both languages, zero fallbacks.
+             6. D10: hiding the origin again turns the guard red.
+             7. Full suite green.
+
+REVIEWER:    codex
+AUDIT:       auditor
+UX REVIEW:   design
+FINDINGS:    docs/findings/w1-bundle-reachability-b5b3ea5.md
+```

@@ -63,6 +63,43 @@ def _committed_constitution(cfg: Config, commit: str) -> tuple[str, bytes]:
             "cannot apply a missing standard", commit=commit, path=cfg.constitution)
     return text, data
 
+def _print_origin() -> None:
+    """One line under the front door naming which install this is.
+
+    D40: the version alone does not answer "which crossaudit did I just run",
+    which is the question somebody has when a DMG app and a pip install disagree.
+    """
+    mode, where = running_from()
+    print("\n  " + i18n.t("origin.front_door", version=f"crossaudit {__version__}",
+                          mode=mode, path=where))
+
+
+def running_from() -> tuple[str, str]:
+    """(install mode, the path this process is actually running from).
+
+    D40. A person who installs the DMG and types `crossaudit` can be routed to a
+    completely different, older install that is already on PATH — and nothing
+    told them. The ledger stays honest either way: receipts carry the version, a
+    path-tagged code digest and the install mode, and `verify --admit` already
+    refuses modes whose code could have changed under it. What is misled is the
+    PERSON, so the fix belongs on the surfaces a person reads.
+
+    Facts about THIS process only. It deliberately does not go looking for other
+    installs: guessing where a rival copy might live would be inventing evidence
+    on exactly the surface that exists to stop us doing that. Two runs printing
+    two versions and two paths is self-evident without anyone asserting a
+    mismatch.
+    """
+    mode = _selfid.install_mode()
+    if getattr(sys, "frozen", False):
+        return mode, sys.executable
+    # What the person invoked, when that is knowable; otherwise where the code
+    # actually is. `argv[0]` is the console script they typed.
+    invoked = Path(sys.argv[0]) if sys.argv and sys.argv[0] else None
+    if invoked is not None and invoked.name and invoked.exists():
+        return mode, str(invoked.resolve())
+    return mode, str(Path(_selfid.__file__).resolve().parent)
+
 
 GETTING_STARTED = """\
 CrossAudit {version} — cross-vendor generation and audit loop
@@ -494,6 +531,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     verdict = adm.assess(root=cfg.root, paired=bool(cfg.audit_repo),
                          controller_persistent=caps["persistent"],
                          controller_atomic=caps["atomic"], online=args.online)
+    mode, where = running_from()
+    note("install origin",
+         i18n.t("origin.doctor.detail", version=__version__, mode=mode, path=where),
+         copy="origin.doctor")
     note("admission tier", f"{verdict.tier} — {adm.TIER_MEANING[verdict.tier]}",
          copy="doctor.tier")
     for shortfall in verdict.shortfalls:
@@ -1611,8 +1652,10 @@ def cmd_run(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="crossaudit", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    _mode, _where = running_from()
     p.add_argument("--version", action="version",
-                   version=f"crossaudit {__version__} (receipt schema {RECEIPT_SCHEMA})")
+                   version=f"crossaudit {__version__} "
+                           f"(receipt schema {RECEIPT_SCHEMA}) · {_mode} · {_where}")
     p.add_argument("--json", action="store_true", help="machine-readable output")
     sub = p.add_subparsers(dest="verb")
 
@@ -1782,8 +1825,10 @@ def main(argv: list[str] | None = None) -> int:
                           "`crossaudit run`.")
                     return EXIT_OK
             print(GETTING_STARTED.format(version=__version__))
+            _print_origin()
             return EXIT_OK
         print(GETTING_STARTED.format(version=__version__))
+        _print_origin()
         return EXIT_OK
     try:
         return args.func(args)
