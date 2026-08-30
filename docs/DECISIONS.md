@@ -2030,3 +2030,49 @@ in the shipped build.
 
 Unreached and explicitly not inferred: S2, S4, S5, three of four escalation
 causes, the demo's inner surfaces — all need a funded run.
+
+## D53 — I got the capture point wrong three times in twenty lines
+
+D47 said retain the previous shipped artifact. I wrote about twenty lines of
+shell and got it wrong twice before it worked:
+
+1. **`ditto "$APP" "$PREV/CrossAudit.app"`** — at that point in the script
+   `$APP` is the build just made. "The previous artifact" would have been the
+   *new* one wearing the old one's name: worse than retaining nothing, because
+   it would look like evidence. Fixed by extracting the app from the previous
+   DMG instead.
+2. **The block sat after line 42**, which is
+   `rm -rf … "$DIST/CrossAudit-$VERSION-arm64.dmg"` — the build deletes the
+   previous DMG at the very start. So the guard skipped correctly and the
+   feature silently never ran. The code was right; its **position** was wrong.
+
+Both are the family we have been finding all day in other people's code: the
+value read at the wrong moment. I have spent the session insisting that a
+value correct at the producer can be wrong at the consumer, and then made the
+same error three times in my own twenty lines.
+
+Two process points, and the second is the one that matters:
+
+- **A feature that silently does nothing looks exactly like a feature that
+  works.** After the second attempt the build exited 0, every verification
+  step passed, and `dist/previous/` did not exist. Nothing failed. I only
+  found it because I went to look.
+- **I ran it rather than reasoned about it, and that is the only reason I
+  know.** I had committed both broken versions. It is now verified by
+  execution: `dist/previous/` holds the prior DMG, its sha256, the `.app`
+  extracted from *that* DMG (timestamped from the previous build, not the
+  new one), and a retention timestamp.
+
+The rule I have been applying to guards applies to build tooling: a mechanism
+that has never been observed doing its job has not been shown to have one.
+
+### Merged this round
+
+- `audit/verifier-rederives-claims` — verify re-derives what the receipt cites.
+- `audit/constitution-drift-visible` — doctor fails and de-tallies a drifted
+  constitution.
+
+**`2017227` is held**: the verifier branch's behaviour sentence says drift is
+"a separate doctor concern", and `app_doctor` has no drift check. It would be
+true of the CLI and false of the GUI. The security auditor blocked it using my
+own regrading argument — the working case being the one nobody meets.
