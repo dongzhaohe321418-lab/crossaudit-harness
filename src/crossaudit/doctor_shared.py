@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from .gitio import git
 
+CONSTITUTION_READY_SENTENCE = "audits cite the commit that versioned the rules (I3)"
+
 
 def constitution_state(cfg) -> tuple[str, str]:
     tracked = bool(git("log", "-1", "--format=%H", "--", cfg.constitution,
@@ -14,4 +16,4 @@ def constitution_state(cfg) -> tuple[str, str]:
     if dirty:
         return "drifted", (f"{cfg.constitution} has uncommitted changes; an audit "
                             "would cite the committed version, not what is on disk")
-    return "ready", "audits cite the commit that versioned the rules (I3)"
+    return "ready", CONSTITUTION_READY_SENTENCE

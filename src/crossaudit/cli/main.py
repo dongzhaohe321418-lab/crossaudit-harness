@@ -18,6 +18,7 @@ from ..auditor import dcl_source_digest, run_audit
 from ..config import CONFIG_NAME, Config, heterogeneity, load
 from ..controller import StateStore
 from ..dcl import run_checks
+from ..doctor_shared import CONSTITUTION_READY_SENTENCE
 from ..errors import (EXIT_BLOCKED, EXIT_CONFIG, EXIT_ESCALATED, EXIT_INTEGRITY,
                       EXIT_OK, ConfigDenial, Denial, IntegrityDenial)
 from ..gitio import (changed_paths, entries, git, is_ancestor, is_repo, materialise,
@@ -325,7 +326,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             git("commit", "-q", "-m", "constitution: initial version", cwd=cfg.root)
             const_committed = True
         add("constitution committed", const_committed,
-            "audits cite the commit that versioned the rules (I3)"
+            CONSTITUTION_READY_SENTENCE
             if const_committed else
             (f"{cfg.constitution} has uncommitted changes; an audit would cite "
              "the committed version, not what is on disk" if const_tracked else
