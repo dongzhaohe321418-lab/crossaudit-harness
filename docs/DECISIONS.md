@@ -3687,3 +3687,36 @@ The UI engineer caught my misattribution of `f6ad8c0` in the same minutes I did,
 and named the reason: *"re-derive rather than match a title."* Two people
 reaching the same correction from the same instinct is worth more than either
 correction — it means the rule has transferred rather than been obeyed.
+
+## D91 — The announcement is not in a live region at all
+
+SPEC-20 delivered with all four constraints met — `shape=matches-ui-branch`,
+`zh=catalogue`, `mutation=stated`, **`one_contract=yes`** — and recorded a
+finding wider than the slice it was written for:
+
+> The announcement appears in **visible page text, not in a live region** —
+> for this notice **and the pre-existing file-outlining one**. The announcing
+> path **may not reach a screen reader at all, for any reduction.** Older and
+> wider than this slice.
+
+So the three condensation states established as distinguishable are
+distinguishable **visually**, and possibly **none of them is announced** to a
+screen-reader user.
+
+**This is D89 one layer deeper.** That law was *containers present, contents
+absent* — live regions that never contain text, a listbox whose children carry
+no option role, a readiness list as one node. **This instance has no container
+at all**: the text is on the page and nothing announces it.
+
+And it is **older than tonight's work.** The file-outlining notice has the same
+shape and predates every merge in this cycle, which means the property "a
+person is told when context was reduced" has never held for screen-reader users
+on any path — while every visual check we have has passed.
+
+The `one_contract=yes` result matters more because of this. Two condensation
+mechanisms were about to get two signal paths; they now share one. **A single
+contract is the only reason this finding is one fix rather than one per
+mechanism**, and it is the answer to the thing I asked for: *the next person
+who adds a third condensation mechanism should not find the same empty cell.*
+
+Routed to the UI engineer with SPEC-20.
