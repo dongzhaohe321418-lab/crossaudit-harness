@@ -884,8 +884,19 @@ textarea::placeholder{color:var(--text-3)}
 .inspector.open{transform:translateX(0);visibility:visible;transition:transform var(--dur-slow) var(--spring)}
 .inspect-head{display:flex;align-items:center;min-height:48px;padding:0 var(--sp-3) 0 var(--sp-4);flex:none}
 .inspect-head h2{font-size:var(--fs-body);margin:0;font-weight:600}
-.panel-tabs{display:flex;gap:2px;padding:0 var(--sp-2) var(--sp-2);flex:none}
-.panel-tabs .nav-item{flex:1;min-width:0;height:40px;padding:0 2px;border:0;border-radius:var(--r-sm);
+.panel-tabs{display:flex;flex-wrap:wrap;gap:2px;padding:0 var(--sp-2) var(--sp-2);flex:none}
+/* flex-basis:auto, not 0: a tab is never narrower than its own label. Eight
+   tabs at a 318px panel width give 36px each, and "Governed" needs 52 — with
+   an equal-share basis the labels bled into each other rather than wrapping.
+   They now take a second row instead of being clipped. The rows start at the
+   same edge: centred, the second row floated in the middle aligned to nothing
+   above it, which reads as leftovers rather than as a grid.
+   English is two rows at EVERY desktop width, not only narrow ones — the strip
+   never exceeds 398px — so this is the permanent English layout, not an edge
+   case. Chinese is one row everywhere. The inspector getting NARROWER as the
+   screen gets wider (398px at 1280, 318px at 1440-1920) is what makes one row
+   impossible in English; that inversion belongs to whoever owns the inspector. */
+.panel-tabs .nav-item{flex:0 1 auto;min-width:0;height:40px;padding:0 7px;border:0;border-radius:var(--r-sm);
   background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:2px;color:var(--text-2);font-size:var(--fs-caption);text-align:center}
 .panel-tabs .nav-item:hover{background:var(--hover);color:var(--text)}
@@ -913,6 +924,26 @@ textarea::placeholder{color:var(--text-3)}
 .model-actions-row .secondary{flex:1;height:30px;font-size:var(--fs-caption)}
 .contract{font-family:var(--font-mono);font-size:var(--fs-caption);padding:4px 0;color:var(--text-2);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* SPEC-2. One verification vocabulary, four states, used by every surface that
+   shows a check result. The glyph carries the state so the row survives
+   greyscale, colour-blindness and a screenshot pasted into a bug report; the
+   colour is a second channel, never the only one. Only .passed may be green.
+   Failed is the only state that takes a background, so a panel of passing rows
+   does not become a wall of colour and one failure stands out.
+   Not-run is --text-2, deliberately NOT --text-3: --text-3 measures 3.06:1
+   light / 3.77:1 dark and would make the honest state the unreadable one. */
+.check-summary{margin:0 0 8px;font-size:var(--fs-caption);color:var(--text-2);line-height:1.5}
+.check-row{display:flex;align-items:baseline;gap:7px;padding:4px 0;
+  font-family:var(--font-mono);font-size:var(--fs-caption);color:var(--text-2);font-weight:400}
+.check-glyph{width:11px;flex:none;text-align:center;font-family:var(--font-label)}
+.check-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.check-row.passed{color:var(--pass);font-weight:500}
+.check-row.failed{color:var(--blocked);font-weight:600;background:var(--blocked-bg);
+  border-radius:var(--r-xs);padding-left:5px;margin:0 -5px}
+/* Measured, not assumed: --blocked on its own 10% wash composites to 4.50:1 in
+   light at 1440 and 4.31:1 at 390, where the panel sits on a different ground.
+   The failed row is the one state that must never be the hard one to read. */
+:root[data-theme="light"] .check-row.failed{color:#A82F26}
 .mini-metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .mini-metric{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm);padding:8px}
 .mini-value{font-size:var(--fs-h2);font-weight:600;letter-spacing:-.02em;font-family:var(--font-mono);
@@ -1156,6 +1187,7 @@ body.deciding .composer-wrap{display:none}
 .mcp-tool{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);
   border-radius:var(--r-xs);padding:4px 6px;font-size:var(--fs-caption);color:var(--text-2)}
 .mcp-tool.approved{border-color:color-mix(in srgb,var(--pass) 45%,var(--line));color:var(--pass)}
+.mcp-tool .mcp-risk{margin-left:2px;padding:1px 6px;font-size:10px}
 .mcp-call{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px 12px;
   border-bottom:1px solid var(--line)}
 .mcp-call:last-child{border-bottom:0}
@@ -1671,6 +1703,9 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
    footer pinned so the primary action is never below the fold. */
 .mcp-wizard{display:flex;flex-direction:column;overflow:hidden}
 .mcp-wizard>.wizard-head,.mcp-wizard>.mcp-steps,.mcp-wizard>.wizard-foot{flex:none}
+/* Chinese has no word boundaries, so a squeezed button breaks inside a word
+   (\53d6/\6d88). The label is never the thing that should shrink. */
+.mcp-wizard>.wizard-foot>button{white-space:nowrap;flex:none}
 .mcp-wizard-body{flex:1;min-height:0;overflow:auto}
 .mcp-steps{display:flex;gap:8px;margin:0;padding:11px 24px;list-style:none;
   border-bottom:1px solid var(--line);background:var(--surface-2)}
@@ -1694,6 +1729,8 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
   border-radius:var(--r-md);background:var(--pass-bg)}
 .mcp-connected b{font-size:var(--fs-label);font-weight:600;color:var(--pass)}
 .mcp-connected small{font-size:var(--fs-caption);color:var(--text-2)}
+.mcp-connected .mcp-draft-note{flex-basis:100%;margin-top:1px}
+.field input[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--blocked)}
 .mcp-approve-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:9px;margin-bottom:8px}
 .mcp-approve-head>span{font-size:var(--fs-label);font-weight:600}
 .mcp-approve-head>small{font-size:var(--fs-caption);color:var(--text-3);margin-right:auto}
@@ -1712,6 +1749,32 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
 .mcp-risk.destructive{border-color:color-mix(in srgb,var(--blocked) 45%,var(--line));
   color:var(--blocked);background:var(--blocked-bg)}
 .mcp-risk.readonly{border-color:color-mix(in srgb,var(--pass) 40%,var(--line));color:var(--pass)}
+.mcp-risk.unlabelled{border-style:dashed;border-color:var(--line-strong);color:var(--text-2);background:none}
+.mcp-caveat{margin:0 0 9px}
+/* The field help under Server name states the rule a person has to satisfy
+   BEFORE typing, and the one under Arguments states how the textarea is
+   read. .field-help's --text-3 measures 2.72:1 light / 3.59:1 dark, so as
+   written neither was legible. Raised to the same tone the step notes use
+   (5.31 / 7.05) inside this dialog. The same shortfall exists wherever else
+   .field-help is used; that is a wider change than this slice and is
+   reported rather than made here. */
+.mcp-wizard .field-help{color:var(--text-2)}
+/* Light-theme AA. Each of these sits on a 10%-tinted wash of its own token,
+   which pulls the token under 4.5:1 against the composited background:
+   "May change data" measured 4.03, the consent heading 3.96 and the Connected
+   heading 4.16 at 11-12px. Darkened here, in light only — dark measured 5.18 /
+   6.76 / 6.38 and is deliberately untouched. Re-measure, do not assume: the
+   backgrounds are alpha-composited down the whole ancestor chain. */
+:root[data-theme="light"] .mcp-risk.destructive{color:#A82F26}
+:root[data-theme="light"] .hpc-confirm b{color:#7F540A}
+:root[data-theme="light"] .mcp-connected b,
+:root[data-theme="light"] .mcp-approved b{color:#14684A}
+/* D7: a consent the person cannot give yet should not be the loudest thing on
+   the step. Until something is approved the box steps back to a plain surface
+   instead of wearing the same alert wash as the live one. */
+.hpc-confirm.awaiting{background:var(--surface-2);
+  border-color:var(--line);color:var(--text-3)}
+:root .hpc-confirm.awaiting b,:root[data-theme="light"] .hpc-confirm.awaiting b{color:var(--text-2)}
 .mcp-empty{margin:0;padding:15px 13px;font-size:var(--fs-label);color:var(--text-2)}
 .mcp-approved{padding:11px 13px;border-radius:var(--r-md);
   border:1px solid color-mix(in srgb,var(--pass) 32%,var(--line));background:var(--pass-bg)}
@@ -1954,6 +2017,11 @@ mark.preview-hit.on{background:var(--preview-mark-on);color:var(--inverse-text)}
   .wizard-head{padding:18px 17px 15px}
   .wizard-body{padding:18px 17px}
   .wizard-foot{padding:13px 17px;padding-bottom:max(13px,env(safe-area-inset-bottom))}
+  /* the footer note was taking ~60% of a 390px row; give it its own row and let
+     the buttons keep their natural width */
+  .mcp-wizard>.wizard-foot{flex-wrap:wrap}
+  .mcp-wizard>.wizard-foot>span{flex-basis:100%;max-width:none;margin:0 0 9px}
+  .mcp-wizard>.wizard-foot>button:nth-of-type(1){margin-left:auto}
   .project-wizard,.settings-wizard{height:100dvh;max-height:100dvh}
   .project-wizard-body{padding:18px 17px}
   .wizard-progress li{grid-template-columns:26px minmax(0,1fr);column-gap:7px}
@@ -2813,12 +2881,13 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <input type="hidden" name="server_id" id="mcp-server-id">
       <input type="hidden" name="allowed_tools_text" id="mcp-allowed-tools">
       <section class="mcp-step" data-mcp-step="connect" tabindex="-1"><div class="form-grid">
-        <label class="field"><span>Server name</span><input name="name" id="mcp-name" maxlength="80" required placeholder="Research tools"></label>
+        <label class="field"><span>Server name</span><input name="name" id="mcp-name" maxlength="80" required placeholder="Research tools" aria-describedby="mcp-name-help"><small class="field-help" id="mcp-name-help">A label for this project. ASCII letters, digits, spaces and . _ - only, and it must start with a letter or digit.</small></label>
         <label class="field"><span>Transport</span><select name="transport" id="mcp-transport"><option value="stdio">Local stdio</option><option value="http">Streamable HTTP</option></select></label>
         <div class="field full mcp-transport-fields" id="mcp-stdio-fields"><div class="form-grid">
           <label class="field"><span>Executable</span><input name="command" id="mcp-command" maxlength="1000" placeholder="npx" autocomplete="off"></label>
           <label class="field"><span>Arguments</span><textarea name="args_text" id="mcp-args" maxlength="32000" placeholder="-y&#10;@example/mcp-server"></textarea><small class="field-help">One argument per line. CrossAudit never invokes a shell.</small></label>
           <label class="hpc-confirm field full" id="mcp-approve-box"><input name="approve_local_code" type="checkbox"><span><b>I approve this exact local command</b>A local MCP server runs with this app's user permissions and may access files or the network. Verify its publisher and arguments.</span></label>
+          <p class="mcp-step-note field full" id="mcp-approve-required" hidden>Connect runs this command on your Mac, so the approval above is required before it can run.</p>
           <div class="field full mcp-approved" id="mcp-approved-note" hidden><b>This exact command is already approved</b><small>You approved this executable and these arguments when you connected the server. Editing either one asks you to approve the new command.</small></div>
         </div></div>
         <div class="field full mcp-transport-fields off" id="mcp-http-fields"><div class="form-grid">
@@ -2834,18 +2903,18 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
         <p class="mcp-step-note">Connecting only reads the server's tool list. Nothing can be called until you approve it in the next step.</p>
       </section>
       <section class="mcp-step" data-mcp-step="tools" tabindex="-1" hidden>
-        <div class="mcp-connected" id="mcp-connected"></div>
-        <div class="mcp-approve-head"><span>Approved tool names</span><small id="mcp-approve-count"></small><button type="button" class="mcp-link" id="mcp-select-all">Select all</button></div>
+        <div class="mcp-connected" id="mcp-connected" role="status" aria-live="polite"></div>
+        <p class="mcp-step-note mcp-caveat">Tool names, descriptions and risk labels are reported by the server itself and are not verified by CrossAudit. Approve only what you recognise.</p>
+        <div class="mcp-approve-head"><span>Tools this project may use</span><small id="mcp-approve-count" aria-live="polite"></small><button type="button" class="mcp-link" id="mcp-select-all">Select all except destructive</button></div>
         <div class="mcp-approve" id="mcp-tool-approve" role="group" aria-label="Advertised tools"></div>
-        <p class="mcp-step-note">Tool names, descriptions and risk labels are reported by the server itself and are not verified by CrossAudit. Approve only what you recognise.</p>
-        <label class="hpc-confirm field full" style="margin-top:15px"><input name="enabled" type="checkbox" id="mcp-enabled"><span><b>Allow Generator to call the approved tools automatically</b>Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.</span></label>
+        <label class="hpc-confirm field full" style="margin-top:15px"><input name="enabled" type="checkbox" id="mcp-enabled" aria-describedby="mcp-enable-note"><span><b>Allow Generator to call the approved tools automatically</b>Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.</span></label>
         <p class="mcp-step-note" id="mcp-enable-note">Leave this off to keep the server manual-only. You can turn it on later.</p>
       </section>
-      <div class="wizard-error" id="mcp-error"></div></div>
+      <div class="wizard-error" id="mcp-error" role="alert" tabindex="-1"></div></div>
     <div class="wizard-foot"><span id="mcp-foot-note">Bearer tokens are write-only Keychain items. Local commands are stored without secrets.</span>
       <button type="button" class="secondary" id="cancel-mcp">Cancel</button>
       <button type="button" class="secondary" id="mcp-back" hidden>Back</button>
-      <button class="primary" id="save-mcp">Connect</button></div>
+      <button class="primary" id="save-mcp" aria-describedby="mcp-approve-required">Connect</button></div>
   </form>
 </div>
 
@@ -2933,6 +3002,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <button type="button" class="nav-item" data-view="models" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Models</button>
       <button type="button" class="nav-item" data-view="usage" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Usage</button>
       <button type="button" class="nav-item" data-view="compute" aria-pressed="false"><span class="nav-icon" aria-hidden="true"></span>Compute</button>
+      <button type="button" class="nav-item" data-view="tools" aria-pressed="false" aria-label="Tools &amp; Skills"><span class="nav-icon" aria-hidden="true"></span>Tools</button>
       <button type="button" class="nav-item" data-view="evidence" aria-pressed="false" aria-label="Governed actions and evidence"><span class="nav-icon" aria-hidden="true"></span>Governed</button>
       <button type="button" class="nav-item" data-view="plan" aria-pressed="false" aria-label="Goal and plan"><span class="nav-icon" aria-hidden="true"></span>Plan</button></nav>
     <div class="panel-body">
@@ -2947,8 +3017,9 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
           <div class="kv"><span>Current round</span><span id="current-round">-</span></div>
           <div class="kv"><span>Constitution</span><span id="rules-count">…</span></div>
           <div class="kv"><span>Admission tier</span><span id="tier-value">…</span></div></section>
-        <section class="inspect-section"><div class="inspect-title">Deterministic checks</div>
-          <div id="runtime-checks"></div></section>
+        <section class="inspect-section"><div class="inspect-title" id="runtime-checks-title">Automatic checks</div>
+          <p class="check-summary" id="runtime-checks-state"></p>
+          <div id="runtime-checks" role="list" aria-labelledby="runtime-checks-title" aria-describedby="runtime-checks-state"></div></section>
         <section class="inspect-section"><div class="inspect-title">Ledger</div>
           <div class="mini-metrics" id="mini-metrics"></div></section>
         <section class="inspect-section"><div class="inspect-title">Needs attention</div>
@@ -3146,13 +3217,13 @@ const ZH={
   "Job script":"任务脚本","I approve this remote execution":"我批准此次远程执行",
   "The script can access anything my account can read or write on this host. Closing CrossAudit will not stop it.":"脚本可访问我的账户在该主机上有权读写的所有内容。关闭 CrossAudit 不会停止它。","Submit job":"提交任务",
   "Tasks":"任务","New chat":"新对话","＋ New chat":"＋ 新对话","Workspace views":"工作区视图","Chat":"对话","Files":"文件","More":"更多",
-  "Audit history":"审计记录","Usage":"用量","Tools & Skills":"工具与技能",
+  "Audit history":"审计记录","Usage":"用量","Tools & Skills":"工具与技能","Tools":"工具",
   "Back to projects":"返回项目列表","Pin project":"置顶项目","Settings":"设置","Switch theme":"切换主题","Toggle audit context":"切换审计上下文","Open navigation":"打开导航","Close open panel":"关闭面板",
   "You":"你","Auditor":"审计者","New task":"新任务",
   "Message recipient":"消息接收方","To":"发送给","Auto":"自动","@ Generator":"@ 生成者","@ Auditor":"@ 审计者","Add files":"添加文件","＋ Add files":"＋ 添加文件",
   "Message the group, or @ someone…":"给群组发送消息，或 @ 某一方…","Run task":"运行任务","Generator → Auditor":"生成者 → 审计者","Auto-planning":"自动规划","Generator infers focus, format, tone, and structure unless you specify them.":"除非你明确指定，否则生成者会自动判断重点、格式、语气和结构。","Enter to send · Shift+Enter for new line":"Enter 发送 · Shift+Enter 换行",
   "What should CrossAudit work on?":"希望 CrossAudit 完成什么？","Describe what you need or add files. CrossAudit will do the work and independently check the result before showing it here.":"描述你的需求或添加文件。CrossAudit 会完成工作，并在结果显示到这里之前进行独立检查。",
-  "Audit context":"审计上下文","Close audit context":"关闭审计上下文","Loop parameters":"循环参数","Maximum rounds":"最大轮数","Current round":"当前轮次","Constitution":"审计章程","Admission tier":"准入级别","Deterministic checks":"确定性检查","Ledger":"账本",
+  "Audit context":"审计上下文","Close audit context":"关闭审计上下文","Loop parameters":"循环参数","Maximum rounds":"最大轮数","Current round":"当前轮次","Constitution":"审计章程","Admission tier":"准入级别","Automatic checks":"自动检查","Ledger":"账本",
   "Drop files to add them":"拖放文件以添加","No CrossAudit file-count or file-size quota. Available storage, filesystem limits and provider context still apply.":"CrossAudit 不限制文件数量或大小，但仍受可用存储、文件系统和供应商上下文限制。",
   "Rendered locally and audited from the final binary":"在本地渲染，并从最终二进制文件回读审计","File preview":"文件预览","Preparing preview…":"正在准备预览…","Loading audited deliverable…":"正在加载已审计的交付文件…","Download":"下载","Close preview":"关闭预览","The complete file remains available to download.":"完整文件始终可供下载。","Preview unavailable for this file type. Download the complete file to open it in a compatible app.":"此文件类型无法安全预览。请下载完整文件并使用兼容应用打开。","The reading preview is shortened for responsiveness; the download is complete.":"为保证界面流畅，阅读预览已截短；下载文件是完整的。","Preview is reconstructed from the final audited DOCX binary.":"预览内容从最终通过审计的 DOCX 二进制文件中重建。","HTML preview is isolated from the app and cannot access the network.":"HTML 预览与应用隔离，且无法访问网络。",
   "Search preview":"搜索预览","Search in preview":"在预览中搜索","Previous match":"上一个匹配","Next match":"下一个匹配",
@@ -3278,7 +3349,7 @@ const ZH={
   "Server name":"服务器名称","Transport":"传输方式","Local stdio":"本地 stdio","Streamable HTTP":"Streamable HTTP","Executable":"可执行文件","Arguments":"参数",
   "One argument per line. CrossAudit never invokes a shell.":"每行一个参数。CrossAudit 绝不会调用 shell。","I approve this exact local command":"我批准此准确的本地命令","A local MCP server runs with this app's user permissions and may access files or the network. Verify its publisher and arguments.":"本地 MCP 服务器使用本应用的用户权限运行，可能访问文件或网络。请核实发布者和参数。",
   "MCP endpoint":"MCP 端点","Secure MCP endpoint URL":"安全的 MCP 端点 URL","Bearer token (optional)":"Bearer token（可选）","Leave blank to keep saved token":"留空以保留已保存的 token","Allow a verified private-network server":"允许已核实的专用网络服务器","Use only for an enterprise hostname you control. Public remote servers must use HTTPS.":"仅用于你所控制的企业主机名。公共远程服务器必须使用 HTTPS。",
-  "Request timeout":"请求超时","Calls per task":"每个任务的调用次数","Approved tool names":"已批准的工具名称","Allow Generator to call the approved tools automatically":"允许生成者自动调用已批准的工具","Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.":"调用会实时显示在任务循环中。工具输出被视为不可信外部数据，绝不会成为审计规则。",
+  "Request timeout":"请求超时","Calls per task":"每个任务的调用次数","Tools this project may use":"本项目可以使用的工具","Allow Generator to call the approved tools automatically":"允许生成者自动调用已批准的工具","Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.":"调用会实时显示在任务循环中。工具输出被视为不可信外部数据，绝不会成为审计规则。",
   "Advertised tools":"公布的工具","Bearer tokens are write-only Keychain items. Local commands are stored without secrets.":"Bearer token 以只写方式存入钥匙串；本地命令不含秘密信息。",
   "Project-scoped MCP capabilities and committed Generator guidance.":"项目级 MCP 能力与已提交的生成者指导。","Explicit capability boundaries.":"明确的能力边界。","MCP servers and Skills are invisible until you configure them. Approved MCP output remains untrusted data; Skills guide only the Generator and never change the Constitution.":"MCP 服务器和技能在你配置前不可见。已批准的 MCP 输出仍是不可信数据；技能只指导生成者，绝不会修改审计章程。",
   "＋ Add MCP server":"＋ 添加 MCP 服务器","Manage Skills":"管理技能","MCP servers":"MCP 服务器","Recent tool calls":"最近工具调用","Skills":"技能","No MCP servers connected to this project.":"此项目尚未连接 MCP 服务器。","No MCP tools called in this project.":"此项目尚未调用 MCP 工具。","No project Skills yet.":"此项目尚无技能。",
@@ -3290,8 +3361,8 @@ const ZH={
   "Connecting only reads the server's tool list. Nothing can be called until you approve it in the next step.":"连接只会读取服务器的工具列表。在你于下一步批准之前，任何工具都不会被调用。",
   "This exact command is already approved":"此命令已获批准",
   "You approved this executable and these arguments when you connected the server. Editing either one asks you to approve the new command.":"你在连接此服务器时已批准该可执行文件与这些参数。修改其中任何一项都会要求你重新批准新的命令。",
-  "Save":"保存","Saving…":"正在保存…","Select all":"全选","Clear all":"全部清除",
-  "Read-only":"只读","May change data":"可能修改数据","No description provided.":"未提供说明。",
+  "Save":"保存","Saving…":"正在保存…","Select all except destructive":"全选（破坏性除外）","Clear all":"全部清除",
+  "Read-only":"只读","May change data":"可能修改数据","Not labelled by the server":"服务器未标注","No description provided.":"未提供说明。",
   "This server advertised no tools, so there is nothing to approve.":"此服务器未公布任何工具，因此没有可批准的内容。",
   "Tool names, descriptions and risk labels are reported by the server itself and are not verified by CrossAudit. Approve only what you recognise.":"工具名称、说明与风险标签均由服务器自行提供，CrossAudit 不对其进行核实。请只批准你认得的内容。",
   "Approve at least one tool before the Generator can call this server.":"先批准至少一个工具，生成者才能调用此服务器。",
@@ -3303,6 +3374,55 @@ const ZH={
   // detail_i18n / summary_i18n), so it is deliberately NOT duplicated here —
   // the old ZH_PATTERNS/dictionary handoff for these strings is superseded.
   "Context reduced":"上下文已精简","round":"轮次",
+  "A label for this project. ASCII letters, digits, spaces and . _ - only, and it must start with a letter or digit.":"本项目中的标识名称。仅限 ASCII 字母、数字、空格和 . _ -，且必须以字母或数字开头。",
+  "Connect runs this command on your Mac, so the approval above is required before it can run.":"连接会在你的 Mac 上运行此命令，因此必须先勾选上方的批准。",
+  "Server names use ASCII letters, digits, spaces and . _ - only, and must start with a letter or digit. Rename this server to continue.":"服务器名称仅支持 ASCII 字母、数字、空格和 . _ -，且必须以字母或数字开头。请修改名称后继续。",
+  "This project already has an MCP server with that name. Choose a different name, or configure the existing one.":"此项目已存在同名的 MCP 服务器。请换一个名称，或直接配置已有的服务器。",
+  "This project already has an MCP server running that exact command. Configure the existing one instead.":"此项目已存在运行该命令的 MCP 服务器。请直接配置已有的服务器。",
+  "Not saved yet — Cancel removes this connection.":"尚未保存 —— 取消将移除此连接。",
+  // Denials /api/mcp can return into this dialog. The backend wording is the
+  // contract; these are its Chinese parity, so a refusal is never English-only.
+  "MCP server settings must be an object":"MCP 服务器设置必须是一个对象",
+  "MCP server name uses unsupported characters":"MCP 服务器名称包含不支持的字符",
+  "MCP transport must be stdio or Streamable HTTP":"MCP 传输方式必须是 stdio 或 Streamable HTTP",
+  "invalid MCP server identifier":"无效的 MCP 服务器标识符",
+  "that MCP server is not registered in this project":"该 MCP 服务器未注册在此项目中",
+  "MCP timeout must be a whole number":"MCP 超时必须是整数",
+  "MCP timeout must be between 1 and 300 seconds":"MCP 超时必须在 1 到 300 秒之间",
+  "MCP calls per task must be a whole number":"MCP 每任务调用次数必须是整数",
+  "approve the exact local MCP command before it runs":"请先批准将要运行的这条本地 MCP 命令",
+  "MCP executable is required":"必须填写 MCP 可执行文件",
+  "MCP arguments must be a list":"MCP 参数必须是一个列表",
+  "an MCP argument is invalid or too long":"某个 MCP 参数无效或过长",
+  "MCP arguments are unexpectedly large":"MCP 参数过大",
+  "allowed MCP tools must be a list":"允许的 MCP 工具必须是一个列表",
+  "an allowed MCP tool is not advertised by this server":"某个已允许的 MCP 工具并未由此服务器公布",
+  "select at least one MCP tool before enabling Generator access":"启用生成者访问前，请至少选择一个 MCP 工具",
+  "connect the MCP server without Generator access first, review the advertised tool list, then configure and enable it":"请先在不开放生成者访问的情况下连接 MCP 服务器，复核其公布的工具列表，然后再配置并启用它",
+  "MCP URL must be a plain HTTP(S) endpoint without credentials, query or fragment":"MCP URL 必须是不含凭据、查询串或片段的纯 HTTP(S) 端点",
+  "remote MCP servers require HTTPS; HTTP is allowed only on loopback":"远程 MCP 服务器必须使用 HTTPS；仅回环地址允许使用 HTTP",
+  "the MCP hostname could not be resolved":"无法解析该 MCP 主机名",
+  "the MCP hostname resolves to a private or reserved address; enable private-network access only for a verified enterprise server":"该 MCP 主机名解析到专用或保留地址；请仅对已核实的企业服务器启用专用网络访问",
+  "MCP endpoint redirects are refused; register the final HTTPS URL":"MCP 端点重定向会被拒绝；请直接登记最终的 HTTPS 地址",
+  "MCP server requires authorization. Add a valid bearer token; interactive MCP OAuth is not configured for this server.":"MCP 服务器需要授权。请添加有效的 bearer token；此服务器未配置交互式 MCP OAuth。",
+  "MCP request timed out":"MCP 请求超时",
+  "MCP server wrote non-JSON data to stdout":"MCP 服务器向标准输出写入了非 JSON 数据",
+  "MCP server returned invalid JSON":"MCP 服务器返回了无效的 JSON",
+  "MCP server returned a non-object JSON-RPC message":"MCP 服务器返回了非对象的 JSON-RPC 消息",
+  "MCP server response exceeded the safety limit":"MCP 服务器响应超出安全上限",
+  "MCP event stream ended without the requested response":"MCP 事件流在返回所请求的响应前已结束",
+  "MCP tools/list returned an invalid tool list":"MCP tools/list 返回了无效的工具列表",
+  "MCP server advertised an invalid tool":"MCP 服务器公布了无效的工具",
+  "MCP server advertised more than 1000 tools":"MCP 服务器公布了超过 1000 个工具",
+  "MCP server returned an invalid pagination cursor":"MCP 服务器返回了无效的分页游标",
+  "MCP bearer token is empty or unexpectedly large":"MCP bearer token 为空或过大",
+  "MCP bearer token contains control characters":"MCP bearer token 含有控制字符",
+  "macOS Keychain is unavailable for the MCP credential":"无法使用 macOS 钥匙串保存 MCP 凭据",
+  "Generator MCP request must be an object":"生成者的 MCP 请求必须是一个对象",
+  "this MCP server is not enabled for the Generator":"此 MCP 服务器未对生成者启用",
+  "this MCP tool is not approved for automatic use":"此 MCP 工具未被批准自动使用",
+  "the Generator reached this MCP server's calls-per-task limit":"生成者已达到此 MCP 服务器的每任务调用上限",
+  "MCP tool arguments must be an object":"MCP 工具参数必须是一个对象",
   "Generator enabled":"已为生成者启用","Manual only":"仅手动","Configure":"配置","Refresh tools":"刷新工具","No tools advertised.":"未公布工具。","Applies to every task":"适用于每个任务","MCP tool":"MCP 工具","calling MCP tool":"正在调用 MCP 工具","policy":"政策",
   "Last 64 KB · stdout + stderr":"最近 64 KB · 标准输出 + 标准错误","Remote process finished":"远程进程已完成","Submitted to Slurm":"已提交至 Slurm","Detached on host":"已在远程主机后台启动","Preparing remote job":"正在准备远程任务",
   "Passed":"已通过","Blocked":"已阻止","Waiting on you":"等待你决定","Admitted":"已准入","Complete":"已完成","Active":"正在进行","Pending":"等待中"
@@ -3321,6 +3441,11 @@ const ZH={
   "The task this conversation asked for.":"此对话所要求完成的任务。",
   "Independent review":"独立审查","Independent auditor approved the result":"独立审计者已批准该结果",
   "No blocking findings":"没有阻断性问题","Recorded in the audit ledger":"已记录到审计账本",
+  // SPEC-2 verification states. The section line is the only thing a person
+  // who does not know what a deterministic check is has to read.
+  "Not run yet — these run automatically on your first task.":"尚未运行——它们会在你的第一个任务中自动运行。",
+  "These run with every task; no result has been reported for the latest round.":"它们会随每个任务运行；最近一轮尚未报告结果。",
+  "No checks configured":"未配置任何检查",
   "Findings":"发现的问题","Record":"记录","Commit":"提交","Cycle":"审计循环",
   "Open Files panel":"打开文件面板","now":"刚刚","Human decision":"人工决定",
   "First launch setup":"首次启动设置","Setup steps":"设置步骤","Welcome":"欢迎","Readiness":"就绪检查","Providers":"供应商","Roles":"角色",
@@ -3411,7 +3536,7 @@ const ZH={
   ,"Sign in, enter the code, and approve GitHub CLI. This page updates automatically.":"登录并输入代码，然后批准 GitHub CLI。此页面会自动更新。","Install GitHub tool ↗":"安装 GitHub 工具 ↗"
   ,"Enter the code in GitHub. This dialog updates automatically after approval.":"在 GitHub 中输入代码。批准后此对话框会自动更新。","Authorize CrossAudit in GitHub":"在 GitHub 中授权 CrossAudit"
   ,"Review the repository settings and retry.":"请检查仓库设置后重试。","Authorize permanent repository deletion":"授权永久删除仓库"
-  ,"Exact model ID":"准确的模型 ID","Credential":"凭据","Could not resume setup":"无法恢复设置","Resuming GitHub setup":"正在恢复 GitHub 设置","Research tools":"检索工具","visible to this account":"此账户可见"
+  ,"Exact model ID":"准确的模型 ID","Credential":"凭据","Could not resume setup":"无法恢复设置","Resuming GitHub setup":"正在恢复 GitHub 设置","visible to this account":"此账户可见"
   ,"Open help":"打开帮助","Fix":"修复","Git installation guide":"Git 安装指南"
   ,"Use the official Codex login and an eligible ChatGPT plan. CrossAudit never receives the OAuth token.":"使用官方 Codex 登录及符合条件的 ChatGPT 套餐。CrossAudit 绝不会接收 OAuth token。"
   ,"Official ChatGPT subscription sign-in is available through the bundled Codex runtime; CrossAudit never receives its OAuth token.":"可通过内置 Codex 运行时使用官方 ChatGPT 订阅登录；CrossAudit 绝不会接收其 OAuth token。"
@@ -3467,7 +3592,7 @@ const ZH_PATTERNS=[
   [/^Connected · (.+)\. Usage follows this ChatGPT workspace and plan\.$/i,m=>'已连接 · '+m[1]+'。用量遵循该 ChatGPT 工作区和套餐。'],
   [/^Connected as (.+)$/i,m=>'已连接为 '+m[1]],[/^Local project: (.+)$/i,m=>'本地项目：'+m[1]],
   [/^(\d+) attachment\(s\) received$/i,m=>'已收到 '+m[1]+' 个附件'],
-  [/^(\d+) blocker rules?$/i,m=>m[1]+' 条阻断规则'],
+  [/^(\d+) rules?$/i,m=>m[1]+' 条规则'],
   [/^(\d+) reports?$/i,m=>m[1]+' 份报告'],[/^(\d+) connected$/i,m=>'已连接 '+m[1]+' 个'],[/^(\d+) active$/i,m=>m[1]+' 个正在运行'],
   [/^(.+) · local controller$/i,m=>m[1]+' · 本地控制器'],
   [/^(.+) · updated (.+)$/i,m=>m[1]+' · 更新于 '+m[2]],
@@ -3550,6 +3675,24 @@ const ZH_PATTERNS=[
   ,[/^([0-9a-f]{7,40}) · round (\d+)$/i,m=>m[1]+' · 第 '+m[2]+' 轮']
   ,[/^(PASS|BLOCKED|ESCALATED|ESCALATE|DCL_ONLY) · (\d+) finding\(s\)$/,m=>zhValue(m[1])+' · '+m[2]+' 项发现']
   ,[/^cycle (\S+) is waiting for a human$/,m=>'循环 '+m[1]+' 正在等待人工处理']
+  ,[/^MCP executable (.+) was not found or is not executable$/,m=>'未找到 MCP 可执行文件 '+m[1]+'，或它不可执行']
+  ,[/^MCP server could not start: (.+)$/,m=>'MCP 服务器无法启动：'+m[1]]
+  ,[/^MCP server closed its input\.(.*)$/,m=>'MCP 服务器关闭了输入。'+m[1].trim()]
+  ,[/^MCP server exited before replying\.(.*)$/,m=>'MCP 服务器在回复前已退出。'+m[1].trim()]
+  ,[/^MCP server returned HTTP (\d+)$/,m=>'MCP 服务器返回 HTTP '+m[1]]
+  ,[/^MCP server connection failed: (.+)$/,m=>'MCP 服务器连接失败：'+m[1]]
+  ,[/^MCP server negotiated unsupported protocol (.+)$/,m=>'MCP 服务器协商了不受支持的协议 '+m[1]]
+  ,[/^MCP (\S+) failed: (.+)$/,m=>'MCP '+m[1]+' 失败：'+m[2]]
+  ,[/^MCP (\S+) returned an invalid result$/,m=>'MCP '+m[1]+' 返回了无效结果']
+  ,[/^MCP calls per task must be between 1 and (\d+)$/,m=>'MCP 每任务调用次数必须在 1 到 '+m[1]+' 之间']
+  ,[/^macOS Keychain refused the MCP credential: (.+)$/,m=>'macOS 钥匙串拒绝了 MCP 凭据：'+m[1]]
+  ,[/^(.+) — the cancelled connection is still listed; remove it there\.$/,m=>zhValue(m[1])+' —— 已取消的连接仍在列表中，请在那里将其移除。']
+  ,[/^All (\d+) checks? passed on the latest round\.$/,m=>'最近一轮的 '+m[1]+' 项检查全部通过。']
+  ,[/^(\d+) of (\d+) checks? did not pass on the latest round\.$/,m=>'最近一轮中有 '+m[1]+' 项检查未通过。']
+  ,[/^(\d+) of (\d+) checks? (?:has|have) not run on the latest round\.$/,m=>'最近一轮中有 '+m[1]+' 项检查尚未运行。']
+  ,[/^(\d+) checks? passed, (\d+) had nothing to check\.$/,m=>m[1]+' 项检查通过，'+m[2]+' 项没有可检查的内容。']
+  ,[/^(.+): (passed|did not pass|not run yet|nothing to check)$/,m=>m[1]+'：'
+    +({passed:'已通过','did not pass':'未通过','not run yet':'尚未运行','nothing to check':'没有可检查的内容'})[m[2]]]
 ];
 let currentLocale='en';
 const textSources=new WeakMap(),attributeSources=new WeakMap();
@@ -5452,16 +5595,20 @@ function reviewCard(d){
   const passed=status==='passed'||status==='consumed';
   const statusLabel = ({PASSED:'Passed review',CONSUMED:'Admitted',BLOCKED:'Needs changes',ESCALATED:'Needs your input'})[String(cycle.status||'').toUpperCase()] || cycle.status;
   const open=expandedReviews.has(cycle.id);
-  const checks=Object.keys(d.check_contracts||{});
+  const checks=checkRows(d);
   const roundLines=(rows.length?rows.map(m=>{
     const count=(m.findings||[]).length;
     return '<div class="review-round-row"><span class="round-n">Round '+esc(m.round)+'/'+esc(d.max_rounds)
       +'</span> · <span>'+(count?count+' finding'+(count===1?'':'s'):esc(m.verdict||'PASS'))
       +'</span></div>';}):['<div class="review-round-row"><span class="round-n">Round '
       +esc(cycle.round)+'/'+esc(d.max_rounds)+'</span></div>']).join('');
+  // "N deterministic checks passed" counted the CONFIGURED checks and called
+  // them passed. That is the same fabrication as the ticks below it: the console
+  // is not told which checks ran. The claim is removed rather than restated, and
+  // the check list in the detail carries its real state instead.
   const checkLines=passed
     ?'<ul class="review-checks"><li>Independent auditor approved the result</li>'
-      +(checks.length?'<li>'+checks.length+' deterministic check'+(checks.length===1?'':'s')+' passed</li>':'<li>No blocking findings</li>')
+      +'<li>No blocking findings</li>'
       +'<li>Recorded in the audit ledger</li></ul>'
     :'';
   const findingRows=rows.filter(m=>(m.findings||[]).length).map(m=>
@@ -5471,9 +5618,10 @@ function reviewCard(d){
       +'<span class="spacer"></span><span class="finding-rule" title="rule id">'+esc(f.rule)+'</span></div><p>'
       +esc(f.observation)+'</p></div>').join('')).join('');
   const detail='<div class="review-detail"><div class="review-detail-inner">'
-    +'<div class="review-section"><div class="review-section-title">Deterministic checks</div>'
-    +(checks.length?checks.map(name=>'<div class="contract">✓ '+esc(name)+'</div>').join(''):'<div class="empty">No checks configured</div>')
-    +'<div class="review-rounds">'+esc(d.rules)+' blocker rules</div></div>'
+    +'<div class="review-section"><div class="review-section-title" id="review-checks-title-'+esc(cycle.id)+'">Automatic checks</div>'
+    +'<p class="check-summary">'+esc(checkSummary(checks,auditCount(d)))+'</p>'
+    +'<div role="list" aria-labelledby="review-checks-title-'+esc(cycle.id)+'">'+renderCheckRows(checks)+'</div>'
+    +'<div class="review-rounds">'+esc(d.rules)+(d.rules===1?' rule':' rules')+'</div></div>'
     +(findingRows?'<div class="review-section"><div class="review-section-title">Findings</div>'+findingRows+'</div>':'')
     +'<div class="review-section"><div class="review-section-title">Record</div><div class="review-record">'
     +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
@@ -5868,9 +6016,15 @@ function planView(d){
 function toolsView(d){
   const state=d.mcp||{servers:[],calls:[]},skills=((d.runtime_config||{}).skills||[]);
   const servers=(state.servers||[]).map(server=>{const approved=new Set(server.allowed_tools||[]);
-    const tools=(server.tools||[]).map(tool=>{const note=tool.annotations||{},risk=note.destructiveHint?' ⚠':note.readOnlyHint?' ◉':'';
+    // The dialog spells these out; a bare glyph whose meaning lives in a title
+    // attribute is unavailable on touch and unreliable for a screen reader, so
+    // the list says the same words the approval screen said.
+    const tools=(server.tools||[]).map(tool=>{const note=tool.annotations||{};
+      const risk=note.destructiveHint?'<i class="mcp-risk destructive">May change data</i>'
+        :note.readOnlyHint?'<i class="mcp-risk readonly">Read-only</i>'
+        :'<i class="mcp-risk unlabelled">Not labelled by the server</i>';
       return '<span class="mcp-tool'+(approved.has(tool.name)?' approved':'')+'" title="'+esc((tool.description||'')
-        +' · server annotations are untrusted')+'">'+(approved.has(tool.name)?'✓ ':'')+esc(tool.name+risk)+'</span>';}).join('');
+        +' · server annotations are untrusted')+'">'+(approved.has(tool.name)?'✓ ':'')+esc(tool.name)+risk+'</span>';}).join('');
     const endpoint=server.transport==='stdio'?[server.command,...(server.args||[])].join(' '):server.url;
     return '<div class="host-row"><div class="host-top"><b>'+esc(server.name)+'</b>'
       +'<span class="host-kind">'+esc(server.transport)+'</span></div><div class="host-detail">'+esc(endpoint||'')+'</div>'
@@ -6019,6 +6173,56 @@ function renderDecisionBanner(d){
   if(show)document.getElementById('decision-banner-text').textContent=
     count+' task'+(count===1?'':'s')+' need'+(count===1?'s':'')+' your decision';
 }
+// SPEC-2 — a claim may not be shown before it is true.
+// Four states, one vocabulary, no surface invents a fifth: a check that ran and
+// held, one that ran and did not, one that has NOT RUN, and one that ran with
+// nothing in scope. The panel used to print a literal '✓' in front of every
+// CONFIGURED check, so a project with zero audits and zero receipts opened on
+// four green ticks claiming verification that had never happened.
+const CHECK_STATES={
+  passed :{glyph:'\u2713',cls:'passed' ,word:'passed'},
+  failed :{glyph:'\u2715',cls:'failed' ,word:'did not pass'},
+  not_run:{glyph:'\u00b7',cls:'not-run',word:'not run yet'},
+  n_a    :{glyph:'\u2013',cls:'n-a'    ,word:'nothing to check'}};
+// The server sends {name: contract}. SPEC-2 asks it to send
+// {name:{description,state}}; that half is server-side and is not in this
+// slice, so both shapes are read here. Anything unrecognised — an absent state,
+// a state this build does not know — is NOT_RUN. Never the other way round: a
+// client that ships ahead of its server has to fail in the honest direction.
+function checkEntry(value){
+  const row=(value&&typeof value==='object'&&!Array.isArray(value))?value:{description:value};
+  const state=Object.prototype.hasOwnProperty.call(CHECK_STATES,row.state)?row.state:'not_run';
+  return {description:String(row.description==null?'':row.description),state:state};}
+function checkRows(d){const contracts=(d&&d.check_contracts)||{};
+  return Object.keys(contracts).map(name=>{const row=checkEntry(contracts[name]);
+    return {name:name,description:row.description,state:row.state};});}
+function auditCount(d){const row=((d&&d.metrics)||[]).find(m=>m.label==='Audits');
+  return Number((row&&row.value)||0);}
+// The glyph alone leaves "· convergence" — quieter and still meaningless to
+// someone who does not know what a deterministic check is. This line is the
+// only thing such a person needs to read, and it never says more than the
+// states it is counting.
+function checkSummary(rows,audits){
+  if(!rows.length)return '';
+  const total=rows.length,count=state=>rows.filter(row=>row.state===state).length;
+  const failed=count('failed'),notRun=count('not_run'),na=count('n_a'),passed=count('passed');
+  const word=n=>n===1?'check':'checks';
+  if(notRun===total)return audits>0
+    ?'These run with every task; no result has been reported for the latest round.'
+    :'Not run yet — these run automatically on your first task.';
+  if(failed)return failed+' of '+total+' '+word(total)+' did not pass on the latest round.';
+  if(notRun)return notRun+' of '+total+' '+word(total)+(notRun===1?' has':' have')+' not run on the latest round.';
+  if(na)return passed+' '+word(passed)+' passed, '+na+' had nothing to check.';
+  return 'All '+total+' '+word(total)+' passed on the latest round.';}
+// Each row states its own state as text: a screen reader must never be left to
+// interpret a bare '·'.
+function renderCheckRows(rows){
+  if(!rows.length)return '<div class="empty">No checks configured</div>';
+  return rows.map(row=>{const ui=CHECK_STATES[row.state];
+    return '<div class="check-row '+ui.cls+'" role="listitem" title="'+esc(row.description)
+      +'" aria-label="'+esc(row.name+': '+ui.word)+'">'
+      +'<span class="check-glyph" aria-hidden="true">'+ui.glyph+'</span>'
+      +'<span class="check-name">'+esc(row.name)+'</span></div>';}).join('');}
 function renderInspector(d){
   document.getElementById('runtime-generator').textContent = d.generator;
   document.getElementById('runtime-auditor').textContent = d.auditor;
@@ -6029,12 +6233,15 @@ function renderInspector(d){
   document.getElementById('current-round').textContent = current
     ? current.round_no + ' / ' + current.round_limit
     : cycles.length ? cycles[cycles.length-1].round + ' / ' + d.max_rounds : '-';
-  document.getElementById('rules-count').textContent = d.rules + ' blocker rules';
+  // The count is every rule in the constitution; how many of them GATE is not
+  // in this payload, so the row no longer calls them all blockers. SPEC-2 4.1
+  // wants "8 rules · 7 blocking"; the blocking half needs one additive server
+  // field and is escalated, not guessed.
+  document.getElementById('rules-count').textContent = d.rules + (d.rules===1?' rule':' rules');
   document.getElementById('tier-value').textContent = d.tier.tier;
-  const contracts = d.check_contracts || {};
-  document.getElementById('runtime-checks').innerHTML = Object.keys(contracts).length
-    ? Object.entries(contracts).map(([k,v]) => '<div class="contract" title="' + esc(v) + '">✓ '
-      + esc(k) + '</div>').join('') : '<div class="empty">No checks configured</div>';
+  const rows = checkRows(d);
+  document.getElementById('runtime-checks-state').textContent = checkSummary(rows, auditCount(d));
+  document.getElementById('runtime-checks').innerHTML = renderCheckRows(rows);
   document.getElementById('mini-metrics').innerHTML = d.metrics.map(m => '<div class="mini-metric">'
     + '<div class="mini-value">' + esc(m.value ?? '-') + '</div><div class="mini-label">'
     + esc(m.label) + '</div></div>').join('');
@@ -6281,12 +6488,24 @@ function syncMcpTransport(){const stdio=document.getElementById('mcp-transport')
   document.getElementById('mcp-stdio-fields').classList.toggle('off',!stdio);
   document.getElementById('mcp-http-fields').classList.toggle('off',stdio);
   document.getElementById('mcp-command').required=stdio;document.getElementById('mcp-url').required=!stdio;
-  if(stdio)syncMcpApprovalState();}
+  // Also on the way OUT of stdio: the local-command gate must be released when
+  // the transport it belongs to is no longer the one selected.
+  syncMcpApprovalState();}
 // The dialog walks the same lifecycle /api/mcp already enforces: connect and
 // read the tool list first, approve named tools second, and only then may the
 // Generator be let near them. Step 1 never approves or enables anything, so a
 // half-finished dialog always leaves the server switched off.
 let mcpStep='connect';let mcpTools=[];let mcpApproved=new Set();let mcpReconnected=false;
+// SERVER_NAME from mcp.py, mirrored so the refusal arrives in the field the
+// person is looking at instead of as a round-trip denial. It is only ever a
+// mirror: the
+// server still decides, and this must never be looser than it is.
+const MCP_NAME_RE=/^[A-Za-z0-9][A-Za-z0-9_. -]{0,79}$/;
+// Step 1 has to POST to read the tool list, so a row exists while step 2 is on
+// screen. That row is a draft, not a server the person agreed to keep: this
+// holds its id until they press Save, and every close path deletes it. Declining
+// therefore leaves nothing behind, which is what Cancel has always claimed.
+let mcpCreatedId='';
 // The exact local command the person has ALREADY approved for this server
 // ({command, args}), or null when nothing is approved yet. A saved server
 // carries the approval its owner gave when they connected it; that approval
@@ -6346,7 +6565,18 @@ function syncMcpApprovalState(){const approved=mcpCommandUnchanged();
   if(input&&input.checked&&!mcpSameTuple(mcpLiveTuple(),mcpTickedFor)){
     input.checked=false;mcpTickedFor=null;}
   if(approved&&input){input.checked=false;mcpTickedFor=null;}
-  box.hidden=approved;note.hidden=!approved;}
+  box.hidden=approved;note.hidden=!approved;
+  // The other rule on this dialog (Generator access with nothing approved) is
+  // shown as a disabled control plus the reason, instead of being discovered
+  // through a ConfigDenial. This is the same rule /api/mcp enforces for a local
+  // command, given the same treatment: Connect is unavailable until the exact
+  // command on screen has been approved, and the sentence beside it says why.
+  const stdio=document.getElementById('mcp-transport').value==='stdio';
+  const needed=mcpStep==='connect'&&stdio&&!mcpApprovalGranted();
+  const ask=document.getElementById('mcp-approve-required');
+  if(ask)ask.hidden=!needed;
+  const save=document.getElementById('save-mcp');
+  if(save)save.disabled=needed;}
 function mcpText(id,text){const node=document.getElementById(id);if(node)node.textContent=text;}
 function setMcpStep(step){mcpStep=step==='tools'?'tools':'connect';
   document.querySelectorAll('[data-mcp-step]').forEach(pane=>pane.hidden=pane.dataset.mcpStep!==mcpStep);
@@ -6358,21 +6588,49 @@ function setMcpStep(step){mcpStep=step==='tools'?'tools':'connect';
   mcpText('mcp-foot-note',mcpStep==='tools'
     ?'Only the tools you tick are approved. Tools the server adds later stay blocked until you review them.'
     :'Bearer tokens are write-only Keychain items. Local commands are stored without secrets.');
+  syncMcpApprovalState();
   setTimeout(()=>{const pane=document.querySelector('[data-mcp-step="'+mcpStep+'"]');if(pane)pane.scrollTop=0;
     const body=document.querySelector('.mcp-wizard-body');if(body)body.scrollTop=0;},0);}
 function renderMcpConnected(server){const host=document.getElementById('mcp-connected');if(!host)return;
   const info=(server&&server.server_info)||{};const named=esc(info.name||(server&&server.name)||'');
   const version=info.version?' '+esc(info.version):'';
+  const draft=mcpCreatedId?'<small class="mcp-draft-note">Not saved yet — Cancel removes this connection.</small>':'';
   host.innerHTML=server?'<b>Connected</b><small>'+named+version+' · MCP '+esc(server.protocol_version||'')
-    +' · '+((server.tools||[]).length)+' tools advertised</small>':'';}
+    +' · '+((server.tools||[]).length)+' tools advertised</small>'+draft:'';}
+// Delete the step-1 draft row. /api/mcp already owns removal; nothing new is
+// invented here. If the delete fails the list is left as it is and the person is
+// told, rather than the dialog closing over a row it silently could not undo.
+function discardMcpDraft(){const id=mcpCreatedId;if(!id)return;mcpCreatedId='';
+  api('/api/mcp',{action:'remove',server_id:id})
+    .then(()=>api('/api/state'))
+    .then(state=>{if(lastState){lastState.mcp=state.mcp;render(lastState);}})
+    .catch(error=>{const reason=(error&&error.message)?error.message:String(error);
+      computeSurfaceError(new Error(reason+' — the cancelled connection is still listed; remove it there.'));});}
+// A row already in this project with the same name, or the same local command,
+// is indistinguishable from the one being added. Say so before creating a
+// second one; the row being edited never counts as its own duplicate.
+function mcpDuplicate(name,vector,selfId){
+  const rows=((lastState&&lastState.mcp&&lastState.mcp.servers)||[]).filter(row=>row.id!==selfId);
+  const wanted=String(name||'').trim().toLowerCase();
+  if(rows.some(row=>String(row.name||'').trim().toLowerCase()===wanted))
+    return 'This project already has an MCP server with that name. Choose a different name, or configure the existing one.';
+  if(document.getElementById('mcp-transport').value==='stdio'&&vector.command
+     &&rows.some(row=>(row.transport||'stdio')==='stdio'&&mcpSameTuple({command:row.command||'',args:(row.args||[]).slice()},vector)))
+    return 'This project already has an MCP server running that exact command. Configure the existing one instead.';
+  return '';}
 function renderMcpTools(){const host=document.getElementById('mcp-tool-approve');if(!host)return;
   if(!mcpTools.length){host.innerHTML='<p class="mcp-empty">This server advertised no tools, so there is nothing to approve.</p>';
     document.getElementById('mcp-select-all').hidden=true;syncMcpApproval();return;}
   document.getElementById('mcp-select-all').hidden=false;
   host.innerHTML=mcpTools.map(tool=>{const note=tool.annotations||{};
+    // Three states, not two. A tool the server did not label gets its own
+    // badge: an empty space would read as "nothing notable" when what it
+    // actually means is "the server said nothing" (AGENTS.md §1.5).
     const badge=note.destructiveHint?'<i class="mcp-risk destructive">May change data</i>'
-      :note.readOnlyHint?'<i class="mcp-risk readonly">Read-only</i>':'';
+      :note.readOnlyHint?'<i class="mcp-risk readonly">Read-only</i>'
+      :'<i class="mcp-risk unlabelled">Not labelled by the server</i>';
     return '<label class="mcp-approve-row"><input type="checkbox" data-mcp-tool="'+esc(tool.name)+'"'
+      +(note.destructiveHint?' data-mcp-destructive':'')
       +(mcpApproved.has(tool.name)?' checked':'')+'><span><b>'+esc(tool.name)+'</b><small>'
       +esc(tool.description||'No description provided.')+'</small></span>'+badge+'</label>';}).join('');
   syncMcpApproval();}
@@ -6383,13 +6641,24 @@ function syncMcpApproval(){const boxes=[...document.querySelectorAll('[data-mcp-
   // The server refuses "enabled with nothing approved"; say so instead of
   // letting the person find out through a denial.
   enable.disabled=none;if(none)enable.checked=false;
+  const consent=enable.closest('.hpc-confirm');
+  if(consent)consent.classList.toggle('awaiting',none);
   mcpText('mcp-approve-count',mcpApproved.size+' of '+boxes.length+' approved');
   mcpText('mcp-enable-note',none?'Approve at least one tool before the Generator can call this server.'
     :mcpReconnected?'Re-connecting cleared this server\'s approvals. Nothing can be called until you save.'
     :'Leave this off to keep the server manual-only. You can turn it on later.');
-  const all=boxes.length>0&&mcpApproved.size===boxes.length;
-  mcpText('mcp-select-all',all?'Clear all':'Select all');}
-function openMcp(serverId=''){mcpForm.reset();document.getElementById('mcp-error').className='wizard-error';
+  // The bulk action covers the ordinary case and stops short of the two rows
+  // where being wrong costs most: anything the server labelled destructive
+  // needs its own deliberate tick. The label says exactly that, so the
+  // behaviour is evident before it is used, and the count above stays a plain
+  // count of every advertised tool.
+  const safe=boxes.filter(box=>!box.hasAttribute('data-mcp-destructive'));
+  const link=document.getElementById('mcp-select-all');
+  if(link)link.hidden=!safe.length;
+  mcpText('mcp-select-all',safe.length&&safe.every(box=>box.checked)?'Clear all':'Select all except destructive');}
+function clearMcpError(){const box=document.getElementById('mcp-error');box.textContent='';box.className='wizard-error';}
+function openMcp(serverId=''){mcpForm.reset();clearMcpError();
+  mcpCreatedId='';document.getElementById('mcp-name').removeAttribute('aria-invalid');
   const server=((lastState&&lastState.mcp&&lastState.mcp.servers)||[]).find(row=>row.id===serverId);
   document.getElementById('mcp-title').textContent=server?'Configure MCP server':'Add MCP server';
   document.getElementById('mcp-server-id').value=server?server.id:'';
@@ -6410,7 +6679,8 @@ function openMcp(serverId=''){mcpForm.reset();document.getElementById('mcp-error
   setMcpStep(server?'tools':'connect');
   mcpModal.className='project-modal on';
   setTimeout(()=>document.getElementById(server?'mcp-select-all':'mcp-name').focus(),0);}
-function closeMcp(){mcpModal.className='project-modal';mcpForm.reset();
+function closeMcp(){discardMcpDraft();mcpModal.className='project-modal';mcpForm.reset();
+  document.getElementById('mcp-name').removeAttribute('aria-invalid');
   mcpTools=[];mcpApproved=new Set();mcpReconnected=false;mcpApprovedCommand=null;
   mcpTickedFor=null;mcpRendered=null;
   setMcpStep('connect');syncMcpApprovalState();}
@@ -6420,20 +6690,51 @@ for(const id of ['mcp-command','mcp-args'])
 // The tick is only ever recorded together with the vector it was given for.
 document.querySelector('#mcp-approve-box [name="approve_local_code"]')
   .addEventListener('change',event=>{
-    mcpTickedFor=event.target.checked?mcpLiveTuple():null;});
+    mcpTickedFor=event.target.checked?mcpLiveTuple():null;syncMcpApprovalState();});
+// Cancel, Escape, x and the backdrop all run closeMcp, which deletes the draft.
+// Closing the TAB runs none of them, so the same intent — leaving without
+// saving — left the row behind. This is best effort by construction: the page
+// is going away and the browser may cut the request, so it uses keepalive and
+// makes no promise it always lands. It only ever fires when a draft exists.
+window.addEventListener('pagehide',()=>{
+  if(!mcpCreatedId)return;
+  const id=mcpCreatedId;mcpCreatedId='';
+  try{fetch('/api/mcp?t='+encodeURIComponent(T),{method:'POST',keepalive:true,
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({action:'remove',server_id:id})});}catch(e){}});
 document.getElementById('close-mcp').onclick=closeMcp;document.getElementById('cancel-mcp').onclick=closeMcp;
 document.getElementById('mcp-back').onclick=()=>setMcpStep('connect');
 document.getElementById('mcp-tool-approve').addEventListener('change',ev=>{
   if(ev.target.matches('[data-mcp-tool]'))syncMcpApproval();});
 document.getElementById('mcp-select-all').onclick=()=>{const boxes=[...document.querySelectorAll('[data-mcp-tool]')];
-  const target=!(boxes.length>0&&boxes.every(box=>box.checked));boxes.forEach(box=>{box.checked=target;});syncMcpApproval();};
+  const safe=boxes.filter(box=>!box.hasAttribute('data-mcp-destructive'));
+  // Clearing is always safe, so the toggle still clears everything; filling
+  // only ever fills the rows the server did not label destructive.
+  if(safe.length&&safe.every(box=>box.checked))boxes.forEach(box=>{box.checked=false;});
+  else safe.forEach(box=>{box.checked=true;});
+  syncMcpApproval();};
 mcpModal.addEventListener('click',ev=>{if(ev.target===mcpModal)closeMcp();});
 mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElementById('save-mcp');
-  const connecting=mcpStep==='connect';button.disabled=true;
-  mcpText('save-mcp',connecting?'Connecting…':'Saving…');
-  document.getElementById('mcp-error').className='wizard-error';const fd=new FormData(mcpForm);
+  const connecting=mcpStep==='connect';
+  clearMcpError();const fd=new FormData(mcpForm);
   const payload=Object.fromEntries(fd.entries());payload.action='register';
   const vector=mcpLiveTuple();
+  const priorId=String(payload.server_id||'');
+  const nameField=document.getElementById('mcp-name');
+  if(connecting){
+    // The two refusals a person can hit before anything is even attempted are
+    // answered here, in the field, instead of as a denial after a round trip.
+    nameField.removeAttribute('aria-invalid');
+    const name=String(payload.name||'').trim();
+    if(!MCP_NAME_RE.test(name)){
+      nameField.setAttribute('aria-invalid','true');
+      showInlineError('mcp-error',new Error('Server names use ASCII letters, digits, spaces and . _ - only, and must start with a letter or digit. Rename this server to continue.'));
+      nameField.focus();return;}
+    const clash=mcpDuplicate(name,vector,priorId);
+    if(clash){nameField.setAttribute('aria-invalid','true');
+      showInlineError('mcp-error',new Error(clash));nameField.focus();return;}}
+  button.disabled=true;
+  mcpText('save-mcp',connecting?'Connecting…':'Saving…');
   // An untouched legacy row keeps its stored arguments verbatim — the textarea
   // trims and drops blank lines, so re-deriving them would silently rewrite a
   // working configuration (and make it unsaveable).
@@ -6455,6 +6756,9 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
   try{const server=await api('/api/mcp',payload);
     if(lastState){lastState.mcp=await api('/api/state').then(state=>state.mcp);render(lastState);}
     if(connecting){document.getElementById('mcp-server-id').value=server.id||'';
+      // Only a row this dialog just created is a draft. Re-connecting an existing
+      // server, or an edit reached through Configure, is not one and is kept.
+      if(!priorId&&server.id)mcpCreatedId=server.id;
       // Adopt what was actually stored (the resolved executable), and show it, so
       // the field, the standing approval and the server row all agree.
       if((server.transport||'stdio')==='stdio'){
@@ -6473,9 +6777,9 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
       mcpApproved=new Set(kept);
       renderMcpConnected(server);renderMcpTools();setMcpStep('tools');
       setTimeout(()=>document.getElementById('mcp-select-all').focus(),0);}
-    else closeMcp();}
-  catch(e){computeError('mcp-error',e);}
-  finally{button.disabled=false;mcpText('save-mcp',mcpStep==='tools'?'Save':'Connect');}};
+    else{mcpCreatedId='';closeMcp();}}
+  catch(e){computeError('mcp-error',e);document.getElementById('mcp-error').focus();}
+  finally{button.disabled=false;mcpText('save-mcp',mcpStep==='tools'?'Save':'Connect');syncMcpApprovalState();}};
 function stopComputeTimers(except=''){for(const [id,timer] of computeLogTimers){if(id!==except){clearInterval(timer);computeLogTimers.delete(id);}}}
 async function loadComputePanel(jobId,mode){const current=computePanels.get(jobId)||{};computePanels.set(jobId,{...current,open:true,mode,loading:true,error:''});
   if(lastState)render(lastState);try{const result=await api('/api/hpc',{action:mode==='outputs'?'outputs':'logs',job_id:jobId});

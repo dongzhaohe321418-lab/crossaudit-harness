@@ -230,7 +230,7 @@ def test_tools_and_skills_ui_exposes_project_policy_without_external_assets():
     for text in (
         'data-view="tools"', 'id="mcp-modal"', 'id="mcp-form"',
         "Tools & Skills", "Add MCP server", "Local stdio", "Streamable HTTP",
-        "I approve this exact local command", "Approved tool names",
+        "I approve this exact local command", "Tools this project may use",
         "Allow Generator to call the approved tools automatically",
         "Manage Skills", "/api/mcp", "data-mcp-configure",
     ):
