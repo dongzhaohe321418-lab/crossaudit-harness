@@ -3450,6 +3450,7 @@ const ZH={
   "No blocking findings":"没有阻断性问题","Recorded in the audit ledger":"已记录到审计账本",
   // SPEC-9 slice 1 — spoken, not seen. A screen reader hears these; nothing renders them.
   "A task is waiting for your decision.":"有一个任务正在等待你的决定。",
+  "CrossAudit replied.":"CrossAudit 已回复。",
   // SPEC-2 verification states. The section line is the only thing a person
   // who does not know what a deterministic check is has to read.
   "Not run yet — these run automatically on your first task.":"尚未运行——它们会在你的第一个任务中自动运行。",
@@ -3763,7 +3764,15 @@ function announce(sentence){
   if(announceTimer)clearTimeout(announceTimer);
   announceTimer=setTimeout(()=>{announceTimer=null;
     const node=document.getElementById('announcer');
-    if(node)node.textContent=text;},120);
+    if(!node)return;
+    node.textContent=text;
+    // Translate SYNCHRONOUSLY, in the same task as the write. The locale
+    // observer would do it a microtask later, which leaves a window in which
+    // the node holds the English source while the person is reading Chinese —
+    // and a live region announces what is there, not what is about to be. The
+    // English source is still what was written, so switching locale later
+    // re-translates it the ordinary way.
+    if(typeof localizeTree==='function')localizeTree(node);},120);
   return true;}
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -6107,6 +6116,28 @@ function toolsView(d){
     +'<section class="compute-section"><div class="compute-section-head"><b>Skills</b><span>'+skills.length+' committed</span></div>'
     +(skills.length?'<table class="dt"><thead><tr><th>Skill</th><th>Applies to</th></tr></thead><tbody>'+skillRows+'</tbody></table>':'<div class="compute-empty">No project Skills yet.</div>')+'</section></div>';
 }
+// SPEC-9 §4. #conversation is replaced wholesale on every render, so it can
+// never carry a live region — that would re-announce the whole transcript every
+// two seconds. The DELTA is announced instead, and only that something arrived:
+// reading a generated answer aloud through a live region is hostile, because a
+// person cannot pause it, skim it or re-read it. They are told it is there; they
+// read it themselves.
+let announcedTurns=null;let announcedTurnChat=null;
+function turnKey(m){
+  return [m.kind,m.t,String(m.utterance||m.summary||m.verdict||m.response||'').slice(0,40)].join('|');}
+function announceThread(messages){
+  const chat=activeChatId||'';
+  const keys=new Set(messages.map(turnKey));
+  // A transcript that already existed is not news. The first render of a thread,
+  // and every switch between threads, takes the baseline in silence — otherwise
+  // opening an old conversation would announce all of it.
+  if(announcedTurnChat!==chat||announcedTurns===null){
+    announcedTurnChat=chat;announcedTurns=keys;return false;}
+  const fresh=messages.filter(m=>m.kind!=='you'&&!announcedTurns.has(turnKey(m)));
+  announcedTurns=keys;
+  // Their own words are not read back to them.
+  if(!fresh.length)return false;
+  return announce('CrossAudit replied.');}
 function renderConversation(d){
   const thread = document.getElementById('thread');
   const previousTop = thread.scrollTop;
@@ -6116,6 +6147,7 @@ function renderConversation(d){
   if(newTaskMode) html = welcome();
   else{
     const messages = allMessages(d);
+    announceThread(messages);
     const p = chatProgress(d);
     const live = p && !p.finished ? runCard(d) : '';
     const approval = approvalCard(d);
