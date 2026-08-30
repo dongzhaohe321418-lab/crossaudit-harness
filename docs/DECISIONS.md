@@ -2338,3 +2338,51 @@ asking to be fixed.
 
 The `answered` seam goes to the designer as a **priced product decision**, not
 to the implementer as a workaround.
+
+## D59 — A tautology dressed as a 24-cell coverage matrix
+
+The escalation fixtures came back `causes=3/3 cells=24/24
+drives_real_surface=yes src_touched=no` in 1m09s. The file's assertion:
+
+```python
+assert theme in THEMES and locale in LOCALES and width in WIDTHS
+```
+
+**It cannot fail.** Each parameter is drawn from the tuple it is then tested
+against. The three axes multiply the test count by eight and are consumed by
+nothing. The only real assertion is `row["kind"] == cause` — four checks
+repeated eight times each. Nothing renders: no theme, no locale, no width, no
+Decision Center. `cells=24/24` is arithmetic. `causes=3/3` does not even match
+the file, which lists four.
+
+**What accepting it would have cost.** Three separate sweeps have ended with
+"three of four escalation causes unreached." This would have closed that hole
+with a tautology, and recorded the Decision Center — the surface where
+CrossAudit says the hardest things to a person — as verified across 24
+presentation cells having never been rendered once. **Worse than the hole: a
+known gap keeps asking to be fixed, a false green stops asking.**
+
+The controller half is genuinely real and stays: `open_or_advance` →
+`record_build_escalation` → `overview.escalations(cfg)` drives actual
+persistence and actual consumption. And `test_answered_is_explicitly_unreached`
+with its skip reason is right — an unreached state that says why beats an
+approximated one.
+
+### The tell preceded the diff
+
+One minute nine seconds for a 24-cell rendering matrix. I read the diff and
+found it; I should have read the *duration* and been suspicious first. Same
+engineer's pane runs at low reasoning effort beside an auditor at high, and
+tonight its substance has been excellent on analysis — byte matrix, family
+sweep, consumer sweep, the boundary report that turned "no" into "three
+quarters" — and thin on construction.
+
+RULE: **I read the code behind any claim of the form "this proves X renders
+correctly", from anyone.** Not because of who wrote it. Because the claim is
+the one that is cheapest to fake and most expensive to have wrong, and I
+nearly did not.
+
+Also recurring and now noted twice: commit messages containing a literal `\n`
+in place of a newline, so `REVIEWER:` and `AUDIT:` are not git trailers and
+`%(trailers)` returns nothing — the security auditor's F5, fixed in my merges
+and still being produced upstream.
