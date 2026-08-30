@@ -2593,3 +2593,72 @@ environment rather than the tests. Third instrument artifact caught by its own
 operator today, and the only one where a secondary symptom nobody was looking
 for got noticed. Re-run with full dependencies reproduced the author's
 1740/2/0 exactly — which is what makes the rest of the numbers usable.
+
+## D64 — The guard I specified against fake checks was itself a fake check
+
+`fix/app-doctor-parity`: **DO NOT MERGE.**
+
+> Merging it unblocks a sentence about parity **on the strength of a
+> tautology**, and puts a reassuring name on top of it. §3.5 is explicit that
+> this is worse than nothing: the next reviewer reads
+> `test_cli_doctor_checks_are_mirrored_or_named_excluded` and stops.
+
+I specified that enumeration test as *the* mechanism that would stop this class
+recurring — every `cmd_doctor` check either mirrored in `app_doctor.collect()`
+or on a named exclusion list. I insisted on it when the author first delivered
+without it. **I never specified that it must be demonstrated red.**
+
+So the guard built specifically to prevent fake checks was itself one, under a
+name engineered to end inquiry. The specification error is mine, not the
+implementation. Thirteenth instance of the class today and the only one that
+was commissioned.
+
+RULE, and it binds my dispatches as much as anyone's code: **a guard is
+specified with its mutation.** "Add a test that asserts X" is incomplete;
+"add a test that asserts X, and show it red by doing Y" is the whole
+instruction. I have demanded counterfactuals from every engineer today and
+omitted one from the mechanism I cared most about.
+
+Three fixes dispatched: derive both sides by **calling the two doctors** rather
+than listing names, and redden with an unmirrored CLI check (mutations A/B/C
+ready-made); `cmd_doctor` calls `doctor_shared.constitution_state` and the
+duplicate is deleted; the two contradicted exclusions fixed and the third
+substantiated or dropped. Byte-0 left as the author's call — the only item the
+auditor would not gate on.
+
+### An infrastructure gap I had not noticed
+
+> I have no channel to a codex session — every peer I can see is a claude
+> session — so it needs relaying from your side.
+
+The security auditor had built a working mint-render guard and could not hand
+it over. Relayed to `_handoff/mint-render-guard/` and that is now the standing
+route: anything built for a codex-authored slice goes through `_handoff/`
+rather than a session scratchpad, so it survives the session and reaches the
+author without me guessing a path.
+
+**And the guard's construction is the transferable part**: it reads the shipped
+lines out of `page.py` **by regex rather than transcribing them**, drives them
+against the real mint table, and reddens by name under the
+reader-ignores-fields mutation. A transcribed string drifts from the source it
+claims to test and nothing notices; an extracted one cannot. Same principle as
+computing the accessible name instead of checking an attribute, applied to
+fixtures.
+
+### SPEC-14: the false sentence resolved by telling the truth
+
+> Editing rules is a governance action — it changes what passes — and deserves
+> its own design with confirmation and provenance. Shipping one inside a reader
+> slice would repeat precisely the mistake the security audit caught:
+> capability before legibility.
+
+So *"The constitution is edited inside each project"* becomes *"To change these
+rules, edit AUDIT_RULES.md in the project folder"* — with **no claim about when
+a change takes effect**, because that is D36's story and D36 is not merged.
+Second time that engineer has applied D43 to itself unasked, and both times the
+withheld claim was one I would have let through.
+
+The three specs read back in the order they should have been written:
+**SPEC-11 designed the moment, SPEC-12 made the moment's bytes honest, SPEC-14
+makes the document those bytes describe visible at all** — the security
+auditor's ordering, and the reverse of the order I commissioned.
