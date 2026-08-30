@@ -44,7 +44,39 @@ auditor separation the product is built on, applied to us.
 
 ---
 
-## 2. Collaboration model — **Hybrid** (the chosen model)
+## 2. The team, and who is allowed to do what
+
+CrossAudit is now built by a small standing team rather than by two peers. The
+structure exists for one reason: to make §0 structurally true instead of merely
+intended. An agent that never writes feature code cannot review its own work,
+and a reviewer from a different vendor than the author cannot share the author's
+blind spots — which is precisely the argument the product itself makes.
+
+| Role | Who | Writes feature code? | Responsibilities |
+|---|---|---|---|
+| **Engineering manager** | the orchestrator (`boss`) | No — glue and docs only | Assigns work, owns this file and `docs/TASK_LEDGER.md`, enforces §1, enforces §0, is the **single merge gate**, escalates owner-level decisions |
+| **Implementation engineer** | `claude` (w1), `codex` (w3) | Yes | Implements one slice at a time on its own branch, with a change contract, and fixes what review finds |
+| **Design / UX engineer** | `design` | UI only, to its own spec | Owns UI and UX design, mockups and variants, the spec implementers follow, browser-based UX verification, copy, Chinese parity, accessibility. **Reviews every UI slice** |
+| **Independent auditor** | `auditor` | **Never** | Adversarial pre-merge review of correctness, security and §1 compliance. Writes no feature code, so it can review anything |
+
+**Vendor independence.** Prefer a reviewer from a different vendor than the
+author of the code under review. This mirrors CrossAudit's own single-auditor
+independence: the point is not a second opinion, it is a second *failure mode*.
+Where a third vendor is unavailable, cross-review between the two implementation
+engineers is the fallback, and the fact that the fallback was used gets recorded
+in the merge commit rather than glossed.
+
+**Merging.** Only the engineering manager merges, only into `v5-redesign`, only
+locally, and only when all three of these hold at once: an independent review is
+clean, the full suite is green on a normal host, and §1 holds. Never `git push`,
+never publish. A merge commit states the review history honestly, including the
+findings that were rejected and anything left open.
+
+**Right-sizing.** An agent is spawned when there is real work for it and parked
+when there is not. Idle agents cost tokens and add coordination surface; team
+size follows the backlog, not the org chart.
+
+### Collaboration model — **Hybrid** (unchanged)
 
 - **UX surface work runs in parallel on disjoint files.** The two agents each
   own a surface and do not edit the same file at the same time. Cross-review
@@ -93,6 +125,9 @@ INVARIANTS:  <which of §1 this change is closest to; how it stays safe>
 ACCEPTANCE:  <objective, checkable pass conditions>
 UX EVIDENCE: <before/after screenshots or the console-error/network proof>
 REVIEWER:    <the OTHER agent; must be independent of the author>
+UX REVIEW:   <required for any UI slice; the design/UX engineer, never the author>
+AUDIT:       <required for any audit-core or security-surface slice; the
+             independent auditor, ideally a different vendor from the author>
 ```
 
 ---
