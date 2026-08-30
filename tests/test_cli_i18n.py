@@ -31,15 +31,21 @@ def test_every_english_key_has_a_translation():
     assert zh - en == set(), f"translations with no English: {sorted(zh - en)}"
 
 
+#: Entries whose Chinese is deliberately identical to their English, because
+#: what they contain is typed, matched or traced rather than read.
+_IDENTICAL_BY_DESIGN = {"checks.proposal.ground", "doctor.title"}
+
+
 def test_no_translation_is_still_sitting_in_english():
     """A key copied across without being translated would pass the key check.
 
-    `checks.proposal.ground` is the one honest exception: it is slots and an
-    arrow, with nothing in it to translate.
+    Two honest exceptions, each justified by SPEC-7 §4 rather than waved
+    through: `checks.proposal.ground` is slots and an arrow with nothing in it
+    to translate, and `doctor.title` is the command a person TYPES.
     """
     untranslated = [
         key for key, value in i18n.CATALOGUE["zh"].items()
-        if value == i18n.CATALOGUE["en"][key] and key != "checks.proposal.ground"]
+        if value == i18n.CATALOGUE["en"][key] and key not in _IDENTICAL_BY_DESIGN]
     assert untranslated == [], f"copied, not translated: {untranslated}"
 
 
@@ -138,22 +144,32 @@ def test_the_whole_wizard_speaks_chinese_end_to_end(tmp_path, monkeypatch, capsy
     assert i18n.FALLBACK_MARK not in out
 
 
-#: What may legitimately appear in Latin script on a Chinese screen. Everything
-#: here is a thing we deliberately do not translate: a command someone types, an
-#: environment variable, a filename, a vendor or model id, a path, git's own
-#: output, or a URL. The list is the CLAIM — "no English prose survives" is not
-#: mechanically decidable, but "every Latin run is one of these" is.
+#: What may legitimately appear in Latin script on a Chinese screen.
+#:
+#: The criterion is SPEC-7 §4, supplied by the design engineer: the seam falls at
+#: anything a person or a script may have to TYPE, MATCH, or TRACE. Every entry
+#: below is justified by one of those three, and an entry that cannot be is not
+#: an exception — it is prose we failed to translate.
+#:
+#: This list started at 52 entries and 37 of them were never needed. It had
+#: collected `the`, `of`, `test`, `wizard` and `shell` — from wrapped sandbox
+#: paths — and those are PROSE. An allowlist padded with English words is a
+#: guard shaped like the bug it is meant to catch: real untranslated copy could
+#: have walked straight through it. `test_the_allowlist_carries_no_padding`
+#: below is what stops that happening again.
 _ALLOWED_LATIN = {
-    "crossaudit", "git", "init", "build", "console", "doctor", "run", "amend",
-    "CrossAudit", "AUDIT_RULES", "md", "yml", "markdown", "shell", "id",
-    "API", "URL", "http", "https", "com", "cli", "github", "io",
+    # TRACE — the product's own name, which identifies it in a bug report.
+    "CrossAudit",
+    # TYPE — commands and command words a person is being told to run.
+    "crossaudit", "init", "build", "doctor", "git", "export",
+    # TYPE / MATCH — environment variables. A person exports them; a script
+    # greps for them. Translating one would make the instruction wrong.
     "CROSSAUDIT_AUDITOR_KEY", "CROSSAUDIT_GENERATOR_KEY", "CROSSAUDIT_SHOW_KEYS",
-    "CROSSAUDIT_KEYS_FILE", "export", "source", "env", "keys", "proj", "T",
-    "anthropic", "openai", "claude", "opus", "gpt", "human", "TODO",
-    "DETERMINISTIC_CHECKS", "checks", "parseable", "declared", "internal",
-    "complete", "schema", "units", "convergence", "provenance", "CA", "PROJECT",
-    "Users", "private", "var", "folders", "tmp", "home", "pytest", "of",
-    "ericdong", "test", "the", "wizard", "zh", "en", "n", "s", "x",
+    # TYPE / MATCH — file names and extensions that appear on disk.
+    "AUDIT_RULES", "md", "yml", "env",
+    # Terms of art that Chinese technical writing does not translate either.
+    # Kept deliberately and named, rather than waved through as "technical".
+    "API", "markdown",
 }
 
 
@@ -174,7 +190,14 @@ def test_no_untranslated_english_survives_on_the_chinese_screen(
     # a path, not prose, and allow-listing this machine's temp directory names
     # would make the guard pass for the wrong reason on this machine and fail on
     # anyone else's.
-    where = str(project)
+    # Every absolute path this run prints verbatim. Substring membership rather
+    # than word equality, because `tui.note` WRAPS: a path broken across lines
+    # leaves fragments like "key" from "keys-latin.env", and whether a given
+    # fragment appears at all depends on where the wrapper happened to break.
+    # A guard whose result depends on that is not a guard.
+    where = " ".join(str(x) for x in (
+        project, project.resolve(), tmp_path, tmp_path.resolve(),
+        tmp_path / "keys-latin.env", tmp_path / "home-latin"))
     hexish = re.compile(r"(?i)^[0-9a-f]+$")
     stray = sorted({
         word for word in re.findall(r"[A-Za-z][A-Za-z_]{1,}", plain)
@@ -188,8 +211,25 @@ def test_no_untranslated_english_survives_on_the_chinese_screen(
     # the English catalogue may appear on a Chinese screen.
     leaked = sorted(
         key for key, english in i18n.CATALOGUE["en"].items()
-        if len(english) > 12 and "{" not in english and english in plain)
+        if len(english) > 12 and "{" not in english and english in plain
+        and key not in _IDENTICAL_BY_DESIGN)
     assert leaked == [], f"English catalogue copy on a Chinese screen: {leaked}"
+
+
+def test_the_allowlist_carries_no_padding(tmp_path, monkeypatch, capsys):
+    """Every declared exception must actually be needed.
+
+    Without this, the allowlist silently accumulates: each entry that stops
+    appearing stays behind as a hole, and the next English word to leak through
+    lands in one of them. An unused entry is not harmless — it is pre-approved
+    English. If this fails, delete the named entries; do not add to them.
+    """
+    project, out = _init(tmp_path, monkeypatch, capsys, lang="zh", name="latin")
+    plain = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", out)
+    seen = set(re.findall(r"[A-Za-z][A-Za-z_]{1,}", plain))
+    unused = sorted(_ALLOWED_LATIN - seen)
+    assert unused == [], (
+        f"allowlist entries never seen on screen — delete them: {unused}")
 
 
 def test_an_unknown_language_is_english_rather_than_a_broken_screen():
@@ -254,3 +294,208 @@ def test_chinese_never_overflows_the_boxes_it_is_drawn_in(
             assert tui._visible(line.strip()) == tui.WIDTH, (
                 f"box line is {tui._visible(line.strip())} columns, "
                 f"not {tui.WIDTH}: {line!r}")
+
+
+# ======================================================================= wave 2
+# D21 wave 2: the keyless failure paths a first-timer hits in the next two
+# minutes — doctor's FAIL detail, its fix and its verdict; build's stop message;
+# the un-initialised refusal. Design's reason for that grouping is the one to
+# hold onto: this is where someone lands BECAUSE SOMETHING WENT WRONG, which is
+# the worst possible moment to change language on them.
+
+def _doctor(tmp_path, monkeypatch, capsys, *, lang, name, project=None, **over):
+    from crossaudit.cli import main as _main
+    home = tmp_path / f"home-{name}"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("CROSSAUDIT_KEYS_FILE", str(tmp_path / f"keys-{name}.env"))
+    for env in ("CROSSAUDIT_AUDITOR_KEY", "CROSSAUDIT_GENERATOR_KEY"):
+        monkeypatch.delenv(env, raising=False)
+    where = project or (tmp_path / f"empty-{name}")
+    where.mkdir(parents=True, exist_ok=True)
+    monkeypatch.chdir(where)
+    argv = ["doctor", "--lang", lang] + list(over.get("argv", []))
+    code = _main.main(argv)
+    return code, capsys.readouterr()
+
+
+def test_doctor_speaks_the_language_it_was_asked_for(tmp_path, monkeypatch, capsys):
+    """Verdict, FAIL label, consequence and fix — the whole default view."""
+    code_en, cap_en = _doctor(tmp_path, monkeypatch, capsys, lang="en", name="den")
+    code_zh, cap_zh = _doctor(tmp_path, monkeypatch, capsys, lang="zh", name="dzh")
+    assert code_en == code_zh, "the exit code must not depend on the language"
+
+    en, zh = _flat(cap_en.out), _flat(cap_zh.out)
+    assert i18n.CATALOGUE["en"]["doctor.not_ready.plural"].split("{")[0] in en
+    for key in ("doctor.config.label", "doctor.config.why"):
+        assert i18n.CATALOGUE["en"][key] in en, key
+        assert i18n.CATALOGUE["zh"][key] in zh, key
+    # The verdict is translated, not merely the rows.
+    assert "尚未就绪" in zh
+    assert i18n.fallbacks() == (), f"fell back: {i18n.fallbacks()}"
+
+
+def test_the_doctor_machine_surfaces_stay_english(tmp_path, monkeypatch, capsys):
+    """`--all` is the stable surface for CI, and check NAMES are --json keys.
+
+    SPEC-7 §4: anything a person or a script may TYPE, MATCH or TRACE is not
+    translated. Translating a check name would break a scripting contract in the
+    same way translating EXIT_CONFIG would.
+    """
+    code, cap = _doctor(tmp_path, monkeypatch, capsys, lang="zh", name="dall",
+                        argv=["--all"])
+    out = cap.out
+    assert "[FAIL] config" in out or "[FAIL] admission-capable" in out
+    assert "not ready — fix the FAIL lines above" in out
+    # No Chinese anywhere in the machine view.
+    assert not any(ord(ch) > 0x2E80 for ch in out), (
+        "Chinese reached `doctor --all`, which CI and scripts parse")
+
+
+def test_the_un_initialised_refusal_translates_its_human_half_only(
+        tmp_path, monkeypatch, capsys):
+    """`reason` is the machine contract; `human` is the sentence a person reads.
+
+    The seam already existed — `human` is deliberately kept out of `as_dict()` —
+    and wave 2 uses it rather than inventing a new one.
+    """
+    from crossaudit.config import find
+    monkeypatch.chdir(tmp_path)
+    i18n.set_language("zh")
+    try:
+        with pytest.raises(Exception) as caught:
+            find(tmp_path)
+    finally:
+        i18n.set_language("en")
+    exc = caught.value
+    assert "no crossaudit.yml found from" in exc.reason, "reason must stay English"
+    assert "run `crossaudit init`" in exc.reason
+    assert "denied" in exc.as_dict() and exc.as_dict()["reason"] == exc.reason
+    assert "human" not in exc.as_dict(), "the human sentence is not a contract"
+    assert i18n.CATALOGUE["zh"]["refusal.no_project.title"] in exc.human
+    assert "crossaudit init" in exc.human, "the command a person types stays Latin"
+
+
+def test_build_says_what_did_not_happen_in_the_persons_language():
+    """The stop message, both ways, without needing a provider."""
+    for lang, key in (("en", "build.nothing"), ("zh", "build.nothing")):
+        i18n.set_language(lang)
+        rendered = i18n.t(key)
+        assert rendered == i18n.CATALOGUE[lang][key]
+    i18n.set_language("zh")
+    try:
+        assert "没有写出任何东西" in i18n.t("build.nothing")
+        # The command in the remedy is still the command.
+        assert "crossaudit build" in i18n.t("build.nothing.then", task="x")
+        assert 'x' in i18n.t("build.nothing.then", task="x")
+    finally:
+        i18n.set_language("en")
+
+
+#: The one block on a Chinese doctor screen that is still English, named rather
+#: than silently tolerated. `admission.TIER_MEANING` and `Assessment.shortfalls`
+#: are literal sentences with no stable ids, and they are carried verbatim by
+#: `Assessment.as_dict()` — so translating them at the render site needs ids
+#: added in `admission.py`, which is audit-core-adjacent and is a decision, not
+#: a commit (AGENTS.md §1). Escalated rather than reached into.
+_KNOWN_ENGLISH_POSTURE = (
+    "self-review; the history is yours to rewrite",
+    "history out of unilateral control",
+    "privilege separation between the two agents",
+    "the verdict is published and checkable, but nothing is refused",
+    "a failed audit refuses the merge",
+    "one repository holds both the work and the rules",
+    "the controller's state does not outlive the run",
+    "receipt consumption is not atomic",
+    "branch protection was not probed",
+    "the history can be rewritten by whoever holds it",
+)
+
+
+def _doctor_on_a_real_project(tmp_path, monkeypatch, capsys, *, lang, name):
+    """A doctor run that actually reaches the posture block.
+
+    In an empty directory doctor stops at "no project here", so the admission
+    tier and its shortfalls never render — and a test written against that
+    fixture would be asserting over a screen the person never sees.
+    """
+    from crossaudit.config import load as load_cfg
+    project, _out = _init(tmp_path, monkeypatch, capsys, lang="en",
+                          name=f"proj-{name}")
+    load_cfg(project / "crossaudit.yml")
+    monkeypatch.setattr(main._selfid, "identity", lambda: {
+        "install_mode": "wheel", "code_digest_sha256": "a" * 64,
+        "project": "crossaudit", "version": "4.0.0", "lock_digest_sha256": None})
+    monkeypatch.chdir(project)
+    code = main.main(["doctor", "--lang", lang])
+    return code, capsys.readouterr()
+
+
+def test_no_untranslated_english_on_the_chinese_doctor_screen(
+        tmp_path, monkeypatch, capsys):
+    """Same guard as the wizard's, with one named and justified exemption."""
+    _code, cap = _doctor_on_a_real_project(tmp_path, monkeypatch, capsys,
+                                           lang="zh", name="dscreen")
+    plain = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", cap.out)
+    for known in _KNOWN_ENGLISH_POSTURE:
+        plain = plain.replace(known, "")
+    leaked = sorted(
+        key for key, english in i18n.CATALOGUE["en"].items()
+        if len(english) > 12 and "{" not in english and english in plain
+        and key not in _IDENTICAL_BY_DESIGN)
+    assert leaked == [], f"English catalogue copy on a Chinese doctor: {leaked}"
+
+
+def test_the_posture_exemption_is_real_and_not_a_blanket(tmp_path, monkeypatch,
+                                                         capsys):
+    """The exemption must name strings that ACTUALLY appear, or it is a hole.
+
+    An exemption list that stops matching becomes pre-approved English exactly
+    the way an unused allowlist entry does.
+    """
+    _code, cap = _doctor_on_a_real_project(tmp_path, monkeypatch, capsys,
+                                           lang="zh", name="dexempt")
+    used = [s for s in _KNOWN_ENGLISH_POSTURE if s in cap.out]
+    assert used, ("no exempted posture string appeared; if the admission block is "
+                  "now translated, delete this exemption rather than keep it")
+
+
+def test_every_key_the_code_asks_for_exists_in_the_catalogue():
+    """Static companion to the screen tests.
+
+    The screen tests catch a key that is used and missing only on the paths they
+    happen to drive. This reads every `t("...")` call in the translated modules
+    and checks it against the catalogue, so a key on a rarely-taken branch
+    cannot reach a person as `[missing:...]`.
+
+    It is also the guard that would have caught a real slip in this slice: an
+    unguarded string replacement failed to add `from .i18n import t` to
+    `build.py`, so `t` was called and never imported. Three unrelated tests
+    found it as a NameError; this finds the class.
+    """
+    import ast
+
+    modules = ["src/crossaudit/cli/wizard.py", "src/crossaudit/cli/main.py",
+               "src/crossaudit/cli/build.py", "src/crossaudit/cli/tui.py",
+               "src/crossaudit/config.py"]
+    missing = []
+    for path in modules:
+        source = Path(path).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        # The module must be able to reach `t` at all, not merely name it.
+        uses_t = any(
+            (getattr(n.func, "attr", None) or getattr(n.func, "id", None)) == "t"
+            for n in ast.walk(tree) if isinstance(n, ast.Call))
+        if uses_t:
+            assert "i18n import t" in source or "i18n.t" in source, (
+                f"{path} calls t() without importing it")
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            name = getattr(node.func, "attr", None) or getattr(node.func, "id", None)
+            if name != "t" or not node.args:
+                continue
+            first = node.args[0]
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                if first.value not in i18n.CATALOGUE["en"]:
+                    missing.append((path, first.value))
+    assert missing == [], f"t() keys with no catalogue entry: {missing}"

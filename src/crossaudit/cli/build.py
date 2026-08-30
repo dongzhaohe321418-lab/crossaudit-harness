@@ -44,6 +44,8 @@ from ..errors import (EXIT_ESCALATED, EXIT_OK, ConfigDenial, Denial,
                       ProviderDenial, park_escalation_kind)
 from ..file_identity import AppliedFiles
 from ..gitio import git, git_bytes, is_repo
+from . import i18n as _i18n
+from .i18n import t
 from ..providers import resilience as provider_resilience
 from ..runtime import (
     PROVIDER_WAIT_CATEGORIES,
@@ -1117,6 +1119,8 @@ def _missing_role_keys(cfg) -> list[str]:
 
 
 def cmd_build(args) -> int:
+    _i18n.set_language(getattr(args, "lang", "en") or "en")
+    _i18n.reset_fallbacks()
     cfg = load()
     preflight(cfg)
     service = RunCommandService(cfg)
@@ -1184,25 +1188,24 @@ def cmd_build(args) -> int:
     code = service.start(prepare, worker, background=False)
     assert isinstance(code, int)
     if code == EXIT_OK:
-        print("\n  Done. The work passed audit and the ledger has the whole exchange.")
-        print("  Read it:  crossaudit watch   ·   Watch live:  crossaudit console")
+        print("\n  " + t("build.done"))
+        print("  " + t("build.done.read"))
     elif not produced:
         # 3. State the outcome, then the remedy. "It is yours now" is a handoff
         #    after a success; nothing was produced. The blunt sentence is
         #    deliberate — it is what stops someone hunting for a partial result
         #    that does not exist.
-        print("\n  Nothing was written and nothing was audited.")
+        print("\n  " + t("build.nothing"))
         missing = _missing_role_keys(cfg)
         if missing:
             from . import wizard as _wizard
-            print(f"\n  To fix: source {_wizard.keys_file()}, or export "
-                  + " and ".join(missing))
+            print("\n  " + t("build.nothing.fix", path=_wizard.keys_file(),
+                                envs=" and ".join(missing)))
         # The task is reprinted verbatim so the person does not have to
         # reconstruct what they typed.
-        print(f'  Then:   crossaudit build "{prepared_task}"')
+        print("  " + t("build.nothing.then", task=prepared_task))
     else:
         # Something exists. The sentence above would be false, so say what is
         # there instead of claiming nothing is.
-        print("\n  The run stopped before it finished. What was committed is "
-              "still in the ledger: `crossaudit watch` to read it.")
+        print("\n  " + t("build.partial"))
     return code

@@ -154,11 +154,17 @@ def find(start: Path | None = None) -> Path:
     # The "and every directory above it" clause is kept deliberately: it is what
     # tells someone standing in a subdirectory why their existing project was
     # not found, and dropping it for brevity would cost a real diagnosis.
+    # `reason` is the machine contract — `as_dict()`, `--json` and every script
+    # that greps it — so it stays English. `human` is the sentence a person
+    # reads and is deliberately kept OUT of `as_dict()`, which is exactly what
+    # makes it safe to translate. The seam was already here; wave 2 uses it.
+    from .cli.i18n import t
     raise ConfigDenial(
         f"no {CONFIG_NAME} found from {cur} upward — run `crossaudit init`",
-        human=("No CrossAudit project here.\n\n"
-               f"    Looked for {CONFIG_NAME} in {cur} and every directory above it.\n\n"
-               "    crossaudit init     set one up, right here"))
+        human=(t("refusal.no_project.title") + "\n\n"
+               + "    " + t("refusal.no_project.looked",
+                            name=CONFIG_NAME, where=cur) + "\n\n"
+               + "    " + t("refusal.no_project.fix")))
 
 
 def load(path: Path | None = None) -> Config:

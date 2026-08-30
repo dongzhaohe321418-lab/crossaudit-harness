@@ -1044,3 +1044,112 @@ down where it can be overturned cheaply. Both are marked as the implementer's
 call rather than design's, and neither should be read as design having agreed.
 Recorded because a spec everyone cites and nobody can open is the same shape as
 D20's working-directory drift: it looks fine from where each person stands.
+
+---
+
+## A5 — change contract (CLI i18n, wave 2)
+
+```
+TASK:        Translate the keyless failure paths a first-timer hits in the two
+             minutes after setup (D21 wave 2): doctor's FAIL detail, its fix and
+             its verdict; build's stop message; the un-initialised refusal.
+             Design's reason for that grouping is the one to hold onto — this is
+             where somebody lands BECAUSE SOMETHING WENT WRONG, which is the
+             worst possible moment to change language on them.
+
+BASE:        agentA/cli-i18n-wave1. Waves 1 and 2 together are exactly the first
+             three minutes D6 ranked highest.
+
+SURFACE:     src/crossaudit/cli/{i18n,main,build}.py, src/crossaudit/config.py
+             tests/test_cli_i18n.py
+             Audit core touched? NO — and see the escalation below for the one
+             place wave 2 stops BECAUSE it would have had to.
+
+THE SEAM, which is the whole design. `detail` and `fix` on a doctor check are
+             carried verbatim by `--json` and by `--all`, and `--all` is
+             documented as the stable surface for CI. The check NAME is a
+             `--json` key. So none of those are translated. Instead each check
+             carries an optional `copy` stem naming its HUMAN copy, resolved at
+             render time for the default view only. The machine payload and the
+             human payload sit beside each other rather than one being cast to
+             the other. Same shape for the refusal: `reason` is the contract and
+             stays English, `human` is the sentence a person reads and was
+             already deliberately excluded from `as_dict()` — wave 2 uses that
+             existing seam rather than inventing one.
+
+--lang IS PER COMMAND, not central. It is declared on `init`, `doctor` and
+             `build`, and each of those calls `_speak(args)` as its first
+             statement. A dispatcher-level switch was written first and removed:
+             it silently translated any command that happened to carry a `--lang`
+             attribute, which is how a half-translated surface ships, and it did
+             nothing at all for a caller that invokes `cmd_doctor` directly
+             rather than through argv — which is how the console and every test
+             call these. The set of translated commands is now visible at the
+             commands themselves.
+
+ACCEPTANCE:  1. doctor's verdict, FAIL label, consequence and fix are Chinese
+                under `--lang zh`, with zero fallbacks, and the exit code is
+                identical in both languages.
+             2. `doctor --all` contains no Chinese at all.
+             3. The refusal's `reason` stays English and is byte-identical in
+                `as_dict()`; only `human` translates.
+             4. build's stop message translates; the commands inside it do not.
+             5. No English catalogue sentence appears on a Chinese doctor screen,
+                except one named block (below).
+             6. The wave 1 D10 counterfactual still goes red.
+             7. Full suite green.
+
+CHINESE PARITY: **SATISFIED for `crossaudit init`, `crossaudit doctor` and
+             `crossaudit build`** — waves 1 and 2. **NOT APPLICABLE, tracked as
+             D16, for every other CLI surface**: run, watch, verify, amend,
+             talk, check, console and the front door. `--lang` is not offered to
+             them, so nobody can reach them in Chinese. Three claims, not one.
+
+REVIEWER:    codex
+AUDIT:       auditor
+UX REVIEW:   design
+```
+
+### ESCALATION — the one thing wave 2 could not close, and why
+
+A Chinese `doctor` still shows one English block: the admission posture lines.
+
+`admission.TIER_MEANING` is five literal sentences and `Assessment.shortfalls`
+is four more, and both are carried verbatim by `Assessment.as_dict()`. They have
+**no stable ids**. Translating them at the render site therefore means keying
+them by their English text — which is precisely the msgid trap this mechanism
+was chosen to avoid, because rewording the English would silently orphan the
+translation. Giving them ids is an additive change to `admission.py`, which
+governs what counts as admitted evidence and is audit-core-adjacent: AGENTS.md
+§1 says that is a conversation, not a commit.
+
+So wave 2 stops there deliberately. The test carries a NAMED exemption listing
+the nine exact strings, plus a second test asserting that at least one of them
+still appears — because an exemption list that stops matching becomes
+pre-approved English exactly the way an unused allowlist entry does.
+
+**What I need to close it:** a decision on adding stable ids to
+`admission.TIER_MEANING` and `Assessment.shortfalls`. It is additive and touches
+no verdict, but it is not mine to take.
+
+### What design's SPEC-7 §4 changed about wave 1, retroactively
+
+Design supplied the criterion I had been missing: the seam falls at anything a
+person or a script may have to **TYPE, MATCH, or TRACE**. Tested against it, my
+wave 1 allowlist failed badly. It had 52 entries and **37 were never needed** —
+including `the`, `of`, `test`, `wizard` and `shell`, which had accumulated from
+wrapped sandbox paths. Those are PROSE. An allowlist padded with English words
+is a guard shaped like the bug it exists to catch: real untranslated copy could
+have walked straight through it.
+
+It is now 15 entries, each justified by one of type/match/trace and grouped by
+which, with a new test asserting that **every declared entry is actually needed**
+so padding cannot re-accumulate. The path-fragment exclusion was also made
+deterministic: it had depended on where `tui.note` happened to break a long path
+across lines, so whether the guard held varied with the sandbox's name length.
+
+Design also confirmed the catalogue half of that guard is sound and is NOT the
+shape that was defeated three times on consent: that guard chased a forbidden
+MEANING and paraphrase is unbounded, while this one forbids an English CATALOGUE
+sentence — a finite set we own, so its coverage is decidable by construction.
+The open half is the allowlist, which is why it now has a guard of its own.
