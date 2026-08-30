@@ -2662,3 +2662,57 @@ The three specs read back in the order they should have been written:
 **SPEC-11 designed the moment, SPEC-12 made the moment's bytes honest, SPEC-14
 makes the document those bytes describe visible at all** — the security
 auditor's ordering, and the reverse of the order I commissioned.
+
+## D65 — The audit-core S0 is closed; and two branches solved it twice
+
+Cycle-integrity R3: **MERGE AFTER FIXES. The S0 is closed.** Open since this
+afternoon, survived two repairs, shut on the third. Verified cross-vendor
+across all four routes: **dirty working constitution bytes entered none of
+them.** All three `cmd_run` omissions remain closed; the five
+unpinned-by-design paths remain untouched, which was the risk I flagged when I
+sent the class rather than the instance.
+
+**D7 does not trigger.** Three rounds, closed on the third.
+
+The provider-request failure I refused to call a flake is **diagnosed and
+contained**: credentials sandboxed, non-loopback sockets refused, all 51
+project-UI tests passing.
+
+One S3 remains, and the auditor drew the line exactly:
+
+> One redundant test still claims D10 receipt coverage without reaching
+> receipt construction... **The new replacement guard does reach receipt
+> construction and catches the exact shortcut mutation, so the production
+> property is protected despite `guards_reach=no` across every test bearing
+> the guard claim.**
+
+The property is held. What remains is a test whose *name* claims coverage it
+does not have, beside one that does — the thirteenth of that class today, and
+still worth removing: a reader auditing by name ticks it off and stops looking.
+
+### The same problem solved twice, in two branches, both landing
+
+Rebasing onto current integration conflicts in `cli/main.py`'s imports:
+integration has **`read_committed_bytes`** (from the merged verifier work),
+cycle-integrity has **`git_bytes`**. Both exist to read committed bytes rather
+than working-tree bytes — *the defect class this entire evening has been about*
+— and two engineers built a primitive for it independently.
+
+Referred to the author rather than resolved by me: are they the same function
+under two names, or do they differ in error behaviour, in missing-object
+handling, in whether they accept a pinned commit? Also `IntegrityDenial` exists
+on integration and not on that branch, so its paths may be raising something
+weaker. **And if `git_bytes` is the better primitive, it replaces the merged
+one** — the verifier work landing first does not make it the winner.
+
+### I ran a suite against a conflicted tree
+
+I piped `git rebase` through `tail -1`, did not check its exit status, and ran
+pytest anyway. The eleven "collection errors" were a `SyntaxError: unmatched
+')'` from conflict markers in the import block — **mine, not the branch's.**
+D39's shape pointed at me: a check run against a tree I had not established
+was in a valid state. Second time today.
+
+The auditor's green run was at `7d691fa` **unrebased** — a true statement about
+the branch, and not a statement about what happens when it meets integration.
+Both facts matter and neither substitutes for the other.
