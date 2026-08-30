@@ -42,7 +42,8 @@ from ..controller import StateStore
 from ..dcl import describe as describe_checks
 from ..errors import (EXIT_ESCALATED, EXIT_OK, ConfigDenial, Denial,
                       ProviderDenial, park_escalation_kind)
-from ..gitio import git, is_repo
+from ..file_identity import AppliedFiles
+from ..gitio import git, git_bytes, is_repo
 from ..providers import resilience as provider_resilience
 from ..runtime import (
     PROVIDER_WAIT_CATEGORIES,
@@ -261,17 +262,43 @@ def _current_work(cfg: Config, task: str = "", findings: str = "",
     return shape_work(out, task, findings, on_condense=report_condensation)
 
 
-def _stage_generated(cfg: Config, written: list[str]) -> list[str]:
+def _stage_authorized(cfg: Config, written: AppliedFiles) -> None:
+    """Put receipt bytes in the index without reopening their pathnames."""
+    written.verify()
+    rows: list[bytes] = []
+    for entry in written.entries:
+        oid = git_bytes("hash-object", "-w", "--stdin", cwd=cfg.root,
+                        input_data=entry.payload).decode("ascii").strip()
+        if not re.fullmatch(r"[0-9a-f]{40,64}", oid):
+            raise ConfigDenial("git returned an invalid generated blob identity")
+        rows.append(
+            f"{entry.git_mode} {oid}\t".encode("ascii")
+            + entry.relative.encode("utf-8") + b"\0")
+    # One update-index process takes one index lock for the complete round.
+    git_bytes("update-index", "-z", "--index-info", cwd=cfg.root,
+              input_data=b"".join(rows))
+
+
+def _stage_generated(cfg: Config, written: list[str] | AppliedFiles) -> list[str]:
     """Stage exactly the files returned by the generator, and nothing else.
 
     A scope directory may contain a user's untracked work or the starter
     template. Staging the whole directory silently sweeps both into the model's
-    commit and later audit. The apply boundary already returns the exact paths;
-    use that boundary as the pathspec.
+    commit and later audit. Generator apply returns a retained authorization
+    receipt, whose bytes are written to the index without reopening a pathname.
     """
     if not written:
         return []
-    git("add", "--", *written, cwd=cfg.root)
+    if isinstance(written, AppliedFiles):
+        try:
+            _stage_authorized(cfg, written)
+        except Exception:
+            written.rollback()
+            raise
+    else:
+        # Backward-compatible for trusted callers outside the generator loop.
+        # Generator output is required to carry AppliedFiles authority.
+        git("add", "--", *written, cwd=cfg.root)
     return git("diff", "--cached", "--name-only", cwd=cfg.root,
                check=False).splitlines()
 
@@ -706,6 +733,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                 break
             continue
 
+        written: list[str] | AppliedFiles | None = None
         try:
             document_export.validate_export_work(cfg.root, work.files, task)
             written = gen_mod.apply(work, cfg.root, cfg.scope_dirs)
@@ -714,6 +742,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                      "rendering final document locally", state=RunState.GENERATING)
             written = document_export.render_export(cfg.root, written, task)
         except ProviderDenial as exc:
+            if isinstance(written, AppliedFiles):
+                written.rollback()
             emit("document_refused", "generator", "document export refused",
                  exc.reason, state=RunState.GENERATING)
             findings = ("[BLOCKER] The local document export boundary refused the "
@@ -735,6 +765,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         # the commit has nothing staged and fails.
         staged = _stage_generated(cfg, written)
         if not staged:
+            if isinstance(written, AppliedFiles):
+                written.rollback()
             # Self-heal first (§24.1): a round whose bytes match the committed
             # work is usually the model reproducing content that already landed
             # (an earlier interrupted run, or a retry). Tell it exactly that,
@@ -766,6 +798,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         secret = _staged_secret(cfg)
         if secret:
             git("reset", "-q", cwd=cfg.root)
+            if isinstance(written, AppliedFiles):
+                written.rollback()
             emit("commit_refused", "loop", "the round could not be committed",
                  f"the generated changes appear to contain {secret}; the secret "
                  "was not committed", state=RunState.GENERATING)
@@ -786,6 +820,10 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                 commit_args += ["-m", f"CrossAudit-Chat: {chat_id}"]
             git(*commit_args, cwd=cfg.root)
         except ConfigDenial as exc:
+            git("reset", "-q", "HEAD", "--", *written, cwd=cfg.root,
+                check=False)
+            if isinstance(written, AppliedFiles):
+                written.rollback()
             # git refusing is a refused round, like any other: the loop reports it
             # and stops cleanly rather than tearing down a run the ledger already
             # has rounds for.
@@ -794,6 +832,9 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             termination_reason = (
                 f"generator revision could not be committed in round {round_no}")
             break
+
+        if isinstance(written, AppliedFiles):
+            written.finalize()
 
         audit_sha = git("rev-parse", "HEAD", cwd=cfg.root)
         emit("audit_started", "auditor", "reviewing the commit",

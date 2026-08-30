@@ -11,6 +11,7 @@ import pytest
 
 from crossaudit import file_identity as identity
 from crossaudit import generator
+from crossaudit.cli import build as build_mod
 from crossaudit.cli.build import _stage_generated
 from crossaudit.errors import ProviderDenial
 
@@ -58,23 +59,19 @@ def test_whole_file_symlink_escape_is_refused_before_write_or_stage(tmp_path: Pa
         capture_output=True, text=True).stdout == ""
 
 
-def test_s0_guard_fails_against_recorded_lexical_resolution_mutation(
+def test_real_apply_refuses_even_if_resolution_is_mutated_to_lexical(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """D10 counterfactual: no-follow resolution -> historical lexical path.
-
-    The shared assertion passes with the product resolver.  Replacing only its
-    physical-resolution seam with the old lexical target makes that assertion
-    fail after the rules file is rewritten through the link.  This records and
-    executes the exact mutation the regression guard must catch.
-    """
+    """The D10 mutation now runs real apply; atomic replace is a second guard."""
     def assert_rules_cannot_be_rewritten(root: Path, rules: Path) -> None:
         try:
-            targets = identity.resolve_file_targets(
-                root, ["work/rules-link.md"], ["work"])
+            work = generator.bind_file_identities(generator.Work("rewrite", {
+                "work/rules-link.md": "ADVISORY: may skip\n",
+            }), root, ["work"])
+            receipt = generator.apply(work, root, ["work"])
         except ProviderDenial:
-            targets = ()
-        if targets:
-            targets[0].physical.write_text("ADVISORY: may skip\n", encoding="utf-8")
+            receipt = None
+        if receipt is not None:
+            receipt.finalize()
         assert rules.read_text(encoding="utf-8") == "BLOCKER: must hold\n"
 
     safe_root, safe_rules = _s0_fixture(tmp_path / "safe")
@@ -85,9 +82,7 @@ def test_s0_guard_fails_against_recorded_lexical_resolution_mutation(
 
     mutant_root, mutant_rules = _s0_fixture(tmp_path / "mutant")
     monkeypatch.setattr(identity, "_physical_target", lexical_mutant)
-    with pytest.raises(AssertionError):
-        assert_rules_cannot_be_rewritten(mutant_root, mutant_rules)
-    assert mutant_rules.read_text(encoding="utf-8") == "ADVISORY: may skip\n"
+    assert_rules_cannot_be_rewritten(mutant_root, mutant_rules)
 
 
 def test_in_scope_symlink_binds_writes_and_stages_the_physical_file(tmp_path: Path):
@@ -332,3 +327,183 @@ def test_parent_and_child_targets_are_refused_before_apply(tmp_path: Path):
     with pytest.raises(ProviderDenial, match="contains another"):
         generator.bind_file_identities(work, root, ["work"])
     assert not (root / "work" / "node").exists()
+
+
+ROUND_TRANSACTION_SHAPES = [
+    (count, parent_exists, target_exists, failure_index)
+    for count in (1, 2)
+    for parent_exists in (False, True)
+    for target_exists in (False, True)
+    for failure_index in (*range(count), None)
+]
+
+
+@pytest.mark.parametrize(
+    "count,parent_exists,target_exists,failure_index",
+    ROUND_TRANSACTION_SHAPES,
+)
+def test_round_transaction_exhaustive_shape_matrix(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, count: int,
+        parent_exists: bool, target_exists: bool,
+        failure_index: int | None):
+    """Enumerate target count/state, parent state, and every publish boundary."""
+    root = _project(tmp_path)
+    parent = root / "work" / "nested"
+    if parent_exists or target_exists:
+        parent.mkdir()
+    files = {f"work/nested/{index}.txt": f"new-{index}"
+             for index in range(count)}
+    if target_exists:
+        for index in range(count):
+            (parent / f"{index}.txt").write_text(
+                f"old-{index}", encoding="utf-8")
+    bound = generator.bind_file_identities(
+        generator.Work("matrix", files), root, ["work"])
+
+    original_replace = identity._replace_prepared
+    calls = {"value": 0}
+
+    def injected(row):
+        index = calls["value"]
+        calls["value"] += 1
+        if index == failure_index:
+            raise OSError("injected publish refusal")
+        original_replace(row)
+
+    monkeypatch.setattr(identity, "_replace_prepared", injected)
+    if failure_index is not None:
+        with pytest.raises(ProviderDenial, match="atomically apply"):
+            generator.apply(bound, root, ["work"])
+    else:
+        receipt = generator.apply(bound, root, ["work"])
+        assert [
+            (parent / f"{index}.txt").read_text(encoding="utf-8")
+            for index in range(count)
+        ] == [f"new-{index}" for index in range(count)]
+        receipt.rollback()
+
+    for index in range(count):
+        path = parent / f"{index}.txt"
+        if target_exists:
+            assert path.read_text(encoding="utf-8") == f"old-{index}"
+        else:
+            assert not path.exists()
+    assert parent.exists() is (parent_exists or target_exists)
+    assert not list((root / "work").rglob(".crossaudit-*-*"))
+
+
+def test_round_atomicity_guard_counterfactual_uses_real_apply(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """D10: deleting rollback makes the first real replacement survive refusal."""
+    def exercise(base: Path, mp: pytest.MonkeyPatch) -> None:
+        root = _project(base)
+        for name in ("a.txt", "b.txt"):
+            (root / "work" / name).write_text(f"{name}-old", encoding="utf-8")
+        bound = generator.bind_file_identities(generator.Work("round", {
+            "work/a.txt": "a-new", "work/b.txt": "b-new",
+        }), root, ["work"])
+        real_replace = identity._replace_prepared
+        calls = {"value": 0}
+
+        def fail_second(row):
+            calls["value"] += 1
+            if calls["value"] == 2:
+                raise OSError("second replacement refused")
+            real_replace(row)
+
+        mp.setattr(identity, "_replace_prepared", fail_second)
+        with pytest.raises(ProviderDenial):
+            generator.apply(bound, root, ["work"])
+        assert (root / "work" / "a.txt").read_text(encoding="utf-8") == "a.txt-old"
+        assert (root / "work" / "b.txt").read_text(encoding="utf-8") == "b.txt-old"
+
+    with monkeypatch.context() as safe:
+        exercise(tmp_path / "safe", safe)
+
+    with monkeypatch.context() as mutant:
+        mutant.setattr(identity.AppliedFiles, "rollback",
+                       identity.AppliedFiles.finalize)
+        with pytest.raises(AssertionError):
+            exercise(tmp_path / "mutant", mutant)
+
+
+def test_parent_creation_guard_counterfactual_uses_real_apply(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """D10: following one swapped component recreates the outside mkdir/write."""
+    def exercise(base: Path, mp: pytest.MonkeyPatch, *,
+                 mutate_guard: bool) -> None:
+        root = _project(base)
+        outside = base / "outside"
+        outside.mkdir()
+        sub = root / "work" / "sub"
+        sub.mkdir()
+        bound = generator.bind_file_identities(generator.Work("nested", {
+            "work/sub/deep/a.txt": "generator bytes",
+        }), root, ["work"])
+        real_preflight = identity._preflight_parent
+        swapped = {"value": False}
+
+        def swap_after_preflight(root_fd: int, relative: str) -> None:
+            real_preflight(root_fd, relative)
+            if not swapped["value"]:
+                sub.rmdir()
+                sub.symlink_to(outside, target_is_directory=True)
+                swapped["value"] = True
+
+        mp.setattr(identity, "_preflight_parent", swap_after_preflight)
+        if mutate_guard:
+            def following_open(name, *, dir_fd=None):
+                return os.open(name, identity._DIRECTORY_FLAGS, dir_fd=dir_fd)
+            mp.setattr(identity, "_open_directory", following_open)
+        try:
+            receipt = generator.apply(bound, root, ["work"])
+        except ProviderDenial:
+            receipt = None
+        if receipt is not None:
+            receipt.finalize()
+        assert not (outside / "deep").exists()
+
+    with monkeypatch.context() as safe:
+        exercise(tmp_path / "safe", safe, mutate_guard=False)
+
+    with monkeypatch.context() as mutant:
+        with pytest.raises(AssertionError):
+            exercise(tmp_path / "mutant", mutant, mutate_guard=True)
+
+
+def test_staging_authority_guard_counterfactual_uses_real_stage(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """D10: reopening the path stages swapped outside bytes; the receipt refuses."""
+    def exercise(base: Path, mp: pytest.MonkeyPatch, *,
+                 mutate_guard: bool) -> None:
+        root = _git_project(base)
+        secret = base / "outside-secret.txt"
+        secret.write_text("OUTSIDE SECRET\n", encoding="utf-8")
+        receipt = generator.apply(
+            generator.bind_file_identities(generator.Work("stage", {
+                "work/a.txt": "authorized bytes\n",
+            }), root, ["work"]), root, ["work"])
+        target = root / "work" / "a.txt"
+        target.unlink()
+        os.link(secret, target)
+        if mutate_guard:
+            def historical_stage(cfg, written):
+                subprocess.run(["git", "add", "--", *written], cwd=cfg.root,
+                               check=True)
+            mp.setattr(build_mod, "_stage_authorized", historical_stage)
+        try:
+            _stage_generated(SimpleNamespace(root=root), receipt)
+        except ProviderDenial:
+            pass
+        staged = subprocess.run(
+            ["git", "show", ":work/a.txt"], cwd=root, capture_output=True,
+            text=True).stdout
+        assert staged != secret.read_text(encoding="utf-8")
+        receipt.rollback()
+
+    with monkeypatch.context() as safe:
+        exercise(tmp_path / "safe", safe, mutate_guard=False)
+
+    with monkeypatch.context() as mutant:
+        with pytest.raises(AssertionError):
+            exercise(tmp_path / "mutant", mutant, mutate_guard=True)

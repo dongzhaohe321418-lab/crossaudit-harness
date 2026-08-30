@@ -6,13 +6,27 @@ actual spelling, authorizes the resulting physical target, and rejects a reply
 whose names converge on one target.  Callers retain the returned binding through
 validation, application, and Git staging; they never reconstruct a target from
 the model's string.
+
+Authorization-boundary change contract (D18/D19): REVIEWER: claude; AUDIT:
+independent auditor.  Resolution, parent creation, replacement, rollback, and
+staging share one physical binding.  Normal/injected failure is all-or-nothing
+for a round; cross-file power-loss atomicity is not claimed.  The executable
+enumeration crosses one/many files, existing/new targets, existing/missing
+parents, and failure before every replacement plus success.  Existing identity
+tests separately enumerate symlink, hardlink, lexical/case/Unicode aliases,
+scope escape, trailing-space names, and bind/apply races.  Arbitrary kernel or
+hardware failure modes and hostile replacement after the exact-byte index write
+are not exhaustively enumerable; the latter cannot put replacement bytes in the
+index because staging never reopens the pathname.
 """
 from __future__ import annotations
 
 import os
+import secrets
 import stat
 import tempfile
 import unicodedata
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Iterable
@@ -38,6 +52,204 @@ class FileTarget:
     exists: bool
     device: int | None
     inode: int | None
+
+
+@dataclass(frozen=True)
+class AppliedFile:
+    """Exact authorized bytes to stage for one physical target."""
+
+    target: FileTarget
+    payload: bytes
+    git_mode: str
+
+    @property
+    def relative(self) -> str:
+        return self.target.relative
+
+
+@dataclass
+class _PreparedFile:
+    target: FileTarget
+    payload: bytes
+    git_mode: str
+    parent_fd: int
+    payload_name: str | None
+    backup_fd: int | None
+    applied_identity: tuple[int, int] | None = None
+
+
+@dataclass
+class _CreatedDirectory:
+    parent_fd: int
+    name: str
+
+
+class AppliedFiles(Sequence[str]):
+    """A live authorization receipt spanning apply, staging, and commit.
+
+    The sequence interface is intentionally read-only and preserves the old
+    list-like consumer contract.  Security-sensitive consumers use ``entries``
+    instead: it carries the physical binding and exact bytes, so reducing this
+    object to path strings is an explicit loss of authority rather than an
+    accidental one.
+    """
+
+    def __init__(self, prepared: list[_PreparedFile],
+                 created: list[_CreatedDirectory], *, root: Path,
+                 allowed_dirs: list[str] | None) -> None:
+        self._prepared = prepared
+        self._created = created
+        self.root = root
+        self.allowed_dirs = (tuple(allowed_dirs)
+                             if allowed_dirs is not None else None)
+        self._active = True
+
+    @property
+    def entries(self) -> tuple[AppliedFile, ...]:
+        return tuple(AppliedFile(row.target, row.payload, row.git_mode)
+                     for row in self._prepared)
+
+    def __len__(self) -> int:
+        return len(self._prepared)
+
+    def __getitem__(self, index):
+        paths = [row.target.relative for row in self._prepared]
+        return paths[index]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(row.target.relative for row in self._prepared)
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Sequence) and not isinstance(other, (str, bytes)):
+            return list(self) == list(other)
+        return False
+
+    def verify(self) -> None:
+        """Refuse if a pathname stopped naming the file this round installed."""
+        if not self._active:
+            raise _path_denial("generated file authorization receipt is no longer active")
+        for row in self._prepared:
+            try:
+                info = os.stat(row.target.physical.name, dir_fd=row.parent_fd,
+                               follow_symlinks=False)
+            except OSError as exc:
+                raise _path_denial(
+                    f"generated file identity changed before staging: "
+                    f"{row.target.relative!r}") from exc
+            if ((info.st_dev, info.st_ino) != row.applied_identity
+                    or not stat.S_ISREG(info.st_mode) or info.st_nlink != 1):
+                raise _path_denial(
+                    f"generated file identity changed before staging: "
+                    f"{row.target.relative!r}")
+
+    def rollback(self) -> None:
+        """Restore the entire pre-round filesystem state through pinned fds."""
+        if not self._active:
+            return
+        errors: list[OSError] = []
+        for row in reversed(self._prepared):
+            try:
+                if row.applied_identity is not None:
+                    if row.backup_fd is None:
+                        try:
+                            os.unlink(row.target.physical.name, dir_fd=row.parent_fd)
+                        except FileNotFoundError:
+                            pass
+                    else:
+                        restore_name, restore_fd = _temporary_name(
+                            row.parent_fd, "restore")
+                        try:
+                            try:
+                                backup_info = os.fstat(row.backup_fd)
+                                os.fchmod(
+                                    restore_fd, stat.S_IMODE(backup_info.st_mode))
+                                os.lseek(row.backup_fd, 0, os.SEEK_SET)
+                                _copy_to_backup(row.backup_fd, restore_fd)
+                                os.fsync(restore_fd)
+                            finally:
+                                os.close(restore_fd)
+                            os.replace(restore_name, row.target.physical.name,
+                                       src_dir_fd=row.parent_fd,
+                                       dst_dir_fd=row.parent_fd)
+                        finally:
+                            try:
+                                os.unlink(restore_name, dir_fd=row.parent_fd)
+                            except FileNotFoundError:
+                                pass
+                    os.fsync(row.parent_fd)
+                if row.payload_name is not None:
+                    try:
+                        os.unlink(row.payload_name, dir_fd=row.parent_fd)
+                    except FileNotFoundError:
+                        pass
+                row.payload_name = None
+            except OSError as exc:
+                errors.append(exc)
+        self._remove_created_directories(errors)
+        self._close()
+        if errors:
+            from .errors import IntegrityDenial
+            raise IntegrityDenial(
+                "could not restore the complete pre-round filesystem state") from errors[0]
+
+    def finalize(self) -> None:
+        """Accept the applied round and remove its rollback material."""
+        if not self._active:
+            return
+        errors: list[OSError] = []
+        for row in self._prepared:
+            for name in (row.payload_name,):
+                if name is None:
+                    continue
+                try:
+                    os.unlink(name, dir_fd=row.parent_fd)
+                except FileNotFoundError:
+                    pass
+                except OSError as exc:
+                    errors.append(exc)
+            row.payload_name = None
+        self._close()
+        if errors:
+            from .errors import IntegrityDenial
+            raise IntegrityDenial(
+                "could not remove generated round transaction material") from errors[0]
+
+    def _remove_created_directories(self, errors: list[OSError]) -> None:
+        for created in reversed(self._created):
+            try:
+                os.rmdir(created.name, dir_fd=created.parent_fd)
+            except FileNotFoundError:
+                pass
+            except OSError as exc:
+                errors.append(exc)
+
+    def _close(self) -> None:
+        for row in self._prepared:
+            if row.backup_fd is not None:
+                try:
+                    os.close(row.backup_fd)
+                except OSError:
+                    pass
+                row.backup_fd = None
+            try:
+                os.close(row.parent_fd)
+            except OSError:
+                pass
+        for created in self._created:
+            try:
+                os.close(created.parent_fd)
+            except OSError:
+                pass
+        self._active = False
+
+    def __del__(self) -> None:
+        # A caller outside the build loop historically treated apply() as the
+        # commit point.  Abandoning a receipt therefore accepts the writes but
+        # must never leak its hidden rollback files or descriptors.
+        try:
+            self.finalize()
+        except Exception:
+            pass
 
 
 def _path_denial(reason: str) -> ProviderDenial:
@@ -275,3 +487,278 @@ def resolve_file_targets(root: Path, requested_paths: Iterable[str],
                 raise _path_denial(
                     "refusing generated paths where one physical target contains another")
     return tuple(targets)
+
+
+_DIRECTORY_FLAGS = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+_NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
+
+
+def _same_binding(left: FileTarget, right: FileTarget) -> bool:
+    return (left.requested, left.relative, left.physical, left.exists,
+            left.device, left.inode) == (
+                right.requested, right.relative, right.physical, right.exists,
+                right.device, right.inode)
+
+
+def _open_directory(name: str | Path, *, dir_fd: int | None = None) -> int:
+    """Open one directory identity without following its final component."""
+    return os.open(name, _DIRECTORY_FLAGS | _NOFOLLOW, dir_fd=dir_fd)
+
+
+def _walk_parent(root_fd: int, relative: str, *, create: bool,
+                 created: list[_CreatedDirectory]) -> int:
+    """Open a target's parent component-by-component from the pinned root."""
+    current = os.dup(root_fd)
+    try:
+        for part in PurePosixPath(relative).parts[:-1]:
+            try:
+                child = _open_directory(part, dir_fd=current)
+            except FileNotFoundError:
+                if not create:
+                    return current
+                try:
+                    os.mkdir(part, 0o777, dir_fd=current)
+                    created.append(_CreatedDirectory(os.dup(current), part))
+                except FileExistsError:
+                    # A concurrent creator gets no trust: the no-follow open
+                    # below must still prove it installed a directory.
+                    pass
+                child = _open_directory(part, dir_fd=current)
+            os.close(current)
+            current = child
+        return current
+    except Exception:
+        os.close(current)
+        raise
+
+
+def _preflight_parent(root_fd: int, relative: str) -> None:
+    """Establish every existing ancestor before any directory is created."""
+    current = os.dup(root_fd)
+    try:
+        for part in PurePosixPath(relative).parts[:-1]:
+            try:
+                child = _open_directory(part, dir_fd=current)
+            except FileNotFoundError:
+                return
+            os.close(current)
+            current = child
+    finally:
+        os.close(current)
+
+
+def _temporary_name(parent_fd: int, purpose: str,
+                    mode: int = 0o600) -> tuple[str, int]:
+    for _ in range(128):
+        name = f".crossaudit-{purpose}-{secrets.token_hex(12)}"
+        try:
+            fd = os.open(name, os.O_RDWR | os.O_CREAT | os.O_EXCL | _NOFOLLOW,
+                         mode, dir_fd=parent_fd)
+            return name, fd
+        except FileExistsError:
+            continue
+    raise OSError("could not allocate a unique round transaction file")
+
+
+def _write_all(fd: int, payload: bytes) -> None:
+    offset = 0
+    while offset < len(payload):
+        count = os.write(fd, payload[offset:])
+        if count <= 0:
+            raise OSError("generated file write made no progress")
+        offset += count
+
+
+def _copy_to_backup(source_fd: int, backup_fd: int) -> None:
+    while True:
+        chunk = os.read(source_fd, 1024 * 1024)
+        if not chunk:
+            return
+        _write_all(backup_fd, chunk)
+
+
+def _prepare_target(target: FileTarget, payload: bytes,
+                    parent_fd: int) -> _PreparedFile:
+    """Snapshot one old target and prepare replacement bytes without publishing."""
+    name = target.physical.name
+    backup_name: str | None = None
+    retained_backup_fd: int | None = None
+    payload_name: str | None = None
+    try:
+        if target.exists:
+            source_fd = os.open(name, os.O_RDONLY | _NOFOLLOW, dir_fd=parent_fd)
+            try:
+                info = os.fstat(source_fd)
+                if ((info.st_dev, info.st_ino) != (target.device, target.inode)
+                        or not stat.S_ISREG(info.st_mode) or info.st_nlink != 1):
+                    raise _path_denial(
+                        f"refusing a generated file that changed during apply: "
+                        f"{target.relative!r}")
+                backup_name, backup_fd = _temporary_name(parent_fd, "rollback")
+                try:
+                    os.fchmod(backup_fd, stat.S_IMODE(info.st_mode))
+                    _copy_to_backup(source_fd, backup_fd)
+                    os.fsync(backup_fd)
+                    os.lseek(backup_fd, 0, os.SEEK_SET)
+                    os.unlink(backup_name, dir_fd=parent_fd)
+                    backup_name = None
+                    retained_backup_fd = backup_fd
+                except Exception:
+                    os.close(backup_fd)
+                    raise
+                mode = stat.S_IMODE(info.st_mode)
+            finally:
+                os.close(source_fd)
+        else:
+            try:
+                os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                pass
+            else:
+                raise _path_denial(
+                    f"refusing a generated file created after authorization: "
+                    f"{target.relative!r}")
+            mode = 0o666
+
+        payload_name, payload_fd = _temporary_name(
+            parent_fd, "payload", 0o600 if target.exists else 0o666)
+        try:
+            if target.exists:
+                os.fchmod(payload_fd, mode)
+            _write_all(payload_fd, payload)
+            os.fsync(payload_fd)
+            installed_mode = stat.S_IMODE(os.fstat(payload_fd).st_mode)
+        finally:
+            os.close(payload_fd)
+        git_mode = "100755" if installed_mode & 0o111 else "100644"
+        return _PreparedFile(target, payload, git_mode, parent_fd,
+                             payload_name, retained_backup_fd)
+    except Exception:
+        for temporary in (payload_name, backup_name):
+            if temporary is None:
+                continue
+            try:
+                os.unlink(temporary, dir_fd=parent_fd)
+            except OSError:
+                pass
+        if retained_backup_fd is not None:
+            try:
+                os.close(retained_backup_fd)
+            except OSError:
+                pass
+        raise
+
+
+def _target_still_original(row: _PreparedFile) -> bool:
+    name = row.target.physical.name
+    try:
+        info = os.stat(name, dir_fd=row.parent_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return not row.target.exists
+    if not row.target.exists:
+        return False
+    return ((info.st_dev, info.st_ino) == (row.target.device, row.target.inode)
+            and stat.S_ISREG(info.st_mode) and info.st_nlink == 1)
+
+
+def _replace_prepared(row: _PreparedFile) -> None:
+    """Publish one already-prepared payload through its pinned parent."""
+    assert row.payload_name is not None
+    os.replace(row.payload_name, row.target.physical.name,
+               src_dir_fd=row.parent_fd, dst_dir_fd=row.parent_fd)
+    row.payload_name = None
+    info = os.stat(row.target.physical.name, dir_fd=row.parent_fd,
+                   follow_symlinks=False)
+    row.applied_identity = (info.st_dev, info.st_ino)
+    os.fsync(row.parent_fd)
+
+
+def apply_bound_files(root: Path, targets: tuple[FileTarget, ...],
+                      payloads: dict[str, bytes],
+                      allowed_dirs: list[str] | None) -> AppliedFiles:
+    """Apply one authorized file round as a rollback-capable transaction.
+
+    Enumeration of the construction: existing/new targets, existing/missing
+    parent chains, one/many targets, and failures before/during/after the first
+    replacement all use the same prepare-then-publish path.  Symlink, hardlink,
+    namespace-alias and scope dimensions remain owned by
+    :func:`resolve_file_targets`.  Process crash/power-loss atomicity across
+    several filesystem objects is not claimed; normal and injected exceptions
+    are all-or-nothing.
+    """
+    physical_root = root.resolve(strict=True)
+    rebound = resolve_file_targets(
+        physical_root, (target.requested for target in targets), allowed_dirs)
+    if len(rebound) != len(targets) or any(
+            not _same_binding(before, after)
+            for before, after in zip(targets, rebound)):
+        raise _path_denial(
+            "refusing generated files whose physical identity changed before apply")
+    if set(payloads) != {target.relative for target in targets}:
+        raise _path_denial("generated payloads do not match their authorized targets")
+
+    root_fd = _open_directory(physical_root)
+    prepared: list[_PreparedFile] = []
+    created: list[_CreatedDirectory] = []
+    unowned_parent_fds: set[int] = set()
+    receipt: AppliedFiles | None = None
+    try:
+        root_info = os.fstat(root_fd)
+        expected_root = physical_root.stat()
+        if ((root_info.st_dev, root_info.st_ino)
+                != (expected_root.st_dev, expected_root.st_ino)):
+            raise _path_denial("the physical project directory changed before apply")
+
+        # This pass has no filesystem mutation.  Every existing component for
+        # every target must be a no-follow directory before mkdir is possible.
+        for target in targets:
+            _preflight_parent(root_fd, target.relative)
+
+        # Creation is relative to the pinned root and every opened component is
+        # no-follow.  A swapped lexical ancestor is never traversed.
+        parent_fds: list[tuple[FileTarget, int]] = []
+        for target in sorted(targets, key=lambda item: item.relative):
+            parent_fd = _walk_parent(root_fd, target.relative, create=True,
+                                     created=created)
+            parent_fds.append((target, parent_fd))
+            unowned_parent_fds.add(parent_fd)
+        for target, parent_fd in parent_fds:
+            row = _prepare_target(target, payloads[target.relative], parent_fd)
+            prepared.append(row)
+            unowned_parent_fds.discard(parent_fd)
+
+        receipt = AppliedFiles(prepared, created, root=physical_root,
+                               allowed_dirs=allowed_dirs)
+        for row in prepared:
+            if not _target_still_original(row):
+                raise _path_denial(
+                    f"refusing a generated file that changed before publish: "
+                    f"{row.target.relative!r}")
+            _replace_prepared(row)
+        return receipt
+    except ProviderDenial:
+        if receipt is None:
+            receipt = AppliedFiles(prepared, created, root=physical_root,
+                                   allowed_dirs=allowed_dirs)
+        receipt.rollback()
+        raise
+    except OSError as exc:
+        if receipt is None:
+            receipt = AppliedFiles(prepared, created, root=physical_root,
+                                   allowed_dirs=allowed_dirs)
+        receipt.rollback()
+        raise _path_denial("could not atomically apply the generated file round") from exc
+    finally:
+        for parent_fd in unowned_parent_fds:
+            try:
+                os.close(parent_fd)
+            except OSError:
+                pass
+        os.close(root_fd)
+
+
+def apply_file_payloads(root: Path, payloads: dict[str, bytes],
+                        allowed_dirs: list[str] | None) -> AppliedFiles:
+    """Resolve, authorize, and transactionally apply an exact byte mapping."""
+    targets = resolve_file_targets(root, payloads, allowed_dirs)
+    return apply_bound_files(root, targets, payloads, allowed_dirs)
