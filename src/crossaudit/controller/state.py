@@ -43,6 +43,25 @@ LOCK_STALE_S = 120.0
 #: time instead of a blank/zero.
 HISTORY_LIMIT = 500
 
+def _recorded_verdict(cycle: dict, round_: int, sha: str) -> dict | None:
+    """The decision this cycle already reached for (round, sha), if any.
+
+    Cycles written before D36 carry no ``verdicts`` list. They read as "no
+    recorded decision", which is the pre-existing behaviour and keeps old state
+    loadable; the protection begins with the first verdict recorded after the
+    upgrade rather than being retroactively asserted about history we do not have.
+    """
+    for row in cycle.get("verdicts", ()):
+        if row.get("round") == round_ and row.get("sha") == sha:
+            return row
+    return None
+
+
+def _has_verdict_for(cycle: dict, sha: str) -> bool:
+    """Whether this cycle has ever reached a decision on this exact commit."""
+    return any(row.get("sha") == sha for row in cycle.get("verdicts", ()))
+
+
 OPEN, BLOCKED, PASSED, ESCALATED, CONSUMED = "OPEN", "BLOCKED", "PASSED", "ESCALATED", "CONSUMED"
 TERMINAL = frozenset({CONSUMED})
 
@@ -154,11 +173,17 @@ class StateStore:
         return dict(c, cycle_id=cycle_id) if c else None
 
     # -------------------------------------------------------------- mutations
-    def open_or_advance(self, repo: str, sha: str, parent_sha: str | None) -> dict:
+    def open_or_advance(self, repo: str, sha: str, parent_sha: str | None,
+                        constitution_commit: str = "") -> dict:
         """New root commit opens a cycle; a child of an active sha advances it.
 
         Identity follows the commit graph, never changed-path sets, so a nonce
         file cannot reset a round.
+
+        ``constitution_commit`` is recorded when a cycle is OPENED and never
+        afterwards: a cycle is judged against the standard it began under, so a
+        rule change lands on the next cycle rather than on one already running
+        (D36 clause 1). Advancing and continuing deliberately leave it alone.
         """
         with self._locked() as state:
             cycles = state["cycles"]
@@ -172,6 +197,16 @@ class StateStore:
                               round=c["round"])
                     return dict(c, cycle_id=cid)
                 if c["active_sha"] == sha and c["status"] in (OPEN, BLOCKED):
+                    # D36 clause 2. A round that already reached a verdict on
+                    # this exact commit may not be advanced past: re-running the
+                    # same work replaced the recorded decision rather than
+                    # adding to it, which is how a BLOCK was erased instead of
+                    # superseded. A round that never reached a verdict is the
+                    # branch above and still resumes.
+                    if _has_verdict_for(c, sha):
+                        self._log(state, "verdict_already_recorded", cycle=cid,
+                                  sha=sha, round=c["round"], status=c["status"])
+                        return dict(c, cycle_id=cid, verdict_already_recorded=True)
                     c["round"] += 1
                     c["status"] = OPEN
                     c["awaiting_verdict"] = True
@@ -198,7 +233,8 @@ class StateStore:
                         return dict(c, cycle_id=cid)
             cid = cycle_id_for(repo, sha)
             c = {"repo": repo, "root_sha": sha, "active_sha": sha, "parent_receipt": "",
-                 "round": 1, "status": OPEN, "consumed": [], "awaiting_verdict": True}
+                 "round": 1, "status": OPEN, "consumed": [], "awaiting_verdict": True,
+                 "constitution_commit": constitution_commit, "verdicts": []}
             cycles[cid] = c
             self._log(state, "open", cycle=cid, sha=sha)
             return dict(c, cycle_id=cid)
@@ -357,6 +393,16 @@ class StateStore:
                 # An admitted cycle is closed; a late verdict cannot reopen it.
                 self._log(state, "verdict_after_admission_ignored", cycle=cycle_id, sha=sha)
                 return c["status"]
+            if _recorded_verdict(c, c["round"], sha) is not None:
+                # Superseded, never erased (D36). A second verdict for a round
+                # that already reached one would overwrite the record rather
+                # than extend it, so it is refused outright.
+                self._log(state, "duplicate_verdict_refused", cycle=cycle_id,
+                          sha=sha, round=c["round"])
+                raise IntegrityDenial(
+                    f"round {c['round']} of this cycle already recorded a verdict; "
+                    f"a decision already made cannot be replaced",
+                    cycle_id=cycle_id, round=c["round"], status=c["status"])
             if verdict == "PASS":
                 c["status"] = PASSED
             elif verdict in ("ESCALATE", "DCL_ONLY"):
@@ -374,6 +420,13 @@ class StateStore:
                     or classify_escalation_kind(c.get("escalation_reason", "")))
             c["parent_receipt"] = receipt_hash
             c["awaiting_verdict"] = False
+            # The append-only half. Every decision this cycle ever reached stays
+            # here with the standard it was judged against, so a later round can
+            # supersede an earlier one without the earlier one ceasing to exist.
+            c.setdefault("verdicts", []).append({
+                "round": c["round"], "sha": sha, "verdict": verdict,
+                "status": c["status"], "receipt": receipt_hash[:16],
+                "constitution_commit": c.get("constitution_commit", "")})
             self._log(state, "verdict", cycle=cycle_id, sha=sha, verdict=verdict,
                       round=c["round"], status=c["status"], receipt=receipt_hash[:16])
             return c["status"]

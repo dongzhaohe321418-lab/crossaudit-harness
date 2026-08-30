@@ -106,6 +106,43 @@ def git_bytes(*args: str, cwd: Path, input_data: bytes = b"",
     return proc.stdout
 
 
+def read_committed_bytes(repo: Path, commit: str, path: str) -> bytes:
+    """Return one regular file exactly as stored in ``commit``.
+
+    This is the committed-artifact boundary.  Unlike :func:`git`, it never
+    decodes, strips, or translates Git's output; unlike a working-tree read,
+    it cannot observe uncommitted bytes while citing ``commit``.  Audit callers
+    use this named operation so exact evidence reads cannot be confused with
+    convenience reads of Git metadata.
+    """
+    raw = git_bytes("ls-tree", "-z", commit, "--", path, cwd=repo)
+    wanted = os.fsencode(path)
+    matches: list[tuple[bytes, bytes, str]] = []
+    for record in raw.split(b"\0"):
+        if not record:
+            continue
+        try:
+            meta, found = record.split(b"\t", 1)
+            mode, object_type, blob = meta.split()
+        except ValueError as exc:
+            raise IntegrityDenial(
+                f"git returned an invalid tree entry for committed artifact {path!r}",
+                commit=commit, path=path) from exc
+        if found == wanted:
+            matches.append((mode, object_type, blob.decode("ascii")))
+
+    if len(matches) != 1:
+        raise IntegrityDenial(
+            f"committed artifact {path!r} does not identify exactly one file in "
+            f"{commit[:12]}", commit=commit, path=path, matches=len(matches))
+    mode, object_type, blob = matches[0]
+    if object_type != b"blob" or mode not in (b"100644", b"100755"):
+        raise IntegrityDenial(
+            f"committed artifact {path!r} is not a regular file in {commit[:12]}",
+            commit=commit, path=path, mode=mode.decode("ascii", errors="replace"))
+    return git_bytes("cat-file", "blob", blob, cwd=repo)
+
+
 def is_repo(path: Path) -> bool:
     return subprocess.run(["git", "-C", str(path), "rev-parse", "--git-dir"],
                           capture_output=True).returncode == 0

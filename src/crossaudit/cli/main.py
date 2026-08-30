@@ -19,9 +19,9 @@ from ..config import CONFIG_NAME, Config, heterogeneity, load
 from ..controller import StateStore
 from ..dcl import run_checks
 from ..errors import (EXIT_BLOCKED, EXIT_CONFIG, EXIT_ESCALATED, EXIT_INTEGRITY,
-                      EXIT_OK, ConfigDenial, Denial)
+                      EXIT_OK, ConfigDenial, Denial, IntegrityDenial)
 from ..gitio import (changed_paths, entries, git, is_ancestor, is_repo, materialise,
-                     parent, read_cap, resolve)
+                     parent, read_cap, read_committed_bytes, resolve)
 from ..receipt import build as build_receipt
 from ..receipt import digest as receipt_digest
 from ..receipt import load as load_receipt
@@ -45,6 +45,23 @@ def _allow_custom(args: argparse.Namespace) -> bool:
     """
     return bool(getattr(args, "allow_custom_endpoint", False)
                 or os.environ.get(ALLOW_CUSTOM_ENV))
+
+
+def _committed_constitution(cfg: Config, commit: str) -> tuple[str, bytes]:
+    """The exact UTF-8 rules bytes named by an audit and its receipt."""
+    data = read_committed_bytes(cfg.root, commit, cfg.constitution)
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise IntegrityDenial(
+            f"the committed constitution at {commit[:12]} is not valid UTF-8",
+            commit=commit, path=cfg.constitution) from exc
+    if not text.strip():
+        raise ConfigDenial(
+            f"the committed constitution at {commit[:12]} is empty; an audit "
+            "cannot apply a missing standard", commit=commit, path=cfg.constitution)
+    return text, data
+
 
 GETTING_STARTED = """\
 CrossAudit {version} — cross-vendor generation and audit loop
@@ -467,6 +484,15 @@ def cmd_audit(args: argparse.Namespace) -> int:
 
     store = _state(cfg)
     continuation = getattr(args, "continue_cycle", None)
+    # The standard this audit will apply, chosen BEFORE the cycle is opened so a
+    # newly opened cycle can be pinned to it (D36 clause 1).
+    head_const_commit = git("log", "-1", "--format=%H", "--", cfg.constitution,
+                            cwd=cfg.root, check=False) or ""
+    if not head_const_commit:
+        raise ConfigDenial(
+            f"{cfg.constitution} is not committed: an audit must cite the commit that "
+            f"versioned the rules (I3). Commit it first.")
+
     if continuation:
         prior = store.cycle(continuation)
         if prior is None:
@@ -477,21 +503,28 @@ def cmd_audit(args: argparse.Namespace) -> int:
                 f"descend from its active commit {prior['active_sha'][:12]}")
         cycle = store.continue_cycle(continuation, cfg.science_repo, sha)
     else:
-        cycle = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha))
+        cycle = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha),
+                                      constitution_commit=head_const_commit)
     if cycle.get("already_admitted"):
         raise ConfigDenial(f"{sha[:12]} was already admitted; open a new increment")
+    if cycle.get("verdict_already_recorded"):
+        # D36 clause 2. Re-running the same commit used to advance a round and
+        # replace the recorded decision. It is refused rather than absorbed, and
+        # the sentence says which of the two legitimate routes to take.
+        raise ConfigDenial(
+            f"{sha[:12]} already has a recorded decision in this cycle "
+            f"({cycle['status']}); a decision already made is not replaced by "
+            f"re-running it. Commit a revision to continue the cycle, or start a "
+            f"new increment to be judged afresh.",
+            cycle_id=cycle["cycle_id"], status=cycle["status"])
 
     files, notes, scope_text = _materialise_tree_scope(cfg, sha, args.scope)
-    const_path = cfg.root / cfg.constitution
-    if not const_path.is_file():
-        raise ConfigDenial(f"constitution not found: {const_path}")
-    constitution = const_path.read_text(encoding="utf-8")
-    const_commit = git("log", "-1", "--format=%H", "--", cfg.constitution,
-                       cwd=cfg.root, check=False) or ""
-    if not const_commit:
-        raise ConfigDenial(
-            f"{cfg.constitution} is not committed: an audit must cite the commit that "
-            f"versioned the rules (I3). Commit it first.")
+    # A cycle is judged against the standard it began under. Reading the working
+    # tree instead let a constitution loosened mid-cycle re-judge work the cycle
+    # had already decided on — the D34 defect. Pre-D36 cycles carry no pin and
+    # fall back to HEAD, which is exactly today's behaviour for them.
+    const_commit = cycle.get("constitution_commit") or head_const_commit
+    constitution, constitution_bytes = _committed_constitution(cfg, const_commit)
 
     task = _committed_task(cfg, sha)
     outcome = run_audit(cfg=cfg, sha=sha, round_=cycle["round"], files=files, notes=notes,
@@ -530,7 +563,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
     receipt = build_receipt(
         cfg=cfg, subject={"sha": sha, "tree": tree, "scope": scope_text},
         cycle=cycle, manifest=manifest, constitution_path=cfg.constitution,
-        constitution_bytes=const_path.read_bytes(), constitution_commit=const_commit,
+        constitution_bytes=constitution_bytes, constitution_commit=const_commit,
         dcl_source_sha256=dcl_source_digest(), prompt_sha256=outcome.prompt_sha256,
         checks=cfg.checks, skills=_skills_manifest(cfg),
         verdict=outcome.verdict, exchange=outcome.exchange,
@@ -1100,7 +1133,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         raise ConfigDenial(f"{cfg.constitution} is not committed; commit it first "
                            f"(an audit must cite the rules' commit)")
     from ..auditor import known_rules
-    const_text = (cfg.root / cfg.constitution).read_text(encoding="utf-8")
+    const_text, const_bytes = _committed_constitution(cfg, const_commit)
     print(f"  rules      {cfg.constitution} @ {const_commit[:12]} "
           f"({len(known_rules(const_text))} rules)")
     print(f"  auditor    {cfg.auditor.provider}:{cfg.auditor.model} "
@@ -1122,7 +1155,8 @@ def cmd_run(args: argparse.Namespace) -> int:
                 f"descend from its active commit {prior['active_sha'][:12]}")
         cycle = store.continue_cycle(continuation, cfg.science_repo, sha)
     else:
-        cycle = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha))
+        cycle = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha),
+                                      constitution_commit=const_commit)
     if cycle.get("already_admitted"):
         print("  This commit was already audited, passed, and admitted. Nothing to do.")
         return EXIT_OK
@@ -1137,6 +1171,11 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"  Commit a fix and run again. To re-audit this same commit (a dispute "
               f"or second opinion), use: crossaudit audit --sha {sha[:12]}")
         return EXIT_OK
+
+    # Continuations use the standard pinned when their cycle opened. New cycles
+    # already carry the current committed standard passed above.
+    const_commit = cycle.get("constitution_commit") or const_commit
+    const_text, const_bytes = _committed_constitution(cfg, const_commit)
 
     total = 2 if offline else 3
     _step(1, total, "deterministic checks")
@@ -1188,7 +1227,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     receipt = build_receipt(
         cfg=cfg, subject={"sha": sha, "tree": tree, "scope": "changed-paths"},
         cycle=cycle, manifest=manifest, constitution_path=cfg.constitution,
-        constitution_bytes=const_text.encode(), constitution_commit=const_commit,
+        constitution_bytes=const_bytes, constitution_commit=const_commit,
         dcl_source_sha256=dcl_source_digest(), prompt_sha256=outcome.prompt_sha256,
         checks=cfg.checks, skills=_skills_manifest(cfg),
         verdict=outcome.verdict, exchange=outcome.exchange,

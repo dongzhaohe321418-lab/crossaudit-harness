@@ -192,16 +192,22 @@ def test_an_escalation_carries_the_reason_it_stopped(cfg):
 def test_round_limit_escalation_explains_attempts_issues_and_human_action(cfg):
     from crossaudit.controller import StateStore
 
-    sha = "b" * 40
+    # One SHA per round, because that is what the build loop actually produces:
+    # the generator commits a revision and the cycle continues onto it. Driving
+    # three rounds at one commit was a fixture shortcut, and since D36 it is
+    # also the shape that erases a decision, so it no longer stands in for the
+    # real thing.
+    shas = [chr(ord("b") + n) * 40 for n in range(3)]
     store = StateStore(cfg.root / cfg.state_dir / "state.json")
-    cycle = store.open_or_advance(cfg.science_repo, sha, None)
-    for round_ in range(1, 4):
+    cycle = store.open_or_advance(cfg.science_repo, shas[0], None)
+    for round_, sha in enumerate(shas, start=1):
         add_audit(cfg, sha[:12], "BLOCKED", BLOCKER, round_=round_)
         status = store.record_verdict(cycle["cycle_id"], sha, "BLOCKED",
                                       f"receipt-{round_}", 3)
         if round_ < 3:
             assert status == "BLOCKED"
-            cycle = store.open_or_advance(cfg.science_repo, sha, None)
+            cycle = store.continue_cycle(cycle["cycle_id"], cfg.science_repo,
+                                         shas[round_])
 
     rows = overview.escalations(cfg)
     assert len(rows) == 1
