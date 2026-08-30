@@ -428,6 +428,24 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .turn-time{margin-left:auto}
 .turn.user .turn-time{margin-left:0}
 .turn-body{font-size:var(--fs-prose);white-space:pre-wrap;word-break:break-word;line-height:1.6}
+/* Context-condensation notice: the RUNTIME narrating what it reduced before
+   sending the prompt. Deliberately not shaped like a turn — no round avatar, no
+   speaker name — because nothing said this; attributing it to the generator
+   would be a claim about who produced the words. */
+.turn.system-note{margin-bottom:var(--sp-5)}
+.turn.system-note .turn-main{border-left:2px solid var(--line-strong);
+  padding:2px 0 2px var(--sp-4)}
+.turn.system-note .turn-meta{margin-bottom:4px;color:var(--text-3)}
+.turn.system-note .turn-meta b{font-size:var(--fs-caption);font-weight:600;
+  color:var(--text-2);letter-spacing:.02em;text-transform:uppercase}
+.system-mark{flex:none;font-size:var(--fs-caption);color:var(--text-3)}
+.turn.system-note .turn-body{font-size:var(--fs-label);color:var(--text-2);
+  white-space:normal;line-height:1.55}
+.condense-paths{margin-top:5px;display:flex;flex-wrap:wrap;gap:4px}
+.condense-path{font-size:var(--fs-caption);color:var(--text-3);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:var(--r-xs);padding:1px 6px;
+  overflow-wrap:anywhere;max-width:100%}
+.event-mark.runtime{background:var(--surface-2);color:var(--text-3)}
 /* The optimistic "working" indicator shown the instant a message is sent. */
 .thinking-dots{display:inline-flex;gap:5px;align-items:center;height:20px}
 .thinking-dots i{width:6px;height:6px;border-radius:50%;background:var(--text-3);
@@ -3280,6 +3298,11 @@ const ZH={
   "Leave this off to keep the server manual-only. You can turn it on later.":"保持关闭即为仅手动使用。你可以稍后再开启。",
   "Re-connecting cleared this server's approvals. Nothing can be called until you save.":"重新连接已清除此服务器的批准。在你保存之前，任何工具都不会被调用。",
   "Only the tools you tick are approved. Tools the server adds later stay blocked until you review them.":"只有你勾选的工具会被批准。服务器之后新增的工具在你复核前始终处于阻止状态。",
+  // A2: page-side labels for a runtime context-condensation notice. The
+  // notice TEXT itself arrives pre-localised on the wire (text_i18n /
+  // detail_i18n / summary_i18n), so it is deliberately NOT duplicated here —
+  // the old ZH_PATTERNS/dictionary handoff for these strings is superseded.
+  "Context reduced":"上下文已精简","round":"轮次",
   "Generator enabled":"已为生成者启用","Manual only":"仅手动","Configure":"配置","Refresh tools":"刷新工具","No tools advertised.":"未公布工具。","Applies to every task":"适用于每个任务","MCP tool":"MCP 工具","calling MCP tool":"正在调用 MCP 工具","policy":"政策",
   "Last 64 KB · stdout + stderr":"最近 64 KB · 标准输出 + 标准错误","Remote process finished":"远程进程已完成","Submitted to Slurm":"已提交至 Slurm","Detached on host":"已在远程主机后台启动","Preparing remote job":"正在准备远程任务",
   "Passed":"已通过","Blocked":"已阻止","Waiting on you":"等待你决定","Admitted":"已准入","Complete":"已完成","Active":"正在进行","Pending":"等待中"
@@ -3550,7 +3573,13 @@ function applyLocale(locale,remember=true){currentLocale=locale==='zh'?'zh':'en'
   for(const id of ['locale-toggle','hub-locale']){const button=document.getElementById(id);button.textContent=currentLocale==='zh'?'EN':'中文';
     button.setAttribute('aria-label',currentLocale==='zh'?'切换到英文':'Switch to Chinese');button.title=currentLocale==='zh'?'切换到英文':'Switch language';}
   localizeTree(document.body);if(remember){try{localStorage.setItem(LOCALE_KEY,currentLocale);}catch(e){}
-    document.cookie=LOCALE_COOKIE+'='+encodeURIComponent(currentLocale)+'; Path=/; Max-Age=31536000; SameSite=Strict';}}
+    document.cookie=LOCALE_COOKIE+'='+encodeURIComponent(currentLocale)+'; Path=/; Max-Age=31536000; SameSite=Strict';}
+  // Copy localised on the wire (event text_i18n / summary_i18n) is chosen when a
+  // row is rendered, so the text-node translator cannot reach it by design.
+  // Re-render so those rows follow the locale from every entry point. The guard
+  // is a try/catch because this also runs during boot, before `lastState` is
+  // initialised, where touching it would raise.
+  try{if(lastState)render(lastState);}catch(e){}}
 const localeObserver=new MutationObserver(records=>{for(const record of records){if(record.type==='characterData')renderLocaleText(record.target);
   else if(record.type==='attributes')renderLocaleAttributes(record.target);else for(const node of record.addedNodes)localizeTree(node);}});
 localeObserver.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label']});
@@ -3560,6 +3589,15 @@ applyLocale(storedLocale()==='zh'?'zh':'en',false);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const at = t => t ? new Date(t*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+// Locale selection for wire-localised event copy. Agent B ships {en, zh} on the
+// event itself precisely so the page never has to re-translate prose or match
+// text nodes; this reads the active locale and falls back to the plain field.
+const localeText = (bundle, base) => {
+  const pair = bundle || {};
+  return String(pair[currentLocale] || pair.en || base || '');
+};
+// Short UI words this consumer adds itself still go through the dictionary.
+const t = value => currentLocale==='zh' ? zhValue(value) : value;
 const MARK = {done:'✓',failed:'×',current:'·',pending:''};
 let lastState = null;
 let pendingContinuation={cycle:'',chat:''};
@@ -5301,6 +5339,30 @@ function turn(m,d){
       + (fs || '<div class="turn-body">'+(m.verdict==='PASS'?'No findings. The audited increment passed.':'No structured findings were recorded.')+'</div>')
       + '</div></article>';
   }
+  if(m.kind === 'context_condensed'){
+    // The runtime reduced what it sent. Localise from the wire fields the
+    // event already carries; never re-translate prose or match text nodes.
+    const full=localeText(m.summary_i18n,m.summary);
+    const detail=String(m.notes||'');
+    // `summary` is "<sentence>: <detail>". When the detail is locale-neutral
+    // (paths, tool labels) it survives verbatim, so the tail can be split off
+    // and shown as chips. When it was localised too (a byte count), the split
+    // simply does not fire and the whole sentence is rendered — degrading to
+    // correct-but-unsplit rather than to wrong.
+    const tail=': '+detail;
+    const head=(detail&&full.endsWith(tail))?full.slice(0,-tail.length):full;
+    const chips=(detail&&full.endsWith(tail))
+      ? '<div class="condense-paths">'+detail.split(',').map(part=>part.trim())
+          .filter(Boolean).map(part=>'<span class="condense-path">'+esc(part)+'</span>').join('')
+        +'</div>' : '';
+    return '<article class="turn system-note"><div class="turn-main">'
+      + '<div class="turn-meta"><span class="system-mark" aria-hidden="true">↻</span>'
+      + '<b>' + esc(t('Context reduced')) + '</b>'
+      + (m.round ? '<span>' + esc(t('round')) + ' ' + m.round + '</span>' : '')
+      + '<span class="turn-time">' + at(m.t) + '</span></div>'
+      + '<div class="turn-body">' + esc(head) + '</div>' + chips
+      + '</div></article>';
+  }
   return '<article class="turn"><div class="turn-main">'
     + '<div class="turn-meta"><span class="role-mark generator" aria-hidden="true">G</span><b>Generator</b>' + (m.round ? '<span>round ' + m.round + '</span>' : '')
     + '<span class="turn-time">' + at(m.t) + '</span></div><div class="turn-body">'
@@ -5460,12 +5522,22 @@ function runCard(d){
   const stateNames = {done:'Done',failed:'Stopped',current:'Active',pending:'Waiting'};
   const actorNames = {generator:'Generator',auditor:'Auditor',compute:'Compute',tool:'Tool',loop:'Process',done:'Result',input:'You'};
   const actorMarks = {generator:'G',auditor:'A',compute:'H',tool:'M',loop:'↻',done:'✓'};
-  const eventRows = p && p.steps ? p.steps.slice(-12).map(s => '<div class="audit-event">'
-    + '<span class="event-mark ' + esc(s.actor) + '">' + esc(actorMarks[s.actor]||'·') + '</span>'
-    + '<div class="event-main"><div class="event-line"><b>' + esc(actorNames[s.actor]||s.actor)
-    + '</b><span>' + esc(s.text) + '</span></div>'
-    + (s.detail ? '<div class="event-detail">' + esc(s.detail) + '</div>' : '') + '</div>'
-    + '<time class="event-time">' + at(s.t) + '</time></div>').join('') : '';
+  const eventRows = p && p.steps ? p.steps.slice(-12).map(s => {
+    // A condensation notice is the runtime reporting on itself, so it does not
+    // borrow the generator name or mark here either, and it localises from
+    // the wire fields rather than showing English under 中文.
+    const system = s.kind === 'context_condensed';
+    const mark = system ? '↻' : (actorMarks[s.actor]||'·');
+    const who = system ? t('Context reduced') : (actorNames[s.actor]||s.actor);
+    const line = system ? localeText(s.text_i18n, s.text) : s.text;
+    const detail = system ? localeText(s.detail_i18n, s.detail) : s.detail;
+    return '<div class="audit-event">'
+    + '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>'
+    + '<div class="event-main"><div class="event-line"><b>' + esc(who)
+    + '</b><span>' + esc(line) + '</span></div>'
+    + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
+    + '<time class="event-time">' + at(s.t) + '</time></div>';
+  }).join('') : '';
   const activityTitle = p && !p.finished ? 'Live activity' : 'Run activity';
   const activity = eventRows || '<div class="activity-empty">The generator and auditor show what they are doing here while a task runs.</div>';
   const task = p && p.task ? p.task : titleOf(d);
