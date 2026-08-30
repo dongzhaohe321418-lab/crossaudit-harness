@@ -342,8 +342,12 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     add("python", sys.version_info >= (3, 10),
         f"{sys.version.split()[0]}", "CrossAudit requires Python 3.10+",
         copy="doctor.python")
+    # Doctor already named the mode and the digest; it did not say WHERE. The
+    # path is appended to that same line rather than given a second sentence of
+    # its own — two phrasings for one truth is its own defect (D40).
     add("install", ident["install_mode"] != "unknown",
-        f"{ident['install_mode']}, code digest {ident['code_digest_sha256'][:12]}",
+        f"{ident['install_mode']}, code digest "
+        f"{ident['code_digest_sha256'][:12]}, at {running_from()[1]}",
         "reinstall from a wheel if this says unknown", copy="doctor.install")
     if ident["install_mode"] not in _selfid.ADMISSIBLE_MODES:
         add("admission-capable", False,
@@ -531,10 +535,6 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     verdict = adm.assess(root=cfg.root, paired=bool(cfg.audit_repo),
                          controller_persistent=caps["persistent"],
                          controller_atomic=caps["atomic"], online=args.online)
-    mode, where = running_from()
-    note("install origin",
-         i18n.t("origin.doctor.detail", version=__version__, mode=mode, path=where),
-         copy="origin.doctor")
     note("admission tier", f"{verdict.tier} — {adm.TIER_MEANING[verdict.tier]}",
          copy="doctor.tier")
     for shortfall in verdict.shortfalls:

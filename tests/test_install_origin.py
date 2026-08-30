@@ -88,51 +88,24 @@ def test_two_installs_are_distinguishable_from_their_own_output(monkeypatch):
         assert "another" not in out.lower() or "PATH" in out
 
 
-@pytest.mark.parametrize("lang", ["en", "zh"])
-def test_doctor_says_which_install_this_is_in_both_languages(
-        tmp_path, monkeypatch, capsys, lang):
-    """Doctor is the command a confused person runs, so it says it out loud.
-
-    An INFO posture line, not a check: "which install is this" has no pass/fail
-    axis, and a green marker beside it would be the defect this project has
-    spent the week removing. Posture lines render in the DEFAULT view, which is
-    where the confused person is.
-    """
-    project = tmp_path / f"p-{lang}"
-    project.mkdir()
-    monkeypatch.setenv("HOME", str(tmp_path / f"home-{lang}"))
-    monkeypatch.setenv("CROSSAUDIT_KEYS_FILE", str(tmp_path / f"k-{lang}.env"))
-    for env in ("CROSSAUDIT_AUDITOR_KEY", "CROSSAUDIT_GENERATOR_KEY"):
-        monkeypatch.delenv(env, raising=False)
-    monkeypatch.chdir(project)
-    main.cmd_init(argparse.Namespace(
-        path=str(project), github=False, force=True, no_console=True, json=False,
-        auditor_vendor="anthropic", auditor_model="claude-opus-4",
-        generator_vendor="openai", generator_model="gpt-5", profile="own",
-        lang="en"))
-    capsys.readouterr()
-    from crossaudit.config import load as _load
-    _load(project / "crossaudit.yml")
-    main.main(["doctor", "--lang", lang])
-    out = capsys.readouterr().out
-
-    flat = re.sub(r"\s+", " ", out)
-    assert i18n.CATALOGUE[lang]["origin.doctor.label"] in flat
-    mode, where = main.running_from()
-    assert mode in flat and where in flat
-    assert i18n.fallbacks() == (), f"fell back: {i18n.fallbacks()}"
-    # A posture, never a verdict.
-    assert "[PASS] install origin" not in out
-    assert "✗ " + i18n.CATALOGUE[lang]["origin.doctor.label"] not in out
-
-
-def test_the_origin_line_is_a_posture_not_a_counted_check(
+def test_doctor_names_where_it_is_running_from_on_its_own_existing_line(
         tmp_path, monkeypatch, capsys):
-    """It must not move the tally, because it tests nothing."""
-    project = tmp_path / "tally"
+    """Doctor already said the mode and the digest. It did not say WHERE.
+
+    The path is appended to that same line rather than given a second sentence:
+    two phrasings for one truth is its own defect. This is deliberately the
+    smaller change — an earlier draft added a separate posture line, which was
+    a second sentence for a fact doctor already reports.
+
+    Note for whoever reads this next: on this branch the `install` check PASSES,
+    and passing checks collapse out of the default view, so this line is visible
+    under `--all` rather than by default. `--version` is the surface a person
+    actually compares between two installs, and it carries the same facts.
+    """
+    project = tmp_path / "where"
     project.mkdir()
-    monkeypatch.setenv("HOME", str(tmp_path / "home-tally"))
-    monkeypatch.setenv("CROSSAUDIT_KEYS_FILE", str(tmp_path / "k-tally.env"))
+    monkeypatch.setenv("HOME", str(tmp_path / "home-where"))
+    monkeypatch.setenv("CROSSAUDIT_KEYS_FILE", str(tmp_path / "k-where.env"))
     monkeypatch.chdir(project)
     main.cmd_init(argparse.Namespace(
         path=str(project), github=False, force=True, no_console=True, json=False,
@@ -143,9 +116,17 @@ def test_the_origin_line_is_a_posture_not_a_counted_check(
     from crossaudit.config import load as _load
     _load(project / "crossaudit.yml")
     main.main(["doctor", "--all"])
-    rows = [ln for ln in capsys.readouterr().out.splitlines()
-            if "install origin" in ln]
-    assert rows and rows[0].startswith("[INFO]"), rows
+    out = capsys.readouterr().out
+
+    mode, where = main.running_from()
+    rows = [ln for ln in out.splitlines() if "] install " in ln]
+    assert len(rows) == 1, f"expected exactly one install line, got {rows}"
+    assert mode in rows[0] and where in rows[0], rows[0]
+    assert "code digest" in rows[0], "doctor's own vocabulary was replaced"
+    # And no second sentence anywhere restating the same fact.
+    assert out.count(where) == 1, (
+        f"the running-from path appears {out.count(where)} times; one truth, "
+        f"one sentence")
 
 
 # ------------------------------------------- D10: demonstrate the guard fails

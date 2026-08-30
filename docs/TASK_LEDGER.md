@@ -1184,24 +1184,40 @@ WHAT IT DOES NOT DO, deliberately. It never looks for other installs and never
              self-evident without anyone claiming it, and a test asserts the
              output contains no such claim.
 
-SURFACES:    3. `--version` (the thing a person compares), the front door (the
-             first thing they read when nothing is set up), and `doctor` — which
-             is the command a confused person actually runs. In doctor it is an
-             INFO POSTURE line, not a check: "which install is this" has no
-             pass/fail axis, a green marker beside it would be the defect this
-             project has spent the week removing, and posture lines render in
-             the DEFAULT view where the confused person is. A test asserts it
-             does not move the tally.
+SURFACES:    2 new, 1 extended. `--version` (the thing a person compares) and
+             the front door (the first thing they read when nothing is set up)
+             both now name mode and path. Doctor is NOT given a line of its own:
+             it already reports the mode and the code digest, so the resolved
+             path is appended to THAT line. Two phrasings for one truth is its
+             own defect, and a test asserts the path appears exactly once in
+             doctor's whole output.
 
-CHINESE PARITY: translated in the same commit as the English, not retrofitted.
-             The doctor line is REACHABLE in Chinese today, because `doctor`
-             carries `--lang` from wave 2, and a test drives it in both
-             languages. The `--version` and front-door strings are translated
-             and NOT yet reachable, because the front door is D21 wave 3 and
-             `--lang` is deliberately not offered there — one Chinese line in an
-             otherwise English front door is the seam D21 exists to prevent. So:
-             parity satisfied for the doctor surface, present-but-unreachable
-             for the other two, and that is stated rather than counted as done.
+             SHRUNK MID-FLIGHT, and the first draft was wrong. It added a
+             separate `install origin` posture line to doctor, which was a
+             second sentence for a fact doctor already reports. The manager's
+             correction — read doctor first, match its vocabulary — removed a
+             whole surface and its two tests.
+
+             ONE FACT THE CORRECTION RESTED ON DOES NOT HOLD HERE, measured
+             rather than assumed. The observation that "doctor already reports
+             install: frozen-app" was made against the shipped BUNDLE, whose
+             doctor lists every line. On this branch the first-three-minutes
+             restructure collapses passing checks, and `install` PASSES — so it
+             is visible under `--all` and NOT in the default view. That does not
+             change the fix (`--version` is the comparison surface either way)
+             but it is a question for the manager: whether "which install is
+             this" should be visible by default. Not decided unilaterally.
+
+CHINESE PARITY: translated in the same commit as the English rather than
+             retrofitted, and NOT YET REACHABLE — stated plainly rather than
+             counted as done. `origin.front_door` has its Chinese; `--version`
+             is argparse's own action and carries no copy of ours. Neither
+             surface is offered `--lang`, because the front door is D21 wave 3
+             and one Chinese line in an otherwise English front door is exactly
+             the seam D21 exists to prevent. Doctor's extended line is the
+             machine detail string, which is not translated by design (SPEC-7
+             §4: `--json` and `--all` are a scripting contract).
+             So: parity PRESENT, reachable when wave 3 lands. Not satisfied.
 
 ACCEPTANCE:  1. `running_from()` reports this process only, and its path exists.
              2. `--version`, the front door and doctor all name mode and path.
