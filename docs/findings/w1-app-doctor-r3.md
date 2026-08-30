@@ -86,3 +86,127 @@ The row is GUI-only by design, so it is outside what this test constrains — th
 comparison runs CLI-to-app. It needs no exclusion because it is not a CLI check.
 Now that the test is real, it will have an opinion about any CLI counterpart, as
 it should.
+
+---
+
+# R4 — self-check at the manager's request: two defects, both mine
+
+Re-checked `cc87378` per the D64 instruction, and the check found two things
+the branch shipped wrong. Both were found by mutating the production side and
+watching what the guards did, which is the only method that has worked here.
+
+## 1. The parity guard was real on one side and blind on the other
+
+**Mutation A — a real, unmirrored check added to the shipped `cmd_doctor`:**
+
+    FAILED test_cli_doctor_checks_are_mirrored_or_named_excluded
+    FAILED test_the_parity_guard_reddens_for_an_unmirrored_cli_check
+    E  CLI doctor checks with no GUI mirror and no named exclusion:
+       ['unmirrored probe']
+    restored -> 4 passed
+
+Reproduced. The CLI side is derived by calling `cmd_doctor`, and it reddens.
+
+**Mutation B — the app doctor's mirror deleted instead:** I renamed the `python`
+row's id in `app_doctor.collect()`, so the CLI's `python` check no longer has a
+mirror anywhere.
+
+    4 passed
+
+**Green.** The guard did not notice that the mirror it names had been deleted.
+
+Because `python` sat in `CLI_ONLY` with the reason *"mirrored by the app's
+`python` row"* — and `_unmirrored` consults `CLI_ONLY` first and short-circuits.
+Six entries were justified that way. Four of them (`install`, `tls trust store`,
+`gh cli`, `constitution`) were *also* in `ALIASES`, which reads as covered and is
+not: the alias branch is unreachable for any name `CLI_ONLY` already matched.
+
+So an exclusion whose stated reason is a claim that a mirror exists is a claim
+nothing executes. **That is the D64 defect — a parity assertion with nothing
+behind it — reproduced inside the fix for D64, by me, while writing the fix.**
+It is the third time I have seen the shape and the first time I have seen it in
+my own repair of it.
+
+FIX: a mirror claim belongs in `ALIASES`, which *is* executed against the ids
+`app_doctor.collect()` emits. The six moved. Plus
+`test_no_exclusion_is_justified_by_a_mirror_it_does_not_check`, the structural
+guard, alongside the two existing ones about absence and staleness.
+
+After the fix, both mutations redden, by name:
+
+    A -> FAILED ... ['unmirrored probe']       (CLI side derived)
+    B -> FAILED ... ['python']                 (app side derived)
+    baseline and restored -> 5 passed
+
+## 2. The PATH-identity row did not fire in the state it was built for
+
+D66 says execute the change against the reported symptom. The symptom is live on
+this machine, so I ran the row against it rather than against a fixture:
+
+    which crossaudit -> /Library/Frameworks/.../3.13/bin/crossaudit
+    that binary says -> crossaudit 3.2.0 (receipt schema 2)
+    our __version__  -> 4.15.0
+
+    app_doctor.path_identity()  ->  {'state': 'same', ...}   NO ROW
+
+**Silent.** `mine = Path(sys.executable).resolve()` follows a virtualenv's
+`bin/python` symlink back to the base prefix — which is the directory the stale
+3.2.0 script is in. The sibling test then called the shadowing install a
+sibling. The row whose entire purpose is saying which program answers you was
+quiet exactly when there was something to say, and the metadata proving it was
+3.2.0 was on disk the whole time, unread, because the heuristic returned first.
+
+I reported this row as verified in my handoff. What I verified was
+`_other_crossaudit_version` against the real 3.2.0 install — the version
+reader, which was correct. I never ran `path_identity()` itself on this machine.
+
+Worse, and this is the part worth keeping: the test that guarded the silence
+bias, `test_our_own_install_is_not_reported_as_a_stranger`, pointed at
+`Path(sys.executable).resolve().parent / "crossaudit"` — on this machine, the
+3.2.0 file. It asserted "same" about a genuine stranger and passed. **It was
+validated by the environment that has the defect.**
+
+FIX: the version evidence outranks the directory heuristic. If the other
+install's version is readable and is not ours, it is a different program however
+the paths sit; the sibling test is only reached when the filesystem has not
+already answered. Sameness is asked of the interpreter as invoked as well as
+resolved, and the row now names the invoked interpreter as "this app" rather
+than the base prefix a venv borrows a binary from.
+
+    app_doctor.path_identity()  ->  {'state': 'different', 'version': '3.2.0', ...}
+
+    the row collect() renders, on this machine:
+      Typing `crossaudit` runs /Library/Frameworks/.../3.13/bin/crossaudit
+      (version 3.2.0). This app is 4.15.0 at /…/crossaudit_v4/.venv/bin/python.
+
+**Mutation C — the `resolve()`-only test restored:**
+
+    FAILED test_a_virtualenv_does_not_mistake_its_base_prefix_for_itself
+    E  - different
+    E  + same
+    and the live machine under the mutation: state = same
+
+The regression test builds the two prefixes on disk and asserts the topology it
+depends on before asserting behaviour, so it cannot pass for the wrong reason if
+the layout stops reproducing.
+
+## executes_foreign = no, and it is now a fact about the live call
+
+The existing test patches `subprocess.run`/`Popen`/`check_output` to raise. In
+addition, the real call on this machine was run under a CPython audit hook over
+`subprocess.Popen`, `os.exec*` and `os.posix_spawn`:
+
+    processes spawned during path_identity(): NONE
+
+## unknown_honest = yes, unchanged
+
+An unreadable layout still yields `version: ""` and the row still says *"Its
+version could not be determined without running it, which CrossAudit does not
+do."* The new short-circuit only fires on a version it actually read.
+
+## What this does NOT change
+
+The CLI failure case is still not closable from our side, exactly as recorded in
+`w1-path-identity.md`: a person who types `crossaudit` still reaches 3.2.0, and
+no change of ours executes in that process. What is now true, and was not, is
+that a person who opens the app is told which program that is.

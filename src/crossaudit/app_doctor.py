@@ -177,30 +177,54 @@ def path_identity(*, which=None) -> dict:
 
     `which` is injectable so the states can be driven; the default is a plain
     filesystem lookup and nothing is executed at any point.
+
+    THE VERSION EVIDENCE OUTRANKS THE DIRECTORY HEURISTIC, and it has to. The
+    first version of this asked only whether the script was a sibling of
+    `Path(sys.executable).resolve()`. Executed against the real failure state on
+    the machine that reported it — a 3.2.0 console script in the framework `bin`
+    — it returned "same" and printed no row: `.resolve()` follows a virtualenv's
+    `bin/python` symlink back to the base prefix, which is the very directory
+    the stale script lives in. So the heuristic reported "that is us" about the
+    program the row exists to warn about. Reading the other install's version
+    first settles it from the filesystem, whatever the two paths look like.
     """
     import shutil
 
     resolve = which or (lambda name: shutil.which(name))
     found = resolve("crossaudit")
-    mine = Path(sys.executable).resolve()
+    invoked = Path(sys.executable)
+    mine = invoked.resolve()
+    # What the row REPORTS as "this app" is the interpreter as invoked, which in
+    # a virtualenv is this install and not the base prefix it borrows a binary
+    # from. Sameness is still judged against both forms below.
+    here = str(invoked if invoked.is_absolute() else mine)
     if not found:
-        return {"state": "absent", "path": "", "version": "", "mine": str(mine)}
+        return {"state": "absent", "path": "", "version": "", "mine": here}
     other = Path(found).resolve()
+    version = _other_crossaudit_version(other)
+    if version and version != __version__:
+        return {"state": "different", "path": str(other), "version": version,
+                "mine": here}
     # Inside this bundle, or beside this interpreter: the command a person types
     # is us. A pip or source install puts the console script in the same `bin`
     # as the interpreter running this code, and the frozen bundle has nothing
-    # else beside its core, so the sibling test is right in both.
+    # else beside its core, so the sibling test is right in both. It is asked of
+    # the interpreter AS INVOKED as well as resolved, because those differ in a
+    # virtualenv and the invoked one is the install the person actually has.
     #
     # The bias is deliberately toward "same", i.e. toward saying nothing. This
     # is the surface whose whole purpose is telling somebody which program is
     # answering them, so a confident wrong "there is another one" is worse than
     # any other wrong answer in the product. Staying quiet costs a person
-    # nothing they did not already have.
-    if other == mine or mine.parent in other.parents or other.parent == mine.parent:
+    # nothing they did not already have — and it is now only reached when the
+    # filesystem did not already say the other install is a different version.
+    homes = {mine.parent, invoked.parent}
+    if (other == mine or other.parent in homes
+            or any(home in other.parents for home in homes)):
         return {"state": "same", "path": str(other), "version": "",
-                "mine": str(mine)}
+                "mine": here}
     return {"state": "different", "path": str(other),
-            "version": _other_crossaudit_version(other), "mine": str(mine)}
+            "version": version, "mine": here}
 
 
 def collect(cfg: Config, *, online: bool = True) -> dict:

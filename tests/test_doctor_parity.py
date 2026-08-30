@@ -65,20 +65,6 @@ CLI_ONLY: dict[str, str] = {
     "config": (
         "whether one directory holds a crossaudit.yml; the app surfaces this as "
         "project readiness"),
-    "constitution": (
-        "whether one project's rules file exists; mirrored by the app's own "
-        "constitution row via the shared helper"),
-    "tls trust store": (
-        "mirrored by the app's `tls` row, which asks the same question of the "
-        "same trust store"),
-    "install": (
-        "mirrored by the app's `install` row"),
-    "gh cli": (
-        "mirrored by the app's `github_cli` row"),
-    "python": (
-        "mirrored by the app's `python` row"),
-    "git": (
-        "mirrored by the app's `git` row"),
     # The deterministic pack a PROJECT configured, reported one row per check.
     # Which checks are enabled is a property of that project's crossaudit.yml,
     # so the machine cannot be ready or unready for them.
@@ -97,6 +83,13 @@ CLI_ONLY: dict[str, str] = {
 #: CLI check name -> app check id, where the two ask the same question under
 #: different names. Anything not here and not in CLI_ONLY must match by name.
 ALIASES = {
+    # Every entry here is a CLAIM THAT A MIRROR EXISTS, and `_unmirrored`
+    # executes it against the ids `app_doctor.collect()` actually produced. A
+    # mirror claim parked in CLI_ONLY instead is never executed: deleting the
+    # app's row leaves the guard green. That is what mutation B found in this
+    # file's own exclusion list, so `python` and `git` moved here from there.
+    "python": "python",
+    "git": "git",
     "constitution": "constitution",
     # Both CLI rows ask about the same file and the app answers both with one
     # row built from the shared helper: is this project's constitution present
@@ -178,7 +171,7 @@ def test_every_exclusion_names_a_check_that_exists(cfg, monkeypatch, capsys):
     cli = _cli_check_names(cfg, monkeypatch, capsys)
     # Only the checks this fixture can reach are asserted; ones behind --online
     # or a broken install are listed here so the set stays honest.
-    unreachable = {"gh cli", "isolation minimum", "admission-capable",
+    unreachable = {"isolation minimum", "admission-capable",
                    "  toward enforced"}
     stale = {name for name in CLI_ONLY
              if name not in cli and name not in unreachable
@@ -197,3 +190,24 @@ def test_no_exclusion_is_justified_by_mere_absence():
             if "not implemented" in why.lower() or "currently absent" in why.lower()
             or why.strip().lower().startswith("the gui does not have")]
     assert lazy == [], f"exclusions justified by their own absence: {lazy}"
+
+
+def test_no_exclusion_is_justified_by_a_mirror_it_does_not_check():
+    """A mirror claim belongs in ALIASES, where something executes it.
+
+    Found by mutating the app doctor rather than the CLI one: deleting the app's
+    `python` row left this file green, because "python" sat in CLI_ONLY with the
+    reason "mirrored by the app's `python` row". CLI_ONLY is consulted first and
+    short-circuits, so the claim that a mirror exists was never checked against
+    the ids `app_doctor.collect()` emits — the D64 defect (a parity claim with
+    nothing executing it) reproduced inside the fix for D64.
+
+    Four of the six were in ALIASES *as well*, which reads as covered and is not:
+    the alias branch is unreachable for any name CLI_ONLY already matched.
+    """
+    claims = {name: why for name, why in CLI_ONLY.items()
+              if "mirror" in why.lower()}
+    assert claims == {}, (
+        f"exclusions asserting a mirror that nothing executes: "
+        f"{sorted(claims)}. Move each to ALIASES so the app doctor's own output "
+        f"has to contain the row.")

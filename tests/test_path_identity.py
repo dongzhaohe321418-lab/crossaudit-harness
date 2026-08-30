@@ -28,12 +28,86 @@ def test_no_other_crossaudit_on_path_says_nothing():
     assert app_doctor.path_identity(which=lambda _n: None)["state"] == "absent"
 
 
-def test_our_own_install_is_not_reported_as_a_stranger():
-    """The bias is toward silence; a false alarm here is the worst wrong answer."""
+def _install(root: Path, version: str | None) -> Path:
+    """A real pip-shaped prefix on disk: `bin/crossaudit` plus its dist-info.
+
+    Built rather than mocked, because the defect this file now guards was in
+    how two real paths relate to each other — a fixture returning a canned
+    state could not have shown it, and did not.
+    """
+    (root / "bin").mkdir(parents=True, exist_ok=True)
+    script = root / "bin" / "crossaudit"
+    script.write_text("#!/usr/bin/env python\n")
+    site = root / "lib" / "python3.13" / "site-packages"
+    site.mkdir(parents=True, exist_ok=True)
+    if version:
+        (site / f"crossaudit-{version}.dist-info").mkdir(exist_ok=True)
+    return script
+
+
+def test_our_own_install_is_not_reported_as_a_stranger(tmp_path, monkeypatch):
+    """The bias is toward silence; a false alarm here is the worst wrong answer.
+
+    This test used to point at `Path(sys.executable).resolve().parent`, i.e. at
+    whatever `crossaudit` happened to sit beside the real interpreter. On the
+    machine that reported D40 that file is the 3.2.0 install, so the test was
+    asserting "same" about a genuine stranger and passing. **It was validated by
+    the environment that has the defect.** It builds its own prefix now.
+    """
     import sys
 
-    beside_me = str(Path(sys.executable).resolve().parent / "crossaudit")
-    assert app_doctor.path_identity(which=lambda _n: beside_me)["state"] == "same"
+    script = _install(tmp_path / "mine", __version__)
+    interpreter = tmp_path / "mine" / "bin" / "python3.13"
+    interpreter.write_text("")
+    monkeypatch.setattr(sys, "executable", str(interpreter))
+    assert app_doctor.path_identity(which=lambda _n: str(script))["state"] == "same"
+
+
+def test_a_virtualenv_does_not_mistake_its_base_prefix_for_itself(tmp_path,
+                                                                  monkeypatch):
+    """The live D40 failure state, reproduced as the two directories it is.
+
+    A virtualenv's `bin/python` is a symlink into the base prefix, so
+    `Path(sys.executable).resolve()` lands in the base `bin` — the directory the
+    stale `crossaudit` is in. The sibling test then called the shadowing install
+    a sibling and the row stayed silent, which is the one wrong answer this
+    surface cannot afford: it is silent precisely when there is something to
+    say. Executed against the real machine, the row printed nothing at all.
+    """
+    import sys
+
+    base_script = _install(tmp_path / "base", "3.2.0")
+    base_python = tmp_path / "base" / "bin" / "python3.13"
+    base_python.write_text("")
+    venv_bin = tmp_path / "venv" / "bin"
+    venv_bin.mkdir(parents=True)
+    venv_python = venv_bin / "python"
+    venv_python.symlink_to(base_python)
+    monkeypatch.setattr(sys, "executable", str(venv_python))
+
+    assert Path(sys.executable).resolve().parent == base_script.parent, (
+        "fixture does not reproduce the topology: the resolved interpreter must "
+        "land in the same directory as the shadowing script")
+
+    row = app_doctor.path_identity(which=lambda _n: str(base_script))
+    assert row["state"] == "different", (
+        "the shadowing install was reported as this one")
+    assert row["version"] == "3.2.0"
+    assert row["mine"] == str(venv_python), (
+        "the row should name the interpreter as invoked, not the base prefix "
+        "it borrows a binary from")
+
+
+def test_the_same_version_beside_us_stays_quiet(tmp_path, monkeypatch):
+    """Version evidence outranks the heuristic only when it CONTRADICTS it."""
+    import sys
+
+    script = _install(tmp_path / "mine", __version__)
+    interpreter = tmp_path / "mine" / "bin" / "python3.13"
+    interpreter.write_text("")
+    monkeypatch.setattr(sys, "executable", str(interpreter))
+    row = app_doctor.path_identity(which=lambda _n: str(script))
+    assert row["state"] == "same", "a same-version sibling is not worth a row"
 
 
 def test_a_different_install_is_named_with_both_paths():
