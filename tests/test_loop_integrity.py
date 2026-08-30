@@ -590,7 +590,18 @@ def test_escalated_cycle_cannot_be_routed_around(science, cfg, transcripts):
 
 
 def test_transient_failure_does_not_spend_the_revision_budget(science, cfg):
-    """Re-entering an open round resumes it; only a verdict advances the loop."""
+    """Re-entering an OPEN round resumes it; a decided one is not re-entered.
+
+    The property this test exists for is the first half and is unchanged: five
+    crashed attempts must not spend the revision budget, because a round that
+    never reached a verdict is not a decision.
+
+    The contrast at the end used to assert that a verdict ADVANCES the round on
+    the same commit. That is the erasure path D34 demonstrated and D36 closed —
+    the new round replaced the recorded decision rather than adding to it. The
+    contrast is still here and still shows that only a verdict changes anything;
+    what a verdict now does is CLOSE that commit rather than re-open it.
+    """
     sha = write_increment(science, GOOD_RESULTS, "Fine.", "clean")
     store = StateStore(cfg.root / cfg.state_dir / "state.json")
     first = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha))
@@ -599,7 +610,9 @@ def test_transient_failure_does_not_spend_the_revision_budget(science, cfg):
         assert again["round"] == first["round"]
     store.record_verdict(first["cycle_id"], sha, "BLOCKED", "r1", cfg.max_rounds)
     after = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha))
-    assert after["round"] == first["round"] + 1          # a verdict does advance it
+    assert after["round"] == first["round"]              # not advanced...
+    assert after.get("verdict_already_recorded") is True  # ...because it is decided
+    assert after["status"] == "BLOCKED"
 
 
 def test_admission_is_single_use_under_concurrency(science, cfg, transcripts, monkeypatch):
