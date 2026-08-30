@@ -3613,3 +3613,41 @@ from an absence into a detectable event, which is the entire point: the class
 that produced this workstream's founding defect — *a send that failed while the
 interface showed nothing* — is the one class no suite and no structural sweep
 can reach.
+
+## D89 — Containers present, contents absent: three incidents, one law
+
+`READINESS TREE: CONFIRMED-S2-FIX-BEFORE-MERGE, completable=no,
+cause=missing-markup, locales=2, pattern=systemic.`
+
+I asked whether three accessibility findings tonight were incidents or a
+pattern. The answer:
+
+> **Three tonight, one law: live regions present and never containing text; a
+> listbox container whose children carry no option role; the readiness list as
+> one continuous node.**
+
+**Containers present, contents absent.** That is the accessibility form of the
+class this codebase is made of — correct at the producer, wrong at the
+consumer — and it is *systemic*, so it is one spec item rather than three
+fixes.
+
+**`completable=no` is the part that matters most.** A screen-reader user cannot
+complete readiness. Every `names_computed` check we have passes on this surface:
+the row names are all computed and present. **Name presence is what our guards
+assert; whether a person can navigate item by item is a different property and
+nobody had measured it** until it was driven.
+
+This connects three things already in the record:
+- *"Eight empty regions prove wiring, not speech"* (D74) — the same law, stated
+  one instrument earlier.
+- **Condition 4** was reported as partially shown on the strength of *0 unnamed
+  of 261 computed names*. That number is true and it does not establish a
+  screen-reader user can complete anything. Another case of evidence being real
+  and about something adjacent.
+- The seam sweep predicted exactly this: **no suite spans runtime event through
+  browser DOM and accessibility tree**, so a DOM-level pass says nothing about
+  the tree a person meets.
+
+RULE: an accessibility guard asserts what a container **contains** and whether
+the structure is **navigable**, never that names exist. Presence of names on an
+unusable structure is the failure mode all three instances share.
