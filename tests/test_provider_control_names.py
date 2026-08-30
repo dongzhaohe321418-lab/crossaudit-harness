@@ -13,6 +13,22 @@ against its own accessibility tree and live in
 `_ui_findings/spec13/browser_spec13.mjs`, with the mutation runner beside them
 (`mutate.py`). Every one of the eight was observed to fail against its mutation.
 
+**Which seam each guard stops at, stated rather than implied.** A suite's
+verdict is a claim about the seam it stops at — thirty streaming tests passed
+while a page registered no listener, because they stopped at the transport.
+G1/G2/G3/G8 query Chromium's accessibility tree (`Accessibility.queryAXTree`,
+`getByRole({name})`). G7 does now too, and did NOT at first: it read the status
+badge's `textContent` and called that the accessible name. The two coincide for
+a plain span, so it passed — for the wrong reason, and it would have kept
+passing if the badge were hidden from assistive technology, given an overriding
+`aria-label`, or replaced by a CSS `::before`. A mutation now pins the
+difference: `aria-hidden="true"` on the badge leaves the text in the DOM and
+turns G7 red, which the textContent version could not have done.
+
+G5 asserts what the live region CONTAINS after an action — one announcement,
+naming the provider — not how many regions exist. Empty regions prove wiring,
+not speech.
+
 **What this file is.** The regression guard for the parts that are decidable
 from the source without a browser, named for what they actually check:
 
