@@ -1677,3 +1677,34 @@ all-clear D29 forbids. It is being reviewed now, post-merge, cross-vendor,
 against the artifact. The gap is recorded under my name regardless of what
 the review returns, because the defect is that I merged without establishing
 the gate, not that the code is necessarily bad.
+
+## D45 — Context exhaustion is a management failure, not an agent failure
+
+I noticed the UI engineer at **97% context** only because it happened to be
+visible in a pane read I did for another reason. It was mid-slice with two
+fresh S1s queued — a normalisation seam and a contradicting headline, both
+needing the whole state in view.
+
+I have been monitoring agent *state* (working / done / stalled) and not agent
+*capacity*. An agent at 97% is nominally "working" and is about to lose
+everything it has not written down. The monitor cannot see that; I have to.
+
+MECHANISM: when an agent approaches its context limit, it stops, commits what
+is coherent, and writes `_handoff/<name>-<sha>.md` containing what a fresh
+agent with none of its context would need — what the slice covers and does
+not, queued findings restated in its own words (so I can tell whether they
+arrived intact), any rule it discovered that exists nowhere else in writing,
+and anything it believes but has not proven, marked as such. Then a clean
+restart. **It loses the conversation; it does not lose the work.**
+
+Do not let it "just finish first." A subtle fix written by an agent about to
+be compacted mid-reasoning is the worst of both — the work is done badly and
+the context is gone anyway.
+
+This is D38 generalised. D38 said a finding that lives only in a pane can
+evaporate. So can a *method*: the UI engineer's locale-timing rule
+(announcing synchronously speaks the English source while the accessible
+name, built from the same two nodes, is already translated, because the
+locale observer runs a microtask later) exists nowhere in writing, and three
+occasions where its guard went red for the wrong reason are pure hard-won
+calibration a fresh agent would re-learn expensively.
