@@ -2076,3 +2076,61 @@ that has never been observed doing its job has not been shown to have one.
 "a separate doctor concern", and `app_doctor` has no drift check. It would be
 true of the CLI and false of the GUI. The security auditor blocked it using my
 own regrading argument — the working case being the one nobody meets.
+
+## D54 — The fix made the failure coherent instead of contradictory
+
+Cycle-integrity R2 (`2e22e3c`): DO NOT MERGE. Four of five closed — all three
+`cmd_run` omissions, the five unpinned-by-design paths untouched, skills
+deriving from subject-commit bytes, the impossible same-SHA dispute command
+gone with honest output. **Receipt bytes equal auditor bytes 4/4 routes**, so
+the second-read defect the author set out to fix is fixed.
+
+**And the S0 is still open, through the fix.** The shared `GoverningStandard`
+reads the *working* constitution whenever the selected commit equals the
+latest constitution commit, then names that commit:
+
+| Route | Cycle pin | Auditor bytes | Receipt hash | Receipt commit |
+|---|---|---|---|---|
+| `audit`, new | C | **W** | **W** | C |
+| `run`, new | C | **W** | **W** | C |
+| both pinned continuations | C0 | C0 | C0 | C0 |
+
+Auditor and receipt now agree with each other while both disagree with the Git
+object they cite. The author corrected "two reads disagree" by making it one
+read; the one read is from the wrong place.
+
+**Consolidation was the right move and it made the failure coherent instead of
+contradictory — which is worse.** A contradiction is detectable. A consistent
+wrong answer is not. This is the renderer-agrees-with-itself defect arriving at
+the audit core *by way of its own repair*, and it is the sharpest form of the
+class we have hit twelve times today.
+
+The trap is the condition: `selected commit == latest constitution commit` is
+exactly the case where the working file may be dirty and differ from the
+commit. It reads as a safe shortcut — same commit, why re-read the object —
+and it is the single branch where the shortcut is wrong. Ruling: **delete the
+equality shortcut, do not guard it.** A fast path that is right except in the
+case that matters is not a fast path. The pinned continuations already show
+the correct shape in the author's own code.
+
+### Verifying the author's self-report paid for itself
+
+The author reported catching three guards that could not reach the code they
+guard, and fixing them. I asked for independent verification anyway, saying it
+was not doubt but that such a claim must not rest on the author's word —
+**including when the author is the one who found it.** The auditor's aggregate:
+`guards_reach=no`. The class was wider than the instances the author caught.
+
+### A count that looks clean is not a clean count
+
+Reported 1669 is not reproducible. The detached SHA collects 1,672 (1,670
+executable, 2 skipped). Two full runs each produced **1,669 passed and one
+failure** — a different one each time: the prescribed GitHub flake, and a new
+one, an unexpected provider request in the project-deletion parameter. All
+1,670 pass in isolated reruns; **no single full run was green.**
+
+"1669 passed" and "1669 passed, 1 failed" are different facts that look
+identical once the second half is dropped. RULE: report collected total,
+passed, and failed — never the passed number alone. And an unexpected
+*provider request* on a deletion path is not obviously a flake; it is being
+diagnosed rather than re-run.
