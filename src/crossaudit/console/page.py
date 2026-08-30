@@ -1564,6 +1564,7 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
 .settings-nav-icon.diagnostics{--settings-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12h4l2-6 4 12 2-6h6'/%3E%3C/svg%3E")}
 .settings-nav-icon.advanced{--settings-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Cpath d='M7 9l3 3-3 3M13 15h4'/%3E%3C/svg%3E")}
 .settings-nav-button.dim{opacity:.4}
+.settings-result.active{background:var(--surface-2);outline:1px solid var(--accent);outline-offset:-1px}
 .settings-content{min-width:0;overflow:auto;padding:24px 25px}
 .settings-pane{margin:0}
 .settings-pane[hidden]{display:none}
@@ -1647,6 +1648,65 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
 .hpc-confirm>span{flex:1;min-width:0}
 .hpc-confirm b{display:block;color:var(--escalated)}
 .mcp-transport-fields.off{display:none}
+/* Add-MCP-server dialog: a two-step wizard that mirrors the real lifecycle
+   the server enforces (connect -> discover -> approve -> enable), with the
+   footer pinned so the primary action is never below the fold. */
+.mcp-wizard{display:flex;flex-direction:column;overflow:hidden}
+.mcp-wizard>.wizard-head,.mcp-wizard>.mcp-steps,.mcp-wizard>.wizard-foot{flex:none}
+.mcp-wizard-body{flex:1;min-height:0;overflow:auto}
+.mcp-steps{display:flex;gap:8px;margin:0;padding:11px 24px;list-style:none;
+  border-bottom:1px solid var(--line);background:var(--surface-2)}
+.mcp-steps li{display:flex;align-items:center;gap:9px;padding:5px 11px 5px 5px;
+  border-radius:var(--r-pill);color:var(--text-3)}
+.mcp-steps li.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-1)}
+.mcp-steps li>span{width:22px;height:22px;flex:none;display:grid;place-items:center;
+  border:1px solid var(--line-strong);border-radius:50%;font-size:var(--fs-caption);font-weight:600}
+.mcp-steps li.active>span{border-color:var(--accent);background:var(--accent);color:var(--on-accent,#fff)}
+.mcp-steps li.complete>span{border-color:var(--pass);color:var(--pass);font-size:0}
+.mcp-steps li.complete>span:after{content:"\2713";font-size:var(--fs-caption)}
+.mcp-steps li b{display:block;font-size:var(--fs-label);font-weight:600}
+.mcp-steps li small{display:block;font-size:var(--fs-caption);color:var(--text-3)}
+.mcp-advanced{margin-top:14px;border:1px solid var(--line);border-radius:var(--r-md);padding:0}
+.mcp-advanced>summary{padding:10px 13px;cursor:pointer;font-size:var(--fs-label);font-weight:500}
+.mcp-advanced[open]>summary{border-bottom:1px solid var(--line)}
+.mcp-advanced>.form-grid{padding:13px}
+.mcp-step-note{margin:14px 0 0;font-size:var(--fs-caption);color:var(--text-2);line-height:1.55}
+.mcp-connected{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:15px;
+  padding:11px 13px;border:1px solid color-mix(in srgb,var(--pass) 32%,var(--line));
+  border-radius:var(--r-md);background:var(--pass-bg)}
+.mcp-connected b{font-size:var(--fs-label);font-weight:600;color:var(--pass)}
+.mcp-connected small{font-size:var(--fs-caption);color:var(--text-2)}
+.mcp-approve-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:9px;margin-bottom:8px}
+.mcp-approve-head>span{font-size:var(--fs-label);font-weight:600}
+.mcp-approve-head>small{font-size:var(--fs-caption);color:var(--text-3);margin-right:auto}
+.mcp-approve{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.mcp-approve-row{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;cursor:pointer;
+  border-bottom:1px solid var(--line)}
+.mcp-approve-row:last-child{border-bottom:0}
+.mcp-approve-row:hover{background:var(--hover)}
+.mcp-approve-row input{margin-top:2px;flex:none;width:auto;accent-color:var(--accent)}
+.mcp-approve-row>span{flex:1;min-width:0}
+.mcp-approve-row b{display:block;font-size:var(--fs-label);font-weight:600;overflow-wrap:anywhere}
+.mcp-approve-row small{display:block;font-size:var(--fs-caption);color:var(--text-2);
+  margin-top:2px;line-height:1.5;overflow-wrap:anywhere}
+.mcp-risk{flex:none;font-style:normal;font-size:var(--fs-caption);padding:2px 8px;
+  border-radius:var(--r-pill);border:1px solid var(--line);color:var(--text-3)}
+.mcp-risk.destructive{border-color:color-mix(in srgb,var(--blocked) 45%,var(--line));
+  color:var(--blocked);background:var(--blocked-bg)}
+.mcp-risk.readonly{border-color:color-mix(in srgb,var(--pass) 40%,var(--line));color:var(--pass)}
+.mcp-empty{margin:0;padding:15px 13px;font-size:var(--fs-label);color:var(--text-2)}
+.mcp-approved{padding:11px 13px;border-radius:var(--r-md);
+  border:1px solid color-mix(in srgb,var(--pass) 32%,var(--line));background:var(--pass-bg)}
+.mcp-approved b{display:block;font-size:var(--fs-label);font-weight:600;color:var(--pass)}
+.mcp-approved small{display:block;margin-top:3px;font-size:var(--fs-caption);
+  color:var(--text-2);line-height:1.5}
+.mcp-link{border:0;background:none;padding:0;font:inherit;font-size:var(--fs-caption);
+  color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.mcp-link:disabled{color:var(--text-3);cursor:default;text-decoration:none}
+@media(max-width:760px){
+  .mcp-steps{padding:9px 14px}
+  .mcp-steps li small{display:none}
+}
 
 /* File preview: rendered locally, audited from the final binary. */
 :root,:root[data-theme="dark"]{--tok-key:#6CA8F8;--tok-str:#7DD3A8;--tok-num:#E0A66B;
@@ -2634,7 +2694,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <div class="settings-jump"><button type="button" class="secondary" data-settings-open="compute">Open remote compute</button><small class="settings-empty" data-scope-note hidden></small></div>
     </section><section class="form-section settings-pane" data-settings-pane="integrations" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Integrations</span><h3>MCP, skills, and tools</h3><p>Capabilities the generator can call while it works.</p></div>
       <p class="settings-empty">MCP servers and generator skills are configured inside the active project.</p>
-      <div class="settings-jump"><button type="button" class="secondary" data-settings-open="tools">Open tools &amp; skills</button><small class="settings-empty" data-scope-note hidden></small></div>
+      <div class="settings-jump"><button type="button" class="secondary" data-settings-open="tools">Open tools &amp; skills</button><button type="button" class="secondary" id="settings-open-skills" data-settings-open="skills">Manage Skills</button><small class="settings-empty" data-scope-note hidden></small></div>
     </section><section class="form-section settings-pane" data-settings-pane="usage" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Usage</span><h3>Usage and budgets</h3><p>Token and cost estimates, and the limits that pause a run.</p></div>
       <p class="settings-empty">Usage and budgets are tracked per project. Export isn't available here yet.</p>
       <div class="settings-jump"><button type="button" class="secondary" data-settings-open="usage">Open usage</button><button type="button" class="secondary" data-settings-open="runtime-budgets">Set budgets</button><small class="settings-empty" data-scope-note hidden></small></div>
@@ -2724,31 +2784,50 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
 </div>
 
 <div class="project-modal" id="mcp-modal" role="dialog" aria-modal="true" aria-labelledby="mcp-title">
-  <form class="wizard" id="mcp-form"><div class="wizard-head"><div><h2 id="mcp-title">Add MCP server</h2>
-    <p>Connect project tools through the official Model Context Protocol lifecycle.</p></div>
+  <form class="wizard mcp-wizard" id="mcp-form"><div class="wizard-head"><div><h2 id="mcp-title">Add MCP server</h2>
+    <p>Connect the server first, then choose which of its tools this project may use.</p></div>
     <span class="spacer"></span><button type="button" class="icon-button" id="close-mcp" aria-label="Close">×</button></div>
-    <div class="wizard-body"><input type="hidden" name="server_id" id="mcp-server-id"><div class="form-grid">
-      <label class="field"><span>Server name</span><input name="name" id="mcp-name" maxlength="80" required placeholder="Research tools"></label>
-      <label class="field"><span>Transport</span><select name="transport" id="mcp-transport"><option value="stdio">Local stdio</option><option value="http">Streamable HTTP</option></select></label>
-      <div class="field full mcp-transport-fields" id="mcp-stdio-fields"><div class="form-grid">
-        <label class="field"><span>Executable</span><input name="command" id="mcp-command" maxlength="1000" placeholder="npx" autocomplete="off"></label>
-        <label class="field"><span>Arguments</span><textarea name="args_text" id="mcp-args" maxlength="32000" placeholder="-y&#10;@example/mcp-server"></textarea><small class="field-help">One argument per line. CrossAudit never invokes a shell.</small></label>
-        <label class="hpc-confirm field full"><input name="approve_local_code" type="checkbox"><span><b>I approve this exact local command</b>A local MCP server runs with this app's user permissions and may access files or the network. Verify its publisher and arguments.</span></label>
-      </div></div>
-      <div class="field full mcp-transport-fields off" id="mcp-http-fields"><div class="form-grid">
-        <label class="field full"><span>MCP endpoint</span><input name="url" id="mcp-url" maxlength="2000" placeholder="Secure MCP endpoint URL"></label>
-        <label class="field"><span>Bearer token (optional)</span><input name="bearer_token" id="mcp-token" type="password" maxlength="16384" autocomplete="off" placeholder="Leave blank to keep saved token"></label>
-        <label class="hpc-confirm field"><input name="allow_private_network" type="checkbox"><span><b>Allow a verified private-network server</b>Use only for an enterprise hostname you control. Public remote servers must use HTTPS.</span></label>
-      </div></div>
-      <label class="field"><span>Request timeout</span><input name="timeout" type="number" min="1" max="300" value="30" required></label>
-      <label class="field"><span>Calls per task</span><input name="max_calls_per_task" type="number" min="1" max="20" value="5" required></label>
-      <label class="field full"><span>Approved tool names</span><input name="allowed_tools_text" id="mcp-allowed-tools" maxlength="12000" placeholder="search, fetch_record"><small class="field-help">Comma-separated exact names. Save once without enabling to inspect advertised tools first.</small></label>
-      <label class="hpc-confirm field full"><input name="allow_all_tools" type="checkbox"><span><b>Approve all tools advertised during this connection</b>Only the current list is approved. Tools added by the server later remain blocked until you review them.</span></label>
-      <label class="hpc-confirm field full"><input name="enabled" type="checkbox"><span><b>Allow Generator to call the approved tools automatically</b>Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.</span></label>
-      <div class="field full"><span>Advertised tools</span><div class="mcp-tool-list" id="mcp-tool-preview"><span class="field-help">Connect the server to discover tools.</span></div></div>
-    </div><div class="wizard-error" id="mcp-error"></div></div>
-    <div class="wizard-foot"><span>Bearer tokens are write-only Keychain items. Local commands are stored without secrets.</span>
-      <button type="button" class="secondary" id="cancel-mcp">Cancel</button><button class="primary" id="save-mcp">Connect & save</button></div>
+    <ol class="mcp-steps" id="mcp-steps">
+      <li class="active" data-mcp-marker="connect" aria-current="step"><span>1</span><div><b>Connect</b><small>Reach the server</small></div></li>
+      <li data-mcp-marker="tools"><span>2</span><div><b>Approve tools</b><small>Choose what it may do</small></div></li>
+    </ol>
+    <div class="wizard-body mcp-wizard-body">
+      <input type="hidden" name="server_id" id="mcp-server-id">
+      <input type="hidden" name="allowed_tools_text" id="mcp-allowed-tools">
+      <section class="mcp-step" data-mcp-step="connect" tabindex="-1"><div class="form-grid">
+        <label class="field"><span>Server name</span><input name="name" id="mcp-name" maxlength="80" required placeholder="Research tools"></label>
+        <label class="field"><span>Transport</span><select name="transport" id="mcp-transport"><option value="stdio">Local stdio</option><option value="http">Streamable HTTP</option></select></label>
+        <div class="field full mcp-transport-fields" id="mcp-stdio-fields"><div class="form-grid">
+          <label class="field"><span>Executable</span><input name="command" id="mcp-command" maxlength="1000" placeholder="npx" autocomplete="off"></label>
+          <label class="field"><span>Arguments</span><textarea name="args_text" id="mcp-args" maxlength="32000" placeholder="-y&#10;@example/mcp-server"></textarea><small class="field-help">One argument per line. CrossAudit never invokes a shell.</small></label>
+          <label class="hpc-confirm field full" id="mcp-approve-box"><input name="approve_local_code" type="checkbox"><span><b>I approve this exact local command</b>A local MCP server runs with this app's user permissions and may access files or the network. Verify its publisher and arguments.</span></label>
+          <div class="field full mcp-approved" id="mcp-approved-note" hidden><b>This exact command is already approved</b><small>You approved this executable and these arguments when you connected the server. Editing either one asks you to approve the new command.</small></div>
+        </div></div>
+        <div class="field full mcp-transport-fields off" id="mcp-http-fields"><div class="form-grid">
+          <label class="field full"><span>MCP endpoint</span><input name="url" id="mcp-url" maxlength="2000" placeholder="Secure MCP endpoint URL"></label>
+          <label class="field"><span>Bearer token (optional)</span><input name="bearer_token" id="mcp-token" type="password" maxlength="16384" autocomplete="off" placeholder="Leave blank to keep saved token"></label>
+          <label class="hpc-confirm field full"><input name="allow_private_network" type="checkbox"><span><b>Allow a verified private-network server</b>Use only for an enterprise hostname you control. Public remote servers must use HTTPS.</span></label>
+        </div></div>
+      </div>
+        <details class="mcp-advanced"><summary>Call limits</summary><div class="form-grid">
+          <label class="field"><span>Request timeout</span><input name="timeout" type="number" min="1" max="300" value="30" required><small class="field-help">Seconds to wait for one response.</small></label>
+          <label class="field"><span>Calls per task</span><input name="max_calls_per_task" type="number" min="1" max="20" value="5" required><small class="field-help">How many times a single task may call this server.</small></label>
+        </div></details>
+        <p class="mcp-step-note">Connecting only reads the server's tool list. Nothing can be called until you approve it in the next step.</p>
+      </section>
+      <section class="mcp-step" data-mcp-step="tools" tabindex="-1" hidden>
+        <div class="mcp-connected" id="mcp-connected"></div>
+        <div class="mcp-approve-head"><span>Approved tool names</span><small id="mcp-approve-count"></small><button type="button" class="mcp-link" id="mcp-select-all">Select all</button></div>
+        <div class="mcp-approve" id="mcp-tool-approve" role="group" aria-label="Advertised tools"></div>
+        <p class="mcp-step-note">Tool names, descriptions and risk labels are reported by the server itself and are not verified by CrossAudit. Approve only what you recognise.</p>
+        <label class="hpc-confirm field full" style="margin-top:15px"><input name="enabled" type="checkbox" id="mcp-enabled"><span><b>Allow Generator to call the approved tools automatically</b>Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.</span></label>
+        <p class="mcp-step-note" id="mcp-enable-note">Leave this off to keep the server manual-only. You can turn it on later.</p>
+      </section>
+      <div class="wizard-error" id="mcp-error"></div></div>
+    <div class="wizard-foot"><span id="mcp-foot-note">Bearer tokens are write-only Keychain items. Local commands are stored without secrets.</span>
+      <button type="button" class="secondary" id="cancel-mcp">Cancel</button>
+      <button type="button" class="secondary" id="mcp-back" hidden>Back</button>
+      <button class="primary" id="save-mcp">Connect</button></div>
   </form>
 </div>
 
@@ -3177,16 +3256,30 @@ const ZH={
   "Compute hosts":"计算主机","Remote jobs":"远程任务","No SSH compute hosts yet.":"尚未添加 SSH 计算主机。",
   "No jobs submitted from this project.":"此项目尚未提交任务。","Probe":"探测","Run job":"运行任务","Live logs":"实时日志","Outputs":"输出",
   "Cancel job":"取消任务","Remote outputs":"远程输出","Updating…":"正在更新…","No remote output files found.":"未找到远程输出文件。",
-  "Add MCP server":"添加 MCP 服务器","Configure MCP server":"配置 MCP 服务器","Connect project tools through the official Model Context Protocol lifecycle.":"通过官方 Model Context Protocol 生命周期连接项目工具。",
+  "Add MCP server":"添加 MCP 服务器","Configure MCP server":"配置 MCP 服务器",
   "Server name":"服务器名称","Transport":"传输方式","Local stdio":"本地 stdio","Streamable HTTP":"Streamable HTTP","Executable":"可执行文件","Arguments":"参数",
   "One argument per line. CrossAudit never invokes a shell.":"每行一个参数。CrossAudit 绝不会调用 shell。","I approve this exact local command":"我批准此准确的本地命令","A local MCP server runs with this app's user permissions and may access files or the network. Verify its publisher and arguments.":"本地 MCP 服务器使用本应用的用户权限运行，可能访问文件或网络。请核实发布者和参数。",
   "MCP endpoint":"MCP 端点","Secure MCP endpoint URL":"安全的 MCP 端点 URL","Bearer token (optional)":"Bearer token（可选）","Leave blank to keep saved token":"留空以保留已保存的 token","Allow a verified private-network server":"允许已核实的专用网络服务器","Use only for an enterprise hostname you control. Public remote servers must use HTTPS.":"仅用于你所控制的企业主机名。公共远程服务器必须使用 HTTPS。",
-  "Request timeout":"请求超时","Calls per task":"每个任务的调用次数","Approved tool names":"已批准的工具名称","Comma-separated exact names. Save once without enabling to inspect advertised tools first.":"使用逗号分隔准确名称。可先不启用并保存一次，以查看服务器公布的工具。",
-  "Approve all tools advertised during this connection":"批准本次连接中公布的所有工具","Only the current list is approved. Tools added by the server later remain blocked until you review them.":"只批准当前列表。服务器以后新增的工具在你审核前仍保持阻止状态。",
-  "Allow Generator to call the approved tools automatically":"允许生成者自动调用已批准的工具","Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.":"调用会实时显示在任务循环中。工具输出被视为不可信外部数据，绝不会成为审计规则。",
-  "Advertised tools":"公布的工具","Connect the server to discover tools.":"连接服务器以发现工具。","Bearer tokens are write-only Keychain items. Local commands are stored without secrets.":"Bearer token 以只写方式存入钥匙串；本地命令不含秘密信息。","Connect & save":"连接并保存",
+  "Request timeout":"请求超时","Calls per task":"每个任务的调用次数","Approved tool names":"已批准的工具名称","Allow Generator to call the approved tools automatically":"允许生成者自动调用已批准的工具","Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.":"调用会实时显示在任务循环中。工具输出被视为不可信外部数据，绝不会成为审计规则。",
+  "Advertised tools":"公布的工具","Bearer tokens are write-only Keychain items. Local commands are stored without secrets.":"Bearer token 以只写方式存入钥匙串；本地命令不含秘密信息。",
   "Project-scoped MCP capabilities and committed Generator guidance.":"项目级 MCP 能力与已提交的生成者指导。","Explicit capability boundaries.":"明确的能力边界。","MCP servers and Skills are invisible until you configure them. Approved MCP output remains untrusted data; Skills guide only the Generator and never change the Constitution.":"MCP 服务器和技能在你配置前不可见。已批准的 MCP 输出仍是不可信数据；技能只指导生成者，绝不会修改审计章程。",
   "＋ Add MCP server":"＋ 添加 MCP 服务器","Manage Skills":"管理技能","MCP servers":"MCP 服务器","Recent tool calls":"最近工具调用","Skills":"技能","No MCP servers connected to this project.":"此项目尚未连接 MCP 服务器。","No MCP tools called in this project.":"此项目尚未调用 MCP 工具。","No project Skills yet.":"此项目尚无技能。",
+  // Add-MCP-server dialog (two-step connect -> approve).
+  "Connect the server first, then choose which of its tools this project may use.":"先连接服务器，再选择本项目可以使用它的哪些工具。",
+  "Reach the server":"连接到服务器","Approve tools":"批准工具","Choose what it may do":"选择它可以做什么",
+  "Call limits":"调用限制","Seconds to wait for one response.":"等待单次响应的秒数。",
+  "How many times a single task may call this server.":"单个任务可以调用此服务器的次数。",
+  "Connecting only reads the server's tool list. Nothing can be called until you approve it in the next step.":"连接只会读取服务器的工具列表。在你于下一步批准之前，任何工具都不会被调用。",
+  "This exact command is already approved":"此命令已获批准",
+  "You approved this executable and these arguments when you connected the server. Editing either one asks you to approve the new command.":"你在连接此服务器时已批准该可执行文件与这些参数。修改其中任何一项都会要求你重新批准新的命令。",
+  "Save":"保存","Saving…":"正在保存…","Select all":"全选","Clear all":"全部清除",
+  "Read-only":"只读","May change data":"可能修改数据","No description provided.":"未提供说明。",
+  "This server advertised no tools, so there is nothing to approve.":"此服务器未公布任何工具，因此没有可批准的内容。",
+  "Tool names, descriptions and risk labels are reported by the server itself and are not verified by CrossAudit. Approve only what you recognise.":"工具名称、说明与风险标签均由服务器自行提供，CrossAudit 不对其进行核实。请只批准你认得的内容。",
+  "Approve at least one tool before the Generator can call this server.":"先批准至少一个工具，生成者才能调用此服务器。",
+  "Leave this off to keep the server manual-only. You can turn it on later.":"保持关闭即为仅手动使用。你可以稍后再开启。",
+  "Re-connecting cleared this server's approvals. Nothing can be called until you save.":"重新连接已清除此服务器的批准。在你保存之前，任何工具都不会被调用。",
+  "Only the tools you tick are approved. Tools the server adds later stay blocked until you review them.":"只有你勾选的工具会被批准。服务器之后新增的工具在你复核前始终处于阻止状态。",
   "Generator enabled":"已为生成者启用","Manual only":"仅手动","Configure":"配置","Refresh tools":"刷新工具","No tools advertised.":"未公布工具。","Applies to every task":"适用于每个任务","MCP tool":"MCP 工具","calling MCP tool":"正在调用 MCP 工具","policy":"政策",
   "Last 64 KB · stdout + stderr":"最近 64 KB · 标准输出 + 标准错误","Remote process finished":"远程进程已完成","Submitted to Slurm":"已提交至 Slurm","Detached on host":"已在远程主机后台启动","Preparing remote job":"正在准备远程任务",
   "Passed":"已通过","Blocked":"已阻止","Waiting on you":"等待你决定","Admitted":"已准入","Complete":"已完成","Active":"正在进行","Pending":"等待中"
@@ -3371,6 +3464,8 @@ const ZH_PATTERNS=[
   ,[/^Generator tool · (\d+) jobs\/task · (\d+) CPU · (\d+) GPU$/i,m=>'生成者工具 · 每任务 '+m[1]+' 个作业 · '+m[2]+' CPU · '+m[3]+' GPU']
   ,[/^Offline view · (.+) · the remote job continues independently$/i,m=>'离线视图 · '+m[1]+' · 远程任务仍在独立运行']
   ,[/^(\d+) MCP servers · (\d+) Skills$/i,m=>m[1]+' 个 MCP 服务器 · '+m[2]+' 个技能']
+  ,[/^(\d+) of (\d+) approved$/i,m=>'已批准 '+m[1]+' / '+m[2]]
+  ,[/^(.+) · MCP (.*) · (\d+) tools advertised$/i,m=>m[1]+' · MCP '+m[2]+' · 公布了 '+m[3]+' 个工具']
   ,[/^(\d+) calls\/task$/i,m=>'每任务 '+m[1]+' 次调用']
   ,[/^(\d+) recorded$/i,m=>'已记录 '+m[1]+' 次']
   ,[/^(\d+) committed$/i,m=>'已提交 '+m[1]+' 个']
@@ -3600,7 +3695,7 @@ const SETTINGS_INDEX=[
   {panel:'compute',group:'Compute',label:'SSH hosts',keywords:'scheduler slurm transfer policy'},
   {panel:'integrations',group:'Integrations',label:'Integrations',heading:'MCP, skills, and tools',purpose:'Capabilities the generator can call while it works.'},
   {panel:'integrations',group:'Integrations',label:'MCP servers',keywords:'skills tools 技能 工具 服务器 连接器'},
-  {panel:'integrations',group:'Integrations',label:'Skills',keywords:'skills manage install 技能 管理 安装'},
+  {panel:'integrations',group:'Integrations',label:'Skills',anchor:'settings-open-skills',keywords:'skills manage install guidance 技能 管理 安装 指导'},
   {panel:'usage',group:'Usage',label:'Usage',heading:'Usage and budgets',purpose:'Token and cost estimates, and the limits that pause a run.'},
   {panel:'usage',group:'Usage',label:'Budgets',keywords:'estimate cost tokens export'},
   {panel:'security',group:'Security & privacy',label:'Security & privacy',heading:'Security and privacy',purpose:'How credentials are stored and where your data goes.'},
@@ -3617,6 +3712,31 @@ function settingsSearchMatch(entry,q){
   const zh=typeof zhValue==='function'?zhValue:(v=>v);
   return fields.some(v=>String(zh(String(v||''))).toLowerCase().indexOf(n)>=0);
 }
+// Rank by how specifically the entry answers the query. Without this the
+// group row (which repeats the group name in every field) always outranks the
+// individual control, so searching "Appearance" opened General at the top of
+// the pane instead of the Appearance control.
+function settingsSearchScore(entry,q){
+  const n=String(q||'').trim().toLowerCase();if(!n)return 0;
+  const zh=typeof zhValue==='function'?zhValue:(v=>v);
+  const forms=value=>{const raw=String(value||'').toLowerCase();
+    return [raw,String(zh(String(value||''))).toLowerCase()];};
+  const rank=(value,exact,prefix,partial)=>{let best=0;
+    for(const form of forms(value)){if(!form)continue;
+      if(form===n)best=Math.max(best,exact);
+      else if(form.startsWith(n))best=Math.max(best,prefix);
+      else if(form.indexOf(n)>=0)best=Math.max(best,partial);}
+    return best;};
+  let score=rank(entry.label,1000,700,400);
+  score+=rank(entry.keywords,0,0,150);
+  score+=rank(entry.heading,0,0,80);
+  score+=rank(entry.purpose,0,0,40);
+  score+=rank(entry.group,0,0,20);
+  // A leaf control beats the group overview row on an equal textual hit.
+  if(entry.anchor)score+=60;
+  if(entry.heading)score-=30;
+  return score;
+}
 function filterSettings(){
   const input=document.getElementById('settings-search');const q=input?input.value:'';
   const results=document.getElementById('settings-search-results');
@@ -3630,16 +3750,34 @@ function filterSettings(){
   }
   content.classList.add('searching');
   document.querySelectorAll('[data-settings-pane]').forEach(p=>p.hidden=true);
-  const matches=SETTINGS_INDEX.filter(e=>settingsSearchMatch(e,q));
+  const matches=SETTINGS_INDEX.filter(e=>settingsSearchMatch(e,q))
+    .map((entry,order)=>({entry,order,score:settingsSearchScore(entry,q)}))
+    .sort((a,b)=>b.score-a.score||a.order-b.order).map(row=>row.entry);
   const groups=new Set(matches.map(e=>e.panel));
   buttons.forEach(b=>b.classList.toggle('dim',!groups.has(b.dataset.settingsPanel)));
-  results.innerHTML=matches.length?matches.map(e=>
-    '<button type="button" class="settings-result" data-result-panel="'+esc(e.panel)+'" data-result-anchor="'+esc(e.anchor||'')+'">'
+  results.innerHTML=matches.length?matches.map((e,index)=>
+    '<button type="button" role="option" id="settings-result-'+index+'" aria-selected="'+(index===0)+'"'
+    +' class="settings-result'+(index===0?' active':'')+'" data-result-panel="'+esc(e.panel)+'" data-result-anchor="'+esc(e.anchor||'')+'">'
     +'<span class="settings-result-label">'+esc(e.label)+'</span>'
     +'<span class="settings-result-group">'+esc(e.group)+'</span></button>').join('')
     :'<div class="settings-result-empty">No matching settings.</div>';
-  results.hidden=false;
+  results.hidden=false;settingsResultIndex=matches.length?0:-1;syncSettingsActiveResult();
 }
+// The results container declares role="listbox", so it has to be operable from
+// the keyboard: Down/Up move, Enter opens, Escape clears back to the pane.
+let settingsResultIndex=-1;
+function settingsResultRows(){return [...document.querySelectorAll('#settings-search-results [data-result-panel]')];}
+function syncSettingsActiveResult(){const rows=settingsResultRows();const search=document.getElementById('settings-search');
+  rows.forEach((row,index)=>{const active=index===settingsResultIndex;
+    row.classList.toggle('active',active);row.setAttribute('aria-selected',String(active));
+    if(active)row.scrollIntoView({block:'nearest'});});
+  const current=rows[settingsResultIndex];
+  if(search)search.setAttribute('aria-activedescendant',current?current.id:'');}
+function openSettingsResult(row){if(!row)return;
+  const panel=row.getAttribute('data-result-panel'),anchor=row.getAttribute('data-result-anchor');
+  showSettingsPanel(panel,false);
+  if(anchor){const el=document.getElementById(anchor);if(el){el.scrollIntoView({block:'center'});
+    if(typeof el.focus==='function'){try{el.focus({preventScroll:true});}catch(e){el.focus();}}}}}
 function showSettingsPanel(name,focus=true){
   const next=SETTINGS_PANELS.includes(name)?name:'general';activeSettingsPanel=next;
   const search=document.getElementById('settings-search');if(search)search.value='';
@@ -3659,11 +3797,14 @@ document.querySelector('.settings-nav').onclick=ev=>{const button=ev.target.clos
   if(button)showSettingsPanel(button.dataset.settingsPanel,false);};
 document.getElementById('settings-search').addEventListener('input',filterSettings);
 document.getElementById('settings-search-results').addEventListener('click',ev=>{
-  const row=ev.target.closest('[data-result-panel]');if(!row)return;
-  const panel=row.getAttribute('data-result-panel'),anchor=row.getAttribute('data-result-anchor');
-  showSettingsPanel(panel,false);
-  if(anchor){const el=document.getElementById(anchor);if(el){el.scrollIntoView({block:'center'});
-    if(typeof el.focus==='function'){try{el.focus({preventScroll:true});}catch(e){el.focus();}}}}});
+  const row=ev.target.closest('[data-result-panel]');if(!row)return;openSettingsResult(row);});
+document.getElementById('settings-search').addEventListener('keydown',ev=>{
+  const rows=settingsResultRows();
+  if(ev.key==='Escape'){ev.preventDefault();ev.target.value='';filterSettings();return;}
+  if(!rows.length)return;
+  if(ev.key==='ArrowDown'){ev.preventDefault();settingsResultIndex=(settingsResultIndex+1)%rows.length;syncSettingsActiveResult();}
+  else if(ev.key==='ArrowUp'){ev.preventDefault();settingsResultIndex=(settingsResultIndex-1+rows.length)%rows.length;syncSettingsActiveResult();}
+  else if(ev.key==='Enter'){ev.preventDefault();openSettingsResult(rows[Math.max(settingsResultIndex,0)]);}});
 const settingsAppearance=document.getElementById('settings-appearance');
 const settingsLanguage=document.getElementById('settings-language');
 function syncSettingsControls(){settingsAppearance.value=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
@@ -3682,6 +3823,7 @@ document.getElementById('settings-content').addEventListener('click',ev=>{
   closeSettings();
   if(target==='runtime')openRuntime();
   else if(target==='runtime-budgets'){openRuntime();showRuntimePanel('budgets',false);}
+  else if(target==='skills')openSkillsEditor();
   else if(target==='compute')openPanelTab('compute');
   else if(target==='tools')openPanelTab('tools');
   else if(target==='usage')openPanelTab('usage');});
@@ -3866,6 +4008,13 @@ function showRuntimePanel(name,focus=true){
 }
 document.querySelector('.runtime-nav').onclick=ev=>{const button=ev.target.closest('[data-runtime-panel]');
   if(button)showRuntimePanel(button.dataset.runtimePanel,false);};
+// "Manage Skills" and the Integrations jump both promise the skills editor.
+// It lives inside the runtime "Generator guidance" pane, so land on the editor
+// itself rather than the top of a pane with a different name.
+function openSkillsEditor(){openRuntime();showRuntimePanel('instructions',false);
+  setTimeout(()=>{const select=document.getElementById('runtime-skill-select');
+    if(!select)return;select.scrollIntoView({block:'center'});
+    try{select.focus({preventScroll:true});}catch(e){select.focus();}},0);}
 function runtimeEl(role,name){return document.getElementById('runtime-'+role+'-'+name);}
 function runtimeModel(role){const select=runtimeEl(role,'model');return select.value==='__custom__'
   ?runtimeEl(role,'custom').value.trim():select.value;}
@@ -6059,34 +6208,202 @@ computeJobForm.onsubmit=async ev=>{ev.preventDefault();const button=document.get
 function syncMcpTransport(){const stdio=document.getElementById('mcp-transport').value==='stdio';
   document.getElementById('mcp-stdio-fields').classList.toggle('off',!stdio);
   document.getElementById('mcp-http-fields').classList.toggle('off',stdio);
-  document.getElementById('mcp-command').required=stdio;document.getElementById('mcp-url').required=!stdio;}
-function renderMcpPreview(server){const approved=new Set((server&&server.allowed_tools)||[]),tools=(server&&server.tools)||[];
-  document.getElementById('mcp-tool-preview').innerHTML=tools.length?tools.map(tool=>{const note=tool.annotations||{},risk=note.destructiveHint?' ⚠':note.readOnlyHint?' ◉':'';
-    return '<span class="mcp-tool'+(approved.has(tool.name)?' approved':'')+'" title="'+esc((tool.description||'')
-      +' · server annotations are untrusted')+'">'+(approved.has(tool.name)?'✓ ':'')+esc(tool.name+risk)+'</span>';}).join(''):'<span class="field-help">Connect the server to discover tools.</span>';}
+  document.getElementById('mcp-command').required=stdio;document.getElementById('mcp-url').required=!stdio;
+  if(stdio)syncMcpApprovalState();}
+// The dialog walks the same lifecycle /api/mcp already enforces: connect and
+// read the tool list first, approve named tools second, and only then may the
+// Generator be let near them. Step 1 never approves or enables anything, so a
+// half-finished dialog always leaves the server switched off.
+let mcpStep='connect';let mcpTools=[];let mcpApproved=new Set();let mcpReconnected=false;
+// The exact local command the person has ALREADY approved for this server
+// ({command, args}), or null when nothing is approved yet. A saved server
+// carries the approval its owner gave when they connected it; that approval
+// stays valid for that command and those arguments and for nothing else, so
+// editing a timeout does not demand a fresh ritual while editing the command
+// does. It is never invented: it comes from a stored server row or from the
+// checkbox the person just ticked.
+// An approval is a claim about ONE execution vector, so it is stored AS that
+// vector, never as a bare flag:
+//   mcpApprovedCommand — what the stored server row proves its owner approved
+//                        when they connected it (null for a new server);
+//   mcpTickedFor       — the exact command+args on screen at the moment the
+//                        person ticked the consent box.
+// Both are {command, args}. approve_local_code=true is sent only when the live
+// form equals one of them, so anything sent is traceable to a human looking at
+// that exact vector. A tick can never ride along to a command it was not given
+// for; a mismatch is simply unapproved, and the server refuses.
+let mcpApprovedCommand=null;let mcpTickedFor=null;
+// What was rendered into the fields when the dialog opened, kept alongside the
+// stored values so an UNTOUCHED form round-trips the row byte-for-byte. The
+// textarea is lossy (it trims and drops blank lines), so a legacy row with an
+// empty or whitespace-bearing argument must not be re-derived from the text.
+let mcpRendered=null;
+function mcpArgsValue(){return document.getElementById('mcp-args').value
+  .split('\n').map(value=>value.trim()).filter(Boolean);}
+function mcpSameTuple(left,right){
+  if(!left||!right)return false;
+  const a=left.args||[],b=right.args||[];
+  return left.command===right.command&&a.length===b.length
+    &&a.every((value,index)=>value===b[index]);}
+// The vector the form currently describes. While the fields still hold exactly
+// what was rendered, that is the stored row itself — not a re-parse of it.
+function mcpLiveTuple(){
+  const commandText=document.getElementById('mcp-command').value;
+  const argsText=document.getElementById('mcp-args').value;
+  if(mcpRendered&&commandText===mcpRendered.commandText&&argsText===mcpRendered.argsText)
+    return {command:mcpRendered.command,args:(mcpRendered.args||[]).slice()};
+  return {command:commandText.trim(),args:mcpArgsValue()};}
+function mcpCommandUnchanged(){
+  return Boolean(mcpApprovedCommand)&&mcpSameTuple(mcpLiveTuple(),mcpApprovedCommand);}
+// The single question the submit asks. Both branches require the live vector to
+// equal something a person actually granted.
+function mcpApprovalGranted(){
+  const live=mcpLiveTuple();
+  if(mcpSameTuple(live,mcpApprovedCommand))return true;
+  const box=document.querySelector('#mcp-approve-box [name="approve_local_code"]');
+  return Boolean(box&&box.checked&&mcpSameTuple(live,mcpTickedFor));}
+// Show the standing approval, or ask for a new one — so the rule the server
+// enforces is visible in the form instead of arriving later as a denial. A tick
+// whose vector no longer matches the form is revoked here as you type, so the
+// screen can never show consent that the submit would not honour.
+function syncMcpApprovalState(){const approved=mcpCommandUnchanged();
+  const box=document.getElementById('mcp-approve-box');
+  const note=document.getElementById('mcp-approved-note');
+  if(!box||!note)return;
+  const input=box.querySelector('[name="approve_local_code"]');
+  if(input&&input.checked&&!mcpSameTuple(mcpLiveTuple(),mcpTickedFor)){
+    input.checked=false;mcpTickedFor=null;}
+  if(approved&&input){input.checked=false;mcpTickedFor=null;}
+  box.hidden=approved;note.hidden=!approved;}
+function mcpText(id,text){const node=document.getElementById(id);if(node)node.textContent=text;}
+function setMcpStep(step){mcpStep=step==='tools'?'tools':'connect';
+  document.querySelectorAll('[data-mcp-step]').forEach(pane=>pane.hidden=pane.dataset.mcpStep!==mcpStep);
+  document.querySelectorAll('[data-mcp-marker]').forEach(item=>{const active=item.dataset.mcpMarker===mcpStep;
+    item.classList.toggle('active',active);item.classList.toggle('complete',item.dataset.mcpMarker==='connect'&&mcpStep==='tools');
+    if(active)item.setAttribute('aria-current','step');else item.removeAttribute('aria-current');});
+  document.getElementById('mcp-back').hidden=mcpStep!=='tools';
+  mcpText('save-mcp',mcpStep==='tools'?'Save':'Connect');
+  mcpText('mcp-foot-note',mcpStep==='tools'
+    ?'Only the tools you tick are approved. Tools the server adds later stay blocked until you review them.'
+    :'Bearer tokens are write-only Keychain items. Local commands are stored without secrets.');
+  setTimeout(()=>{const pane=document.querySelector('[data-mcp-step="'+mcpStep+'"]');if(pane)pane.scrollTop=0;
+    const body=document.querySelector('.mcp-wizard-body');if(body)body.scrollTop=0;},0);}
+function renderMcpConnected(server){const host=document.getElementById('mcp-connected');if(!host)return;
+  const info=(server&&server.server_info)||{};const named=esc(info.name||(server&&server.name)||'');
+  const version=info.version?' '+esc(info.version):'';
+  host.innerHTML=server?'<b>Connected</b><small>'+named+version+' · MCP '+esc(server.protocol_version||'')
+    +' · '+((server.tools||[]).length)+' tools advertised</small>':'';}
+function renderMcpTools(){const host=document.getElementById('mcp-tool-approve');if(!host)return;
+  if(!mcpTools.length){host.innerHTML='<p class="mcp-empty">This server advertised no tools, so there is nothing to approve.</p>';
+    document.getElementById('mcp-select-all').hidden=true;syncMcpApproval();return;}
+  document.getElementById('mcp-select-all').hidden=false;
+  host.innerHTML=mcpTools.map(tool=>{const note=tool.annotations||{};
+    const badge=note.destructiveHint?'<i class="mcp-risk destructive">May change data</i>'
+      :note.readOnlyHint?'<i class="mcp-risk readonly">Read-only</i>':'';
+    return '<label class="mcp-approve-row"><input type="checkbox" data-mcp-tool="'+esc(tool.name)+'"'
+      +(mcpApproved.has(tool.name)?' checked':'')+'><span><b>'+esc(tool.name)+'</b><small>'
+      +esc(tool.description||'No description provided.')+'</small></span>'+badge+'</label>';}).join('');
+  syncMcpApproval();}
+function syncMcpApproval(){const boxes=[...document.querySelectorAll('[data-mcp-tool]')];
+  mcpApproved=new Set(boxes.filter(box=>box.checked).map(box=>box.getAttribute('data-mcp-tool')));
+  document.getElementById('mcp-allowed-tools').value=[...mcpApproved].join(', ');
+  const none=mcpApproved.size===0,enable=document.getElementById('mcp-enabled');
+  // The server refuses "enabled with nothing approved"; say so instead of
+  // letting the person find out through a denial.
+  enable.disabled=none;if(none)enable.checked=false;
+  mcpText('mcp-approve-count',mcpApproved.size+' of '+boxes.length+' approved');
+  mcpText('mcp-enable-note',none?'Approve at least one tool before the Generator can call this server.'
+    :mcpReconnected?'Re-connecting cleared this server\'s approvals. Nothing can be called until you save.'
+    :'Leave this off to keep the server manual-only. You can turn it on later.');
+  const all=boxes.length>0&&mcpApproved.size===boxes.length;
+  mcpText('mcp-select-all',all?'Clear all':'Select all');}
 function openMcp(serverId=''){mcpForm.reset();document.getElementById('mcp-error').className='wizard-error';
   const server=((lastState&&lastState.mcp&&lastState.mcp.servers)||[]).find(row=>row.id===serverId);
   document.getElementById('mcp-title').textContent=server?'Configure MCP server':'Add MCP server';
   document.getElementById('mcp-server-id').value=server?server.id:'';
+  mcpTools=server?(server.tools||[]):[];mcpApproved=new Set(server?(server.allowed_tools||[]):[]);mcpReconnected=false;
+  // A stored stdio row is proof its owner approved that exact command already.
+  mcpApprovedCommand=(server&&(server.transport||'stdio')==='stdio')
+    ?{command:server.command||'',args:(server.args||[]).slice()}:null;
+  mcpTickedFor=null;
+  mcpRendered=server?{commandText:server.command||'',argsText:(server.args||[]).join('\n'),
+                      command:server.command||'',args:(server.args||[]).slice()}:null;
   if(server){document.getElementById('mcp-name').value=server.name||'';document.getElementById('mcp-transport').value=server.transport||'stdio';
     document.getElementById('mcp-command').value=server.command||'';document.getElementById('mcp-args').value=(server.args||[]).join('\n');
     document.getElementById('mcp-url').value=server.url||'';mcpForm.elements.timeout.value=server.timeout||30;
-    mcpForm.elements.max_calls_per_task.value=server.max_calls_per_task||5;mcpForm.elements.allowed_tools_text.value=(server.allowed_tools||[]).join(', ');
+    mcpForm.elements.max_calls_per_task.value=server.max_calls_per_task||5;
     mcpForm.elements.enabled.checked=Boolean(server.enabled);mcpForm.elements.allow_private_network.checked=Boolean(server.allow_private_network);}
-  syncMcpTransport();renderMcpPreview(server);mcpModal.className='project-modal on';setTimeout(()=>document.getElementById('mcp-name').focus(),0);}
-function closeMcp(){mcpModal.className='project-modal';mcpForm.reset();}
+  syncMcpTransport();syncMcpApprovalState();renderMcpConnected(server);renderMcpTools();
+  // An already-connected server opens on its tool list; a new one starts at step 1.
+  setMcpStep(server?'tools':'connect');
+  mcpModal.className='project-modal on';
+  setTimeout(()=>document.getElementById(server?'mcp-select-all':'mcp-name').focus(),0);}
+function closeMcp(){mcpModal.className='project-modal';mcpForm.reset();
+  mcpTools=[];mcpApproved=new Set();mcpReconnected=false;mcpApprovedCommand=null;
+  mcpTickedFor=null;mcpRendered=null;
+  setMcpStep('connect');syncMcpApprovalState();}
 document.getElementById('mcp-transport').onchange=syncMcpTransport;
+for(const id of ['mcp-command','mcp-args'])
+  document.getElementById(id).addEventListener('input',syncMcpApprovalState);
+// The tick is only ever recorded together with the vector it was given for.
+document.querySelector('#mcp-approve-box [name="approve_local_code"]')
+  .addEventListener('change',event=>{
+    mcpTickedFor=event.target.checked?mcpLiveTuple():null;});
 document.getElementById('close-mcp').onclick=closeMcp;document.getElementById('cancel-mcp').onclick=closeMcp;
+document.getElementById('mcp-back').onclick=()=>setMcpStep('connect');
+document.getElementById('mcp-tool-approve').addEventListener('change',ev=>{
+  if(ev.target.matches('[data-mcp-tool]'))syncMcpApproval();});
+document.getElementById('mcp-select-all').onclick=()=>{const boxes=[...document.querySelectorAll('[data-mcp-tool]')];
+  const target=!(boxes.length>0&&boxes.every(box=>box.checked));boxes.forEach(box=>{box.checked=target;});syncMcpApproval();};
 mcpModal.addEventListener('click',ev=>{if(ev.target===mcpModal)closeMcp();});
-mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElementById('save-mcp');button.disabled=true;
-  button.textContent='Connecting…';document.getElementById('mcp-error').className='wizard-error';const fd=new FormData(mcpForm);
-  const payload=Object.fromEntries(fd.entries());payload.action='register';payload.args=document.getElementById('mcp-args').value.split('\n').map(value=>value.trim()).filter(Boolean);
-  payload.allowed_tools=document.getElementById('mcp-allowed-tools').value.split(',').map(value=>value.trim()).filter(Boolean);
+mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElementById('save-mcp');
+  const connecting=mcpStep==='connect';button.disabled=true;
+  mcpText('save-mcp',connecting?'Connecting…':'Saving…');
+  document.getElementById('mcp-error').className='wizard-error';const fd=new FormData(mcpForm);
+  const payload=Object.fromEntries(fd.entries());payload.action='register';
+  const vector=mcpLiveTuple();
+  // An untouched legacy row keeps its stored arguments verbatim — the textarea
+  // trims and drops blank lines, so re-deriving them would silently rewrite a
+  // working configuration (and make it unsaveable).
+  payload.args=vector.args;
   payload.timeout=Number(payload.timeout);payload.max_calls_per_task=Number(payload.max_calls_per_task);
-  for(const name of ['approve_local_code','allow_private_network','allow_all_tools','enabled'])payload[name]=fd.has(name);
+  payload.allow_private_network=fd.has('allow_private_network');
+  // Deny-by-default is the server's rule and stays the server's rule. What is
+  // sent is either the box the person just ticked, or the approval they already
+  // gave for this identical command and arguments — never an approval invented
+  // because a row happens to exist. Change the command and this goes false, the
+  // checkbox comes back, and the server refuses until it is ticked.
+  payload.approve_local_code=payload.transport==='stdio'&&mcpApprovalGranted();
+  // Step 1 is a pure connect: approve nothing, enable nothing. Step 2 sends the
+  // exact set of ticked tools — never a blanket "all", so what is stored is
+  // always the list the person actually saw.
+  payload.allowed_tools=connecting?[]:[...mcpApproved];
+  payload.enabled=connecting?false:fd.has('enabled');
   delete payload.args_text;delete payload.allowed_tools_text;
-  try{await api('/api/mcp',payload);closeMcp();if(lastState){lastState.mcp=await api('/api/state').then(state=>state.mcp);render(lastState);}}
-  catch(e){computeError('mcp-error',e);}finally{button.disabled=false;button.textContent='Connect & save';}};
+  try{const server=await api('/api/mcp',payload);
+    if(lastState){lastState.mcp=await api('/api/state').then(state=>state.mcp);render(lastState);}
+    if(connecting){document.getElementById('mcp-server-id').value=server.id||'';
+      // Adopt what was actually stored (the resolved executable), and show it, so
+      // the field, the standing approval and the server row all agree.
+      if((server.transport||'stdio')==='stdio'){
+        document.getElementById('mcp-command').value=server.command||'';
+        document.getElementById('mcp-args').value=(server.args||[]).join('\n');
+        mcpApprovedCommand={command:server.command||'',args:(server.args||[]).slice()};
+        mcpRendered={commandText:server.command||'',argsText:(server.args||[]).join('\n'),
+                     command:server.command||'',args:(server.args||[]).slice()};
+      }else{mcpApprovedCommand=null;mcpRendered=null;}
+      mcpTickedFor=null;
+      syncMcpApprovalState();
+      mcpTools=server.tools||[];const advertised=new Set(mcpTools.map(tool=>tool.name));
+      // Keep prior approvals only where the server still advertises them.
+      const kept=[...mcpApproved].filter(name=>advertised.has(name));
+      mcpReconnected=mcpApproved.size>0&&kept.length<mcpApproved.size;
+      mcpApproved=new Set(kept);
+      renderMcpConnected(server);renderMcpTools();setMcpStep('tools');
+      setTimeout(()=>document.getElementById('mcp-select-all').focus(),0);}
+    else closeMcp();}
+  catch(e){computeError('mcp-error',e);}
+  finally{button.disabled=false;mcpText('save-mcp',mcpStep==='tools'?'Save':'Connect');}};
 function stopComputeTimers(except=''){for(const [id,timer] of computeLogTimers){if(id!==except){clearInterval(timer);computeLogTimers.delete(id);}}}
 async function loadComputePanel(jobId,mode){const current=computePanels.get(jobId)||{};computePanels.set(jobId,{...current,open:true,mode,loading:true,error:''});
   if(lastState)render(lastState);try{const result=await api('/api/hpc',{action:mode==='outputs'?'outputs':'logs',job_id:jobId});
@@ -6125,7 +6442,7 @@ function handleActionClick(ev){
   }
   if(ev.target.closest('[data-hpc-add]'))openComputeHost();
   if(ev.target.closest('[data-mcp-add]'))openMcp();
-  if(ev.target.closest('[data-manage-skills]')){openRuntime();showRuntimePanel('instructions',false);}
+  if(ev.target.closest('[data-manage-skills]'))openSkillsEditor();
   const configureMcp=ev.target.closest('[data-mcp-configure]');if(configureMcp)openMcp(configureMcp.getAttribute('data-mcp-configure'));
   const probeMcp=ev.target.closest('[data-mcp-probe]');if(probeMcp){probeMcp.disabled=true;probeMcp.textContent='Refreshing…';
     api('/api/mcp',{action:'probe',server_id:probeMcp.getAttribute('data-mcp-probe')}).catch(computeSurfaceError)
