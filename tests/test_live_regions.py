@@ -164,8 +164,19 @@ def test_the_announcer_is_a_stable_node_outside_every_render_target():
 # ------------------------------------------------------------------ executed
 HARNESS = r"""
 const A=(c,m)=>{if(!c)throw new Error(m);};
-let writes=[];const node={set textContent(v){writes.push(v);},get textContent(){return writes[writes.length-1]||'';}};
-globalThis.document={getElementById:id=>id==='announcer'?node:null};
+let writes=[];
+// The announcer now reaches its node through liveText, which builds the value in
+// a detached holder and moves it in with ONE replaceChildren — so the stub has
+// to model that door rather than a bare textContent setter. What this file
+// measures is unchanged: how many times, and with what, the region is written.
+const node={childNodes:[],
+  replaceChildren(...ns){this.childNodes=ns.slice();writes.push(this.textContent);},
+  set textContent(v){this.childNodes=v===''?[]:[{text:v}];writes.push(v);},
+  get textContent(){return this.childNodes.map(n=>n.text).join('');}};
+globalThis.document={getElementById:id=>id==='announcer'?node:null,
+  createElement:()=>({childNodes:[],
+    set textContent(v){this.childNodes=v===''?[]:[{text:v}];},
+    set innerHTML(v){this.childNodes=v===''?[]:[{text:v}];}})};
 let timers=[];
 globalThis.setTimeout=(fn)=>{timers.push(fn);return timers.length;};
 globalThis.clearTimeout=(id)=>{if(id)timers[id-1]=null;};
@@ -203,6 +214,39 @@ A(writes.length===1,'A -> B -> A must announce, got '+writes.length);
 // Nothing is announced for nothing.
 writes=[];announce('');announce(null);announce('   ');flush();
 A(writes.length===0,'empty sentences are not announcements');
+
+// R2. The suppression above is a rule about a STATE. An EVENT repeated verbatim
+// is a SECOND occurrence, and silencing it is how a screen-reader user loses a
+// reply a sighted user can see. The auditor found this through a colliding
+// identity key; the browser drive then showed it silences every repeat arrival,
+// collision or not.
+writes=[];
+announce('CrossAudit replied in Alpha analysis.','event');flush();
+announce('CrossAudit replied in Alpha analysis.','event');flush();
+A(writes.filter(w=>w!=='').length===2,
+  'a repeated EVENT must be announced again, got '+JSON.stringify(writes));
+A(writes.filter(w=>w!=='').every(w=>w==='CrossAudit replied in Alpha analysis.'),
+  'and it says the same thing both times: '+JSON.stringify(writes));
+// ...and it is a real change to the region, not the same string re-assigned,
+// which a screen reader comparing content would have nothing to notice.
+A(writes[0]===''&&writes[2]==='',
+  'each event clears the region before writing, got '+JSON.stringify(writes));
+
+// A state is still a state: the default is unchanged, so the 2-second render
+// loop cannot become speech.
+writes=[];
+announce('Round 4 of 4 started');flush();
+announce('Round 4 of 4 started');flush();
+A(writes.length===1,'a repeated STATE is still silent, got '+JSON.stringify(writes));
+
+// A burst of events inside one frame is still one sentence.
+writes=[];
+announce('CrossAudit replied in Alpha analysis.','event');
+announce('CrossAudit replied in Alpha analysis.','event');
+announce('CrossAudit replied in Alpha analysis.','event');
+flush();
+A(writes.filter(w=>w!=='').length===1,
+  'three arriving in one frame is one sentence, got '+JSON.stringify(writes));
 console.log('ok');
 """
 
@@ -225,7 +269,7 @@ def _extract(signature):
 def _sources():
     head = _script()
     prefix = head[head.index("let announcedText="):head.index("function announce(")]
-    return prefix + _extract("function announce(sentence)")
+    return prefix + _extract("function announce(sentence,kind)")
 
 
 def _run(js):
@@ -246,12 +290,19 @@ def test_the_announcer_speaks_once_per_change_and_not_once_per_render():
 
 
 MUTATIONS = (
+    ("an arrival is treated as a state, so every reply after the first is "
+     "silent — the R2 finding, in behaviour",
+     "  if(!event&&text===announcedText)return false;",
+     "  if(text===announcedText)return false;"),
+    ("an event stops being a real change to the region, so a screen reader "
+     "comparing content has nothing to notice",
+     "    if(event)liveText(node,'');", "    "),
     ("the debounce is removed, so a burst of stream events becomes a burst of "
      "speech — SPEC-9 slice 0's own mutation",
      "  if(announceTimer)clearTimeout(announceTimer);", "  "),
     ("a repeated state is announced again, so a render that restates what it "
      "already stated speaks",
-     "  if(!text||text===announcedText)return false;", "  if(!text)return false;"),
+     "  if(!event&&text===announcedText)return false;", "  if(!text)return false;"),
 )
 
 

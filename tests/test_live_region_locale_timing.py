@@ -24,10 +24,19 @@ The alert fired on the first of those. A Chinese person picking the same vendor
 for both roles saw Chinese and was read English. Evidence:
 `_ui_findings/locale-timing/evidence/real-path-fr-role-msg.json`.
 
-**What this file guards.** A live region may not be given a string the product
-knows how to translate, except through `liveText` / `liveHTML`, which write and
-translate in the same task. That is decidable: the collection surface is every
-live region in the page, and the property is "this literal is in ZH".
+**What this file guards, and what it explicitly does NOT.** A live region may
+not be given a string the product knows how to translate, except through
+`liveText` / `liveHTML`. That is decidable from the source: the collection
+surface is every live region in the page, and the property is "this literal is
+in ZH". It is a routing rule — everything goes through the one door.
+
+It is NOT a claim that the door is correct. An earlier version of this file
+asserted that `node.textContent=` appeared before `localizeTree(node)` and
+called that the locale-timing property; the cross-vendor auditor then drove the
+product and found the live region holding `CrossAudit replied.` and only
+afterwards `CrossAudit 已回复。`, with this file green. Source order is a claim
+about the code. Whether the region ever HELD English is settled by execution, in
+`tests/test_live_region_locale_values.py`, and that is where it belongs.
 
 The debt list is EMPTY and may never grow. It is empty because the exposure is
 narrow — a write only bites when the string has a dictionary entry, and today
@@ -148,47 +157,55 @@ def test_the_rule_is_one_function_and_the_announcer_uses_it():
     re-implemented at each consumer holds at the consumers someone remembered."""
     assert "function liveText(node,value){" in PAGE
     assert "function liveHTML(node,markup){" in PAGE
-    assert "liveText(document.getElementById('announcer'),text);" in PAGE
+    assert "const node=document.getElementById('announcer');" in PAGE
+    assert "liveText(node,text);},120);" in PAGE
     # The old inline form is gone, so there is one implementation, not two that
     # can drift.
-    announce = PAGE[PAGE.index("function announce(sentence){"):]
+    announce = PAGE[PAGE.index("function announce(sentence,kind){"):]
     announce = announce[:announce.index("\nfunction ")]
     assert "node.textContent=text;" not in announce
 
 
-@pytest.mark.parametrize("helper,write", (
-    ("function liveText(node,value){", "node.textContent="),
-    ("function liveHTML(node,markup){", "node.innerHTML="),
+@pytest.mark.parametrize("helper", (
+    "function liveText(node,value){",
+    "function liveHTML(node,markup){",
 ))
-def test_the_write_and_the_translation_are_in_the_same_task(helper, write):
-    """Not merely "in this order". The defect is a task boundary between them,
-    so the guard is about the boundary: nothing in this function may defer."""
+def test_the_live_region_is_mutated_once_and_never_before_translation(helper):
+    """The shape, not the order. The region is written by exactly one statement
+    — `replaceChildren` with content that was already localised in a detached
+    holder — so there is no second write for it to hold a value between. A door
+    that writes the node directly is the defect however well the next line is
+    ordered, which is what the source-order version of this guard missed."""
     body = PAGE[PAGE.index(helper):]
     body = body[:body.index("\nfunction ")]
-    assert write in body
-    assert "localizeTree(node)" in body
-    assert body.index(write) < body.index("localizeTree(node)")
+    assert "node.replaceChildren(...holder.childNodes);" in body
+    assert body.count("node.") == 1, (
+        f"{helper} touches the live region more than once, so the region holds "
+        f"an intermediate value: {body!r}")
+    assert "localizeTree" not in body, (
+        f"{helper} localises the live region itself rather than the detached "
+        f"holder, which means it wrote an untranslated value into it first")
     for defer in ("setTimeout", "queueMicrotask", "requestAnimationFrame",
                   "await", "Promise", "then("):
         assert defer not in body, (
-            f"{helper} defers with {defer!r} between the write and the "
-            f"translation, which is the exact window this rule closes")
+            f"{helper} defers with {defer!r}, which reopens the window this "
+            f"rule closes")
 
 
 MUTATIONS = (
-    ("the translation stops happening in the same task, so a live region "
-     "announces the English source to a Chinese reader",
+    ("the door goes back to writing the live region itself and translating it "
+     "afterwards — the b41d7e4 implementation, which reads as correct and "
+     "leaves the region holding English first",
+     "function liveText(node,value){\n"
+     "  if(!node)return;\n"
+     "  const holder=liveFragment(h=>{h.textContent=String(value==null?'':value);});\n"
+     "  node.replaceChildren(...holder.childNodes);}",
      "function liveText(node,value){\n"
      "  if(!node)return;\n"
      "  node.textContent=String(value==null?'':value);\n"
-     "  if(typeof localizeTree==='function')localizeTree(node);}",
-     "function liveText(node,value){\n"
-     "  if(!node)return;\n"
-     "  node.textContent=String(value==null?'':value);\n"
-     "  setTimeout(()=>{if(typeof localizeTree==='function')localizeTree(node);},0);}"),
+     "  if(typeof localizeTree==='function')localizeTree(node);}"),
     ("the announcer stops going through the shared rule and grows its own copy",
-     "    liveText(document.getElementById('announcer'),text);},120);",
-     "    const node=document.getElementById('announcer');\n"
+     "    liveText(node,text);},120);",
      "    if(node)node.textContent=text;},120);"),
     ("the first-run independence alert goes back to a raw write — the site the "
      "browser drive caught, restored exactly",
@@ -222,8 +239,8 @@ def test_the_class_guard_is_shown_to_fail(why, before, after, monkeypatch):
     for name, check in (
             ("one rule, and the announcer uses it",
              test_the_rule_is_one_function_and_the_announcer_uses_it),
-            ("same task", lambda: test_the_write_and_the_translation_are_in_the_same_task(
-                "function liveText(node,value){", "node.textContent=")),
+            ("one mutation", lambda: test_the_live_region_is_mutated_once_and_never_before_translation(
+                "function liveText(node,value){")),
             ("no raw translatable write",
              test_no_live_region_is_handed_a_translatable_string_outside_the_rule)):
         try:

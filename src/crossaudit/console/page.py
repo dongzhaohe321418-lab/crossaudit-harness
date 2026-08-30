@@ -3690,6 +3690,11 @@ const ZH_PATTERNS=[
   ,[/^(PASS|BLOCKED|ESCALATED|ESCALATE|DCL_ONLY) · (\d+) finding\(s\)$/,m=>zhValue(m[1])+' · '+m[2]+' 项发现']
   ,[/^cycle (\S+) is waiting for a human$/,m=>'循环 '+m[1]+' 正在等待人工处理']
   ,[/^(\d+) tasks are waiting for your decision\.$/,m=>'有 '+m[1]+' 个任务正在等待你的决定。']
+  // Composed, so it MUST be a pattern: a fixed entry would translate only the
+  // threads whose titles happen to be in the dictionary and leave every other
+  // Chinese reader an English sentence. The title itself is not translated —
+  // it is a name the person chose for their own thread.
+  ,[/^CrossAudit replied in (.+)\.$/,m=>'CrossAudit 在「'+m[1]+'」中已回复。']
   ,[/^MCP executable (.+) was not found or is not executable$/,m=>'未找到 MCP 可执行文件 '+m[1]+'，或它不可执行']
   ,[/^MCP server could not start: (.+)$/,m=>'MCP 服务器无法启动：'+m[1]]
   ,[/^MCP server closed its input\.(.*)$/,m=>'MCP 服务器关闭了输入。'+m[1].trim()]
@@ -3777,23 +3782,78 @@ let announcedText='';let announceTimer=null;
 // driven and confirmed, zh then en then zh, not assumed. One function rather
 // than a rule each caller has to remember, because the defect this closes is
 // precisely a canonicalisation applied at one point and not at the next.
+//
+// R2 CORRECTION, and it is the reason this comment is long. Write-then-
+// translate-in-the-same-task was NOT the rule. It closed the microtask window
+// and left the defect: the node still HELD the English source first, because
+// the write and the translation are two separate mutations of the same node,
+// and a live-region notification fires on the first one. The cross-vendor
+// auditor drove it and recorded exactly that —
+//   CrossAudit replied.  ->  CrossAudit 已回复。
+// — while my guard, which inspected source ORDER, went green. Ordering is a
+// claim about the code; the property is about the values the node held.
+//
+// So the rule is now: the live region is MUTATED ONCE, and the value it takes
+// is already in the active locale. Build the content in a detached element —
+// invisible to the locale observer and to assistive technology, so nothing
+// there is announced — run localizeTree, the product own translator, over it
+// there, and move the finished nodes in with a single replaceChildren.
+//
+// Translating in the holder rather than re-deriving the string is deliberate:
+// the same text nodes are MOVED into the live region, carrying the `textSources`
+// entries renderLocaleText recorded for them. That is what keeps the English
+// source alive, so a later locale switch re-translates the ordinary way instead
+// of freezing the region in whichever language it was born in. Driven zh -> en
+// -> zh; the full English sentence returns.
+function liveFragment(fill){
+  const holder=document.createElement('div');
+  fill(holder);
+  if(typeof localizeTree==='function')localizeTree(holder);
+  return holder;}
 function liveText(node,value){
   if(!node)return;
-  node.textContent=String(value==null?'':value);
-  if(typeof localizeTree==='function')localizeTree(node);}
+  const holder=liveFragment(h=>{h.textContent=String(value==null?'':value);});
+  node.replaceChildren(...holder.childNodes);}
 function liveHTML(node,markup){
   if(!node)return;
-  node.innerHTML=String(markup==null?'':markup);
-  if(typeof localizeTree==='function')localizeTree(node);}
-function announce(sentence){
+  const holder=liveFragment(h=>{h.innerHTML=String(markup==null?'':markup);});
+  node.replaceChildren(...holder.childNodes);}
+// R2, and this is the SECOND cause of the silent-reply finding the auditor
+// raised. The first was a lossy identity key; fixing it was not enough, and
+// the browser drive is what showed that.
+//
+// Re-announcing the same sentence is suppressed outright: a correct rule
+// about a STATE. `Round 2 of 3 started` restated is not news. But it is the
+// wrong rule for an EVENT: `CrossAudit replied in Alpha analysis.` a second
+// time means a SECOND reply, and that is exactly the news. Applied to an event,
+// a state rule silences every arrival after the first — not only the ones whose
+// keys collided, which is why the key fix alone left the region unmutated.
+//
+// So the caller says which it is. Default stays `state`, because the progress
+// and panel announcements of slices 3-6 are states and must keep the
+// suppression that stops a 2-second render loop becoming speech.
+//
+// Repeating an identical sentence has to be a REAL change to the region or a
+// screen reader that compares content has nothing to notice, so an event clears
+// first. An empty live region is not announced, and the empty string has no
+// language, so this cannot reintroduce the wrong-locale value the other half of
+// this rule exists to prevent. What a specific assistive technology vocalises is
+// beyond what has been driven here; the DOM contract, one mutation per real
+// arrival carrying the arrival sentence in the language being read, is what is
+// established.
+function announce(sentence,kind){
   const text=String(sentence==null?'':sentence).trim();
-  if(!text||text===announcedText)return false;
+  if(!text)return false;
+  const event=kind==='event';
+  if(!event&&text===announcedText)return false;
   announcedText=text;
   if(announceTimer)clearTimeout(announceTimer);
   announceTimer=setTimeout(()=>{announceTimer=null;
     // Through the same helper as every other live region, so the rule has one
     // implementation and cannot hold true here while drifting elsewhere.
-    liveText(document.getElementById('announcer'),text);},120);
+    const node=document.getElementById('announcer');
+    if(event)liveText(node,'');
+    liveText(node,text);},120);
   return true;}
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -5861,7 +5921,9 @@ function allMessages(d){
     return ['passed','consumed'].includes(auditStatus(d,m.sha));
   });
   const seen = new Set();
-  return rows.filter(m => {const key = [m.kind,m.t,m.utterance||m.summary||m.verdict||m.response||''].join('|');
+  // Same function the announcer keys on, so "two messages" means the same thing
+  // to the renderer and to the thing that speaks about them.
+  return rows.filter(m => {const key = turnKey(m);
     if(seen.has(key)) return false;seen.add(key);return true;}).sort((a,b) => a.t-b.t);
 }
 // §41.9 admission explanation — a transient, client-side card that answers:
@@ -6144,9 +6206,37 @@ function toolsView(d){
 // person cannot pause it, skim it or re-read it. They are told it is there; they
 // read it themselves.
 let announcedTurns=null;let announcedTurnChat=null;
+// R2 S1. This key was kind + second + the first 40 characters of the content,
+// and the auditor collided it: two DIFFERENT replies in the same second whose
+// first 40 characters agree rendered as two articles and produced ONE
+// announcement. A sighted person saw both; a screen-reader user lost one
+// entirely. A lossy prefix is not an identity.
+//
+// The fix is not a longer prefix — that is the same defect at a bigger number.
+// `allMessages` already establishes what "a distinct message" means, because it
+// drops duplicates on kind + second + the WHOLE content; anything it returns is
+// therefore distinct under that triple. So the announcer uses that same key, and
+// the two functions cannot disagree about identity — which is the shape of
+// almost every defect found on this codebase this week: canonical at the
+// producer, lossy at the consumer.
 function turnKey(m){
-  return [m.kind,m.t,String(m.utterance||m.summary||m.verdict||m.response||'').slice(0,40)].join('|');}
-function announceThread(messages){
+  return [m.kind,m.t,String(m.utterance||m.summary||m.verdict||m.response||'')].join('|');}
+// R2 S2. The content limit was right and is unchanged — the reply body never
+// enters this sentence, and the auditor confirmed nothing leaks. But a status
+// heard while focus is elsewhere has to say WHICH thread moved, and with Alpha
+// and Beta both present this said only "CrossAudit replied." Naming the thread
+// is a different axis from the content limit, not a relaxation of it.
+//
+// The name is `titleOf(d)` — the exact string the visible <h1 id="thread-title">
+// shows — so the announcement and the heading cannot drift apart. Untitled
+// threads fall back to the bare sentence rather than announcing "New chat",
+// which names nothing.
+function threadArrivalSentence(d){
+  const title=d?String(titleOf(d)||'').trim():'';
+  return (!title||title==='New chat'||title==='New task')
+    ?'CrossAudit replied.'
+    :'CrossAudit replied in '+title+'.';}
+function announceThread(messages,d){
   const chat=activeChatId||'';
   const keys=new Set(messages.map(turnKey));
   // A transcript that already existed is not news. The first render of a thread,
@@ -6158,7 +6248,7 @@ function announceThread(messages){
   announcedTurns=keys;
   // Their own words are not read back to them.
   if(!fresh.length)return false;
-  return announce('CrossAudit replied.');}
+  return announce(threadArrivalSentence(d),'event');}
 function renderConversation(d){
   const thread = document.getElementById('thread');
   const previousTop = thread.scrollTop;
@@ -6168,7 +6258,7 @@ function renderConversation(d){
   if(newTaskMode) html = welcome();
   else{
     const messages = allMessages(d);
-    announceThread(messages);
+    announceThread(messages,d);
     const p = chatProgress(d);
     const live = p && !p.finished ? runCard(d) : '';
     const approval = approvalCard(d);
@@ -6342,9 +6432,11 @@ function announceEscalations(rows){
   const fresh=ids.filter(id=>id&&!announcedEscalations.has(id));
   announcedEscalations=new Set(ids);
   if(!fresh.length)return;
+  // An arrival, not a state: two separate escalations produce the same sentence
+  // and the second one is still news.
   announce(fresh.length===1
     ?'A task is waiting for your decision.'
-    :fresh.length+' tasks are waiting for your decision.');}
+    :fresh.length+' tasks are waiting for your decision.','event');}
 function renderInspector(d){
   document.getElementById('runtime-generator').textContent = d.generator;
   document.getElementById('runtime-auditor').textContent = d.auditor;
