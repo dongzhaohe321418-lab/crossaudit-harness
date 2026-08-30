@@ -765,7 +765,7 @@ def snapshot(cfg: Config) -> dict:
         # The seeded local sample flags every surface as illustrative; the UI
         # shows a persistent "not a real audit" banner whenever this is true.
         "demo": projects.is_demo_project(cfg),
-        "rules": const.read_text(encoding="utf-8").count("\n### ") if const.is_file() else 0,
+        "rules": len(re.findall(r"(?m)^### ", const.read_text(encoding="utf-8"))) if const.is_file() else 0,
         "skills": house,
         "auditor": (f"{cfg.auditor.vendor} · "
                     f"{cfg.auditor.provider}:{cfg.auditor.model}" +

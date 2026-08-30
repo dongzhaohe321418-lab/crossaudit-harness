@@ -25,6 +25,7 @@ from . import __version__
 from .config import CONFIG_NAME, Config
 from .errors import ConfigDenial
 from .providers.base import tls_context
+from .doctor_shared import constitution_state
 
 LATEST_RELEASE_API = (
     "https://api.github.com/repos/dongzhaohe321418-lab/crossaudit_v4/releases/latest"
@@ -271,14 +272,15 @@ def collect(cfg: Config, *, online: bool = True) -> dict:
 
     config_ready = cfg.path.is_file()
     constitution = cfg.root / cfg.constitution
+    const_status, const_detail = constitution_state(cfg)
     checks.extend(({
         "id": "config", "label": "Project configuration",
         "status": "ready" if config_ready else "missing", "blocking": not config_ready,
         "detail": str(cfg.path),
     }, {
         "id": "constitution", "label": "Audit rules",
-        "status": "ready" if constitution.is_file() else "missing",
-        "blocking": not constitution.is_file(), "detail": str(constitution),
+        "status": const_status,
+        "blocking": const_status != "ready", "detail": const_detail,
     }))
 
     latest, release_url = _latest_release() if online else (None, LATEST_RELEASE_URL)
