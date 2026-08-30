@@ -360,11 +360,19 @@ def test_every_reduction_the_producers_emit_is_handled_and_catalogued():
 
 # --------------------------------------------------- SPEC-20 §6, the live region
 def test_the_condensation_notice_is_announced_and_not_only_displayed():
-    """A WIRING claim, said plainly. Whether a screen reader hears anything is
-    settled by execution, in `_ui_findings/s4-condense/sweep_announce.mjs`,
-    which records every value the region HOLDS after condensation in the locale
-    under test — not that a region exists. Eight empty ones prove wiring, not
-    speech.
+    """A WIRING claim and NOTHING MORE — a presence check, named as one.
+
+    The audit found this filed as though it settled the property: it asserts the
+    function is defined and called. That is a presence check, and the law it is
+    meant to serve is *containers present, contents absent* — so a presence
+    check here reproduces the defect one level up. It passes on a live region
+    that exists, is written, and stays empty.
+
+    The content assertion is `test_condensation_is_announced.py`, IN THIS
+    REPOSITORY rather than only in `_ui_findings/`: it executes the page's own
+    `announceCondensation` and asserts what the announcer node HOLDS, in the
+    locale under test, with an EMPTY region as the mutation. A missing region is
+    easy and every version caught it; an empty one is the case the law names.
 
     SPEC-20 §6 fenced this as out of scope: older and wider than turn folding,
     and a property of the shared `context_condensed` renderer. That is precisely
