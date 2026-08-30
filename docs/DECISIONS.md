@@ -3180,3 +3180,42 @@ declared triples plus executable reader-counterfactual fixtures, and the
 property that decides whether it survives: **ordinary refactors stay free.** A
 detector that taxes every refactor becomes a green light nobody maintains,
 which is the failure mode we have deleted thirteen times in other forms.
+
+## D79 — My own merge commit carries a claim the product does not keep
+
+**F7 — S2, missing consumer, `assumed_by_other=yes`** (the fourth):
+
+> A production-shaped `generation_chunk` was persisted and **reached Chromium
+> as a named SSE frame. The page registered no named listener.** The 30 focused
+> streaming tests all pass **because they stop at transport.** The browser
+> property fails on the unmodified product.
+
+The streaming merge — the first of tonight — claims a visible live draft, and
+**my merge commit says so**: *"Generator output streams to the console as it is
+produced rather than appearing whole at the end. TTFT 53ms against a
+several-second wait."* The transport is real and the number is real. A person
+watching the console sees nothing arrive early. **The commit message is a false
+claim in the same sense as the copy we have been deleting all night, and I
+wrote it.**
+
+Thirty tests pass because they stop at the seam. A test asserting frames were
+emitted passes today with the property dead — the same structure as F1, where
+a correct change orphaned a property no diff could show.
+
+Routed to the console owner behind F1, with the ordering stated: **F1 first,
+because it fabricates auditor prose on the default surface and is reachable
+without touching the machine, while F7 is a promise unkept. A lie outranks an
+absence.**
+
+The guard must drive a browser via `serve(cfg, port=0)` under Playwright, and
+its mutation is deleting the listener. If the suite stays green with the
+listener removed, it is the thirty-first transport test.
+
+### What this says about merge messages
+
+I have been writing merge commits that describe intent and gate results. This
+one described a user-visible behaviour that had never been observed. Nothing in
+my three gates asks whether the prose in the merge message is true — the
+independent review covers the diff, the suite covers the tests, the tree check
+covers provenance. **The message itself is unaudited**, and it is the artifact
+most likely to be read later as a record of what shipped.
