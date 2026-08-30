@@ -716,3 +716,68 @@ strings identify files uniquely, and that "no trailing newline" was the complete
 boundary of byte identity. It found the blind spot it predicted it would share.
 That is a point in favour of the auditor and not a reason to relax D2: it says
 nothing about what a same-vendor reviewer would still be missing.
+
+### D8 — The constitution is the standard; the audit is the mechanism
+
+I asked the design engineer the question I could not answer: if a person can
+freely weaken their own constitution at the moment it is created, what is the
+audit worth? Its argument is better than my framing and I am adopting it as
+policy.
+
+**The line is drawn at concealment, not at content.** The constitution is the
+STANDARD; the audit is the MECHANISM. §1.1 protects the mechanism — independence,
+evidence-only, deny-by-default, the hash chain — and none of it is touched by what
+the standard says. A weak standard does not produce a weak audit. It produces an
+honest audit of a weak standard, which is a legitimate thing for a person to
+choose. The failure mode that would actually matter is a receipt implying a
+stronger standard than was applied, and we are already protected from it: every
+audit cites the constitution commit, and rule changes take effect only between
+cycles. So nobody can amend their way out of a decision already made — which is
+the concrete answer to "edits it into meaninglessness the first time it blocks
+them."
+
+**What follows for the design: show, do not police.** No warnings on a minimal
+constitution, no "are you sure". Instead the between-cycles rule is said out loud
+— *changing the rules never changes a decision already made* — because that single
+sentence is what makes editing safe to offer freely, and it converts the worry
+into a true statement the person can rely on.
+
+Consequences adopted:
+- The least-effort path is three NAMED choices with a default, preceded by four
+  plain-language consequence lines and two visible alternatives — not a bare "I
+  agree" checkbox. Taking a default among named options is a real decision;
+  agreeing to something unread is the rubber stamp we were trying to avoid.
+- The minimal option is called "Only what I write myself" rather than "Minimal",
+  so its name says what it gives up.
+- Provenance is carried by ATTRIBUTION, not by a disclaimer: the drafted path
+  quotes the person's own sentence under the rule it produced; the template path
+  has nothing to quote, and that absence is the signal. The word "drafted" may
+  appear only when a draft happened.
+- `crossaudit amend` is provider-backed, so it cannot run in the keyless state —
+  yet today's fallback copy offers exactly that as the edit route. $EDITOR becomes
+  the keyless path and amend is not offered without a key.
+
+### D9 — A suggested action must prove it can change the situation
+
+From the same review. The Decision Center currently offers "Retry provider · use
+the current connection" for a missing credential, which fails identically, while
+the route that does reach an API-key field is unlabelled. The root cause is
+structural rather than editorial: the "Suggested" tag is static markup on the
+reopen radio, and although its LABEL is rewritten per cause, the tag itself can
+never move to another option or disappear.
+
+The rule: capability is tested PER INSTANCE against a field the failure actually
+carries — `retryable` is already sent — not per action-kind. An absent field means
+not-suggestible, which is fail-closed. If nothing is capable, suggest nothing. An
+action that cannot possibly work is worse than no action, because it spends the
+person's last confidence at the moment they have least.
+
+And the subtle part, which is the reason this is a rule and not a conditional:
+`stop` is always capable and must never be suggested. Capability is necessary but
+not sufficient — a suggested action must also be a step toward what the person
+came for.
+
+**Architecture note, adopted:** the send-path rule and the suggested-action rule
+are the same rule wearing two hats. If they ship as separate slices they will
+diverge. Remediations are minted ONCE, server-side, in order, and both surfaces
+consume them.
