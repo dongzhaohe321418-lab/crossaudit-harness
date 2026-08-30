@@ -2929,3 +2929,48 @@ yields 32 passed, 1 skipped — the axis assertions remain tautological (D59).
 separate sweeps with *"three of four causes unreached, needs a funded run"* can
 close, with a method already demonstrated. Detached suite on that branch:
 1,772 collected, 1,769 passed, 3 skipped, 0 failed.
+
+## D74 — The first real evidence, and the fixture that unlocks the rest
+
+The clean-HOME packaged walkthrough produced **99 files** — 31 screenshots, 26
+accessible trees, 30 text captures — at `_handoff/packaged-walkthrough/evidence/`
+with its drivers beside them. Before tonight every claim about the packaged
+build was a description of it.
+
+**The operator caught its own instrument mid-run:**
+
+> The credential-free demo opens a second console on another port that shows
+> the same first-run overlay, so my **first 16 cells captured one screen
+> twice**; the 8 main-console cells were taken after dismissing it.
+
+Sixteen cells that would have counted as coverage were one screen photographed
+twice. Fourth instrument artifact caught by its own operator today; that
+pattern is now the most reliable quality signal on this team.
+
+**"Eight empty ones prove wiring, not speech."** Assert what a live region
+*contains* after an action, not how many exist. That retires a whole family of
+accessibility checks we would otherwise have counted, and it is the same shape
+as computing the accessible name rather than checking an attribute.
+
+And it graded **its own harness by component**: `walk2.mjs`'s click layer needs
+Playwright locators before its numbers mean anything; `cells.mjs` and
+`past.mjs` are sound. Distrusting part of your own tool by name is worth more
+than the tool.
+
+### The recorded-provider fixture
+
+> S2, S4, S5 and S6 are all blocked on the same thing, and **replay already
+> exists and is credential-free.** A recorded transcript set turns four
+> unobserved scenarios into observable ones **without one API call**, reusable
+> every build.
+
+Four scenarios that have ended every sweep as "needs a funded run" become
+standing regression, at the cost of recording transcripts once. Cheapest
+proposal of the night relative to what it unlocks. It goes to an engineer —
+the auditor that proposed it writes no feature code.
+
+### Context handoffs
+
+Fifth of the session (ui ×2, design ×2, eng1, secaudit). **No work lost in
+any.** The mechanism (D45) has now paid for itself five times, and in two of
+them the handoff carried a rule that existed nowhere else in writing.
