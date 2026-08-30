@@ -1374,3 +1374,58 @@ the second closes the class.
 Recorded because the correction matters more than the fix: I gave a rule that would
 have closed the reported bug and quietly broken a case D8 exists to protect, and the
 engineer found it by reading the code before building to my words rather than after.
+
+### D37 — The GUI is the product for the people we ship to, and it writes their constitution silently
+
+I asked which onboarding a DMG user actually meets. The answer is categorical and it
+is not close.
+
+The Swift wrapper never sets `process.arguments`, so a double-click launches the core
+with **no argv**, which is app mode. The DMG's only symlink is `/Applications`, so
+nothing lands on PATH — by design, per D31 part 2. And the CLI is reachable only by
+someone who knows to run
+`/Applications/CrossAudit.app/Contents/Resources/core/CrossAuditCore <command>` — a
+path nobody finds by accident and **the product never mentions**.
+
+So the four-step onboarding is a DMG user's entire first three minutes, and the CLI
+first-contact work — SPEC-6's front door, doctor's verdict-first restructure, the
+constitution moment, i18n waves 1 and 2 — serves people who already know the product
+well enough to open a `.app` bundle. Not wasted: the dispatch makes it correct rather
+than broken, and source and pip users are real. **But it is not first contact for the
+population we ship to.**
+
+**The corollary is the finding.** The constitution moment is not on the DMG path at
+all. `app.py` writes `AUDIT_RULES.md` **silently** and imports nothing from `cli/`. So
+for the population that installs the DMG, the product still writes their governing
+document without showing it to them and without asking — which is precisely the defect
+the constitution moment was built to remove, still live, for everyone who meets the
+product the normal way.
+
+That also means D28 condition 5 — the first three minutes working in Chinese — is
+currently satisfied for a population that is not the DMG population. The condition
+stays, and it now needs the GUI path too.
+
+**Decided.**
+1. **A GUI constitution moment is a P0 design slice**, not a follow-up. Silently
+   writing a person's governing document is the same §1.5 failure whichever surface
+   does it, and the surface that does it is the one almost everyone uses.
+2. **CLI discoverability needs an answer that is not a silent PATH install.** D31 part
+   2 stands on consent grounds — a command-line tool appears through an explicit
+   action a person consents to — but "consented" cannot mean "undiscoverable". The
+   product must at least TELL a person the CLI exists and offer to install it. An
+   unmentioned path buried four directories inside a bundle is not an offer.
+3. **D28's conditions are re-read against the GUI.** Conditions 2, 3, 4 and 5 were
+   being measured largely on the CLI. They are about the product a person meets, so
+   the GUI is where they have to hold.
+
+**And a defect found sideways, which goes straight to an author.** In judging the
+Chinese copy the design engineer suggested a guard, and that guard caught a real
+integrity bug: **`git()` strips the pinned constitution's trailing newline, so the
+auditor judges bytes that are not the commit's while the receipt cites that commit.**
+The receipt names a commit and the auditor saw something else. That is an audit-core
+integrity defect, found as a side effect of a copy review.
+
+It also **retracted the larger half of its own finding** once D36 landed — under D36
+the English becomes true and the Chinese is true the same way — keeping only a
+one-verb precision fix. Fourth time today an agent has narrowed its own claim rather
+than let it stand.
