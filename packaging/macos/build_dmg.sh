@@ -147,6 +147,25 @@ plutil -lint "$APP/Contents/Info.plist"
 mkdir -p "$DMG_ROOT"
 ditto "$APP" "$DMG_ROOT/CrossAudit.app"
 ln -s /Applications "$DMG_ROOT/Applications"
+# D47: retain the last shipped artifact before overwriting it.
+# Artifact-to-artifact comparison is the only way to answer "did a late
+# boundary catch a path that used to work", and it has found real defects
+# three times. Keeping exactly one previous build makes that repeatable
+# instead of depending on an old bundle happening to still be on disk.
+PREV="$DIST/previous"
+PREV_DMG="$DIST/CrossAudit-$VERSION-arm64.dmg"
+if [[ -f "$PREV_DMG" ]]; then
+  rm -rf "$PREV"
+  mkdir -p "$PREV"
+  ditto "$PREV_DMG" "$PREV/$(basename "$PREV_DMG")"
+  [[ -f "$PREV_DMG.sha256" ]] && ditto "$PREV_DMG.sha256" "$PREV/"
+  # The .app is what a reviewer drives; extracting it from the DMG every
+  # time is friction that gets skipped, so keep it unpacked.
+  [[ -d "$APP" ]] && ditto "$APP" "$PREV/CrossAudit.app"
+  date -u "+%Y-%m-%dT%H:%M:%SZ" > "$PREV/retained-at.txt"
+  echo "retained previous artifact in $PREV"
+fi
+
 hdiutil create -quiet -volname "CrossAudit $VERSION" -srcfolder "$DMG_ROOT" \
   -ov -format UDZO "$DIST/CrossAudit-$VERSION-arm64.dmg"
 if [[ -n "$NOTARY_PROFILE" ]]; then
