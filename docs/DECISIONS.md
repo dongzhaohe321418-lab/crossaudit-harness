@@ -3037,3 +3037,49 @@ Six deadlines in that module, two at 1 second, one polling a background thread.
 A different test in the same module failed once in a full run and passed alone.
 It has been treated as one known flaky test all evening; it is six timing
 deadlines.
+
+## D76 — The orphan map, and the column that had already come true
+
+Generalising F1 (D75): **12 properties held by exactly one thing.** 7 by
+design, 2 by accident, **3 already orphaned**, and **5 one correct change away
+from being orphaned.**
+
+The deliverable column was *"plausible correct change that orphans it"*, and
+three of its predictions **had already happened tonight**:
+
+- *"Consolidate reads through a convenience working-tree helper"* — D54, the
+  `GoverningStandard` consolidation that made the failure coherent.
+- *"Simplify projection to `led.entries()` for performance"* — the #8 evidence
+  chain gap.
+- *"Route GUI users exclusively through `app_doctor` and omit the row"* — D55,
+  and it is not hypothetical: for the GUI population that property is
+  effectively orphaned today.
+
+A predictive column whose predictions have already occurred is not a
+speculation exercise.
+
+**Already orphaned (3):** a report shown as audited being the cited report
+bytes (F1); configured checks in a receipt coming from the audited
+configuration; skills in a receipt having existed in the cited subject commit.
+All three are in flight — the first with the console owner, the other two on
+the receipt rebuild.
+
+**One change from orphaned (5):** report streams, DCL digest, GUI rule count,
+CLI drift visibility, unknown remediation rendering.
+
+### The zero-case is the structural finding
+
+> **No property is protected by an independent orphan detector at every
+> consumer; all listed holders are single points, so a correct refactor can
+> remove the only guard.**
+
+That is a statement about the codebase rather than about a defect. Every
+property this product exists to hold rests on one thing, and nothing notices
+when that thing stops holding it. F1 is what that costs, and it cost nothing
+visible in a diff.
+
+This makes an **orphan detector** — a guard that fails when a property loses
+its holder, rather than when behaviour changes — the highest-leverage
+structural addition available. Recorded as the candidate for the next major
+slice rather than dispatched tonight: it needs a design, and every engineer is
+loaded on work that closes the three orphans we already have.
