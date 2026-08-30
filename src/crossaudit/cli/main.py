@@ -31,7 +31,7 @@ from ..receipt.sign import sign_receipt
 from ..receipt.verify import admit as admit_receipt
 from ..receipt import reproduction as _reproduction
 from ..receipt import sources as _sources
-from . import tui, wizard
+from . import i18n, tui, wizard
 from .talk import cmd_routing, cmd_talk
 
 ALLOW_CUSTOM_ENV = "CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT"
@@ -1189,6 +1189,9 @@ def cmd_watch(args: argparse.Namespace) -> int:
 
 # ------------------------------------------------------------------- init
 def cmd_init(args: argparse.Namespace) -> int:
+    i18n.set_language(getattr(args, "lang", i18n.DEFAULT_LANGUAGE)
+                      or i18n.DEFAULT_LANGUAGE)
+    i18n.reset_fallbacks()
     summary = wizard.run(Path(args.path or "."), mode="github" if args.github else "local",
                          force=args.force,
                          auditor_vendor=getattr(args, "auditor_vendor", None),
@@ -1205,8 +1208,26 @@ def cmd_init(args: argparse.Namespace) -> int:
     # available.
     if not args.no_console:
         summary.update(_open_console(Path(summary["config"]).parent))
+    _report_untranslated()
     _emit(summary, args.json)
     return EXIT_OK
+
+
+def _report_untranslated() -> None:
+    """Say out loud that this run was not fully translated.
+
+    The inline `[en]` marks make a gap visible in a screenshot; this line makes
+    it countable, and names the keys so the person reporting it does not have to
+    describe which sentence looked wrong. Deliberately English and deliberately
+    outside the catalogue: it is a defect notice about the catalogue, and a
+    notice that can itself go missing is no notice.
+    """
+    missing = i18n.fallbacks()
+    if not missing:
+        return
+    print(f"\n  [i18n] {len(missing)} string(s) fell back to English in this "
+          f"run: {', '.join(missing[:8])}"
+          + (" ..." if len(missing) > 8 else ""))
 
 
 def _open_console(root: Path) -> dict:
@@ -1528,6 +1549,14 @@ def build_parser() -> argparse.ArgumentParser:
                    help="pick the constitution starting point without being asked")
     i.add_argument("--no-console", action="store_true",
                    help="do not start or open the console when setup finishes")
+    # Wave 1 (D21) translates the init wizard and nothing else, so the flag is
+    # offered on `init` and nowhere else. Accepting it globally would let
+    # somebody choose Chinese and then meet English at the first thing that goes
+    # wrong, which is the half-translated product D21 refuses. LANG and LC_ALL
+    # are deliberately NOT consulted: an environment that happens to be Chinese
+    # must not opt a person into a partly-translated tool without asking.
+    i.add_argument("--lang", choices=i18n.LANGUAGES, default=i18n.DEFAULT_LANGUAGE,
+                   help="language for the setup wizard (wave 1: init only)")
     i.add_argument("--auditor-vendor", choices=tuple(wizard.VENDORS),
                    help="auditor vendor; useful when stdin is not a terminal")
     i.add_argument("--auditor-model",

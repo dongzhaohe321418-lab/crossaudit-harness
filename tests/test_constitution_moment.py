@@ -30,6 +30,7 @@ import re
 import pytest
 
 from crossaudit.cli import main, wizard
+from crossaudit.cli.i18n import t
 
 
 def _args(project, **over) -> argparse.Namespace:
@@ -252,12 +253,12 @@ def test_the_frame_never_promises_a_check_over_a_list_of_what_is_not_checked(
     flat = _flat(out)
     assert "There are no rules to check yet, so until you write one:" in flat
     assert "nothing will be blocked, whatever the work says" in flat
-    assert wizard.GATING_FRAME not in flat, (
+    assert t(wizard.GATING_FRAME_KEY) not in flat, (
         "the empty standard checks nothing; it must not say it will")
 
     # The gating frame is not merely deleted — it is still used where it is true.
     _project2, gated = _init(tmp_path, monkeypatch, capsys, name="generalframe")
-    assert wizard.GATING_FRAME in _flat(gated)
+    assert t(wizard.GATING_FRAME_KEY) in _flat(gated)
 
 
 def test_the_frame_guard_fails_when_the_gating_promise_comes_back(
@@ -265,13 +266,13 @@ def test_the_frame_guard_fails_when_the_gating_promise_comes_back(
     """Mutate the real table, run the real guard, watch it catch it (D10)."""
     _project, honest = _init(tmp_path, monkeypatch, capsys, name="framebase",
                              profile="own")
-    assert wizard.GATING_FRAME not in _flat(honest)
+    assert t(wizard.GATING_FRAME_KEY) not in _flat(honest)
 
     monkeypatch.setitem(wizard.STARTING_POINTS["own"], "frame",
-                        wizard.GATING_FRAME)
+                        wizard.GATING_FRAME_KEY)
     _project2, mutated = _init(tmp_path, monkeypatch, capsys, name="framebad",
                                profile="own")
-    assert wizard.GATING_FRAME in _flat(mutated), (
+    assert t(wizard.GATING_FRAME_KEY) in _flat(mutated), (
         "the mutation did not take; this demonstration proves nothing")
 
 

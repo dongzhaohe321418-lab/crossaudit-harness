@@ -29,6 +29,7 @@ from ..scaffold import (AUDIT_TREE, CONFIG_TEMPLATE, GENERAL_CHECKS,
                         read, write_tree)
 from ..providers.specs import SPECS
 from . import tui
+from .i18n import t
 
 DEFAULT_KEYS_FILE = Path.home() / ".crossaudit-keys.env"
 
@@ -58,13 +59,14 @@ def choose_model(vendor: str, default: str, *, role: str = "Auditor") -> str:
     """
     known = VENDOR_MODELS.get(vendor) or []
     if not known:
-        return tui.text("Model id", default, placeholder="exactly as the vendor spells it")
+        return tui.text(t("prompt.model_id"), default,
+                        placeholder=t("prompt.model_id.placeholder"))
     options = [tui.Option(m, m, hint) for m, hint in known]
-    options.append(tui.Option(TYPE_IT, "something else", "type the id yourself"))
-    picked = tui.select(f"{role} model:", options, default=0)
+    options.append(tui.Option(TYPE_IT, t("option.type_it"), t("option.type_it.hint")))
+    picked = tui.select(t("prompt.model", role=role), options, default=0)
     if picked == TYPE_IT:
-        return tui.text("Model id", default,
-                        placeholder="exactly as the vendor spells it")
+        return tui.text(t("prompt.model_id"), default,
+                        placeholder=t("prompt.model_id.placeholder"))
     return picked
 # Kept for callers and tests that predate the arrow-key flow.
 VENDOR_PRESETS = VENDORS
@@ -164,11 +166,11 @@ def prepare(target: Path) -> list[str]:
     done: list[str] = []
     if not target.exists():
         target.mkdir(parents=True)
-        done.append(f"created {target}")
+        done.append(t("prepare.created", path=target))
     if not (target / ".git").is_dir():
         subprocess.run(["git", "init", "-q", "-b", "main"], cwd=str(target),
                        check=True)
-        done.append("git init — the ledger is git, and an audit reads commits")
+        done.append(t("prepare.git_init"))
     gitignore = target / ".gitignore"
     current = gitignore.read_text(encoding="utf-8") if gitignore.is_file() else ""
     local_state = (".crossaudit/", ".crossaudit-home/", ".crossaudit-trash/")
@@ -177,7 +179,7 @@ def prepare(target: Path) -> list[str]:
         with open(gitignore, "a", encoding="utf-8", newline="\n") as fh:
             fh.write("\n# CrossAudit's local state. The ledger is committed; this is not.\n"
                      + "\n".join(missing_state) + "\n")
-        done.append("ignored CrossAudit local state directories — not the ledger")
+        done.append(t("prepare.gitignore"))
     return done
 
 
@@ -248,43 +250,53 @@ def commit_setup(target: Path, paths: list[str]) -> str:
 #: because one of them gates nothing: "it will check that nothing will be gated"
 #: is not a check, and a frame that promises checking over a list describing its
 #: ABSENCE is the overclaim shape this slice exists to remove (AGENTS.md §1.5).
-GATING_FRAME = "Before CrossAudit accepts any work, it will check that:"
+GATING_FRAME_KEY = "rules.gating_frame"
 
+#: Each starting point stores i18n KEYS, not sentences. The English text lives
+#: in one catalogue with every other language, so a translator meets one file
+#: and a reviewer sees both columns of a change side by side. Resolving at
+#: DISPLAY time rather than import time is what lets `--lang` be chosen after
+#: this module is imported.
 STARTING_POINTS: dict[str, dict] = {
     "general": {
-        "label": "General",
-        "hint": "any deliverable — prose, documents, code",
         "template": "GENERAL_AUDIT_RULES.md",
-        "frame": GATING_FRAME,
-        "consequences": [
-            "it does what you asked for",
-            "it is finished — no TODO or placeholder text left in",
-            "nothing it states contradicts the sources you gave it",
-        ],
+        "consequences": ("start.general.c1", "start.general.c2", "start.general.c3"),
     },
     "science": {
-        "label": "Science & data",
-        "hint": "numerical results with declared inputs and units",
         "template": "AUDIT_RULES.md",
-        "frame": GATING_FRAME,
-        "consequences": [
-            "every result declares the inputs and code version it came from",
-            "every number carries a unit and a traceable source",
-            "anything reported as converged actually met its threshold",
-            "the prose does not disagree with the data files",
-        ],
+        "consequences": ("start.science.c1", "start.science.c2",
+                         "start.science.c3", "start.science.c4"),
     },
     "own": {
-        "label": "Only what I write myself",
-        "hint": "no rules yet; nothing is gated until you add some",
         "template": None,
-        "frame": "There are no rules to check yet, so until you write one:",
-        "consequences": [
-            "nothing will be blocked, whatever the work says",
-            "the automatic checks still run, and every result is still recorded",
-        ],
+        "frame": "start.own.frame",
+        "consequences": ("start.own.c1", "start.own.c2"),
     },
 }
+
+
+def point_label(key: str) -> str:
+    return t(f"start.{key}.label")
+
+
+def point_hint(key: str) -> str:
+    return t(f"start.{key}.hint")
+
+
+def point_frame(key: str) -> str:
+    """The sentence a starting point's consequences are read under.
+
+    Per point, because one of them gates nothing: "it will check that nothing
+    will be gated" is not a check, and a frame promising checking over a list
+    describing its ABSENCE is the overclaim shape this slice removed.
+    """
+    return t(STARTING_POINTS[key].get("frame") or GATING_FRAME_KEY)
+
+
+def point_consequences(key: str) -> list[str]:
+    return [t(item) for item in STARTING_POINTS[key]["consequences"]]
+
+
 DEFAULT_STARTING_POINT = "general"
 
 #: The deterministic pack that belongs with each starting point. The CLI used
@@ -428,18 +440,19 @@ def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
         point = STARTING_POINTS[chosen]
         if drafted is not None:
             attributed = [r for r in drafted.rules if getattr(r, "from_user", "")]
-            frame = GATING_FRAME
-            header = (f"Rules drafted from what you said · {len(drafted.rules)} rules"
-                      + (f", {len(attributed)} from your description"
-                         if attributed else ""))
+            frame = t(GATING_FRAME_KEY)
+            header = (t("rules.drafted_header.attributed",
+                        count=len(drafted.rules), attributed=len(attributed))
+                      if attributed else
+                      t("rules.drafted_header", count=len(drafted.rules)))
             consequences = [r.title.strip().rstrip(".").lower()
                             for r in drafted.rules if r.severity == "BLOCKER"][:4]
             body = _substitute_project(drafted.render(target.name), target.name)
         else:
             # The word "drafted" may appear only when a draft happened.
-            header = f"A starting point — not drafted from your description · {point['label']}"
-            frame = point["frame"]
-            consequences = point["consequences"]
+            header = t("rules.starting_point_header", label=point_label(chosen))
+            frame = point_frame(chosen)
+            consequences = point_consequences(chosen)
             body = (_empty_constitution(target.name) if point["template"] is None
                     else _substitute_project(read(point["template"]), target.name))
 
@@ -450,11 +463,11 @@ def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
         tui.note(header)
 
         options = [
-            tui.Option("use", "Use these rules", "writes and commits them"),
-            tui.Option("switch", "Use a different starting point",
-                       "general, science & data, or only what you write"),
-            tui.Option("edit", "Edit them first", "opens the file in your editor"),
-            tui.Option("show", "Show the full rules", "every rule, in full"),
+            tui.Option("use", t("rules.option.use"), t("rules.option.use.hint")),
+            tui.Option("switch", t("rules.option.switch"),
+                       t("rules.option.switch.hint")),
+            tui.Option("edit", t("rules.option.edit"), t("rules.option.edit.hint")),
+            tui.Option("show", t("rules.option.show"), t("rules.option.show.hint")),
         ]
         # Said BEFORE the choice, not after it. This is the sentence that makes
         # editing safe to offer freely (Ledger D8) — it is true because every
@@ -462,17 +475,16 @@ def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
         # between cycles. Read after the person has already chosen, it is a
         # reassurance about a decision they have made; read before, it is the
         # fact they need in order to make it.
-        tui.note("You can change these at any time. Changing the rules never "
-                 "changes a decision already made.")
-        picked = tui.select("These rules:", options, default=0)
+        tui.note(t("rules.free_to_change"))
+        picked = tui.select(t("rules.prompt"), options, default=0)
 
         if picked == "show":
-            tui.panel(f"{const_name} — in full", body.splitlines())
+            tui.panel(t("rules.panel.full", name=const_name), body.splitlines())
             continue
         if picked == "switch":
-            chosen = tui.select("Starting point:", [
-                tui.Option(key, item["label"], item["hint"])
-                for key, item in STARTING_POINTS.items()],
+            chosen = tui.select(t("rules.starting_point_prompt"), [
+                tui.Option(key, point_label(key), point_hint(key))
+                for key in STARTING_POINTS],
                 default=list(STARTING_POINTS).index(chosen))
             drafted = None          # an explicit choice replaces the draft
             continue
@@ -481,7 +493,7 @@ def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
             _open_in_editor(const_path)
             body = const_path.read_text(encoding="utf-8")
             drafted = None
-            tui.ok("edits loaded — showing them again before committing")
+            tui.ok(t("rules.edits_loaded"))
             continue
         chosen = _propose_check_pack(drafted, chosen)
         return body, chosen
@@ -512,24 +524,26 @@ def _propose_check_pack(drafted, chosen: str) -> str:
     if proposal is None or not tui.interactive():
         return chosen
 
-    tui.note("Your rules ask for things CrossAudit can check mechanically:")
+    tui.note(t("checks.proposal.intro"))
     for rule_id, title, from_user, checks in proposal.grounds:
-        said = (f'\n        from what you said: "{from_user}"' if from_user else "")
-        print(f"      · {rule_id} {title} → {', '.join(checks)}{said}")
-    tui.note(f"So it proposes the {STARTING_POINTS[proposal.key]['label'].lower()} "
-             f"automatic checks. They run before any model reads the work, and "
-             f"they never change what your rules say.")
+        print("      · " + t("checks.proposal.ground", rule_id=rule_id,
+                             title=title, checks=", ".join(checks)))
+        if from_user:
+            # The person's own words, on their own line: the sentence around
+            # them differs in word order between languages, and a quote welded
+            # into a translated clause by concatenation reads as neither.
+            print("        " + t("checks.proposal.said", said=from_user))
+    tui.note(t("checks.proposal.because", label=point_label(proposal.key)))
 
-    picked = tui.select("Automatic checks:", [
-        tui.Option(proposal.key, f"Use the {STARTING_POINTS[proposal.key]['label']} checks",
+    picked = tui.select(t("checks.proposal.prompt"), [
+        tui.Option(proposal.key,
+                   t("checks.proposal.accept", label=point_label(proposal.key)),
                    ", ".join(proposal.checks)),
-        tui.Option(chosen, f"Keep the {STARTING_POINTS[chosen]['label']} checks",
+        tui.Option(chosen, t("checks.proposal.keep", label=point_label(chosen)),
                    ", ".join(proposal.instead_of)),
     ], default=0)
     if picked != chosen:
-        tui.note("You can change these at any time by editing `checks:` in "
-                 "crossaudit.yml. Like the rules, a change takes effect only "
-                 "between cycles.")
+        tui.note(t("checks.proposal.editable"))
     return picked
 
 
@@ -553,9 +567,7 @@ def _reason_inside_setup(exc: Denial) -> str:
     env = str(exc.detail.get("env", ""))
     if not env or "keys_file" in exc.detail:
         return exc.reason
-    return (f"there is no key in ${env} yet — export ${env}, or re-run setup "
-            f"with `crossaudit init --force` to store one. The rest of setup "
-            f"does not need it")
+    return t("rules.no_key_here", env=env)
 
 
 def _open_in_editor(path: Path) -> None:
@@ -570,13 +582,13 @@ def _open_in_editor(path: Path) -> None:
 
     editor = os.environ.get("EDITOR") or os.environ.get("VISUAL")
     if not editor or not tui.interactive():
-        tui.note(f"edit it here, then re-run setup: {path}")
+        tui.note(t("editor.manual", path=path))
         return
     try:
         subprocess.run([*editor.split(), str(path)], check=False)
     except OSError as exc:  # noqa: BLE001 -- an editor that will not start is not fatal
-        tui.warn(f"could not start {editor}: {exc}")
-        tui.note(f"edit it here instead: {path}")
+        tui.warn(t("editor.failed", editor=editor, error=exc))
+        tui.note(t("editor.manual_instead", path=path))
 
 
 def _missing_credentials(target: Path, keys_file) -> list[tuple[str, str]]:
@@ -609,11 +621,11 @@ def _missing_credentials(target: Path, keys_file) -> list[tuple[str, str]]:
 
     if NEEDS_KEY.get(cfg.auditor.provider, True) and not present.get(
             cfg.auditor.key_env, "").strip():
-        missing.append((cfg.auditor.key_env, "auditor"))
+        missing.append((cfg.auditor.key_env, t("role.auditor")))
     generator_env = cfg.generator_key_env or "CROSSAUDIT_GENERATOR_KEY"
     if (cfg.generator_vendor or "").lower() != "human" and not present.get(
             generator_env, "").strip():
-        missing.append((generator_env, "generator"))
+        missing.append((generator_env, t("role.generator")))
     return missing
 
 
@@ -665,19 +677,17 @@ def run(target: Path, *, mode: str, force: bool = False,
         raise ConfigDenial(f"{cfg_path} already exists; refusing to overwrite "
                            f"(pass --force if you mean it)")
 
-    tui.banner("CrossAudit — setting up a supervised project",
-               "Two models from different vendors, one ledger in git. "
-               "Four questions, then it runs.")
+    tui.banner(t("init.banner.title"), t("init.banner.subtitle"))
 
     gitignore_existed = (target / ".gitignore").exists()
     for line in prepare(target):
         tui.ok(line)
 
     # ---- 1. the auditor ----------------------------------------------------
-    tui.step(1, 4, "Who audits")
-    tui.note("The model that reviews everything before it counts as done.")
+    tui.step(1, 4, t("init.step1.title"))
+    tui.note(t("init.step1.note"))
     auditor_vendor = auditor_vendor or tui.select(
-        "Auditor vendor:",
+        t("prompt.auditor_vendor"),
         [tui.Option(v, v, VENDOR_HINTS[v]) for v in VENDORS], default=0)
     if auditor_vendor not in VENDORS:
         raise ConfigDenial(f"unknown auditor vendor {auditor_vendor!r}")
@@ -685,19 +695,19 @@ def run(target: Path, *, mode: str, force: bool = False,
     model = auditor_model or choose_model(auditor_vendor, default_model)
     base_url = ""
     if auditor_vendor == "other":
-        base_url = tui.text("OpenAI-compatible base URL",
+        base_url = tui.text(t("prompt.base_url"),
                             placeholder="https://host/v1")
         provider = "openai_compat"
 
     # ---- 2. the generator --------------------------------------------------
-    tui.step(2, 4, "Who generates")
-    tui.note("The model that writes each build round. Its vendor is also recorded "
-             "so same-source supervision can be refused before either key is used.")
+    tui.step(2, 4, t("init.step2.title"))
+    tui.note(t("init.step2.note"))
     others = [v for v in VENDORS if v not in (auditor_vendor, "other")]
     generator_vendor = generator_vendor or tui.select(
-        "Generator vendor:",
+        t("prompt.generator_vendor"),
         [tui.Option(v, v, VENDOR_HINTS[v]) for v in others]
-        + [tui.Option("human", "human", "you write it yourself")], default=0)
+        + [tui.Option("human", t("option.human"), t("option.human.hint"))],
+        default=0)
     if generator_vendor == auditor_vendor:
         raise ConfigDenial(
             f"auditor and generator are both {auditor_vendor!r}: that is "
@@ -715,17 +725,14 @@ def run(target: Path, *, mode: str, force: bool = False,
             generator_vendor, generator_default_model, role="Generator")
 
     # ---- 3. keys -----------------------------------------------------------
-    tui.step(3, 4, "API keys")
-    tui.note(f"Written to {keys_file()} with mode 600, never placed in the "
-             f"repository. Leave blank to export them yourself.")
-    tui.note("Hidden by default. After entry, only length and the final four "
-             "characters are shown for paste checking. Set CROSSAUDIT_SHOW_KEYS=1 "
-             "only when you explicitly want visible input.")
-    auditor_key = tui.secret(f"{auditor_vendor} key — the auditor")
+    tui.step(3, 4, t("init.step3.title"))
+    tui.note(t("init.step3.where", path=keys_file()))
+    tui.note(t("init.step3.hidden"))
+    auditor_key = tui.secret(t("prompt.auditor_key", vendor=auditor_vendor))
     generator_key = ""
     if generator_vendor != "human":
-        generator_key = tui.secret(f"{generator_vendor} key — the generator "
-                                   f"(leave blank to export it yourself)")
+        generator_key = tui.secret(
+            t("prompt.generator_key", vendor=generator_vendor))
     written = None
     if auditor_key or generator_key:
         written = write_keys({"CROSSAUDIT_AUDITOR_KEY": auditor_key,
@@ -735,22 +742,20 @@ def run(target: Path, *, mode: str, force: bool = False,
         # first thing the person types into the console fails on a missing key
         # they just supplied.
         load_keys_into_env()
-        tui.ok(f"keys written to {written} (mode 600)")
+        tui.ok(t("file.keys_written", path=written))
 
     # ---- 4. the rules, spoken rather than written --------------------------
-    tui.step(4, 4, "What this is, and what would be a mistake")
+    tui.step(4, 4, t("init.step4.title"))
     # True on EVERY path. "Drafted" was promised before it was known whether a
     # draft could happen, and on the keyless path none does — so the promise was
     # broken by the state, not by the code. What is always true is that the
     # rules are shown and chosen before anything is committed.
-    tui.note("Say it in your own words. You will see the rules before anything "
-             "is committed, and you choose — you never write markdown.")
+    tui.note(t("init.step4.note"))
     const_name = "AUDIT_RULES.md"
     const_path = target / const_name
     description = tui.text(
-        "your project, in a sentence or three",
-        placeholder="e.g. a review of the PV industry; every figure must trace "
-                    "to a source")
+        t("prompt.description"),
+        placeholder=t("prompt.description.placeholder"))
 
     # An explicit --profile skips the proposal entirely; otherwise the default
     # is general, and silence never selects the laboratory contract.
@@ -765,10 +770,8 @@ def run(target: Path, *, mode: str, force: bool = False,
             # `crossaudit amend` as the remedy: that is provider-backed and
             # cannot run in exactly the state this message appears in. Nor does
             # it offer `crossaudit init`, which is what the person is inside.
-            tui.warn(f"could not draft rules from your description: "
-                     f"{_reason_inside_setup(exc)}")
-            tui.note("Showing a starting point instead — you can edit it here, "
-                     "or pick a different one.")
+            tui.warn(t("rules.draft_failed", reason=_reason_inside_setup(exc)))
+            tui.note(t("rules.draft_failed.fallback"))
 
     # Shown and agreed on every path, which is what the step-4 promise said and
     # only the drafted path delivered.
@@ -776,10 +779,10 @@ def run(target: Path, *, mode: str, force: bool = False,
         target=target, const_path=const_path, const_name=const_name,
         drafted=draft, chosen=starting_point, description=description)
     const_path.write_text(constitution_text, encoding="utf-8", newline="\n")
-    tui.ok(f"{const_name} written and committed with the rest of setup")
+    tui.ok(t("rules.written", name=const_name))
 
     # ---- configuration and shape -------------------------------------------
-    science_repo = tui.text("Project name (owner/name, or a label)", target.name)
+    science_repo = tui.text(t("prompt.project_name"), target.name)
     audit_repo = "" if mode == "local" else f"{science_repo}-audit"
 
     cfg_path.write_text(CONFIG_TEMPLATE.format(
@@ -805,7 +808,7 @@ def run(target: Path, *, mode: str, force: bool = False,
         scope_dirs="experiments",
         checks=", ".join(STARTING_CHECKS[starting_point]),
     ), encoding="utf-8", newline="\n")
-    tui.ok(f"{CONFIG_NAME} written")
+    tui.ok(t("file.config_written", name=CONFIG_NAME))
     from ..dcl import describe as describe_checks
 
     contract_name = "DETERMINISTIC_CHECKS.md"
@@ -825,7 +828,7 @@ def run(target: Path, *, mode: str, force: bool = False,
         owned.extend(write_tree(target, AUDIT_TREE))
 
     setup_commit = commit_setup(target, owned)
-    tui.ok(f"setup committed — {setup_commit[:12]}")
+    tui.ok(t("file.setup_committed", sha=setup_commit[:12]))
 
     # ---- what to do next ---------------------------------------------------
     # `init` and `doctor` must not contradict each other one command apart
@@ -834,41 +837,40 @@ def run(target: Path, *, mode: str, force: bool = False,
     # credential leads the Next list instead of scrolling above a green box.
     missing = _missing_credentials(target, written)
     if missing:
-        tui.banner("Setup written — not ready to run yet", str(target))
+        tui.banner(t("done.not_ready"), str(target))
     else:
-        tui.banner("Ready", str(target))
+        tui.banner(t("done.ready"), str(target))
     rows = []
     if missing:
         # Named first, because it is the thing that stops the very next command.
         for env_name, role in missing:
             rows.append(f"export {env_name}=...")
-            rows.append(tui.dim(f"    the {role} has no key yet; "
-                                f"`crossaudit build` stops without it"))
+            rows.append(tui.dim("    " + t("next.no_key", role=role)))
         if written:
             rows.append(f"source {written}")
-            rows.append(tui.dim("    load the keys you entered into this shell"))
+            rows.append(tui.dim("    " + t("next.source_keys")))
         rows.append("crossaudit doctor")
-        rows.append(tui.dim("    re-check once a key is in place; it agrees with this"))
+        rows.append(tui.dim("    " + t("next.doctor_recheck")))
     else:
         if written:
             rows.append(f"source {written}")
-            rows.append(tui.dim("    load the keys into this shell"))
+            rows.append(tui.dim("    " + t("next.source_keys.ready")))
         rows += [
             "crossaudit doctor",
-            tui.dim("    check everything, offline and read-only"),
+            tui.dim("    " + t("next.doctor")),
             'crossaudit build "…"',
-            tui.dim("    say what to build; the loop writes and audits it"),
+            tui.dim("    " + t("next.build")),
             "crossaudit console",
-            tui.dim("    two windows in a browser, live, and it outlives the window"),
+            tui.dim("    " + t("next.console")),
         ]
-    tui.panel("Next", rows)
+    tui.panel(t("done.next"), rows)
 
     if mode != "local":
-        tui.panel("Two repositories (privilege separation)",
+        tui.panel(t("done.two_repos"),
                   github_plan(science_repo, audit_repo or f"{science_repo}-audit"))
         gh_ok, detail = gh_available()
         if not gh_ok:
-            tui.warn(f"{detail} — install from https://cli.github.com first")
+            tui.warn(t("done.gh_missing", detail=detail))
 
     return {"config": str(cfg_path), "constitution": str(const_path),
             "keys_file": str(written) if written else None, "mode": mode,

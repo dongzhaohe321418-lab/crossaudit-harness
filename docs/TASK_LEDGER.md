@@ -912,3 +912,135 @@ engineer caught it while reading the rule it had been told to follow. It is now
 cherry-picked onto v5-redesign and the stray commit removed from the branch that
 had already been reviewed at 293110b. The rule that a claim must be checked rather
 than assumed applies to the person writing the rules.
+---
+
+## A4 — change contract (CLI i18n, wave 1)
+
+```
+TASK:        Translate the ENTIRE `crossaudit init` wizard so a person enters in
+             English or Chinese and stays in that language for the whole setup
+             (D21), and give the CLI the i18n mechanism D16 records it as not
+             having. D25 is why this is not polish: for a Chinese-speaking
+             first-timer an English-only CLI is not degradation, it is exclusion.
+
+BASE:        agentA/first-three-minutes at 704aca9, merged with v5-redesign at
+             bbb29a0 — NOT bbb29a0 alone. Stated because it is a real dependency
+             and the manager owns merge ordering. bbb29a0's wizard is 467 lines
+             and contains no constitution moment; the wizard wave 1 has to cover
+             is 875 lines and contains it. D21's whole argument is that the
+             constitution moment cannot be carved out of its own wizard, so
+             translating bbb29a0's `init` would have translated an `init` that
+             does not contain the thing wave 1 is P0 for, and thrown the work
+             away at the merge. The merge was clean apart from TASK_LEDGER.md.
+
+SURFACE:     src/crossaudit/cli/i18n.py (new), wizard.py, tui.py, main.py
+             tests/test_cli_i18n.py (new), test_constitution_moment.py
+             Audit core touched? NO.
+
+MECHANISM:   A keyed catalogue in one module, not `gettext`. The argument is in
+             the module docstring so it is cheap to overturn; the short form is
+             that gettext's fallback is SILENT by design, its msgid is the
+             English string (so rewording English silently orphans every
+             translation), `.mo` files are binaries a reviewer cannot read and a
+             frozen app must ship as data, and the console already uses a table.
+             Its real advantages — plurals and translator tooling — are the two
+             we need least. Stdlib either way; this is not a dependency call.
+
+FALLBACK:    VISIBLE, in two halves that are both required. A missing
+             translation is served in English with an inline `[en] ` mark (so a
+             gap shows in a screenshot or a bug report) and recorded (so CI can
+             assert on it), and the run prints `[i18n] N string(s) fell back`
+             naming the keys. Not an exception: crashing setup over a missing
+             sentence turns a copy defect into an outage.
+
+SCOPE OF --lang: offered on `init` and nowhere else, per D21 — accepting it
+             globally would let somebody choose Chinese and then meet English at
+             the first thing that goes wrong. LANG and LC_ALL are deliberately
+             NOT consulted: an environment that happens to be Chinese must not
+             opt a person into a partly-translated tool without asking.
+
+NOT TRANSLATED, and why the seam is there:
+             rule ids and check names (an id is what traces a verdict back to a
+             person's own constitution and to a receipt); exit codes, `--json`
+             and every machine-readable field (a scripting contract, per
+             errors.py — that seam was drawn once and this does not move it);
+             model-generated text, including a drafted rule's title and the
+             person's own words quoted back; paths, env var names, git output
+             and commands to type; and the CONSTITUTION FILE ITSELF, which is
+             project content the auditor reads, not UI.
+
+ACCEPTANCE:  1. 98 keys, symmetric across both languages, no translation left
+                sitting in English, no translation inventing a slot.
+             2. A real `init --lang zh` run is Chinese at every step, with zero
+                fallbacks and no `[en] ` marks.
+             3. No English catalogue sentence appears on a Chinese screen, and
+                every Latin run on it is a named exception.
+             4. A real `init` run defaults to English and is unchanged.
+             5. Chinese never overflows a box: every box line measures exactly
+                `tui.WIDTH` columns.
+             6. `--json` is unaffected.
+             7. D10 counterfactual: making the fallback silent goes red.
+             8. Full suite green.
+
+CHINESE PARITY: **SATISFIED for the `crossaudit init` wizard only** — every
+             screen from the banner to the Next panel, including the
+             constitution moment and the check-pack proposal. **NOT APPLICABLE,
+             tracked as D16, for every other CLI surface**: doctor, build, run,
+             watch, amend, talk, the front door and every refusal outside
+             `init`. Those are D21 waves 2-4 and remain English; `--lang` is not
+             offered to them, so nobody can reach them in Chinese. Stated as two
+             claims rather than one because a blanket "parity satisfied" after
+             wave 1 would be exactly the overclaim this team has spent the day
+             removing.
+
+REVIEWER:    codex
+AUDIT:       auditor
+UX REVIEW:   design
+```
+
+### What I said I would flag, flagged
+
+Writing the science-proposal slice I said I would say if any string was painful
+to extract. Four were, and one of them was a defect rather than a difficulty.
+
+**The defect.** My first Chinese run looked complete and was not. `git init — the
+ledger is git…`, the `Next` rows and `(default)` were still English, and
+`fallbacks()` reported ZERO — because a string that never went through `t()` is
+not a missing translation, it is a missing key, and the fallback counter cannot
+see it. A counter that only measures the strings you remembered to route is a
+guard shaped exactly like the bug. So the test reads the SCREEN: every Latin run
+on a Chinese screen must be a named exception, and no English catalogue sentence
+may appear on it. That test is the one that found the gap; the counter did not.
+
+**The three genuine difficulties**, all resolved rather than deferred:
+* `tui.select`'s hint is one string shared by every menu in the product with the
+  option count interpolated. Translated once, in `tui`, keyed.
+* The check-pack grounds line quotes the person's own words inside a sentence
+  whose word order differs in Chinese. Splitting the quote onto its own line was
+  the fix; a translated clause welded to an untranslatable quote by
+  concatenation reads as neither language.
+* `_reason_inside_setup` names the same env var twice in one English sentence.
+  The Chinese keeps both, because the second is the thing you type.
+
+### Width, checked rather than assumed
+
+`tui._visible` already counts CJK as two columns and `tui._break` already splits
+spaceless runs, so the existing wrapper handles Chinese. What needed a test was
+the BOXES, which are fixed at `tui.WIDTH` and padded from measured content: the
+test asserts every drawn box line is exactly 72 columns in a Chinese run. Note
+`tui.note` WRAPS, so every assertion here flattens whitespace first — a sentence
+a person reads as one line arrives split and indented in the raw stream, which is
+the CLI's version of the rendered-versus-raw distinction that has caught this
+team repeatedly.
+
+### One thing I could not do
+
+SPEC-7 is not in the repository, or in any worktree, or in any branch — and
+neither are SPEC-1, 2, 3 or 6, which earlier slices also cite. They appear to
+exist only in the design engineer's own context. So the two questions the manager
+explicitly delegated to design — whether `gettext` is right, and what "visible
+fallback" should mean — were decided here instead, with the reasoning written
+down where it can be overturned cheaply. Both are marked as the implementer's
+call rather than design's, and neither should be read as design having agreed.
+Recorded because a spec everyone cites and nobody can open is the same shape as
+D20's working-directory drift: it looks fine from where each person stands.

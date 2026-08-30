@@ -19,6 +19,8 @@ import os
 import sys
 from dataclasses import dataclass
 
+from .i18n import t
+
 try:                                   # POSIX only; absence is a supported state
     import termios
     import tty
@@ -225,7 +227,7 @@ def outcome_line(index: int, option: Option) -> str:
     answer anyone can report or scroll back to, so the menu states its result
     before it hands control back.
     """
-    return f"{dim('→')} chose {index + 1}) {option.label}"
+    return f"{dim('→')} " + t("select.chose", n=index + 1, label=option.label)
 
 
 def select(title: str, options: list[Option], *, default: int = 0,
@@ -249,14 +251,14 @@ def select(title: str, options: list[Option], *, default: int = 0,
     if not interactive():
         chosen = options[default]
         print(f"  {title} {dim('→')} {default + 1}) {chosen.label} "
-              f"{dim('(default)')}")
+              f"{dim(t('select.default'))}")
         return chosen.value
 
     index = max(0, min(default, len(options) - 1))
     print(f"  {title}")
     typeable = min(9, len(options))
-    hint = footer or (f"↑↓ to move · enter to choose · or type 1-{typeable}"
-                      if typeable > 1 else "enter to choose")
+    hint = footer or (t("select.hint", n=typeable) if typeable > 1
+                      else t("select.hint.single"))
     print(dim(f"  {hint}"))
 
     def render(first: bool = False) -> None:
