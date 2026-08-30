@@ -535,8 +535,13 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             # strings on this surface belong. The sentence says what was folded
             # AND that nothing is gone, because "+N" alone is a number and the
             # point is that the transcript is intact.
+            folded = int(report.get("earlier") or 0)
+            # SPEC-20 §2. This read "1 turns" for a single folded turn. It is an
+            # English-only defect — Chinese has no plural, so `1 轮` was always
+            # right — which is why a locale sweep would not have caught it and
+            # reading the grammar did.
             context_notice(EARLIER_TURNS_NOTICE,
-                           f"{int(report.get('earlier') or 0)} turns")
+                           f"{folded} turn{'' if folded == 1 else 's'}")
 
     def generator_provider_event(actor: str, text: str, detail: str = "") -> None:
         emit("provider_recovery", actor, text, detail,

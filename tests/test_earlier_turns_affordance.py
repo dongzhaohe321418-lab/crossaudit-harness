@@ -260,3 +260,132 @@ def test_the_guard_is_shown_to_fail(why, before, after, project, monkeypatch):
         except (AssertionError, IndexError) as exc:
             caught.append((name, str(exc).split("\n")[0][:110]))
     assert caught, f"MUTATION SURVIVED — {why}. No guard went red."
+
+
+# ------------------------------------------------------------- SPEC-20 §2, §4
+def test_a_single_folded_turn_reads_singular_and_still_translates():
+    """SPEC-20 §2. `1 turns` was English-only — Chinese has no plural, so `1 轮`
+    was always right. A locale sweep could not have caught it; reading the
+    grammar did. BOTH halves are checked, because fixing the English without
+    widening the pattern moves the defect rather than closing it: the singular
+    detail would stop matching and a Chinese reader would get `1 turn`."""
+    import crossaudit.cli.build as build_module
+
+    source = Path(build_module.__file__).read_text()
+    assert "turn{'' if folded == 1 else 's'}" in source, (
+        "a single folded turn reads '1 turns'")
+    assert progress._detail_i18n("1 turn") == {"en": "1 turn", "zh": "1 轮"}
+    assert progress._detail_i18n("2 turns") == {"en": "2 turns", "zh": "2 轮"}
+    # And the unit it was generalised from still works.
+    assert progress._detail_i18n("1024 bytes")["zh"] == "1024 字节"
+
+
+def test_the_sentence_has_exactly_one_definition(project):
+    """SPEC-20 G3. It lived in two files with nothing tying them together; edit
+    one and the other silently falls back to English."""
+    import crossaudit.cli.build as build_module
+
+    catalogue = Path(progress.__file__).read_text()
+    assert "EARLIER_TURNS_NOTICE:" in catalogue, (
+        "the catalogue key is a duplicated literal, so the two can drift")
+    assert build_module.EARLIER_TURNS_NOTICE not in catalogue, (
+        "the sentence is written out a second time in the catalogue")
+    assert build_module.EARLIER_TURNS_NOTICE in progress.CONTEXT_CONDENSATION_ZH
+
+
+def _emitted_reductions_and_sentences():
+    """SPEC-20 G4 — DERIVED by scanning the emitters, never a written list.
+
+    A hand-maintained list is the enumeration tautology D64 rejected: it agrees
+    with itself and says nothing about the code. This reads the module.
+    """
+    import ast
+
+    import crossaudit.cli.build as build_module
+    tree = ast.parse(Path(build_module.__file__).read_text())
+    constants = {node.targets[0].id: ast.literal_eval(node.value)
+                 for node in ast.walk(tree)
+                 if isinstance(node, ast.Assign) and len(node.targets) == 1
+                 and isinstance(node.targets[0], ast.Name)
+                 and isinstance(node.value, ast.Constant)
+                 and isinstance(node.value.value, str)}
+
+    emitted, handled, sentences = set(), set(), set()
+    for node in ast.walk(tree):
+        # Producers: any dict literal carrying a "reduction" key.
+        if isinstance(node, ast.Dict):
+            for key, value in zip(node.keys, node.values):
+                if (isinstance(key, ast.Constant) and key.value == "reduction"
+                        and isinstance(value, ast.Constant)):
+                    emitted.add(value.value)
+        # The dispatcher: `reduction == "<name>"`.
+        if (isinstance(node, ast.Compare) and isinstance(node.left, ast.Name)
+                and node.left.id == "reduction"
+                and isinstance(node.comparators[0], ast.Constant)):
+            handled.add(node.comparators[0].value)
+        # The sentences actually passed to context_notice.
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id == "context_notice" and node.args):
+            first = node.args[0]
+            if isinstance(first, ast.Constant):
+                sentences.add(first.value)
+            elif isinstance(first, ast.Name) and first.id in constants:
+                sentences.add(constants[first.id])
+    return emitted, handled, sentences
+
+
+def test_every_reduction_the_producers_emit_is_handled_and_catalogued():
+    """SPEC-20 G4, the anti-recurrence guard. A fifth mechanism that emits
+    without a branch, or narrates without a catalogue entry, is caught here
+    rather than by someone noticing an empty cell months later."""
+    emitted, handled, sentences = _emitted_reductions_and_sentences()
+    assert emitted, "the scan found no producers, so this guard is vacuous"
+    assert sentences, "the scan found no narration, so this guard is vacuous"
+    assert "earlier_turns" in emitted and "earlier_turns" in handled
+
+    unhandled = {name for name in emitted if name not in handled
+                 # `results` is renamed to compute_results / tool_results at the
+                 # call site before it reaches the dispatcher; both are handled.
+                 and name != "results"}
+    assert not unhandled, (
+        f"these reductions are emitted and never narrated, so they condense "
+        f"silently: {sorted(unhandled)}")
+
+    missing = [text for text in sentences
+               if text not in progress.CONTEXT_CONDENSATION_ZH]
+    assert not missing, (
+        f"these notices have no Chinese, so a Chinese reader is told in "
+        f"English that their context was reduced: {missing}")
+
+
+# --------------------------------------------------- SPEC-20 §6, the live region
+def test_the_condensation_notice_is_announced_and_not_only_displayed():
+    """A WIRING claim, said plainly. Whether a screen reader hears anything is
+    settled by execution, in `_ui_findings/s4-condense/sweep_announce.mjs`,
+    which records every value the region HOLDS after condensation in the locale
+    under test — not that a region exists. Eight empty ones prove wiring, not
+    speech.
+
+    SPEC-20 §6 fenced this as out of scope: older and wider than turn folding,
+    and a property of the shared `context_condensed` renderer. That is precisely
+    why it is fixed here — one renderer, so one change covers turn folding AND
+    the file-outlining notice that predates every merge in this cycle. Driven:
+    both announced, both locales, baseline silent.
+    """
+    from crossaudit.console.page import PAGE
+
+    assert "function announceCondensation(d){" in PAGE
+    assert "announceCondensation(d);" in PAGE, (
+        "condensation is displayed and never announced, so a screen-reader "
+        "user is told nothing about any reduction"
+    )
+    body = PAGE[PAGE.index("function announceCondensation(d){"):]
+    body = body[:body.index("\nfunction ")]
+    # The wire-localised string, never the English source: this renderer's rule
+    # is to localise from the fields the event carries, and handing the English
+    # to the translator would speak English to a Chinese reader.
+    assert "localeText(last.summary_i18n,last.summary)" in body
+    # An occurrence, not a state: two reductions of one kind are two events.
+    assert "'event'" in body
+    # Baselined in silence, or opening a thread announces its whole history.
+    assert "announcedCondensations===null" in body

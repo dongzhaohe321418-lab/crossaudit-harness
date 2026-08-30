@@ -47,7 +47,10 @@ CONTEXT_CONDENSATION_ZH = {
 #: deliberately left alone.
 COUNTED_DETAIL_ZH = (
     (re.compile(r"(\d+) bytes"), "{0} 字节"),
-    (re.compile(r"(\d+) turns"), "{0} 轮"),
+    # `turns?` — both halves of the singular fix, or the singular detail stops
+    # matching the pattern and lands in the other failure mode: an English
+    # "1 turn" shown to a Chinese reader.
+    (re.compile(r"(\d+) turns?"), "{0} 轮"),
 )
 
 

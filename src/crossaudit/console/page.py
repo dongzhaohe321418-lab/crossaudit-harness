@@ -6229,6 +6229,41 @@ function toolsView(d){
 // person cannot pause it, skim it or re-read it. They are told it is there; they
 // read it themselves.
 let announcedTurns=null;let announcedTurnChat=null;
+// SPEC-20 §6, taken up rather than deferred. The design engineer recorded the
+// live-region gap and fenced it as out of scope: it is older and wider than the
+// turn-folding slice, and it is a property of the SHARED context_condensed
+// renderer. That is exactly why it is fixed here — one renderer, so one fix
+// covers turn folding AND the file-outlining notice that predates every merge
+// in this cycle. Fixing it per mechanism would have been the wrong shape.
+//
+// The law the security auditor stated, one layer deeper: containers present,
+// contents absent. This case had no container at all: the notice was visible
+// page text and nothing announced it, so a screen-reader user was told nothing
+// about any reduction.
+//
+// The sentence announced is the one the wire already localised, NOT the English
+// source. The rule this renderer states is to localise from the wire fields the
+// event carries and never re-translate prose; the combined "<sentence>: <detail>"
+// string has no dictionary entry by design, so handing the English to
+// localizeTree would speak English to a Chinese reader — the locale-timing
+// defect arriving through the other door.
+//
+// EVENT, not state: two reductions of the same kind are two occurrences, and
+// the second is news. Baselined in silence on first render, or opening a thread
+// would announce every condensation it ever had.
+let announcedCondensations=null;let announcedCondenseChat=null;
+function announceCondensation(d){
+  const chat=activeChatId||'';
+  const rows=(d.generator_stream||[]).filter(m=>m.kind==='context_condensed'
+    &&(m.chat_id||'history')===chat);
+  const ids=new Set(rows.map(m=>String(m.event_id||m.t||'')));
+  if(announcedCondenseChat!==chat||announcedCondensations===null){
+    announcedCondenseChat=chat;announcedCondensations=ids;return false;}
+  const fresh=rows.filter(m=>!announcedCondensations.has(String(m.event_id||m.t||'')));
+  announcedCondensations=ids;
+  if(!fresh.length)return false;
+  const last=fresh[fresh.length-1];
+  return announce(localeText(last.summary_i18n,last.summary),'event');}
 // R2 S1. This key was kind + second + the first 40 characters of the content,
 // and the auditor collided it: two DIFFERENT replies in the same second whose
 // first 40 characters agree rendered as two articles and produced ONE
@@ -6282,6 +6317,7 @@ function renderConversation(d){
   else{
     const messages = allMessages(d);
     announceThread(messages,d);
+    announceCondensation(d);
     const p = chatProgress(d);
     const live = p && !p.finished ? runCard(d) : '';
     const approval = approvalCard(d);
