@@ -3345,3 +3345,52 @@ RULE (D39 completed): compare the merge result to the tested tree, and when
 they differ materially, **the suite runs on the merge commit before the merge
 counts as gated.** Identical trees make the branch run sufficient; different
 trees make it evidence about something that no longer exists.
+
+## D83 — Correcting D81: the fixture may have measured a different CrossAudit
+
+Cross-vendor audit of the provider fixture: **MERGE AFTER FIXES**, 0 S0, 1 S1,
+2 S2, 1 S3 — and it corrects the record I wrote one hour ago.
+
+**What holds**: `drives_real=4/4` is genuine and `tautologies=0`. *"The product
+was not handed precomputed console state: all four fixtures drove real
+producers and real consumers."* That was the claim I most wanted broken and it
+survived.
+
+**S1 — `4/4 scenarios` is a false coverage claim, at the scenario boundary.**
+Each fixture reaches a *state* within its scenario, not the standing scenario.
+Three remainders are admitted in the fixture's own unreached table; **the
+fourth is silent**: S6's Manage Skills was counted but never activated or
+destination-checked. The proof is a mutation — **the real Manage Skills click
+consumer disabled while its button remained present, and the S6 sweep still
+returned two cells, zero failures, zero page errors.** *The guard protects
+presence, not the navigation property.* The defect class this fixture exists to
+close, arriving inside it.
+
+**S2 — the harness can execute a different CrossAudit than the requested
+tree.** `CROSSAUDIT_SRC` is inserted into the module path and **its imported
+origin and runtime identity are never asserted.** Pointed at a nonexistent
+directory, the shared interpreter imported its *installed* CrossAudit instead;
+recording and replay both completed against that foreign product and produced a
+matching record/replay result. Only later browser signatures rejected it,
+because that build happened to be substantially older — **"a closer wrong build
+can satisfy those presentation signatures."**
+
+### The correction
+
+**D81 recorded conditions 3, 5 and part of 4 as "measured on the artifact." I
+am withdrawing "measured" pending the fixes.** Two independent reasons:
+the 4/4 that condition 3 rests on is a false coverage claim, and the harness
+cannot presently prove it ran the requested build at all. I wrote at the time
+that these were *measured, not shown*, and held that a condition moves to shown
+only when an independent party reproduces it. **The independent party has now
+reported, and it moved the other way.**
+
+That is the rule working. It is also the third time tonight the evidence was
+real and about something adjacent — and this time the adjacency was mine to
+catch and I did not: I had the fixture's own honest unreached list in front of
+me and did not ask whether the list was complete.
+
+RULE: **a test harness must assert the identity of the product it loaded.** Not
+its path — its runtime identity. This is D39 and D69 arriving in the apparatus
+that generates evidence, where it is worst: every number it produces inherits
+the error silently.
