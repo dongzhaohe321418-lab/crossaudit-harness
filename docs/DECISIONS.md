@@ -3651,3 +3651,39 @@ This connects three things already in the record:
 RULE: an accessibility guard asserts what a container **contains** and whether
 the structure is **navigable**, never that names exist. Presence of names on an
 unusable structure is the failure mode all three instances share.
+
+## D90 — The rule answered the shortage, so I did not spawn
+
+Seven branches queued behind two codex auditors. My reflex was a third codex
+auditor — I have spawned three times tonight and each was justified by a
+measurable, recurring backlog.
+
+**This time the existing rule answers it.** D26 set a **topic split**:
+audit-core work goes to a codex auditor for vendor independence, everything
+else to a claude auditor. **The hard law is no-self-review.** UI and
+accessibility work is not audit-core, so a claude auditor who did not write it
+satisfies the law fully.
+
+So: codex auditors stay on audit-core — watchdog, receipt verification, doctor
+parity. **Claude auditors take the UI branches.** Existing capacity rather than
+added coordination.
+
+**This is not the relaxation I refused earlier.** I refused to let a
+claude-authored *audit-core* branch merge on two claude verdicts, and held it
+until a codex auditor cleared it. That refusal and this routing are the same
+rule read correctly: vendor independence is strongest where the product's
+premise lives, and no-self-review is absolute everywhere.
+
+### Four branches from one engineer, one surface
+
+`ux/live-regions`, `ux/send-refusal`, `ux/report-provenance`,
+`ux/condense-affordance` — each on its own worktree, none merged. That is
+precisely where **`assumed_by_other`** lives: four changes to one surface, each
+reviewed against integration as it stood before the others.
+
+### Independently caught, twice
+
+The UI engineer caught my misattribution of `f6ad8c0` in the same minutes I did,
+and named the reason: *"re-derive rather than match a title."* Two people
+reaching the same correction from the same instinct is worth more than either
+correction — it means the rule has transferred rather than been obeyed.
