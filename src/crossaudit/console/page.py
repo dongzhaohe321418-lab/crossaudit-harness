@@ -1714,6 +1714,8 @@ details.credential-card[open]>.credential-head:after{transform:rotate(180deg)}
 .mcp-risk.destructive{border-color:color-mix(in srgb,var(--blocked) 45%,var(--line));
   color:var(--blocked);background:var(--blocked-bg)}
 .mcp-risk.readonly{border-color:color-mix(in srgb,var(--pass) 40%,var(--line));color:var(--pass)}
+.mcp-risk.unlabelled{border-style:dashed;border-color:var(--line-strong);color:var(--text-2);background:none}
+.mcp-caveat{margin:0 0 9px}
 .mcp-empty{margin:0;padding:15px 13px;font-size:var(--fs-label);color:var(--text-2)}
 .mcp-approved{padding:11px 13px;border-radius:var(--r-md);
   border:1px solid color-mix(in srgb,var(--pass) 32%,var(--line));background:var(--pass-bg)}
@@ -2821,6 +2823,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
           <label class="field"><span>Executable</span><input name="command" id="mcp-command" maxlength="1000" placeholder="npx" autocomplete="off"></label>
           <label class="field"><span>Arguments</span><textarea name="args_text" id="mcp-args" maxlength="32000" placeholder="-y&#10;@example/mcp-server"></textarea><small class="field-help">One argument per line. CrossAudit never invokes a shell.</small></label>
           <label class="hpc-confirm field full" id="mcp-approve-box"><input name="approve_local_code" type="checkbox"><span><b>I approve this exact local command</b>A local MCP server runs with this app's user permissions and may access files or the network. Verify its publisher and arguments.</span></label>
+          <p class="mcp-step-note field full" id="mcp-approve-required" hidden>Connect runs this command on your Mac, so the approval above is required before it can run.</p>
           <div class="field full mcp-approved" id="mcp-approved-note" hidden><b>This exact command is already approved</b><small>You approved this executable and these arguments when you connected the server. Editing either one asks you to approve the new command.</small></div>
         </div></div>
         <div class="field full mcp-transport-fields off" id="mcp-http-fields"><div class="form-grid">
@@ -2837,9 +2840,9 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       </section>
       <section class="mcp-step" data-mcp-step="tools" tabindex="-1" hidden>
         <div class="mcp-connected" id="mcp-connected"></div>
-        <div class="mcp-approve-head"><span>Approved tool names</span><small id="mcp-approve-count"></small><button type="button" class="mcp-link" id="mcp-select-all">Select all</button></div>
+        <p class="mcp-step-note mcp-caveat">Tool names, descriptions and risk labels are reported by the server itself and are not verified by CrossAudit. Approve only what you recognise.</p>
+        <div class="mcp-approve-head"><span>Approved tool names</span><small id="mcp-approve-count"></small><button type="button" class="mcp-link" id="mcp-select-all">Select all except destructive</button></div>
         <div class="mcp-approve" id="mcp-tool-approve" role="group" aria-label="Advertised tools"></div>
-        <p class="mcp-step-note">Tool names, descriptions and risk labels are reported by the server itself and are not verified by CrossAudit. Approve only what you recognise.</p>
         <label class="hpc-confirm field full" style="margin-top:15px"><input name="enabled" type="checkbox" id="mcp-enabled"><span><b>Allow Generator to call the approved tools automatically</b>Calls appear live in the task loop. Tool output is treated as untrusted external data and never becomes an audit rule.</span></label>
         <p class="mcp-step-note" id="mcp-enable-note">Leave this off to keep the server manual-only. You can turn it on later.</p>
       </section>
@@ -2847,7 +2850,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
     <div class="wizard-foot"><span id="mcp-foot-note">Bearer tokens are write-only Keychain items. Local commands are stored without secrets.</span>
       <button type="button" class="secondary" id="cancel-mcp">Cancel</button>
       <button type="button" class="secondary" id="mcp-back" hidden>Back</button>
-      <button class="primary" id="save-mcp">Connect</button></div>
+      <button class="primary" id="save-mcp" aria-describedby="mcp-approve-required">Connect</button></div>
   </form>
 </div>
 
@@ -3292,8 +3295,8 @@ const ZH={
   "Connecting only reads the server's tool list. Nothing can be called until you approve it in the next step.":"连接只会读取服务器的工具列表。在你于下一步批准之前，任何工具都不会被调用。",
   "This exact command is already approved":"此命令已获批准",
   "You approved this executable and these arguments when you connected the server. Editing either one asks you to approve the new command.":"你在连接此服务器时已批准该可执行文件与这些参数。修改其中任何一项都会要求你重新批准新的命令。",
-  "Save":"保存","Saving…":"正在保存…","Select all":"全选","Clear all":"全部清除",
-  "Read-only":"只读","May change data":"可能修改数据","No description provided.":"未提供说明。",
+  "Save":"保存","Saving…":"正在保存…","Select all except destructive":"全选（破坏性除外）","Clear all":"全部清除",
+  "Read-only":"只读","May change data":"可能修改数据","Not labelled by the server":"服务器未标注","No description provided.":"未提供说明。",
   "This server advertised no tools, so there is nothing to approve.":"此服务器未公布任何工具，因此没有可批准的内容。",
   "Tool names, descriptions and risk labels are reported by the server itself and are not verified by CrossAudit. Approve only what you recognise.":"工具名称、说明与风险标签均由服务器自行提供，CrossAudit 不对其进行核实。请只批准你认得的内容。",
   "Approve at least one tool before the Generator can call this server.":"先批准至少一个工具，生成者才能调用此服务器。",
@@ -3306,6 +3309,7 @@ const ZH={
   // the old ZH_PATTERNS/dictionary handoff for these strings is superseded.
   "Context reduced":"上下文已精简","round":"轮次",
   "A label for this project. ASCII letters, digits, spaces and . _ - only.":"本项目中的标识名称。仅限 ASCII 字母、数字、空格和 . _ -。",
+  "Connect runs this command on your Mac, so the approval above is required before it can run.":"连接会在你的 Mac 上运行此命令，因此必须先勾选上方的批准。",
   "Server names use ASCII letters, digits, spaces and . _ - only. Rename this server to continue.":"服务器名称仅支持 ASCII 字母、数字、空格和 . _ -。请修改名称后继续。",
   "This project already has an MCP server with that name. Choose a different name, or configure the existing one.":"此项目已存在同名的 MCP 服务器。请换一个名称，或直接配置已有的服务器。",
   "This project already has an MCP server running that exact command. Configure the existing one instead.":"此项目已存在运行该命令的 MCP 服务器。请直接配置已有的服务器。",
@@ -6343,7 +6347,9 @@ function syncMcpTransport(){const stdio=document.getElementById('mcp-transport')
   document.getElementById('mcp-stdio-fields').classList.toggle('off',!stdio);
   document.getElementById('mcp-http-fields').classList.toggle('off',stdio);
   document.getElementById('mcp-command').required=stdio;document.getElementById('mcp-url').required=!stdio;
-  if(stdio)syncMcpApprovalState();}
+  // Also on the way OUT of stdio: the local-command gate must be released when
+  // the transport it belongs to is no longer the one selected.
+  syncMcpApprovalState();}
 // The dialog walks the same lifecycle /api/mcp already enforces: connect and
 // read the tool list first, approve named tools second, and only then may the
 // Generator be let near them. Step 1 never approves or enables anything, so a
@@ -6418,7 +6424,18 @@ function syncMcpApprovalState(){const approved=mcpCommandUnchanged();
   if(input&&input.checked&&!mcpSameTuple(mcpLiveTuple(),mcpTickedFor)){
     input.checked=false;mcpTickedFor=null;}
   if(approved&&input){input.checked=false;mcpTickedFor=null;}
-  box.hidden=approved;note.hidden=!approved;}
+  box.hidden=approved;note.hidden=!approved;
+  // The other rule on this dialog (Generator access with nothing approved) is
+  // shown as a disabled control plus the reason, instead of being discovered
+  // through a ConfigDenial. This is the same rule /api/mcp enforces for a local
+  // command, given the same treatment: Connect is unavailable until the exact
+  // command on screen has been approved, and the sentence beside it says why.
+  const stdio=document.getElementById('mcp-transport').value==='stdio';
+  const needed=mcpStep==='connect'&&stdio&&!mcpApprovalGranted();
+  const ask=document.getElementById('mcp-approve-required');
+  if(ask)ask.hidden=!needed;
+  const save=document.getElementById('save-mcp');
+  if(save)save.disabled=needed;}
 function mcpText(id,text){const node=document.getElementById(id);if(node)node.textContent=text;}
 function setMcpStep(step){mcpStep=step==='tools'?'tools':'connect';
   document.querySelectorAll('[data-mcp-step]').forEach(pane=>pane.hidden=pane.dataset.mcpStep!==mcpStep);
@@ -6430,6 +6447,7 @@ function setMcpStep(step){mcpStep=step==='tools'?'tools':'connect';
   mcpText('mcp-foot-note',mcpStep==='tools'
     ?'Only the tools you tick are approved. Tools the server adds later stay blocked until you review them.'
     :'Bearer tokens are write-only Keychain items. Local commands are stored without secrets.');
+  syncMcpApprovalState();
   setTimeout(()=>{const pane=document.querySelector('[data-mcp-step="'+mcpStep+'"]');if(pane)pane.scrollTop=0;
     const body=document.querySelector('.mcp-wizard-body');if(body)body.scrollTop=0;},0);}
 function renderMcpConnected(server){const host=document.getElementById('mcp-connected');if(!host)return;
@@ -6464,9 +6482,14 @@ function renderMcpTools(){const host=document.getElementById('mcp-tool-approve')
     document.getElementById('mcp-select-all').hidden=true;syncMcpApproval();return;}
   document.getElementById('mcp-select-all').hidden=false;
   host.innerHTML=mcpTools.map(tool=>{const note=tool.annotations||{};
+    // Three states, not two. A tool the server did not label gets its own
+    // badge: an empty space would read as "nothing notable" when what it
+    // actually means is "the server said nothing" (AGENTS.md §1.5).
     const badge=note.destructiveHint?'<i class="mcp-risk destructive">May change data</i>'
-      :note.readOnlyHint?'<i class="mcp-risk readonly">Read-only</i>':'';
+      :note.readOnlyHint?'<i class="mcp-risk readonly">Read-only</i>'
+      :'<i class="mcp-risk unlabelled">Not labelled by the server</i>';
     return '<label class="mcp-approve-row"><input type="checkbox" data-mcp-tool="'+esc(tool.name)+'"'
+      +(note.destructiveHint?' data-mcp-destructive':'')
       +(mcpApproved.has(tool.name)?' checked':'')+'><span><b>'+esc(tool.name)+'</b><small>'
       +esc(tool.description||'No description provided.')+'</small></span>'+badge+'</label>';}).join('');
   syncMcpApproval();}
@@ -6481,8 +6504,15 @@ function syncMcpApproval(){const boxes=[...document.querySelectorAll('[data-mcp-
   mcpText('mcp-enable-note',none?'Approve at least one tool before the Generator can call this server.'
     :mcpReconnected?'Re-connecting cleared this server\'s approvals. Nothing can be called until you save.'
     :'Leave this off to keep the server manual-only. You can turn it on later.');
-  const all=boxes.length>0&&mcpApproved.size===boxes.length;
-  mcpText('mcp-select-all',all?'Clear all':'Select all');}
+  // The bulk action covers the ordinary case and stops short of the two rows
+  // where being wrong costs most: anything the server labelled destructive
+  // needs its own deliberate tick. The label says exactly that, so the
+  // behaviour is evident before it is used, and the count above stays a plain
+  // count of every advertised tool.
+  const safe=boxes.filter(box=>!box.hasAttribute('data-mcp-destructive'));
+  const link=document.getElementById('mcp-select-all');
+  if(link)link.hidden=!safe.length;
+  mcpText('mcp-select-all',safe.length&&safe.every(box=>box.checked)?'Clear all':'Select all except destructive');}
 function clearMcpError(){const box=document.getElementById('mcp-error');box.textContent='';box.className='wizard-error';}
 function openMcp(serverId=''){mcpForm.reset();clearMcpError();
   mcpCreatedId='';document.getElementById('mcp-name').removeAttribute('aria-invalid');
@@ -6517,13 +6547,18 @@ for(const id of ['mcp-command','mcp-args'])
 // The tick is only ever recorded together with the vector it was given for.
 document.querySelector('#mcp-approve-box [name="approve_local_code"]')
   .addEventListener('change',event=>{
-    mcpTickedFor=event.target.checked?mcpLiveTuple():null;});
+    mcpTickedFor=event.target.checked?mcpLiveTuple():null;syncMcpApprovalState();});
 document.getElementById('close-mcp').onclick=closeMcp;document.getElementById('cancel-mcp').onclick=closeMcp;
 document.getElementById('mcp-back').onclick=()=>setMcpStep('connect');
 document.getElementById('mcp-tool-approve').addEventListener('change',ev=>{
   if(ev.target.matches('[data-mcp-tool]'))syncMcpApproval();});
 document.getElementById('mcp-select-all').onclick=()=>{const boxes=[...document.querySelectorAll('[data-mcp-tool]')];
-  const target=!(boxes.length>0&&boxes.every(box=>box.checked));boxes.forEach(box=>{box.checked=target;});syncMcpApproval();};
+  const safe=boxes.filter(box=>!box.hasAttribute('data-mcp-destructive'));
+  // Clearing is always safe, so the toggle still clears everything; filling
+  // only ever fills the rows the server did not label destructive.
+  if(safe.length&&safe.every(box=>box.checked))boxes.forEach(box=>{box.checked=false;});
+  else safe.forEach(box=>{box.checked=true;});
+  syncMcpApproval();};
 mcpModal.addEventListener('click',ev=>{if(ev.target===mcpModal)closeMcp();});
 mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElementById('save-mcp');
   const connecting=mcpStep==='connect';
@@ -6590,7 +6625,7 @@ mcpForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElement
       setTimeout(()=>document.getElementById('mcp-select-all').focus(),0);}
     else{mcpCreatedId='';closeMcp();}}
   catch(e){computeError('mcp-error',e);}
-  finally{button.disabled=false;mcpText('save-mcp',mcpStep==='tools'?'Save':'Connect');}};
+  finally{button.disabled=false;mcpText('save-mcp',mcpStep==='tools'?'Save':'Connect');syncMcpApprovalState();}};
 function stopComputeTimers(except=''){for(const [id,timer] of computeLogTimers){if(id!==except){clearInterval(timer);computeLogTimers.delete(id);}}}
 async function loadComputePanel(jobId,mode){const current=computePanels.get(jobId)||{};computePanels.set(jobId,{...current,open:true,mode,loading:true,error:''});
   if(lastState)render(lastState);try{const result=await api('/api/hpc',{action:mode==='outputs'?'outputs':'logs',job_id:jobId});

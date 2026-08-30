@@ -228,7 +228,9 @@ def test_every_new_visible_string_has_chinese_parity():
         '"Connected":"已连接"',  # reused, already in the dictionary
         '"Save":"保存"',
         '"Saving…":"正在保存…"',
-        '"Select all":"全选"',
+        # Relabelled: the bulk action deliberately stops short of the tools the
+        # server labelled destructive, so the label has to say so.
+        '"Select all except destructive":"全选（破坏性除外）"',
         '"Clear all":"全部清除"',
         '"Read-only":"只读"',
         '"May change data":"可能修改数据"',
@@ -433,18 +435,32 @@ const A = (cond, msg) => { if (!cond) { throw new Error(msg); } };
 let FIELDS = {command: '', args: ''};
 const BOX = {hidden: false, checked: false};
 const NOTE = {hidden: true};
+// syncMcpApprovalState also drives the step-1 gate now (design finding D3): the
+// same answer that decides what goes on the wire decides whether Connect is
+// available and whether the reason for that is on screen.
+const ASK = {hidden: true};
+const SAVE = {disabled: false};
+globalThis.mcpStep = 'connect';
 const INPUT = {get checked(){return BOX.checked;}, set checked(v){BOX.checked=v;}};
 globalThis.document = {
   getElementById: id => id === 'mcp-command' ? {get value(){return FIELDS.command;}}
     : id === 'mcp-args' ? {get value(){return FIELDS.args;}}
     : id === 'mcp-approve-box' ? {...BOX, querySelector: () => INPUT,
         get hidden(){return BOX.hidden;}, set hidden(v){BOX.hidden=v;}}
-    : id === 'mcp-approved-note' ? NOTE : null,
+    : id === 'mcp-approved-note' ? NOTE
+    : id === 'mcp-transport' ? {value: 'stdio'}
+    : id === 'mcp-approve-required' ? ASK
+    : id === 'save-mcp' ? SAVE : null,
   querySelector: () => INPUT,
 };
 // Typing is what revokes a stale tick, so every edit goes through the handler.
 const type = (command, args) => { FIELDS = {command, args}; syncMcpApprovalState(); };
 const tick = () => { BOX.checked = true; globalThis.mcpTickedFor = mcpLiveTuple(); };
+
+const GATE = msg => {
+  A(SAVE.disabled === !mcpApprovalGranted(), 'D3 gate must track approval: ' + msg);
+  A(ASK.hidden === !SAVE.disabled, 'D3 reason must be shown exactly when gated: ' + msg);
+};
 
 // A saved server: its stored row proves its owner approved vector A.
 globalThis.mcpApprovedCommand = {command: '/bin/A', args: ['-y', 'server']};
@@ -453,6 +469,7 @@ globalThis.mcpRendered = {commandText: '/bin/A', argsText: '-y\\nserver',
 globalThis.mcpTickedFor = null;
 type('/bin/A', '-y\\nserver');
 A(mcpApprovalGranted() === true, 'the stored vector must stay approved');
+GATE('a stored row needs no fresh tick');
 
 // === THE S0 SEQUENCE: A -> B -> approve B -> C ===
 type('/bin/B', '-y\\nserver');
@@ -462,6 +479,7 @@ A(mcpApprovalGranted() === true, 'B is approved once ticked');
 type('/bin/C', '-y\\nserver');
 A(BOX.checked === false, 'the tick must be revoked when the command changes');
 A(mcpApprovalGranted() === false, 'S0: a tick for B must NEVER be sent for C');
+GATE('after the command changed under a tick');
 // The counterfactual, kept so this test pins the BEHAVIOUR and not merely the
 // presence of a function: the shipped-and-broken logic was
 // `fd.has('approve_local_code') || mcpCommandUnchanged()`, and the old handler
