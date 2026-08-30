@@ -499,3 +499,64 @@ def test_every_key_the_code_asks_for_exists_in_the_catalogue():
                 if first.value not in i18n.CATALOGUE["en"]:
                     missing.append((path, first.value))
     assert missing == [], f"t() keys with no catalogue entry: {missing}"
+
+
+def _drifted_doctor(tmp_path, monkeypatch, capsys, *, lang, name):
+    """A project whose constitution IS committed and then edited on disk.
+
+    The third state. `git log` finds it, so it is not "not committed"; the
+    working copy differs, so an audit would cite bytes the person is not looking
+    at. Telling them the wrong one of those is the D71 misleading, not a wording
+    preference.
+    """
+    from crossaudit.gitio import git
+
+    project, _out = _init(tmp_path, monkeypatch, capsys, lang="en",
+                          name=f"drift-{name}")
+    rules = project / "AUDIT_RULES.md"
+    git("add", "--", "AUDIT_RULES.md", cwd=project)
+    git("commit", "-q", "-m", "rules", cwd=project, check=False)
+    rules.write_text(rules.read_text() + "\n### CA-EXTRA-001 edited on disk\n")
+    assert git("log", "-1", "--format=%H", "--", "AUDIT_RULES.md",
+               cwd=project, check=False).strip(), "fixture did not commit"
+    assert git("status", "--porcelain", "--", "AUDIT_RULES.md",
+               cwd=project, check=False).strip(), "fixture did not drift"
+
+    monkeypatch.setattr(main._selfid, "identity", lambda: {
+        "install_mode": "wheel", "code_digest_sha256": "a" * 64,
+        "project": "crossaudit", "version": "4.0.0", "lock_digest_sha256": None})
+    monkeypatch.chdir(project)
+    i18n.reset_fallbacks()
+    main.main(["doctor", "--lang", lang])
+    return capsys.readouterr().out
+
+
+def test_a_drifted_constitution_is_named_as_drift_not_as_uncommitted(
+        tmp_path, monkeypatch, capsys):
+    """Composed while rebasing onto v5-redesign, so it is guarded here.
+
+    Integration carried three constitution states; this branch carried the copy
+    mechanism over two. Resolving toward either side alone would have dropped
+    Chinese or told a person their committed-and-then-edited rules were "not
+    committed" — a claim about a different thing.
+    """
+    out = _flat(_drifted_doctor(tmp_path, monkeypatch, capsys, lang="en",
+                                name="en"))
+    assert "Your rules have uncommitted changes" in out, out[-700:]
+    assert "Your rules are not committed" not in out, (
+        "the drifted state was reported as never committed")
+    assert "not what is on disk" in out
+
+
+def test_the_drifted_row_is_chinese_with_no_fallback(tmp_path, monkeypatch,
+                                                     capsys):
+    """A new key reaches a zh reader translated, or it is not done (D21)."""
+    out = _flat(_drifted_doctor(tmp_path, monkeypatch, capsys, lang="zh",
+                                name="zh"))
+    assert "你的规则有未提交的改动" in out, out[-700:]
+    assert "审计会引用已提交的版本" in out
+    leaked = [key for key in ("doctor.constitution_drifted.label",
+                              "doctor.constitution_drifted.why",
+                              "doctor.constitution_drifted.fix")
+              if key in i18n.fallbacks()]
+    assert leaked == [], f"the drifted copy fell back to English: {leaked}"
