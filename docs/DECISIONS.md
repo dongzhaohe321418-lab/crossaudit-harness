@@ -915,3 +915,40 @@ engineer's recommendation, adopted as written.
 
 This does not change D5. It corrects my application of it: "how badly is a person
 hurt" has to be asked about the person most hurt, not about the median one.
+
+### D26 — Two auditors, split by topic, because one vendor cannot report on this class
+
+The codex auditor has now been blocked by a provider content filter on eight turns
+across two sessions, including a clean restart, whenever the subject is the
+filesystem-authorization boundary. The cause is not the work: a harness that swaps
+symlinks and hardlinks to test a defensive boundary looks like an exploit regardless
+of purpose, and the filter reads shape rather than intent. It cost us the answer to
+D18's deciding question, which I then had to settle by reading code instead of by
+execution.
+
+Restarting it a second time would be doing the same thing and expecting a different
+result. So:
+
+**The independent auditor role splits into two seats, assigned by TOPIC.**
+- Security-boundary work — path authorization, staging, receipts, anything whose
+  evidence requires adversarial filesystem manipulation — goes to a **claude**
+  auditor. That work is codex-authored, so a claude auditor is properly
+  cross-vendor AND is not subject to the filter that blocks the incumbent.
+- Everything else — UI, copy, contracts, honesty audits — stays with the **codex**
+  auditor, which is cross-vendor against the claude-authored work that makes up most
+  of it.
+
+Both write no feature code, which is what makes either able to review anything.
+
+Note this makes vendor independence BETTER rather than worse. The previous
+arrangement had a codex auditor reviewing codex-authored security work and
+disclosing same-vendor weakness in every verdict — it flagged, accurately and
+repeatedly, that a different vendor was likelier to challenge the physical-path and
+newline-framing assumptions it shared with the author. It challenged them anyway and
+found them, which earned it credit and did not make the arrangement sound. Splitting
+by topic happens to put the cross-vendor auditor on exactly the work where
+same-vendor review was weakest.
+
+The constraint that forced this is a tooling limit, not a judgement about either
+model. Recorded so that a later reader does not conclude the codex auditor was
+removed from security work for performance reasons. It found the S0.
