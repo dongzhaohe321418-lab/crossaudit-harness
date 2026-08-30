@@ -2431,3 +2431,54 @@ engineer drives the real console with Playwright on every sweep. So the 24
 cells are a browser sweep seeded by the controller fixtures, which are real and
 are kept. Two halves, two tools — a connection that only existed at the level
 where both were visible.
+
+## D61 — D40's fix could not reach the case D40 described
+
+Cross-vendor audit of `agentA/cli-i18n-wave1`, S1:
+
+> The guard substitutes two new-code invocations for the stale-code/bundle
+> mismatch. The machine has CrossAudit 4.15.0 installed and PATH still
+> resolves `crossaudit` to the August 3.2.0 pip installation — the exact state
+> this slice claims to close. The person invokes `crossaudit --version` and
+> runs **3.2.0**, whose complete output is `crossaudit 3.2.0 (receipt schema
+> 2)`: no mode, no path, **because that executable predates this change.**
+
+**You cannot change a stale binary's output by editing the new one.** The fix
+is structurally incapable of reaching the case it was built for.
+
+This is my error, in a dispatch I wrote and twice corrected. I asked *which
+surface should carry the message* — front door, then `--version`, then
+`doctor` — and never asked **which binary is executing when the person needs
+it.** Three revisions of the wrong question.
+
+The only code that runs in the failure case and is ours to change is the new
+side. So the message must be outward-looking rather than self-describing: not
+"I am 4.15.0 frozen-app at this path" but "**there is another `crossaudit` on
+your PATH and it is older than this one**". That is a different kind of check
+— resolve PATH, read the other binary's version, compare.
+
+Open and referred to the engineer rather than scoped by me again:
+- Executing an arbitrary `crossaudit` found on PATH means running a program we
+  did not build, in the user's environment. That may be a line not to cross.
+- `doctor` is the command a confused person runs — but in this scenario typing
+  `crossaudit doctor` runs 3.2.0's doctor, so they may never reach ours.
+- **"This cannot be closed from our side" is an acceptable answer.** A stale
+  binary shadowing a new one is a property of the user's environment. Better
+  to record that than to ship a fix that reads as closing the case while the
+  case stays open.
+
+What the audit confirmed is sound and stays: vocabulary shared with `doctor`'s
+existing install row rather than a second phrasing; the Chinese translation
+present with zero fallback and deliberately not exposed globally — judged
+*honest, not a half-Chinese front door*; and a real mutation removing origin
+data made the install-origin guards fail.
+
+### D60 took effect immediately
+
+Asked to adopt the auditor's mint-render guard and report seeing it red, the
+engineer reported `seen_red=no reverted_fails=no`: the harness is incompatible
+with the current controller API (`record_build_escalation()` no longer accepts
+`remediation_facts`). **It reported a verification it could not complete rather
+than asserting one** — the first time tonight. The incompatibility is also a
+finding in its own right: the auditor's harness was written against an older
+tree.
