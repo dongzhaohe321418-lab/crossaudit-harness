@@ -7,16 +7,30 @@ round number — in English regardless of locale. That is a claim about who
 produced the words: the runtime condensed the context, the generator said
 nothing.
 
-**How these tests work, and why they were rewritten.** The first version of this
-file asserted that certain strings appeared in ``PAGE``. An independent audit
-rejected that, correctly: a source-string assertion proves what the file
-*contains*, not what the page *renders* — the same defect class this project
-filed against Agent B's own tests earlier the same day. So every behavioural
-claim below is now **executed**: the real ``turn()`` and the real ``runCard()``
-are pulled out of ``PAGE``, run under node against real wire-shaped payloads,
-and their rendered HTML is parsed into a DOM and asserted structurally. Only
-genuinely static data — a dictionary entry — is still checked as text, because a
-dictionary *is* data rather than behaviour.
+**How these tests work, and why they were rewritten twice.** The first version
+asserted that strings appeared in ``PAGE``. An independent audit rejected that,
+correctly: a source-string assertion proves what the file *contains*, not what
+the page *renders*. The second version fixed most of it but repeated the defect
+twice — it "verified" a locale switch with three independent renders that never
+performed a switch, and kept one raw-source regex — and the audit rejected that
+too. Both rejections were right, and the second is the more instructive: an
+assertion that *looks* executed passes review unless someone tries to defeat it.
+
+So, precisely, in this file:
+
+* **No assertion reads ``PAGE`` as text.** ``PAGE`` is read as *data* — to
+  extract the real renderers and the page's own ZH table — and every assertion
+  is made against what executing those renderers produces.
+* The locale test executes a real **transition**: one call to the real
+  ``applyLocale``, with the DOM compared before and after. Three snapshots
+  cannot prove a transition, which is exactly what the previous version got
+  wrong.
+* Rendered HTML is parsed into a DOM and asserted structurally, so a phrase
+  split across child elements cannot hide from it.
+
+Verified by attacking the tests rather than trusting them: deleting the
+re-render line from ``applyLocale`` fails the transition test; deleting the ZH
+label entries fails two tests; and all eleven fail against the pre-A2 page.
 
 The three properties pinned:
 
@@ -56,6 +70,20 @@ def _zh_for(english: str) -> str:
     """The shipped Chinese for an upstream sentence, read from progress.py."""
     from crossaudit.console.progress import CONTEXT_CONDENSATION_ZH
     return CONTEXT_CONDENSATION_ZH[english]
+
+
+def _page_zh_table() -> dict:
+    """The page's own ZH dictionary, READ as data so it can be rendered with.
+
+    Reading a table is not the same as asserting a string: nothing here claims
+    an entry exists. The entries are fed to the real renderers, and the tests
+    below assert what comes OUT. Delete an entry and zhValue falls through to
+    English, so the rendered assertion fails — which is the behaviour we mean.
+    """
+    block = PAGE[PAGE.index("const ZH={"):PAGE.index("const ZH_PATTERNS=[")]
+    pairs = re.findall(r'"((?:[^"\\]|\\.)*)":"((?:[^"\\]|\\.)*)"', block)
+    unescape = lambda v: v.replace('\\"', '"').replace("\\'", "'")
+    return {unescape(k): unescape(v) for k, v in pairs}
 
 
 # ------------------------------------------------------------------ tiny DOM
@@ -130,8 +158,10 @@ def _render(cases: list[dict]) -> dict[str, str]:
     node = shutil.which("node")
     if not node:
         pytest.skip("node is required to execute the page renderers")
-    zh_map = {TRACKED_EN: _zh_for(TRACKED_EN), UNTRACKED_EN: _zh_for(UNTRACKED_EN),
-              "Context reduced": "上下文已精简", "round": "轮次"}
+    # The page's OWN table, plus the upstream sentences it does not carry.
+    zh_map = dict(_page_zh_table())
+    zh_map.setdefault(TRACKED_EN, _zh_for(TRACKED_EN))
+    zh_map.setdefault(UNTRACKED_EN, _zh_for(UNTRACKED_EN))
     program = "\n".join([
         _STUBS,
         f"const ZH = {json.dumps(zh_map, ensure_ascii=False)};",
@@ -232,18 +262,87 @@ def test_run_card_does_not_attribute_the_notice_to_the_generator_either():
 
 
 # ------------------------------------------- 2. locale comes off the wire
-def test_the_notice_follows_a_locale_switch_in_both_directions():
+def test_a_locale_switch_re_renders_the_notice_rather_than_leaving_it_stale():
+    """Executes the TRANSITION, not three independent renders.
+
+    The bug this guards is real and was found by driving: wire-localised copy is
+    chosen when a row is rendered, so the text-node translator cannot reach it,
+    and without a re-render the body stays English after the locale changes.
+    Three separate renders that each happen to be correct cannot prove a
+    transition works — an earlier version of this test made exactly that mistake
+    and the independent auditor rejected it.
+
+    So: render once, call the real applyLocale ONCE, and assert the DOM produced
+    by the page's own render path changed as a result of that single call.
+    Delete the re-render line from applyLocale and this fails, because the
+    recorded DOM never updates.
+    """
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node is required to execute the page renderers")
     row = _stream_row(TRACKED_EN, TRACKED_PATHS, _zh_for(TRACKED_EN))
-    rendered = _render([
-        {"name": "en", "fn": "turn", "row": row, "locale": "en"},
-        {"name": "zh", "fn": "turn", "row": row, "locale": "zh"},
-        {"name": "back", "fn": "turn", "row": row, "locale": "en"},
+    zh_map = dict(_page_zh_table())
+    zh_map.setdefault(TRACKED_EN, _zh_for(TRACKED_EN))
+    program = "\n".join([
+        _STUBS,
+        f"const ZH = {json.dumps(zh_map, ensure_ascii=False)};",
+        "const zhValue = v => ZH[v] || v;",
+        "let currentLocale = 'en';",
+        # Enough DOM for the real applyLocale to run unmodified.
+        """
+const BUTTONS = {};
+globalThis.document = {
+  documentElement: {},
+  body: {},
+  getElementById: id => (BUTTONS[id] = BUTTONS[id] || {
+    textContent:'', setAttribute(){}, title:'' }),
+  cookie: '',
+};
+globalThis.localStorage = { setItem(){}, getItem(){ return null; } };
+const LOCALE_KEY = 'k', LOCALE_COOKIE = 'c';
+let localizeCalls = 0;
+const localizeTree = () => { localizeCalls++; };
+// The page's render path, reduced to the one row under test: whatever the
+// current locale is when render() runs is what lands in the DOM.
+let DOM = null;
+let lastState = {row: null};
+const render = state => { DOM = turn(state.row, {}); };
+""",
+        _extract_fn("const localeText = (bundle, base) =>") + ";",
+        _extract_fn("const t = value =>") + ";",
+        _extract_fn("function turn(m,d)"),
+        _extract_fn("function applyLocale(locale,remember=true)"),
+        f"lastState.row = {json.dumps(row, ensure_ascii=False)};",
+        """
+const seen = {};
+render(lastState);                 // first paint, in English
+seen.before = DOM;
+applyLocale('zh');                 // ONE call: the transition under test
+seen.afterSwitch = DOM;
+applyLocale('en');                 // and back again
+seen.afterSwitchBack = DOM;
+seen.localizeCalls = localizeCalls;
+console.log(JSON.stringify(seen));
+""",
     ])
-    assert _Dom(rendered["en"]).text_of("turn-body") == TRACKED_EN
-    assert _Dom(rendered["zh"]).text_of("turn-body") == _zh_for(TRACKED_EN)
-    # Switching back restores English — no stale Chinese left behind.
-    assert _Dom(rendered["back"]).text_of("turn-body") == TRACKED_EN
-    assert "上下文已精简" in _Dom(rendered["zh"]).text_of("turn-meta")
+    result = subprocess.run([node, "-e", program], text=True, capture_output=True)
+    assert result.returncode == 0, result.stderr
+    seen = json.loads(result.stdout)
+
+    before = _Dom(seen["before"]).text_of("turn-body")
+    after = _Dom(seen["afterSwitch"]).text_of("turn-body")
+    back = _Dom(seen["afterSwitchBack"]).text_of("turn-body")
+
+    assert before == TRACKED_EN
+    # The switch itself changed the DOM. This is the assertion the previous
+    # version could not make, because it never performed a switch.
+    assert after != before, "applyLocale must re-render; the body stayed stale"
+    assert after == _zh_for(TRACKED_EN)
+    assert back == TRACKED_EN, "switching back must restore English"
+    # And the label the page supplies itself followed too, rendered not asserted.
+    assert "上下文已精简" in _Dom(seen["afterSwitch"]).text_of("turn-meta")
+    assert "Context reduced" in _Dom(seen["afterSwitchBack"]).text_of("turn-meta")
+    assert seen["localizeCalls"] == 2, "the text-node translator still runs"
 
 
 def test_run_card_localises_from_the_wire_fields_too():
@@ -324,13 +423,18 @@ def test_a_localised_detail_degrades_to_one_sentence_rather_than_a_wrong_split()
     assert dom.by_class("condense-path") == []
 
 
-# ------------------------------------------------------- static data only
-def test_the_page_side_labels_have_chinese_parity():
-    """A dictionary entry is data, so it is checked as data.
+# --------------------------------------------------- the page-supplied label
+def test_the_page_supplied_label_renders_in_chinese_from_the_shipped_table():
+    """The label the page adds itself, asserted as RENDERED output.
 
-    The notice text itself is NOT duplicated here — it arrives pre-localised on
-    the wire, which the render tests above exercise.
+    "Context reduced" and "round" are page copy rather than event copy, so they
+    go through the page ZH table. That table is read as data and fed to the real
+    renderer; the assertion is on what comes out. Remove either entry and the
+    renderer falls through to English here, so this fails.
     """
-    assert '"Context reduced":"上下文已精简","round":"轮次",' in PAGE
-    assert re.search(r"try\{if\(lastState\)render\(lastState\);\}catch\(e\)\{\}\}",
-                     PAGE), "a locale switch must re-render wire-localised rows"
+    row = _stream_row(TRACKED_EN, TRACKED_PATHS, _zh_for(TRACKED_EN))
+    rendered = _render([{"name": "zh", "fn": "turn", "row": row, "locale": "zh"}])
+    meta = _Dom(rendered["zh"]).text_of("turn-meta")
+    assert "上下文已精简" in meta, "the page label must render in Chinese"
+    assert "轮次 1" in meta, "the round word must render in Chinese"
+    assert "Context reduced" not in meta and "round 1" not in meta
