@@ -483,3 +483,62 @@ blocked rounds the round budget exists for, and requires showing the user work
 that a late BLOCK then retracts. The replacement experiment — skipping the
 auditor model call when the deterministic tier has already hard-failed, since the
 verdict cannot change — is measurable and stays queued behind the four above.
+
+### D4 — Slice 2 (streaming) contract: countersigned with binding amendments
+
+The design was proposed by the claude implementation engineer and countersigned
+by codex, which owns the half of the split where most of these consequences land.
+Codex's amendments are ACCEPTED and are binding on both halves. The contract text
+on `agentA/a2-condensation-consumer` must be reconciled to this entry at rebase;
+where the two disagree, this entry wins, so there is one contract and not two.
+
+Accepted as proposed: one new `RunEvent.kind`, `generation_chunk`; no new
+`RunState` and no transition-table change; ordering by explicit `stream.seq`, so
+a consumer seeing 0,1,3 knows 2 is missing; explicit termination rather than an
+inferred one; and no page-side stall timer — stalls stay with the existing lease
+heartbeat, `run_stalled` and `provider_unavailable`. Codex confirmed that last
+point survives contact with `runtime/runs.py`: chunk appends renew the lease, so a
+silent provider produces no heartbeat and gets the existing narration. The page
+does not invent a second timer.
+
+Amendments, each of which changes something real:
+
+1. **"Process-local" was false, and that matters more than it looks.** Streamed
+   text lands in the SQLite operational journal and persists under existing
+   retention — up to 14 days. The honest formulation is *local operational-journal
+   data, subject to existing retention*, and it remains excluded from evidence,
+   tool results, auditor prompts, commit messages, receipts and the ledger. The
+   P2 guarantee is unchanged; the sentence describing it is now true. A contract
+   that had shipped saying "process-local" would have been an §1.5 overclaim
+   written into the design rather than into the code.
+2. **`response_sha256` is defined exactly**: SHA-256 of the complete assembled
+   completion *text*, UTF-8 encoded, matching today's `sha256_text(text)` — not the
+   provider's HTTP response body. Chunks are never evidence, and now the sentence
+   saying so cannot be satisfied by digesting the wrong bytes.
+3. **Carrying the stream on `waiting_reason` is rejected.** That field is
+   run-level, cleared by later events, and absent from individual event
+   projections. Slice 2 adds a validated `RunEvent.stream` mapping persisted in an
+   additive `stream_json` column.
+4. **Chunk granularity, which was the open question**: emit the first decoded
+   text immediately, then flush at 200 ms or 8 KiB, whichever comes first, with
+   incremental UTF-8 decoding and residual text flushed before the terminal event.
+   Sequence numbers are assigned *after* coalescing, so they stay contiguous from
+   the consumer's view and the gap rule holds. The journal neither renumbers,
+   coalesces, nor caps stream rows. Coalescing at the provider is what keeps a
+   token-per-event stream from putting thousands of rows in the journal.
+5. `generation_chunk` text bypasses the journal's 400-character narration
+   truncation, while staying bounded by the 8 KiB chunk contract.
+6. **SSE delivery must be incremental**, not a repeated re-serialisation of the
+   whole 200-event snapshot tail — otherwise a feature whose entire purpose is
+   perceived speed would make the console slower the longer a run gets.
+7. **On any sequence gap the page marks or discards the incomplete draft.** It
+   never concatenates across a gap and never presents the result as complete.
+8. Termination is clarified: provider-controlled completion or failure emits
+   `complete` / `aborted`, but cancellation, process death and run failure may
+   prevent that callback, because `RunCommandService` moves to `CANCELLING` and
+   rejects later generation events. The existing run-terminal or liveness event
+   then supersedes the open stream.
+
+Unchanged and non-negotiable: streamed text is unaudited by construction and must
+be unmistakably a live draft — no download, no Files panel, no deliverable
+styling, visibly superseded when the round commits.
