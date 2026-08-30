@@ -779,3 +779,73 @@ while doing something other than what was intended — and it is mine.
 No reliance on where the shell happens to be. And when a decision references an
 earlier one, the reference is a checkable claim like any other: if D19 cites D18,
 D18 must be readable from the same branch.
+
+### D21 — CLI i18n ships as the whole init wizard, not the constitution moment alone
+
+I asked whether the constitution moment could ship translated on its own. The design
+engineer's answer is no, and the reason is better than my question.
+
+The constitution moment lives INSIDE `init` — steps 1 through 3 and step 4 are one
+continuous sequence in one session. A Chinese consent panel after three English
+prompts is not a partial translation; it is **a visible seam in the middle of a
+single screen flow**. And a person meeting one Chinese screen inside an English tool
+will reasonably conclude the rest is broken rather than untranslated — they would be
+reading a real signal, because we would be shipping something that looks
+half-finished at the exact moment we ask them to agree to something.
+
+**Wave 1 is the whole init wizard.** It is the smallest coherent unit: a person
+enters in English or Chinese and stays there for the entire setup. The constitution
+moment is *why* wave 1 is P0 — it is where agreement is asked — but it cannot be
+carved out of its own wizard.
+**Wave 2** is the keyless failure paths a first-timer hits in the next two minutes:
+doctor's FAIL detail, fix and verdict; build's stop message; the un-initialised
+console refusal. That is where someone lands *because something went wrong*, which is
+the worst possible moment to change language on them. Waves 1 and 2 together are
+exactly the first three minutes that D6 ranked highest.
+**Wave 3** is the front door — the first thing read, but not the first thing that
+blocks, since someone who cannot read it has already been handed `crossaudit init`.
+**Wave 4** is everything else.
+
+And `--lang zh` is not offered at all until wave 1 is complete. A half-Chinese wizard
+is worse than an English one, for the same reason.
+
+### D22 — Review the sha, and know which kind of "the sha" you need
+
+Adopted from the design engineer, then corrected by it within the hour, which is the
+right sequence.
+
+The rule: **a review runs against the sha under review, never against a live
+worktree.** It caught itself reviewing a branch whose worktree had moved seven files
+underneath it, and its review stood only because it had exported a clean archive
+first. Reviewing a moving worktree and reporting it as a review of a commit is a
+category error.
+
+The correction: **an archive is enough to DRIVE the product, but not to run the
+suite.** Tests that shell out to git — credential scanning does — report false
+failures against an export with no `.git`. Suite runs need a real detached checkout:
+`git worktree add --detach <path> <sha>`, run, remove. Both of its false alarms today
+came from this, and both were caught by the reviewer rather than reported as defects.
+
+### D23 — A confident wrong diagnosis is a regression, even shipped beside a fix
+
+The send-path slice replaces a silence with an explanation, and in its generic path
+it explains the wrong thing. A non-JSON HTML 500, an aborted connection, or JSON with
+no kind and no reason each render a credential or circuit diagnosis — including a
+technical-detail line reading "retry in 7s · circuit_open · exit_code 22 ·
+http_status 400" for a request that returned 500 and no JSON at all. The notice is
+synthesised from the server's LIVE circuit state rather than from the response that
+actually failed.
+
+**Decided: this blocks the merge, and the reasoning generalises.** The defect being
+replaced told the person nothing. This tells them something confidently wrong, in the
+one field a support conversation quotes verbatim, and sends someone whose local
+service just returned 500 to go and fix an Anthropic credential. D5 goal 2 says a
+reassuring falsehood is worse than an honest failure, so in that path this is a
+regression against our own ranking — shipping in the same commit as a real
+improvement.
+
+The rule: **a diagnosis must be derived from the failure being reported, not from
+ambient state that happens to be available.** Where the failure carries no
+information, the honest output says so and says nothing more. "Something went wrong
+and we do not know what" is a worse sentence to write and a better one to read than a
+precise account of a different problem.
