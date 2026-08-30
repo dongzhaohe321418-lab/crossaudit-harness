@@ -3123,3 +3123,60 @@ what it rejected is fixed or renamed.
 **And I sent that audit to a superseded SHA** (`cc87378`, now `23994a7`) —
 my own D57, missed by me. Corrected before it could report against a tree
 nobody would merge.
+
+## D78 — The guard reddens on injected data, not on derived data
+
+Third layer of one error, mine at the root.
+
+`test_the_parity_guard_reddens_for_an_unmirrored_cli_check` **does not add a
+check to anything.** It injects a synthetic name into the already-computed set:
+
+```python
+missing = _unmirrored(cli | {"nobody mirrors this"}, app)
+```
+
+It proves the *assertion* fails when handed a bad set. It does not prove the
+*derivation* would ever produce one. Mutations **D and D2** — CLI side and app
+side each reverting to a typed literal — **stay green before and after.** The
+file can return to being a tautology and this test will not notice.
+
+The sequence: I commissioned an enumeration test to stop fake checks (D64) →
+it was a tautology → it was fixed to redden → **and it reddens on injected data
+rather than derived data.** Each step genuinely fixed the previous one and each
+left the same hole one layer down.
+
+**Gating an S2, against D35.** D35 makes S2 schedulable rather than gating and
+I have honoured that all night. This finding is *the anti-recurrence mechanism
+does not detect recurrence*. An S2 on hardening is schedulable; an S2 on the
+load-bearing claim is the gate failing quietly. Acceptance is mutation D
+itself: add a real check to shipped `cmd_doctor` that nothing mirrors, derive
+both sides from code, and if reverting either side to a literal leaves it
+green it is still testing the assert.
+
+**What is closed, and it is most of it** — 0 S0, 0 S1, suite 1,755 collected /
+1,753 passed / 0 failed, matching my own run:
+- Mutation B (app doctor's `python` mirror deleted): green before, **RED
+  after** — the guard catches a real deletion.
+- The live symptom, a real 3.2.0 on PATH: **SILENT before, DETECTS now**,
+  without executing the foreign binary and honest when the layout is
+  unreadable. D66 satisfied against the actual reported symptom.
+- Duplicate helper gone; F3 correctly still open.
+
+### A branch name and its work disagreed, and the auditor caught it first
+
+> `fix/app-doctor-parity` still points at `109170e`. `cc87378` and `23994a7`
+> are reachable only from `agentA/path-identity`. **The branch named in the
+> dispatch does not currently contain the work the dispatch is about.**
+
+I would have merged the branch named in my own dispatch and taken a tree
+without the fixes. Third occurrence tonight of a name and a SHA disagreeing
+(D57, D65); **first time it was caught before I acted**, and by an auditor
+doing housekeeping outside its brief.
+
+### The orphan detector is viable
+
+`mechanism=hybrid, catches_f1=yes, would_have_caught=4/4, verdict=viable` —
+declared triples plus executable reader-counterfactual fixtures, and the
+property that decides whether it survives: **ordinary refactors stay free.** A
+detector that taxes every refactor becomes a green light nobody maintains,
+which is the failure mode we have deleted thirteen times in other forms.
