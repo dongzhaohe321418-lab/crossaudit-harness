@@ -3439,3 +3439,32 @@ digest genuinely cannot be re-derived from the object the receipt cites. That
 is a finding about the receipt format, written up as one rather than left as an
 unfinished item — which is exactly what I asked for and the direction that
 costs the author a closed gap. `reverted_reddens=3/3`.
+
+## D85 — I attributed a rebased tree's number to the original SHA
+
+The F1/F7 audit corrected me:
+
+> The supplied 1,782/1,780 count is **not reproducible at `26df8a2`**; exact SHA
+> produced 1,761 collected, 1,759 passed, 2 skipped, 0 failed. **A rebased
+> 1,782-test tree necessarily has another SHA and is outside this verdict.**
+
+I rebased the branch onto integration in my worktree, ran the suite, and
+reported the result as a fact about `26df8a2`. After a rebase it is not that
+SHA. Both numbers are true; only one is about the commit I named.
+
+**And my own instrument, written an hour earlier, would have caught it** — it
+asserts the worktree HEAD equals the requested SHA, and a rebase changes HEAD.
+I did not use it, because I rebased by hand out of habit. **Building the check
+and then not routing the work through it is the same failure as writing a guard
+nobody runs**, which is the thing I have been gating other people's branches on
+all night.
+
+RULE: when a branch is rebased for verification, the number belongs to the
+**rebased SHA**, which must be stated. "Rebased onto integration and green" is
+a claim about a commit that exists and has a name; naming the pre-rebase SHA
+instead makes it a claim about a tree nobody measured.
+
+This is also why the rebased-vs-original distinction matters beyond
+bookkeeping: the rebase is exactly where two branches' interaction first
+appears (D75, D82), so the rebased number is the *more* interesting one — it
+just is not the number the audit is about.
