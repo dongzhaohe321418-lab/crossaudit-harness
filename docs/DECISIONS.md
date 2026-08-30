@@ -1463,3 +1463,23 @@ to rely on.
 
 Recorded under my name because all three were mine, and because the pattern only
 became visible when the third one arrived. One is an error; three is a mechanism.
+
+## D39 — Verify the tree you merged, not the tree you tested
+
+Merging the streaming slice I rebased it in a scratch worktree, ran the
+suite there (1706 passed), then merged the **branch ref** — whose force
+update had failed, so it still pointed at the un-rebased tip. The suite I
+cited as the gate had been run on content I did not merge.
+
+The trees turned out identical (`84f8019`), so nothing was wrong. But I
+only know that because I checked afterwards, and "it was fine" is not a
+gate. My merge rule says the full suite is green on the host; that claim
+is about a specific tree, and I had not established which tree.
+
+RULE: before recording a merge as gated, compare the merge result's tree
+hash to the tree the suite actually ran against. Identical, or the gate is
+not met and the suite re-runs on the merge commit.
+
+This is the same shape as D33 and the codex sweep rule: a value verified
+at one point does not transfer to the consumer unless the consumer is the
+thing checked. Here I was the consumer and I nearly exempted myself.
