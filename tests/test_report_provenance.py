@@ -198,6 +198,45 @@ def test_the_receipts_commit_is_preferred_over_whatever_git_last_touched(audited
     assert "differs" in row["report_note"]
 
 
+def test_a_derived_commit_is_never_presented_as_the_audited_one(audited):
+    """R2 — F1's own claim, alive in a narrower state.
+
+    `_cited_report_commit` prefers the receipt's `ledger.report_commit`. When
+    that is absent — a legacy receipt, a `--no-write-ledger` run — the fallback
+    asks git which commit last touched the file. That answer is not the audited
+    commit: for a report rewritten AFTER its audit and then committed, it is the
+    REWRITE. And the console reported `committed`, so it did not merely omit
+    provenance, it ASSERTED it. Omission would have been a gap; assertion is the
+    original defect at a smaller size.
+
+    Asserted at the CONSUMER, where a person is misled, not at the holder. The
+    auditor's zero-case: the whole property rests on one function and nothing
+    downstream would notice if it started returning disk bytes again.
+    """
+    cfg, report = audited
+    # A receipt that cites no commit — the shape legacy and --no-write-ledger
+    # runs leave behind.
+    receipt = report.parent / "receipt.json"
+    receipt.write_text(json.dumps(
+        {"ledger": {"report_commit": "", "cycle_path": "cycles/aaaaaaaaaaaa-r1",
+                    "audit_repo": "local", "report_sha256": ""}}))
+    _rewrite_after_the_audit(report)
+    _git("add", "-A", cwd=cfg.root)
+    _git("commit", "-q", "-m", "rewrite and commit", cwd=cfg.root)
+
+    row = [row for row in streams.auditor_stream(cfg, routing=[])
+           if row["kind"] == "auditor"][0]
+    assert row["report_state"] != "committed", (
+        "the console asserted that a derived commit is the audited one: a "
+        "report rewritten after its audit is presented as audited")
+    assert row["report_state"] == "unverified"
+    assert "cannot confirm" in row["report_note"]
+    assert "crossaudit verify" in row["report_note"]
+    # The dashboard must carry the same state, or the two surfaces disagree
+    # about the same report.
+    assert overview.read_cycles(cfg)[0].report_state == "unverified"
+
+
 # ------------------------------------------------------------------ mutations
 # The shipped code, restored verbatim. Each must turn a named assertion red.
 MUTATIONS = (
@@ -211,9 +250,11 @@ MUTATIONS = (
      """        if False:"""),
     ("the receipt's cited commit is ignored in favour of whatever git last "
      "touched, which is the rewrite itself",
-     "overview", """            commit = (_cited_report_commit(report.parent)
-                      or _derived_report_commit(cfg.root, rel))""",
-     """            commit = _derived_report_commit(cfg.root, rel)"""),
+     "overview", """            commit = _cited_report_commit(report.parent)""",
+     """            commit = \"\""""),
+    ("the fallback goes back to ASSERTING that a derived commit is the audited "
+     "one — F1's own claim alive in a narrower state",
+     "overview", """        if not self.cited:""", """        if False:"""),
 )
 
 
@@ -252,7 +293,8 @@ def test_the_guard_is_shown_to_fail(why, module, before, after, audited, monkeyp
             ("auditor words", test_a_rewritten_report_does_not_reach_the_screen_as_the_auditors_words),
             ("dashboard counters", test_the_dashboard_counters_do_not_move_when_a_report_is_rewritten),
             ("the person is told", test_the_person_is_told_the_disk_copy_differs_rather_than_silently_corrected),
-            ("receipt over git log", test_the_receipts_commit_is_preferred_over_whatever_git_last_touched))):
+            ("receipt over git log", test_the_receipts_commit_is_preferred_over_whatever_git_last_touched),
+            ("derived is not asserted", test_a_derived_commit_is_never_presented_as_the_audited_one))):
         try:
             check(_build_audited(tmp_path / f"mutant-{index}"))
         except AssertionError as exc:

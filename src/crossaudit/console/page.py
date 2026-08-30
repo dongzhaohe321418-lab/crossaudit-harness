@@ -3492,6 +3492,7 @@ const ZH={
   "You can swap either model later without losing history.":"你之后可以更换任一模型而不丢失历史记录。",
   "The copy of this report on disk differs from the audited one shown here. Run crossaudit verify to check the record.":"磁盘上的这份报告与此处显示的已审计版本不同。请运行 crossaudit verify 核对记录。",
   "Generator live draft · not yet audited":"生成者实时草稿 · 尚未审计",
+  "No receipt names the commit this report was audited at, so CrossAudit cannot confirm the version shown here is the one that was audited. Run crossaudit verify to check the record.":"没有收据记录这份报告在哪个提交上接受了审计，因此 CrossAudit 无法确认此处显示的版本就是当时被审计的版本。请运行 crossaudit verify 核对记录。",
   "This report is not committed yet, so it cannot be verified yet.":"这份报告尚未提交，因此暂时无法核验。",
   "Start using CrossAudit":"开始使用 CrossAudit","Paste your API key":"粘贴你的 API key",
   "Paste a new key to replace the saved one":"粘贴新密钥以替换已保存的密钥",

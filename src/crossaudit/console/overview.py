@@ -59,11 +59,25 @@ class ReportSource:
     text: str
     commit: str
     on_disk_differs: bool
+    #: Whether the RECEIPT named this commit, or we merely asked git which
+    #: commit last touched the file. R2: the difference is the whole claim.
+    cited: bool = True
 
     @property
     def state(self) -> str:
         if not self.commit:
             return "uncommitted"
+        if not self.cited:
+            # R2. The fallback used to report "committed" — it did not merely
+            # omit provenance, it ASSERTED it. That is F1's original defect
+            # alive in a narrower state: a report rewritten AFTER its audit and
+            # then committed is what `git log -1` hands back, and the console
+            # presented those bytes as the audited ones.
+            #
+            # Without a receipt naming the audited commit, the honest statement
+            # is that we cannot tell. "A committed version" is not "the version
+            # that was audited", and only the receipt knows which.
+            return "unverified"
         return "drifted" if self.on_disk_differs else "committed"
 
     @property
@@ -82,6 +96,11 @@ class ReportSource:
         if self.state == "uncommitted":
             return ("This report is not committed yet, so it cannot be "
                     "verified yet.")
+        if self.state == "unverified":
+            return ("No receipt names the commit this report was audited at, "
+                    "so CrossAudit cannot confirm the version shown here is "
+                    "the one that was audited. Run crossaudit verify to check "
+                    "the record.")
         return ""
 
 
@@ -155,10 +174,14 @@ def read_report_sources(cfg: Config) -> list[ReportSource]:
         disk = report.read_bytes()
         rel = report.relative_to(cfg.root).as_posix()
         commit = ""
+        cited = True
         committed: bytes | None = None
         if repo:
-            commit = (_cited_report_commit(report.parent)
-                      or _derived_report_commit(cfg.root, rel))
+            commit = _cited_report_commit(report.parent)
+            if not commit:
+                # Derived, not cited. Kept as a way to SHOW something rather
+                # than nothing, but never as a way to claim it was audited.
+                commit, cited = _derived_report_commit(cfg.root, rel), False
             if commit:
                 try:
                     committed = read_committed_bytes(cfg.root, commit, rel)
@@ -166,11 +189,11 @@ def read_report_sources(cfg: Config) -> list[ReportSource]:
                     # The cited commit is unreachable here — a shallow clone, a
                     # ledger copied without its history. Say "uncommitted"
                     # rather than present the working copy as audited.
-                    commit, committed = "", None
+                    commit, committed, cited = "", None, True
         text = (committed if committed is not None else disk)
         out.append(ReportSource(
             path=report, text=text.decode("utf-8", errors="replace"),
-            commit=commit,
+            commit=commit, cited=cited,
             on_disk_differs=committed is not None and committed != disk))
     return out
 
