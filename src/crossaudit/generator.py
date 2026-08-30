@@ -19,12 +19,14 @@ Three boundaries this module exists to hold:
 from __future__ import annotations
 
 import json
+import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .constitution import parse_json_reply
 from .errors import ConfigDenial, Denial, ProviderDenial
+from .file_identity import FileTarget, resolve_file_targets
 
 GENERATOR_SYSTEM = """You produce work for a supervised project. Another model \
 from a different vendor audits everything you commit, against rules you will be \
@@ -101,34 +103,51 @@ class Work:
     summary: str
     files: dict[str, str]
     notes: str = ""
+    _targets: tuple[FileTarget, ...] = field(default=(), repr=False, compare=False)
+    _root: Path | None = field(default=None, repr=False, compare=False)
+    _allowed_dirs: tuple[str, ...] | None = field(default=None, repr=False,
+                                                      compare=False)
 
     def validate(self, *, allowed_dirs: list[str] | None) -> None:
         if not self.files:
             raise ProviderDenial("the generator returned no files; nothing to commit")
-        for path, content in self.files.items():
-            p = Path(path)
-            if p.is_absolute() or ".." in p.parts:
-                raise ProviderDenial(f"refusing a path that escapes the project: {path!r}")
-            if p.parts and p.parts[0].startswith("."):
-                raise ProviderDenial(f"refusing a hidden path: {path!r}")
-            if "TEMPLATE" in p.parts:
-                raise ProviderDenial(
-                    f"refusing to edit scaffold template {path!r}; create a new "
-                    f"increment directory instead")
-            if allowed_dirs and (not p.parts or p.parts[0] not in allowed_dirs):
-                raise ProviderDenial(
-                    f"{path!r} is outside the working directories {allowed_dirs}; the "
-                    f"generator may not write rules, ledger or configuration")
 
     @staticmethod
     def from_json(raw: dict) -> "Work":
         try:
-            files = {str(f["path"]).strip(): str(f["content"]) for f in raw["files"]}
+            rows = [(str(f["path"]), str(f["content"])) for f in raw["files"]]
         except (KeyError, TypeError) as exc:
             raise ProviderDenial(f"the generator returned an unusable shape: {exc}",
                                  category="format") from exc
+        files: dict[str, str] = {}
+        for path, content in rows:
+            if path in files:
+                raise ProviderDenial(
+                    f"the generator returned duplicate file request {path!r}",
+                    category="format")
+            files[path] = content
         return Work(summary=str(raw.get("summary", "work")).strip() or "work",
                     files=files, notes=str(raw.get("notes", "")).strip())
+
+
+def bind_file_identities(work: Work, root: Path,
+                         allowed_dirs: list[str] | None) -> Work:
+    """Resolve and authorize every target once, before downstream validation."""
+    if work._targets:
+        physical_root = root.resolve(strict=True)
+        expected_scope = tuple(allowed_dirs) if allowed_dirs is not None else None
+        if work._root != physical_root or work._allowed_dirs != expected_scope:
+            raise ProviderDenial(
+                "refusing file identities bound to a different project or scope",
+                category="path_identity", retryable=True)
+        return work
+    targets = resolve_file_targets(root, work.files, allowed_dirs)
+    canonical: dict[str, str] = {}
+    for target in targets:
+        canonical[target.relative] = work.files[target.requested]
+    return Work(summary=work.summary, files=canonical, notes=work.notes,
+                _targets=targets, _root=root.resolve(strict=True),
+                _allowed_dirs=(tuple(allowed_dirs) if allowed_dirs is not None else None))
 
 
 @dataclass
@@ -237,7 +256,7 @@ def _extract_file_blocks(text: str) -> list[tuple[str, str, int, int]]:
     marker is absent, its content runs to the next file's opening marker, or to
     the ``NOTES:`` line, or to the end of the reply. The path is only ever read
     from the ``path="…"`` attribute — never inferred — so recovery cannot invent
-    a target, and ``Work.validate`` still guards every path afterwards.
+    a target, and the physical-identity boundary still guards every path afterwards.
     """
     opens = list(FILE_OPEN.finditer(text))
     if not opens:
@@ -292,16 +311,9 @@ def parse_work_reply(text: str) -> Work:
             "the generator returned malformed file blocks: the opening file "
             "marker is missing its path", category="format")
     for path, content, _open_start, _block_end in blocks:
-        path = path.strip()
         if path in files:
-            # Providers occasionally repeat the exact same block while trying to
-            # emphasise that only one deliverable exists. Identical bytes are one
-            # unambiguous write, so collapse them. Different bytes for the same
-            # path remain fail-closed because choosing either would invent intent.
-            if files[path] == content:
-                continue
             raise ProviderDenial(
-                f"the generator returned conflicting duplicate file {path!r}",
+                f"the generator returned duplicate file request {path!r}",
                 category="format")
         files[path] = content
     prefix = text[:blocks[0][2]].strip()
@@ -471,15 +483,16 @@ def generate(*, task: str, constitution: str, current: dict[str, str],
              compute_hosts=None, compute_results=None, mcp_servers=None,
              tool_results=None, builtin_tools=None,
              on_repair=None, owner_guidance: str = "",
-             conversation: str = "") -> Work | ComputeRequest | ToolRequest:
+             conversation: str = "", root: Path | None = None,
+             ) -> Work | ComputeRequest | ToolRequest:
     """One round of work. `complete` is a provider bound to the generator role.
 
     A reply the parsers cannot read is a *format* failure, not a provider
     failure: the model gets exactly ONE corrective re-ask (the precise error
     plus the envelope contract, generator-side only — P2 intact) before the
     denial propagates. ``on_repair(reason)`` is called before the re-ask so the
-    caller can record the adjustment visibly. Path/scope refusals from
-    ``Work.validate`` are never retried — those are refusals, not typos.
+    caller can record the adjustment visibly. Physical path/scope refusals are
+    never format-repaired — those are authorization refusals, not parser typos.
     """
     if not task.strip():
         raise ConfigDenial("the generator needs a task; say what you want built")
@@ -527,16 +540,112 @@ def generate(*, task: str, constitution: str, current: dict[str, str],
                                          conversational=True) from second
             raise
     if isinstance(outcome, Work):
+        outcome = bind_file_identities(outcome, root or Path.cwd(), allowed_dirs)
         outcome.validate(allowed_dirs=allowed_dirs)
     return outcome
 
 
-def apply(work: Work, root: Path) -> list[str]:
-    """Write the returned files. Paths were validated before we got here."""
-    written = []
-    for rel, content in sorted(work.files.items()):
-        target = root / rel
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content, encoding="utf-8", newline="\n")
-        written.append(rel)
+def _same_binding(left: FileTarget, right: FileTarget) -> bool:
+    return (left.requested, left.relative, left.physical, left.exists,
+            left.device, left.inode) == (
+                right.requested, right.relative, right.physical, right.exists,
+                right.device, right.inode)
+
+
+def _write_bound_target(target: FileTarget, payload: bytes,
+                        parent_identity: tuple[int, int]) -> None:
+    """Write through a pinned parent fd and refuse link/identity races."""
+    directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    try:
+        parent_fd = os.open(target.physical.parent, directory_flags | nofollow)
+        try:
+            parent_info = os.fstat(parent_fd)
+            if (parent_info.st_dev, parent_info.st_ino) != parent_identity:
+                raise ProviderDenial(
+                    "refusing a generated file whose parent changed during apply",
+                    category="path_identity", retryable=True)
+            flags = os.O_WRONLY | nofollow
+            if target.exists:
+                fd = os.open(target.physical.name, flags, dir_fd=parent_fd)
+            else:
+                fd = os.open(target.physical.name, flags | os.O_CREAT | os.O_EXCL,
+                             0o666, dir_fd=parent_fd)
+            try:
+                info = os.fstat(fd)
+                if target.exists and ((info.st_dev, info.st_ino)
+                                      != (target.device, target.inode)
+                                      or info.st_nlink != 1):
+                    raise ProviderDenial(
+                        "refusing a generated file that changed during apply",
+                        category="path_identity", retryable=True)
+                os.ftruncate(fd, 0)
+                offset = 0
+                while offset < len(payload):
+                    count = os.write(fd, payload[offset:])
+                    if count <= 0:
+                        raise OSError("generated file write made no progress")
+                    offset += count
+            finally:
+                os.close(fd)
+        finally:
+            os.close(parent_fd)
+    except ProviderDenial:
+        raise
+    except OSError as exc:
+        raise ProviderDenial(
+            f"could not safely write generated file {target.relative!r}",
+            category="path_identity", retryable=True) from exc
+
+
+def apply(work: Work, root: Path,
+          allowed_dirs: list[str] | None = None) -> list[str]:
+    """Write only a physically bound Work and return canonical Git pathspecs."""
+    if not work._targets:
+        work = bind_file_identities(work, root, allowed_dirs)
+    physical_root = root.resolve(strict=True)
+    if work._root != physical_root:
+        raise ProviderDenial(
+            "refusing file identities bound to a different project",
+            category="path_identity", retryable=True)
+    rebound = resolve_file_targets(
+        physical_root, (target.requested for target in work._targets),
+        list(work._allowed_dirs) if work._allowed_dirs is not None else None)
+    if len(rebound) != len(work._targets) or any(
+            not _same_binding(before, after)
+            for before, after in zip(work._targets, rebound)):
+        raise ProviderDenial(
+            "refusing generated files whose physical identity changed before apply",
+            category="path_identity", retryable=True)
+
+    encoded = {target.relative: work.files[target.relative].encode("utf-8")
+               for target in work._targets}
+    parent_ids: dict[Path, tuple[int, int]] = {}
+    for target in work._targets:
+        target.physical.parent.mkdir(parents=True, exist_ok=True)
+        parent = target.physical.parent.resolve(strict=True)
+        if parent != target.physical.parent:
+            raise ProviderDenial(
+                "refusing a generated file parent whose physical identity changed",
+                category="path_identity", retryable=True)
+        info = parent.stat()
+        parent_ids[parent] = (info.st_dev, info.st_ino)
+
+    # Bind again after creating any new parent directories and before the first
+    # content byte is written.  The same resolver owns both decisions.
+    rebound = resolve_file_targets(
+        physical_root, (target.requested for target in work._targets),
+        list(work._allowed_dirs) if work._allowed_dirs is not None else None)
+    if len(rebound) != len(work._targets) or any(
+            not _same_binding(before, after)
+            for before, after in zip(work._targets, rebound)):
+        raise ProviderDenial(
+            "refusing generated files whose physical identity changed before write",
+            category="path_identity", retryable=True)
+
+    written: list[str] = []
+    for target in sorted(work._targets, key=lambda item: item.relative):
+        _write_bound_target(target, encoded[target.relative],
+                            parent_ids[target.physical.parent])
+        written.append(target.relative)
     return written
