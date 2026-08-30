@@ -59,7 +59,28 @@ receipts carry the version, a path-tagged code digest and the install mode, and
 The shared `receipt schema 2` is not a compatibility claim. What is misled is the
 PERSON, so this is a false-premise experience on valid input, not data loss.
 
-**Fixed** — see the change contract for A6.
+**OPEN.** This said *"Fixed — see the change contract for A6"*, and that was
+wrong when I wrote it. The cross-vendor audit of this branch made correcting it
+the one required fix, and the manager has since restated it (D66): F3 closes
+when the shadowing case is detected, not before.
+
+What A6 does is make an install identify itself on the surfaces where our code
+already runs. What it does not do is tell a person that the `crossaudit`
+answering them is a different program — and in the failure state **our code
+never executes**, because the binary that answers predates it. You cannot change
+a stale binary's output by editing the new one, so no revision of A6 could have
+reached this.
+
+Detection now exists, on `agentA/path-identity`: `app_doctor.path_identity()`
+resolves the `crossaudit` on PATH, reads the other install's version from its
+dist-info directory name — a filesystem read, never executing it — and the app
+says which program answers. Executed against the real state on this machine, it
+names the 3.2.0 install against our 4.15.0.
+
+**That still does not close F3, and it must not be recorded as closing it.** It
+reaches the person who opens the app. Anyone who only types `crossaudit` gets
+the old program, and nothing of ours runs in that process. What changed is the
+population who can find out, not the collision.
 
 ## F4 — what a person must know to reach the CLI at all (INFO, feeds D37)
 
