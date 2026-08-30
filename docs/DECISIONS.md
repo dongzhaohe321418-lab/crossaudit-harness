@@ -3083,3 +3083,43 @@ its holder, rather than when behaviour changes — the highest-leverage
 structural addition available. Recorded as the candidate for the next major
 slice rather than dispatched tonight: it needs a design, and every engineer is
 loaded on work that closes the three orphans we already have.
+
+## D77 — I held a branch behind a dependency that does not exist
+
+The i18n engineer mentioned in passing that `agentA/cli-i18n-wave1` "remains
+unmerged behind the first-three-minutes hold." I re-derived rather than
+remembered: **`agentA/first-three-minutes` is not an ancestor of
+`cli-i18n-wave1`.** They are independent branches. I have been blocking a
+mergeable branch on a dependency I invented.
+
+Same family as D50 — a hold on one branch quietly changing another's fate —
+except there the effect was real and here the premise was simply false. And it
+surfaced only because an engineer restated my own decision back to me in a
+status line. **A hold is invisible to everyone except the person it blocks**,
+so it will not be questioned unless they mention it.
+
+`first-three-minutes` stays held: it ships a currently-false sentence.
+**`cli-i18n-wave1` is released**, pending its own rebase and review.
+
+Its head is `dc04d95` — *"F3 is open, and this file said it was fixed."* The
+author corrected a false closure claim on its own branch, unprompted, in the
+direction that costs it a closed finding. D66 applied by an author to itself,
+and the reason the branch can be released rather than re-audited from scratch.
+
+It does not rebase cleanly: `docs/TASK_LEDGER.md` conflicts. That is the file
+the decision record was split out of precisely because it conflicted on every
+branch — the split helped and did not finish the job. Returned to the author
+rather than guessed at.
+
+### `app_doctor` at `23994a7`
+
+Suite verified by me: **1,755 collected, 1,753 passed, 2 skipped, 0 failed.**
+`enumeration_reddens=yes` with mutation A — the guard I commissioned without
+its mutation (D64) now actually fails when a CLI check goes unmirrored.
+`path_row=detects`, `executes_foreign=no`, `unknown_honest=yes`. With the
+security auditor, which gated the branch originally and is checking whether
+what it rejected is fixed or renamed.
+
+**And I sent that audit to a superseded SHA** (`cc87378`, now `23994a7`) —
+my own D57, missed by me. Corrected before it could report against a tree
+nobody would merge.
