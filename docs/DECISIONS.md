@@ -952,3 +952,41 @@ same-vendor review was weakest.
 The constraint that forced this is a tooling limit, not a judgement about either
 model. Recorded so that a later reader does not conclude the codex auditor was
 removed from security work for performance reasons. It found the S0.
+
+### D27 — The auditor refused both my options and gave a better third; D24's line holds
+
+I asked the security auditor for MERGE or DO NOT MERGE on the receipt scope guard.
+It gave neither, and its reasoning is better than my framing, so it is adopted.
+
+First, it answered the question I had put twice and never had answered: what would
+be TRUE if the closure were structural that would be FALSE of an enumeration. It
+found one — a surviving explicit rollback is measurably REDUNDANT, because the
+region is carried by the construction itself. Redundancy of a hand-written guard is
+the signature of a structural closure, and it is false of an enumeration, where
+every guard is load-bearing. The original symptom then survived ten adversarial swap
+cases at four windows with zero escapes.
+
+Then it declined both verdicts:
+- Not MERGE, because the branch ships `s0_reachable=no` and **that is not true** —
+  publication contains an operation that violates the construction's own discipline,
+  and D24's standard is "closed by construction END TO END", which includes
+  publication. Merging would be the third consecutive merge carrying an open
+  S0-class defect justified by "it strictly dominates" — the treadmill D24 exists to
+  stop.
+- Not DO NOT MERGE, because the defect is pre-existing and identical on integration,
+  so holding the branch buys nothing on it and costs a real improvement. And the fix
+  is three lines in the same object with the suite green, which it ran.
+- So: fix it on this branch and re-audit. "That gets you the clean third round D24
+  asked for instead of another dominating merge."
+
+**Adopted.** That is the outcome D24 was written to produce and I had not seen it,
+because I had framed the choice as ship-or-hold when the actual answer was one short
+round. A rule that binds the manager is worth more when someone uses it to find the
+option the manager missed.
+
+Also carried into the merge commit whichever way it lands: the branch's contract
+claims closure by construction "from physical publication through exact-byte staging
+and commit". Everything FROM publication onward holds. Publication itself is the one
+link that does not, and it is inherited rather than authored here — so the claim is
+narrower than the sentence, and the sentence gets corrected rather than the claim
+quietly enlarged.
