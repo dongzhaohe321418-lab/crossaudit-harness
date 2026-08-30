@@ -1708,3 +1708,35 @@ name, built from the same two nodes, is already translated, because the
 locale observer runs a microtask later) exists nowhere in writing, and three
 occasions where its guard went red for the wrong reason are pure hard-won
 calibration a fresh agent would re-learn expensively.
+
+## D46 — A change contract can outlive the code it describes
+
+The i18n engineer corrected one of its own earlier contracts unprompted: it
+claimed Chinese parity satisfied for a `doctor` surface that **no longer
+exists**. The claim was true when written and became false when the surface
+was replaced — and nothing in our process would have caught it, because we
+review contracts against the diff they ship with, never again afterwards.
+
+We lean on contracts heavily: they are how I gate merges and how auditors
+scope. A contract that has quietly decoupled from the code is the same
+defect class as everything else this cycle — accurate at the producer, wrong
+at the consumer — except the consumer is me.
+
+RULE: when a slice removes or replaces a surface, the author checks whether
+any earlier contract asserted something about it, and corrects it in the
+same commit. An unprompted correction of one's own past claim is the
+behaviour to copy.
+
+### "Present, not satisfied" is a legitimate i18n state
+
+The same engineer declined to offer `--lang` on the front door: the string is
+translated from the first draft, but one Chinese line in an otherwise English
+front door is precisely the seam D21 exists to prevent, so it stays
+unreachable until wave 3 lands. Doctor's extended line is machine detail,
+untranslated by design per SPEC-7 §4.
+
+That is the honest report — **translated from the first draft, reachable when
+wave 3 lands** — and it is better than either claiming parity or claiming a
+gap. Recording it so the distinction is available to everyone: a string can
+be *present* and deliberately not yet *reachable*, and saying so is not
+hedging (D43) because the claim being made is accurate and complete.
