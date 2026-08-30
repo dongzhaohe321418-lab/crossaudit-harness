@@ -849,3 +849,38 @@ ambient state that happens to be available.** Where the failure carries no
 information, the honest output says so and says nothing more. "Something went wrong
 and we do not know what" is a worse sentence to write and a better one to read than a
 precise account of a different problem.
+
+### D24 — Merge the authorization boundary, and name the limit of this pattern
+
+The cross-vendor engineering review of `fix/authorization-boundary` returned MERGE
+AFTER FIXES, and its structural verdict is the one I asked for: *one sentence in,
+one mechanism out.* `resolve_file_targets` authorizes, `AppliedFiles` carries that
+authorization through parent creation, publication, rollback and staging, and every
+consumer takes the binding instead of the string. Symptoms 2 and 3 — parent creation
+racing a swapped ancestor, and identity discarded before staging — are closed **by
+construction**: there is no window to hit and no pathname to re-resolve. Two previous
+rounds of patching had not achieved that.
+
+Finding 1 remains: the receipt has no scope guard, so the third symptom is closed by
+ENUMERATION where the other two are closed by construction. The reviewer's words:
+this "leaves the S0 you rated S0 reachable through a narrower door, and the branch's
+own test suite already contains the proof that the door is dangerous."
+
+It also re-confirmed, on a harness written before this fix existed, that integration
+at 05863a6 **today** writes through a symlink into out-of-scope rules invisibly,
+creates directories outside the project, and stages out-of-scope bytes.
+
+**Decided: merge.** The branch strictly dominates what is in the integration branch,
+the reviewer said so unprompted and recommended not holding it behind a perfect
+answer, and finding 1 narrows a door that is currently wide open. Same arithmetic as
+D19.
+
+**And the limit, stated now rather than discovered later.** This is the SECOND
+consecutive merge carrying a known open S0 on the same code, justified both times by
+"it strictly dominates". That reasoning is correct and it is also exactly how a team
+talks itself onto a treadmill — each step an improvement, the hole never closed. So:
+finding 1 is the next thing its author does, ahead of anything else assigned to it,
+and **if a third round arrives still carrying an open S0 on this boundary, the
+justification stops working and the slice stops merging until the boundary is closed
+by construction end to end.** Improvement is not a licence to stay incomplete
+indefinitely; it is a licence to ship the improvement once.
