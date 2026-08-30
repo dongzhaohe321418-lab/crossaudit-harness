@@ -2108,7 +2108,7 @@ body.first-run #first-run{display:flex;flex-direction:column;min-height:100vh;he
   font-size:var(--fs-prose);line-height:1.65}
 .fr-choices{display:flex;flex-direction:column;gap:var(--sp-5);max-width:520px}
 .fr-arw{transition:transform var(--dur-base) var(--spring)}
-.fr-primary{display:inline-flex;align-items:center;gap:9px;width:fit-content;
+.fr-primary{display:inline-flex;align-items:center;gap:9px;width:fit-content;white-space:nowrap;
   font-size:var(--fs-title);font-weight:600;border:1px solid transparent;border-radius:var(--r-md);
   padding:12px 22px;background:var(--accent);color:var(--inverse-text);box-shadow:var(--shadow-2),var(--edge-highlight);
   transition:transform var(--dur-fast) var(--ease-out),filter var(--dur-fast) var(--ease-out)}
@@ -2189,7 +2189,8 @@ body.first-run #first-run{display:flex;flex-direction:column;min-height:100vh;he
   gap:var(--sp-4);padding:16px clamp(var(--sp-5),5vw,var(--sp-9))}
 .fr-hint{color:var(--text-3);font-size:var(--fs-caption)}
 .fr-foot-right{display:flex;align-items:center;gap:20px}
-.fr-back{color:var(--text-3);font-size:var(--fs-body);background:none;border:0;padding:6px 8px;border-radius:var(--r-sm)}
+.fr-back{color:var(--text-3);font-size:var(--fs-body);background:none;border:0;padding:6px 8px;border-radius:var(--r-sm);
+  white-space:nowrap}
 .fr-back:hover{color:var(--text-2);background:var(--hover)}
 .fr-rail{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);
   height:34px;padding:0 clamp(var(--sp-5),4vw,var(--sp-8));border-top:1px solid var(--line);
@@ -3494,6 +3495,7 @@ const ZH={
   "Generator and auditor must run on different providers. Independent review is the core of the protocol and cannot be turned off.":"生成者和审计者必须运行在不同的供应商上。独立审查是本协议的核心，无法关闭。",
   "You can swap either model later without losing history.":"你之后可以更换任一模型而不丢失历史记录。",
   "Start using CrossAudit":"开始使用 CrossAudit","Paste your API key":"粘贴你的 API key",
+  "API key":"API 密钥","Saving your provider setup…":"正在保存你的供应商设置……",
   "Paste a new key to replace the saved one":"粘贴新密钥以替换已保存的密钥",
   "Same provider — independent review is not possible.":"同一家供应商——无法进行独立审查。",
   "Your provider setup is saved. Create your first project to put the recommended pair to work.":"你的供应商设置已保存。创建你的第一个项目，即可让推荐搭配开始工作。"
@@ -3576,6 +3578,27 @@ const ZH_PATTERNS=[
    m=>'在终端里输入 `crossaudit` 运行的是 '+m[1]+'（版本 '+m[2]+'）。本应用是 '+m[3]+'，位于 '+m[4]+'。'],
   [/^Typing `crossaudit` runs (.+)\. Its version could not be determined without running it, which CrossAudit does not do\. This app is (.+) at (.+)\.$/,
    m=>'在终端里输入 `crossaudit` 运行的是 '+m[1]+'。在不运行它的前提下无法确定其版本，而 CrossAudit 不会运行它。本应用是 '+m[2]+'，位于 '+m[3]+'。'],
+  // ORDER MATTERS: ZH_PATTERNS is first-match-wins, and these sit at the front
+  // deliberately. An existing /^Remove (.+)$/ was swallowing
+  // "Remove OpenAI API key" into "移除 OpenAI API key" — translated verb,
+  // untranslated noun, which reads as done and is not. A composed name must be
+  // matched by the most specific pattern, so the most specific goes first.
+  // SPEC-13 §3.1 and §3.4. Every one of these is COMPOSED from a provider name,
+  // so each must be a pattern. A fixed entry would translate only the providers
+  // whose names happen to be in the dictionary and hand every other Chinese
+  // reader an English control name — the i18n form of the silent gap. The
+  // provider name itself is never translated: it is the vendor identifier.
+  [/^(Paste|Clear|Validate|Reveal|Replace|Remove) (.+) API key$/,m=>
+    ({Paste:'粘贴',Clear:'清除',Validate:'验证',Reveal:'显示',Replace:'更换',Remove:'移除'})[m[1]]
+    +' '+m[2]+' API 密钥']
+  ,[/^Get key — (.+)$/,m=>'获取 key —— '+m[1]]
+  ,[/^API docs — (.+)$/,m=>'API 文档 —— '+m[1]]
+  ,[/^Checking (.+) key…$/,m=>'正在检查 '+m[1]+' 密钥……']
+  ,[/^(.+) key verified\.$/,m=>m[1]+' 密钥已验证。']
+  ,[/^(.+) key rejected\. Check it and try again\.$/,m=>m[1]+' 密钥被拒绝。请检查后重试。']
+  ,[/^(.+) key works, but no models are available to it\.$/,m=>m[1]+' 密钥可用，但没有可用的模型。']
+  ,[/^Could not reach (.+)\. Check your connection and try again\.$/,m=>'无法连接 '+m[1]+'。请检查网络后重试。']
+  ,[/^reading (\d+) owner message\(s\)$/,m=>'正在读取 '+m[1]+' 条所有者补充信息'],
   [/^reading (\d+) owner message\(s\)$/,m=>'正在读取 '+m[1]+' 条所有者补充信息'],
   [/^queued as owner guidance for the running build \(#(\d+)\); it will be read at the next round$/,m=>'已作为所有者补充信息排队（第 '+m[1]+' 位），将在下一轮读取'],
   [/^(\d+) queued$/,m=>m[1]+' 条排队中'],
@@ -7463,7 +7486,7 @@ function setFirstRunStep(step,focus=true){firstRunStep=Math.max(1,Math.min(4,Num
     if(n===firstRunStep)item.setAttribute('aria-current','step');else item.removeAttribute('aria-current');});
   document.getElementById('fr-footbar').hidden=firstRunStep<2;
   document.querySelector('#fr-continue .fr-continue-label').textContent=firstRunStep===4?'Start using CrossAudit':'Continue';
-  document.getElementById('fr-continue').disabled=false;
+  frSetContinue(true);
   document.getElementById('fr-hint').textContent=FR_HINTS[firstRunStep]||FR_HINTS[2];
   if(firstRunStep===2)startFirstRunReadiness();
   else if(firstRunStep===3)renderFirstRunProviders();
@@ -7489,26 +7512,68 @@ function frProvVendors(){
     const rank=v=>v==='openai'?0:(providers[v]||{}).configured?1:2;
     return rank(a)-rank(b)||String((providers[a]||{}).label||a).localeCompare(String((providers[b]||{}).label||b));});
 }
+// SPEC-13 §3.1. Every per-provider control is named after its provider.
+//
+// Observed in the frozen bundle: eleven key fields with NO accessible name at
+// all, distinguished only by a `data-fr-*` attribute, and a placeholder — which
+// is not a name: it is not reliably announced as one and it disappears on the
+// first keystroke. Tabbing the stage produced "Validate. Validate. Validate."
+// eleven times.
+//
+// The buttons take `aria-label`, because no single visible node carries the
+// whole name. The INPUT does not: it points at the visible provider name plus a
+// hidden "API key", so the accessible name is built from the same node the eye
+// reads and there is no translatable duplicate to drift. In zh that yields
+// "OpenAI API 密钥" without a composed string at all — the provider name is not
+// translated, and "API key" is one ordinary dictionary entry.
+//
+// Beyond the three controls SPEC-13 §3.1 tabulates, Reveal, Replace and Remove
+// carry the identical defect — Reveal shipped ONE shared aria-label on all
+// eleven rows. G2 is arithmetic (distinct names must equal control count), so
+// it forces them in whether or not the table lists them. Naming three and
+// leaving three would fail the guard the spec itself wrote, which is it working.
+const FR_KEY_ACTIONS={paste:'Paste',clear:'Clear',validate:'Validate',
+                      reveal:'Reveal',replace:'Replace',remove:'Remove'};
+function frKeyLabel(action,label){
+  return FR_KEY_ACTIONS[action]+' '+label+' API key';}
 function frProvRow(vendor,p){
   const label=p.label||vendor;const mark=esc(String(label).slice(0,1).toUpperCase());
-  const links=(p.console_url?'<a class="fr-learn" href="'+esc(p.console_url)+'" target="_blank" rel="noopener">Get key ↗</a> ':'')
-    +(p.docs_url?'<a class="fr-learn" href="'+esc(p.docs_url)+'" target="_blank" rel="noopener">API docs ↗</a>':'');
+  const nameId='fr-name-'+esc(vendor);
+  const aria=action=>' aria-label="'+esc(frKeyLabel(action,label))+'"';
+  // The two per-row links were the same defect as the buttons and are NOT in
+  // SPEC-13 §3.1: ten rows shipped ten identical "Get key ↗" and ten identical
+  // "API docs ↗". G2 is arithmetic — distinct names must equal the control
+  // count — so the spec caught them through its own guard rather than through
+  // its table, which is the guard being better than the list.
+  // The visible text is unchanged and is CONTAINED in the accessible name
+  // (WCAG 2.5.3): a speech-input user still says "Get key".
+  const links=(p.console_url?'<a class="fr-learn" href="'+esc(p.console_url)+'" target="_blank" rel="noopener"'
+      +' aria-label="'+esc('Get key — '+label)+'">Get key ↗</a> ':'')
+    +(p.docs_url?'<a class="fr-learn" href="'+esc(p.docs_url)+'" target="_blank" rel="noopener"'
+      +' aria-label="'+esc('API docs — '+label)+'">API docs ↗</a>':'');
   const configured='<div class="fr-configured" data-fr-configured hidden><span class="fr-mask" aria-hidden="true">•••• •••• ••••</span>'
     +'<span>Stored in your macOS Keychain.</span>'
-    +'<button type="button" class="fr-tool" data-fr-replace="'+esc(vendor)+'">Replace</button>'
-    +'<button type="button" class="fr-tool" data-fr-remove="'+esc(vendor)+'">Remove</button></div>';
+    +'<button type="button" class="fr-tool" data-fr-replace="'+esc(vendor)+'"'+aria('replace')+'>Replace</button>'
+    +'<button type="button" class="fr-tool" data-fr-remove="'+esc(vendor)+'"'+aria('remove')+'>Remove</button></div>';
   const field='<div class="fr-keyfield">'
-    +'<input class="fr-key" type="password" id="fr-key-'+esc(vendor)+'" data-fr-key="'+esc(vendor)+'" autocomplete="new-password" placeholder="Paste your API key">'
-    +'<button type="button" class="fr-tool" data-fr-paste="'+esc(vendor)+'">Paste</button>'
-    +'<button type="button" class="fr-tool" data-fr-reveal="'+esc(vendor)+'" aria-pressed="false" aria-label="Reveal the key you just typed">'
+    +'<span class="sr-only" id="fr-apikey-'+esc(vendor)+'">API key</span>'
+    +'<input class="fr-key" type="password" id="fr-key-'+esc(vendor)+'" data-fr-key="'+esc(vendor)+'"'
+    +' aria-labelledby="'+nameId+' fr-apikey-'+esc(vendor)+'"'
+    +' autocomplete="new-password" placeholder="Paste your API key">'
+    +'<button type="button" class="fr-tool" data-fr-paste="'+esc(vendor)+'"'+aria('paste')+'>Paste</button>'
+    +'<button type="button" class="fr-tool" data-fr-reveal="'+esc(vendor)+'" aria-pressed="false"'+aria('reveal')+'>'
     +'<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1.5 10S4.5 4 10 4s8.5 6 8.5 6-3 6-8.5 6-8.5-6-8.5-6Z"/><circle cx="10" cy="10" r="2.3"/></svg></button>'
-    +'<button type="button" class="fr-tool" data-fr-clear="'+esc(vendor)+'">Clear</button>'
-    +'<button type="button" class="fr-tool fr-tool-cta" data-fr-validate="'+esc(vendor)+'">Validate</button></div>';
+    +'<button type="button" class="fr-tool" data-fr-clear="'+esc(vendor)+'"'+aria('clear')+'>Clear</button>'
+    +'<button type="button" class="fr-tool fr-tool-cta" data-fr-validate="'+esc(vendor)+'"'+aria('validate')+'>Validate</button></div>';
   const chatgpt=vendor==='openai'
     ?'<div class="fr-divider">or</div><button type="button" class="fr-chatgpt" id="fr-chatgpt"><svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M10 3.5v13M3.5 10h13"/></svg> Sign in with ChatGPT (official)</button>':'';
   const honesty=(p.subscription&&p.subscription.detail)?'<p class="fr-honesty">'+esc(p.subscription.detail)+'</p>':'';
-  return '<div class="fr-prov" data-fr-prov="'+esc(vendor)+'"><div class="fr-prov-id"><span class="fr-prov-mark" aria-hidden="true">'+mark+'</span>'
-    +'<div><div class="fr-prov-name">'+esc(label)+'</div><div class="fr-prov-sub">'+esc(vendor)+'</div></div>'
+  // §3.2. The provider is announced once on entering the row. Per-control names
+  // stay regardless: group context is a convenience of good screen readers, not
+  // something a spec may lean on.
+  return '<div class="fr-prov" role="group" aria-labelledby="'+nameId+'" data-fr-prov="'+esc(vendor)+'">'
+    +'<div class="fr-prov-id"><span class="fr-prov-mark" aria-hidden="true">'+mark+'</span>'
+    +'<div><div class="fr-prov-name" id="'+nameId+'">'+esc(label)+'</div><div class="fr-prov-sub">'+esc(vendor)+'</div></div>'
     +'<span class="fr-stat fr-s-pending" data-fr-stat>Checking…</span></div>'
     +'<div class="fr-prov-body"><span class="fr-prov-label"><span>New API key</span> · '+links+'</span>'
     +configured+field+chatgpt+honesty
@@ -7542,6 +7607,7 @@ function updateFirstRunProviderStates(){
     const note=row.querySelector('[data-fr-configured]');if(note)note.hidden=!configured;
     const input=row.querySelector('[data-fr-key]');
     if(input)input.placeholder=configured?'Paste a new key to replace the saved one':'Paste your API key';
+    frAnnounceValidation(vendor,p.label||vendor,v&&v.state?String(v.state):'');
     const msg=row.querySelector('[data-fr-msg]');
     if(msg){
       if(v&&v.state==='ready'){msg.className='fr-keymsg ok';msg.textContent='Connection verified.';}
@@ -7552,6 +7618,33 @@ function updateFirstRunProviderStates(){
     }
   });
 }
+// SPEC-13 §3.4. Seven per-row states change with no page load, on nodes with no
+// role and no aria-live, so a screen-reader user pressed Validate and received
+// NOTHING — including in the three states where something went wrong and the
+// message is the only guidance.
+//
+// Routed through the shared announcer from slice 0 rather than giving eleven rows
+// their own live regions, which is what the spec prefers and what stops the
+// stage having eleven things that can speak.
+//
+// Announced as an EVENT, not a state: two providers can fail the same way, and
+// re-validating the same key is a second answer to a second question. That
+// distinction is the R2 finding from SPEC-9 slice 2, and it applies here for the
+// same reason.
+//
+// Once per OUTCOME. `updateFirstRunProviderStates` runs on every render, so the
+// transition is what is announced, not the value — otherwise a re-render speaks.
+let frAnnouncedValidation={};
+const FR_OUTCOME_SENTENCE={
+  ready:label=>label+' key verified.',
+  invalid:label=>label+' key rejected. Check it and try again.',
+  no_access:label=>label+' key works, but no models are available to it.',
+  unreachable:label=>'Could not reach '+label+'. Check your connection and try again.'};
+function frAnnounceValidation(vendor,label,state){
+  if(frAnnouncedValidation[vendor]===state)return false;
+  frAnnouncedValidation[vendor]=state;
+  const sentence=FR_OUTCOME_SENTENCE[state];
+  return sentence?announce(sentence(label),'event'):false;}
 function frShowKeyMsg(vendor,text,cls){const el=document.querySelector('#fr-provs [data-fr-msg]');
   const row=document.querySelector('#fr-provs [data-fr-prov="'+vendor+'"]');const m=row?row.querySelector('[data-fr-msg]'):el;
   if(!m)return;m.className='fr-keymsg'+(cls?' '+cls:'');m.textContent=text||'';}
@@ -7559,6 +7652,13 @@ async function frValidate(vendor){
   const input=document.getElementById('fr-key-'+vendor);const typed=input?input.value.trim():'';
   const btn=document.querySelector('#fr-provs [data-fr-validate="'+vendor+'"]');const original=btn?btn.textContent:'';
   if(btn){btn.disabled=true;btn.textContent='Checking…';}    // §26 loading state
+  // The check itself is announced, because pressing Validate and hearing nothing
+  // is indistinguishable from pressing a button that does not work. Cleared so
+  // the OUTCOME that follows is a transition and speaks.
+  {const providers=(settingsState&&settingsState.providers)||{};
+   const label=(providers[vendor]&&providers[vendor].label)||vendor;
+   frAnnouncedValidation[vendor]='checking';
+   announce('Checking '+label+' key…','event');}
   try{
     if(typed){await api('/api/settings',{[vendor+'_key']:typed});if(input){input.value='';input.type='password';}}
     frValidation[vendor]=await api('/api/providers/validate',{vendor});
@@ -7635,6 +7735,28 @@ function frRenderRoleCard(role,sel){
   else if(p.configured)chips.push('<span class="fr-chip fr-chip-auth">'+check+' <span>Keychain key</span></span>');
   document.getElementById('fr-'+role+'-chips').innerHTML=chips.join('');
 }
+// SPEC-13 §3.3. `disabled` removes the control from the tab order, so the
+// on-screen reason — "Connect at least two different providers…" — is
+// unreachable WITH it. The person meets a stage they cannot complete and nothing
+// tells them why. This is the reason-attached pattern rather than convention for
+// its own sake: an explanation that can only be reached by reaching the thing it
+// explains is not an explanation.
+//
+// So the button stays focusable and in the tab order, says it is unavailable,
+// points at the reason, and the handler declines the action. One mechanism for
+// every blocked case, including the transient in-flight one, because two would
+// drift — and the in-flight case gets its own reason rather than an unexplained
+// refusal.
+function frSetContinue(enabled,reasonId){
+  const cont=document.getElementById('fr-continue');if(!cont)return;
+  cont.disabled=false;
+  if(enabled){cont.removeAttribute('aria-disabled');cont.removeAttribute('aria-describedby');}
+  else{cont.setAttribute('aria-disabled','true');
+    if(reasonId)cont.setAttribute('aria-describedby',reasonId);
+    else cont.removeAttribute('aria-describedby');}}
+function frContinueBlocked(){
+  const cont=document.getElementById('fr-continue');
+  return !!cont&&cont.getAttribute('aria-disabled')==='true';}
 function frUpdateIndependence(){
   const banner=document.getElementById('fr-independent');const msg=document.getElementById('fr-role-msg');
   const cont=document.getElementById('fr-continue');if(!frRoles){banner.hidden=true;return;}
@@ -7643,10 +7765,10 @@ function frUpdateIndependence(){
   if(same){banner.classList.add('bad');
     document.getElementById('fr-independent-text').textContent='Same provider — independent review is not possible.';
     msg.className='fr-role-msg';liveText(msg,'Generator and auditor must run on different providers. Independent review is the core of the protocol and cannot be turned off.');
-    if(cont)cont.disabled=true;
+    frSetContinue(false,'fr-role-msg');
   }else{banner.classList.remove('bad');
     document.getElementById('fr-independent-text').textContent='Independent — your auditor runs on a different provider than your generator.';
-    msg.className='fr-role-msg';liveText(msg,'');if(cont)cont.disabled=false;}
+    msg.className='fr-role-msg';liveText(msg,'');frSetContinue(true);}
 }
 function renderFirstRunRoles(){
   if(firstRunStep!==4)return;
@@ -7658,7 +7780,7 @@ function renderFirstRunRoles(){
      ||frRoles.gen.vendor===frRoles.aud.vendor){frRoles=frRecommendRoles();}
   if(!frRoles){pair.hidden=true;banner.hidden=true;
     msg.className='fr-role-msg';liveText(msg,'Connect at least two different providers on the previous step to form an independent Generator / Auditor pair.');
-    if(cont)cont.disabled=true;return;}
+    frSetContinue(false,'fr-role-msg');return;}
   pair.hidden=false;
   const label=v=>(cat[v]&&cat[v].label)||(providers[v]&&providers[v].label)||v;
   const modelOpts=v=>((cat[v]&&cat[v].models)||[]).map(m=>({value:m.id,label:m.id}));
@@ -7690,7 +7812,9 @@ async function frFinishOnboarding(){
   const cont=document.getElementById('fr-continue');const msg=document.getElementById('fr-role-msg');
   if(!frRoles){await frEnterHub('complete');return;}
   if(frRoles.gen.vendor===frRoles.aud.vendor){frUpdateIndependence();return;} // hard refusal
-  cont.disabled=true;
+  // In flight. Same mechanism, and it states its reason rather than going quiet.
+  msg.className='fr-role-msg';liveText(msg,'Saving your provider setup…');
+  frSetContinue(false,'fr-role-msg');
   // Persist the chosen models onto the current project via the real runtime path
   // (projects.update_runtime → atomic crossaudit.yml rewrite; the server refuses
   // the write while a loop runs, TRACKER.running). update_runtime rewrites the
@@ -7705,7 +7829,7 @@ async function frFinishOnboarding(){
                               auditor_model:keep('auditor',frRoles.aud)});
     await frEnterHub('complete');
   }catch(e){
-    if(e&&e.issue==='runtime_busy'){cont.disabled=false;msg.className='fr-role-msg';liveText(msg,e.message);return;}
+    if(e&&e.issue==='runtime_busy'){frSetContinue(true);msg.className='fr-role-msg';liveText(msg,e.message);return;}
     // No writable project yet (first launch may have no repo). Do not fabricate a
     // config write — finish onboarding honestly and let them create their first.
     await frEnterHub('complete',true);
@@ -7719,6 +7843,9 @@ document.getElementById('fr-recheck').onclick=async()=>{frScanning=true;renderFi
   try{const d=await api('/api/doctor',{action:'scan'});frScanning=false;renderFirstRunReadiness(d);if(settingsState)settingsState.doctor=d;}
   catch(e){frScanning=false;renderFirstRunReadiness(settingsState&&settingsState.doctor,e);}};
 document.getElementById('fr-continue').onclick=async()=>{
+  // aria-disabled does not stop a click, so the handler is where the action is
+  // actually declined. That is the trade for the reason being reachable.
+  if(frContinueBlocked())return;
   if(firstRunStep<4){setFirstRunStep(firstRunStep+1);return;}
   await frFinishOnboarding();};
 document.getElementById('fr-open').onclick=async()=>{try{await completeOnboarding('complete');}catch(e){}hideFirstRun();showProjects();};
