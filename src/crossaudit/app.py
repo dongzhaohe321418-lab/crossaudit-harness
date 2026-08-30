@@ -29,18 +29,6 @@ from .scaffold import CONFIG_TEMPLATE, GENERAL_CHECKS, read
 from .workspace import configured_workspace
 
 
-_CORE_USAGE = f"""usage: CrossAuditCore [MODE]
-
-CrossAudit's frozen application core.
-
-With no arguments, start the desktop application.
-  --project-console DIRECTORY [PORT]  serve one configured project
-  --self-test                         verify the frozen runtime
-  --version                           print CrossAudit's version
-  --help                              show this help
-"""
-
-
 def app_support() -> Path:
     override = os.environ.get("CROSSAUDIT_APP_SUPPORT", "").strip()
     return (Path(override).expanduser() if override else
@@ -259,15 +247,15 @@ def _parse_port(raw: str) -> int:
 
 
 def _dispatch(argv: list[str]) -> int:
-    """Select one explicit frozen-core mode; arguments never imply app mode."""
+    """Select a private app mode or delegate to the one public CLI grammar.
+
+    The bundle intentionally installs no PATH entry. Invoking its embedded core
+    with a CLI argument is nevertheless the same product and must reach the same
+    parser as ``crossaudit``. Only the argument-free native launch and the two
+    frozen-runtime protocols remain private to this entry point.
+    """
     if not argv:
         return _run_app()
-    if argv == ["--help"]:
-        print(_CORE_USAGE, end="")
-        return 0
-    if argv == ["--version"]:
-        print(f"CrossAudit {__version__}")
-        return 0
     if argv[0] == "--self-test":
         return _self_test_cli()
     if argv[0] == "--project-console":
@@ -276,8 +264,16 @@ def _dispatch(argv: list[str]) -> int:
                 "project-console requires DIRECTORY and an optional PORT")
         port = _parse_port(argv[2]) if len(argv) == 3 else 0
         return project_console(Path(argv[1]), port)
-    raise ConfigDenial(
-        "unrecognized CrossAuditCore arguments; use --help")
+    # Import lazily: a native no-argument launch should not pay for or depend on
+    # CLI-only modules, while every public command must use the real CLI parser.
+    from .cli.main import main as cli_main
+
+    try:
+        return cli_main(argv)
+    except SystemExit as exc:
+        # argparse owns help, version, and invalid-argument output, but its
+        # process-level exit must not escape the app's no-exception boundary.
+        return int(exc.code) if isinstance(exc.code, int) else 1
 
 
 def _entry_boundary(operation) -> int:

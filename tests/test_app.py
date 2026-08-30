@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import subprocess
@@ -161,13 +162,16 @@ def test_frozen_entry_help_and_version_are_finite_informational_modes(
 
     assert app.main(["--help"]) == 0
     help_output = capsys.readouterr()
-    assert "usage: CrossAuditCore" in help_output.out
-    assert "--project-console DIRECTORY [PORT]" in help_output.out
+    assert "usage: crossaudit" in help_output.out
+    assert "doctor" in help_output.out
+    assert "init" in help_output.out
+    assert "build" in help_output.out
     assert help_output.err == ""
 
     assert app.main(["--version"]) == 0
     version_output = capsys.readouterr()
-    assert version_output.out == f"CrossAudit {app.__version__}\n"
+    assert version_output.out.startswith(
+        f"crossaudit {app.__version__} (receipt schema ")
     assert version_output.err == ""
 
 
@@ -180,27 +184,72 @@ def test_bare_frozen_entry_is_the_only_implicit_app_mode(monkeypatch, capsys):
     assert output.err == ""
 
 
-@pytest.mark.parametrize("argv", [
-    ["--unknown"],
-    ["ordinary-folder"],
-    ["--help", "extra"],
-    ["--version", "extra"],
-    ["--project-console"],
-    ["--project-console", "one", "two", "three"],
-    ["--project-console", "one", "not-a-port"],
-    ["--project-console", "one", "65536"],
+@pytest.mark.parametrize("argv,expected", [
+    (["--unknown"], 2),
+    (["ordinary-folder"], 2),
+    (["--project-console"], 20),
+    (["--project-console", "one", "two", "three"], 20),
+    (["--project-console", "one", "not-a-port"], 20),
+    (["--project-console", "one", "65536"], 20),
 ])
 def test_every_non_mode_argument_shape_is_a_visible_refusal_not_app_mode(
-        argv, monkeypatch, capsys):
+        argv, expected, monkeypatch, capsys):
     monkeypatch.setattr(
         app, "_run_app",
         lambda: pytest.fail("arguments must never fall through to app mode"))
 
-    assert app.main(argv) == 20
+    assert app.main(argv) == expected
     output = capsys.readouterr()
     assert output.out == ""
-    assert output.err.startswith("DENIED (config): ")
+    assert output.err
     assert "Traceback" not in output.err
+
+
+def test_every_public_cli_command_reaches_the_existing_cli_main(
+        monkeypatch, capsys):
+    cli_module = importlib.import_module("crossaudit.cli.main")
+    parser = cli_module.build_parser()
+    verbs = next(
+        action.choices for action in parser._actions  # noqa: SLF001 -- contract enumeration
+        if getattr(action, "choices", None) and action.dest == "verb")
+    observed = []
+    monkeypatch.setattr(cli_module, "main", lambda argv: observed.append(argv) or 73)
+    monkeypatch.setattr(
+        app, "_run_app",
+        lambda: pytest.fail("a CLI command must never start app mode"))
+
+    for verb in verbs:
+        assert app.main([verb]) == 73
+
+    assert observed == [[verb] for verb in verbs]
+    assert set(verbs) == {
+        "init", "run", "doctor", "check", "audit", "verify",
+        "export-pubkey", "reproduce", "status", "watch", "skills",
+        "console", "pair", "build", "talk", "routing", "amend", "resolve",
+    }
+    assert capsys.readouterr().err == ""
+
+
+def test_cli_dispatch_guard_goes_red_if_a_public_command_falls_back_to_app(
+        monkeypatch):
+    cli_module = importlib.import_module("crossaudit.cli.main")
+    reached = []
+    monkeypatch.setattr(cli_module, "main", lambda argv: reached.append(argv) or 0)
+    monkeypatch.setattr(app, "_run_app", lambda: 0)
+
+    def exercise() -> None:
+        reached.clear()
+        assert app.main(["doctor"]) == 0
+        assert reached == [["doctor"]], "doctor did not reach cli.main"
+
+    exercise()
+    with monkeypatch.context() as mutant:
+        original = app._dispatch
+        mutant.setattr(
+            app, "_dispatch",
+            lambda argv: app._run_app() if argv == ["doctor"] else original(argv))
+        with pytest.raises(AssertionError, match="did not reach cli.main"):
+            exercise()
 
 
 def test_project_console_dispatch_accepts_only_its_explicit_shape(
@@ -404,6 +453,16 @@ def test_native_shell_has_bounded_startup_recovery_and_log_retention():
     assert "size > 5 * 1024 * 1024" in source
     assert 'appendingPathExtension("1")' in source
     assert "if self.core === process { self.core = nil }" in source
+
+
+def test_native_shell_surfaces_the_current_core_denial_before_offering_logs():
+    source = (Path(__file__).parents[1] / "packaging" / "macos" /
+              "CrossAuditApp.swift").read_text()
+    assert "launchLogOffset" in source
+    assert "try handle.seek(toOffset: launchLogOffset)" in source
+    assert 'value.hasPrefix("DENIED (")' in source
+    assert 'value.range(of: "): ")' in source
+    assert "showFailure(denial, offersDiagnosticLog: false)" in source
 
 
 def test_native_shell_keeps_projects_running_after_the_window_closes():
