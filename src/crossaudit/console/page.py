@@ -2334,6 +2334,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
 }
 </style></head>
 <body>
+<p id="announcer" role="status" aria-live="polite" class="sr-only"></p>
 <section class="project-hub" id="project-hub" aria-label="Projects">
   <header class="hub-bar"><button class="brand-button" id="hub-brand"><span class="brand-mark" aria-hidden="true">◇</span>
     CrossAudit <span class="version" id="hub-version">V4.15.0</span></button><span class="spacer"></span>
@@ -3733,6 +3734,28 @@ localeObserver.observe(document.body,{subtree:true,childList:true,characterData:
 document.getElementById('locale-toggle').onclick=()=>applyLocale(currentLocale==='zh'?'en':'zh');
 document.getElementById('hub-locale').onclick=document.getElementById('locale-toggle').onclick;
 applyLocale(storedLocale()==='zh'?'zh':'en',false);
+// SPEC-9 §2.1 — one polite region for the whole console, written IN PLACE.
+// Progress-class changes call this with a SENTENCE, never a value: a live
+// region that reads a bare counter is a riddle; "Round 2 of 3 started" is not.
+// Interrupt-class surfaces keep role="alert" on their own inserted node.
+//
+// Two things stop it becoming noise, and both are the point of this slice:
+// re-announcing the SAME sentence is suppressed outright, because a render that
+// re-states the state it already stated is not news; and a burst of stream
+// events inside one frame is coalesced into the last sentence rather than
+// spoken in sequence. The render loop polls every 2s and the stream can fire
+// several times between frames, so without both a person hears the transcript
+// on a loop.
+let announcedText='';let announceTimer=null;
+function announce(sentence){
+  const text=String(sentence==null?'':sentence).trim();
+  if(!text||text===announcedText)return false;
+  announcedText=text;
+  if(announceTimer)clearTimeout(announceTimer);
+  announceTimer=setTimeout(()=>{announceTimer=null;
+    const node=document.getElementById('announcer');
+    if(node)node.textContent=text;},120);
+  return true;}
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const at = t => t ? new Date(t*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
@@ -5527,9 +5550,9 @@ function optimisticTurn(text, queued){
     + '<div class="turn-meta"><b>You</b><span class="turn-time">'
     + (currentLocale==='zh'?'刚刚':'now') + '</span></div>'
     + '<div class="turn-body">' + esc(text) + '</div></div></article>'
-    + '<article class="turn" aria-live="polite"><div class="turn-main">'
+    + '<article class="turn"><div class="turn-main">'
     + '<div class="turn-meta"><span class="role-mark generator" aria-hidden="true">G</span>'
-    + '<b>Generator</b></div><div class="turn-body"><span class="thinking-dots" role="status" aria-label="'
+    + '<b>Generator</b></div><div class="turn-body"><span class="thinking-dots" aria-label="'
     + (currentLocale==='zh'?'处理中':'Working') + '"><i></i><i></i><i></i></span></div></div></article>';
 }
 function modelTag(value){const raw=String(value||'');if(!raw)return '';
