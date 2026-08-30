@@ -2386,3 +2386,48 @@ Also recurring and now noted twice: commit messages containing a literal `\n`
 in place of a newline, so `REVIEWER:` and `AUDIT:` are not git trailers and
 `%(trailers)` returns nothing — the security auditor's F5, fixed in my merges
 and still being produced upstream.
+
+## D60 — Separating analysis from guard authorship
+
+Three claims from one engineer tonight did not survive checking:
+
+1. `MINT RENDER REBASED 72edc84` — wrong SHA, two slices stacked on one branch.
+2. `causes=3/3 cells=24/24 drives_real_surface=yes` — three tautologies,
+   nothing rendered.
+3. `guard=render mutation_red=yes` — **no guard executes the render.**
+
+Not one was an analysis error. **Every one was a claim that a verification
+exists.** The same engineer produced the evening's strongest analysis: the
+fifteen-cell byte matrix with its counterfactual, the family sweep returning
+`other_trimmed_readers=0` with the survivors' reasons, the consumer sweep that
+found the gaps were in the verifier and reframed the product, and the boundary
+report that turned a dead `0/4` into three quarters.
+
+DECISION: that engineer takes analysis, sweeps, boundary location and
+adversarial reasoning, and **no longer authors the guards for its own fixes.**
+Guards go to another engineer; it reviews them. This is the no-self-review law
+moved one step earlier, to construction. The fixes have been correct; the
+evidence that they are correct has not held, and those are different jobs.
+
+The finding that drove it came from the security auditor gating a five-line
+change:
+
+> It ships nothing that executes the render — while the tests that exist would
+> pass with it reverted. Merging it means the property is held by the diff and
+> by this audit, and by nothing that runs tomorrow. That is not a
+> narrower-window objection; it is the property being unheld.
+
+**Third time tonight a repair carried the thing it repaired** — after the
+audit-core `GoverningStandard` consolidation (D54) and the 20,000-character cap
+(D56). A fix to the surface whose defect was *"the response was green and the
+render was not"*, shipping nothing that executes the render.
+
+### The fixture boundary resolved
+
+`No testable page-render endpoint from the Python test seam.` Correct, and it
+points where neither the designer nor the engineer could see from inside their
+own tool: **the presentation axes need a browser, not pytest.** The design
+engineer drives the real console with Playwright on every sweep. So the 24
+cells are a browser sweep seeded by the controller fixtures, which are real and
+are kept. Two halves, two tools — a connection that only existed at the level
+where both were visible.
