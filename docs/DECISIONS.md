@@ -425,6 +425,19 @@ The general principle: when a guard is defeated three times, ask whether the
 property is mechanically decidable at all. If it is not, replace the guarantee with
 one that is, and say plainly which guarantee you now have.
 
+**Amendment, from the fifth instance.** An engineer applying D10 found that its own
+demonstration had the defect D10 exists to catch: the counterfactual was
+established against a STORED ARTIFACT rather than against an unmutated baseline, so
+the proof that the guard catches a mutation inherited the same failure mode as the
+guard. Its observation is right and is adopted — the demonstration is itself a
+test, and nothing exempts a test from being tested.
+
+So: the counterfactual must be established by mutating the real thing and running
+the real guard against it, not by comparing to a recorded snapshot of what the
+guard once said. And a second test should assert that the guard's COLLECTION
+SURFACE has not shrunk, so a refactor that quietly stops collecting one input fails
+loudly instead of silently narrowing what is checked.
+
 ### D11 — Stop slice 1. Build file identity first, as its own slice.
 
 The invariant audit of the rebuilt slice 1 returned DO NOT MERGE with an S0 and
