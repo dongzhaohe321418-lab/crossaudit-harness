@@ -24,8 +24,21 @@ from .config import CONFIG_NAME, load
 from .console import daemon, serve
 from .console.server import PROJECT_IDLE_TIMEOUT_S
 from .dcl import describe as describe_checks
+from .errors import ConfigDenial, Denial
 from .scaffold import CONFIG_TEMPLATE, GENERAL_CHECKS, read
 from .workspace import configured_workspace
+
+
+_CORE_USAGE = f"""usage: CrossAuditCore [MODE]
+
+CrossAudit's frozen application core.
+
+With no arguments, start the desktop application.
+  --project-console DIRECTORY [PORT]  serve one configured project
+  --self-test                         verify the frozen runtime
+  --version                           print CrossAudit's version
+  --help                              show this help
+"""
 
 
 def app_support() -> Path:
@@ -164,31 +177,62 @@ def self_test() -> dict:
                 "loopback_token_enforced": True}
 
 
-def main() -> int:
-    if len(sys.argv) == 2 and sys.argv[1] == "--self-test":
-        try:
-            print(json.dumps(self_test(), sort_keys=True), flush=True)
-            return 0
-        except Exception as exc:  # noqa: BLE001 -- app boundary must return structured failure
-            print(json.dumps({"ok": False, "error": type(exc).__name__,
-                              "detail": str(exc)[:300]}, sort_keys=True),
-                  file=sys.stderr, flush=True)
-            return 1
-    if len(sys.argv) >= 3 and sys.argv[1] == "--project-console":
-        root = Path(sys.argv[2]).expanduser().resolve()
-        port = int(sys.argv[3]) if len(sys.argv) > 3 else 0
-        return project_console(root, port)
+def _self_test_cli() -> int:
+    try:
+        print(json.dumps(self_test(), sort_keys=True), flush=True)
+        return 0
+    except Exception as exc:  # noqa: BLE001 -- self-test contract is structured JSON
+        print(json.dumps({"ok": False, "error": type(exc).__name__,
+                          "detail": str(exc)[:300]}, sort_keys=True),
+              file=sys.stderr, flush=True)
+        return 1
+
+
+def _display_path(path: Path) -> str:
+    """Render a local path without exposing more of the home path than needed."""
+    try:
+        relative = path.relative_to(Path.home())
+    except ValueError:
+        return str(path)
+    return "~" if not relative.parts else f"~/{relative.as_posix()}"
+
+
+def _startup_step(operation, reason: str):
+    """Translate an expected OS startup refusal at the entry boundary."""
+    try:
+        return operation()
+    except OSError as exc:
+        raise ConfigDenial(reason) from exc
+
+
+def _run_app() -> int:
     os.environ["CROSSAUDIT_APP_MODE"] = "1"
     support = app_support()
     workspace = workspace_root(support)
-    support.mkdir(parents=True, exist_ok=True, mode=0o700)
-    workspace.mkdir(parents=True, exist_ok=True)
+    _startup_step(
+        lambda: support.mkdir(parents=True, exist_ok=True, mode=0o700),
+        "CrossAudit could not prepare its private application data in "
+        f"{_display_path(support)} — grant access in System Settings › Privacy "
+        "& Security › Files and Folders, then retry.")
+    workspace_location = workspace if workspace.exists() else workspace.parent
+    workspace_reason = (
+        "CrossAudit could not create its workspace in "
+        f"{_display_path(workspace_location)} — grant access in System Settings "
+        "› Privacy & Security › Files and Folders, or choose another location.")
+    _startup_step(
+        lambda: workspace.mkdir(parents=True, exist_ok=True), workspace_reason)
     os.environ["CROSSAUDIT_APP_SUPPORT"] = str(support)
     os.environ["CROSSAUDIT_WORKSPACE_ROOT"] = str(workspace)
-    load_into_environment()
-    root = _controller_project(workspace)
-    cfg = load(root / CONFIG_NAME)
-    url, httpd = serve(cfg, port=0)
+    _startup_step(
+        load_into_environment,
+        "CrossAudit could not read its saved connection settings — unlock the "
+        "login Keychain and retry.")
+    root = _startup_step(lambda: _controller_project(workspace), workspace_reason)
+    cfg = _startup_step(lambda: load(root / CONFIG_NAME), workspace_reason)
+    url, httpd = _startup_step(
+        lambda: serve(cfg, port=0),
+        "CrossAudit could not start its private local console — allow local "
+        "connections and retry.")
 
     def stop(_signum=None, _frame=None) -> None:
         threading.Thread(target=httpd.shutdown, daemon=True).start()
@@ -203,15 +247,81 @@ def main() -> int:
     return 0
 
 
+def _parse_port(raw: str) -> int:
+    try:
+        port = int(raw)
+    except ValueError as exc:
+        raise ConfigDenial(
+            f"project-console port must be an integer, not {raw!r}") from exc
+    if not 0 <= port <= 65535:
+        raise ConfigDenial("project-console port must be between 0 and 65535")
+    return port
+
+
+def _dispatch(argv: list[str]) -> int:
+    """Select one explicit frozen-core mode; arguments never imply app mode."""
+    if not argv:
+        return _run_app()
+    if argv == ["--help"]:
+        print(_CORE_USAGE, end="")
+        return 0
+    if argv == ["--version"]:
+        print(f"CrossAudit {__version__}")
+        return 0
+    if argv[0] == "--self-test":
+        return _self_test_cli()
+    if argv[0] == "--project-console":
+        if len(argv) not in (2, 3):
+            raise ConfigDenial(
+                "project-console requires DIRECTORY and an optional PORT")
+        port = _parse_port(argv[2]) if len(argv) == 3 else 0
+        return project_console(Path(argv[1]), port)
+    raise ConfigDenial(
+        "unrecognized CrossAuditCore arguments; use --help")
+
+
+def _entry_boundary(operation) -> int:
+    """Turn every frozen entry refusal into output plus a stable exit status."""
+    try:
+        return operation()
+    except Denial as exc:
+        print(f"DENIED ({exc.kind}): {exc.reason}", file=sys.stderr, flush=True)
+        return exc.exit_code
+    except KeyboardInterrupt:
+        print("DENIED (config): CrossAudit startup was interrupted",
+              file=sys.stderr, flush=True)
+        return ConfigDenial.exit_code
+    except Exception as exc:  # noqa: BLE001 -- nothing may escape the frozen boundary
+        print(
+            "DENIED (config): CrossAudit could not safely start the requested "
+            f"mode ({type(exc).__name__}); use --self-test for runtime details",
+            file=sys.stderr, flush=True)
+        return ConfigDenial.exit_code
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run one explicit frozen-core mode without leaking an exception."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    return _entry_boundary(lambda: _dispatch(args))
+
+
 def project_console(root: Path, port: int = 0) -> int:
     """Bundled daemon entry used for independent per-project backgrounds."""
+    root = root.expanduser().resolve()
+    if not root.is_dir():
+        raise ConfigDenial(
+            f"project directory does not exist or is not a directory: {root}")
+    config = root / CONFIG_NAME
+    if not config.is_file():
+        raise ConfigDenial(
+            f"no {CONFIG_NAME} found in {root} — run `crossaudit init` there")
     os.environ["CROSSAUDIT_APP_MODE"] = "1"
     # CLI commands invoked by the shared console layer call config.load() from
     # the process working directory. Make the entrypoint self-contained rather
     # than relying on every parent launcher to remember cwd=project.
     os.chdir(root)
     load_into_environment()
-    cfg = load(root / CONFIG_NAME)
+    cfg = load(config)
     # E1: a per-project daemon starts detached (start_new_session=True) and never
     # receives the app's SIGTERM, so an infinite idle timeout let daemons pile up
     # unbounded after the app closed or a project stopped being viewed. A finite,
