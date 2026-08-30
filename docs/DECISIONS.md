@@ -1201,3 +1201,36 @@ No new auditor output and no new failure mode. The engineer also downgraded its 
 earlier "better than silence" judgement rather than leaving it standing — not to
 neutral, since an observation is prose describing what and why and self-locates
 better than it had assumed, but honestly less than it had hoped.
+
+### D33 — A guard shaped like the bug it exists to catch; and §0 by proxy
+
+Two rules from one report, both found by the engineer against its own work.
+
+**The allowlist was a guard shaped like the bug.** Its i18n guard carried a 52-entry
+allowlist of strings permitted to remain English. Given design's criterion — an entry
+is justified only by TYPE, MATCH or TRACE — 37 of the 52 turned out never to have been
+needed, and they included `the`, `of`, `test`, `wizard` and `shell`, accumulated from
+wrapped sandbox paths. Those are prose. **An allowlist padded with English words is a
+guard shaped like the bug it exists to catch**, and real untranslated copy could have
+walked straight through it.
+It is now 15 entries, each justified and grouped by which criterion justifies it, with
+a test asserting that every declared entry is actually needed — so the allowlist
+cannot silently re-accumulate. That last part is the fix; the pruning alone would have
+regrown.
+
+It also found the guard's path-fragment exclusion depended on **where `tui.note`
+happened to wrap a long path**, so whether the guard held varied with the length of
+the sandbox's directory name. A guard whose verdict depends on the test environment's
+name is not a guard. Now deterministic.
+
+This is the eighth instance today of the same family — something that looks like
+verification and is not — and the first where the mechanism was an *allowlist growing
+by accretion*. Add it to the pattern: **any list of exceptions needs a test that each
+exception is still required**, or it becomes a hole that widens quietly.
+
+**§0 by proxy.** In the same exchange, the design engineer declined to accept the
+author's rendering of its own four items and re-drove them itself, on the grounds
+that **"an author confirming their own fix to the reviewer is §0 by proxy."**
+Adopted. §0 says no agent reviews work it wrote; the corollary nobody had stated is
+that a reviewer accepting the author's demonstration has let the author review itself
+through the reviewer's hands. A reviewer re-runs; it does not receive.
