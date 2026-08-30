@@ -409,6 +409,17 @@ stored-after.
 "binary edited on disk after render" keeps the standing approval, because the
 vector (path + arguments) is unchanged. A person approves *a path*, not the
 bytes currently at it; that gap exists between any approval and any later
-launch, and the client cannot close it. `mcp.py` re-resolves and re-checks the
-executable at launch. Flagged because a reviewer should decide whether it is
-acceptable rather than discover it.
+launch, and the client cannot close it.
+
+~~`mcp.py` re-resolves and re-checks the executable at launch.~~ **That sentence
+is false and is struck.** The independent auditor executed the case rather than
+reading it: `_safe_command()` re-resolves during REGISTRATION, immediately before
+the connection probe, but later agent-call sessions launch the stored absolute
+path directly, without re-resolving or hashing. It proved it end to end —
+registration probed one version of a file, a later call launched a replacement at
+the same path. So the gap is wider than this entry originally claimed, and nothing
+downstream of registration closes it.
+
+The gap is now stated in the product itself rather than only here: the approval
+copy says the approval follows the path and arguments, not the file's contents,
+and that software at that path may change before a later run.
