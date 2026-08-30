@@ -3795,3 +3795,34 @@ node with `completable=no`.
 `both_mechanisms=yes` holds, so the single signal contract does cover turn
 folding and path reduction. That is the part worth keeping: the next
 condensation mechanism inherits the contract instead of repeating the gap.
+
+## D94 — MERGED: the verifier stops denying honest history
+
+`fix/receipt-small` merged. **Seventh audit-core merge**, and the branch that
+took the longest route to get here:
+
+1. First attempt: **0 of 3 gaps closed while claiming 3**, and #11's reader
+   revertible with the whole suite staying green.
+2. Rebuilt counterfactual-first — revert the reader, watch it redden by its own
+   name, then fix. Earned MERGE from two claude auditors.
+3. **Held**, because both auditors were the same vendor as the author and this
+   is audit-core. Cleared by a codex auditor.
+4. **Failed to merge** — `cli/main.py` conflicted with doctor parity, both
+   having grown constitution-reading imports.
+5. Rebuilt small on current integration, adopting integration's helpers.
+   Re-audited: **0 S0, 0 S1, 0 S2**, `reverted_reddens=3/3`,
+   `adoption=equal`, `hash9` carried as a stated format limit.
+
+**No verdict was carried across a rebuild.** Same properties, different code is
+not the same claim, and I refused it here on a branch that had already been
+cleared three times.
+
+D39 check: merged tree differs from tested tree by `docs/DECISIONS.md` only —
+229 lines of my own entries. Source identical, so per D82 the branch run
+suffices and no merge-commit re-run was needed.
+
+The substance: a verifier that **denied** honest, signed, controller-recorded
+receipts, demonstrated on four real ones. Worse than too permissive — the
+permissive one lets a bad receipt through and the ledger is still a ledger;
+this told a person their genuine audit was invalid, and **the true case is the
+only one most people ever meet.**
