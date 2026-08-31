@@ -95,3 +95,42 @@ works" from "the patch missed".
   sweep of "functions whose `None` means two things" is worth commissioning
   separately rather than my widening this branch.
 * Cross-vendor adversarial review is required before merge (§0, audit core).
+
+
+---
+
+## S3 from the cross-vendor review — my own tautology, on the signing path
+
+The review closed the S0 and found one thing in my fix:
+
+    assert sign_receipt(cfg, receipt, cdir) is not None or True
+
+`X or True` is true for every possible result. The auditor changed
+`sign_receipt()` to return `""` before creating any sidecar and **the named test
+still passed** — so a test called
+`test_an_honest_tool_free_receipt_still_builds_and_signs` was guarding the build
+half and nothing about signing.
+
+**Fourth instance of this class tonight**, and the second of them mine. The
+others were an unused `inspect.getsource()`, thirteen names claiming behaviour
+their bodies did not check, and a coexistence check red by construction. A guard
+that cannot fail is worse than no guard: it holds the slot a real one would take
+and it reports success.
+
+**Replaced with the property, not a stronger-looking expression.** The test now
+requires a non-empty key id, a sidecar on disk, a non-empty sidecar, a
+verification that reports `signed` and `verified`, and a key id that matches the
+one signing returned. A second test requires the signature to bind **this**
+receipt: altering the receipt after signing must stop it verifying, because a
+sidecar that verified against anything would satisfy the first test.
+
+**Mutated on the thing it names**, not on the surrounding code:
+
+    G1  sign_receipt returns "" before any sidecar   RED  (the auditor's own)
+    G2  the sidecar signs a fixed digest, not this receipt  RED
+    G3  a key id is returned but no sidecar is written      RED
+
+All three redden `test_an_honest_tool_free_receipt_still_builds_and_signs` by
+name, and each mutation asserts its anchor and fails loudly if it does not land.
+Nothing outside `sign.py` was touched, so the test is guarding signing and not
+something adjacent to it.

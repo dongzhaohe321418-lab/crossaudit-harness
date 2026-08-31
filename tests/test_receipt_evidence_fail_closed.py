@@ -25,7 +25,7 @@ from crossaudit.receipt import build
 from crossaudit.receipt.build import (EVIDENCE_ABSENT, EVIDENCE_BROKEN,
                                       EVIDENCE_INTACT, _tool_evidence)
 from crossaudit.receipt.schema import validate
-from crossaudit.receipt.sign import sign_receipt
+from crossaudit.receipt.sign import SIDECAR, sign_receipt, verify_receipt
 
 from .conftest import GOOD_RESULTS, write_increment
 
@@ -141,16 +141,55 @@ def test_a_tampered_ledger_denies_receipt_construction(cfg, science, tmp_path):
 
 def test_an_honest_tool_free_receipt_still_builds_and_signs(cfg, science,
                                                             tmp_path):
-    """Requirement 3: do not deny the honest case to catch the dishonest one."""
+    """Requirement 3: do not deny the honest case to catch the dishonest one.
+
+    The signing half of this ended `assert sign_receipt(...) is not None or True`
+    — an expression true for every possible result, on the signing path, inside
+    the fix for an S0. It is asserted on the sidecar and its verification now,
+    so breaking `sign_receipt` reddens THIS test rather than something else.
+    """
     assert not _evidence_path(cfg).exists()
     _sha, _ldir, kwargs = _build_receipt(cfg, science)
     receipt = build(**kwargs)
 
     assert "tool_evidence" not in receipt, "tool-free receipt bytes changed"
     validate(receipt)
+
     cdir = tmp_path / "cycle"
     cdir.mkdir()
-    assert sign_receipt(cfg, receipt, cdir) is not None or True
+    keyid = sign_receipt(cfg, receipt, cdir)
+    assert keyid, "signing returned no key id, so nothing was signed"
+
+    sidecar = cdir / SIDECAR
+    assert sidecar.is_file(), f"no signature sidecar was written to {cdir}"
+    assert sidecar.read_text(encoding="utf-8").strip(), "the sidecar is empty"
+
+    report = verify_receipt(receipt, cdir)
+    assert report["signed"] is True, report
+    assert report["verified"] is True, report.get("reason", report)
+    assert report["keyid"] == keyid, (
+        f"the sidecar binds {report['keyid']!r}, not the key that signed")
+
+
+def test_the_signature_binds_THIS_receipt_and_not_merely_a_receipt(cfg, science,
+                                                                   tmp_path):
+    """A sidecar that verifies against any payload would satisfy the test above.
+
+    The signature has to bind this receipt's digest, so altering the receipt
+    after signing must stop it verifying.
+    """
+    _sha, _ldir, kwargs = _build_receipt(cfg, science)
+    receipt = build(**kwargs)
+    cdir = tmp_path / "cycle"
+    cdir.mkdir()
+    assert sign_receipt(cfg, receipt, cdir)
+    assert verify_receipt(receipt, cdir)["verified"] is True
+
+    altered = dict(receipt)
+    altered["verdict"] = "PASS" if altered.get("verdict") != "PASS" else "BLOCK"
+    after = verify_receipt(altered, cdir)
+    assert after["verified"] is False, (
+        "the signature verified against a receipt it did not sign")
 
 
 def test_an_intact_ledger_still_binds_its_head(cfg, science):
