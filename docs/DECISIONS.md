@@ -4813,3 +4813,35 @@ wrong, not whether to try once more.
 Both engineers are on the audit-core S0s (D113). **Two S0s in the non-bypassable
 core outrank an i18n S1**, so R4 queues rather than preempts. The branch stays
 out of integration meanwhile, which costs nothing — it was already out.
+
+## D115 — A waiver that costs honesty to use, and a third instance in merged code
+
+The naming fixture landed and **found five more name-claim violations on its
+first run** — in `report-provenance`, which I merged two hours ago. Its author
+reported `extractors=9-10-10, this slice adds zero`, put
+`fixture_misses=deletion-erosion` in the docstring, and carried the same caveat
+into the commit: *authored by the auditor, proved with my own mutations, needs a
+reviewer who is not me.*
+
+**The waiver design is better than what I specified, and the principle
+generalises.** Every guard needs an escape hatch or it gets disabled wholesale.
+The usual hatch is a comment or a skip marker — **costless, so it gets used
+whenever the guard is inconvenient.** Here the only exemption is renaming the
+test `test_page_markup_*`: **the way to buy out of the check is to declare that
+you only check markup.**
+
+RULE: **an escape hatch should cost the thing the guard protects.** You cannot
+word your way past this one; you can only be more honest, and the waiver leaves
+a permanent public record of what you actually check. Three were used, each with
+a reason, each verified to still name a live test.
+
+### Third instance, in code I already merged
+
+`report-provenance` has now produced this class three times. **Three is not an
+accident; it is a property of how that surface gets written.** A name is not a
+live defect and these are not S1s — but they are **what the merged tree
+actually contains**, and condition 1 records the tree rather than the intention.
+
+The response is not five more renames. **When the S0s clear, it is a convention
+with the author**, because renaming instances of a pattern while the pattern
+keeps producing them is the cheapest possible way to look busy.
