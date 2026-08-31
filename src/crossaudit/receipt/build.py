@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import hashlib
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 from .. import RECEIPT_SCHEMA, _selfid
 from ..config import Config, heterogeneity
+from ..errors import IntegrityDenial
 from ..providers.specs import source_independent
 
 #: The honest reason parametric is withheld from an otherwise heterogeneous
@@ -101,22 +103,67 @@ def isolation_evidence(cfg: Config, *, mode: str, provisioner: str,
     return evidence
 
 
-def _tool_evidence(cfg: Config) -> dict | None:
-    """Bind the project's evidence-ledger head + entry count, if any tools ran.
+#: The three states an evidence ledger can be in when a receipt is assembled.
+#: They are distinct VALUES because collapsing them was the defect: `None` meant
+#: both "no tools ran" and "the evidence is corrupt", so a tampered append-only
+#: chain produced a receipt shaped exactly like an honest tool-free audit — and
+#: signed it. Absence and failure are not the same state.
+EVIDENCE_ABSENT = "absent"
+EVIDENCE_INTACT = "intact"
+EVIDENCE_BROKEN = "broken"
 
-    Read-only and fail-safe: a missing, empty, or unreadable ledger yields no
-    block, so a tool-free cycle's receipt bytes (and digest) stay exactly what
-    they were in v2 — this can never break receipt assembly.
+#: Said to a person whose receipt is refused, in the receipt's own vocabulary.
+EVIDENCE_BROKEN_REASON = (
+    "the evidence ledger for this project is present and does not verify, so a "
+    "receipt cannot be signed for it: omitting the block would state, over a "
+    "valid signature, that this audit used no tools")
+
+
+@dataclass(frozen=True, slots=True)
+class ToolEvidence:
+    """What the ledger is, kept separate from what to write into the receipt."""
+
+    state: str
+    block: dict | None = None
+    reason: str = ""
+
+
+def _tool_evidence(cfg: Config) -> ToolEvidence:
+    """Classify the project's evidence ledger: absent, intact, or broken.
+
+    Read-only, and deliberately NOT fail-safe. The previous version returned
+    `None` for every non-happy path and its docstring promised this "can never
+    break receipt assembly" — which is exactly how a corrupt chain became a
+    signed statement that no tools were used. A builder must not soften a
+    denial into an absence; the broker already refuses a broken chain at its own
+    seam and this is the same chain.
+
+    An ABSENT ledger still yields no block, so a genuinely tool-free cycle mints
+    byte-identical v2 receipt bytes. Denying that case to catch the dishonest one
+    would be the worse trade.
     """
+    path = cfg.root / cfg.state_dir / "evidence.jsonl"
     try:
         from ..ledger import EvidenceLedger
-        led = EvidenceLedger(cfg.root / cfg.state_dir / "evidence.jsonl")
-        report = led.verify()
-        if not report.ok or report.count < 1:
-            return None
-        return {"ledger_head": report.head, "entries": report.count}
-    except Exception:  # noqa: BLE001 -- evidence binding must never break the receipt
-        return None
+        report = EvidenceLedger(path).verify()
+    except Exception as exc:  # noqa: BLE001 -- classified below, never swallowed
+        # A ledger that is present and unreadable is BROKEN, not absent: we
+        # cannot establish that no tools ran, and "cannot establish" must never
+        # render as "did not happen".
+        if path.exists():
+            return ToolEvidence(EVIDENCE_BROKEN,
+                                reason=f"the evidence ledger could not be read: {exc}")
+        return ToolEvidence(EVIDENCE_ABSENT)
+    if not report.ok:
+        detail = report.error or "the evidence chain does not re-derive"
+        at = getattr(report, "at_seq", None)
+        if at is not None:
+            detail = f"{detail} (at entry {at})"
+        return ToolEvidence(EVIDENCE_BROKEN, reason=detail)
+    if report.count < 1:
+        return ToolEvidence(EVIDENCE_ABSENT)
+    return ToolEvidence(EVIDENCE_INTACT,
+                        block={"ledger_head": report.head, "entries": report.count})
 
 
 def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
@@ -185,8 +232,11 @@ def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
     # cycle actually ran governed tools. A tool-free cycle omits the block, so
     # its receipt bytes and digest are identical to a plain v2 receipt.
     evidence = _tool_evidence(cfg)
-    if evidence:
-        receipt["tool_evidence"] = evidence
+    if evidence.state == EVIDENCE_BROKEN:
+        raise IntegrityDenial(f"{EVIDENCE_BROKEN_REASON}: {evidence.reason}",
+                              path=str(cfg.root / cfg.state_dir / "evidence.jsonl"))
+    if evidence.block:
+        receipt["tool_evidence"] = evidence.block
     # Optional, back-compatible reproducibility bundle (A2): present ONLY when the
     # audited tree carries a dependency lock, so a lock-free receipt's bytes and
     # digest stay identical to a pre-A2 receipt. The bundle's own digest is bound
