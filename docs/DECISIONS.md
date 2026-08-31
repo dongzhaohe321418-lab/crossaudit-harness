@@ -4906,3 +4906,56 @@ this design accounted for: **the second vendor may decline to look**, and it
 declines most readily at exactly the security boundaries where the second
 opinion is worth the most. That belongs in the product's own honest account of
 its limits, not just in this cycle's notes.
+
+## D117 — 74 of 74 aria-labels are English: the assistive surface has no translation at all
+
+I asked whether one untranslated `aria-label` belonged in the accessibility case
+set or the i18n wave, and told the engineer to say which rather than take it
+silently. The answer was larger than the question:
+
+> **74 distinct `aria-label` literals in `page.py`, not one containing CJK —
+> that's not one untranslated string, it's the entire assistive-technology
+> surface.**
+
+**For a Chinese user running a screen reader, every label on every control is in
+English.** Not degraded, not partial: none of it is translated. Graded **S1** —
+accessibility and language are their own tier (D5/D25), and a core task cannot
+be completed by that person.
+
+**Why it survived every sweep, including the ones built to catch this.** The
+observation layer's `raw_english` check reads **visible text**. An `aria-label`
+is never visible. **It is user-facing text that no sighted reviewer ever reads
+and no visible-text scanner ever sees** — so it sat in the one blind spot shared
+by every human reviewer and every automated one we had.
+
+That is the same shape as the night's other findings and worth stating as the
+general rule: **the defects that survive are the ones no instrument was pointed
+at, not the ones instruments looked at and misjudged.** `aria-label`,
+`aria-description`, `title`, `alt` and live-region content are all in this
+class — text with a real reader and no reviewer.
+
+RULING on scope, as recommended: **the case lives in the accessibility set**
+(it is an accessibility-tree observation, and only that instrument can see it);
+**the fix goes to the i18n wave.** Neither owns both halves, and pretending
+otherwise would put the case where nothing can run it or the fix where nobody
+owns the catalogue.
+
+### Condition 3, measured on the packaged core
+
+`cells_observed=8 cells_reachable=8 observations=56/56 axes_consumed=yes
+page_errors=0 unnamed=0`, executor **packaged-core**, bound to
+`2c21ce7`/`dd48bf59afe6`.
+
+One confirmed leak: **"Project history"** at `chats.py:74,363` — a *server-side*
+literal. `page.py`'s text-node translator cannot reach server-side strings,
+which is why `progress.py` carries its own catalogue. **A second translation
+boundary nobody had drawn.**
+
+And one candidate reported as unresolved rather than guessed: *"/ project"* on
+`#branch-label`, which the engineer could not separate from folder data without
+more work. **Reporting it as unresolved is worth more than resolving it wrongly**
+in either direction.
+
+`unreachable=settings/hub/onboarding/composer` — reachable surfaces this
+producer does not seed. **Condition 3 stays PARTIAL**, and the gap is now a
+named list of four surfaces rather than a feeling.
