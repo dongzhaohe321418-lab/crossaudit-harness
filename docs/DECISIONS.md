@@ -3913,3 +3913,38 @@ make it the same missing tier, not a separate mechanism.
 
 The founding defect this was built for — *a send that failed while the
 interface showed nothing* — remains uncovered by any instrument.
+
+## D97 — Seven proposed duplicates, six were not
+
+The owner's directive — *stop piling on code, consolidate what can be
+consolidated* — produced its first concrete deletion proposal within minutes:
+an auditor found **two harness copies and seven duplicates.**
+
+I approved it with one condition: **prove each duplicate is a duplicate before
+removing it — run the survivor against the mutation the deleted one was
+supposed to catch. If the survivor does not redden, they were not duplicates;
+they were two partial checks that looked alike.**
+
+Result: **`harnesses=1` removed, `duplicates=0` removed, `kept=7`,
+`survivor_reddens=1/1`, coverage 1,786 → 1,786 unchanged.**
+
+**All seven survived the proof.** What looked like duplication was seven checks
+that resemble each other and assert different things. One harness copy was
+genuinely redundant and its survivor reddens on the right mutation.
+
+**Without the condition, we would have deleted seven load-bearing guards and
+the suite would have stayed green** — because they guard things that are not
+currently broken. That is the same law as *a guard on an invariant that has
+held all year has not fired and is not dead: the test is whether it would, not
+whether it has.*
+
+RULE: a deletion is a change to what is guarded and is not automatically safe.
+**Prove subsumption by mutation, never by resemblance.** And a proposed count
+is a hypothesis, not a target — I told the auditor *"seven is your count, not a
+target; I would rather have six honest deletions than seven where one was
+load-bearing."* The honest number turned out to be one.
+
+This is the directive working in the direction that is easy to get wrong:
+consolidation pressure makes deletion feel like progress, and deletion that
+removes coverage while keeping the suite green is indistinguishable from
+progress until something breaks.
