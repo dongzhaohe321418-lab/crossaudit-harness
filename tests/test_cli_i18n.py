@@ -605,15 +605,180 @@ def test_a_plural_sibling_is_never_english_only():
         f"plural forms missing from the Chinese catalogue: {untranslated}")
 
 
-def test_the_drafted_header_agrees_with_its_count(tmp_path, monkeypatch, capsys):
-    """Driven through the shipped selection, not the catalogue."""
-    from crossaudit.cli import wizard
+def test_the_drafted_header_agrees_with_its_count():
+    """F5: this named itself "driven through the shipped selection" and read the
+    catalogue instead. Its `inspect.getsource()` result was unused, and changing
+    the shipped selection to always choose `.plural` left it green — a guard
+    that cannot fail, occupying the slot where a real one would go.
 
-    source = inspect.getsource(wizard.run) if hasattr(wizard, "run") else ""
-    en = i18n.CATALOGUE["en"]
-    assert en["rules.drafted_header"].format(count=1).endswith("1 rule")
-    assert en["rules.drafted_header.plural"].format(count=4).endswith("4 rules")
+    It executes the shipped selection now, which had to be given a name before
+    it could be executed at all.
+    """
+    from crossaudit.cli.wizard import drafted_header_key
+
+    assert drafted_header_key(1, False) == "rules.drafted_header"
+    assert drafted_header_key(3, False) == "rules.drafted_header.plural"
+    assert drafted_header_key(1, True) == "rules.drafted_header.attributed"
+    assert drafted_header_key(2, True) == "rules.drafted_header.attributed.plural"
+
+    # And the rendered result, through the real catalogue: what a person reads.
+    assert i18n.CATALOGUE["en"][drafted_header_key(1, False)].format(
+        count=1).endswith("1 rule")
+    assert i18n.CATALOGUE["en"][drafted_header_key(4, False)].format(
+        count=4).endswith("4 rules")
+
+    # Kept: this uniquely guards the singular catalogue text (D97 subsumption).
     for lang in ("en", "zh"):
         for key in ("rules.drafted_header.plural",
                     "rules.drafted_header.attributed.plural"):
             assert key in i18n.CATALOGUE[lang], f"{key} missing from {lang}"
+
+# ============================ the human / machine boundary (F3) ============
+CJK = re.compile(r"[　-鿿＀-￯]")
+
+
+def _machine_project(tmp_path):
+    """A project that reaches the posture and contract rows, not an empty seam.
+
+    The committed machine-surface test used an earlier empty-project seam that
+    never reached the row which leaked, which is why the leak survived it.
+    """
+    import subprocess
+
+    proj = tmp_path / "machine"
+    proj.mkdir()
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=proj, check=True)
+    # "No rules yet." is what puts doctor on the `note()` branch — the row that
+    # leaked. A file that merely lacks headings takes the `add()` branch and
+    # never reaches it, which is precisely why the committed machine-surface
+    # test passed while the leak shipped. My first fixture had the same flaw and
+    # the mutation run is what found it.
+    (proj / "AUDIT_RULES.md").write_text(
+        "# Constitution\n\nNo rules yet. Add one when you know what to require.\n")
+    (proj / "crossaudit.yml").write_text(
+        "version: 1\nscience_repo: t/p\nconstitution: AUDIT_RULES.md\n"
+        "auditor: {vendor: openai, provider: openai_compat, model: m,"
+        " key_env: CROSSAUDIT_AUDITOR_KEY}\ngenerator: {vendor: anthropic}\n"
+        "state: {dir: .crossaudit}\nchecks: [parseable]\n")
+    return proj
+
+
+def _doctor_output(proj, monkeypatch, capsys, **kw):
+    import argparse
+
+    monkeypatch.chdir(proj)
+    main.cmd_doctor(argparse.Namespace(fix=False, online=False, lang="zh", **kw))
+    return capsys.readouterr().out
+
+
+def test_no_translated_text_reaches_a_machine_surface(tmp_path, monkeypatch,
+                                                      capsys):
+    """F3. The BOUNDARY, not the strings that happen to cross it today.
+
+    `--all` and `--json` are a contract with a parser, and a parser does not
+    read Chinese. A script consuming doctor broke under LANG=zh, silently and
+    only for Chinese users. This asserts the rule rather than the instance, so
+    the next producer that translates into `detail` is caught by the same test.
+    """
+    proj = _machine_project(tmp_path)
+    for label, kw in (("--all", dict(json=False, all=True)),
+                      ("--json", dict(json=True, all=True))):
+        out = _doctor_output(proj, monkeypatch, capsys, **kw)
+        leaked = [line for line in out.splitlines() if CJK.search(line)]
+        assert leaked == [], (
+            f"translated text reached the {label} machine surface: {leaked[:3]}")
+
+
+def test_the_human_surface_still_speaks_chinese(tmp_path, monkeypatch, capsys):
+    """The boundary must not have been held by removing the translation."""
+    proj = _machine_project(tmp_path)
+    out = _doctor_output(proj, monkeypatch, capsys, json=False, all=False)
+    assert [line for line in out.splitlines() if CJK.search(line)], (
+        "the machine surface was cleaned by making the human one English")
+
+
+def test_every_check_carries_its_machine_detail_untranslated(tmp_path,
+                                                             monkeypatch, capsys):
+    """The rule stated on the objects themselves, one level below rendering."""
+    import argparse
+    import json as _json
+
+    proj = _machine_project(tmp_path)
+    monkeypatch.chdir(proj)
+    main.cmd_doctor(argparse.Namespace(json=True, all=True, fix=False,
+                                       online=False, lang="zh"))
+    out = capsys.readouterr().out
+    payload = _json.loads(out[out.index("{"):out.rindex("}") + 1])
+    for row in payload["checks"]:
+        for field in ("check", "detail", "fix"):
+            assert not CJK.search(str(row.get(field, ""))), (
+                f"{row['check']}.{field} is translated; that field is the "
+                f"parser's, and a human string belongs in detail_copy")
+
+
+# ==================================== the reachable Chinese paths (F2) =====
+def test_the_console_handoff_speaks_the_language_the_setup_used(monkeypatch,
+                                                                capsys):
+    """F2. init is translated and this is its tail; an English remedy after a
+    Chinese setup tells the person something broke."""
+    from crossaudit.cli import main as m
+    from crossaudit.console import daemon
+
+    i18n.set_language("zh")
+    try:
+        monkeypatch.setattr(daemon, "reusable_for_launch", lambda *a, **k: None)
+        monkeypatch.setattr(daemon, "spawn", lambda *a, **k: (
+            _ for _ in ()).throw(OSError("the port was refused")))
+        m._open_console(Path("/tmp/nonexistent-project"))
+        out = capsys.readouterr().out
+    finally:
+        i18n.set_language("en")
+    assert CJK.search(out), f"the console failure stayed English: {out!r}"
+    assert "crossaudit console" in out, "the command a person types is not translated"
+
+
+def test_build_is_not_offered_a_language_it_cannot_finish(capsys):
+    """F2. Consistently one language beats a switch mid-flow.
+
+    build's banner and closing copy are translated, but its round narration is
+    RunEvent prose from the agent loop; translating that needs a
+    kind-to-catalogue mapping and is wave 2. So `--lang` is not offered here
+    until the narration can follow it.
+    """
+    import pytest as _pytest
+
+    with _pytest.raises(SystemExit):
+        main.main(["build", "--lang", "zh", "do", "a", "thing"])
+    err = capsys.readouterr().err
+    assert "unrecognized arguments" in err or "invalid choice" in err, err
+
+
+# ========================= fallback reporting on every command (F4) ========
+def test_a_fallback_is_counted_on_a_normal_doctor_run(tmp_path, monkeypatch,
+                                                      capsys):
+    """F4. `_report_untranslated` existed and only init called it."""
+    proj = _machine_project(tmp_path)
+    monkeypatch.chdir(proj)
+    monkeypatch.delitem(i18n.CATALOGUE["zh"], "doctor.admission_capable.label",
+                        raising=False)
+    i18n.reset_fallbacks()
+    main.main(["doctor", "--lang", "zh"])
+    out = capsys.readouterr().out
+    assert "[i18n]" in out, "the fallback was visible inline but never counted"
+    assert "doctor.admission_capable.label" in out, "the key was not named"
+
+
+def test_the_fallback_notice_never_enters_the_machine_surface(tmp_path,
+                                                              monkeypatch, capsys):
+    """A defect notice printed into --json would be F3 wearing another hat."""
+    import json as _json
+
+    proj = _machine_project(tmp_path)
+    monkeypatch.chdir(proj)
+    monkeypatch.delitem(i18n.CATALOGUE["zh"], "doctor.admission_capable.label",
+                        raising=False)
+    i18n.reset_fallbacks()
+    main.main(["--json", "doctor", "--lang", "zh"])
+    out = capsys.readouterr().out
+    assert "[i18n]" not in out, "the notice corrupted the parser's surface"
+    _json.loads(out[out.index("{"):out.rindex("}") + 1])

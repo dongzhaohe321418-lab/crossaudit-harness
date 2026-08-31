@@ -18,6 +18,7 @@ from ..auditor import dcl_source_digest, run_audit
 from ..config import CONFIG_NAME, Config, heterogeneity, load
 from ..controller import StateStore
 from ..dcl import run_checks
+from .. import doctor_shared
 from ..doctor_shared import constitution_state, CONSTITUTION_READY_SENTENCE
 from ..errors import (EXIT_BLOCKED, EXIT_CONFIG, EXIT_ESCALATED, EXIT_INTEGRITY,
                       EXIT_OK, ConfigDenial, Denial, IntegrityDenial)
@@ -306,7 +307,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     ok = True
 
     def add(name: str, passed: bool, detail: str, fix: str = "", *,
-            copy: str = "", slots: dict | None = None) -> None:
+            copy: str = "", slots: dict | None = None,
+            detail_copy: str = "") -> None:
         """A tested condition. [PASS] here means it ran and it held.
 
         ``copy`` names this check's HUMAN copy in the catalogue — the default
@@ -321,10 +323,11 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         ok = ok and passed
         checks.append({"check": name, "ok": passed, "detail": detail, "fix": fix,
                        "kind": "verdict", "copy": copy,
+                       "detail_copy": detail_copy,
                        "slots": {k: str(v) for k, v in (slots or {}).items()}})
 
     def note(name: str, detail: str, *, copy: str = "",
-             slots: dict | None = None) -> None:
+             slots: dict | None = None, detail_copy: str = "") -> None:
         """A posture, a mode or a configured contract — NOT a test result.
 
         SPEC 2 (design/UX, Ledger D6): ``[PASS]`` means a condition was tested
@@ -336,6 +339,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         """
         checks.append({"check": name, "ok": None, "detail": detail, "fix": "",
                        "kind": "info", "copy": copy,
+                       "detail_copy": detail_copy,
                        "slots": {k: str(v) for k, v in (slots or {}).items()}})
 
     ident = _selfid.identity()
@@ -349,11 +353,11 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         f"{ident['install_mode']}, code digest "
         f"{ident['code_digest_sha256'][:12]}, at {running_from()[1]}",
         "reinstall from a wheel if this says unknown", copy="doctor.install")
-    if ident["install_mode"] not in _selfid.ADMISSIBLE_MODES:
-        add("admission-capable", False,
-            f"install mode {ident['install_mode']} may verify but never admit",
-            "install the built wheel to admit receipts",
-            copy="doctor.admission_capable")
+    for name, detail in doctor_shared.install_blocks(ident):
+        if name == "admission-capable":
+            add("admission-capable", False, detail,
+                "install the built wheel to admit receipts",
+                copy="doctor.admission_capable")
     add("git", shutil.which("git") is not None, shutil.which("git") or "not found",
         "install git", copy="doctor.git")
 
@@ -392,9 +396,15 @@ def cmd_doctor(args: argparse.Namespace) -> int:
                 "each rule needs a '### CA-AREA-NNN' heading, or every citation "
                 "is unknown", copy="doctor.constitution_rules")
         else:
+            # F3. This stored the TRANSLATED sentence in `detail`, which is the
+            # machine field `--json` and `--all` carry verbatim — so a script
+            # parsing doctor got Chinese under LANG=zh, silently and only for
+            # Chinese users. A parser does not read Chinese; `detail` is a
+            # contract with it. The human string moves to `detail_copy`.
             note("constitution rules",
-                 i18n.t("doctor.constitution_rules.none"),
-                 copy="doctor.constitution_rules")
+                 "no rules yet — nothing is gated until you add one; the automatic checks still run",
+                 copy="doctor.constitution_rules",
+                 detail_copy="doctor.constitution_rules.none")
 
     # These are the CONFIGURED contracts, printed so a person can read what the
     # deterministic layer will enforce. Nothing has run: doctor is offline and
@@ -611,6 +621,19 @@ def _doctor_fix(check: dict) -> str:
     return i18n.t(key, **check.get("slots", {}))
 
 
+def _doctor_detail(check: dict) -> str:
+    """The human detail for a line, or the machine one when there is no parallel.
+
+    `detail` is what `--all` and `--json` carry verbatim, so it is never
+    translated — the boundary this function exists to hold. A line that needs a
+    sentence in the person's language names it with `detail_copy`.
+    """
+    key = check.get("detail_copy") or ""
+    if not key:
+        return check["detail"]
+    return i18n.t(key, **check.get("slots", {}))
+
+
 def _render_doctor(checks: list[dict], ok: bool, show_all: bool = False) -> str:
     """[PASS] tested and held · [FAIL] tested and did not · [INFO] not a test.
 
@@ -637,7 +660,7 @@ def _render_doctor(checks: list[dict], ok: bool, show_all: bool = False) -> str:
         label, consequence = _doctor_label(c)
         lines.append(f"  ✗ {label}")
         # Consequence before remedy: what you cannot do, then what to type.
-        lines.append(f"      {consequence or c['detail']}")
+        lines.append(f"      {consequence or _doctor_detail(c)}")
         if c["fix"]:
             lines.append(f"      → {_doctor_fix(c)}")
     if failed:
@@ -652,7 +675,7 @@ def _render_doctor(checks: list[dict], ok: bool, show_all: bool = False) -> str:
         label, _consequence = _doctor_label(c)
         if label:
             lines.append(f"  ℹ {label}")
-        lines.append(f"      {c['detail']}")
+        lines.append(f"      {_doctor_detail(c)}")
     if posture:
         lines.append("")
     if contracts:
@@ -1359,12 +1382,14 @@ def _open_console(root: Path) -> dict:
         cfg = load(root / CONFIG_NAME)
         info = daemon.reusable_for_launch(cfg) or daemon.spawn(cfg, 0)
     except (Denial, TimeoutError, OSError) as exc:
-        print(f"\n  The console did not start ({exc}). Start it yourself with:")
+        # F2: init is a translated flow, and this is its tail. An English
+        # remedy after a Chinese setup tells the person something broke.
+        print("\n  " + i18n.t("console.failed", reason=str(exc)))
         print("    crossaudit console")
         return {"console": None}
 
     url = daemon.url_for(info)
-    print(f"\n  Console: {url}")
+    print("\n  " + i18n.t("console.url", url=url))
     opened = False
     try:
         # webbrowser can hand a URL to a text browser or block on a headless
@@ -1372,8 +1397,8 @@ def _open_console(root: Path) -> dict:
         opened = webbrowser.open(url)
     except Exception:                                        # noqa: BLE001
         opened = False
-    print("  Opened in your browser." if opened
-          else "  Open that URL when you are ready.")
+    print("  " + i18n.t("console.opened" if opened
+                        else "console.open_yourself"))
     return {"console": url, "console_opened": opened}
 
 
@@ -1702,7 +1727,7 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--all", action="store_true",
                    help="list every check instead of collapsing the passing ones")
     d.add_argument("--lang", choices=i18n.LANGUAGES,
-                   default=i18n.DEFAULT_LANGUAGE, help="language for this command (waves 1-2: init, doctor, build)")
+                   default=i18n.DEFAULT_LANGUAGE, help="language for this command (wave 1: init, doctor)")
     d.set_defaults(func=cmd_doctor)
 
     c = sub.add_parser("check", help="run the deterministic layer, no model involved")
@@ -1776,8 +1801,13 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("words", nargs="*")
     b.add_argument("--verbose", action="store_true",
                    help="also print the run goal payload and other internal state")
-    b.add_argument("--lang", choices=i18n.LANGUAGES,
-                   default=i18n.DEFAULT_LANGUAGE, help="language for this command (waves 1-2: init, doctor, build)")
+    # F2. `build` is NOT offered --lang this wave, deliberately. Its banner and
+    # closing copy are translated, but the round-by-round narration is
+    # `RunEvent` prose produced by the agent loop, and translating that needs a
+    # kind-to-catalogue mapping that is wave 2. Offering --lang here would ship
+    # a run that reports what happened in Chinese and what went wrong in
+    # English — a switch mid-flow tells a person something broke. Consistently
+    # one language until the narration can follow.
     b.set_defaults(func=_cmd_build)
 
     tk = sub.add_parser("talk", help="say what you want; the program routes it")
@@ -1831,7 +1861,15 @@ def main(argv: list[str] | None = None) -> int:
         _print_origin()
         return EXIT_OK
     try:
-        return args.func(args)
+        # F4. Reported once here rather than at each command's return, so a
+        # command cannot be added that silently drops the notice — the same
+        # reason the action set comes from argparse rather than a list. It goes
+        # to stderr and is skipped for --json, because a defect notice printed
+        # into a machine surface would be F3 wearing a different hat.
+        code = args.func(args)
+        if not getattr(args, "json", False):
+            _report_untranslated()
+        return code
     except Denial as exc:
         if getattr(args, "json", False):
             print(json.dumps(exc.as_dict(), indent=2, sort_keys=True))

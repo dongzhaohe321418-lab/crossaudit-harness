@@ -195,7 +195,19 @@ def test_init_does_not_claim_ready_when_the_next_command_cannot_run(
     assert code == EXIT_CONFIG and "not ready" in doctor_out
 
 
-def test_init_says_ready_only_when_doctor_would_agree(tmp_path, monkeypatch, capsys):
+def test_init_says_ready_only_when_doctor_would_agree(tmp_path, monkeypatch,
+                                                     capsys):
+    """F1: the contradiction, driven rather than asserted about.
+
+    The previous version of this test checked that init printed "Ready" and
+    never ran doctor at all. So it passed on a tree where a keyed init said
+    Ready and the very next command denied readiness — in the person's own
+    language, with the second line being the true one. It runs BOTH now and
+    asserts only that they agree, because which answer is right depends on the
+    machine and the agreement is the property.
+    """
+    import argparse
+
     project = tmp_path / "keyed"
     project.mkdir()
     monkeypatch.setenv("HOME", str(tmp_path / "home2"))
@@ -203,12 +215,28 @@ def test_init_says_ready_only_when_doctor_would_agree(tmp_path, monkeypatch, cap
     monkeypatch.setenv("CROSSAUDIT_GENERATOR_KEY", "generator-secret")
     monkeypatch.chdir(project)
     main.cmd_init(_init_args(project))
-    out = capsys.readouterr().out
+    init_out = capsys.readouterr().out
 
-    assert "not ready to run yet" not in out
-    assert "Ready" in out
-    # With both credentials in place, the run commands are offered again.
-    assert "crossaudit build" in out
+    code = main.cmd_doctor(argparse.Namespace(json=False, all=False, fix=False,
+                                              online=False, lang="en"))
+    capsys.readouterr()
+
+    init_says_ready = ("Ready" in init_out
+                       and "not ready" not in init_out.lower())
+    doctor_says_ready = code == 0
+    assert init_says_ready == doctor_says_ready, (
+        f"init and doctor disagree one command apart: init "
+        f"{'said Ready' if init_says_ready else 'did not say Ready'}, doctor "
+        f"returned {code}. Setup finishing is not the same as being able to "
+        f"run, and whichever is right they must not contradict each other.")
+
+    if not doctor_says_ready:
+        # Saying "not ready" is only half the fix; the person needs the reason.
+        assert any(word in init_out.lower()
+                   for word in ("admit", "credential", "key")), (
+            "init withheld Ready without saying what remains")
+    # With both credentials in place, the run commands are offered either way.
+    assert "crossaudit build" in init_out
 
 
 # ----------------------------------------------------------- the front door

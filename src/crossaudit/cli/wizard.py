@@ -22,6 +22,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from .. import doctor_shared
 from ..config import CONFIG_NAME
 from ..errors import ConfigDenial, Denial
 from ..scaffold import (AUDIT_TREE, CONFIG_TEMPLATE, GENERAL_CHECKS,
@@ -442,11 +443,10 @@ def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
             attributed = [r for r in drafted.rules if getattr(r, "from_user", "")]
             frame = t(GATING_FRAME_KEY)
             # One rule drafted said "1 rules". Selected the way doctor does it,
-            # rather than by a new mechanism.
+            # rather than by a new mechanism. The choice is a named function so
+            # a test can execute the shipped selection instead of restating it.
             count = len(drafted.rules)
-            base = ("rules.drafted_header.attributed" if attributed
-                    else "rules.drafted_header")
-            key = base if count == 1 else base + ".plural"
+            key = drafted_header_key(count, bool(attributed))
             header = (t(key, count=count, attributed=len(attributed))
                       if attributed else t(key, count=count))
             consequences = [r.title.strip().rstrip(".").lower()
@@ -593,6 +593,19 @@ def _open_in_editor(path: Path) -> None:
     except OSError as exc:  # noqa: BLE001 -- an editor that will not start is not fatal
         tui.warn(t("editor.failed", editor=editor, error=exc))
         tui.note(t("editor.manual_instead", path=path))
+
+
+def drafted_header_key(count: int, attributed: bool) -> str:
+    """Which drafted-rules header to render, singular or plural.
+
+    Named and importable on purpose: the previous guard claimed to be "driven
+    through the shipped selection" while reading catalogue entries, so changing
+    this choice left it green. A test can only execute a decision that has a
+    name.
+    """
+    base = ("rules.drafted_header.attributed" if attributed
+            else "rules.drafted_header")
+    return base if count == 1 else base + ".plural"
 
 
 def _missing_credentials(target: Path, keys_file) -> list[tuple[str, str]]:
@@ -840,11 +853,23 @@ def run(target: Path, *, mode: str, force: bool = False,
     # to run, so the banner reports which of the two happened, and a missing
     # credential leads the Next list instead of scrolling above a green box.
     missing = _missing_credentials(target, written)
-    if missing:
+    # F1. "Ready" was derived from credentials alone while the doctor also
+    # weighed the install, so a keyed setup announced Ready and the very next
+    # command denied it — in the person's own language, with the second line
+    # being the true one. Both now read the same decision.
+    blocks = doctor_shared.install_blocks()
+    if missing or blocks:
         tui.banner(t("done.not_ready"), str(target))
     else:
         tui.banner(t("done.ready"), str(target))
     rows = []
+    if blocks and not missing:
+        # Named here for the same reason a missing credential is: it is what
+        # stops the very next command from agreeing.
+        for name, _detail in blocks:
+            if name == "admission-capable":
+                rows.append(tui.dim("    " + t("doctor.admission_capable.label")))
+                rows.append(tui.dim("    " + t("doctor.admission_capable.fix")))
     if missing:
         # Named first, because it is the thing that stops the very next command.
         for env_name, role in missing:
