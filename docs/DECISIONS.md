@@ -5117,3 +5117,47 @@ That is not embarrassing and I am recording it as evidence rather than as a
 lapse: **the shape is fundamental, not a series of unrelated slips.** It has now
 been found in the receipt path, the DCL, my own shell pipelines, my own
 permission probe, and the instrument written to detect it.
+
+## D121 — The waiver I praised is bypassable, and two guards fail in opposite directions
+
+Stacked review of the dead-guard sweep and the naming fixture:
+**`MERGE AFTER FIXES`, `0 S0, 0 S1, 1 S2, 1 S3`.** The substance holds — the XSS
+test is real and catches both mutations, `old_guard_blind_confirmed=yes`,
+`renames_correct=18/18`, `extractors 9→10→10` with the second slice adding none.
+
+### Correcting D115
+
+I wrote that the waiver design was better than what I specified, because
+*"you cannot word your way past it; you can only be more honest."* I told the
+reviewer to try. **`waiver_bypassable=yes`.**
+
+**The reviewer worded its way past it, so my sentence was wrong.** The idea is
+still right — an escape hatch that costs the thing the guard protects is the
+correct shape — but **this implementation does not achieve it**, and I praised a
+mechanism on its intent rather than on a test. **I had the test available: I
+commissioned it in the same breath as the praise, and wrote the praise first.**
+
+### Two guards, failing in opposite directions
+
+**One dies quietly in the future.** `_reads_only_source` keys on the token
+`PAGE`. **When the slicer consolidation lands, that token goes and the guard
+stops guarding — silently, green the whole way.** A guard whose trigger a
+scheduled refactor will delete is a timer, not a check. It must key on *whether
+product code is called*, and it must be changed **before** the consolidation,
+not after.
+
+**One accuses the innocent today.** The `\bon…=` text scan **would
+false-accuse a correct renderer** on a `title_breakout`-shaped payload. The
+element/attribute assertion already carries that property, so the scan adds no
+coverage and adds a false positive.
+
+RULE: **a guard that reddens on correct code is as much a defect as a guard that
+stays green on broken code**, and it is more corrosive — the first kind gets
+suppressed, and the suppression habit outlives the guard. Drop it.
+
+### And the reviewer volunteered the ordering constraint
+
+*"Nothing here should merge past the two open audit-core S0s you named
+regardless."* **It ruled its own branch behind a priority it did not have to
+mention.** Correct, and it is the second time tonight a reviewer has protected
+the queue rather than its own throughput.
