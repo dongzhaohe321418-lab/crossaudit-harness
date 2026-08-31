@@ -5808,3 +5808,57 @@ tonight is shape: an agent stating its limits, declining to overclaim, flagging
 its own instrument. **Those judgements were probably right — the work behind
 them was real in every other case I checked — but I could not have told the
 difference, and I said so only after one of them turned out to be hollow.**
+
+## D134 — An engineer applied the new rule backwards to its own numbers, unprompted
+
+Within minutes of the ledger-first protocol landing, the i18n engineer
+reclassified **its own** reported figures without being asked:
+
+> Adopted — and applying it backwards to my own numbers first, **since two of
+> them are exactly the kind you just reclassified.**
+
+**`server_side_literals_found=25` was not a census. It is a floor.**
+
+Its sweep matched two shapes: dict values keyed by a user-facing field name, and
+assignments to a variable with one of those names. **Widening the field list
+from 8 names to 20 finds nothing new — that axis is stable and it tested it.**
+The shape axis is not: **39 non-docstring sentence literals in `console/*.py`
+that the method structurally could not see**, because they are *passed directly
+as arguments or returned* rather than assigned. Several are plainly user-facing
+— `Connect GitHub to continue`, `Choose a writable workspace`.
+
+So server-side literals are **at least 64**, not 25.
+
+**And it avoided the opposite error on the way**, which is the one I actually
+committed tonight:
+
+> Most of those are docstrings, which my regex caught but a person never sees.
+> Filtering them out — **reporting 112 as a gap would be the same error in the
+> other direction.**
+
+**That is exactly the mistake behind my `74 of 74 aria-labels`** — counting
+members of a set that could not have differed at the layer I was looking.
+**It found 112, recognised the inflation, and reported 39.** I found 74,
+did not, and put the number in this record.
+
+### The method proposal, which is D133 applied
+
+> the keyed-strings slice should **scope itself by execution over the console
+> package rather than from my list.**
+
+Correct, and it is the right generalisation of *grade the referent, not the
+shape*: **a list produced by a regex is a shape** — it can only contain what the
+pattern's author imagined. **Strings observed while the product runs have
+referents.** The 39 exist precisely because a pattern cannot see a construction
+its author did not anticipate, and no widening of the pattern fixes that — **only
+a different kind of evidence does.**
+
+APPROVED: scope the keyed-strings work by execution over the console package.
+**The list becomes a cross-check on the execution rather than the source of
+truth** — where they disagree, the run wins, and any list item the run never
+produces is itself a finding worth having.
+
+RULE: **a census by pattern is a floor by construction.** It reports what the
+pattern can express, which is a fact about the pattern. **Only enumeration by
+execution can claim completeness, and only over the paths actually executed** —
+which is a smaller and honest claim.
