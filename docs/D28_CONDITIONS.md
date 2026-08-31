@@ -18,7 +18,7 @@ Rules for this file:
 
 | # | Condition | What would show it | Status |
 |---|---|---|---|
-| 1 | No open S0/S1 on merged code | A current cross-vendor audit of the merged tree, not per-branch verdicts collected over time | **SHOWN for the UX surface** — auditor2 audited the combined tree `2c21ce7` (not per-branch): 0 S0, 0 S1. Not shown for the rest of the product. |
+| 1 | No open S0/S1 on merged code | A current cross-vendor audit of the merged tree, not per-branch verdicts collected over time | **NOT SHOWN — one open S1** (D109): 3 of 52 error boxes carry `role="alert"`, so a screen-reader user hits a wizard error and is told nothing. auditor2's `0 S0, 0 S1` on `2c21ce7` stands for what it examined; this was outside it. **The audit was not wrong — the condition was broader than the audit**, and I had recorded the audit as if it were the condition. |
 | 2 | Frozen fresh-user walkthrough | Clean-HOME first contact with the DMG, completed end to end | **IN MEASUREMENT** — CLI half done on `2c21ce7`. GUI half was blocked by token confinement (D107); the owner granted assistive access and it is verified (D108), so the window is now readable and the product was not weakened to get there. |
 | 3 | UX S1–S7 across themes / locales / widths | Cells observed on the packaged build; observed means screenshot + read_page, not reasoned about | **PARTIAL** (D81) |
 | 4 | Screen-reader first contact | A task completed via the accessibility tree — *containers present is not contents present* | **IN MEASUREMENT** — same wall as condition 2, same unblock (D108). Never once measured on a frozen build; *completed via the accessibility tree*, not landmarks present. |
@@ -45,3 +45,20 @@ Rules for this file:
   clean-HOME packaged walkthrough reaches 2, 3, 4 and 5 at once, because those
   four are all about a person meeting a build rather than about code being
   correct.
+
+## Corrections to this file
+
+**Condition 1, same session.** I recorded it as *shown for the UX surface* on the
+strength of a cross-vendor `0 S0, 0 S1`, and twenty minutes later an S1 turned
+up on that surface (D109).
+
+The audit was not wrong and neither was the count. **I widened a verdict past
+its scope**: auditor2 examined the combined render path of three branches, and I
+wrote it down as though it covered the console. That is the same error as
+counting defect closures as condition evidence (D72), one level up — *a real
+result, recorded against a claim larger than the result.*
+
+RULE: **a condition's row records what was examined, not what was concluded.**
+"0 S0, 0 S1" is not an entry; *"0 S0, 0 S1 across the combined render path of
+three branches at `2c21ce7`"* is. The second one cannot be quietly widened,
+because the scope travels with the number.
