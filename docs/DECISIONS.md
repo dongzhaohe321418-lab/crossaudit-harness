@@ -5215,3 +5215,52 @@ Tonight produced all three, on our own defensive work:
 **These belong in CrossAudit's own honest account of what it guarantees.** A
 product that sells independent second-vendor review has to say what happens when
 the second vendor is unavailable, unwilling, or not the same one that started.
+
+## D123 — Two instruments converged on the same unguarded sentence
+
+The three presence-only trust sentences, traced back to their tests and
+producers rather than recalled:
+
+1. **"forbidden: loopback-only, and the session token from the printed URL is
+   required."** — frozen console refusal page. The guards assert **the denial is
+   emitted**; they do not assert the sentence. Softening it *"would make a user
+   believe the console is generally reachable or that the token is optional."*
+   Producer: Python server response, rendered by the browser.
+2. **"CrossAudit replied."** — Decision Center escalation banner. The guards
+   assert the branch or string exists **in the page source**, or that the state
+   is present; **rendered copy is never asserted.** Softening it *"would make a
+   user believe an audited deliverable exists when CrossAudit only answered
+   conversationally."* Producer: **browser-only.**
+3. **The provenance statement identifying source-backed evidence.** The guards
+   assert receipt/source fields and provenance keys exist; **the human-readable
+   sentence is not content-checked.** Softening it *"would make a user believe
+   cited sources were independently grounded when the record only proves
+   retrieval/provenance metadata."* Producer: Python builder, then browser/CLI.
+
+**Sentence 1 is the one the design engineer independently found unguarded and
+has already written a content guard for**, on `ux/forbidden-page @ ff5dacb`,
+hours before this sweep named it.
+
+**Two instruments that never spoke converged on the same sentence** — one by
+rewriting the page and noticing nothing asserted its wording, one by
+inventorying trust sentences against their guards. **That convergence is the
+strongest evidence tonight that the honesty-sentence class is real** rather than
+a framing I imposed: it was found twice, from opposite directions, by different
+methods.
+
+RULING on routing, which the producers decide:
+
+- **Sentence 1 — already in flight. Do not duplicate it.** It is on a branch
+  waiting for review behind the audit-core S0s.
+- **Sentence 3 — same slice.** Python producer; the existing content-guard work
+  reaches it.
+- **Sentence 2 — separate slice.** Browser-only, and **the browser side has no
+  home in the suite for behavioural evidence.** Writing its guard here would
+  smuggle the missing layer in under a rename, which is exactly what the
+  consolidation review is holding. **It waits for the layer, and saying so is
+  better than a guard that pretends the layer exists.**
+
+Sentence 2 is also the highest-consequence of the three: *an audited deliverable
+appears to exist when CrossAudit only answered conversationally.* **The one we
+can least afford to leave unguarded is the one we cannot honestly guard yet** —
+that is the gap stated at its true size rather than papered over.
