@@ -6007,3 +6007,54 @@ guard is real" without the anchor count.** That is eng1's rule, and it is the
 only reason this report says 6 instead of 4-and-two-suspicious. **I have made
 five instrument errors tonight and this is the first time the check caught one
 before I formed a conclusion rather than after.**
+
+## D138 — Two branches, each green alone, two failures together
+
+```
+LEDGER: 4 detached worktrees off v5-redesign, identity asserted, ~18 min suite time
+baseline (v5-redesign)          316ad7a   1887 passed, 0 failed
++ security stack (cd0302c)      e139e17   1893 passed, 0 failed
++ honesty guards (9d2fa5f)      d597312   1894 passed, 0 failed
++ BOTH                          8152b9b   1898 passed, **2 failed**
+```
+
+Failing: `tests/test_projects_ui.py::test_failed_github_setup_is_visible_and_resumes_idempotently`
+and `::test_project_guidance_can_be_created_and_updated_entirely_from_ui_controls`.
+
+**And both pass when their own file is run alone at the merge commit — 51
+passed.** They fail only in the company of the full suite.
+
+**So it is not a conflict between the two branches' changes.** Each adds a test
+file — `test_guard_names_match_what_they_check.py` and
+`test_trust_sentences_say_what_they_mean.py` — and together they alter
+something the suite shares: ordering, module state, or a fixture. **Two tests in
+a third, untouched file now depend on something nobody declared.**
+
+**A test that passes alone and fails in company has a result that depends on
+something nobody wrote down.** That is this product's own subject, occurring in
+its test suite, found by the batch discipline for the second time tonight.
+
+**Both branches were independently reviewed and both were green.** Neither
+review was wrong. **A review verifies a branch; only a combination verifies a
+combination**, and the only reason this was not merged on two clean verdicts is
+that the suite runs on the merge commit rather than on the branches (D39/D82).
+
+NOT MERGED. Routed to the author with the isolation above rather than with a
+symptom.
+
+### Three instrument errors of mine on the way to that table
+
+1. `pytest <file>::<test> <file>::<test>` returned **"no tests ran"** at four
+   refs. I had not checked that the worktrees were created; `cd` failed and
+   pytest ran in the wrong directory.
+2. `git cat-file -e ref:path` reported the file **ABSENT** while `git grep` found
+   it in the same ref and path. **Two results that cannot both be true** — I
+   stopped rather than picking the one I preferred.
+3. Earlier, two mutation attempts produced a clean **7 passed** because the
+   phrases were split across source lines and my substitution matched nothing.
+
+**Every one produced a plausible answer.** "No tests ran" reads as *these tests
+do not exist here*; "7 passed" reads as *the guard does not work*. **Only the
+anchor counts and the contradiction between two tools told me otherwise** —
+and this is the first time tonight the checks caught my instrument *before* I
+formed a conclusion rather than after.
