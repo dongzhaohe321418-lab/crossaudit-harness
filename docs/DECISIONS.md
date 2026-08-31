@@ -6058,3 +6058,50 @@ do not exist here*; "7 passed" reads as *the guard does not work*. **Only the
 anchor counts and the contradiction between two tools told me otherwise** —
 and this is the first time tonight the checks caught my instrument *before* I
 formed a conclusion rather than after.
+
+## D139 — The enumeration: 31 states, 16 out of sync, and revocation has zero test coverage
+
+The owner's ruling was *enumerate the lifecycle states before any further fix.*
+Delivered at `docs/dcl-lifecycle-states @ 52eff13`:
+
+```
+states=31   in_sync=15
+authority_outlives_authorization = 7      (round 1's class)
+authorization_outlives_authority = 3      (round 2's class)
+result_crosses_the_boundary      = 3      (round 3's class)
+unreachable                      = 3
+covered_by_tests = unknown  (retracted 9 — the data said 6)
+  measured bound: 166 load_allowed calls across 6 call sites, **0 load→revoke transitions**
+  → revocation states S13–S28 have **zero coverage**
+completeness = incomplete: S29 (concurrent reload) reachable in production but not
+  constructible with a single-threaded driver; S30, S31 unbuilt with reasons;
+  the transition list is not proven exhaustive
+```
+
+**Sixteen of thirty-one states are out of sync, and the entire revocation half
+of the lifecycle has never been exercised by a test.** Not under-tested —
+`0 load→revoke transitions` in 166 calls.
+
+**This settles why three correct fixes did not converge.** Each round landed in
+a space with sixteen known-bad states and no coverage over the half that
+contains them. **A fourth round would have found a fourth of sixteen**, and a
+fifth a fifth. The owner's ruling is vindicated by its own output: **the
+enumeration was worth more than any of the three repairs, and it could only be
+seen by refusing to write the fourth.**
+
+**Each of the three rounds is now a category rather than an incident** — 7, 3
+and 3 instances respectively. The bugs we chased were samples.
+
+### Two things about how it was reported
+
+**It retracted its own number.** `covered_by_tests` was first reported as 9; the
+data said 6; it withdrew the figure and marked it `unknown` rather than
+defending or quietly correcting it. **Within an hour of the ledger rule
+landing.**
+
+**And `completeness=incomplete` with reasons per state.** S29 is *reachable in
+production and not constructible by the driver used* — which is the honest form:
+not "no concurrency issues found" but "my instrument is single-threaded and
+production is not." **The transition list itself is stated as unproven.** An
+enumeration that claims exhaustiveness it has not earned would have recreated
+the original defect one level up.
