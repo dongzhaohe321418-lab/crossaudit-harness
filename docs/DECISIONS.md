@@ -4135,3 +4135,51 @@ took 52 cells and the suite stayed green. **D99**: a conflict silently took
 three decisions and the suite stayed green. In both, the loss was invisible
 because *the thing lost was not counted anywhere.* The fix is the same both
 times — count it, out loud, where a gap is arithmetic rather than memory.
+
+## D100 — A green tree with three S1s in it, and a dispatch that went nowhere
+
+I staged four UX branches together and ran them: **1,968 passed, 2 skipped, 0
+failed**, identity asserted, import origin verified inside the batch worktree.
+By every number I had, that tree was ready.
+
+Then the cross-vendor audit of one of its four branches returned
+`verdict=MERGE AFTER FIXES`, **3 S1 and 2 S2**, `zh_complete=no
+zh_position=half-shipped error_paths=split`. The sharpest, F1: **keyed init
+prints "Ready" and the doctor run immediately after it denies readiness** — the
+product contradicting itself in two consecutive lines, in the user's own
+language, with the second line being the true one.
+
+**A green suite and three blocking findings, on the same bytes.** That is not a
+process failure to apologise for. It is the thesis of this product, arriving
+unannounced on my own merge queue: *the suite reports what it was told to
+check, and the audit reports what is true.* I have spent this cycle asking
+agents to trust that distinction. Tonight it cost me a merge, which is the only
+way anyone ever actually learns it.
+
+Related, and found in the same audit: `inspect.getsource()` called with its
+result unused at `tests/test_cli_i18n.py:608-619`. A test that names a
+guarantee, asserts nothing, and stays green — **as did all 26 tests in that
+file.** Third instance this cycle of the same class (D64, D97). A guard that
+cannot fail is worse than no guard: it occupies the slot a real one would take
+and it reports success.
+
+`cli-i18n-wave1` is out of the batch. The other three rebuild and re-run.
+
+### And my own dispatch silently did nothing
+
+I routed the findings with `herdr agent prompt agentA … || herdr agent prompt eng1 …`.
+**There is no agent named `agentA`.** The command returned success anyway, the
+`||` fallback never fired, and eng1 received nothing. I found it only because I
+went to check whether the message had landed.
+
+The tool reported success while doing nothing, and **I had wrapped it in
+`>/dev/null 2>&1`, which discarded the only evidence either way.** Both halves
+are mine: the swallowed output and the assumption that a returned zero meant a
+delivered message.
+
+RULE: **a dispatch is confirmed by reading it on the receiving side, not by the
+sender's exit code.** `grep -c` on the recipient's pane returning `2` is the
+confirmation; `echo routed` is not. This is D66 — *execute the change against
+the reported symptom* — applied to my own instructions rather than to code, and
+it is the fourth time this cycle the failure has been **something reporting
+success while nothing happened.**
