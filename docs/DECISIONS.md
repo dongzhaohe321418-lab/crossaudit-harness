@@ -4235,3 +4235,59 @@ would have duplicated already existed and it had no way to know. **That is my
 routing failure, not its judgement** — and the directive worked exactly as
 intended: the cost of asking was one message, the cost of building would have
 been a sixth mechanism on a layer I had just collapsed to one.
+
+## D102 — First packaged-build walkthrough of this tree; two findings, both mine
+
+Built a DMG from `staging/batch3` (`2c21ce7`, the three UX branches without
+i18n) and ran first contact from a **clean HOME** against the frozen bundle.
+Signature valid, satisfies its Designated Requirement, frozen runtime verified.
+
+**The version string is `4.15.0` and so is the DMG already sitting in
+integration's `dist/`. Same name, different bytes.** The artifact is bound to
+`2c21ce7` and to code digest `dd48bf59afe6`, not to its version.
+
+### Two findings I nearly filed, and why neither survived
+
+**"Every failure exits 0."** `doctor` printed *not ready*, `status` printed
+*DENIED*, `check` printed *BLOCKED*, and my harness reported `exit=0` for all
+three — an S1, and exactly the class that has bitten this cycle four times.
+
+It was my measurement. `cmd | head -30; echo $?` reports **head's** exit status.
+Measured without the pipe, the product is **correct and well-designed**:
+`20` not-ready/denied, `10` blocked verdict, `2` bad usage — distinct, non-zero,
+and a script can tell them apart.
+
+**"Chinese first contact is entirely in English."** True, and not a defect:
+**`agentA/cli-i18n-wave1` is the branch that adds i18n, and I had just pulled it
+out of this batch.** I tested a tree for a feature I had personally removed
+from it.
+
+Both dissolved on re-measurement. Both were plausible, severe-sounding, and
+consistent with the night's pattern — **which is precisely why they were easy to
+believe.** D84 says assert identity before measuring; the corollary is that
+*the instrument is part of the identity.*
+
+### What the walkthrough actually established
+
+- **Install mode and code digest are visible on the frozen artifact** —
+  `frozen-app, code digest dd48bf59afe6`. That is D40's requirement, shown where
+  it has to be shown rather than in source mode.
+- Exit codes distinguish not-ready from blocked from misuse.
+- Every FAIL line carries a `->` next action in plain language.
+- `init` explains itself in four steps; keys are written `600` and never into
+  the repository.
+- The admission tier states its own limit unprompted: *local — self-review; the
+  history is yours to rewrite… it cannot hold anyone to account.* **The product
+  volunteering the reason it cannot be trusted yet is the single best thing in
+  the walkthrough.**
+
+### Ledger
+
+Condition 2 moves from NOT SHOWN to **PARTIAL**: CLI first contact on a frozen
+bundle from a clean HOME, completed end to end. The GUI half — the path a person
+actually takes, double-clicking the `.app` — is untested, and every
+frozen-only defect found so far has lived on that side.
+
+**Condition 5 cannot be shown on this tree at all**, and saying so is the point:
+it depends on a branch blocked by three S1s. A condition that is unreachable by
+construction is not a condition that is pending.
