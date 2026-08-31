@@ -4630,3 +4630,42 @@ COMMISSIONED: a sweep for honesty sentences with no content guard, ranked by
 what a person is misled into believing when the sentence weakens. This is
 condition 7 work — *invariants demonstrated* — because an invariant a user is
 told about, and which nothing checks, is being asserted rather than held.
+
+## D111 — The tension I described in D107 did not exist
+
+Frozen GUI first contact, `2c21ce7` / `dd48bf59afe6`, with assistive access:
+
+```
+window_reachable=yes  first_screen=pass  blocked_by=none
+token_visible_to_gui_user=not-needed
+```
+
+**D107 was wrong, and wrong in the direction that costs the most.** I wrote that
+token confinement and first-contact verifiability were *"the same fact stated
+twice"* — that the property making the token safe was what made the path
+unobservable. It is not. **The app renders the console inside its own window.
+The GUI user never needs the token; it gates external browsers only**, and it
+is still absent from stdout, stderr, disk and argv.
+
+My framing assumed the person must reach a browser. **They don't.** I took a
+limitation of my instrument and described it as a property of the design.
+
+What that nearly cost: D107 ranked three options and the second was an opt-in
+`CROSSAUDIT_CONSOLE_TOKEN_FILE` — **a hole cut in an authorization boundary to
+solve a problem that did not exist.** I sent it to security review rather than
+building it, and that is the only reason this is a note instead of a
+regression. **The instinct to route it rather than write it was worth more than
+the analysis that produced it.**
+
+The owner's grant was not wasted: **the wall was real, it was just in the
+automation and not in the product.** Assistive access was exactly the right
+resolution — the one that changed nothing about CrossAudit — and it was the
+recommendation for the right reason even though my model of the obstacle was
+wrong.
+
+RULE: **before proposing that a security property be relaxed, state what would
+have to be true for the property to be irrelevant to the measurement.** Here:
+*"a GUI user who never opens an external browser needs no token."* That sentence
+was checkable in one run and would have closed the question before any option
+was ranked. **An analysis that produces three options without checking its own
+premise has produced three wrong options.**
