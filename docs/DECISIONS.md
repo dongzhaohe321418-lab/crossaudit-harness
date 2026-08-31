@@ -4845,3 +4845,64 @@ actually contains**, and condition 1 records the tree rather than the intention.
 The response is not five more renames. **When the S0s clear, it is a convention
 with the author**, because renaming instances of a pattern while the pattern
 keeps producing them is the cheapest possible way to look busy.
+
+## D116 — Correcting D115, and a provider refused the security review
+
+### D115 was wrong about the cause
+
+I wrote that `report-provenance` producing the name-claim class three times was
+*"a property of how that surface gets written"* and that the answer was a
+naming convention with its author. **The security engineer corrected me and it
+is right:**
+
+> all three had honest docstrings and real browser evidence — the author knew,
+> wrote it down, and put the evidence in `_ui_findings/`. **The naming is not
+> the root; the root is that there is nowhere in the suite for browser evidence
+> to live**, so it lands outside the repo and a substring guard stands in for
+> it. Renaming makes the suite honest about that gap; it does not close it.
+
+**The author was honest at every step.** It documented what it checked, gathered
+real browser evidence, and stored it — outside the repository, because the
+suite has no home for it. The dishonest-sounding name was the closest thing
+expressible **inside** a suite that cannot hold behavioural evidence.
+
+I had a person-shaped explanation ready for a structure-shaped defect. **That is
+the more comfortable error and the more expensive one** — it would have produced
+a conversation about naming discipline with the one engineer who had done the
+documenting properly, and left the missing layer exactly where it was.
+
+The answer belongs to the consolidation review and to the behavioural coverage
+already commissioned. **That layer is the fix; renaming was only ever the
+suite admitting it did not have one.**
+
+### And the cross-vendor reviewer was refused by its provider
+
+The stacked review — 13 renames, a behavioural XSS case, the naming fixture —
+returned this from the codex-side auditor:
+
+```
+This content can't be shown.
+We take extra caution with cybersecurity requests.
+```
+
+**A provider safety filter blocked the security review.** The dispatch asked for
+a novel XSS payload against our own guard, which is ordinary defensive work on
+our own code, and the filter does not know that.
+
+**I am not rewording the dispatch to get past it.** A product whose entire claim
+is that a second vendor independently checks the first does not get to launder a
+request through a rephrasing when that vendor declines — **the refusal is a
+result, and treating it as an obstacle to route around would corrupt the thing
+the architecture exists to provide.**
+
+So the XSS portion goes to a Claude-side reviewer, and **the cross-vendor
+property is degraded for that finding specifically.** Recorded, not hidden: the
+reviewer is not the author, so the hard law holds; the vendor is the same as the
+author's, so the preference does not. Any verdict from it carries that caveat.
+
+**This is worth more than an inconvenience — it is a real constraint on the
+product we are building.** Cross-vendor auditing has a failure mode nobody in
+this design accounted for: **the second vendor may decline to look**, and it
+declines most readily at exactly the security boundaries where the second
+opinion is worth the most. That belongs in the product's own honest account of
+its limits, not just in this cycle's notes.
