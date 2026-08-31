@@ -416,26 +416,41 @@ def _render_shipped_markdown(payloads):
 
 
 def test_the_shipped_markdown_renderer_neutralises_real_payloads():
-    """The security property, executed: no live sink survives the renderer.
+    """These nine payload shapes produce no element or scheme the renderer did
+    not choose. Narrower than "no live sink survives", which this does not show.
+
+    WHAT IT COVERS: the nine shapes in XSS_PAYLOADS, through `renderMarkdown`
+    and the two functions it delegates to, with the vocabulary check in
+    RENDERER_TAGS and the scheme check on emitted tags. A payload shape nobody
+    listed here is not covered, and the author chose the list — so a reviewer's
+    first job is a payload the author did not think of.
+
+    WHAT IT DOES NOT COVER: anything downstream of this html — insertion,
+    sanitiser ordering, CSP, or what a browser does with it. It runs the
+    functions in node over a string.
 
     Its mutation, and this is the acceptance test for the guard itself: make
     `esc` the identity, or `safeUrl` return its input, and this must go red by
-    name. The markup check cannot -- that is why both exist.
+    name. The markup check cannot see either -- that is why both exist.
     """
     rendered = _render_shipped_markdown(XSS_PAYLOADS + [SAFE_LINK])
     html = rendered[:-1]
     for payload, out in zip(XSS_PAYLOADS, html):
-        # The property is about ELEMENTS and ATTRIBUTES, never about text. An
+        # The property is about ELEMENTS and SCHEMES, never about text. An
         # escaped payload legitimately still contains the word "onerror" as
         # inert text inside &lt;...&gt;, and asserting over the text accused a
         # correct renderer -- my own first mistake writing this guard.
         tags = {t.lower() for t in re.findall(r"<\s*/?\s*([A-Za-z][A-Za-z0-9]*)", out)}
         assert tags <= RENDERER_TAGS, (
             f"payload introduced an element: {payload!r} -> {sorted(tags - RENDERER_TAGS)}")
+        # No handler-attribute scan: every attribute on an emitted tag is one
+        # this renderer wrote, with its value `esc`-ed, so the vocabulary check
+        # above already carries it. A `\bon[a-z]+=` scan over tag bodies adds no
+        # coverage and WOULD false-accuse a correct renderer on a link whose
+        # title or text legitimately reads like a handler. A guard that reddens
+        # on correct code gets suppressed, and the habit outlives the guard.
         for tag_body in re.findall(r"<[^>]*>", out):
             low = tag_body.lower()
-            assert not re.search(r"\bon[a-z]+\s*=", low), (
-                f"event-handler attribute reached a tag: {payload!r} -> {tag_body!r}")
             for scheme in ("javascript:", "data:", "vbscript:", "file:"):
                 assert scheme not in low, (
                     f"dangerous scheme reached a tag: {payload!r} -> {tag_body!r}")

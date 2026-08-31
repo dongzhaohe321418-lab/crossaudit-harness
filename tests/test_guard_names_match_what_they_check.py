@@ -31,20 +31,32 @@ from pathlib import Path
 
 TESTS = Path(__file__).resolve().parent
 
-#: A name that promises a person saw or heard something.
-CLAIMS_AN_OUTCOME = re.compile(
-    r"renders?|announc|speaks|neutralis|displays\b|is_displayed|hears", re.I)
+#: A name that promises a person saw or heard something. Matched as WHOLE
+#: TOKENS, because that is the difference between a claim and a noun: "renders"
+#: promises, "render target" names a container; "announces" promises, "the
+#: announcer" is a DOM node. The first pattern matched substrings, which forced
+#: an exemption to stop it accusing honest names — and the exemption was the
+#: hole (the reviewer worded past it with `test_page_markup_renders_x`).
+CLAIM_TOKENS = frozenset({
+    "render", "renders", "rendered", "rerenders", "announce", "announces",
+    "announced", "announcing", "speak", "speaks", "spoken", "neutralise",
+    "neutralises", "neutralize", "neutralizes", "display", "displays",
+    "displayed", "show", "shows", "shown", "hear", "hears", "heard",
+})
 #: ...except when the subject is a guard rather than a page. "shown to fail" is
 #: a counterfactual about a test, and those are exactly what we want more of.
 ABOUT_A_GUARD = re.compile(r"shown_to_fail|guard_is_shown|_reddens|_is_shown_to_", re.I)
-#: ...and except when the name has ALREADY declared itself a markup check. This
-#: prefix is the whole convention: it tells a reader, before they open the body,
-#: that a string in a file is what is asserted. A test that declares it is
-#: checking markup and then checks markup is not lying, whatever nouns follow —
-#: "the announcer" and "every render target" are DOM nodes, not promises. The
-#: prefix is a claim in itself, so making it the exemption keeps the convention
-#: load-bearing instead of leaving the scanner to guess verbs from nouns.
-DECLARED_MARKUP_CHECK = "test_page_markup_"
+
+#: THERE IS NO NAMING EXEMPTION. A prefix cannot buy a name out of this check:
+#: `test_page_markup_renders_x` is flagged exactly like `test_page_renders_x`,
+#: because the claim is in the verb and the prefix does not remove it. The only
+#: escape is the explicit registry below, which costs a written reason and is
+#: checked to still name a live test.
+
+
+def _claims_an_outcome(name: str) -> bool:
+    return bool(set(name.lower().split("_")) & CLAIM_TOKENS)
+
 
 #: Names that read as an outcome but state a claim ABOUT THE SOURCE, which a
 #: source assertion is the right instrument for. Each says why, and each is
@@ -68,8 +80,8 @@ SOURCE_CLAIMS_BY_DESIGN = {
 }
 
 
-def _crossaudit_symbols(tree: ast.AST) -> set[str]:
-    """Names this module pulled out of the product, PAGE excluded."""
+def _product_symbols(tree: ast.AST) -> set[str]:
+    """Names this scope pulled out of the product."""
     out: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("crossaudit"):
@@ -77,27 +89,39 @@ def _crossaudit_symbols(tree: ast.AST) -> set[str]:
         elif isinstance(node, ast.Import):
             out |= {(a.asname or a.name).split(".")[0]
                     for a in node.names if a.name.startswith("crossaudit")}
-    return out - {"PAGE"}
+    return out
 
 
-def _reads_only_source(fn: ast.AST, module: ast.AST, src: str) -> bool:
-    """True when the body reads page/source text and calls no product code.
+def _root_of(func: ast.AST) -> str | None:
+    while isinstance(func, ast.Attribute):
+        func = func.value
+    return func.id if isinstance(func, ast.Name) else None
 
-    Deciding this by regex accused `test_replay_role_renders_a_sample_descriptor`
-    — which really does call `projects.materialize_demo` — so the check is on
-    the imported symbols the body actually references, not on words.
+
+def _executes_something(fn: ast.AST, product: set[str], helpers: dict) -> bool:
+    """Whether this body CALLS product code, directly or via a local helper.
+
+    Keyed on calls, never on the token ``PAGE``. The first version required
+    ``PAGE`` to appear before it would consider a body source-only, which the
+    reviewer caught: when the page-script slicers are consolidated that token
+    goes, every body stops looking source-only, and this guard silently stops
+    guarding — green the whole way. A guard whose trigger a scheduled refactor
+    deletes is a timer, not a check.
+
+    Reading a product CONSTANT is not executing it: ``assert "x" in PAGE`` is a
+    Name load, and that is precisely the shape this guard exists to flag.
     """
-    body = ast.get_source_segment(src, fn) or ""
-    if not ("PAGE" in body or "read_text()" in body or "getsource" in body):
-        return False
-    product = _crossaudit_symbols(module) | _crossaudit_symbols(fn)
     for node in ast.walk(fn):
-        if isinstance(node, ast.Name) and node.id in product:
-            return False
-        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) \
-                and node.value.id in product:
-            return False
-    return True
+        if not isinstance(node, ast.Call):
+            continue
+        root = _root_of(node.func)
+        if root is None:
+            continue
+        if root in product or root in {"subprocess", "urllib", "requests"}:
+            return True
+        if helpers.get(root):          # a module-local helper that does
+            return True
+    return False
 
 
 def _offenders(where: Path | None = None) -> list[str]:
@@ -108,19 +132,24 @@ def _offenders(where: Path | None = None) -> list[str]:
             module = ast.parse(src)
         except SyntaxError:
             continue
+        product = _product_symbols(module)
+        # one level of resolution: a test that calls a local helper which calls
+        # the product is exercising the product, however it is named.
+        helpers = {}
+        for node in module.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                helpers[node.name] = _executes_something(node, product, {})
         for node in ast.walk(module):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
             if not node.name.startswith("test_"):
                 continue
-            if node.name.startswith(DECLARED_MARKUP_CHECK):
-                continue
-            if not CLAIMS_AN_OUTCOME.search(node.name) or ABOUT_A_GUARD.search(node.name):
+            if not _claims_an_outcome(node.name) or ABOUT_A_GUARD.search(node.name):
                 continue
             key = f"{path.name}::{node.name}"
             if key in SOURCE_CLAIMS_BY_DESIGN:
                 continue
-            if _reads_only_source(node, module, src):
+            if not _executes_something(node, product | _product_symbols(node), helpers):
                 found.append(key)
     return found
 
@@ -168,10 +197,44 @@ def test_the_guard_is_shown_to_fail(tmp_path):
     # named. This half is what stopped the scanner accusing test_local_demo.
     honest = tmp_path / "test_honest.py"
     honest.write_text(
-        "from crossaudit.console import projects\n"
+        "from crossaudit.console import overview\n"
         "from crossaudit.console.page import PAGE\n\n\n"
         "def test_page_renders_the_thing_for_real():\n"
-        "    assert projects.DEMO_DIRNAME\n"
+        "    assert overview.read_report_texts is not None\n"
+        "    assert overview.ReportSource(path=None, text='', commit='',\n"
+        "                                 on_disk_differs=False).note\n"
         "    assert 'thing' in PAGE\n",
         encoding="utf-8")
     assert _offenders(tmp_path) == ["test_planted.py::test_page_renders_the_thing"]
+
+
+def test_the_prefix_cannot_buy_a_name_out_of_the_check(tmp_path):
+    """R1. The first version exempted anything named ``test_page_markup_*``, and
+    the reviewer worded past it: the prefix declared "markup" while the verb
+    still promised a rendering. There is no naming exemption now — the claim is
+    in the verb and a prefix does not remove it.
+    """
+    (tmp_path / "test_bypass.py").write_text(
+        "from crossaudit.console.page import PAGE\n\n\n"
+        "def test_page_markup_renders_the_thing():\n"
+        "    assert 'thing' in PAGE\n",
+        encoding="utf-8")
+    assert _offenders(tmp_path) == ["test_bypass.py::test_page_markup_renders_the_thing"], (
+        "a name can still buy its way out with a prefix")
+
+
+def test_the_check_does_not_depend_on_the_token_PAGE(tmp_path):
+    """R2. The first version required ``PAGE`` to appear before it would treat a
+    body as source-only. The page-script slicers are scheduled for
+    consolidation; when that lands the token goes, every body stops looking
+    source-only, and this guard would have stopped guarding while staying green.
+    A guard whose trigger a planned refactor deletes is a timer.
+    """
+    (tmp_path / "test_renamed_accessor.py").write_text(
+        "from crossaudit.console.page import PAGE as CONSOLE_HTML\n\n\n"
+        "def test_the_console_renders_the_thing():\n"
+        "    assert 'thing' in CONSOLE_HTML\n",
+        encoding="utf-8")
+    assert _offenders(tmp_path) == [
+        "test_renamed_accessor.py::test_the_console_renders_the_thing"], (
+        "the check follows the token PAGE rather than whether product code runs")
