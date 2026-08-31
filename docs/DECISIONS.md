@@ -5070,3 +5070,50 @@ five unguarded ones.
 would have been the same error as every wrong measurement tonight: a
 right-shaped answer from the wrong source. Asked the agent that has the
 inventory.
+
+## D120 — Two accessibility trees disagree, and every number we have is silent about which one it used
+
+Condition 3 on the packaged core: **`cells 8 → 40`, `observations 88/88`**, all
+four gap surfaces seeded, **`new_mechanism=none`** — coverage quadrupled without
+a fifth launcher, with the before-number stated so the increase is checkable.
+
+**The line that matters is not one of the leaks:**
+
+```
+unnamed = 0-in-DOM-tree, 1-in-native-AX-tree   (composer; engine difference)
+```
+
+**The composer has a name in the DOM tree and no name in the native
+accessibility tree. A screen reader uses the second one.** The S1 is real, and
+it is invisible to the instrument most people would reach for first.
+
+RULE: **an accessibility number must name the tree it was measured in.**
+`unnamed=0` is not a fact until it says *DOM* or *native AX* — and where they
+disagree, **the native tree is the one a person actually meets.** Every
+accessibility figure recorded in this cycle carries this question retroactively,
+including the ones I graded.
+
+This is the same disease as the rest of the night in a new organ: *containers
+present, contents absent* became *named in one tree, nameless in the other*.
+**The DOM answer is not wrong. It is an answer to a question nobody asked.**
+
+### A candidate withdrawn is worth as much as one confirmed
+
+`/ project` was reported as a **candidate** rather than a leak, investigated,
+and **withdrawn.** Withdrawing costs something — it reads as finding less — and
+it prevented both a wasted fix and a bug shipped as fixed. **The two confirmed
+leaks (`Project history`, `Files produced`) are both server-side literals in the
+position `page.py`'s translator cannot reach: a second translation boundary,
+now confirmed twice, which makes it a boundary rather than an oversight.**
+
+### And the shape appeared inside the instrument built to catch it
+
+Of three self-reported instrument faults, one was: *the "all live regions empty"
+fact was **a failure in one check and a noted limitation in another**.* One
+observation, two meanings, one of them a failure — **D118's exact defect, inside
+the observation layer.**
+
+That is not embarrassing and I am recording it as evidence rather than as a
+lapse: **the shape is fundamental, not a series of unrelated slips.** It has now
+been found in the receipt path, the DCL, my own shell pipelines, my own
+permission probe, and the instrument written to detect it.
