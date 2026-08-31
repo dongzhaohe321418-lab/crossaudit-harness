@@ -5322,3 +5322,55 @@ native-tree check belongs to the accessibility harness and I can't run it from
 here."* Correct — and it means the aria-label fix is **verified against the
 catalogue, not against the tree a screen reader reads.** Those are different
 claims (D120) and only the harness can close the second.
+
+## D125 — First audit-core S0 merged: a corrupt ledger can no longer sign as a clean receipt
+
+`v5-redesign` is `0d6d8e0`, tree `d7cd1a08` — **the tested tree exactly.**
+`fix/receipt-evidence-fail-closed @ 6f5d1be` is an ancestor; the F1 fix
+`cded8d1` correctly is not.
+
+**What closed.** `receipt/build.py::_tool_evidence()` no longer returns `None`
+for both *no evidence* and *evidence that failed verification*. A corrupt
+present ledger now **denies receipt construction**: no receipt, no signature.
+The three states are distinct at the call site, and **an honest audit with no
+tools still builds** — the fix does not deny the honest case to catch the
+dishonest one.
+
+**Gates, and one of them I ran myself.**
+
+1. **Cross-vendor review clean** — `F2-REVIEW` at `cc7c233`: *production S0
+   closed*, one S3. And **`src/` is byte-identical between the reviewed commit
+   and the merged tip**, verified by diff rather than assumed across the rebase.
+   The review's verdict travels because the bytes it judged did not move.
+2. **The S3 closed by execution, by me.** The review found a **tautological
+   signing guard** — the fourth of that class tonight. I did not accept the
+   author's repair by reading it. I mutated `verify_receipt` so a signature no
+   longer binds *this* receipt, and required a named red:
+   `FAILED … ::test_the_signature_binds_THIS_receipt_and_not_merely_a_receipt`,
+   **1 failed / 7 passed** — specific, not a blanket — then restored and got 8/8
+   with a clean tree.
+   **My first attempt at that mutation broke on import** and produced a
+   collection error rather than a test failure. That is the case eng1 named for
+   the whole team: *a mutation that silently fails to apply reports the same
+   thing as a guard that works.* Mine failed loudly, so I could tell. **I
+   confirmed the second one landed by grepping for its marker before believing
+   the colour.**
+3. **Suite green on the merge commit** — `1,887 passed, 2 skipped, 0 failed`,
+   identity asserted, worktree clean.
+4. **Invariant strengthened, not weakened** — the change makes the core **fail
+   closed** where it previously failed silent. Additive and backward compatible.
+
+**Nothing about this merge rests on a sentence anybody wrote about it.** The
+review is bound to bytes I diffed, the S3 to a mutation I ran, the suite to a
+tree I asserted the identity of. That is the whole of what the gate is for, and
+it is the first time tonight all four have been true of an audit-core change.
+
+**The other S0 stays out**, and correctly: its fix introduced a confirmed S1 in
+the opposite direction — revocation deleting a rule the configuration still
+authorizes.
+
+**The packaged walkthrough is now void.** `src/` moved, so per D105 the
+artifact's inputs are no longer byte-identical and **condition 2 loses its
+evidence until a rebuild.** That is the rule working as intended rather than a
+setback: the walkthrough was never a permanent fact about the product, only
+about an artifact.
