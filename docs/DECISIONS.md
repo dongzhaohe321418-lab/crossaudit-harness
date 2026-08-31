@@ -6105,3 +6105,29 @@ not "no concurrency issues found" but "my instrument is single-threaded and
 production is not." **The transition list itself is stated as unproven.** An
 enumeration that claims exhaustiveness it has not earned would have recreated
 the original defect one level up.
+
+## D140 — Owner's second ruling: cover the zero-coverage half before changing the design
+
+With the enumeration in hand — 31 states, 16 out of sync, **zero coverage over
+the entire revocation half** — the owner ruled: **write the tests for S13–S28
+first. Do not change the design yet.**
+
+That is the option that makes every later choice checkable. **Whatever we
+eventually do — relocate verdict authority, patch selectively, or accept and
+document — we cannot tell whether it worked over a region nothing tests.** The
+last three rounds each ended with a plausible fix and no way to know; this
+removes that condition before another decision is made on top of it.
+
+**The cost is chosen deliberately and it is visible**: sixteen states are known
+to be out of sync, so honest tests over them **fail on arrival.** Integration
+gets uglier before it gets better, and that ugliness is the sixteen defects
+becoming legible rather than sixteen new defects appearing.
+
+RULE for the work, and it is the one most likely to be inverted: **these tests
+must be red now.** A test written over a known-bad state that passes on the
+first run has been written to the behaviour instead of to the property — it has
+recorded the defect as correct. **Each one asserts what the invariant requires,
+watches it fail, and stays failing until the state is fixed.**
+
+The three unreachable states and S29–S31 stay marked, with their reasons, rather
+than being quietly dropped to make a number look complete.
