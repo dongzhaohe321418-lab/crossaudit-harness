@@ -5374,3 +5374,47 @@ artifact's inputs are no longer byte-identical and **condition 2 loses its
 evidence until a rebuild.** That is the rule working as intended rather than a
 setback: the walkthrough was never a permanent fact about the product, only
 about an artifact.
+
+## D126 — Three provider refusals, and the third was not about security at all
+
+The codex-side auditor has now been refused **three times**:
+
+1. the stacked security review (XSS payloads),
+2. the DCL revocation lifecycle check — not an attack, *does revoking a plugin
+   revoke it*,
+3. **the i18n audit** — translation coverage, error-route enumeration, help text.
+
+```
+This content can't be shown.
+We take extra caution with cybersecurity requests.
+```
+
+**The third one carries no security content by any reading.** That kills the
+obvious explanation. What the three share is not their subject; it is **the
+session they were sent into** — an agent whose accumulated history includes two
+audit-core S0s, a signed-receipt forgery reproduction, and an XSS review
+dispatch.
+
+HYPOTHESIS: **the refusal is a property of the accumulated conversation, not of
+the current request.** If so, the same work in a fresh session passes, and this
+agent is unusable as a reviewer regardless of what it is asked.
+
+**It is cheap to test and the test is also the fix**: route the i18n audit to a
+different codex session that has not been refused. **If it accepts, the
+diagnosis holds** and the remedy is session hygiene rather than rewording — and
+I still will not reword, because the point of the second vendor is that it
+answers the question I actually asked.
+
+**Consequence for the product, added to D118's list.** Cross-vendor auditing now
+shows four failure modes, none in the original design:
+
+- the second vendor **declines to look**, most readily at security boundaries;
+- it **runs out of capacity** mid-review;
+- it **changes model** underneath a review, so a verdict spans two reviewers;
+- **its refusal accumulates** — a session that has audited enough security
+  findings may become unable to audit anything.
+
+**That last one is the worst of the four**, because it is *earned by doing the
+job well.* An auditor that has found serious things becomes, over time, an
+auditor that cannot be sent anywhere. **Any honest account of what CrossAudit
+guarantees has to include that the second opinion is a depleting resource.**
