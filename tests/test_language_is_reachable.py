@@ -137,3 +137,14 @@ def test_the_flag_is_documented_in_help(capsys):
     out = capsys.readouterr().out
     assert "--lang" in out, "the flag exists and --help does not mention it"
     assert "{en,zh}" in out, "--help does not say which languages are available"
+    # Presence is not discoverability. Now that the default follows the system
+    # locale, the flag's only purpose is overriding it — and help that lists a
+    # flag without saying what it is for leaves the person who needs it (a
+    # Chinese system, wanting the English original to search or quote) with no
+    # reason to try it.
+    # Collapsed first: argparse wraps, so a sentence written as one thought
+    # arrives split across lines and a raw match would miss it.
+    flat = __import__("re").sub(r"\s+", " ", out)
+    assert "overrides your system locale" in flat, (
+        "--help lists the flag but never says it overrides the system locale, "
+        "which is the only thing it is now for")

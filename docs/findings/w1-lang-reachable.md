@@ -92,3 +92,65 @@ it always meant.
 occurrences; there are three now that the top-level flag shares the same
 sentence. The property is unchanged — one sentence, shared by every
 registration — and the number moves only when a registration is added on purpose.
+
+
+---
+
+## Follow-up: two of the three remaining items resolved by checking rather than fixing
+
+**`--lang` IS in `--help`, and has been since `8e8e295`.** Driven through the
+packaged entry point at every level:
+
+    crossaudit --help          --lang {en,zh}   present
+    crossaudit doctor --help   --lang {en,zh}   present
+    crossaudit init --help     --lang {en,zh}   present
+
+**A hypothesis for the observation, and it is one of ours.** On this machine
+`which -a crossaudit` resolves to the framework `bin`, and that binary reports
+`crossaudit 3.2.0 (receipt schema 2)` — the August pip install. A shell running
+`crossaudit --help | grep -i lang` gets **3.2.0**, which has no `--lang` at all.
+That is D40/F3 biting a verification rather than a user. Checkable in one
+command: `which crossaudit && crossaudit --version`. Offered as a hypothesis —
+running the bundle core directly would not hit it.
+
+**What WAS missing, and is the real form of the point**: the help listed the flag
+and never said what it is for. Now that the default follows the system locale,
+overriding it is the flag's only purpose, and a person on a Chinese system who
+wants the English original — to quote in a report, or to search for — had no
+reason to try it. Fixed:
+
+    --lang {en,zh}   language for this command; overrides your system
+                     locale (wave 1: init and doctor only)
+
+Guarded on the purpose rather than the presence, and mutation L5 (help stops
+saying what the flag is for) reddens it.
+
+**`CROSSAUDIT_LANG` is correctly ruled out** and I would have been wrong to
+build it. I confirmed independently that no such variable appears in `src/`.
+
+## The verification-method question, answered plainly
+
+**The defect was NOT invisible in source.** Driven at the pre-fix SHA `5a428b2`:
+
+    source            crossaudit --lang zh doctor  → invalid choice: 'zh'
+    packaged entry    app.main(["--lang","zh",…])  → invalid choice: 'zh'
+
+Identical, because `core_entry.py` calls `crossaudit.app.main` and
+`app._dispatch` hands every public command to the same `cli.main.main`. The
+bundle reproduced source behaviour. I am saying so because the conclusion drawn
+from "invisible in source" — that guards must run against the frozen binary —
+does not follow from this defect, and acting on it would spend effort on the
+wrong risk.
+
+**What the guards do reach**: `crossaudit.app.main`, the packaged entry point,
+which is the grammar and locale resolution the frozen core executes. All 18
+tests in the file drive it.
+
+**The honest gap, stated rather than substituted.** No test in the suite runs the
+actual PyInstaller binary. `test_product_readiness.py` asserts the build script
+*contains* `CrossAuditCore --self-test`; it is a string check on the script, not
+an execution of the core. Building the binary takes minutes and is not on the
+test path, so **packaging-class failures — a module PyInstaller does not bundle,
+a missing data file, an import hook — remain uncovered by the suite.** This
+defect was not in that class; a future one could be, and nothing here would
+catch it.

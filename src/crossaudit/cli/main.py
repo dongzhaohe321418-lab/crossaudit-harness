@@ -135,7 +135,8 @@ Docs: README.md in the repository.
 #: One sentence about the language wave, said identically everywhere it is
 #: said. init and doctor previously stated DIFFERENT scopes in their help, which
 #: is a contradiction a person meets before they meet the limitation itself.
-LANG_HELP = "language for this command (wave 1: init and doctor only)"
+LANG_HELP = ("language for this command; overrides your system locale "
+             "(wave 1: init and doctor only)")
 
 #: Stated in `build`'s own help, because build is where the language stops and
 #: a limitation only an engineer can read is not disclosed.
