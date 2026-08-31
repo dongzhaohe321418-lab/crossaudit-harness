@@ -684,7 +684,9 @@ def snapshot(cfg: Config) -> dict:
     # The audit report set is globbed-and-read once and shared: auditor_stream
     # (inside bundle) and read_cycles below both derive from it, so a snapshot
     # reads each report.md a single time instead of twice.
-    report_texts = overview.read_report_texts(cfg)
+    # F1: read_report_sources, not read_report_texts — the snapshot needs to
+    # know WHOSE bytes these are, not only what they say.
+    report_texts = overview.read_report_sources(cfg)
     progress = TRACKER.snapshot()
     gen_stream, aud_stream, commit_chats = bundle(
         cfg, reports=report_texts, progress=progress)

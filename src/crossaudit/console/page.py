@@ -417,6 +417,10 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 /* Message rows: a work record, not a chat app. */
 .turn{margin-bottom:var(--sp-6)}
 .turn.user{display:flex;justify-content:flex-end}
+.turn.draft .turn-main{border:1px dashed var(--line-strong);border-radius:var(--r-md);
+  padding:10px 12px;background:transparent}
+.turn.draft .draft-label{font-weight:500;color:var(--text-2);font-size:var(--fs-caption)}
+.turn.draft .draft-body{white-space:pre-wrap;color:var(--text-2)}
 .turn.user .turn-main{max-width:85%;min-width:0}
 .turn.user .turn-body{background:var(--surface-2);border-radius:var(--r-lg) var(--r-lg) 6px var(--r-lg);
   padding:var(--sp-3) var(--sp-4)}
@@ -433,6 +437,9 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
    speaker name — because nothing said this; attributing it to the generator
    would be a claim about who produced the words. */
 .turn.system-note{margin-bottom:var(--sp-5)}
+.report-provenance{margin:10px 0 0;padding:8px 10px;border-radius:var(--r-sm);
+  background:var(--surface-2);color:var(--text-2);font-size:var(--fs-caption);
+  border-left:2px solid var(--warn,var(--line-strong))}
 .turn.system-note .turn-main{border-left:2px solid var(--line-strong);
   padding:2px 0 2px var(--sp-4)}
 .turn.system-note .turn-meta{margin-bottom:4px;color:var(--text-3)}
@@ -989,7 +996,12 @@ textarea::placeholder{color:var(--text-3)}
 
 /* Human decision screen: what was wanted, tried, blocked, and suggested. */
 .decision{display:none;position:fixed;left:var(--sidebar);right:0;top:calc(var(--topbar-h) + 14px);
-  bottom:0;z-index:var(--z-sheet);background:var(--surface);overflow:auto;
+  bottom:0;background:var(--surface);overflow:auto;
+  /* The inspector shares --z-sheet and comes later in the DOM, so it won the
+     tie and covered this surface: the close button rendered, looked live and
+     did nothing. A modal that announces itself and cannot be dismissed is
+     worse than one that does neither, so the decision sits one level above. */
+  z-index:calc(var(--z-sheet) + 1);
   margin:0 8px 8px;border:1px solid var(--line);border-radius:var(--r-xl)}
 .decision.on{display:block}
 body.deciding .composer-wrap{display:none}
@@ -2103,7 +2115,7 @@ body.first-run #first-run{display:flex;flex-direction:column;min-height:100vh;he
   font-size:var(--fs-prose);line-height:1.65}
 .fr-choices{display:flex;flex-direction:column;gap:var(--sp-5);max-width:520px}
 .fr-arw{transition:transform var(--dur-base) var(--spring)}
-.fr-primary{display:inline-flex;align-items:center;gap:9px;width:fit-content;
+.fr-primary{display:inline-flex;align-items:center;gap:9px;width:fit-content;white-space:nowrap;
   font-size:var(--fs-title);font-weight:600;border:1px solid transparent;border-radius:var(--r-md);
   padding:12px 22px;background:var(--accent);color:var(--inverse-text);box-shadow:var(--shadow-2),var(--edge-highlight);
   transition:transform var(--dur-fast) var(--ease-out),filter var(--dur-fast) var(--ease-out)}
@@ -2184,7 +2196,8 @@ body.first-run #first-run{display:flex;flex-direction:column;min-height:100vh;he
   gap:var(--sp-4);padding:16px clamp(var(--sp-5),5vw,var(--sp-9))}
 .fr-hint{color:var(--text-3);font-size:var(--fs-caption)}
 .fr-foot-right{display:flex;align-items:center;gap:20px}
-.fr-back{color:var(--text-3);font-size:var(--fs-body);background:none;border:0;padding:6px 8px;border-radius:var(--r-sm)}
+.fr-back{color:var(--text-3);font-size:var(--fs-body);background:none;border:0;padding:6px 8px;border-radius:var(--r-sm);
+  white-space:nowrap}
 .fr-back:hover{color:var(--text-2);background:var(--hover)}
 .fr-rail{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);
   height:34px;padding:0 clamp(var(--sp-5),4vw,var(--sp-8));border-top:1px solid var(--line);
@@ -2334,6 +2347,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
 }
 </style></head>
 <body>
+<p id="announcer" role="status" aria-live="polite" class="sr-only"></p>
 <section class="project-hub" id="project-hub" aria-label="Projects">
   <header class="hub-bar"><button class="brand-button" id="hub-brand"><span class="brand-mark" aria-hidden="true">◇</span>
     CrossAudit <span class="version" id="hub-version">V4.15.0</span></button><span class="spacer"></span>
@@ -2691,7 +2705,8 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
   </form>
 </div>
 
-<div class="decision" id="resolution-modal" aria-label="Human decision">
+<div class="decision" id="resolution-modal" role="dialog" aria-modal="true"
+  aria-labelledby="resolution-flag resolution-title" aria-describedby="resolution-summary">
   <form class="decision-body" id="resolution-form"><header class="decision-head">
     <span class="decision-glyph" aria-hidden="true"></span><div>
     <div class="decision-flag" id="resolution-flag">Automatic loop paused</div>
@@ -3441,6 +3456,9 @@ const ZH={
   "The task this conversation asked for.":"此对话所要求完成的任务。",
   "Independent review":"独立审查","Independent auditor approved the result":"独立审计者已批准该结果",
   "No blocking findings":"没有阻断性问题","Recorded in the audit ledger":"已记录到审计账本",
+  // SPEC-9 slice 1 — spoken, not seen. A screen reader hears these; nothing renders them.
+  "A task is waiting for your decision.":"有一个任务正在等待你的决定。",
+  "CrossAudit replied.":"CrossAudit 已回复。",
   // SPEC-2 verification states. The section line is the only thing a person
   // who does not know what a deterministic check is has to read.
   "Not run yet — these run automatically on your first task.":"尚未运行——它们会在你的第一个任务中自动运行。",
@@ -3483,7 +3501,12 @@ const ZH={
   "Connect at least two different providers on the previous step to form an independent Generator / Auditor pair.":"请在上一步至少连接两家不同的供应商，以组成独立的生成者 / 审计者搭配。",
   "Generator and auditor must run on different providers. Independent review is the core of the protocol and cannot be turned off.":"生成者和审计者必须运行在不同的供应商上。独立审查是本协议的核心，无法关闭。",
   "You can swap either model later without losing history.":"你之后可以更换任一模型而不丢失历史记录。",
+  "The copy of this report on disk differs from the audited one shown here. Run crossaudit verify to check the record.":"磁盘上的这份报告与此处显示的已审计版本不同。请运行 crossaudit verify 核对记录。",
+  "Generator live draft · not yet audited":"生成者实时草稿 · 尚未审计",
+  "No receipt names the commit this report was audited at, so CrossAudit cannot confirm the version shown here is the one that was audited. Run crossaudit verify to check the record.":"没有收据记录这份报告在哪个提交上接受了审计，因此 CrossAudit 无法确认此处显示的版本就是当时被审计的版本。请运行 crossaudit verify 核对记录。",
+  "This report is not committed yet, so it cannot be verified yet.":"这份报告尚未提交，因此暂时无法核验。",
   "Start using CrossAudit":"开始使用 CrossAudit","Paste your API key":"粘贴你的 API key",
+  "API key":"API 密钥","Saving your provider setup…":"正在保存你的供应商设置……",
   "Paste a new key to replace the saved one":"粘贴新密钥以替换已保存的密钥",
   "Same provider — independent review is not possible.":"同一家供应商——无法进行独立审查。",
   "Your provider setup is saved. Create your first project to put the recommended pair to work.":"你的供应商设置已保存。创建你的第一个项目，即可让推荐搭配开始工作。"
@@ -3566,6 +3589,27 @@ const ZH_PATTERNS=[
    m=>'在终端里输入 `crossaudit` 运行的是 '+m[1]+'（版本 '+m[2]+'）。本应用是 '+m[3]+'，位于 '+m[4]+'。'],
   [/^Typing `crossaudit` runs (.+)\. Its version could not be determined without running it, which CrossAudit does not do\. This app is (.+) at (.+)\.$/,
    m=>'在终端里输入 `crossaudit` 运行的是 '+m[1]+'。在不运行它的前提下无法确定其版本，而 CrossAudit 不会运行它。本应用是 '+m[2]+'，位于 '+m[3]+'。'],
+  // ORDER MATTERS: ZH_PATTERNS is first-match-wins, and these sit at the front
+  // deliberately. An existing /^Remove (.+)$/ was swallowing
+  // "Remove OpenAI API key" into "移除 OpenAI API key" — translated verb,
+  // untranslated noun, which reads as done and is not. A composed name must be
+  // matched by the most specific pattern, so the most specific goes first.
+  // SPEC-13 §3.1 and §3.4. Every one of these is COMPOSED from a provider name,
+  // so each must be a pattern. A fixed entry would translate only the providers
+  // whose names happen to be in the dictionary and hand every other Chinese
+  // reader an English control name — the i18n form of the silent gap. The
+  // provider name itself is never translated: it is the vendor identifier.
+  [/^(Paste|Clear|Validate|Reveal|Replace|Remove) (.+) API key$/,m=>
+    ({Paste:'粘贴',Clear:'清除',Validate:'验证',Reveal:'显示',Replace:'更换',Remove:'移除'})[m[1]]
+    +' '+m[2]+' API 密钥']
+  ,[/^Get key — (.+)$/,m=>'获取 key —— '+m[1]]
+  ,[/^API docs — (.+)$/,m=>'API 文档 —— '+m[1]]
+  ,[/^Checking (.+) key…$/,m=>'正在检查 '+m[1]+' 密钥……']
+  ,[/^(.+) key verified\.$/,m=>m[1]+' 密钥已验证。']
+  ,[/^(.+) key rejected\. Check it and try again\.$/,m=>m[1]+' 密钥被拒绝。请检查后重试。']
+  ,[/^(.+) key works, but no models are available to it\.$/,m=>m[1]+' 密钥可用，但没有可用的模型。']
+  ,[/^Could not reach (.+)\. Check your connection and try again\.$/,m=>'无法连接 '+m[1]+'。请检查网络后重试。']
+  ,[/^reading (\d+) owner message\(s\)$/,m=>'正在读取 '+m[1]+' 条所有者补充信息'],
   [/^reading (\d+) owner message\(s\)$/,m=>'正在读取 '+m[1]+' 条所有者补充信息'],
   [/^queued as owner guidance for the running build \(#(\d+)\); it will be read at the next round$/,m=>'已作为所有者补充信息排队（第 '+m[1]+' 位），将在下一轮读取'],
   [/^(\d+) queued$/,m=>m[1]+' 条排队中'],
@@ -3679,6 +3723,12 @@ const ZH_PATTERNS=[
   ,[/^([0-9a-f]{7,40}) · round (\d+)$/i,m=>m[1]+' · 第 '+m[2]+' 轮']
   ,[/^(PASS|BLOCKED|ESCALATED|ESCALATE|DCL_ONLY) · (\d+) finding\(s\)$/,m=>zhValue(m[1])+' · '+m[2]+' 项发现']
   ,[/^cycle (\S+) is waiting for a human$/,m=>'循环 '+m[1]+' 正在等待人工处理']
+  ,[/^(\d+) tasks are waiting for your decision\.$/,m=>'有 '+m[1]+' 个任务正在等待你的决定。']
+  // Composed, so it MUST be a pattern: a fixed entry would translate only the
+  // threads whose titles happen to be in the dictionary and leave every other
+  // Chinese reader an English sentence. The title itself is not translated —
+  // it is a name the person chose for their own thread.
+  ,[/^CrossAudit replied in (.+)\.$/,m=>'CrossAudit 在「'+m[1]+'」中已回复。']
   ,[/^MCP executable (.+) was not found or is not executable$/,m=>'未找到 MCP 可执行文件 '+m[1]+'，或它不可执行']
   ,[/^MCP server could not start: (.+)$/,m=>'MCP 服务器无法启动：'+m[1]]
   ,[/^MCP server closed its input\.(.*)$/,m=>'MCP 服务器关闭了输入。'+m[1].trim()]
@@ -3733,6 +3783,112 @@ localeObserver.observe(document.body,{subtree:true,childList:true,characterData:
 document.getElementById('locale-toggle').onclick=()=>applyLocale(currentLocale==='zh'?'en':'zh');
 document.getElementById('hub-locale').onclick=document.getElementById('locale-toggle').onclick;
 applyLocale(storedLocale()==='zh'?'zh':'en',false);
+// SPEC-9 §2.1 — one polite region for the whole console, written IN PLACE.
+// Progress-class changes call this with a SENTENCE, never a value: a live
+// region that reads a bare counter is a riddle; "Round 2 of 3 started" is not.
+// Interrupt-class surfaces keep role="alert" on their own inserted node.
+//
+// Two things stop it becoming noise, and both are the point of this slice:
+// re-announcing the SAME sentence is suppressed outright, because a render that
+// re-states the state it already stated is not news; and a burst of stream
+// events inside one frame is coalesced into the last sentence rather than
+// spoken in sequence. The render loop polls every 2s and the stream can fire
+// several times between frames, so without both a person hears the transcript
+// on a loop.
+let announcedText='';let announceTimer=null;
+// SPEC-9, the locale-timing rule as a MECHANISM rather than a habit.
+//
+// Every live region has the same problem the announcer has, not just the
+// announcer itself: it announces what IS there, not what is about to be.
+// Writing an English source into one and letting the locale observer translate
+// it a microtask later means a Chinese reader is SPOKEN the English while the
+// screen shows Chinese.
+//
+// Measured, not reasoned about. Driving frUpdateIndependence — the function
+// this page itself uses for the first-run provider step — in a Chinese page,
+// and sampling the role=alert node #fr-role-msg at the write, at the next
+// microtask and after a task, gave: English, then Chinese, then Chinese. The
+// alert fires on the first of those. The sweep found nine live regions with
+// this shape; two writes carried a string with a translation, both here.
+//
+// So: write, then translate in the SAME TASK. The English source is still what
+// was written, so a later locale switch re-translates it the ordinary way —
+// driven and confirmed, zh then en then zh, not assumed. One function rather
+// than a rule each caller has to remember, because the defect this closes is
+// precisely a canonicalisation applied at one point and not at the next.
+//
+// R2 CORRECTION, and it is the reason this comment is long. Write-then-
+// translate-in-the-same-task was NOT the rule. It closed the microtask window
+// and left the defect: the node still HELD the English source first, because
+// the write and the translation are two separate mutations of the same node,
+// and a live-region notification fires on the first one. The cross-vendor
+// auditor drove it and recorded exactly that —
+//   CrossAudit replied.  ->  CrossAudit 已回复。
+// — while my guard, which inspected source ORDER, went green. Ordering is a
+// claim about the code; the property is about the values the node held.
+//
+// So the rule is now: the live region is MUTATED ONCE, and the value it takes
+// is already in the active locale. Build the content in a detached element —
+// invisible to the locale observer and to assistive technology, so nothing
+// there is announced — run localizeTree, the product own translator, over it
+// there, and move the finished nodes in with a single replaceChildren.
+//
+// Translating in the holder rather than re-deriving the string is deliberate:
+// the same text nodes are MOVED into the live region, carrying the `textSources`
+// entries renderLocaleText recorded for them. That is what keeps the English
+// source alive, so a later locale switch re-translates the ordinary way instead
+// of freezing the region in whichever language it was born in. Driven zh -> en
+// -> zh; the full English sentence returns.
+function liveFragment(fill){
+  const holder=document.createElement('div');
+  fill(holder);
+  if(typeof localizeTree==='function')localizeTree(holder);
+  return holder;}
+function liveText(node,value){
+  if(!node)return;
+  const holder=liveFragment(h=>{h.textContent=String(value==null?'':value);});
+  node.replaceChildren(...holder.childNodes);}
+function liveHTML(node,markup){
+  if(!node)return;
+  const holder=liveFragment(h=>{h.innerHTML=String(markup==null?'':markup);});
+  node.replaceChildren(...holder.childNodes);}
+// R2, and this is the SECOND cause of the silent-reply finding the auditor
+// raised. The first was a lossy identity key; fixing it was not enough, and
+// the browser drive is what showed that.
+//
+// Re-announcing the same sentence is suppressed outright: a correct rule
+// about a STATE. `Round 2 of 3 started` restated is not news. But it is the
+// wrong rule for an EVENT: `CrossAudit replied in Alpha analysis.` a second
+// time means a SECOND reply, and that is exactly the news. Applied to an event,
+// a state rule silences every arrival after the first — not only the ones whose
+// keys collided, which is why the key fix alone left the region unmutated.
+//
+// So the caller says which it is. Default stays `state`, because the progress
+// and panel announcements of slices 3-6 are states and must keep the
+// suppression that stops a 2-second render loop becoming speech.
+//
+// Repeating an identical sentence has to be a REAL change to the region or a
+// screen reader that compares content has nothing to notice, so an event clears
+// first. An empty live region is not announced, and the empty string has no
+// language, so this cannot reintroduce the wrong-locale value the other half of
+// this rule exists to prevent. What a specific assistive technology vocalises is
+// beyond what has been driven here; the DOM contract, one mutation per real
+// arrival carrying the arrival sentence in the language being read, is what is
+// established.
+function announce(sentence,kind){
+  const text=String(sentence==null?'':sentence).trim();
+  if(!text)return false;
+  const event=kind==='event';
+  if(!event&&text===announcedText)return false;
+  announcedText=text;
+  if(announceTimer)clearTimeout(announceTimer);
+  announceTimer=setTimeout(()=>{announceTimer=null;
+    // Through the same helper as every other live region, so the rule has one
+    // implementation and cannot hold true here while drifting elsewhere.
+    const node=document.getElementById('announcer');
+    if(event)liveText(node,'');
+    liveText(node,text);},120);
+  return true;}
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const at = t => t ? new Date(t*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
@@ -4484,11 +4640,32 @@ function openResolution(value,action='',sha=''){
   resolutionChoice(action||'reopen');
   document.getElementById('resolution-error').className='wizard-error';
   resolutionModal.classList.add('on');document.body.classList.add('deciding');
+  // Being told a modal opened and not being told what it is about are the same
+  // failure, so the flag and the title are announced as ONE sentence — the same
+  // words that name the dialog, so what is heard and what is read agree.
+  setDecidingInert(true);
+  // Deferred one tick on purpose. The flag and the title were just written and
+  // the locale observer translates them on the next microtask, so announcing
+  // synchronously speaks the English source to a Chinese reader while the
+  // name of the dialog — built from the same nodes — is already translated.
+  setTimeout(()=>announce(decisionSentence()),0);
   if(lastState)renderDecisionBanner(lastState);
   setTimeout(()=>{const target=action?document.getElementById('resolution-reason')
     :resolutionForm.querySelector('input[name="resolution-choice"]');if(target)target.focus();},0);
 }
+function decisionSentence(){
+  const flag=String((document.getElementById('resolution-flag')||{}).textContent||'').trim();
+  const title=String((document.getElementById('resolution-title')||{}).textContent||'').trim();
+  return flag&&title?flag+' \u2014 '+title:(title||flag);}
+// The rest of the console is not merely covered while a decision is open, it is
+// removed from the accessibility tree and from the tab order. aria-modal alone
+// tells a screen reader the boundary exists; inert is what makes it true.
+function setDecidingInert(on){
+  const shell=document.querySelector('.app');
+  if(!shell)return;
+  if(on)shell.setAttribute('inert','');else shell.removeAttribute('inert');}
 function closeResolution(){resolutionModal.classList.remove('on');document.body.classList.remove('deciding');
+  setDecidingInert(false);
   resolutionForm.reset();activeResolution=null;resolutionChoice('');
   if(lastState)renderDecisionBanner(lastState);}
 resolutionForm.querySelectorAll('input[name="resolution-choice"]').forEach(input=>input.onchange=()=>resolutionChoice(input.value));
@@ -5484,6 +5661,14 @@ function turn(m,d){
       + '<div class="turn-meta"><span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b><span class="status ' + esc(m.verdict) + '">'
       + esc(m.verdict) + '</span><span class="turn-time">' + at(m.t) + '</span></div>'
       + (fs || '<div class="turn-body">'+(m.verdict==='PASS'?'No findings. The audited increment passed.':'No structured findings were recorded.')+'</div>')
+      // F1. What is shown above is the AUDITED report, read from the commit the
+      // receipt cites. When the copy on disk says something else the person is
+      // told, rather than silently corrected: they may have edited it for a
+      // good reason, and the one thing worth handing them is the command that
+      // settles it. Deliberately OUTSIDE the findings list — inside it, this
+      // would read as something the auditor observed, which is the exact
+      // confusion this whole fix exists to end.
+      + (m.report_note ? '<p class="report-provenance">'+esc(m.report_note)+'</p>' : '')
       + '</div></article>';
   }
   if(m.kind === 'context_condensed'){
@@ -5527,9 +5712,9 @@ function optimisticTurn(text, queued){
     + '<div class="turn-meta"><b>You</b><span class="turn-time">'
     + (currentLocale==='zh'?'刚刚':'now') + '</span></div>'
     + '<div class="turn-body">' + esc(text) + '</div></div></article>'
-    + '<article class="turn" aria-live="polite"><div class="turn-main">'
+    + '<article class="turn"><div class="turn-main">'
     + '<div class="turn-meta"><span class="role-mark generator" aria-hidden="true">G</span>'
-    + '<b>Generator</b></div><div class="turn-body"><span class="thinking-dots" role="status" aria-label="'
+    + '<b>Generator</b></div><div class="turn-body"><span class="thinking-dots" aria-label="'
     + (currentLocale==='zh'?'处理中':'Working') + '"><i></i><i></i><i></i></span></div></div></article>';
 }
 function modelTag(value){const raw=String(value||'');if(!raw)return '';
@@ -5592,7 +5777,22 @@ function reviewCard(d){
   const cycle=cycles[cycles.length-1];
   const status=String(cycle.status||'').toLowerCase();
   if(!['passed','consumed','blocked','escalated'].includes(status))return '';
-  const p=chatProgress(d);if(p&&!p.finished)return '';
+  // R3. This card was suppressed for the whole duration of ANY run. The
+  // suppression predates F1 and F7 — the run card takes the stage — but F1
+  // attaches the report provenance to this card, so that line vanished
+  // exactly while the surface is busiest. A person watching a live draft over a
+  // completed cycle is precisely the person who needs to know what was reviewed
+  // and against what. The F1 property held except while streaming, which is
+  // except when it matters most.
+  //
+  // NARROWED, not removed. A run that is continuing THIS cycle is producing a
+  // verdict that supersedes the one on this card, and showing the old outcome
+  // while it is being replaced would be a false statement about what is
+  // current. A run on anything else is different work: this card stays a true
+  // statement about a settled cycle, it carries that cycle id in its Record,
+  // and the run card directly above it says what is live.
+  const p=chatProgress(d);
+  if(p&&!p.finished&&String(p.continuation_cycle||'')===String(cycle.id||''))return '';
   const reports=d.auditor_stream.filter(m=>m.kind==='auditor'&&(m.chat_id||'history')===activeChatId);
   const related=reports.filter(m=>m.sha&&cycle.sha&&(String(cycle.sha).startsWith(String(m.sha))||String(m.sha).startsWith(String(cycle.sha))));
   const rows=(related.length?related:reports.slice(-Number(cycle.round||1))).slice(-8);
@@ -5627,6 +5827,13 @@ function reviewCard(d){
     +'<div role="list" aria-labelledby="review-checks-title-'+esc(cycle.id)+'">'+renderCheckRows(checks)+'</div>'
     +'<div class="review-rounds">'+esc(d.rules)+(d.rules===1?' rule':' rules')+'</div></div>'
     +(findingRows?'<div class="review-section"><div class="review-section-title">Findings</div>'+findingRows+'</div>':'')
+    // F1. The review card is the surface a person actually reads for the audit
+    // result, so the provenance of the bytes above belongs here and not only in
+    // the Audits view. One line per distinct note, because several rounds of one
+    // cycle share the same edited file and repeating it would read as several
+    // problems.
+    +([...new Set(rows.map(m=>m.report_note).filter(Boolean))]
+        .map(note=>'<p class="report-provenance">'+esc(note)+'</p>').join(''))
     +'<div class="review-section"><div class="review-section-title">Record</div><div class="review-record">'
     +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
     +'<div class="review-record-row"><span>Cycle</span><code>'+esc(cycle.id)+'</code></div>'
@@ -5778,7 +5985,9 @@ function allMessages(d){
     return ['passed','consumed'].includes(auditStatus(d,m.sha));
   });
   const seen = new Set();
-  return rows.filter(m => {const key = [m.kind,m.t,m.utterance||m.summary||m.verdict||m.response||''].join('|');
+  // Same function the announcer keys on, so "two messages" means the same thing
+  // to the renderer and to the thing that speaks about them.
+  return rows.filter(m => {const key = turnKey(m);
     if(seen.has(key)) return false;seen.add(key);return true;}).sort((a,b) => a.t-b.t);
 }
 // §41.9 admission explanation — a transient, client-side card that answers:
@@ -6054,6 +6263,91 @@ function toolsView(d){
     +'<section class="compute-section"><div class="compute-section-head"><b>Skills</b><span>'+skills.length+' committed</span></div>'
     +(skills.length?'<table class="dt"><thead><tr><th>Skill</th><th>Applies to</th></tr></thead><tbody>'+skillRows+'</tbody></table>':'<div class="compute-empty">No project Skills yet.</div>')+'</section></div>';
 }
+// SPEC-9 §4. #conversation is replaced wholesale on every render, so it can
+// never carry a live region — that would re-announce the whole transcript every
+// two seconds. The DELTA is announced instead, and only that something arrived:
+// reading a generated answer aloud through a live region is hostile, because a
+// person cannot pause it, skim it or re-read it. They are told it is there; they
+// read it themselves.
+let announcedTurns=null;let announcedTurnChat=null;
+// SPEC-20 §6, taken up rather than deferred. The design engineer recorded the
+// live-region gap and fenced it as out of scope: it is older and wider than the
+// turn-folding slice, and it is a property of the SHARED context_condensed
+// renderer. That is exactly why it is fixed here — one renderer, so one fix
+// covers turn folding AND the file-outlining notice that predates every merge
+// in this cycle. Fixing it per mechanism would have been the wrong shape.
+//
+// The law the security auditor stated, one layer deeper: containers present,
+// contents absent. This case had no container at all: the notice was visible
+// page text and nothing announced it, so a screen-reader user was told nothing
+// about any reduction.
+//
+// The sentence announced is the one the wire already localised, NOT the English
+// source. The rule this renderer states is to localise from the wire fields the
+// event carries and never re-translate prose; the combined "<sentence>: <detail>"
+// string has no dictionary entry by design, so handing the English to
+// localizeTree would speak English to a Chinese reader — the locale-timing
+// defect arriving through the other door.
+//
+// EVENT, not state: two reductions of the same kind are two occurrences, and
+// the second is news. Baselined in silence on first render, or opening a thread
+// would announce every condensation it ever had.
+let announcedCondensations=null;let announcedCondenseChat=null;
+function announceCondensation(d){
+  const chat=activeChatId||'';
+  const rows=(d.generator_stream||[]).filter(m=>m.kind==='context_condensed'
+    &&(m.chat_id||'history')===chat);
+  const ids=new Set(rows.map(m=>String(m.event_id||m.t||'')));
+  if(announcedCondenseChat!==chat||announcedCondensations===null){
+    announcedCondenseChat=chat;announcedCondensations=ids;return false;}
+  const fresh=rows.filter(m=>!announcedCondensations.has(String(m.event_id||m.t||'')));
+  announcedCondensations=ids;
+  if(!fresh.length)return false;
+  const last=fresh[fresh.length-1];
+  return announce(localeText(last.summary_i18n,last.summary),'event');}
+// R2 S1. This key was kind + second + the first 40 characters of the content,
+// and the auditor collided it: two DIFFERENT replies in the same second whose
+// first 40 characters agree rendered as two articles and produced ONE
+// announcement. A sighted person saw both; a screen-reader user lost one
+// entirely. A lossy prefix is not an identity.
+//
+// The fix is not a longer prefix — that is the same defect at a bigger number.
+// `allMessages` already establishes what "a distinct message" means, because it
+// drops duplicates on kind + second + the WHOLE content; anything it returns is
+// therefore distinct under that triple. So the announcer uses that same key, and
+// the two functions cannot disagree about identity — which is the shape of
+// almost every defect found on this codebase this week: canonical at the
+// producer, lossy at the consumer.
+function turnKey(m){
+  return [m.kind,m.t,String(m.utterance||m.summary||m.verdict||m.response||'')].join('|');}
+// R2 S2. The content limit was right and is unchanged — the reply body never
+// enters this sentence, and the auditor confirmed nothing leaks. But a status
+// heard while focus is elsewhere has to say WHICH thread moved, and with Alpha
+// and Beta both present this said only "CrossAudit replied." Naming the thread
+// is a different axis from the content limit, not a relaxation of it.
+//
+// The name is `titleOf(d)` — the exact string the visible <h1 id="thread-title">
+// shows — so the announcement and the heading cannot drift apart. Untitled
+// threads fall back to the bare sentence rather than announcing "New chat",
+// which names nothing.
+function threadArrivalSentence(d){
+  const title=d?String(titleOf(d)||'').trim():'';
+  return (!title||title==='New chat'||title==='New task')
+    ?'CrossAudit replied.'
+    :'CrossAudit replied in '+title+'.';}
+function announceThread(messages,d){
+  const chat=activeChatId||'';
+  const keys=new Set(messages.map(turnKey));
+  // A transcript that already existed is not news. The first render of a thread,
+  // and every switch between threads, takes the baseline in silence — otherwise
+  // opening an old conversation would announce all of it.
+  if(announcedTurnChat!==chat||announcedTurns===null){
+    announcedTurnChat=chat;announcedTurns=keys;return false;}
+  const fresh=messages.filter(m=>m.kind!=='you'&&!announcedTurns.has(turnKey(m)));
+  announcedTurns=keys;
+  // Their own words are not read back to them.
+  if(!fresh.length)return false;
+  return announce(threadArrivalSentence(d),'event');}
 function renderConversation(d){
   const thread = document.getElementById('thread');
   const previousTop = thread.scrollTop;
@@ -6063,6 +6357,8 @@ function renderConversation(d){
   if(newTaskMode) html = welcome();
   else{
     const messages = allMessages(d);
+    announceThread(messages,d);
+    announceCondensation(d);
     const p = chatProgress(d);
     const live = p && !p.finished ? runCard(d) : '';
     const approval = approvalCard(d);
@@ -6082,7 +6378,7 @@ function renderConversation(d){
     // One protagonist per screen: the welcome empty state renders only when
     // the timeline holds nothing at all, and the delivery band only when no
     // review card already states the outcome of the same cycle.
-    const body = messages.map(m=>turn(m,d)).join('') + optimistic + live + approval + review
+    const body = messages.map(m=>turn(m,d)).join('') + optimistic + liveDraftTurn(d) + live + approval + review
       + admissionCard() + (review ? '' : deliveryStatus(d));
     html = body || welcome();
   }
@@ -6227,6 +6523,20 @@ function renderCheckRows(rows){
       +'" aria-label="'+esc(row.name+': '+ui.word)+'">'
       +'<span class="check-glyph" aria-hidden="true">'+ui.glyph+'</span>'
       +'<span class="check-name">'+esc(row.name)+'</span></div>';}).join('');}
+// Which decisions this client has already spoken about. Announcing on the
+// COUNT would re-announce whenever one was resolved and another arrived in the
+// same snapshot; announcing on identity does not.
+let announcedEscalations=new Set();
+function announceEscalations(rows){
+  const ids=(rows||[]).map(row=>String(row.cycle_id||''));
+  const fresh=ids.filter(id=>id&&!announcedEscalations.has(id));
+  announcedEscalations=new Set(ids);
+  if(!fresh.length)return;
+  // An arrival, not a state: two separate escalations produce the same sentence
+  // and the second one is still news.
+  announce(fresh.length===1
+    ?'A task is waiting for your decision.'
+    :fresh.length+' tasks are waiting for your decision.','event');}
 function renderInspector(d){
   document.getElementById('runtime-generator').textContent = d.generator;
   document.getElementById('runtime-auditor').textContent = d.auditor;
@@ -6250,6 +6560,7 @@ function renderInspector(d){
     + '<div class="mini-value">' + esc(m.value ?? '-') + '</div><div class="mini-label">'
     + esc(m.label) + '</div></div>').join('');
   const escalations=currentEscalations(d);
+  announceEscalations(escalations);
   document.getElementById('escalations').innerHTML = escalations.length ? escalations.map(e =>
     '<div class="escalation"><b>' +(e.limit_reached?'Automatic limit reached · ':'')+esc(e.round)+' / '+esc(e.max_rounds)+' rounds</b><p>'
     + esc(e.why) + '</p><small>'+(e.issues||[]).length+' remaining issue'+((e.issues||[]).length===1?'':'s')+'</small>'
@@ -6334,10 +6645,78 @@ function connected(on,why){
 let poller=null;
 function startPolling(why){connected(false,why);if(poller)return;poller=setInterval(async()=>{
   try{render(await api('/api/state'));connected(true,'polling');}catch(e){connected(false,'offline');}},2000);}
+// F7. The transport was correct and nothing consumed it: production-shaped
+// `generation_chunk` frames reached the browser as NAMED SSE events and the page
+// registered no named listener. Thirty focused streaming tests passed because
+// they stop at the transport, so the merge could claim a visible live draft
+// while a person watching the console saw nothing arrive early.
+//
+// This is the page side of the contract held in the server module
+// docstring for `_generation_sse_frame` (D4), implemented not re-derived:
+// key by (run_id, stream.id); accept only seq == expected; on ANY gap discard
+// the WHOLE accumulated draft and never concatenate across it; done/aborted
+// discards; done/complete stays visibly provisional until the ordinary state
+// leaves GENERATING, which supersedes it with the committed turn.
+//
+// Discarding on a gap rather than showing what arrived is the fail-closed
+// choice and the only honest one: a draft with a hole in it is not what the
+// generator wrote, and presenting it would be a smaller version of the defect
+// F1 closes — text on screen that nothing stands behind.
+let liveDraft=null;
+function draftChunk(row){
+  const stream=row&&row.stream;
+  if(!stream||typeof stream!=='object')return;
+  const run=String(row.run_id||''),id=String(stream.id||'');
+  const seq=Number(stream.seq),done=stream.done===true;
+  if(!run||!id||!Number.isInteger(seq)||seq<0)return;
+  const same=liveDraft&&liveDraft.run===run&&liveDraft.id===id;
+  if(!same){
+    // A new stream may only begin at 0. Anything else means we joined midway —
+    // a reconnect, a dropped frame — and there is no complete draft to show.
+    if(seq!==0){liveDraft={run:run,id:id,seq:seq,text:'',done:true,broken:true};return;}
+    liveDraft={run:run,id:id,seq:-1,text:'',done:false,broken:false};
+  }
+  if(liveDraft.broken)return;
+  if(seq!==liveDraft.seq+1){liveDraft.text='';liveDraft.broken=true;liveDraft.done=true;
+    if(lastState)render(lastState);return;}
+  liveDraft.seq=seq;
+  if(!done)liveDraft.text+=String(row.text||'');
+  else{
+    liveDraft.done=true;
+    // Aborted means the completion did not finish. There is no draft.
+    if(stream.outcome!=='complete'){liveDraft.text='';liveDraft.broken=true;}
+  }
+  if(lastState)render(lastState);}
+// Shown only while the run it belongs to is still generating. Superseding is
+// therefore driven by the ordinary state — a failure, a cancellation, an
+// interruption or the move to AUDITING all end it — and never by a page-side
+// timer, which would be the page guessing about a run it cannot see.
+function liveDraftFor(d){
+  if(!liveDraft||liveDraft.broken||!liveDraft.text)return null;
+  const p=chatProgress(d);
+  if(!p||p.finished||String(p.run_id||'')!==liveDraft.run)return null;
+  if(String(p.state||'').toUpperCase()!=='GENERATING')return null;
+  return liveDraft;}
+function liveDraftTurn(d){
+  const draft=liveDraftFor(d);
+  if(!draft)return '';
+  // Deliberately none of: a file card, a download, a delivery band, a PASS mark
+  // or any audit styling. This is unaudited text and it may not borrow the
+  // furniture of text that has been through the auditor.
+  return '<article class="turn draft"><div class="turn-main">'
+    +'<div class="turn-meta"><span class="role-mark" aria-hidden="true">G</span>'
+    +'<b class="draft-label">Generator live draft · not yet audited</b>'
+    +'<span class="spacer"></span><span class="turn-time">'
+    +(currentLocale==='zh'?'刚刚':'now')+'</span></div>'
+    +'<div class="turn-body draft-body">'+esc(draft.text)+'</div></div></article>';}
 function startStream(){let source;try{source=new EventSource('/api/stream?t='+encodeURIComponent(T));}
   catch(e){startPolling('polling');return;}source.onopen=()=>{connected(true,'live');
   if(poller){clearInterval(poller);poller=null;}};source.onmessage=ev=>{try{render(JSON.parse(ev.data));
-  connected(true,'live');}catch(e){}};source.onerror=()=>startPolling('reconnecting');}
+  connected(true,'live');}catch(e){}};
+  // The named listener this whole finding is about. `onmessage` never sees it:
+  // a frame with an `event:` line is dispatched by name and by name only.
+  source.addEventListener('generation_chunk',ev=>{try{draftChunk(JSON.parse(ev.data));}catch(e){}});
+  source.onerror=()=>startPolling('reconnecting');}
 
 const form=document.getElementById('f');const say=document.getElementById('say');
 const send=document.getElementById('send');const stopRun=document.getElementById('stop-run');
@@ -7252,7 +7631,7 @@ function setFirstRunStep(step,focus=true){firstRunStep=Math.max(1,Math.min(4,Num
     if(n===firstRunStep)item.setAttribute('aria-current','step');else item.removeAttribute('aria-current');});
   document.getElementById('fr-footbar').hidden=firstRunStep<2;
   document.querySelector('#fr-continue .fr-continue-label').textContent=firstRunStep===4?'Start using CrossAudit':'Continue';
-  document.getElementById('fr-continue').disabled=false;
+  frSetContinue(true);
   document.getElementById('fr-hint').textContent=FR_HINTS[firstRunStep]||FR_HINTS[2];
   if(firstRunStep===2)startFirstRunReadiness();
   else if(firstRunStep===3)renderFirstRunProviders();
@@ -7278,26 +7657,68 @@ function frProvVendors(){
     const rank=v=>v==='openai'?0:(providers[v]||{}).configured?1:2;
     return rank(a)-rank(b)||String((providers[a]||{}).label||a).localeCompare(String((providers[b]||{}).label||b));});
 }
+// SPEC-13 §3.1. Every per-provider control is named after its provider.
+//
+// Observed in the frozen bundle: eleven key fields with NO accessible name at
+// all, distinguished only by a `data-fr-*` attribute, and a placeholder — which
+// is not a name: it is not reliably announced as one and it disappears on the
+// first keystroke. Tabbing the stage produced "Validate. Validate. Validate."
+// eleven times.
+//
+// The buttons take `aria-label`, because no single visible node carries the
+// whole name. The INPUT does not: it points at the visible provider name plus a
+// hidden "API key", so the accessible name is built from the same node the eye
+// reads and there is no translatable duplicate to drift. In zh that yields
+// "OpenAI API 密钥" without a composed string at all — the provider name is not
+// translated, and "API key" is one ordinary dictionary entry.
+//
+// Beyond the three controls SPEC-13 §3.1 tabulates, Reveal, Replace and Remove
+// carry the identical defect — Reveal shipped ONE shared aria-label on all
+// eleven rows. G2 is arithmetic (distinct names must equal control count), so
+// it forces them in whether or not the table lists them. Naming three and
+// leaving three would fail the guard the spec itself wrote, which is it working.
+const FR_KEY_ACTIONS={paste:'Paste',clear:'Clear',validate:'Validate',
+                      reveal:'Reveal',replace:'Replace',remove:'Remove'};
+function frKeyLabel(action,label){
+  return FR_KEY_ACTIONS[action]+' '+label+' API key';}
 function frProvRow(vendor,p){
   const label=p.label||vendor;const mark=esc(String(label).slice(0,1).toUpperCase());
-  const links=(p.console_url?'<a class="fr-learn" href="'+esc(p.console_url)+'" target="_blank" rel="noopener">Get key ↗</a> ':'')
-    +(p.docs_url?'<a class="fr-learn" href="'+esc(p.docs_url)+'" target="_blank" rel="noopener">API docs ↗</a>':'');
+  const nameId='fr-name-'+esc(vendor);
+  const aria=action=>' aria-label="'+esc(frKeyLabel(action,label))+'"';
+  // The two per-row links were the same defect as the buttons and are NOT in
+  // SPEC-13 §3.1: ten rows shipped ten identical "Get key ↗" and ten identical
+  // "API docs ↗". G2 is arithmetic — distinct names must equal the control
+  // count — so the spec caught them through its own guard rather than through
+  // its table, which is the guard being better than the list.
+  // The visible text is unchanged and is CONTAINED in the accessible name
+  // (WCAG 2.5.3): a speech-input user still says "Get key".
+  const links=(p.console_url?'<a class="fr-learn" href="'+esc(p.console_url)+'" target="_blank" rel="noopener"'
+      +' aria-label="'+esc('Get key — '+label)+'">Get key ↗</a> ':'')
+    +(p.docs_url?'<a class="fr-learn" href="'+esc(p.docs_url)+'" target="_blank" rel="noopener"'
+      +' aria-label="'+esc('API docs — '+label)+'">API docs ↗</a>':'');
   const configured='<div class="fr-configured" data-fr-configured hidden><span class="fr-mask" aria-hidden="true">•••• •••• ••••</span>'
     +'<span>Stored in your macOS Keychain.</span>'
-    +'<button type="button" class="fr-tool" data-fr-replace="'+esc(vendor)+'">Replace</button>'
-    +'<button type="button" class="fr-tool" data-fr-remove="'+esc(vendor)+'">Remove</button></div>';
+    +'<button type="button" class="fr-tool" data-fr-replace="'+esc(vendor)+'"'+aria('replace')+'>Replace</button>'
+    +'<button type="button" class="fr-tool" data-fr-remove="'+esc(vendor)+'"'+aria('remove')+'>Remove</button></div>';
   const field='<div class="fr-keyfield">'
-    +'<input class="fr-key" type="password" id="fr-key-'+esc(vendor)+'" data-fr-key="'+esc(vendor)+'" autocomplete="new-password" placeholder="Paste your API key">'
-    +'<button type="button" class="fr-tool" data-fr-paste="'+esc(vendor)+'">Paste</button>'
-    +'<button type="button" class="fr-tool" data-fr-reveal="'+esc(vendor)+'" aria-pressed="false" aria-label="Reveal the key you just typed">'
+    +'<span class="sr-only" id="fr-apikey-'+esc(vendor)+'">API key</span>'
+    +'<input class="fr-key" type="password" id="fr-key-'+esc(vendor)+'" data-fr-key="'+esc(vendor)+'"'
+    +' aria-labelledby="'+nameId+' fr-apikey-'+esc(vendor)+'"'
+    +' autocomplete="new-password" placeholder="Paste your API key">'
+    +'<button type="button" class="fr-tool" data-fr-paste="'+esc(vendor)+'"'+aria('paste')+'>Paste</button>'
+    +'<button type="button" class="fr-tool" data-fr-reveal="'+esc(vendor)+'" aria-pressed="false"'+aria('reveal')+'>'
     +'<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1.5 10S4.5 4 10 4s8.5 6 8.5 6-3 6-8.5 6-8.5-6-8.5-6Z"/><circle cx="10" cy="10" r="2.3"/></svg></button>'
-    +'<button type="button" class="fr-tool" data-fr-clear="'+esc(vendor)+'">Clear</button>'
-    +'<button type="button" class="fr-tool fr-tool-cta" data-fr-validate="'+esc(vendor)+'">Validate</button></div>';
+    +'<button type="button" class="fr-tool" data-fr-clear="'+esc(vendor)+'"'+aria('clear')+'>Clear</button>'
+    +'<button type="button" class="fr-tool fr-tool-cta" data-fr-validate="'+esc(vendor)+'"'+aria('validate')+'>Validate</button></div>';
   const chatgpt=vendor==='openai'
     ?'<div class="fr-divider">or</div><button type="button" class="fr-chatgpt" id="fr-chatgpt"><svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M10 3.5v13M3.5 10h13"/></svg> Sign in with ChatGPT (official)</button>':'';
   const honesty=(p.subscription&&p.subscription.detail)?'<p class="fr-honesty">'+esc(p.subscription.detail)+'</p>':'';
-  return '<div class="fr-prov" data-fr-prov="'+esc(vendor)+'"><div class="fr-prov-id"><span class="fr-prov-mark" aria-hidden="true">'+mark+'</span>'
-    +'<div><div class="fr-prov-name">'+esc(label)+'</div><div class="fr-prov-sub">'+esc(vendor)+'</div></div>'
+  // §3.2. The provider is announced once on entering the row. Per-control names
+  // stay regardless: group context is a convenience of good screen readers, not
+  // something a spec may lean on.
+  return '<div class="fr-prov" role="group" aria-labelledby="'+nameId+'" data-fr-prov="'+esc(vendor)+'">'
+    +'<div class="fr-prov-id"><span class="fr-prov-mark" aria-hidden="true">'+mark+'</span>'
+    +'<div><div class="fr-prov-name" id="'+nameId+'">'+esc(label)+'</div><div class="fr-prov-sub">'+esc(vendor)+'</div></div>'
     +'<span class="fr-stat fr-s-pending" data-fr-stat>Checking…</span></div>'
     +'<div class="fr-prov-body"><span class="fr-prov-label"><span>New API key</span> · '+links+'</span>'
     +configured+field+chatgpt+honesty
@@ -7331,6 +7752,7 @@ function updateFirstRunProviderStates(){
     const note=row.querySelector('[data-fr-configured]');if(note)note.hidden=!configured;
     const input=row.querySelector('[data-fr-key]');
     if(input)input.placeholder=configured?'Paste a new key to replace the saved one':'Paste your API key';
+    frAnnounceValidation(vendor,p.label||vendor,v&&v.state?String(v.state):'');
     const msg=row.querySelector('[data-fr-msg]');
     if(msg){
       if(v&&v.state==='ready'){msg.className='fr-keymsg ok';msg.textContent='Connection verified.';}
@@ -7341,6 +7763,33 @@ function updateFirstRunProviderStates(){
     }
   });
 }
+// SPEC-13 §3.4. Seven per-row states change with no page load, on nodes with no
+// role and no aria-live, so a screen-reader user pressed Validate and received
+// NOTHING — including in the three states where something went wrong and the
+// message is the only guidance.
+//
+// Routed through the shared announcer from slice 0 rather than giving eleven rows
+// their own live regions, which is what the spec prefers and what stops the
+// stage having eleven things that can speak.
+//
+// Announced as an EVENT, not a state: two providers can fail the same way, and
+// re-validating the same key is a second answer to a second question. That
+// distinction is the R2 finding from SPEC-9 slice 2, and it applies here for the
+// same reason.
+//
+// Once per OUTCOME. `updateFirstRunProviderStates` runs on every render, so the
+// transition is what is announced, not the value — otherwise a re-render speaks.
+let frAnnouncedValidation={};
+const FR_OUTCOME_SENTENCE={
+  ready:label=>label+' key verified.',
+  invalid:label=>label+' key rejected. Check it and try again.',
+  no_access:label=>label+' key works, but no models are available to it.',
+  unreachable:label=>'Could not reach '+label+'. Check your connection and try again.'};
+function frAnnounceValidation(vendor,label,state){
+  if(frAnnouncedValidation[vendor]===state)return false;
+  frAnnouncedValidation[vendor]=state;
+  const sentence=FR_OUTCOME_SENTENCE[state];
+  return sentence?announce(sentence(label),'event'):false;}
 function frShowKeyMsg(vendor,text,cls){const el=document.querySelector('#fr-provs [data-fr-msg]');
   const row=document.querySelector('#fr-provs [data-fr-prov="'+vendor+'"]');const m=row?row.querySelector('[data-fr-msg]'):el;
   if(!m)return;m.className='fr-keymsg'+(cls?' '+cls:'');m.textContent=text||'';}
@@ -7348,6 +7797,13 @@ async function frValidate(vendor){
   const input=document.getElementById('fr-key-'+vendor);const typed=input?input.value.trim():'';
   const btn=document.querySelector('#fr-provs [data-fr-validate="'+vendor+'"]');const original=btn?btn.textContent:'';
   if(btn){btn.disabled=true;btn.textContent='Checking…';}    // §26 loading state
+  // The check itself is announced, because pressing Validate and hearing nothing
+  // is indistinguishable from pressing a button that does not work. Cleared so
+  // the OUTCOME that follows is a transition and speaks.
+  {const providers=(settingsState&&settingsState.providers)||{};
+   const label=(providers[vendor]&&providers[vendor].label)||vendor;
+   frAnnouncedValidation[vendor]='checking';
+   announce('Checking '+label+' key…','event');}
   try{
     if(typed){await api('/api/settings',{[vendor+'_key']:typed});if(input){input.value='';input.type='password';}}
     frValidation[vendor]=await api('/api/providers/validate',{vendor});
@@ -7424,6 +7880,28 @@ function frRenderRoleCard(role,sel){
   else if(p.configured)chips.push('<span class="fr-chip fr-chip-auth">'+check+' <span>Keychain key</span></span>');
   document.getElementById('fr-'+role+'-chips').innerHTML=chips.join('');
 }
+// SPEC-13 §3.3. `disabled` removes the control from the tab order, so the
+// on-screen reason — "Connect at least two different providers…" — is
+// unreachable WITH it. The person meets a stage they cannot complete and nothing
+// tells them why. This is the reason-attached pattern rather than convention for
+// its own sake: an explanation that can only be reached by reaching the thing it
+// explains is not an explanation.
+//
+// So the button stays focusable and in the tab order, says it is unavailable,
+// points at the reason, and the handler declines the action. One mechanism for
+// every blocked case, including the transient in-flight one, because two would
+// drift — and the in-flight case gets its own reason rather than an unexplained
+// refusal.
+function frSetContinue(enabled,reasonId){
+  const cont=document.getElementById('fr-continue');if(!cont)return;
+  cont.disabled=false;
+  if(enabled){cont.removeAttribute('aria-disabled');cont.removeAttribute('aria-describedby');}
+  else{cont.setAttribute('aria-disabled','true');
+    if(reasonId)cont.setAttribute('aria-describedby',reasonId);
+    else cont.removeAttribute('aria-describedby');}}
+function frContinueBlocked(){
+  const cont=document.getElementById('fr-continue');
+  return !!cont&&cont.getAttribute('aria-disabled')==='true';}
 function frUpdateIndependence(){
   const banner=document.getElementById('fr-independent');const msg=document.getElementById('fr-role-msg');
   const cont=document.getElementById('fr-continue');if(!frRoles){banner.hidden=true;return;}
@@ -7431,11 +7909,11 @@ function frUpdateIndependence(){
   const _g=banner.querySelector('svg path');if(_g)_g.setAttribute('d',same?'M6 6 14 14M14 6 6 14':'M4 10.5 8.2 14.5 16 6');
   if(same){banner.classList.add('bad');
     document.getElementById('fr-independent-text').textContent='Same provider — independent review is not possible.';
-    msg.className='fr-role-msg';msg.textContent='Generator and auditor must run on different providers. Independent review is the core of the protocol and cannot be turned off.';
-    if(cont)cont.disabled=true;
+    msg.className='fr-role-msg';liveText(msg,'Generator and auditor must run on different providers. Independent review is the core of the protocol and cannot be turned off.');
+    frSetContinue(false,'fr-role-msg');
   }else{banner.classList.remove('bad');
     document.getElementById('fr-independent-text').textContent='Independent — your auditor runs on a different provider than your generator.';
-    msg.className='fr-role-msg';msg.textContent='';if(cont)cont.disabled=false;}
+    msg.className='fr-role-msg';liveText(msg,'');frSetContinue(true);}
 }
 function renderFirstRunRoles(){
   if(firstRunStep!==4)return;
@@ -7446,8 +7924,8 @@ function renderFirstRunRoles(){
   if(!frRoles||!configured.includes(frRoles.gen.vendor)||!configured.includes(frRoles.aud.vendor)
      ||frRoles.gen.vendor===frRoles.aud.vendor){frRoles=frRecommendRoles();}
   if(!frRoles){pair.hidden=true;banner.hidden=true;
-    msg.className='fr-role-msg';msg.textContent='Connect at least two different providers on the previous step to form an independent Generator / Auditor pair.';
-    if(cont)cont.disabled=true;return;}
+    msg.className='fr-role-msg';liveText(msg,'Connect at least two different providers on the previous step to form an independent Generator / Auditor pair.');
+    frSetContinue(false,'fr-role-msg');return;}
   pair.hidden=false;
   const label=v=>(cat[v]&&cat[v].label)||(providers[v]&&providers[v].label)||v;
   const modelOpts=v=>((cat[v]&&cat[v].models)||[]).map(m=>({value:m.id,label:m.id}));
@@ -7479,7 +7957,9 @@ async function frFinishOnboarding(){
   const cont=document.getElementById('fr-continue');const msg=document.getElementById('fr-role-msg');
   if(!frRoles){await frEnterHub('complete');return;}
   if(frRoles.gen.vendor===frRoles.aud.vendor){frUpdateIndependence();return;} // hard refusal
-  cont.disabled=true;
+  // In flight. Same mechanism, and it states its reason rather than going quiet.
+  msg.className='fr-role-msg';liveText(msg,'Saving your provider setup…');
+  frSetContinue(false,'fr-role-msg');
   // Persist the chosen models onto the current project via the real runtime path
   // (projects.update_runtime → atomic crossaudit.yml rewrite; the server refuses
   // the write while a loop runs, TRACKER.running). update_runtime rewrites the
@@ -7494,7 +7974,7 @@ async function frFinishOnboarding(){
                               auditor_model:keep('auditor',frRoles.aud)});
     await frEnterHub('complete');
   }catch(e){
-    if(e&&e.issue==='runtime_busy'){cont.disabled=false;msg.className='fr-role-msg';msg.textContent=e.message;return;}
+    if(e&&e.issue==='runtime_busy'){frSetContinue(true);msg.className='fr-role-msg';liveText(msg,e.message);return;}
     // No writable project yet (first launch may have no repo). Do not fabricate a
     // config write — finish onboarding honestly and let them create their first.
     await frEnterHub('complete',true);
@@ -7508,6 +7988,9 @@ document.getElementById('fr-recheck').onclick=async()=>{frScanning=true;renderFi
   try{const d=await api('/api/doctor',{action:'scan'});frScanning=false;renderFirstRunReadiness(d);if(settingsState)settingsState.doctor=d;}
   catch(e){frScanning=false;renderFirstRunReadiness(settingsState&&settingsState.doctor,e);}};
 document.getElementById('fr-continue').onclick=async()=>{
+  // aria-disabled does not stop a click, so the handler is where the action is
+  // actually declined. That is the trade for the reason being reachable.
+  if(frContinueBlocked())return;
   if(firstRunStep<4){setFirstRunStep(firstRunStep+1);return;}
   await frFinishOnboarding();};
 document.getElementById('fr-open').onclick=async()=>{try{await completeOnboarding('complete');}catch(e){}hideFirstRun();showProjects();};

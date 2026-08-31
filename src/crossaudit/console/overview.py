@@ -21,6 +21,7 @@ from ..config import Config
 from ..controller import StateStore
 from ..dispute import DISPUTES_LOG, parse_findings
 from ..errors import classify_escalation_kind, escalation_remediations
+from ..gitio import git, is_repo, read_committed_bytes
 
 VERDICT_RE = re.compile(r"\|\s*verdict\s*\|\s*\*\*(\w+)\*\*")
 ROUND_RE = re.compile(r"\|\s*round\s*\|\s*(\d+)")
@@ -28,6 +29,79 @@ AUDITOR_RE = re.compile(r"\|\s*auditor\s*\|\s*`([^`]+)`")
 CONST_RE = re.compile(r"\|\s*constitution\s*\|\s*`([0-9a-f]+)`")
 
 SEVERITY_ORDER = ("BLOCKER", "ADVISORY")
+
+
+@dataclass(frozen=True)
+class ReportSource:
+    """One ``report.md``, and WHOSE bytes these are.
+
+    F1. The console used to read the working copy. `verify` used to as well,
+    which meant a report rewritten after its audit made verification fail — an
+    accidental detector nobody designed. The verifier merge correctly moved
+    `verify` to the commit the receipt cites, and that removed the detector.
+    Nothing replaced it, and this file read exactly the rewritten bytes.
+
+    Driven, the consequence was worse than "a person reads edited prose": the
+    edit changed the VERDICT the console reported, moved the dashboard
+    counters, and injected a fabricated BLOCKER whose hand-typed observation was
+    attributed to the independent auditor — the one artifact whose independence
+    is the product's central claim.
+
+    So the text is the AUDITED text, and where the working copy disagrees the
+    surface says so rather than silently correcting a person who may have had a
+    good reason to edit. Both halves matter: showing the audited bytes without
+    mentioning the divergence would hide an edit the person made, and mentioning
+    the divergence while still rendering the edited bytes would still put
+    invented prose under the auditor's name.
+    """
+
+    path: Path
+    text: str
+    commit: str
+    on_disk_differs: bool
+    #: Whether the RECEIPT named this commit, or we merely asked git which
+    #: commit last touched the file. R2: the difference is the whole claim.
+    cited: bool = True
+
+    @property
+    def state(self) -> str:
+        if not self.commit:
+            return "uncommitted"
+        if not self.cited:
+            # R2. The fallback used to report "committed" — it did not merely
+            # omit provenance, it ASSERTED it. That is F1's original defect
+            # alive in a narrower state: a report rewritten AFTER its audit and
+            # then committed is what `git log -1` hands back, and the console
+            # presented those bytes as the audited ones.
+            #
+            # Without a receipt naming the audited commit, the honest statement
+            # is that we cannot tell. "A committed version" is not "the version
+            # that was audited", and only the receipt knows which.
+            return "unverified"
+        return "drifted" if self.on_disk_differs else "committed"
+
+    @property
+    def note(self) -> str:
+        """What to tell the person, or nothing.
+
+        A sentence rather than a status word, and it names the command that
+        settles the question — the receipt is honest in every one of these
+        cases, so the useful thing to hand someone is the way to check it.
+        Emitted in English and translated by the page's own locale layer, which
+        is how the rest of this surface handles copy.
+        """
+        if self.state == "drifted":
+            return ("The copy of this report on disk differs from the audited "
+                    "one shown here. Run crossaudit verify to check the record.")
+        if self.state == "uncommitted":
+            return ("This report is not committed yet, so it cannot be "
+                    "verified yet.")
+        if self.state == "unverified":
+            return ("No receipt names the commit this report was audited at, "
+                    "so CrossAudit cannot confirm the version shown here is "
+                    "the one that was audited. Run crossaudit verify to check "
+                    "the record.")
+        return ""
 
 
 @dataclass
@@ -42,40 +116,112 @@ class Cycle:
     at: int
     auditor: str = ""
     constitution: str = ""
+    # Additive, and never inferred: "committed" is only claimed when the bytes
+    # rendered came from a commit.
+    report_state: str = "committed"
+    report_note: str = ""
 
     @property
     def blockers(self) -> int:
         return sum(1 for f in self.findings if f["severity"] == "BLOCKER")
 
 
-def read_report_texts(cfg: Config) -> list[tuple[Path, str]]:
-    """Every ``*/report.md`` under the ledger, read once as (path, text) pairs.
+def _cited_report_commit(cycle_dir: Path) -> str:
+    """The commit the RECEIPT cites for this cycle, if it cites one.
 
-    read_cycles and streams.auditor_stream both derive from this same set. A
-    snapshot reads it once and shares it, rather than globbing-and-reading the
-    reports twice per frame.
+    `receipt.json` is written beside `report.md`, so the audited commit is
+    reachable without touching the receipt store. This is preferred over asking
+    git which commit last touched the file, because those answers differ in
+    exactly the case that matters: a report rewritten AND committed — the
+    shared-audit-repo path, which needs push access and no local access at all.
+    `git log -1` would hand back the rewrite; the receipt still names the audit.
+    """
+    receipt = cycle_dir / "receipt.json"
+    if not receipt.is_file():
+        return ""
+    try:
+        return str(json.loads(receipt.read_text(encoding="utf-8"))
+                   .get("ledger", {}).get("report_commit") or "")
+    except (OSError, ValueError):
+        return ""
+
+
+def _derived_report_commit(root: Path, rel: str) -> str:
+    """Fallback for a cycle whose receipt cites no commit — legacy receipts and
+    `--no-write-ledger` runs both produce that. Deliberately a FALLBACK for the
+    commit only: it never becomes a fallback to reading the working tree under
+    the same presentation, which would be the defect wearing a fallback."""
+    try:
+        return git("log", "-1", "--format=%H", "--", rel, cwd=root).strip()
+    except Exception:
+        return ""
+
+
+def read_report_sources(cfg: Config) -> list[ReportSource]:
+    """Every ``*/report.md`` under the ledger, as the AUDITED bytes plus whose
+    they are.
+
+    read_cycles and streams.auditor_stream both derive from this same set, so
+    there is one reader and the two surfaces cannot disagree about what the
+    auditor said — the producer/consumer seam this codebase keeps splitting on.
     """
     ledger = cfg.root / cfg.ledger_dir
     if not ledger.is_dir():
         return []
-    return [(report, report.read_text(encoding="utf-8"))
-            for report in ledger.glob("*/report.md")]
+    repo = is_repo(cfg.root)
+    out: list[ReportSource] = []
+    for report in ledger.glob("*/report.md"):
+        disk = report.read_bytes()
+        rel = report.relative_to(cfg.root).as_posix()
+        commit = ""
+        cited = True
+        committed: bytes | None = None
+        if repo:
+            commit = _cited_report_commit(report.parent)
+            if not commit:
+                # Derived, not cited. Kept as a way to SHOW something rather
+                # than nothing, but never as a way to claim it was audited.
+                commit, cited = _derived_report_commit(cfg.root, rel), False
+            if commit:
+                try:
+                    committed = read_committed_bytes(cfg.root, commit, rel)
+                except Exception:
+                    # The cited commit is unreachable here — a shallow clone, a
+                    # ledger copied without its history. Say "uncommitted"
+                    # rather than present the working copy as audited.
+                    commit, committed, cited = "", None, True
+        text = (committed if committed is not None else disk)
+        out.append(ReportSource(
+            path=report, text=text.decode("utf-8", errors="replace"),
+            commit=commit, cited=cited,
+            on_disk_differs=committed is not None and committed != disk))
+    return out
+
+
+def read_report_texts(cfg: Config) -> list[tuple[Path, str]]:
+    """The audited (path, text) pairs, for callers that do not need provenance.
+
+    Kept as the pair shape it has always been so existing callers are unchanged;
+    what changed is WHOSE bytes the text is.
+    """
+    return [(source.path, source.text) for source in read_report_sources(cfg)]
 
 
 def read_cycles(cfg: Config,
-                reports: list[tuple[Path, str]] | None = None) -> list[Cycle]:
+                reports: list[ReportSource] | None = None) -> list[Cycle]:
     """Every audit the ledger holds, oldest first.
 
-    ``reports`` may carry a pre-read report set (see read_report_texts) so a
-    caller that already read the reports does not read them again; when absent
-    the reports are read here, preserving the original standalone behaviour.
+    ``reports`` may carry a pre-read set (see read_report_sources) so a caller
+    that already read the reports does not read them again; when absent they are
+    read here, preserving the original standalone behaviour.
     """
     out: list[Cycle] = []
     ledger = cfg.root / cfg.ledger_dir
     if not ledger.is_dir():
         return out
-    pairs = reports if reports is not None else read_report_texts(cfg)
-    for report, text in pairs:
+    sources = (reports if reports is not None else read_report_sources(cfg))
+    for source in sources:
+        report, text = source.path, source.text
         name = report.parent.name
         sha, _, _rest = name.partition("-r")
         verdict = (VERDICT_RE.search(text) or [None, "?"])[1] if VERDICT_RE.search(text) else "?"
@@ -89,7 +235,8 @@ def read_cycles(cfg: Config,
                        "observation": f.observation} for f in parse_findings(text)],
             at=int(report.stat().st_mtime),
             auditor=aud.group(1) if aud else "",
-            constitution=const.group(1) if const else ""))
+            constitution=const.group(1) if const else "",
+            report_state=source.state, report_note=source.note))
     # Cycle directory names begin with a content hash, so lexical order is
     # random with respect to time. The UI's "latest" pipeline must follow the
     # ledger write order, with the protocol round as a deterministic tie-break.

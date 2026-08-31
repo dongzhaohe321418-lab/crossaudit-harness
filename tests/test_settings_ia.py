@@ -115,7 +115,8 @@ def test_static_ui_ids_stay_unique_and_dialog_stays_named():
     assert len(settings) == 1
     dialog = settings[0]
     assert dialog.get("aria-modal") == "true"
-    assert dialog.get("aria-labelledby") in known
+    assert all(part in known
+               for part in (dialog.get("aria-labelledby") or "").split())
 
 
 # ---------------------------------------------------------------- filter logic
