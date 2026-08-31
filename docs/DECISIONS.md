@@ -4396,3 +4396,24 @@ told an engineer a branch had landed when it had not. Tonight the same class of
 error occurred, mechanically, and the rule caught it in the same breath —
 **because merge state is derived from the branch and never from the sentence I
 just typed.**
+
+## D105 — Not a rebuild: why the walkthrough evidence survives the merge
+
+The loop rule is *re-package and re-run the frozen walkthrough whenever a batch
+of merges lands.* A batch just landed. I am not rebuilding, and the reason has
+to be stated precisely, because I have refused to carry a verdict across a
+rebuild all cycle — including on a branch already cleared three times.
+
+`git diff 2c21ce7 d836a56 -- src packaging tests` is **empty.** The entire
+difference between the packaged tree and integration head is `docs/`.
+
+So this is not a verdict carried across a rebuild. **It is the observation that
+no rebuild of the relevant bytes occurred.** The DMG's inputs are byte-identical;
+`dd48bf59afe6` is still the digest of the code that would be frozen today. The
+distinction is the whole of the rule: *same properties, different bytes* is a
+new claim; **same bytes is the same artifact**, and the way to tell them apart
+is a diff rather than a judgement about how much changed.
+
+The moment `src/`, `tests/` or `packaging/` moves, the walkthrough is void and
+gets re-run. Until then it stands, and it stands **because of a command I ran,
+not because rebuilding felt unnecessary.**

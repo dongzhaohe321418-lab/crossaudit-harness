@@ -18,7 +18,7 @@ Rules for this file:
 
 | # | Condition | What would show it | Status |
 |---|---|---|---|
-| 1 | No open S0/S1 on merged code | A current cross-vendor audit of the merged tree, not per-branch verdicts collected over time | **BELIEVED** |
+| 1 | No open S0/S1 on merged code | A current cross-vendor audit of the merged tree, not per-branch verdicts collected over time | **SHOWN for the UX surface** — auditor2 audited the combined tree `2c21ce7` (not per-branch): 0 S0, 0 S1. Not shown for the rest of the product. |
 | 2 | Frozen fresh-user walkthrough | Clean-HOME first contact with the DMG, completed end to end | **PARTIAL** — CLI half done on `2c21ce7`; GUI half `completable=no` from a shell (D103) |
 | 3 | UX S1–S7 across themes / locales / widths | Cells observed on the packaged build; observed means screenshot + read_page, not reasoned about | **PARTIAL** (D81) |
 | 4 | Screen-reader first contact | A task completed via the accessibility tree — *containers present is not contents present* | **PARTIAL** (D81) |
