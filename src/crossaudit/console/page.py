@@ -3524,6 +3524,8 @@ const ZH={
   ,"Working":"进行中","Passed review":"通过复核","Needs changes":"需要修改","Admitted":"已准入","Needs your input":"需要你处理","Current step":"当前步骤","Next step":"下一步","Completed step":"已完成步骤","Compute":"算力","Tool":"工具","Process":"流程","Done":"完成","Active":"进行中","Waiting":"等待","Stopped":"已停止","Audit steps done":"已完成的审计步骤","The generator and auditor show what they are doing here while a task runs.":"任务运行时，生成者和审计者会在这里显示各自正在做什么。"
   ,"passed":"已通过","blocked":"已阻止","escalated":"已升级","consumed":"已准入","interrupted":"已中断","setting_up":"正在设置","setup_failed":"设置失败"
   ,"PASS":"通过","PASSED":"已通过","BLOCKED":"已阻止","ESCALATED":"已升级","CONSUMED":"已准入","DCL_ONLY":"仅确定性检查"
+  ,"NOTHING_TO_AUDIT":"暂无可审计内容"
+  ,"Nothing to check yet — this command reviews work you have added, and there is none here so far.":"暂无可检查的内容——此命令用于审查你已添加的工作，目前这里还没有。"
   ,"To Auditor":"发给审计者","To Generator":"发给生成者","@ auditor":"@ 审计者","@ generator":"@ 生成者"
   ,"No findings. The audited increment passed.":"未发现问题。该受审增量已通过。","No structured findings were recorded.":"未记录结构化问题。"
   ,"Allow once":"仅允许一次","Allow this run":"允许本次运行","Allow this project":"允许此项目","Deny":"拒绝","Approval needed":"需要你批准","Paths":"路径","Host":"主机","Est. cost":"预计成本"
@@ -3721,7 +3723,9 @@ const ZH_PATTERNS=[
   ,[/^(\d+) events?$/,m=>m[1]+' 个事件']
   ,[/^(.+): (Complete|Blocked|Active|Pending)$/,m=>zhValue(m[1])+'：'+zhValue(m[2])]
   ,[/^([0-9a-f]{7,40}) · round (\d+)$/i,m=>m[1]+' · 第 '+m[2]+' 轮']
-  ,[/^(PASS|BLOCKED|ESCALATED|ESCALATE|DCL_ONLY) · (\d+) finding\(s\)$/,m=>zhValue(m[1])+' · '+m[2]+' 项发现']
+  ,[/^(PASS|BLOCKED|ESCALATED|ESCALATE|DCL_ONLY|NOTHING_TO_AUDIT) · (\d+) finding\(s\)$/,m=>zhValue(m[1])+' · '+m[2]+' 项发现']
+  ,[/^  Add a folder under (.+)\/ with your results, then run this again\.$/,
+    m=>'  在 '+m[1]+'/ 下新建一个文件夹放入你的结果，然后再运行一次。']
   ,[/^cycle (\S+) is waiting for a human$/,m=>'循环 '+m[1]+' 正在等待人工处理']
   ,[/^(\d+) tasks are waiting for your decision\.$/,m=>'有 '+m[1]+' 个任务正在等待你的决定。']
   // Composed, so it MUST be a pattern: a fixed entry would translate only the

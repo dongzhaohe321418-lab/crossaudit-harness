@@ -10,7 +10,8 @@ from typing import Mapping
 
 import yaml
 
-from .framework import ADVISORY, BLOCKER, Finding, register
+from .framework import (ADVISORY, BLOCKER, Finding, register,
+                        scope_started)
 
 
 def _load_json(files: Mapping[str, bytes], name: str) -> tuple[dict | None, list[Finding]]:
@@ -30,6 +31,12 @@ def _results_files(files: Mapping[str, bytes]) -> list[str]:
 def check_schema(files: Mapping[str, bytes]) -> list[Finding]:
     """Every increment declares metadata and results, and both must parse."""
     out: list[Finding] = []
+    if not scope_started(files):
+        # Nothing has been started. Reporting two BLOCKERs here told a brand-new
+        # user their project was blocked with two hard failures before they had
+        # written anything — absence read as failure. The verdict layer reports
+        # NOTHING_TO_AUDIT, which is neither pass nor fail.
+        return out
     results = _results_files(files)
     if not results:
         out.append(Finding(BLOCKER, "CA-META-001", "increment",
