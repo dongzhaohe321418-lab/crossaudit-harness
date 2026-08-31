@@ -4523,3 +4523,35 @@ triage rule an honest-but-ugly experience beats a pretty-but-misleading one, so
 this is S3 and not S1 — the sentence is true and a person can read it. It is
 still the first thing a returning user with a stale bookmark sees, and it is
 cheap to make a designed screen that says the same true thing.
+
+## D108 — Assistive access granted; conditions 2 and 4 unblock without touching the product
+
+The owner granted assistive access. **Verified rather than assumed** — the same
+class of check that four wrong measurements tonight went without:
+
+```
+System Events -> process "Terminal"      -> "ericdong — Mac: ... — 173×52"
+System Events -> process "Google Chrome" -> "CrossAudit - Google Chrome – Eric"
+```
+
+Real window titles, from two applications. The `-1728` refusal is gone.
+
+A note on how nearly this went wrong: the **first** probe enumerated Finder's
+windows and returned **empty**. Empty is what a refusal looks like and it is
+also what an app with no windows open looks like. **"No boxes" and "no
+contents" are indistinguishable from the outside** — which is the accessibility
+law this workstream was founded on, arriving in my own permission check. The
+answer came from asking an application that certainly had a window.
+
+**This is the best of the three options and it is worth naming why.** Conditions
+2 and 4 unblock and **the product does not change**: the session token still
+never touches stdout, stderr, disk, or argv. No hole was cut in an
+authorization boundary to make a test pass. The other two options both traded
+something real — one weakened confinement for every user who never opts in, the
+other abandoned two of seven conditions.
+
+**The general rule this instance illustrates**: when a security property and a
+verification need collide, look for the resolution *outside the product* before
+negotiating the property. The wall here was the automation's permissions, not
+the design. Had I gone straight to `CROSSAUDIT_CONSOLE_TOKEN_FILE`, I would
+have shipped a permanent weakening to solve a temporary one.
