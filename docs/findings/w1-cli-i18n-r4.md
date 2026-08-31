@@ -140,3 +140,39 @@ check belongs to the accessibility harness and I cannot run it from here.
     N5  a server-side literal loses its Chinese RED
 
 Each mutation asserts its anchor and fails loudly if the patch does not apply.
+
+
+---
+
+## S2 from the R4 audit — 25 vs 26 reconciled, and the missing thing was the UNIT
+
+The auditor ran **my own helper** and read 26 where my report said 25. That rules
+out "different questions": same predicate, same SHA, same code. So I executed it
+rather than explaining it:
+
+    helper returns rows       : 26
+    DISTINCT values           : 25
+    values appearing twice    :  1   — "Project history"
+                                      chats.py:74 and chats.py:362
+
+**Neither number is wrong and neither is the other one's floor.** 26 is
+occurrences; 25 is distinct strings. The helper returns occurrences and I
+reported distinct without saying which.
+
+The useful part is that **the two units are the two halves of the work**:
+**25 is the number of catalogue entries** to write, **26 is the number of code
+sites** to key under the provenance ruling. A slice scoped on the wrong one is
+short by exactly the number of strings written at more than one site.
+
+Fixed by publishing the predicate where the number is produced: the helper's
+docstring now states shape, files, method and unit, and the test pins **both**
+numbers, so they cannot diverge unexplained again.
+
+**The general form, which I would apply to every count I have given tonight:**
+a count needs shape, files, method, paths — and **unit**. The unit is the one
+nobody names, because within a single head it is obvious, and it is exactly what
+made two correct measurements look like a contradiction.
+
+That also means my earlier "at least 64" needs its unit stated: it is **distinct
+values** (25 distinct + 39 distinct), not occurrences, and the occurrence count
+for the 39 is unmeasured.

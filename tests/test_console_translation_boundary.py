@@ -53,6 +53,22 @@ def _server_side_literals() -> list[tuple[str, int, str]]:
 
     Derived by walking the modules, not from a list: a new server-side string
     lands in this sweep because it is written, not because someone remembered.
+
+    THE PREDICATE, because a count without one is not a count. This returns
+    **occurrences, not distinct values** — one string written at two call sites
+    is two rows. An independent reviewer read 26 from this helper while the
+    report said 25, and neither was wrong: 26 call sites, 25 distinct strings,
+    the difference being `"Project history"` at `chats.py:74` and `chats.py:362`.
+
+    Both units are real and they answer the two halves of the work: **25 is the
+    number of catalogue entries** to write, **26 is the number of code sites** to
+    key. Report which one you mean.
+
+    Counted: string constants of two or more words, appearing either as a value
+    in a dict literal under a key in USER_FACING_FIELDS, or anywhere inside an
+    assignment whose target is a name in that set, in `console/*.py` except
+    `page.py`. Static AST only — nothing here is execution-scoped, so it cannot
+    see a literal passed straight to a call or returned inline.
     """
     found: list[tuple[str, int, str]] = []
     for path in sorted((PAGE.parent).glob("*.py")):
@@ -150,7 +166,12 @@ def test_every_server_side_user_facing_literal_reaches_a_chinese_reader(tmp_path
     """
     literals = _server_side_literals()
     assert len(literals) >= 20, f"the sweep has drifted: {len(literals)}"
+    # Both units, pinned, so the two numbers can never diverge unexplained again.
     values = sorted({value for _f, _l, value in literals})
+    assert (len(literals), len(values)) == (26, 25), (
+        f"the sweep now reports {len(literals)} occurrences / {len(values)} "
+        f"distinct; it was 26/25. Say which unit changed and why — a count "
+        f"without its unit is what made 25 and 26 look like a disagreement.")
     # A literal ending in ": " is a PREFIX: the person sees it with a reason
     # appended, so it is translated by pattern and testing the bare form would
     # ask the wrong question.
