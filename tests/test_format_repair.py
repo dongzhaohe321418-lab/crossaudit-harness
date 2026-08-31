@@ -105,7 +105,12 @@ def test_a_one_off_prose_slip_is_still_repaired_to_work():
     assert isinstance(work, gen.Work)
 
 
-def test_the_decision_center_renders_the_answered_cause():
+def test_page_markup_contains_the_answered_cause_branch():
+    """MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     assert "row.cause==='answered'" in PAGE
     assert "CrossAudit answered" in PAGE
 
@@ -207,7 +212,12 @@ def test_the_retry_is_visible_as_a_run_event(science, cfg, transcripts,
     assert sum("COULD NOT BE PARSED" in c for c in calls) == 1
 
 
-def test_decision_center_renders_the_format_cause_humanely():
+def test_page_markup_contains_the_format_cause_copy():
+    """MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     assert "generator_format" in PAGE
     assert "The generator could not produce auditable work" in PAGE
     assert "Rewrite the task as one concrete instruction" in PAGE
@@ -286,7 +296,12 @@ def test_two_unchanged_rounds_escalate_with_no_progress_cause(
     assert row.get("escalation_cause") == "no_progress"
 
 
-def test_page_renders_the_no_progress_cause():
+def test_page_markup_contains_the_no_progress_cause_copy():
+    """MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     from crossaudit.console.page import PAGE
     assert "The generator repeated the existing work" in PAGE
     assert "Nothing new to audit" in PAGE

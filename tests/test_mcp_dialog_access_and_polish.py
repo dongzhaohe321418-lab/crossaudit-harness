@@ -12,9 +12,14 @@ from crossaudit.console.page import PAGE
 
 
 # ------------------------------------------------------------------------- D4
-def test_both_decision_points_are_announced_and_reachable():
+def test_page_markup_gives_both_decision_points_a_live_region_attribute():
     """#mcp-message in the tools view already had role="alert"; the dialog's own
-    error region, its success banner and its running count did not."""
+    error region, its success banner and its running count did not.
+    MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     assert '<div class="wizard-error" id="mcp-error" role="alert" tabindex="-1"></div>' in PAGE
     assert '<div class="mcp-connected" id="mcp-connected" role="status" aria-live="polite">' in PAGE
     assert '<small id="mcp-approve-count" aria-live="polite"></small>' in PAGE
@@ -49,7 +54,12 @@ def test_the_rule_a_person_must_satisfy_before_typing_is_legible():
 
 
 # ------------------------------------------------------------------------- D7
-def test_a_consent_you_cannot_give_yet_does_not_look_like_one_you_can():
+def test_page_markup_contains_the_awaiting_consent_styles_and_toggle():
+    """MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     assert ".hpc-confirm.awaiting{background:var(--surface-2);" in PAGE
     # ...including in light theme, where the darkened heading rule would
     # otherwise out-specify it.

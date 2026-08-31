@@ -500,7 +500,12 @@ def test_project_page_contains_the_control_plane_contract():
     assert "This dialog updates automatically after approval." in PAGE
 
 
-def test_every_workspace_exposes_a_persistent_bilingual_display_layer():
+def test_page_markup_contains_the_bilingual_strings_and_locale_persistence():
+    """MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     from crossaudit.console.page import PAGE
 
     for text in ("id=\"hub-locale\"", "id=\"locale-toggle\"",

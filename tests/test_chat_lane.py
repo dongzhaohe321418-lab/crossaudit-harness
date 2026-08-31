@@ -186,7 +186,12 @@ def test_empty_chat_reply_is_ledgered_as_denied_not_answered(cfg, monkeypatch):
 
 
 # ------------------------------------------------------------- PAGE contracts
-def test_page_renders_the_generator_chat_turn_kind():
+def test_page_markup_contains_the_generator_chat_turn_kind():
+    """MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     assert "generator_chat" in PAGE
     assert "conversational reply · not audited" in PAGE
 
