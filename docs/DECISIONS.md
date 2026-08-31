@@ -4767,3 +4767,49 @@ gets adversarial review (standing rule), and neither fix is reviewed by whoever
 writes it. **The auditor named its own weakest point — F2's S0 severity, a
 boundary judgement it wants a second security reviewer to confirm.** That
 confirmation is dispatched; the severity is not downgraded while it is pending.
+
+## D114 — DO NOT MERGE on i18n R3: a guard built on the happy path proves nothing about the error path
+
+Re-audit of `ca4b18c` confirms real repair — init and doctor now agree, **all
+seven mutations physically landed and reddened**, the former tautology fails by
+its own test name, `1,977 passed / 0 failed` at the exact SHA. And the verdict
+is **DO NOT MERGE**, because two S1s survived the repair.
+
+**F3 residual.** The `ConfigDenial` branch **returns before the common
+`_emit(..., args.json, ...)` boundary.** With no project configured,
+`doctor --json` emits **no JSON at all** — a Chinese human screen instead. The
+same command in a configured project emits parseable English JSON.
+
+The new guards seed **only a configured project.** They prove the producer
+fields on the normal route and **never enumerate the error route.** I asked for
+a guard on the boundary rather than on the strings that cross it; what was built
+sits on the happy path, where the defect is not.
+
+RULE: **a guard that never takes the error path is not a guard on the
+boundary.** `error_paths=split` was the finding's name and it survived its own
+repair, because the repair and the guard were both written from the route where
+things work.
+
+**F2 residual.** Setup completes in Chinese and presents `crossaudit build` as
+the next action; build is consistently English. Withdrawing `build --lang zh`
+correctly prevents a **false claim** of a translated build — and it does not
+satisfy the separate requirement that **known incompleteness be stated to the
+person before the reachable language switch.** Top-level and build help are
+silent; init and doctor help give **contradictory wave scopes**. The limitation
+exists in source comments and the author's report.
+
+**A limitation recorded where only engineers read it is not a limitation
+disclosed.** The acceptance was never "translate less honestly" — it was
+"tell the person which paths are English **before** they walk into one."
+
+### Round count, stated in advance
+
+This is **round 2 of 3** for F2 and F3. D7 stops the class at three. Naming the
+count now is the point: at round 3 the decision is whether the approach is
+wrong, not whether to try once more.
+
+### Sequencing
+
+Both engineers are on the audit-core S0s (D113). **Two S0s in the non-bypassable
+core outrank an i18n S1**, so R4 queues rather than preempts. The branch stays
+out of integration meanwhile, which costs nothing — it was already out.
