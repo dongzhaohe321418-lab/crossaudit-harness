@@ -4345,3 +4345,54 @@ instrument, not just the target.** Before a number is allowed to mean anything,
 the thing that produced it must be shown to have been pointed at the right
 object, at a time when that object existed. Tonight the product was correct four
 times and my measurement was wrong four times.
+
+## D104 — batch3 merged: 0 S0, 0 S1, and the branch that refused to move
+
+`v5-redesign` is `d836a56`. Tree `db71a9d2` **is the tested tree, byte for
+byte.** Re-derived from the branch rather than remembered (D48):
+`ux/report-provenance e617bd5`, `ux/live-regions fe992d5`,
+`ux/condense-affordance b3b6ab2` are all ancestors;
+`agentA/cli-i18n-wave1` correctly is not.
+
+Gates, in the order they were met:
+
+1. **Independent, cross-vendor, and scoped correctly** — `0 S0, 0 S1, 1 S2,
+   2 S3`, condense audited `47f7053..b3b6ab2` so the shared SPEC-13 region was
+   not left to the other auditor by assumption (D101). **`g8_mutation_reddens=yes`**:
+   the deletion earned its closure by running G8's own mutation against the
+   surviving check, not by resembling it (D97).
+2. **Suite green on the merge commit**, not merely on the tested branches:
+   1,879 passed, 2 skipped, 0 failed, identity asserted, clean worktree — and
+   independently reproduced by the auditor at exactly 1,881/1,879/2/0.
+3. **Invariants hold.** Audit core untouched. The one S2 is in the observation
+   layer's own coexistence check — *a presence test where content is required* —
+   which is tooling, not merged product code, and the result it affects was
+   already reported `unreachable`.
+
+### The ZH debt is named, not waved through
+
+No i18n mechanism exists on integration at all; `src/crossaudit/cli/i18n.py`
+lives only on the branch blocked by three S1s. So the standing parity invariant
+is **unsatisfiable in this tree** — these branches add roughly a dozen English
+strings with no machinery to translate them.
+
+Blocking three clean branches on a mechanism that is itself blocked is a
+deadlock. **Merging and calling the invariant satisfied would be a lie.** So the
+debt is recorded as a concrete list rather than an intention: the strings added
+here — *"Saving your provider setup…"*, *"Round 2 of 3 started"*,
+*"This report is not committed yet, so it cannot be verified yet."*,
+*"CrossAudit replied."*, the provenance and condensation sentences — are wave 1's
+required coverage. **A debt with the items written down is a task; a debt
+described as "add i18n later" is a wish.**
+
+### `git branch -f` refused, and the re-derivation caught it
+
+I moved the branch with `git branch -f` and git refused: the branch was checked
+out in the main worktree. **My own re-derivation printed `NOT merged` for all
+three**, and I saw it before writing anything down.
+
+That is D48 doing exactly the job it was written for. D48 exists because I once
+told an engineer a branch had landed when it had not. Tonight the same class of
+error occurred, mechanically, and the rule caught it in the same breath —
+**because merge state is derived from the branch and never from the sentence I
+just typed.**
