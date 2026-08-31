@@ -23,7 +23,7 @@ Rules for this file:
 | 3 | UX S1–S7 across themes / locales / widths | Cells observed on the packaged build; observed means screenshot + read_page, not reasoned about | **PARTIAL** (D81) |
 | 4 | Screen-reader first contact | A task completed via the accessibility tree — *containers present is not contents present* | **NOT SHOWN** — reported `pass` on `0 unnamed of 5`, which is naming coverage, not the condition. The condition is **a task completed through the accessibility tree**; grading a naming check as completion would be *containers present, contents absent* committed in the ledger written to prevent it. Also `AXDescription` empty on all five. |
 | 5 | First three minutes in Chinese | Frozen GUI parity, not source-string parity | **PARTIAL** (D81) |
-| 6 | Green suite + mutation-proved guards | Each guard demonstrated red by its own name (D64) | **BELIEVED** |
+| 6 | Green suite + mutation-proved guards | Each guard demonstrated red by its own name (D64) | **PARTIAL, unmerged** — 1,448 guards swept; 14 proven unable to fire on the property their name claims, all 14 now renamed or given behavioural cases; `mutation_missed` stratified from 359 to **0 actionable**. Evidence is `audit/dead-guard-sweep d066943`, **not merged and under cross-vendor review**, and its author wrote the guards it verifies. Not SHOWN until that review returns. |
 | 7 | Invariants demonstrated | The disk-vs-cited sites guarded, each with its mutation | **PARTIAL** — frozen console enforces loopback + token against an unauthenticated local request (D103); the disk-vs-cited sites remain unguarded |
 
 ## Standing gaps
@@ -62,3 +62,15 @@ RULE: **a condition's row records what was examined, not what was concluded.**
 "0 S0, 0 S1" is not an entry; *"0 S0, 0 S1 across the combined render path of
 three branches at `2c21ce7`"* is. The second one cannot be quietly widened,
 because the scope travels with the number.
+
+**Condition 6, a caveat that outranks the numbers.** The sweep's own author
+flagged it in the commit message rather than waiting to be asked: *these are
+guards I wrote and verified with my own mutations — particularly the XSS case,
+since I chose both the payloads and the mutations that prove they matter.*
+
+**A guard proved by the person who wrote it is exactly the closed loop this
+product exists to break**, and it does not stop being one because the person is
+careful. The cross-vendor reviewer's first job is a payload the author did not
+choose: **an XSS guard that only catches the attacks its author imagined is
+close to no guard at all.** Until that returns, condition 6's evidence is a
+claim about a claim.
