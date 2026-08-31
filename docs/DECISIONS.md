@@ -5951,3 +5951,59 @@ that **the fixes made in response to a review have not themselves been
 reviewed** (`cd0302c` answering the stacked review, `9d2fa5f` the honesty
 guards). That has been true for an hour behind a freeze that was doing the
 blocking for it. **A stale hold hides the real one.**
+
+## D137 — I ran the honesty-guard mutations myself: 6 of 7 redden by name, 1 unknown
+
+The cross-vendor re-review of the security branches came back `0 S0, 0 S1, 0 S2,
+0 S3` with **`honesty_guards_redden=unknown`** and gated the merge on it:
+*MERGE AFTER FIXES (obtain independent honesty-guard mutation evidence first).*
+
+**That `unknown` is the protocol working in the direction that matters more than
+catching a lie.** A fabrication writes `7/7`. This reviewer executed the waiver
+bypass and three XSS payloads it chose itself — `code-fenced-img-onerror`,
+`javascript-link`, `mixed-case-javascript-link`, **none of which survived** —
+and then **declined to claim the one suite it had not run**, blocking its own
+verdict on it. **The rule made an honest partial answer safe to give.**
+
+The author cannot supply that evidence. I ran it.
+
+```
+LEDGER: worktree 9d2fa5f detached, identity asserted, tree clean throughout
+        6 mutations executed, each anchor-confirmed landed before the colour was read
+        baseline 7 passed → each mutation 1 failed / 6 passed → restored 7 passed
+```
+
+| clause removed | guard that reddened |
+|---|---|
+| `so it cannot be ` | `…says_it_cannot_be_verified_not_merely_that_it_is_new` |
+| `crossaudit verify` | `…says_the_disk_copy_differs_and_how_to_check` |
+| `; the history is yours to rewrite` | `…says_the_history_is_rewritable_not_merely_that_it_is_self_review` |
+| `not what is on disk` | `…says_the_audit_would_cite_other_bytes` |
+| `may only cite sources it fetched` | `…says_the_rule_and_the_evidence_not_just_the_verdict` |
+| `It does not judge the ` | `…disclaims_judging_whether_the_claim_is_true` |
+
+**Each reddened alone — 1 failed, 6 passed** — so each pins its own clause
+rather than casting a net. And the failures explain the cost to a person:
+*"the rule is gone: without it a person is told this citation failed, not that
+citing an unfetched source is never allowed."*
+
+**`test_every_failing_doctor_row_tells_the_person_what_to_do_next` is `unknown`.**
+I did not construct its mutation. It carries its own vacuity assertion —
+*"no failing row in this fixture; the guard would be vacuous"* — which is real
+protection, **but it is not evidence I produced, so it is not evidence I am
+claiming.** Same rule I gave the team an hour ago, applied where it costs me a
+clean number.
+
+### Four of my six mutations silently failed to land first
+
+`cannot be verified` and `does not judge the truth` produced **7 passed** on my
+first attempt. That reads exactly like *the guards do not work*. **Both were my
+instrument**: the phrases are split across source lines, so a single-line
+substitution matched nothing; and one producer was `console/overview.py`, not
+the file I had grepped.
+
+**"7 passed" meant "my knife missed", and it is indistinguishable from "the
+guard is real" without the anchor count.** That is eng1's rule, and it is the
+only reason this report says 6 instead of 4-and-two-suspicious. **I have made
+five instrument errors tonight and this is the first time the check caught one
+before I formed a conclusion rather than after.**
