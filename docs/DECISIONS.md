@@ -4959,3 +4959,72 @@ in either direction.
 `unreachable=settings/hub/onboarding/composer` — reachable surfaces this
 producer does not seed. **Condition 3 stays PARTIAL**, and the gap is now a
 named list of four surfaces rather than a feeling.
+
+## D118 — Six places where a failure is silently discarded, and a second provider refusal
+
+### The sweep
+
+`COLLAPSED-VALUES`: **8 sites, 6 where the failure meaning is silently
+discarded, 6 callers affected**, positive control passed — the pre-`cc7c233`
+`_tool_evidence()` was correctly identified as site 1, so the method finds the
+known one.
+
+1. `_tool_evidence` `None` — **signs corrupted-ledger receipts as no-tools** (the S0, fixed)
+2. `evidence_view` `[]` — **hides unavailable evidence from the auditor**
+3. receipt source/provenance `None` — **omits failed derivation**
+4. secret scan `[]` — **turns scanner failure into clean output**
+5. reproduction lock absence — **hides inspection failure**
+6. DCL provenance `None` — **weakens provenance checks**
+
+**Site 4 is the one to fix next after the S0.** A secret scanner that fails
+returns the same thing as a secret scanner that found nothing. **The failure
+mode is a clean bill of health issued by a scanner that never ran** — and
+nobody reads a clean result twice.
+
+**Site 2 is the same defect aimed at the auditor rather than the user.** Evidence
+that is *unavailable* presents as evidence that *does not exist*, to the party
+whose entire job is to notice that distinction.
+
+And the **zero-case was stated**: verifier exceptions raise a typed
+`IntegrityDenial` rather than returning an empty success, so nothing collapses
+there. **Naming where you looked and found nothing is what makes the six mean
+something.**
+
+### The same shape, at every level of this system
+
+`None` for absent and for corrupt · exit `0` for the product and for `head` ·
+an empty window list for refused and for none-open · an empty live region for
+nothing-to-say and for the-announcement-failed. **Four of these were mine, found
+in my own instruments in a single evening.**
+
+RULE, now general: **a failure must never be representable as an empty success.**
+Absence is usually fine. **A failure rendered as absence is the system forgetting
+that something went wrong**, and every layer that consumes it inherits the
+forgetting.
+
+### And the cross-vendor reviewer was refused a second time
+
+The codex-side auditor was blocked again — this time reviewing the **DCL
+revocation fix**, which is not an attack, not a payload, and not adversarial in
+substance: *does revoking a plugin actually revoke it.*
+
+```
+This content can't be shown.
+We take extra caution with cybersecurity requests.
+```
+
+**Two refusals, on our own defensive work, on our own code.** The other
+codex-side auditor accepted the receipt-integrity review, which was framed in
+terms of fail-closed correctness rather than adversarial attack.
+
+**I am not rewording a refused dispatch to get it accepted.** The observation
+that framing changes the outcome is real and I am recording it — but acting on
+it would mean choosing words to influence a safety system rather than to
+describe work, and **a product whose claim is independent second-vendor review
+cannot be built on requests engineered to pass.** The refusal is a result.
+
+**This is now a product-level finding, not a workflow annoyance.** Cross-vendor
+auditing has a failure mode this design never accounted for: **the second vendor
+may decline to look, and it declines most readily at security boundaries — the
+exact place the second opinion is worth most.** Any honest account of what
+CrossAudit guarantees has to say so.
