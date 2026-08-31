@@ -8,39 +8,33 @@ passes while the person fails, and it is the shape the spec exists to stop. An
 looks correct in a diff and finds nothing at runtime, for a test and for a
 person alike.
 
-An accessible name is computed by the browser, so G1–G8 are driven in Chromium
+An accessible name is computed by the browser, so G1–G7 are driven in Chromium
 against its own accessibility tree and live in
 `_ui_findings/spec13/browser_spec13.mjs`, with the mutation runner beside them
 (`mutate.py`).
 
-**SEVEN of the eight are proven by their OWN mutation. G8 is not, and saying
-otherwise was an overclaim.** This module used to say all eight were
-mutation-proven. G8's specified mutation — remove the group labelling and the
-per-control names together — reddens **G2**, and a reader auditing by this
-module's own claim would tick G8 off and move on. We have deleted fourteen
-checks that did not check; this is a check that checks something real, filed
-under the name of a different property, which is worse to find and easier to
-miss. D64 says a guard is specified with its mutation; a guard specified with
-someone ELSE'S mutation is the version of that rule nobody had anticipated.
+**G8 IS DELETED, and what subsumes it.** This module used to guard eight
+properties and claim all eight were mutation-proven. G8 — no two CONSECUTIVE tab
+stops share an accessible name — was **established by G2**, which fails on the
+same mutation. G2 asserts that the number of distinct accessible names equals
+the number of controls, so ANY two controls sharing a name reddens it, adjacent
+or not. Every state G8 rejected, G2 already rejects, and no mutation can redden
+G8 while leaving G2 green.
 
-**G8 cannot be given an isolating mutation on this surface, and that is a fact
-about the property rather than a failure to try.** G2 asserts that the number of
-distinct accessible names equals the number of controls. Any two controls
-sharing a name — adjacent or not — reduces the distinct count and reddens G2.
-G8 asserts that no two CONSECUTIVE stops share a name, which is a strictly
-weaker statement: every state G8 rejects, G2 already rejects. So no mutation can
-redden G8 while leaving G2 green.
+So the separate assertion added a NAME, not coverage — and a name is worse than
+nothing here, because a reader auditing by this module's claims ticked G8 off
+and moved on. Removing it makes the remaining seven claims true rather than
+making an eighth defensible.
 
-G8 is kept because it costs nothing and would separate from G2 if the two ever
-measured different sets — G2's denominator is the DOM control count and G8 reads
-the accessibility tree in order, so a control present in one and not the other
-would show up in G8 alone. Until that happens it is a subsumed restatement, and
-this module says so rather than counting it as evidence it does not supply.
+**The subsumption is executed, not argued.** G8's specified mutation — remove the
+group labelling and the per-control names together — is KEPT in the mutation
+runner and filed under G2, and G2 reddens on it. A subsumption that is asserted
+rather than run is a hole with an argument in front of it.
 
 **Which seam each guard stops at, stated rather than implied.** A suite's
 verdict is a claim about the seam it stops at — thirty streaming tests passed
 while a page registered no listener, because they stopped at the transport.
-G1/G2/G3/G8 query Chromium's accessibility tree (`Accessibility.queryAXTree`,
+G1/G2/G3 query Chromium's accessibility tree (`Accessibility.queryAXTree`,
 `getByRole({name})`). G7 does now too, and did NOT at first: it read the status
 badge's `textContent` and called that the accessible name. The two coincide for
 a plain span, so it passed — for the wrong reason, and it would have kept
