@@ -151,7 +151,20 @@ def find(start: Path | None = None) -> Path:
     for d in [cur, *cur.parents]:
         if (d / CONFIG_NAME).is_file():
             return d / CONFIG_NAME
-    raise ConfigDenial(f"no {CONFIG_NAME} found from {cur} upward — run `crossaudit init`")
+    # The "and every directory above it" clause is kept deliberately: it is what
+    # tells someone standing in a subdirectory why their existing project was
+    # not found, and dropping it for brevity would cost a real diagnosis.
+    # `reason` is the machine contract — `as_dict()`, `--json` and every script
+    # that greps it — so it stays English. `human` is the sentence a person
+    # reads and is deliberately kept OUT of `as_dict()`, which is exactly what
+    # makes it safe to translate. The seam was already here; wave 2 uses it.
+    from .cli.i18n import t
+    raise ConfigDenial(
+        f"no {CONFIG_NAME} found from {cur} upward — run `crossaudit init`",
+        human=(t("refusal.no_project.title") + "\n\n"
+               + "    " + t("refusal.no_project.looked",
+                            name=CONFIG_NAME, where=cur) + "\n\n"
+               + "    " + t("refusal.no_project.fix")))
 
 
 def load(path: Path | None = None) -> Config:

@@ -88,10 +88,17 @@ class Denial(Exception):
     exit_code = EXIT_CONFIG
     kind = "denied"
 
-    def __init__(self, reason: str, *, remediations=None, **detail: object) -> None:
+    def __init__(self, reason: str, *, remediations=None, human: str = "",
+                 **detail: object) -> None:
         super().__init__(reason)
         self.reason = reason
         self.remediations = _remediation_values(remediations)
+        #: An optional sentence written for a person rather than a parser. Kept
+        #: OUT of `detail` and therefore out of `as_dict()`: the exit code and
+        #: the machine-readable reason are a CLI contract that scripts depend
+        #: on, and a human-readable message is not one. A refusal may soften how
+        #: it reads without changing what it means to a caller.
+        self.human = human
         self.detail = detail
 
     def as_dict(self) -> dict:

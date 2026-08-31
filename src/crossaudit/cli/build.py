@@ -44,6 +44,8 @@ from ..errors import (EXIT_ESCALATED, EXIT_OK, ConfigDenial, Denial,
                       ProviderDenial, park_escalation_kind)
 from ..file_identity import AppliedFiles
 from ..gitio import git, git_bytes, is_repo
+from . import i18n as _i18n
+from .i18n import t
 from ..providers import resilience as provider_resilience
 from ..runtime import (
     PROVIDER_WAIT_CATEGORIES,
@@ -1094,13 +1096,42 @@ def preflight(cfg) -> None:
         raise ConfigDenial(why)
 
 
+def _missing_role_keys(cfg) -> list[str]:
+    """Every absent role credential, generator first.
+
+    Naming only the first would print the AUDITOR variable under a message that
+    just said the GENERATOR failed, which reads as a non-sequitur at the exact
+    moment someone is trying to act on it.
+    """
+    import os as _os
+
+    from ..providers.registry import NEEDS_KEY
+
+    missing = []
+    generator_env = cfg.generator_key_env or "CROSSAUDIT_GENERATOR_KEY"
+    if (cfg.generator_vendor or "").lower() != "human" and not _os.environ.get(
+            generator_env, "").strip():
+        missing.append(generator_env)
+    if NEEDS_KEY.get(cfg.auditor.provider, True) and not _os.environ.get(
+            cfg.auditor.key_env, "").strip():
+        missing.append(cfg.auditor.key_env)
+    return missing
+
+
 def cmd_build(args) -> int:
+    _i18n.set_language(getattr(args, "lang", "en") or "en")
+    _i18n.reset_fallbacks()
     cfg = load()
     preflight(cfg)
     service = RunCommandService(cfg)
+    verbose = bool(getattr(args, "verbose", False))
+    #: Whether any round reached the auditor. Nothing reaching it means nothing
+    #: was committed, which is what makes the closing sentence true.
+    produced: set[str] = set()
+    prepared_task = resolve_task(cfg, args.words)
 
     def prepare() -> PreparedRun:
-        return PreparedRun(task=resolve_task(cfg, args.words))
+        return PreparedRun(task=prepared_task)
 
     def worker(prepared: PreparedRun, emit) -> int:
         constitution = (cfg.root / cfg.constitution).read_text(encoding="utf-8")
@@ -1127,9 +1158,25 @@ def cmd_build(args) -> int:
                 label = f"round {event.round_no} of {event.round_limit}"
                 print(f"\n  ── {label} " + "─" * max(0, 44 - len(label)))
                 return
-            line = f"  {event.actor:10s} {event.text}"
-            print(line if not event.detail
-                  else f"{line}\n  {'':10s} {event.detail[:96]}")
+            # 1. Never print a raw payload. The goal event carries the run's
+            #    JSON goal as detail; truncated at 96 characters it reads as
+            #    corrupted output, and it is internal state either way.
+            detail = event.detail or ""
+            if detail.lstrip().startswith(("{", "[")):
+                detail = "" if not verbose else detail
+            # 2. Do not say "waiting" and then exit. In the console a parked run
+            #    genuinely waits and can be resumed; a foreground build exits, so
+            #    the CLI says what actually happened. The event is unchanged —
+            #    only this renderer differs, because only here is it untrue.
+            text = event.text
+            if event.kind == "provider_unavailable":
+                text = "stopped: " + (detail or text)
+                detail = ""
+            if event.kind == "audit_started":
+                produced.add("yes")
+            line = f"  {event.actor:10s} {text}"
+            print(line if not detail
+                  else f"{line}\n  {'':10s} {detail[:96]}")
 
         # The CLI narrator wraps the shell's emit; carry the lease-renewal
         # handle and the run identity across the wrapper so foreground
@@ -1141,9 +1188,24 @@ def cmd_build(args) -> int:
     code = service.start(prepare, worker, background=False)
     assert isinstance(code, int)
     if code == EXIT_OK:
-        print("\n  Done. The work passed audit and the ledger has the whole exchange.")
-        print("  Read it:  crossaudit watch   ·   Watch live:  crossaudit console")
+        print("\n  " + t("build.done"))
+        print("  " + t("build.done.read"))
+    elif not produced:
+        # 3. State the outcome, then the remedy. "It is yours now" is a handoff
+        #    after a success; nothing was produced. The blunt sentence is
+        #    deliberate — it is what stops someone hunting for a partial result
+        #    that does not exist.
+        print("\n  " + t("build.nothing"))
+        missing = _missing_role_keys(cfg)
+        if missing:
+            from . import wizard as _wizard
+            print("\n  " + t("build.nothing.fix", path=_wizard.keys_file(),
+                                envs=" and ".join(missing)))
+        # The task is reprinted verbatim so the person does not have to
+        # reconstruct what they typed.
+        print("  " + t("build.nothing.then", task=prepared_task))
     else:
-        print("\n  It is yours now: `crossaudit watch` to read the exchange, or say "
-              "what should happen next.")
+        # Something exists. The sentence above would be false, so say what is
+        # there instead of claiming nothing is.
+        print("\n  " + t("build.partial"))
     return code

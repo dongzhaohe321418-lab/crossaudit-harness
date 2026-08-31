@@ -18,6 +18,7 @@ from ..auditor import dcl_source_digest, run_audit
 from ..config import CONFIG_NAME, Config, heterogeneity, load
 from ..controller import StateStore
 from ..dcl import run_checks
+from .. import doctor_shared
 from ..doctor_shared import constitution_state, CONSTITUTION_READY_SENTENCE
 from ..errors import (EXIT_BLOCKED, EXIT_CONFIG, EXIT_ESCALATED, EXIT_INTEGRITY,
                       EXIT_OK, ConfigDenial, Denial, IntegrityDenial)
@@ -31,7 +32,7 @@ from ..receipt.sign import sign_receipt
 from ..receipt.verify import admit as admit_receipt
 from ..receipt import reproduction as _reproduction
 from ..receipt import sources as _sources
-from . import tui, wizard
+from . import i18n, tui, wizard
 from .talk import cmd_routing, cmd_talk
 
 ALLOW_CUSTOM_ENV = "CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT"
@@ -63,6 +64,43 @@ def _committed_constitution(cfg: Config, commit: str) -> tuple[str, bytes]:
             "cannot apply a missing standard", commit=commit, path=cfg.constitution)
     return text, data
 
+def _print_origin() -> None:
+    """One line under the front door naming which install this is.
+
+    D40: the version alone does not answer "which crossaudit did I just run",
+    which is the question somebody has when a DMG app and a pip install disagree.
+    """
+    mode, where = running_from()
+    print("\n  " + i18n.t("origin.front_door", version=f"crossaudit {__version__}",
+                          mode=mode, path=where))
+
+
+def running_from() -> tuple[str, str]:
+    """(install mode, the path this process is actually running from).
+
+    D40. A person who installs the DMG and types `crossaudit` can be routed to a
+    completely different, older install that is already on PATH — and nothing
+    told them. The ledger stays honest either way: receipts carry the version, a
+    path-tagged code digest and the install mode, and `verify --admit` already
+    refuses modes whose code could have changed under it. What is misled is the
+    PERSON, so the fix belongs on the surfaces a person reads.
+
+    Facts about THIS process only. It deliberately does not go looking for other
+    installs: guessing where a rival copy might live would be inventing evidence
+    on exactly the surface that exists to stop us doing that. Two runs printing
+    two versions and two paths is self-evident without anyone asserting a
+    mismatch.
+    """
+    mode = _selfid.install_mode()
+    if getattr(sys, "frozen", False):
+        return mode, sys.executable
+    # What the person invoked, when that is knowable; otherwise where the code
+    # actually is. `argv[0]` is the console script they typed.
+    invoked = Path(sys.argv[0]) if sys.argv and sys.argv[0] else None
+    if invoked is not None and invoked.name and invoked.exists():
+        return mode, str(invoked.resolve())
+    return mode, str(Path(_selfid.__file__).resolve().parent)
+
 
 GETTING_STARTED = """\
 CrossAudit {version} — cross-vendor generation and audit loop
@@ -74,9 +112,15 @@ requirements. It writes keys to a 0600 file outside the repository.
     crossaudit init              guided setup, right here
     crossaudit init --github     the same, plus the two-repository plan
 
-Then there is one command to remember:
+Then, two ways to work:
 
-    crossaudit run               audit your latest commit; everything else is automatic
+    crossaudit build "..."       say what you need; CrossAudit writes it, then a
+                                 second model from a different vendor checks the
+                                 result before you see it
+    crossaudit console           the same loop in a browser, live, and it
+                                 outlives the window
+
+    crossaudit run               already have a commit? audit that instead
 
 It reads the increment from the commit itself, runs the deterministic checks,
 runs the model audit when a key is present, writes the ledger, and tells you
@@ -86,6 +130,17 @@ what to do next. The precise tools underneath it, when you want them:
 
 Docs: README.md in the repository.
 """
+
+
+#: One sentence about the language wave, said identically everywhere it is
+#: said. init and doctor previously stated DIFFERENT scopes in their help, which
+#: is a contradiction a person meets before they meet the limitation itself.
+LANG_HELP = "language for this command (wave 1: init and doctor only)"
+
+#: Stated in `build`'s own help, because build is where the language stops and
+#: a limitation only an engineer can read is not disclosed.
+BUILD_ENGLISH_NOTE = ("  Output is English in this wave; --lang is not offered "
+                      "here until the round-by-round narration can follow it.")
 
 
 def _emit(obj: dict, as_json: bool, human: str = "") -> None:
@@ -242,34 +297,97 @@ def _offer(args, prompt: str) -> bool:
     return input(f"       fix now — {prompt} [Y/n] ").strip().lower() in ("", "y", "yes")
 
 
+def _speak(args: argparse.Namespace) -> None:
+    """Select this COMMAND's language. Called only by commands in a shipped wave.
+
+    Deliberately per-command rather than in the dispatcher. A central switch
+    would translate any command that happened to carry a `--lang` attribute,
+    which is how a half-translated surface ships (D21); and it would do nothing
+    for a caller that invokes `cmd_doctor` directly rather than through argv,
+    which is how the console and the tests call these. Here, the set of
+    translated commands is visible at the commands themselves.
+    """
+    i18n.set_language(getattr(args, "lang", i18n.DEFAULT_LANGUAGE)
+                      or i18n.DEFAULT_LANGUAGE)
+    i18n.reset_fallbacks()
+
+
 def cmd_doctor(args: argparse.Namespace) -> int:
+    _speak(args)
     checks: list[dict] = []
     ok = True
 
-    def add(name: str, passed: bool, detail: str, fix: str = "") -> None:
+    def add(name: str, passed: bool, detail: str, fix: str = "", *,
+            copy: str = "", slots: dict | None = None,
+            detail_copy: str = "") -> None:
+        """A tested condition. [PASS] here means it ran and it held.
+
+        ``copy`` names this check's HUMAN copy in the catalogue — the default
+        view renders ``<copy>.label`` / ``.why`` / ``.fix`` with ``slots``. It
+        sits BESIDE ``detail`` and ``fix`` rather than replacing them, because
+        those two are carried verbatim by ``--json`` and by ``--all``, which is
+        the stable surface for CI. Translating them in place would put Chinese
+        in a scripting contract; the check NAME is a ``--json`` key for the same
+        reason and is never translated (SPEC-7 §4: type, match, or trace).
+        """
         nonlocal ok
         ok = ok and passed
-        checks.append({"check": name, "ok": passed, "detail": detail, "fix": fix})
+        checks.append({"check": name, "ok": passed, "detail": detail, "fix": fix,
+                       "kind": "verdict", "copy": copy,
+                       "detail_copy": detail_copy,
+                       "slots": {k: str(v) for k, v in (slots or {}).items()}})
+
+    def note(name: str, detail: str, *, copy: str = "",
+             slots: dict | None = None, detail_copy: str = "") -> None:
+        """A posture, a mode or a configured contract — NOT a test result.
+
+        SPEC 2 (design/UX, Ledger D6): ``[PASS]`` means a condition was tested
+        and held. A line that reports how the deployment is *set up* has no
+        pass/fail axis, so it renders as ``[INFO]`` and is excluded from the
+        tally. The defect this removes is a green marker sitting beside text
+        that says a guarantee does not hold — the CLI twin of the console's four
+        green ticks for checks that never ran.
+        """
+        checks.append({"check": name, "ok": None, "detail": detail, "fix": "",
+                       "kind": "info", "copy": copy,
+                       "detail_copy": detail_copy,
+                       "slots": {k: str(v) for k, v in (slots or {}).items()}})
 
     ident = _selfid.identity()
     add("python", sys.version_info >= (3, 10),
-        f"{sys.version.split()[0]}", "CrossAudit requires Python 3.10+")
+        f"{sys.version.split()[0]}", "CrossAudit requires Python 3.10+",
+        copy="doctor.python")
+    # Doctor already named the mode and the digest; it did not say WHERE. The
+    # path is appended to that same line rather than given a second sentence of
+    # its own — two phrasings for one truth is its own defect (D40).
     add("install", ident["install_mode"] != "unknown",
-        f"{ident['install_mode']}, code digest {ident['code_digest_sha256'][:12]}",
-        "reinstall from a wheel if this says unknown")
-    if ident["install_mode"] not in _selfid.ADMISSIBLE_MODES:
-        add("admission-capable", False,
-            f"install mode {ident['install_mode']} may verify but never admit",
-            "install the built wheel to admit receipts")
+        f"{ident['install_mode']}, code digest "
+        f"{ident['code_digest_sha256'][:12]}, at {running_from()[1]}",
+        "reinstall from a wheel if this says unknown", copy="doctor.install")
+    for name, detail in doctor_shared.install_blocks(ident):
+        if name == "admission-capable":
+            add("admission-capable", False, detail,
+                "install the built wheel to admit receipts",
+                copy="doctor.admission_capable")
     add("git", shutil.which("git") is not None, shutil.which("git") or "not found",
-        "install git")
+        "install git", copy="doctor.git")
 
     try:
         cfg = load()
     except ConfigDenial as exc:
-        add("config", False, exc.reason, f"run `crossaudit init` to write {CONFIG_NAME}")
-        print(_render_doctor(checks, False))
-        if _offer(args, "run the setup wizard here"):
+        add("config", False, exc.reason,
+            f"run `crossaudit init` to write {CONFIG_NAME}",
+            copy="doctor.config", slots={"name": CONFIG_NAME})
+        # F3. The error route leaves through the SAME boundary as the success
+        # route. It used to print the human screen directly and return, so
+        # `--json` on an unconfigured project emitted a Chinese human screen and
+        # no JSON at all: a parser met prose, and only on the error path — which
+        # is exactly where nobody was looking. One emit, both routes.
+        _emit({"ok": False, "checks": checks, "verifier": ident,
+               "admission": None}, getattr(args, "json", False),
+              _render_doctor(checks, False, getattr(args, "all", False)))
+        if not getattr(args, "json", False) and _offer(
+                args, "run the setup wizard here"):
             wizard.run(Path("."), mode="local", force=False)
             print("\nSetup written — running doctor again:\n")
             return cmd_doctor(args)
@@ -278,22 +396,47 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     add("config", True, str(cfg.path))
     const = cfg.root / cfg.constitution
     add("constitution", const.is_file(), str(const),
-        "point `constitution:` at your rules markdown")
+        "point `constitution:` at your rules markdown", copy="doctor.constitution")
     if const.is_file():
         from ..auditor import known_rules
         rules = known_rules(const.read_text(encoding="utf-8"))
-        add("constitution rules", bool(rules),
-            f"{len(rules)} rule IDs parsed" if rules else "no CA-* rule headings found",
-            "each rule needs a '### CA-AREA-NNN' heading, or every citation is unknown")
+        # A constitution with no rules is a legitimate choice, not a broken
+        # file: the constitution is the STANDARD and the audit is the MECHANISM,
+        # so an empty standard produces an honest audit of an empty standard
+        # (Ledger D8). `init` offers it by name — "Only what I write myself" —
+        # so doctor must not then call the person's choice a defect. A file that
+        # meant to have rules and parsed none is still worth flagging, and the
+        # difference is whether it says so.
+        deliberately_empty = "No rules yet." in const.read_text(encoding="utf-8")
+        if rules or not deliberately_empty:
+            add("constitution rules", bool(rules),
+                f"{len(rules)} rule IDs parsed" if rules
+                else "no CA-* rule headings found",
+                "each rule needs a '### CA-AREA-NNN' heading, or every citation "
+                "is unknown", copy="doctor.constitution_rules")
+        else:
+            # F3. This stored the TRANSLATED sentence in `detail`, which is the
+            # machine field `--json` and `--all` carry verbatim — so a script
+            # parsing doctor got Chinese under LANG=zh, silently and only for
+            # Chinese users. A parser does not read Chinese; `detail` is a
+            # contract with it. The human string moves to `detail_copy`.
+            note("constitution rules",
+                 "no rules yet — nothing is gated until you add one; the automatic checks still run",
+                 copy="doctor.constitution_rules",
+                 detail_copy="doctor.constitution_rules.none")
 
+    # These are the CONFIGURED contracts, printed so a person can read what the
+    # deterministic layer will enforce. Nothing has run: doctor is offline and
+    # read-only, and there is no increment to judge. They carried [PASS] before,
+    # which is the same false green as the console panel D6 flagged.
     from ..dcl import contracts as live_contracts
     for name, contract in live_contracts(cfg.checks).items():
-        checks.append({"check": f"machine:{name}", "ok": True,
-                       "detail": contract, "fix": ""})
+        note(f"machine:{name}", contract)
 
     het_ok, why = heterogeneity(cfg)
     add("heterogeneity (I1)", het_ok, why,
-        "declare generator.vendor, and make it differ from auditor.vendor")
+        "declare generator.vendor, and make it differ from auditor.vendor",
+        copy="doctor.heterogeneity")
 
     from ..providers.registry import NEEDS_KEY, known
     key_needed = NEEDS_KEY.get(cfg.auditor.provider, True)
@@ -315,21 +458,45 @@ def cmd_doctor(args: argparse.Namespace) -> int:
          if not key_needed else
          f"${cfg.auditor.key_env} " + ("present" if key_present else "is empty")),
         ("sign in through CrossAudit Settings" if not key_needed else
-         f"source {wizard.keys_file()} or export {cfg.auditor.key_env}"))
+         f"source {wizard.keys_file()} or export {cfg.auditor.key_env}"),
+        copy=("doctor.auditor_key" if key_needed else ""),
+        slots={"path": wizard.keys_file(), "env": cfg.auditor.key_env})
 
-    generator_key_present = bool(os.environ.get(
-        cfg.generator_key_env or "CROSSAUDIT_GENERATOR_KEY", "").strip())
+    # The credential that stops `build` in its first round. doctor said "check
+    # everything" while never looking at it, so a person could pass doctor and
+    # then fail on their first task (Ledger D6, P1).
+    generator_env = cfg.generator_key_env or "CROSSAUDIT_GENERATOR_KEY"
+    generator_key_present = bool(os.environ.get(generator_env, "").strip())
+    generator_needs_key = _generator_needs_key(cfg)
+    if generator_needs_key and not generator_key_present and _offer(
+            args, f"enter the generator API key (hidden, saved to {wizard.keys_file()})"):
+        import getpass
+        entered = getpass.getpass("       generator API key: ").strip()
+        if entered:
+            written = wizard.write_keys({generator_env: entered})
+            os.environ[generator_env] = entered
+            generator_key_present = True
+            print(f"       saved; future shells: source {written}")
+    add("generator connection", (not generator_needs_key) or generator_key_present,
+        ("no API key needed for this generator"
+         if not generator_needs_key else
+         f"${generator_env} " + ("present" if generator_key_present else "is empty")),
+        f"source {wizard.keys_file()} or export {generator_env} — "
+        f"without it `crossaudit build` stops in round one",
+        copy="doctor.generator_key",
+        slots={"path": wizard.keys_file(), "env": generator_env})
     if cfg.isolation_minimum.get("permissive") and key_present and generator_key_present:
         add("isolation minimum", False,
             "permissive isolation is required, but this process can reach both roles' keys",
             "run the auditor in a separate credential boundary, or deliberately lower "
-            "isolation.minimum.permissive between cycles")
+            "isolation.minimum.permissive between cycles", copy="doctor.isolation")
 
     # Asked of the registry, not restated here: a local allowlist failed valid
     # Gemini/Qwen setups the release after those vendors were registered.
     add("provider", cfg.auditor.provider in known(),
         f"{cfg.auditor.provider}:{cfg.auditor.model}",
-        "set auditor.provider to one of: " + ", ".join(sorted(known())))
+        "set auditor.provider to one of: " + ", ".join(sorted(known())),
+        copy="doctor.provider", slots={"providers": ", ".join(sorted(known()))})
 
     # A trust store this interpreter cannot read fails every call to every
     # vendor, and does it at the moment someone types their first sentence.
@@ -341,19 +508,21 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         f"{certs} root certificate(s)" if certs
         else "empty — every HTTPS call to a vendor will fail",
         "pip install certifi, or export SSL_CERT_FILE=/path/to/ca-bundle.pem "
-        "(macOS python.org builds: run Install Certificates.command)")
+        "(macOS python.org builds: run Install Certificates.command)",
+        copy="doctor.tls")
 
     state_dir = cfg.root / cfg.state_dir
     writable = os.access(state_dir.parent, os.W_OK)
     add("state store", writable, str(state_dir / "state.json"),
-        "the controller must be able to persist consumed receipts")
+        "the controller must be able to persist consumed receipts",
+        copy="doctor.state", slots={"path": state_dir / "state.json"})
 
     repo_ok = is_repo(cfg.root)
     if not repo_ok and _offer(args, f"run git init in {cfg.root}"):
         git("init", "-q", "-b", "main", cwd=cfg.root)
         repo_ok = is_repo(cfg.root)
     add("science repo is git", repo_ok, str(cfg.root),
-        "run `git init` — the ledger is git, not a directory")
+        "run `git init` — the ledger is git, not a directory", copy="doctor.repo")
     if repo_ok:
         git_name = git("config", "user.name", cwd=cfg.root, check=False).strip()
         git_email = git("config", "user.email", cwd=cfg.root, check=False).strip()
@@ -361,7 +530,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             f"{git_name} <{git_email}>" if git_name and git_email
             else "this clone has no effective user.name/user.email",
             "set them for this repository with `git config user.name NAME` and "
-            "`git config user.email EMAIL`")
+            "`git config user.email EMAIL`", copy="doctor.git_identity")
         # ONE implementation of "are the rules committed", not two that agree
         # today. `doctor_shared.constitution_state` already decides the three
         # states and owns their sentences; this consumed a second helper and
@@ -373,12 +542,18 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             git("add", "--", cfg.constitution, cwd=cfg.root)
             git("commit", "-q", "-m", "constitution: initial version", cwd=cfg.root)
             const_status, const_detail = constitution_state(cfg)
+        # The state the shared helper already decided picks the human copy, so
+        # "committed, then edited" cannot be reported as "never committed".
         add("constitution committed", const_status == "ready", const_detail,
-            f"git add {cfg.constitution} && git commit")
+            f"git add {cfg.constitution} && git commit",
+            copy=("doctor.constitution_drifted" if const_status == "drifted"
+                  else "doctor.constitution_committed"),
+            slots={"name": cfg.constitution})
 
     if args.online:
         gh_ok, gh_detail = wizard.gh_available()
-        add("gh cli", gh_ok, gh_detail, "install gh and run `gh auth login`")
+        add("gh cli", gh_ok, gh_detail, "install gh and run `gh auth login`",
+            copy="doctor.gh")
 
     # The tier this deployment can honestly claim, from evidence rather than
     # from configuration. Reported always: a system that only mentions its
@@ -389,29 +564,172 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     verdict = adm.assess(root=cfg.root, paired=bool(cfg.audit_repo),
                          controller_persistent=caps["persistent"],
                          controller_atomic=caps["atomic"], online=args.online)
-    checks.append({"check": "admission tier", "ok": True,
-                   "detail": f"{verdict.tier} — {adm.TIER_MEANING[verdict.tier]}",
-                   "fix": ""})
-    for s in verdict.shortfalls:
-        checks.append({"check": "  toward enforced", "ok": True, "detail": s,
-                       "fix": ""})
+    note("admission tier", f"{verdict.tier} — {adm.TIER_MEANING[verdict.tier]}",
+         copy="doctor.tier")
+    for shortfall in verdict.shortfalls:
+        note("  toward enforced", shortfall)
 
     _emit({"ok": ok, "checks": checks, "verifier": ident,
            "admission": verdict.as_dict()}, args.json,
-          _render_doctor(checks, ok))
+          _render_doctor(checks, ok, getattr(args, "all", False)))
     return EXIT_OK if ok else EXIT_CONFIG
 
 
-def _render_doctor(checks: list[dict], ok: bool) -> str:
+#: Plain language for the checks a newcomer meets first, with the rule id kept.
+#: Precision over friendliness (SPEC 6 §4): renaming without the id would break
+#: a person's ability to trace a verdict back to their own constitution and to
+#: the receipt, so the id stays in parentheses rather than being replaced.
+#: A missing entry keeps the raw name — this table adds clarity, it is never
+#: required for a line to render.
+DOCTOR_COPY: dict[str, tuple[str, str]] = {
+    "auditor connection": ("No auditor API key",
+                           "CrossAudit cannot run an audit without one."),
+    "generator connection": ("No generator API key",
+                             "CrossAudit cannot write anything without one."),
+    "heterogeneity (I1)": ("Generator and auditor are different vendors (I1)", ""),
+    "admission tier": ("How much this project's history proves", ""),
+    "  toward enforced": ("", ""),
+    "machine:schema": ("Results file has the required structure (schema)", ""),
+    "machine:units": ("Every number carries a unit and a source (units)", ""),
+    "machine:convergence": ("Anything reported as converged met its threshold "
+                               "(convergence)", ""),
+    "machine:provenance": ("Every source traces to a declared input "
+                              "(provenance)", ""),
+    "admission-capable": ("This install cannot admit receipts",
+                          "It can generate, audit and verify; it cannot consume a "
+                          "receipt as admitted evidence."),
+    "constitution rules": ("Your rules", ""),
+}
+
+
+def _doctor_label(check: dict) -> tuple[str, str]:
+    """(label, consequence) for the HUMAN view, translated.
+
+    Falls back to the untranslated DOCTOR_COPY table and then to the check NAME,
+    which is a `--json` key and therefore never translated (SPEC-7 §4).
+    """
+    stem = check.get("copy") or ""
+    if stem:
+        slots = check.get("slots", {})
+        # An INFO row prints its own detail, never a consequence, so asking the
+        # catalogue for `.why` here would invent a missing translation and mark
+        # a gap that does not exist.
+        why = ("" if check.get("kind") == "info"
+               else i18n.t(f"{stem}.why", **slots))
+        return i18n.t(f"{stem}.label", **slots), why
+    if check["check"] in DOCTOR_COPY:
+        return DOCTOR_COPY[check["check"]]
+    return check["check"], ""
+
+
+def _doctor_fix(check: dict) -> str:
+    """The remedy, in the person's language, with the command left alone.
+
+    `fix` itself stays English because `--all` and `--json` carry it verbatim;
+    this is the parallel human string. A command inside it (`crossaudit init`,
+    `git config`) is something a person TYPES and is not translated — but the
+    sentence around it is prose and does not ride along in English merely
+    because it contains one.
+    """
+    stem = check.get("copy") or ""
+    if not stem:
+        return check["fix"]
+    key = f"{stem}.fix"
+    if stem == "doctor.auditor_key" and "no API key needed" in check["detail"]:
+        key = f"{stem}.fix.subscription"
+    return i18n.t(key, **check.get("slots", {}))
+
+
+def _doctor_detail(check: dict) -> str:
+    """The human detail for a line, or the machine one when there is no parallel.
+
+    `detail` is what `--all` and `--json` carry verbatim, so it is never
+    translated — the boundary this function exists to hold. A line that needs a
+    sentence in the person's language names it with `detail_copy`.
+    """
+    key = check.get("detail_copy") or ""
+    if not key:
+        return check["detail"]
+    return i18n.t(key, **check.get("slots", {}))
+
+
+def _render_doctor(checks: list[dict], ok: bool, show_all: bool = False) -> str:
+    """[PASS] tested and held · [FAIL] tested and did not · [INFO] not a test.
+
+    An INFO line reports a posture, a mode or a configured contract. It carries
+    no verdict and is not counted, so the tally below means what it says.
+    """
+    if show_all:
+        return _render_doctor_full(checks, ok)
+    failed = [c for c in checks if c.get("kind") != "info" and not c["ok"]]
+    info = [c for c in checks if c.get("kind") == "info"]
+    passed = [c for c in checks if c.get("kind") != "info" and c["ok"]]
+
+    lines = [i18n.t("doctor.title"), ""]
+    # The verdict is the FIRST line. It used to be the last, so a person read
+    # twenty-one lines before learning the answer.
+    if failed:
+        n = len(failed)
+        lines.append("  " + i18n.t("doctor.not_ready" if n == 1
+                                   else "doctor.not_ready.plural", n=n))
+    else:
+        lines.append("  " + i18n.t("doctor.ready"))
+    lines.append("")
+    for c in failed:
+        label, consequence = _doctor_label(c)
+        lines.append(f"  ✗ {label}")
+        # Consequence before remedy: what you cannot do, then what to type.
+        lines.append(f"      {consequence or _doctor_detail(c)}")
+        if c["fix"]:
+            lines.append(f"      → {_doctor_fix(c)}")
+    if failed:
+        lines.append("")
+    # The configured deterministic contracts are reference material, not
+    # something a person needs at first contact, so they collapse the same way
+    # the passing checks do. What stays visible is the posture — the thing that
+    # changes what this project can prove.
+    contracts = [c for c in info if c["check"].startswith("machine:")]
+    posture = [c for c in info if not c["check"].startswith("machine:")]
+    for c in posture:
+        label, _consequence = _doctor_label(c)
+        if label:
+            lines.append(f"  ℹ {label}")
+        lines.append(f"      {_doctor_detail(c)}")
+    if posture:
+        lines.append("")
+    if contracts:
+        n = len(contracts)
+        lines.append("  ℹ " + i18n.t("doctor.contracts" if n == 1
+                                     else "doctor.contracts.plural", n=n))
+    # The passing majority collapses to a count. `--all` prints every line
+    # unchanged, so nothing is lost and CI keeps a stable surface.
+    n = len(passed)
+    lines.append("  ✓ " + i18n.t("doctor.other_passed" if n == 1
+                                 else "doctor.other_passed.plural", n=n))
+    return "\n".join(lines)
+
+
+def _render_doctor_full(checks: list[dict], ok: bool) -> str:
+    """Every line, unchanged. `--all` is the stable surface for CI and scripts."""
     lines = ["crossaudit doctor", "=" * 60]
+    width = max([len(c["check"]) for c in checks] or [22]) + 1
     for c in checks:
-        mark = "PASS" if c["ok"] else "FAIL"
-        lines.append(f"[{mark}] {c['check']:22s} {c['detail']}")
-        if not c["ok"] and c["fix"]:
+        mark = "INFO" if c.get("kind") == "info" else ("PASS" if c["ok"] else "FAIL")
+        lines.append(f"[{mark}] {c['check']:{width}s} {c['detail']}")
+        if mark == "FAIL" and c["fix"]:
             lines.append(f"       -> {c['fix']}")
     lines.append("=" * 60)
     lines.append("ready" if ok else "not ready — fix the FAIL lines above")
     return "\n".join(lines)
+
+
+def _generator_needs_key(cfg) -> bool:
+    """Whether this project's generator role needs an API key of its own."""
+    from ..providers.registry import NEEDS_KEY
+    if (cfg.generator_vendor or "").lower() == "human":
+        return False
+    provider = getattr(getattr(cfg, "generator", None), "provider", "") or ""
+    return NEEDS_KEY.get(provider, True) if provider else True
 
 
 # ------------------------------------------------------------------ check
@@ -1033,12 +1351,14 @@ def cmd_watch(args: argparse.Namespace) -> int:
 
 # ------------------------------------------------------------------- init
 def cmd_init(args: argparse.Namespace) -> int:
+    _speak(args)
     summary = wizard.run(Path(args.path or "."), mode="github" if args.github else "local",
                          force=args.force,
                          auditor_vendor=getattr(args, "auditor_vendor", None),
                          auditor_model=getattr(args, "auditor_model", None),
                          generator_vendor=getattr(args, "generator_vendor", None),
-                         generator_model=getattr(args, "generator_model", None))
+                         generator_model=getattr(args, "generator_model", None),
+                         profile=getattr(args, "profile", "") or "")
 
     # Finish by opening the console, because the setup ends exactly where the
     # work begins and asking someone to find the next command themselves is a
@@ -1048,8 +1368,26 @@ def cmd_init(args: argparse.Namespace) -> int:
     # available.
     if not args.no_console:
         summary.update(_open_console(Path(summary["config"]).parent))
+    _report_untranslated()
     _emit(summary, args.json)
     return EXIT_OK
+
+
+def _report_untranslated() -> None:
+    """Say out loud that this run was not fully translated.
+
+    The inline `[en]` marks make a gap visible in a screenshot; this line makes
+    it countable, and names the keys so the person reporting it does not have to
+    describe which sentence looked wrong. Deliberately English and deliberately
+    outside the catalogue: it is a defect notice about the catalogue, and a
+    notice that can itself go missing is no notice.
+    """
+    missing = i18n.fallbacks()
+    if not missing:
+        return
+    print(f"\n  [i18n] {len(missing)} string(s) fell back to English in this "
+          f"run: {', '.join(missing[:8])}"
+          + (" ..." if len(missing) > 8 else ""))
 
 
 def _open_console(root: Path) -> dict:
@@ -1063,12 +1401,14 @@ def _open_console(root: Path) -> dict:
         cfg = load(root / CONFIG_NAME)
         info = daemon.reusable_for_launch(cfg) or daemon.spawn(cfg, 0)
     except (Denial, TimeoutError, OSError) as exc:
-        print(f"\n  The console did not start ({exc}). Start it yourself with:")
+        # F2: init is a translated flow, and this is its tail. An English
+        # remedy after a Chinese setup tells the person something broke.
+        print("\n  " + i18n.t("console.failed", reason=str(exc)))
         print("    crossaudit console")
         return {"console": None}
 
     url = daemon.url_for(info)
-    print(f"\n  Console: {url}")
+    print("\n  " + i18n.t("console.url", url=url))
     opened = False
     try:
         # webbrowser can hand a URL to a text browser or block on a headless
@@ -1076,8 +1416,8 @@ def _open_console(root: Path) -> dict:
         opened = webbrowser.open(url)
     except Exception:                                        # noqa: BLE001
         opened = False
-    print("  Opened in your browser." if opened
-          else "  Open that URL when you are ready.")
+    print("  " + i18n.t("console.opened" if opened
+                        else "console.open_yourself"))
     return {"console": url, "console_opened": opened}
 
 
@@ -1356,8 +1696,10 @@ def cmd_run(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="crossaudit", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    _mode, _where = running_from()
     p.add_argument("--version", action="version",
-                   version=f"crossaudit {__version__} (receipt schema {RECEIPT_SCHEMA})")
+                   version=f"crossaudit {__version__} "
+                           f"(receipt schema {RECEIPT_SCHEMA}) · {_mode} · {_where}")
     p.add_argument("--json", action="store_true", help="machine-readable output")
     sub = p.add_subparsers(dest="verb")
 
@@ -1367,8 +1709,18 @@ def build_parser() -> argparse.ArgumentParser:
                         "(default: here)")
     i.add_argument("--github", action="store_true", help="also plan the repository pair")
     i.add_argument("--force", action="store_true", help="overwrite an existing config")
+    i.add_argument("--profile", choices=("general", "science", "own"),
+                   help="pick the constitution starting point without being asked")
     i.add_argument("--no-console", action="store_true",
                    help="do not start or open the console when setup finishes")
+    # Wave 1 (D21) translates the init wizard and nothing else, so the flag is
+    # offered on `init` and nowhere else. Accepting it globally would let
+    # somebody choose Chinese and then meet English at the first thing that goes
+    # wrong, which is the half-translated product D21 refuses. LANG and LC_ALL
+    # are deliberately NOT consulted: an environment that happens to be Chinese
+    # must not opt a person into a partly-translated tool without asking.
+    i.add_argument("--lang", choices=i18n.LANGUAGES, default=i18n.DEFAULT_LANGUAGE,
+                   help=LANG_HELP)
     i.add_argument("--auditor-vendor", choices=tuple(wizard.VENDORS),
                    help="auditor vendor; useful when stdin is not a terminal")
     i.add_argument("--auditor-model",
@@ -1391,6 +1743,10 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--online", action="store_true", help="also probe gh")
     d.add_argument("--fix", action="store_true",
                    help="offer to repair each failure interactively")
+    d.add_argument("--all", action="store_true",
+                   help="list every check instead of collapsing the passing ones")
+    d.add_argument("--lang", choices=i18n.LANGUAGES,
+                   default=i18n.DEFAULT_LANGUAGE, help=LANG_HELP)
     d.set_defaults(func=cmd_doctor)
 
     c = sub.add_parser("check", help="run the deterministic layer, no model involved")
@@ -1462,6 +1818,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     b = sub.add_parser("build", help='say what to build; the loop writes and audits it')
     b.add_argument("words", nargs="*")
+    b.add_argument("--verbose", action="store_true",
+                   help="also print the run goal payload and other internal state")
+    b.description = (b.description or "") + BUILD_ENGLISH_NOTE
+    # F2. `build` is NOT offered --lang this wave, deliberately. Its banner and
+    # closing copy are translated, but the round-by-round narration is
+    # `RunEvent` prose produced by the agent loop, and translating that needs a
+    # kind-to-catalogue mapping that is wave 2. Offering --lang here would ship
+    # a run that reports what happened in Chinese and what went wrong in
+    # English — a switch mid-flow tells a person something broke. Consistently
+    # one language until the narration can follow.
     b.set_defaults(func=_cmd_build)
 
     tk = sub.add_parser("talk", help="say what you want; the program routes it")
@@ -1509,19 +1875,36 @@ def main(argv: list[str] | None = None) -> int:
                           "`crossaudit run`.")
                     return EXIT_OK
             print(GETTING_STARTED.format(version=__version__))
+            _print_origin()
             return EXIT_OK
         print(GETTING_STARTED.format(version=__version__))
+        _print_origin()
         return EXIT_OK
     try:
-        return args.func(args)
+        # F4. Reported once here rather than at each command's return, so a
+        # command cannot be added that silently drops the notice — the same
+        # reason the action set comes from argparse rather than a list. It goes
+        # to stderr and is skipped for --json, because a defect notice printed
+        # into a machine surface would be F3 wearing a different hat.
+        code = args.func(args)
+        if not getattr(args, "json", False):
+            _report_untranslated()
+        return code
     except Denial as exc:
         if getattr(args, "json", False):
             print(json.dumps(exc.as_dict(), indent=2, sort_keys=True))
+        elif getattr(exc, "human", ""):
+            # Some refusals are only "not set up yet". DENIED is a permission
+            # word and reads as a wall. The machine contract is unchanged: the
+            # exit code and --json still carry kind and reason, because scripts
+            # depend on them and a human-readable sentence is not a contract.
+            print(exc.human, file=sys.stderr)
+            _report_untranslated()
         else:
             print(f"DENIED ({exc.kind}): {exc.reason}", file=sys.stderr)
         return exc.exit_code
     except KeyboardInterrupt:
-        print("\ninterrupted", file=sys.stderr)
+        print("\n" + i18n.t("build.interrupted"), file=sys.stderr)
         return EXIT_CONFIG
 
 

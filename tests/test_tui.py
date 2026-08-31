@@ -6,6 +6,7 @@ demo — and the failure only shows up somewhere nobody is watching.
 """
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -26,6 +27,189 @@ from crossaudit.errors import ConfigDenial
 ])
 def test_keys_decode_to_intents(raw, expect):
     assert tui.decode(raw) == expect
+
+
+@pytest.mark.parametrize("raw,expect", [
+    (b"1", 1), (b"3", 3), (b"9", 9),
+    (b"0", None),                       # no option zero; it must not select
+    (b"k", None), (b"j", None),         # the vim movement keys stay movement
+    (b"\r", None), (b"\x1b[A", None),   # enter and the arrows are not choices
+    (b"12", None),                      # only a single byte can be one keypress
+    (b"", None),
+])
+def test_a_keypress_names_an_option_or_names_none(raw, expect):
+    """Ledger D17: the number is the option's identity, so decoding it is pure."""
+    assert tui.chosen_number(raw) == expect
+
+
+# ------------------------------------------------------ the numbered menu (D17)
+def _drive_select(keystrokes, options, **kw):
+    """Run the REAL `select` on a REAL pty; return (value, everything drawn).
+
+    D17's claim is about what a terminal renders and what a keypress does, so
+    this drives a terminal rather than reading the source (AGENTS.md §3.5).
+    `interactive()` requires both streams to be ttys, so both are pointed at one
+    pty and the drawn bytes are read back from the master end, with the escape
+    codes stripped — that stripped text is the reading with no colour, no bold
+    and no cursor movement, which is the closest a test gets to what a screen
+    reader is handed.
+
+    Two mechanics the harness has to respect, both learned by watching it hang:
+
+    * `read_key` enters raw mode with ``TCSAFLUSH``, which DISCARDS input queued
+      before it. A key written up front is thrown away and the menu then waits
+      forever, so keys are fed only once the drawing has gone quiet, which is
+      when the reader is blocked on the next one.
+    * An escape sequence is one keypress. ``\x1b`` written on its own is a
+      complete, correct ESCAPE — `select` cancels — so each keystroke goes out
+      in a single write rather than a byte at a time.
+
+    `select` runs on a worker thread with a join deadline, so a change that
+    stops consuming a keypress fails this test instead of hanging the suite.
+    """
+    import os
+    import pty
+    import threading
+    import time
+    import tty
+
+    master, slave = pty.openpty()
+    tty.setraw(slave)
+    drawn: list[bytes] = []
+    last_drawn = [time.monotonic()]
+
+    def drain():
+        while True:
+            try:
+                chunk = os.read(master, 4096)
+            except OSError:
+                return
+            if not chunk:
+                return
+            drawn.append(chunk)
+            last_drawn[0] = time.monotonic()
+
+    threading.Thread(target=drain, daemon=True).start()
+    saved_in, saved_out = sys.stdin, sys.stdout
+    sys.stdin = os.fdopen(slave, "r", buffering=1)
+    sys.stdout = os.fdopen(os.dup(slave), "w", buffering=1)
+    result: dict[str, object] = {}
+
+    def drive():
+        try:
+            result["value"] = tui.select("pick:", options, **kw)
+        except BaseException as exc:            # re-raised on the main thread
+            result["error"] = exc
+        finally:
+            sys.stdout.flush()
+
+    def feed():
+        for stroke in keystrokes:
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline and not result:
+                if time.monotonic() - last_drawn[0] > 0.15:
+                    break
+                time.sleep(0.02)
+            if result:
+                return
+            os.write(master, stroke)
+            time.sleep(0.05)
+
+    worker = threading.Thread(target=drive, daemon=True)
+    try:
+        worker.start()
+        threading.Thread(target=feed, daemon=True).start()
+        worker.join(timeout=20)
+        assert not worker.is_alive(), "select never returned; it is waiting on a key"
+    finally:
+        sys.stdin, sys.stdout = saved_in, saved_out
+        os.close(master)
+    if "error" in result:
+        raise result["error"]
+    text = b"".join(drawn).decode("utf-8", "replace")
+    return result["value"], re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", text)
+
+
+_OPTIONS = [tui.Option("use", "Use these rules", "writes and commits them"),
+            tui.Option("switch", "Use a different starting point"),
+            tui.Option("edit", "Edit them first", "opens the file in your editor"),
+            tui.Option("show", "Show the full rules")]
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="no pty on Windows")
+def test_typing_an_options_number_chooses_it():
+    """The number is not decoration: it is how the option is selected."""
+    value, drawn = _drive_select([b"3"], _OPTIONS)
+    assert value == "edit"
+    assert "3) Edit them first" in drawn
+    # And the hint told the person the range it actually accepts.
+    assert "type 1-4" in drawn
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="no pty on Windows")
+def test_every_option_is_numbered_and_the_outcome_is_said_in_words():
+    """What a screen reader receives: names as text, and a spoken result.
+
+    Position, the green marker and the bold weight are all stripped here — this
+    is the reading with no colour and no glyph — and the menu still names every
+    option and still says which one it chose.
+    """
+    value, drawn = _drive_select([b"\r"], _OPTIONS, default=1)
+    assert value == "switch"
+    for i, opt in enumerate(_OPTIONS):
+        assert f"{i + 1}) {opt.label}" in drawn
+    assert "chose 2) Use a different starting point" in drawn
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="no pty on Windows")
+def test_the_arrows_still_work_and_still_report_where_they_landed():
+    value, drawn = _drive_select([b"\x1b[B", b"\x1b[B", b"\r"], _OPTIONS)
+    assert value == "edit"
+    assert "chose 3) Edit them first" in drawn
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="no pty on Windows")
+def test_a_number_with_no_option_behind_it_is_ignored():
+    """Fail-closed on input: 9 of 4 options selects nothing and waits."""
+    value, drawn = _drive_select([b"9", b"\r"], _OPTIONS)
+    assert value == "use"
+    assert "chose 1) Use these rules" in drawn
+
+
+# ------------------------------------------- D10: demonstrate the guards fail
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="no pty on Windows")
+def test_the_numbering_guards_fail_when_the_numbering_is_removed(monkeypatch):
+    """Mutate the real renderer, run the real guards, watch them catch it.
+
+    Two mutations, one per claim, each applied to the shipped function rather
+    than to a copy of it, and each checked against a live unmutated run in the
+    same session rather than against a recorded snapshot (Ledger D10 as
+    amended).
+    """
+    _honest_value, honest = _drive_select([b"\r"], _OPTIONS)
+    assert "3) Edit them first" in honest and "chose 1) Use these rules" in honest
+
+    # A row that is NOT the chosen one, so the outcome line cannot satisfy the
+    # assertion on the numbering's behalf — which is how this first read.
+    real_row = tui.option_row
+    monkeypatch.setattr(tui, "option_row", lambda index, option, *, current: (
+        f"{'>' if current else ' '} {option.label}"))
+    _v, unnumbered = _drive_select([b"\r"], _OPTIONS)
+    monkeypatch.setattr(tui, "option_row", real_row)
+    assert "Edit them first" in unnumbered, "the menu did not draw at all"
+    assert "3) Edit them first" not in unnumbered, (
+        "the mutation did not take; this demonstration proves nothing")
+
+    monkeypatch.setattr(tui, "outcome_line", lambda index, option: "")
+    _v, silent = _drive_select([b"\r"], _OPTIONS)
+    assert "chose 1) Use these rules" not in silent, (
+        "the mutation did not take; this demonstration proves nothing")
+
+    # And the third claim: without `chosen_number`, typing a number chooses
+    # nothing, so the test above is a guard rather than a description.
+    monkeypatch.setattr(tui, "chosen_number", lambda raw: None)
+    value, _drawn = _drive_select([b"3", b"\r"], _OPTIONS)
+    assert value != "edit", "the mutation did not take"
 
 
 # ------------------------------------------------------------- the fallback
@@ -219,7 +403,11 @@ def test_setup_versions_the_rules_and_scaffold(tmp_path: Path, monkeypatch):
     target = tmp_path / "project"
     monkeypatch.setenv("CROSSAUDIT_KEYS_FILE", str(tmp_path / "keys.env"))
 
-    summary = wizard.run(target, mode="local")
+    # Exercises the SCIENCE starting point explicitly: the assertions below
+    # are about path@revision, provenance and convergence. The CLI default is
+    # now the general pack, so inheriting it would silently change what this
+    # test covers.
+    summary = wizard.run(target, mode="local", profile="science")
 
     contract = (target / "DETERMINISTIC_CHECKS.md").read_text()
     assert "path@revision" in contract and "provenance" in contract
@@ -306,7 +494,11 @@ def test_default_check_uses_the_declared_scope_and_skips_the_scaffold(
 
     target = tmp_path / "project"
     monkeypatch.setenv("CROSSAUDIT_KEYS_FILE", str(tmp_path / "keys.env"))
-    wizard.run(target, mode="local")
+    # The increment below is science-shaped — metadata.yml, results.json with
+    # units and sources — so it needs the science pack to be judged as intended.
+    # The CLI default is now the general pack, so the profile is stated rather
+    # than inherited.
+    wizard.run(target, mode="local", profile="science")
     increment = target / "experiments" / "demo"
     increment.mkdir()
     (increment / "metadata.yml").write_text(

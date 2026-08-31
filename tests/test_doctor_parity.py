@@ -58,11 +58,15 @@ CLI_ONLY: dict[str, str] = {
     "auditor connection": (
         "per-project credential for one role; the app reports connections per "
         "provider rather than per project role"),
-    # NOTE: `generator connection` is deliberately NOT listed. It does not exist
-    # on this branch — it arrives with the first-three-minutes slice — and the
-    # stale-exclusion test below caught me listing it from memory of another
-    # branch. Pre-approving a check that does not exist is the padding this file
-    # forbids; it gets an entry when it gets a check.
+    # It got a check, so it gets an entry. This slot previously held a note that
+    # `generator connection` did NOT exist here and must not be pre-approved;
+    # the first-three-minutes work that emits it is on this branch now, and the
+    # staleness guard is what made the difference observable rather than
+    # remembered.
+    "generator connection": (
+        "per-project credential for one role; the app reports connections per "
+        "provider rather than per project role, exactly as for `auditor "
+        "connection`"),
     "heterogeneity (I1)": (
         "compares two vendors configured in one project's config; nothing about "
         "this Mac can make it true or false"),
@@ -288,13 +292,17 @@ def _names_cmd_doctor_can_emit() -> tuple[set[str], set[str]]:
     interpolation and its entries are real checks.
     """
     body = Path(main.__file__).read_text()
-    body = body[body.index("def cmd_doctor("):]
-    end = re.search(r"\ndef ", body)
-    body = body[:end.start()] if end else body
-    literals = (set(re.findall(r'add\(\s*"([^"]+)"', body))
+    # The WHOLE module, not the `cmd_doctor` slice. Checks are emitted by
+    # `add()` and by `note()`, and a restructure can move either into a helper —
+    # which is exactly what happened, and a reader anchored to one function
+    # reported real checks as nonexistent. A superset is the safe direction
+    # here: this asserts that a named check EXISTS, so over-reading can only
+    # forgive, never invent.
+    call = r'(?:add|note)\(\s*'
+    literals = (set(re.findall(call + r'"([^"]+)"', body))
                 | set(re.findall(r'"check":\s*"([^"]+)"', body)))
     prefixes = (set(re.findall(r'"check":\s*f"([^"{]*)\{', body))
-                | set(re.findall(r'add\(\s*f"([^"{]*)\{', body)))
+                | set(re.findall(call + r'f"([^"{]*)\{', body)))
     return literals, prefixes
 
 

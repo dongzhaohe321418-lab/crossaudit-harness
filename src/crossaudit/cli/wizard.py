@@ -19,14 +19,19 @@ import os
 import shlex
 import shutil
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
+from . import i18n
+from .. import doctor_shared
 from ..config import CONFIG_NAME
 from ..errors import ConfigDenial, Denial
-from ..scaffold import (AUDIT_TREE, CONFIG_TEMPLATE, DEFAULT_CHECKS, SCIENCE_TREE,
+from ..scaffold import (AUDIT_TREE, CONFIG_TEMPLATE, GENERAL_CHECKS,
+                        SCIENCE_CHECKS, SCIENCE_TREE,
                         read, write_tree)
 from ..providers.specs import SPECS
 from . import tui
+from .i18n import t
 
 DEFAULT_KEYS_FILE = Path.home() / ".crossaudit-keys.env"
 
@@ -56,13 +61,14 @@ def choose_model(vendor: str, default: str, *, role: str = "Auditor") -> str:
     """
     known = VENDOR_MODELS.get(vendor) or []
     if not known:
-        return tui.text("Model id", default, placeholder="exactly as the vendor spells it")
+        return tui.text(t("prompt.model_id"), default,
+                        placeholder=t("prompt.model_id.placeholder"))
     options = [tui.Option(m, m, hint) for m, hint in known]
-    options.append(tui.Option(TYPE_IT, "something else", "type the id yourself"))
-    picked = tui.select(f"{role} model:", options, default=0)
+    options.append(tui.Option(TYPE_IT, t("option.type_it"), t("option.type_it.hint")))
+    picked = tui.select(t("prompt.model", role=role), options, default=0)
     if picked == TYPE_IT:
-        return tui.text("Model id", default,
-                        placeholder="exactly as the vendor spells it")
+        return tui.text(t("prompt.model_id"), default,
+                        placeholder=t("prompt.model_id.placeholder"))
     return picked
 # Kept for callers and tests that predate the arrow-key flow.
 VENDOR_PRESETS = VENDORS
@@ -162,11 +168,11 @@ def prepare(target: Path) -> list[str]:
     done: list[str] = []
     if not target.exists():
         target.mkdir(parents=True)
-        done.append(f"created {target}")
+        done.append(t("prepare.created", path=target))
     if not (target / ".git").is_dir():
         subprocess.run(["git", "init", "-q", "-b", "main"], cwd=str(target),
                        check=True)
-        done.append("git init — the ledger is git, and an audit reads commits")
+        done.append(t("prepare.git_init"))
     gitignore = target / ".gitignore"
     current = gitignore.read_text(encoding="utf-8") if gitignore.is_file() else ""
     local_state = (".crossaudit/", ".crossaudit-home/", ".crossaudit-trash/")
@@ -175,7 +181,7 @@ def prepare(target: Path) -> list[str]:
         with open(gitignore, "a", encoding="utf-8", newline="\n") as fh:
             fh.write("\n# CrossAudit's local state. The ledger is committed; this is not.\n"
                      + "\n".join(missing_state) + "\n")
-        done.append("ignored CrossAudit local state directories — not the ledger")
+        done.append(t("prepare.gitignore"))
     return done
 
 
@@ -232,6 +238,415 @@ def commit_setup(target: Path, paths: list[str]) -> str:
                           capture_output=True, text=True, check=True).stdout.strip()
 
 
+#: The starting points a person chooses between, per SPEC 3 §4.2. Each carries
+#: its own plain-language consequence lines: the rule criteria are written for an
+#: auditor to apply, and reading four of them is not how somebody decides whether
+#: a standard is the one they want. The consequences are what the rules mean.
+#:
+#: "Only what I write myself" is named for what it gives up. "Minimal" or "Empty"
+#: would read as a lighter version of the same thing; this says you get nothing
+#: until you write it. It is a legitimate choice — the constitution is the
+#: STANDARD and the audit is the MECHANISM, so a trivial standard produces an
+#: honest audit of a trivial standard, not a weak audit (Ledger D8).
+#: The sentence the consequence lines are read under. It is per starting point
+#: because one of them gates nothing: "it will check that nothing will be gated"
+#: is not a check, and a frame that promises checking over a list describing its
+#: ABSENCE is the overclaim shape this slice exists to remove (AGENTS.md §1.5).
+GATING_FRAME_KEY = "rules.gating_frame"
+
+#: Each starting point stores i18n KEYS, not sentences. The English text lives
+#: in one catalogue with every other language, so a translator meets one file
+#: and a reviewer sees both columns of a change side by side. Resolving at
+#: DISPLAY time rather than import time is what lets `--lang` be chosen after
+#: this module is imported.
+STARTING_POINTS: dict[str, dict] = {
+    "general": {
+        "template": "GENERAL_AUDIT_RULES.md",
+        "consequences": ("start.general.c1", "start.general.c2", "start.general.c3"),
+    },
+    "science": {
+        "template": "AUDIT_RULES.md",
+        "consequences": ("start.science.c1", "start.science.c2",
+                         "start.science.c3", "start.science.c4"),
+    },
+    "own": {
+        "template": None,
+        "frame": "start.own.frame",
+        "consequences": ("start.own.c1", "start.own.c2"),
+    },
+}
+
+
+def point_label(key: str) -> str:
+    return t(f"start.{key}.label")
+
+
+def point_hint(key: str) -> str:
+    return t(f"start.{key}.hint")
+
+
+def point_frame(key: str) -> str:
+    """The sentence a starting point's consequences are read under.
+
+    Per point, because one of them gates nothing: "it will check that nothing
+    will be gated" is not a check, and a frame promising checking over a list
+    describing its ABSENCE is the overclaim shape this slice removed.
+    """
+    return t(STARTING_POINTS[key].get("frame") or GATING_FRAME_KEY)
+
+
+def point_consequences(key: str) -> list[str]:
+    return [t(item) for item in STARTING_POINTS[key]["consequences"]]
+
+
+DEFAULT_STARTING_POINT = "general"
+
+#: The deterministic pack that belongs with each starting point. The CLI used
+#: DEFAULT_CHECKS (= SCIENCE_CHECKS), so a prose review was blocked twice over:
+#: 7 BLOCKER rules about metadata.yml AND four checks demanding the same files.
+#: app.py and console/projects.py already choose per project type; this makes the
+#: CLI agree with them and with dcl/profiles.py, which calls "general" the
+#: default. A sweep confirmed DEFAULT_CHECKS had no consumer outside this module.
+#: What each science-pack check mechanically verifies, in the words a rule that
+#: needed it would use. A term counts as GROUNDS only where it appears in the
+#: DRAFTED RULES — the model's structured statement about this project — never
+#: in the raw description. A person can mention units in passing while writing a
+#: prose review; a rule that says every quantity carries a unit is a commitment,
+#: and only a commitment justifies turning a machine check on.
+SCIENCE_GROUNDS: dict[str, tuple[str, ...]] = {
+    "schema": ("metadata.yml", "results.json"),
+    "units": ("unit", "units"),
+    "convergence": ("converge", "convergence", "threshold"),
+    "provenance": ("provenance", "code_version", "input file", "inputs", "revision"),
+}
+
+#: How many of the four must be grounded before the pack is proposed at all.
+#: One incidental match is not a shape, and proposing on one would make the
+#: proposal noise that people learn to dismiss without reading — which is worse
+#: than not proposing, because the next one is real.
+SCIENCE_GROUNDS_REQUIRED = 2
+
+
+@dataclass(frozen=True)
+class CheckPackProposal:
+    """A proposed deterministic pack and the person's own reasons for it."""
+
+    key: str
+    checks: tuple[str, ...]
+    instead_of: tuple[str, ...]
+    #: One entry per GROUNDING RULE, not per check: a single rule can justify
+    #: two checks ("each entry in results.json has a unit" grounds both schema
+    #: and units), and printing it twice reads as a bug and tells nobody
+    #: anything. (rule id, title, the person's own words or "", checks grounded)
+    grounds: tuple[tuple[str, str, str, tuple[str, ...]], ...]
+
+
+def infer_check_pack(drafted, chosen: str) -> CheckPackProposal | None:
+    """Propose the science pack when the drafted rules already ask for it.
+
+    SPEC 3 §3.5. The walkthrough's harm was a laboratory contract arriving
+    unasked and surfacing later as a BLOCKER about `metadata.yml` — the moment
+    the audit stopped reading as a second opinion and started reading as
+    obstruction. Batch 2 fixed that by always defaulting to general, which is
+    correct for a prose review and silently wrong for real science: the rules
+    get drafted from the person's description, and the machine checks that would
+    verify those very rules never run.
+
+    So the inference is made, but as a PROPOSAL WITH ITS GROUNDS rather than a
+    choice taken on the person's behalf. It returns None unless the draft itself
+    supplies the reasons, and the reasons it returns are quotable back to the
+    person: a rule they can read, and where the drafting model attributed it,
+    the fragment of their own sentence it came from.
+
+    Nothing here changes the constitution — that is already drafted from what
+    they said. What is proposed is the deterministic `checks:` list, which is
+    the half batch 2 left welded to a starting point nobody revisits.
+    """
+    if drafted is None or chosen != DEFAULT_STARTING_POINT:
+        # An explicit choice — including `--profile` — is not ours to revisit.
+        return None
+    proposed = STARTING_CHECKS["science"]
+    claimed: set[str] = set()
+    by_rule: list[tuple[str, str, str, list[str]]] = []
+    for rule in drafted.rules:
+        text = f"{rule.title} {rule.criterion}".lower()
+        grounds_here = [check for check in proposed
+                        if check not in claimed
+                        and any(term in text
+                                for term in SCIENCE_GROUNDS.get(check, ()))]
+        if not grounds_here:
+            continue
+        claimed.update(grounds_here)
+        by_rule.append((rule.id, rule.title.strip().rstrip("."),
+                        str(getattr(rule, "from_user", "")).strip(), grounds_here))
+    if len(claimed) < SCIENCE_GROUNDS_REQUIRED:
+        return None
+    return CheckPackProposal(
+        key="science",
+        checks=tuple(proposed),
+        instead_of=tuple(STARTING_CHECKS[DEFAULT_STARTING_POINT]),
+        grounds=tuple((rid, title, said, tuple(checks))
+                      for rid, title, said, checks in by_rule))
+
+
+STARTING_CHECKS: dict[str, list[str]] = {
+    "general": GENERAL_CHECKS,
+    "science": SCIENCE_CHECKS,
+    "own": GENERAL_CHECKS,
+}
+
+
+def _substitute_project(text: str, project: str) -> str:
+    """No placeholder token survives into a committed file.
+
+    `draft.render()` already did this; the template path did not, which is how a
+    live `# Constitution — <PROJECT>` reached a person's repository.
+    """
+    return text.replace("<PROJECT>", project)
+
+
+def _empty_constitution(project: str) -> str:
+    """A constitution with no rules yet, and honest about what that means."""
+    return _substitute_project(
+        "# Constitution — <PROJECT>\n\n"
+        "Version this file in git. Every audit cites the commit that carried it.\n"
+        "Rule changes take effect only between cycles, so work is never judged\n"
+        "against a target that moved underneath it.\n\n"
+        "No rules yet. Nothing is gated until you add one. Add a rule with a\n"
+        "`### CA-AREA-NNN` heading, a **BLOCKER.** or **ADVISORY.** marker, and a\n"
+        "criterion someone else could check by reading the work.\n", project)
+
+
+def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
+                    drafted, chosen: str, description: str) -> tuple[str, str]:
+    """The constitution moment: show what will be required, then ask.
+
+    Runs on EVERY path, including the keyless one. Previously the drafted path
+    showed its rules and asked, and the fallback path wrote and committed a
+    document the person never saw — while the screen one step earlier promised it
+    would be "shown to you, and committed only if you agree" (Ledger D6).
+
+    Returns (markdown, starting_point_key).
+
+    Accessibility note: this is a terminal, so there is no aria-live to add. The
+    equivalent obligation is that every line reads correctly in linear order and
+    that nothing needed to operate the moment is carried only by colour, position
+    or box drawing. `tui.select` numbers its options and accepts the number as
+    input (Ledger D17), so a screen reader gets the options, their names and
+    their consequences as text and can choose without tracking a marker; the
+    green `❯` and the bold weight are redundant emphasis on top of that number.
+    The chosen option is then said in words when the menu closes rather than
+    left implied by a glyph.
+    """
+    while True:
+        point = STARTING_POINTS[chosen]
+        if drafted is not None:
+            attributed = [r for r in drafted.rules if getattr(r, "from_user", "")]
+            frame = t(GATING_FRAME_KEY)
+            # One rule drafted said "1 rules". Selected the way doctor does it,
+            # rather than by a new mechanism. The choice is a named function so
+            # a test can execute the shipped selection instead of restating it.
+            count = len(drafted.rules)
+            key = drafted_header_key(count, bool(attributed))
+            header = (t(key, count=count, attributed=len(attributed))
+                      if attributed else t(key, count=count))
+            consequences = [r.title.strip().rstrip(".").lower()
+                            for r in drafted.rules if r.severity == "BLOCKER"][:4]
+            body = _substitute_project(drafted.render(target.name), target.name)
+        else:
+            # The word "drafted" may appear only when a draft happened.
+            header = t("rules.starting_point_header", label=point_label(chosen))
+            frame = point_frame(chosen)
+            consequences = point_consequences(chosen)
+            body = (_empty_constitution(target.name) if point["template"] is None
+                    else _substitute_project(read(point["template"]), target.name))
+
+        tui.note(frame)
+        for line in consequences:
+            print(f"      · {line}")
+        print()
+        tui.note(header)
+
+        options = [
+            tui.Option("use", t("rules.option.use"), t("rules.option.use.hint")),
+            tui.Option("switch", t("rules.option.switch"),
+                       t("rules.option.switch.hint")),
+            tui.Option("edit", t("rules.option.edit"), t("rules.option.edit.hint")),
+            tui.Option("show", t("rules.option.show"), t("rules.option.show.hint")),
+        ]
+        # Said BEFORE the choice, not after it. This is the sentence that makes
+        # editing safe to offer freely (Ledger D8) — it is true because every
+        # audit cites the constitution commit and rule changes take effect only
+        # between cycles. Read after the person has already chosen, it is a
+        # reassurance about a decision they have made; read before, it is the
+        # fact they need in order to make it.
+        tui.note(t("rules.free_to_change"))
+        picked = tui.select(t("rules.prompt"), options, default=0)
+
+        if picked == "show":
+            tui.panel(t("rules.panel.full", name=const_name), body.splitlines())
+            continue
+        if picked == "switch":
+            chosen = tui.select(t("rules.starting_point_prompt"), [
+                tui.Option(key, point_label(key), point_hint(key))
+                for key in STARTING_POINTS],
+                default=list(STARTING_POINTS).index(chosen))
+            drafted = None          # an explicit choice replaces the draft
+            continue
+        if picked == "edit":
+            const_path.write_text(body, encoding="utf-8", newline="\n")
+            _open_in_editor(const_path)
+            body = const_path.read_text(encoding="utf-8")
+            drafted = None
+            tui.ok(t("rules.edits_loaded"))
+            continue
+        chosen = _propose_check_pack(drafted, chosen)
+        return body, chosen
+
+
+def _propose_check_pack(drafted, chosen: str) -> str:
+    """Show the inference, with its grounds, and let the person refuse it.
+
+    Only ever shown to somebody who can answer. A proposal made into a pipe is
+    not a proposal — the default would be taken by silence, and batch 2's rule
+    that silence never selects the laboratory contract is exactly what stopped
+    the walkthrough's harm. So with no terminal the pack is left alone and this
+    returns unchanged, which also keeps every non-interactive path byte-identical.
+
+    "Edit them first" and "Use a different starting point" both drop the draft,
+    and after that there is no structured rule set left to read grounds out of —
+    so no proposal is made. That is deliberate rather than a gap: the reasons
+    have to come from somewhere, and markdown a person has just hand-edited is
+    not somewhere we can honestly quote.
+
+    The grounds are quoted rather than summarised. "Because you said X" is only
+    printed where the drafting model actually attributed the rule to a fragment
+    of the person's sentence; where it did not, the rule itself is the reason and
+    the line says so. An invented reason for a real choice is the §1.5 failure
+    this whole slice exists to remove.
+    """
+    proposal = infer_check_pack(drafted, chosen)
+    if proposal is None or not tui.interactive():
+        return chosen
+
+    tui.note(t("checks.proposal.intro"))
+    for rule_id, title, from_user, checks in proposal.grounds:
+        print("      · " + t("checks.proposal.ground", rule_id=rule_id,
+                             title=title, checks=", ".join(checks)))
+        if from_user:
+            # The person's own words, on their own line: the sentence around
+            # them differs in word order between languages, and a quote welded
+            # into a translated clause by concatenation reads as neither.
+            print("        " + t("checks.proposal.said", said=from_user))
+    tui.note(t("checks.proposal.because", label=point_label(proposal.key)))
+
+    picked = tui.select(t("checks.proposal.prompt"), [
+        tui.Option(proposal.key,
+                   t("checks.proposal.accept", label=point_label(proposal.key)),
+                   ", ".join(proposal.checks)),
+        tui.Option(chosen, t("checks.proposal.keep", label=point_label(chosen)),
+                   ", ".join(proposal.instead_of)),
+    ], default=0)
+    if picked != chosen:
+        tui.note(t("checks.proposal.editable"))
+    return picked
+
+
+def _reason_inside_setup(exc: Denial) -> str:
+    """The refusal, with a remedy that is true where it is being read.
+
+    A provider refusal names ``crossaudit init`` as the way to store a key. That
+    is right everywhere except inside ``crossaudit init``, which is where this
+    one is printed — the person is already in it, and step 3 offered them the
+    key a moment ago. Sending them to the command they are running is a dead
+    end at the moment they are trying to act.
+
+    The missing-key refusal is recognised by what it CARRIES rather than by
+    matching its prose: it names an environment variable and no keys file,
+    because no keys file held the key. The other refusal from the same function
+    — a key that is in the file but not in this process — carries ``keys_file``
+    as well, and its remedy is already correct here, so it passes through
+    untouched. So does anything else, which keeps this from quietly rewriting
+    refusals it does not understand.
+    """
+    env = str(exc.detail.get("env", ""))
+    if not env or "keys_file" in exc.detail:
+        return exc.reason
+    return t("rules.no_key_here", env=env)
+
+
+def _open_in_editor(path: Path) -> None:
+    """$EDITOR, or print the path.
+
+    `crossaudit amend` is provider-backed, so it cannot run in the keyless state
+    that this moment is most often met in. Offering it there would be offering a
+    route that does not exist; plain file editing needs no provider.
+    """
+    import os
+    import subprocess
+
+    editor = os.environ.get("EDITOR") or os.environ.get("VISUAL")
+    if not editor or not tui.interactive():
+        tui.note(t("editor.manual", path=path))
+        return
+    try:
+        subprocess.run([*editor.split(), str(path)], check=False)
+    except OSError as exc:  # noqa: BLE001 -- an editor that will not start is not fatal
+        tui.warn(t("editor.failed", editor=editor, error=exc))
+        tui.note(t("editor.manual_instead", path=path))
+
+
+def drafted_header_key(count: int, attributed: bool) -> str:
+    """Which drafted-rules header to render, singular or plural.
+
+    Named and importable on purpose: the previous guard claimed to be "driven
+    through the shipped selection" while reading catalogue entries, so changing
+    this choice left it green. A test can only execute a decision that has a
+    name.
+    """
+    base = ("rules.drafted_header.attributed" if attributed
+            else "rules.drafted_header")
+    return base if count == 1 else base + ".plural"
+
+
+def _missing_credentials(target: Path, keys_file) -> list[tuple[str, str]]:
+    """Which role credentials are absent, as (env var, human role name).
+
+    Read the same way every other command reads them — the environment, plus the
+    keys file if `init` just wrote one — so `init` cannot report a state that
+    `doctor` will contradict a moment later.
+    """
+    import os as _os
+
+    from ..config import load as _load
+
+    present = dict(_os.environ)
+    if keys_file:
+        try:
+            for line in Path(keys_file).read_text(encoding="utf-8").splitlines():
+                line = line.strip().removeprefix("export ").strip()
+                if "=" in line and not line.startswith("#"):
+                    name, _sep, value = line.partition("=")
+                    present.setdefault(name.strip(), value.strip().strip("\"'"))
+        except OSError:
+            pass
+    try:
+        cfg = _load(target / CONFIG_NAME)
+    except Exception:  # noqa: BLE001 -- a report must never break setup
+        return []
+    missing: list[tuple[str, str]] = []
+    from ..providers.registry import NEEDS_KEY
+
+    if NEEDS_KEY.get(cfg.auditor.provider, True) and not present.get(
+            cfg.auditor.key_env, "").strip():
+        missing.append((cfg.auditor.key_env, t("role.auditor")))
+    generator_env = cfg.generator_key_env or "CROSSAUDIT_GENERATOR_KEY"
+    if (cfg.generator_vendor or "").lower() != "human" and not present.get(
+            generator_env, "").strip():
+        missing.append((generator_env, t("role.generator")))
+    return missing
+
+
 def _distil(description: str, provider: str, model: str, base_url: str, *,
             key_env: str = "CROSSAUDIT_AUDITOR_KEY", usage_root: Path | None = None,
             vendor: str = "unknown"):
@@ -259,7 +674,8 @@ def _distil(description: str, provider: str, model: str, base_url: str, *,
 def run(target: Path, *, mode: str, force: bool = False,
         auditor_vendor: str | None = None, auditor_model: str | None = None,
         generator_vendor: str | None = None,
-        generator_model: str | None = None) -> dict:
+        generator_model: str | None = None,
+        profile: str = "") -> dict:
     """Guided setup. Returns a summary of what was written."""
     requested_generator_model = generator_model
     target = target.resolve()
@@ -279,19 +695,17 @@ def run(target: Path, *, mode: str, force: bool = False,
         raise ConfigDenial(f"{cfg_path} already exists; refusing to overwrite "
                            f"(pass --force if you mean it)")
 
-    tui.banner("CrossAudit — setting up a supervised project",
-               "Two models from different vendors, one ledger in git. "
-               "Four questions, then it runs.")
+    tui.banner(t("init.banner.title"), t("init.banner.subtitle"))
 
     gitignore_existed = (target / ".gitignore").exists()
     for line in prepare(target):
         tui.ok(line)
 
     # ---- 1. the auditor ----------------------------------------------------
-    tui.step(1, 4, "Who audits")
-    tui.note("The model that reviews everything before it counts as done.")
+    tui.step(1, 4, t("init.step1.title"))
+    tui.note(t("init.step1.note"))
     auditor_vendor = auditor_vendor or tui.select(
-        "Auditor vendor:",
+        t("prompt.auditor_vendor"),
         [tui.Option(v, v, VENDOR_HINTS[v]) for v in VENDORS], default=0)
     if auditor_vendor not in VENDORS:
         raise ConfigDenial(f"unknown auditor vendor {auditor_vendor!r}")
@@ -299,19 +713,19 @@ def run(target: Path, *, mode: str, force: bool = False,
     model = auditor_model or choose_model(auditor_vendor, default_model)
     base_url = ""
     if auditor_vendor == "other":
-        base_url = tui.text("OpenAI-compatible base URL",
+        base_url = tui.text(t("prompt.base_url"),
                             placeholder="https://host/v1")
         provider = "openai_compat"
 
     # ---- 2. the generator --------------------------------------------------
-    tui.step(2, 4, "Who generates")
-    tui.note("The model that writes each build round. Its vendor is also recorded "
-             "so same-source supervision can be refused before either key is used.")
+    tui.step(2, 4, t("init.step2.title"))
+    tui.note(t("init.step2.note"))
     others = [v for v in VENDORS if v not in (auditor_vendor, "other")]
     generator_vendor = generator_vendor or tui.select(
-        "Generator vendor:",
+        t("prompt.generator_vendor"),
         [tui.Option(v, v, VENDOR_HINTS[v]) for v in others]
-        + [tui.Option("human", "human", "you write it yourself")], default=0)
+        + [tui.Option("human", t("option.human"), t("option.human.hint"))],
+        default=0)
     if generator_vendor == auditor_vendor:
         raise ConfigDenial(
             f"auditor and generator are both {auditor_vendor!r}: that is "
@@ -329,17 +743,14 @@ def run(target: Path, *, mode: str, force: bool = False,
             generator_vendor, generator_default_model, role="Generator")
 
     # ---- 3. keys -----------------------------------------------------------
-    tui.step(3, 4, "API keys")
-    tui.note(f"Written to {keys_file()} with mode 600, never placed in the "
-             f"repository. Leave blank to export them yourself.")
-    tui.note("Hidden by default. After entry, only length and the final four "
-             "characters are shown for paste checking. Set CROSSAUDIT_SHOW_KEYS=1 "
-             "only when you explicitly want visible input.")
-    auditor_key = tui.secret(f"{auditor_vendor} key — the auditor")
+    tui.step(3, 4, t("init.step3.title"))
+    tui.note(t("init.step3.where", path=keys_file()))
+    tui.note(t("init.step3.hidden"))
+    auditor_key = tui.secret(t("prompt.auditor_key", vendor=auditor_vendor))
     generator_key = ""
     if generator_vendor != "human":
-        generator_key = tui.secret(f"{generator_vendor} key — the generator "
-                                   f"(leave blank to export it yourself)")
+        generator_key = tui.secret(
+            t("prompt.generator_key", vendor=generator_vendor))
     written = None
     if auditor_key or generator_key:
         written = write_keys({"CROSSAUDIT_AUDITOR_KEY": auditor_key,
@@ -349,49 +760,47 @@ def run(target: Path, *, mode: str, force: bool = False,
         # first thing the person types into the console fails on a missing key
         # they just supplied.
         load_keys_into_env()
-        tui.ok(f"keys written to {written} (mode 600)")
+        tui.ok(t("file.keys_written", path=written))
 
     # ---- 4. the rules, spoken rather than written --------------------------
-    tui.step(4, 4, "What this is, and what would be a mistake")
-    tui.note("Say it in your own words. The rules are drafted from this, shown to "
-             "you, and committed only if you agree — you never write markdown.")
+    tui.step(4, 4, t("init.step4.title"))
+    # True on EVERY path. "Drafted" was promised before it was known whether a
+    # draft could happen, and on the keyless path none does — so the promise was
+    # broken by the state, not by the code. What is always true is that the
+    # rules are shown and chosen before anything is committed.
+    tui.note(t("init.step4.note"))
     const_name = "AUDIT_RULES.md"
     const_path = target / const_name
     description = tui.text(
-        "your project, in a sentence or three",
-        placeholder="e.g. a review of the PV industry; every figure must trace "
-                    "to a source")
+        t("prompt.description"),
+        placeholder=t("prompt.description.placeholder"))
 
-    drafted = False
+    # An explicit --profile skips the proposal entirely; otherwise the default
+    # is general, and silence never selects the laboratory contract.
+    starting_point = profile if profile in STARTING_POINTS else DEFAULT_STARTING_POINT
+    draft = None
     if description.strip():
         try:
             draft = _distil(description, provider, model or default_model, base_url,
                             usage_root=target, vendor=auditor_vendor or "unknown")
-            rows = [draft.project_summary, tui.dim(f"domain: {draft.domain}"), ""]
-            for r in draft.rules:
-                mark = (tui.red("BLOCKER") if r.severity == "BLOCKER"
-                        else tui.dim("advisory"))
-                rows.append(f"{tui.bold(r.id)}  [{mark}]  {r.title}")
-                rows.append(f"    {r.criterion}")
-                if r.from_user:
-                    rows.append(tui.dim(f'    from you: "{r.from_user}"'))
-            tui.panel("Drafted rules", rows)
-            if tui.confirm("Commit these as the project's rules?", default=True):
-                const_path.write_text(draft.render(target.name), encoding="utf-8",
-                                      newline="\n")
-                drafted = True
-                tui.ok(f"{const_name} written — change it any time by saying so: "
-                       f'crossaudit amend "from now on ..."')
         except Denial as exc:
-            tui.warn(f"could not draft rules: {exc.reason}")
-            tui.note("Falling back to the starter template; edit it, or use "
-                     "`crossaudit amend` once a key is in place.")
-    if not drafted and not const_path.exists():
-        const_path.write_text(read(const_name), encoding="utf-8", newline="\n")
-        tui.ok(f"{const_name} written from the starter template")
+            # Honest about what did not happen, and it does NOT offer
+            # `crossaudit amend` as the remedy: that is provider-backed and
+            # cannot run in exactly the state this message appears in. Nor does
+            # it offer `crossaudit init`, which is what the person is inside.
+            tui.warn(t("rules.draft_failed", reason=_reason_inside_setup(exc)))
+            tui.note(t("rules.draft_failed.fallback"))
+
+    # Shown and agreed on every path, which is what the step-4 promise said and
+    # only the drafted path delivered.
+    constitution_text, starting_point = _show_and_agree(
+        target=target, const_path=const_path, const_name=const_name,
+        drafted=draft, chosen=starting_point, description=description)
+    const_path.write_text(constitution_text, encoding="utf-8", newline="\n")
+    tui.ok(t("rules.written", name=const_name))
 
     # ---- configuration and shape -------------------------------------------
-    science_repo = tui.text("Project name (owner/name, or a label)", target.name)
+    science_repo = tui.text(t("prompt.project_name"), target.name)
     audit_repo = "" if mode == "local" else f"{science_repo}-audit"
 
     cfg_path.write_text(CONFIG_TEMPLATE.format(
@@ -415,9 +824,9 @@ def run(target: Path, *, mode: str, force: bool = False,
         permissive_minimum="false" if mode == "local" else "true",
         state_dir=".crossaudit",
         scope_dirs="experiments",
-        checks=", ".join(DEFAULT_CHECKS),
+        checks=", ".join(STARTING_CHECKS[starting_point]),
     ), encoding="utf-8", newline="\n")
-    tui.ok(f"{CONFIG_NAME} written")
+    tui.ok(t("file.config_written", name=CONFIG_NAME))
     from ..dcl import describe as describe_checks
 
     contract_name = "DETERMINISTIC_CHECKS.md"
@@ -427,7 +836,7 @@ def run(target: Path, *, mode: str, force: bool = False,
         "`crossaudit.yml`. These machine checks run before model review and are "
         "not changed by `crossaudit amend`. Edit `checks:` between cycles to change "
         "the enabled contract.\n\n```text\n"
-        + describe_checks(DEFAULT_CHECKS)
+        + describe_checks(STARTING_CHECKS[starting_point])
         + "\n```\n", encoding="utf-8", newline="\n")
     owned = [CONFIG_NAME, const_name, contract_name]
     if not gitignore_existed:
@@ -437,30 +846,67 @@ def run(target: Path, *, mode: str, force: bool = False,
         owned.extend(write_tree(target, AUDIT_TREE))
 
     setup_commit = commit_setup(target, owned)
-    tui.ok(f"setup committed — {setup_commit[:12]}")
+    tui.ok(t("file.setup_committed", sha=setup_commit[:12]))
 
     # ---- what to do next ---------------------------------------------------
-    tui.banner("Ready", str(target))
+    # `init` and `doctor` must not contradict each other one command apart
+    # (Ledger D6, P1). Setup finishing is not the same as the project being able
+    # to run, so the banner reports which of the two happened, and a missing
+    # credential leads the Next list instead of scrolling above a green box.
+    missing = _missing_credentials(target, written)
+    # F1. "Ready" was derived from credentials alone while the doctor also
+    # weighed the install, so a keyed setup announced Ready and the very next
+    # command denied it — in the person's own language, with the second line
+    # being the true one. Both now read the same decision.
+    blocks = doctor_shared.install_blocks()
+    if missing or blocks:
+        tui.banner(t("done.not_ready"), str(target))
+    else:
+        tui.banner(t("done.ready"), str(target))
     rows = []
-    if written:
-        rows.append(f"source {written}")
-        rows.append(tui.dim("    load the keys into this shell"))
-    rows += [
-        "crossaudit doctor",
-        tui.dim("    check everything, offline and read-only"),
-        'crossaudit build "…"',
-        tui.dim("    say what to build; the loop writes and audits it"),
-        "crossaudit console",
-        tui.dim("    two windows in a browser, live, and it outlives the window"),
-    ]
-    tui.panel("Next", rows)
+    if blocks and not missing:
+        # Named here for the same reason a missing credential is: it is what
+        # stops the very next command from agreeing.
+        for name, _detail in blocks:
+            if name == "admission-capable":
+                rows.append(tui.dim("    " + t("doctor.admission_capable.label")))
+                rows.append(tui.dim("    " + t("doctor.admission_capable.fix")))
+    if missing:
+        # Named first, because it is the thing that stops the very next command.
+        for env_name, role in missing:
+            rows.append(f"export {env_name}=...")
+            rows.append(tui.dim("    " + t("next.no_key", role=role)))
+        if written:
+            rows.append(f"source {written}")
+            rows.append(tui.dim("    " + t("next.source_keys")))
+        rows.append("crossaudit doctor")
+        rows.append(tui.dim("    " + t("next.doctor_recheck")))
+    else:
+        if written:
+            rows.append(f"source {written}")
+            rows.append(tui.dim("    " + t("next.source_keys.ready")))
+        rows += [
+            "crossaudit doctor",
+            tui.dim("    " + t("next.doctor")),
+            'crossaudit build "…"',
+            tui.dim("    " + t("next.build")),
+            # F2. The person set up in their own language and the very next
+            # action they are offered answers in English. Said HERE, at the step
+            # before the switch, because a limitation recorded in a comment or a
+            # findings file is not disclosed to anyone who is not us.
+            *([tui.dim("    " + t("next.build.english_only"))]
+              if i18n.language() != "en" else []),
+            "crossaudit console",
+            tui.dim("    " + t("next.console")),
+        ]
+    tui.panel(t("done.next"), rows)
 
     if mode != "local":
-        tui.panel("Two repositories (privilege separation)",
+        tui.panel(t("done.two_repos"),
                   github_plan(science_repo, audit_repo or f"{science_repo}-audit"))
         gh_ok, detail = gh_available()
         if not gh_ok:
-            tui.warn(f"{detail} — install from https://cli.github.com first")
+            tui.warn(t("done.gh_missing", detail=detail))
 
     return {"config": str(cfg_path), "constitution": str(const_path),
             "keys_file": str(written) if written else None, "mode": mode,
