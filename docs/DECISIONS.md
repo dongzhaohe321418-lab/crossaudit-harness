@@ -4183,3 +4183,55 @@ confirmation; `echo routed` is not. This is D66 — *execute the change against
 the reported symptom* — applied to my own instructions rather than to code, and
 it is the fourth time this cycle the failure has been **something reporting
 success while nothing happened.**
+
+## D101 — assumed_by_other, inside the audit process instead of the code
+
+`ux/live-regions` and `ux/condense-affordance` differ from integration by 10 and
+14 files. **Nine of them are the same nine files** — the unmerged SPEC-13
+commit `47f7053`, which both branches carry and which auditor3 has already
+audited.
+
+Audited per-branch against integration, **each audit re-covers those nine files,
+and either auditor may reasonably conclude the other one did.** That is
+`assumed_by_other` — the class that has produced the sharpest findings of this
+cycle in the product — occurring **in the review process itself.** Two
+independent audits, both honest, both thorough, and a shared region either one
+could rationally leave to the other.
+
+RULINGS:
+
+1. **Scope by delta, not by branch.** The condense-affordance audit runs
+   `47f7053..b3b6ab2`. An audit's scope is the code that is new *to this
+   review*, not the code that is new to the target branch.
+2. **Order the merge so the ambiguity cannot exist.** SPEC-13 lands with
+   `live-regions` first; `condense-affordance` then diffs to its own five files
+   and nothing else. **Fixing this by ordering is strictly better than fixing it
+   by attribution** — attribution is a judgement made afterwards and can be
+   wrong; ordering removes the shared region entirely.
+3. **The audited SHA is not the tip.** `live-regions` was audited at `47f7053`
+   and now points at `fe992d5`. The one file between them is the G8 deletion,
+   and G8 was the subject of that audit's S2. **A deletion is not exempt from
+   re-audit for being a deletion**: the subsumption is proved by running G8's
+   specified mutation against the surviving check and watching it redden (D97).
+
+### The finding underneath, restated at the scope it actually holds
+
+Three of the four branches edit the same render entry point, `renderConversation`
+in `console/page.py`, and **the guards on that file are largely source-text
+assertions.** A green suite therefore proves the three changes do not conflict
+*as text* and proves nothing about whether they **coexist on screen.**
+
+Filed against one line, it was an S2. **At file scope it is the mechanism behind
+D72's "shown 0 of 7"**: every guard on the surface a person actually looks at is
+asserting about source rather than about what rendered. `design/observation-layer`
+is the only thing in this repository standing on the far side of that line, and
+it is now pointed at exactly this question.
+
+### And a duplicate mechanism was avoided by someone asking first
+
+auditor2 proposed driving the combined console with its own harness and **stopped
+to ask rather than starting**, citing the consolidation directive. The layer it
+would have duplicated already existed and it had no way to know. **That is my
+routing failure, not its judgement** — and the directive worked exactly as
+intended: the cost of asking was one message, the cost of building would have
+been a sixth mechanism on a layer I had just collapsed to one.
