@@ -143,11 +143,15 @@ def test_no_live_region_is_emitted_into_a_container_that_is_replaced():
         set(offenders) - set(KNOWN_VIOLATIONS))
 
 
-def test_the_optimistic_turn_stopped_re_announcing_itself():
+def test_page_markup_gives_the_optimistic_turn_no_live_region_attribute():
     """It carried aria-live on the article and role=status on the dots, inside
     #conversation — so the whole echoed message was re-announced every two
     seconds for as long as it was on screen. The announcement it was reaching
-    for is Progress class and is made once, as a sentence, in slice 2."""
+    for is Progress class and is made once, as a sentence, in slice 2.
+    MARKUP ONLY. Asserts strings in ``page.py``; renders nothing and cannot
+    fail if the page never reaches a person — proved under D106 by serving an
+    empty document, which left it green.
+    """
     assert '<article class="turn" aria-live="polite">' not in PAGE
     assert '<span class="thinking-dots" role="status"' not in PAGE
     assert '<article class="turn">' in PAGE
@@ -346,7 +350,7 @@ def test_the_render_target_rule_is_shown_to_fail(why, before, after, monkeypatch
     caught = []
     for name, check in (
             ("render-target rule", test_no_live_region_is_emitted_into_a_container_that_is_replaced),
-            ("optimistic turn", test_the_optimistic_turn_stopped_re_announcing_itself),
+            ("optimistic turn", test_page_markup_gives_the_optimistic_turn_no_live_region_attribute),
             ("announcer placement", test_the_announcer_is_a_stable_node_outside_every_render_target)):
         try:
             check()

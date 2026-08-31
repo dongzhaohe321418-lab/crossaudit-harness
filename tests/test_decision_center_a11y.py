@@ -40,18 +40,26 @@ def test_it_is_a_dialog_and_it_says_what_the_decision_is_about():
     assert "aria-label=" not in modal
 
 
-def test_the_announcement_waits_for_the_locale_to_catch_up():
+def test_page_markup_defers_the_announcement_behind_a_zero_timeout():
     """The flag and the title are written, then translated on the next
     microtask. Announcing synchronously speaks the English source to a Chinese
     reader while the dialog's own name — built from the same nodes — is already
-    translated, so the heard and the read versions disagree."""
+    translated, so the heard and the read versions disagree.
+    MARKUP ONLY. Asserts strings in ``page.py``; renders nothing and cannot
+    fail if the page never reaches a person — proved under D106 by serving an
+    empty document, which left it green.
+    """
     assert "setTimeout(()=>announce(decisionSentence()),0);" in PAGE
     assert "announce(decisionSentence());" not in PAGE.replace(
         "setTimeout(()=>announce(decisionSentence()),0);", "")
 
 
-def test_the_boundary_is_real_and_not_only_announced():
-    """aria-modal tells a screen reader a boundary exists; inert makes it true."""
+def test_page_markup_declares_the_inert_boundary_and_calls_it_once():
+    """aria-modal tells a screen reader a boundary exists; inert makes it true.
+    MARKUP ONLY. Asserts strings in ``page.py``; renders nothing and cannot
+    fail if the page never reaches a person — proved under D106 by serving an
+    empty document, which left it green.
+    """
     assert "function setDecidingInert(on){" in PAGE
     assert "shell.setAttribute('inert','')" in PAGE
     assert PAGE.count("setDecidingInert(true)") == 1
@@ -217,7 +225,7 @@ def test_the_dialog_guards_are_shown_to_fail(why, before, after, monkeypatch):
     caught = []
     for name, check in (
             ("dialog semantics", test_it_is_a_dialog_and_it_says_what_the_decision_is_about),
-            ("inert boundary", test_the_boundary_is_real_and_not_only_announced),
+            ("inert boundary", test_page_markup_declares_the_inert_boundary_and_calls_it_once),
             ("stacking", test_the_decision_sits_above_the_panel_it_shared_a_layer_with)):
         try:
             check()

@@ -359,7 +359,7 @@ def test_every_reduction_the_producers_emit_is_handled_and_catalogued():
 
 
 # --------------------------------------------------- SPEC-20 §6, the live region
-def test_the_condensation_notice_is_announced_and_not_only_displayed():
+def test_page_markup_routes_the_condensation_notice_through_the_announcer():
     """A WIRING claim and NOTHING MORE — a presence check, named as one.
 
     The audit found this filed as though it settled the property: it asserts the
@@ -379,6 +379,10 @@ def test_the_condensation_notice_is_announced_and_not_only_displayed():
     why it is fixed here — one renderer, so one change covers turn folding AND
     the file-outlining notice that predates every merge in this cycle. Driven:
     both announced, both locales, baseline silent.
+    
+    MARKUP ONLY. Asserts strings in ``page.py``; renders nothing and cannot
+    fail if the page never reaches a person — proved under D106 by serving an
+    empty document, which left it green.
     """
     from crossaudit.console.page import PAGE
 
