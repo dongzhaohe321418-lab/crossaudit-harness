@@ -3872,3 +3872,44 @@ afterwards.
 **And "this cannot be asserted mechanically" remains an acceptable verdict.**
 Two correct negatives tonight were worth more than a yes. What is not
 acceptable is a third round where the bar still takes a proxy.
+
+## D96 — D7 triggered: the watchdog is stopped, not re-dispatched
+
+Watchdog R3 (`8f82a22`): **DO NOT MERGE**, `explained_by=proxy`,
+`enforcement=return-only`, **`third_round_same=yes`**. The auditor's own line:
+*"This is the third-round recurrence, so the stated stopping rule applies."*
+
+The class, across three rounds:
+- **R1** — the bound was satisfied by a **spinner**.
+- **R2** — satisfied by a **declaration**: `declare()` marked a watch
+  `explained` while its own docstring said it deliberately does not print.
+- **R3** — satisfied by a **proxy** again, and enforcement is still a return
+  value nobody reads.
+
+Three rounds, one shape: **something stands in for "a person was told," and
+the instrument accepts the stand-in.**
+
+**I am stopping rather than opening a fourth round**, because I stated that
+rule to the author in advance precisely so it would bind me. Re-dispatching now
+would make the rule advisory.
+
+**What is not in doubt**: `console=covered` held this round and
+`mutation_names=yes` — the mechanism can enumerate the right actions and can
+name the one that went silent. The suite is green at 1,841 collected / 1,839
+passed / 0 failed. **The engineering is not the problem.**
+
+**What the three rounds actually establish** is narrower and more interesting
+than "the work failed": every attempt to define *"a person was told"* from
+inside the process has reduced to something checkable-but-not-equivalent —
+an element, a state transition, a return value. That is evidence about the
+property, not about the attempts.
+
+This goes to the owner as a question rather than back to an engineer:
+**can bounded time-to-explanation be asserted from inside the process at all,
+or does it require observing the surface a person actually reads?** The second
+answer would put this instrument in the browser/accessibility-tree layer that
+the seam sweep already identified as the one no suite reaches — which would
+make it the same missing tier, not a separate mechanism.
+
+The founding defect this was built for — *a send that failed while the
+interface showed nothing* — remains uncovered by any instrument.
