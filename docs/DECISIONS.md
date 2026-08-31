@@ -4106,3 +4106,32 @@ agents reported my own decision-record commit as their work** because both read
 
 RULE unchanged but now mechanised: work goes on a named branch before it is
 reported. An untracked deliverable is one `rm -rf` from never having existed.
+
+## D99 — The decision record lost three entries and only a person noticed
+
+Integration's `docs/DECISIONS.md` ran **D70 → D74**. D71, D72 and D73 were
+gone, dropped by a conflict resolution that kept one side of the file.
+
+**D72 was "Shown 0 of 7"** — the adversarial audit of my own bookkeeping that
+found I had been counting defect closures as deliverable evidence. Losing it
+silently is worse than never having written it: the record then reads as
+though the finding was never made, and the behaviour it corrects has nothing
+standing against it.
+
+I did not find this. **An engineer hit the same conflict, said the numbers were
+missing, and I checked.** Every merge gate I run — identity assertion, tree
+comparison, full suite, cross-vendor audit — passes cleanly on a repository
+whose decision record has a hole in it, because **nothing in the suite covers
+`docs/`.**
+
+Recovered from `audit/receipt-remaining-r2`; D39–D99 is now contiguous.
+
+RULE: the record is checked like code. `tests/test_decision_record_is_contiguous.py`
+fails on a gap or a duplicate and names the number. Its mutation, per D64:
+delete D72 and it reddens with `missing decisions: [72]` — verified, not asserted.
+
+This is the same shape as D98, one layer up. **D98**: a consolidation silently
+took 52 cells and the suite stayed green. **D99**: a conflict silently took
+three decisions and the suite stayed green. In both, the loss was invisible
+because *the thing lost was not counted anywhere.* The fix is the same both
+times — count it, out loud, where a gap is arithmetic rather than memory.
