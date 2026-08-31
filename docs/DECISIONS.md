@@ -4472,3 +4472,54 @@ RULE: **a guard's name is part of its contract.** A name claiming behaviour that
 the body does not check is a tautology with a good disguise — the name is what
 people read, so it is the name that gets believed. Renaming is not cosmetic
 work; it is removing a false claim from the record.
+
+## D107 — The token lives only in the window, and that is both the security property and the wall
+
+Frozen GUI first contact on `2c21ce7` / `dd48bf59afe6`:
+
+```
+window_reachable=unknown  first_screen=unreachable  a11y_first_screen=unreachable
+token_visible_to_gui_user=unknown (absent from stdout, stderr, disk and argv)
+stale_url_403=readable
+```
+
+Three results, and they pull against each other.
+
+**1. The token does not leak.** Absent from stdout, stderr, disk, and child
+argv. Another process on the machine cannot read it. That is a real security
+property of the frozen build and **it is worth keeping.**
+
+**2. Therefore first contact cannot be verified.** The token exists only in the
+app window; window enumeration is refused without assistive access
+(`osascript -1728`). The layer refused to convert a process name and a
+listening port into a window, which is correct — *a port is not a window* —
+so conditions 2 and 4 are `unreachable` rather than passed or failed.
+
+**These are the same fact stated twice.** The confinement that makes the token
+safe is exactly what makes the first-contact path unobservable. **This is not a
+testing gap that better tooling closes; it is a property of the design**, and
+pretending otherwise would produce a test that passes by weakening the thing it
+tests.
+
+Three ways out, ranked:
+
+- **Grant assistive access to the automation.** Changes nothing about the
+  product. It is a system security setting, so **it is the owner's to grant, not
+  mine** — surfaced, not taken.
+- **An explicit opt-in token sink** (`CROSSAUDIT_CONSOLE_TOKEN_FILE`, honoured
+  only when set, absent by default). Preserves confinement for every real user
+  and makes first contact verifiable for whoever opts in. **This is a hole cut
+  into an authorization boundary and it does not get designed by the person who
+  wants the test to pass** — it goes to security review before anyone writes it.
+- **Do nothing and leave 2 and 4 permanently unreachable.** Honest, and worse
+  than either of the above, because a condition that can never be shown is not a
+  bar — it is a decoration.
+
+**3. And one plain finding, measured in a real browser**: the 403 is readable
+for both no-token and stale-token — the sentence renders as text,
+`looksLikeBrowserError=false`, zero page errors. **But it is `text/plain` with
+no `<title>`: a correct refusal delivered as a bare text page.** By our own
+triage rule an honest-but-ugly experience beats a pretty-but-misleading one, so
+this is S3 and not S1 — the sentence is true and a person can read it. It is
+still the first thing a returning user with a stale bookmark sees, and it is
+cheap to make a designed screen that says the same true thing.
