@@ -5483,3 +5483,35 @@ no description of either finding.** I sent that one back for evidence.
 **The difference is not the verdict. It is whether the verdict can be checked.**
 A report that reads like an audit gets exactly the treatment I have given every
 fix that read like a closure.
+
+## D128 — Owner's ruling on D127: enumerate the lifecycle before any further fix
+
+Surfaced the three-round DCL revocation class to the owner with three options —
+enumerate first, relocate verdict authority outside the mutable registry, or
+accept the defect and document the limit. **Ruling: enumerate the states, then
+talk about fixing.**
+
+That is the option that treats the last three rounds as evidence rather than as
+bad luck. **The states are the deliverable**; the design question comes after,
+and it is answerable only once the list exists.
+
+Constraints carried into the work:
+
+- **Do not fix anything found while enumerating.** The temptation is exact and
+  predictable: the enumeration will surface a fourth state, and fixing it is
+  precisely the reflex that produced three rounds. **Write it down and keep
+  going.**
+- **A state that cannot be reached is still a state** — record it as
+  unreachable with the reason, rather than dropping it. An enumeration is only
+  worth what its completeness claim is worth.
+- **The branch does not merge and integration keeps the original S0
+  deliberately.** A known defect carried knowingly is safer than a fourth repair
+  whose failure mode we can now predict arrives one round later. **That cost is
+  chosen with open eyes, not overlooked.**
+
+The reviewer has been asked the one question three passes at the boundary
+qualify it to answer: **is this invariant holdable at a mutable process-global
+registry at all**, or must verdict authority be established somewhere a registry
+mutation cannot reach. Not a design request — an observation request. **"No
+opinion" is an acceptable answer; "yes, and here is the tell" changes what goes
+to the owner next.**
