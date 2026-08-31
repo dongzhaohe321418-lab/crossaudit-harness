@@ -5418,3 +5418,68 @@ shows four failure modes, none in the original design:
 job well.* An auditor that has found serious things becomes, over time, an
 auditor that cannot be sent anywhere. **Any honest account of what CrossAudit
 guarantees has to include that the second opinion is a depleting resource.**
+
+## D127 — D7 FIRES: the DCL revocation class has survived three rounds. Stopping.
+
+```
+F1-RERUN d108062  your_probe_rerun=pass  restore_builtin=yes  shared_name_holds=yes
+old_properties_intact=yes  anchors_verified=5/5  s0/s1/s2/s3=0/1/0/0
+third_direction_found = mid-execution_result_crosses_revocation
+model_at_start = model_at_finish = gpt-5.6-luna_low     DO NOT MERGE
+```
+
+Three rounds on one class:
+
+1. **Round 1 — S0.** Revocation left the registry loaded: a removed pack kept
+   verdict authority.
+2. **Round 2 — S1.** The repair deleted a replacement without restoring the
+   authorized check underneath: revocation removed a rule the configuration
+   still allowed.
+3. **Round 3 — S1.** *A check already executing when revoked can still return a
+   finding after revocation. The registry is revoked, but its result crosses
+   the authority boundary.*
+
+**Each round fixed the symptom it was given and the next round found another
+state in the same lifecycle.** That is not three bugs. It is one property —
+*authorization and verdict authority stay in sync* — being defended state by
+state, in a lifecycle **whose states have never been enumerated.**
+
+**D7 fires and I am not opening round 4.** I set that rule before round 1, and
+its whole value is that I stated the stopping condition while I still wanted to
+keep going. Opening a fourth round would find a fourth state, because **the
+method is the problem, not the effort.** Every one of these fixes was correct
+about the thing it was told to fix.
+
+RULING — what happens instead of round 4:
+
+- **Enumerate the states before writing another line of fix.** Load, replace,
+  revoke, re-grant, reload, revoke-during-execution, revoke-during-reload, two
+  packs one name, a pack replacing a replacement. **The list itself is the
+  deliverable**, and it is the artifact the last three rounds were missing.
+- **Then decide whether the invariant is holdable at this boundary at all**, or
+  whether verdict authority has to be established somewhere a registry mutation
+  cannot reach. That is a design question and it goes to the owner, not into
+  another patch.
+- **The branch does not merge.** Integration keeps the original S0 until the
+  design question is answered — a known defect being carried deliberately is
+  safer than three repairs whose failure mode we now know arrives one round
+  later.
+
+### What was genuinely closed
+
+The original S0 and the replacement-chain S1 are **both confirmed closed**, with
+the reviewer re-running its own probe rather than accepting the author's report
+of it. `anchors_verified=5/5`. The author had independently reproduced the
+reviewer's finding **before the verdict arrived.** None of that work is wasted;
+it is the input to the enumeration.
+
+### And a contrast worth recording
+
+This review took **8m33s**, arrived with a findings file, a named mechanism,
+consistent start and finish models, and per-mutation anchor evidence. **Another
+audit tonight reported a two-S1 verdict in six commands and about a minute, with
+no description of either finding.** I sent that one back for evidence.
+
+**The difference is not the verdict. It is whether the verdict can be checked.**
+A report that reads like an audit gets exactly the treatment I have given every
+fix that read like a closure.
