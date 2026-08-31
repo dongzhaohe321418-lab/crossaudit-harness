@@ -4417,3 +4417,58 @@ is a diff rather than a judgement about how much changed.
 The moment `src/`, `tests/` or `packaging/` moves, the walkthrough is void and
 gets re-run. Until then it stands, and it stands **because of a command I ran,
 not because rebuilding felt unnecessary.**
+
+## D106 — The empty-page mutation, and why 359 became 0
+
+The dead-guard campaign examined **1,448 guards**. Its sharpest output is one
+sentence:
+
+> **the product's entire surface can be replaced with an empty document and
+> 99.9% of the suite stays green.**
+
+That is the console's UI having essentially no behavioural coverage in the main
+suite, demonstrated by execution rather than argued. It is also the mechanism
+behind D72's *shown 0 of 7* and behind D101's *guards on `console/page.py` are
+largely source-text assertions*, now measured instead of inferred: **delete the
+thing a person looks at, and the suite does not notice.**
+
+### 359 → 0, and the reason I asked
+
+The campaign first reported `mutation_missed=359`. Taken at face value that is
+a quarter of our guards missing mutations — the largest finding of the cycle.
+Taken carefully it may be operators irrelevant to what those guards pin. **Those
+two readings call for opposite responses and the number cannot distinguish
+them**, so I refused the total and asked for the subset whose *named property*
+the missed mutation actually touched.
+
+**The answer is `0-actionable-of-359`.** Every one was noise floor.
+
+Acting on the raw 359 would have been the largest false alarm of the cycle, and
+it would have looked like diligence the entire time. **A campaign's headline
+number is a question, not a finding.** The finding is what survives
+stratification, and stating the noise floor is what makes the signal mean
+anything.
+
+### The renames earned their names
+
+`cannot_fire=14` is now **14 proven, 0 read-but-unproven** — the 12 by the
+empty-page mutation, the XSS and P2 guards by their own probes. My condition was
+that a rename asserts something about behaviour and gets proved like a deletion
+(D97). It was met before any name changed.
+
+And the new names refuse the easy fix:
+`test_page_renders_the_approval_card_and_calls_the_endpoint` becomes
+`test_page_markup_declares_the_approval_card_and_the_endpoint_path` — **"markup
+contains/declares", never "renders", "announces", or "neutralises".** A reader
+meeting the new name learns that a string is present in a file, which is the
+truth, and does not tick off a property nobody tested.
+
+`test_page_markdown_renderer_neutralises_the_payload` is the one that cannot be
+fixed by renaming: **the XSS property is still untested**, and a rename that
+merely stops lying about it leaves the security hole unmeasured. It gets a real
+behavioural case.
+
+RULE: **a guard's name is part of its contract.** A name claiming behaviour that
+the body does not check is a tautology with a good disguise — the name is what
+people read, so it is the name that gets believed. Renaming is not cosmetic
+work; it is removing a false claim from the record.
