@@ -5924,3 +5924,30 @@ have.
 Also flagged: the auditor reports `mutations_landed=1/1` against the author's
 `7/7`. Probably different scopes — one verified the tautology, the other ran the
 branch's full set — **but "probably" is not a reconciliation, and I am asking.**
+
+## D136 — Unfreezing the queue: a decided defect is not a pending one
+
+I told the team **"nothing merges past the two open audit-core S0s."** That was
+right when both were live and unresolved. It is no longer the situation:
+
+- **F2 is fixed, reviewed cross-vendor, and merged** at `0d6d8e0`.
+- **F1 is being carried deliberately**, under the owner's ruling: enumerate the
+  lifecycle states before any further fix, no round 4.
+
+**Continuing to freeze the queue would treat a decided situation as an
+undecided one.** The DCL defect is not waiting on anything except an
+enumeration that is under way; the rest of the work is not downstream of it.
+
+RULE: **a hold needs a live reason, and "we were holding" is not one.** When the
+condition that justified a freeze is resolved — either fixed or deliberately
+accepted with a plan — **the freeze expires with it**, and someone has to say so
+out loud or it quietly becomes policy.
+
+**Unfrozen**: everything not touching `dcl/`. **Still held**:
+`fix/dcl-revocation` and anything downstream of it.
+
+And the actual blocker on the security branches was never the freeze — it is
+that **the fixes made in response to a review have not themselves been
+reviewed** (`cd0302c` answering the stacked review, `9d2fa5f` the honesty
+guards). That has been true for an hour behind a freeze that was doing the
+blocking for it. **A stale hold hides the real one.**
