@@ -2930,6 +2930,122 @@ separate sweeps with *"three of four causes unreached, needs a funded run"* can
 close, with a method already demonstrated. Detached suite on that branch:
 1,772 collected, 1,769 passed, 3 skipped, 0 failed.
 
+## D71 — The mislead map: ranked by what the person is told, not by depth
+
+Eight observable, unguarded sites from the disk-vs-cited sweep (D68), ranked by
+what a person is misled *about*:
+
+1. **Console constitution rule count** — a user sees a smaller or otherwise
+   wrong standard and **cannot know what rules were actually judged.**
+2. **Console report stream** — a user reads a report **edited after the cited
+   audit**, believing post-audit text was independently reviewed.
+3. **`cli.talk` constitution amendment** — a user is told a committed rule
+   change took effect while the displayed and used rules came from different
+   bytes.
+4. **Verifier configured-check claim** — an honest receipt rejected, or a
+   forged check selection accepted, on the strength of mutable local config.
+5. **Verifier skills manifest** — a user is told guidance was or was not in
+   force when the cited subject commit proves otherwise.
+6. **Verifier DCL source digest** — a valid historical receipt appears forged
+   after a CrossAudit release, undermining trust in signed history.
+7. **Console/demo report rendering** — a deliverable narrative whose report
+   bytes do not match the committed artifact it appears to describe.
+8. **Reproduction/environment status** — an environment reported as matching
+   when the cited lock or source state is not what was inspected.
+
+Ranking by misleading rather than by depth changes the order: a wrong integer
+on the one screen that is a GUI user's entire account of the standard outranks
+a subtle read on a path few reach. Items 2 and 3 are the sharpest new ones —
+both present **post-hoc content as audited**, which is the product's central
+claim inverted.
+
+Plus five correct-by-accident tripwires, each stated as *what would have to
+change for this to become wrong* — the list nobody else on the team could
+produce, because it requires knowing why code is right rather than that it is.
+
+## D72 — Shown 0 of 7: I have been counting defect closures as evidence
+
+I asked for an adversarial assessment of my own bookkeeping against the seven
+D28 conditions. Result: **shown 0/7, believed 3, evidence-adjacent 4.**
+
+> Evidence is real throughout, but **none currently establishes the full D28
+> condition on a packaged build.**
+
+That is precisely the pattern I asked it to hunt, found in my own accounting.
+Per condition, the adjacency:
+
+1. **No open merged S0/S1** — *closure labels and suite counts are not a
+   current merged-branch audit.*
+2. **Frozen fresh-user walkthrough** — *source-mode and shell tests do not
+   establish DMG first contact.*
+3. **UX S1–S7 across themes/locales/widths** — *several claimed matrices were
+   tautologies or focused pytest runs.*
+4. **Screen-reader first contact** — *container tests do not prove completion
+   by a screen-reader user.*
+5. **First three minutes in Chinese** — *CLI reachability and source parity do
+   not prove frozen GUI parity.*
+6. **Green suite and mutation guards** — *several claimed guards were
+   tautologies or did not execute the claimed surface.*
+7. **Invariants demonstrated** — *eight observable disk-vs-cited sites remain
+   unguarded.*
+
+**I have been treating defect closure and condition evidence as the same
+activity.** They are not. Every S0 closed tonight was real work and none of it
+was measured on the thing the bar is about: a packaged build, met by a person.
+
+REORDERING: the frozen-bundle walkthrough stops being a thing that happens
+*after* a batch of merges and becomes the primary evidence-generating activity.
+The cheapest single step covers four conditions at once — **a clean-HOME
+packaged-build walkthrough plus the browser and screen-reader matrices** —
+because those reach the largest unobserved population.
+
+Two things make that possible now that were not possible this morning: the
+escalation render harness is handed over (`serve(cfg, port=0)` drives the
+exact-SHA console under Playwright with no credentials), and artifact retention
+means a before/after build comparison is repeatable rather than lucky (D47).
+
+The three merge candidates continue on their own gates. But **a merge is not
+progress toward the bar unless something afterwards observes the packaged
+result**, and I have been recording merges as if they were.
+
+## D73 — Cycle integrity MERGED; and an engineer was living in the merge gate
+
+`fix/cycle-integrity-small` cleared cross-vendor with **MERGE, no findings**.
+Four routes reproduced against a dirty working constitution absent from Git;
+three `cmd_run` omissions closed as a class; five unpinned-by-design producers
+untouched. Suite reproduced independently at the same SHA: 1,748 collected,
+1,746 passed, 2 skipped, 0 failed.
+
+**The primitive swap was better than equivalent**, which is the question I
+asked because the author had adopted someone else's primitive over its own:
+
+> `read_committed_bytes` differs beneficially: it **rejects missing paths and
+> committed symlinks that the retired primitive mishandled**, while preserving
+> ordinary and pinned reads.
+
+Symlinks are the S0 class closed earlier this cycle. Dropping its own primitive
+was right twice over, and neither reason was visible when the author decided.
+
+### The merge aborted, and the cause was my onboarding
+
+`git merge` failed with *"Merge with strategy ort failed"*. Not a conflict —
+**the integration worktree was dirty.** The second engineer was working
+directly in `crossaudit_integ`, which holds `v5-redesign` and is the merge
+gate: uncommitted edits to `cli/main.py` and `receipt/verify.py` plus an
+untracked test file.
+
+I onboarded it with the repository root and never said which worktree to use.
+Every other engineer has its own. **I gave a new engineer write access to the
+gate and did not notice for an hour.**
+
+Recovery ordered as: commit onto its own branch first — a WIP commit is
+recoverable and a dirty integration tree is not — then cut its own worktree,
+then leave `crossaudit_integ` clean. Explicitly **not** stash or reset there:
+I am the only one who moves that branch and an accidental reset costs the
+evening's merges.
+
+RULE: every engineer is onboarded with **its own worktree path**, not the
+repository root. The integration worktree is mine alone and stays clean.
 ## D74 — The first real evidence, and the fixture that unlocks the rest
 
 The clean-HOME packaged walkthrough produced **99 files** — 31 screenshots, 26
