@@ -5028,3 +5028,45 @@ auditing has a failure mode this design never accounted for: **the second vendor
 may decline to look, and it declines most readily at security boundaries — the
 exact place the second opinion is worth most.** Any honest account of what
 CrossAudit guarantees has to say so.
+
+## D119 — A guard can be real and still pin the wrong half of the sentence
+
+Five content guards landed for the top-ranked unguarded trust sentences:
+`guarded=5/5`, `mutations_run=5/5`, **`mutations_landed=5/5`**,
+`weakened_not_deleted=yes`, `extractors_before_after=9/9`, suite `1884/0`.
+
+The weakening mutation was the requirement, not the deletion one: **deleting the
+sentence is the easy mutation and the wrong one**, because a presence check
+passes the failure we actually fear — the sentence surviving in softened form.
+
+**And the author named a self-review problem I had not seen:**
+
+> not just *"is the guard real"* but **"is the clause it pins the one that
+> carries the meaning."** I chose which half of each sentence is load-bearing,
+> and that judgement is the part I cannot check myself.
+
+**A guard can be technically sound, mutation-proved, and pinned to the wrong
+half.** *"This report is not committed yet, so it cannot be verified yet"* — a
+guard on *"this report"* is real, reddens honestly, and would let the whole
+qualifying clause be rewritten. Every mechanical check passes; the promise still
+evaporates.
+
+This is a **subtler class than the one this team has been hunting.** The dead
+guards could not fire at all. These fire correctly, at the wrong target — and
+nothing in a suite can tell the difference, because **which half of a sentence
+carries the meaning is a judgement about what a person would conclude**, not a
+property of the code. The reviewer's job on this branch is that judgement, and
+it is the only part the author could not do.
+
+### And I did not know the three names
+
+The author asked which three sentences were *presence-only* before deciding
+whether upgrading them is this slice or another — and **refused to guess.** My
+terminal offered a plausible-looking completion naming three. **The sweep's
+printed output never named them**; it reported `presence_only=3` and ranked the
+five unguarded ones.
+
+**A plausible list from an autocompletion is not a finding**, and relaying it
+would have been the same error as every wrong measurement tonight: a
+right-shaped answer from the wrong source. Asked the agent that has the
+inventory.
