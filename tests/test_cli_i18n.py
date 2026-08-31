@@ -782,3 +782,124 @@ def test_the_fallback_notice_never_enters_the_machine_surface(tmp_path,
     out = capsys.readouterr().out
     assert "[i18n]" not in out, "the notice corrupted the parser's surface"
     _json.loads(out[out.index("{"):out.rindex("}") + 1])
+
+
+# ==================== F3: the emit boundary, on the ERROR route ===========
+def _doctor_error_route(monkeypatch, capsys, tmp_path, *argv):
+    """An UNCONFIGURED directory: the route the guards never took."""
+    empty = tmp_path / "nothing"
+    empty.mkdir()
+    monkeypatch.chdir(empty)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    code = main.main(list(argv))
+    return code, capsys.readouterr().out
+
+
+def test_the_error_route_emits_json_like_the_success_route(monkeypatch, capsys,
+                                                           tmp_path):
+    """F3. `--json` with no project emitted a human screen and no JSON at all.
+
+    A parser met Chinese prose, and only on the error path — which is exactly
+    where nobody was looking. The guards seeded a configured project and proved
+    producer fields on the happy path, where the defect is not.
+    """
+    import json as _json
+
+    code, out = _doctor_error_route(monkeypatch, capsys, tmp_path,
+                                    "--json", "doctor", "--lang", "zh")
+    assert code != 0, "an unconfigured project should not report success"
+    payload = _json.loads(out[out.index("{"):out.rindex("}") + 1])
+    assert payload["ok"] is False
+    assert payload["checks"], "the error route emitted no checks"
+    assert not CJK.search(out), "the error route leaked prose into the parser"
+
+
+def test_the_error_route_still_speaks_to_a_person(monkeypatch, capsys, tmp_path):
+    """The boundary must not have been made common by dropping the human half."""
+    _code, out = _doctor_error_route(monkeypatch, capsys, tmp_path,
+                                     "doctor", "--lang", "zh")
+    assert CJK.search(out), "the human error route stopped speaking Chinese"
+
+
+def test_no_doctor_exit_bypasses_the_emit_boundary():
+    """Common in FACT, not by convention: asserted over the shipped source.
+
+    `_render_doctor` may only be handed to `_emit`. A branch that prints it
+    directly is the F3 defect, and it is the kind of thing a reviewer reads past.
+    """
+    import ast
+
+    tree = ast.parse(Path(main.__file__).read_text())
+    fn = next(n for n in ast.walk(tree)
+              if isinstance(n, ast.FunctionDef) and n.name == "cmd_doctor")
+    stray = []
+    for node in ast.walk(fn):
+        if not isinstance(node, ast.Call):
+            continue
+        name = getattr(node.func, "id", "")
+        if name != "print":
+            continue
+        for arg in ast.walk(node):
+            if isinstance(arg, ast.Call) and getattr(arg.func, "id", "") == "_render_doctor":
+                stray.append(node.lineno)
+    assert stray == [], (
+        f"cmd_doctor prints a rendered screen outside _emit at line(s) {stray}; "
+        f"that branch cannot emit JSON and only the error route takes it")
+
+
+# ==================== F2: disclosure a person actually sees ===============
+def _keyed_init(tmp_path, monkeypatch, capsys, lang, name):
+    """A setup that COMPLETES, so init offers the next actions.
+
+    `_init` deletes the credential env vars, so its run always lists a missing
+    key instead — and the language switch this is about is never reached from
+    there. The switch only exists on the path where setup succeeded.
+    """
+    import argparse
+
+    project = tmp_path / name
+    project.mkdir()
+    monkeypatch.setenv("HOME", str(tmp_path / f"home-{name}"))
+    monkeypatch.setenv("CROSSAUDIT_KEYS_FILE", str(tmp_path / f"keys-{name}.env"))
+    monkeypatch.setenv("CROSSAUDIT_AUDITOR_KEY", "auditor-secret")
+    monkeypatch.setenv("CROSSAUDIT_GENERATOR_KEY", "generator-secret")
+    monkeypatch.chdir(project)
+    main.cmd_init(argparse.Namespace(
+        path=str(project), github=False, force=True, no_console=True, json=False,
+        auditor_vendor="anthropic", auditor_model="claude-opus-4",
+        generator_vendor="openai", generator_model="gpt-5", profile="own",
+        lang=lang))
+    return capsys.readouterr().out
+
+
+def test_a_chinese_setup_says_build_answers_in_english(tmp_path, monkeypatch,
+                                                       capsys):
+    """F2. Not a comment, not a findings file — the screen, before the switch."""
+    flat = _flat(_keyed_init(tmp_path, monkeypatch, capsys, "zh", "disc"))
+    assert "crossaudit build" in flat, "the switch is not even offered here"
+    assert i18n.CATALOGUE["zh"]["next.build.english_only"] in flat, (
+        "the person walks from Chinese into English with nothing said")
+
+
+def test_an_english_setup_is_not_told_about_a_switch_that_does_not_happen(
+        tmp_path, monkeypatch, capsys):
+    flat = _flat(_keyed_init(tmp_path, monkeypatch, capsys, "en", "nodisc"))
+    assert "crossaudit build" in flat, "the fixture never reached the next actions"
+    assert i18n.CATALOGUE["en"]["next.build.english_only"] not in flat
+
+
+def test_init_and_doctor_state_the_same_wave_scope():
+    """They stated different scopes, which is a contradiction met before the
+    limitation itself."""
+    source = Path(main.__file__).read_text()
+    helps = re.findall(r'help="language for [^"]*"', source)
+    assert helps == [], (
+        f"the wave scope is written inline again, so the two can drift: {helps}")
+    assert source.count("help=LANG_HELP") == 2, (
+        "init and doctor no longer share one wave-scope sentence")
+    assert "wave 1: init and doctor only" in main.LANG_HELP
+
+
+def test_build_help_states_that_it_answers_in_english():
+    """build has no --lang, so its own help is where its limit belongs."""
+    assert "English in this wave" in main.BUILD_ENGLISH_NOTE

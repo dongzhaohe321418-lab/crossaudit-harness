@@ -22,6 +22,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import i18n
 from .. import doctor_shared
 from ..config import CONFIG_NAME
 from ..errors import ConfigDenial, Denial
@@ -889,6 +890,12 @@ def run(target: Path, *, mode: str, force: bool = False,
             tui.dim("    " + t("next.doctor")),
             'crossaudit build "…"',
             tui.dim("    " + t("next.build")),
+            # F2. The person set up in their own language and the very next
+            # action they are offered answers in English. Said HERE, at the step
+            # before the switch, because a limitation recorded in a comment or a
+            # findings file is not disclosed to anyone who is not us.
+            *([tui.dim("    " + t("next.build.english_only"))]
+              if i18n.language() != "en" else []),
             "crossaudit console",
             tui.dim("    " + t("next.console")),
         ]

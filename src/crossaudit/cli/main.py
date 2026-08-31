@@ -132,6 +132,17 @@ Docs: README.md in the repository.
 """
 
 
+#: One sentence about the language wave, said identically everywhere it is
+#: said. init and doctor previously stated DIFFERENT scopes in their help, which
+#: is a contradiction a person meets before they meet the limitation itself.
+LANG_HELP = "language for this command (wave 1: init and doctor only)"
+
+#: Stated in `build`'s own help, because build is where the language stops and
+#: a limitation only an engineer can read is not disclosed.
+BUILD_ENGLISH_NOTE = ("  Output is English in this wave; --lang is not offered "
+                      "here until the round-by-round narration can follow it.")
+
+
 def _emit(obj: dict, as_json: bool, human: str = "") -> None:
     if as_json:
         print(json.dumps({"crossaudit": __version__, **obj}, indent=2, sort_keys=True))
@@ -367,8 +378,16 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         add("config", False, exc.reason,
             f"run `crossaudit init` to write {CONFIG_NAME}",
             copy="doctor.config", slots={"name": CONFIG_NAME})
-        print(_render_doctor(checks, False, getattr(args, "all", False)))
-        if _offer(args, "run the setup wizard here"):
+        # F3. The error route leaves through the SAME boundary as the success
+        # route. It used to print the human screen directly and return, so
+        # `--json` on an unconfigured project emitted a Chinese human screen and
+        # no JSON at all: a parser met prose, and only on the error path — which
+        # is exactly where nobody was looking. One emit, both routes.
+        _emit({"ok": False, "checks": checks, "verifier": ident,
+               "admission": None}, getattr(args, "json", False),
+              _render_doctor(checks, False, getattr(args, "all", False)))
+        if not getattr(args, "json", False) and _offer(
+                args, "run the setup wizard here"):
             wizard.run(Path("."), mode="local", force=False)
             print("\nSetup written — running doctor again:\n")
             return cmd_doctor(args)
@@ -1701,7 +1720,7 @@ def build_parser() -> argparse.ArgumentParser:
     # are deliberately NOT consulted: an environment that happens to be Chinese
     # must not opt a person into a partly-translated tool without asking.
     i.add_argument("--lang", choices=i18n.LANGUAGES, default=i18n.DEFAULT_LANGUAGE,
-                   help="language for the setup wizard (wave 1: init only)")
+                   help=LANG_HELP)
     i.add_argument("--auditor-vendor", choices=tuple(wizard.VENDORS),
                    help="auditor vendor; useful when stdin is not a terminal")
     i.add_argument("--auditor-model",
@@ -1727,7 +1746,7 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--all", action="store_true",
                    help="list every check instead of collapsing the passing ones")
     d.add_argument("--lang", choices=i18n.LANGUAGES,
-                   default=i18n.DEFAULT_LANGUAGE, help="language for this command (wave 1: init, doctor)")
+                   default=i18n.DEFAULT_LANGUAGE, help=LANG_HELP)
     d.set_defaults(func=cmd_doctor)
 
     c = sub.add_parser("check", help="run the deterministic layer, no model involved")
@@ -1801,6 +1820,7 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("words", nargs="*")
     b.add_argument("--verbose", action="store_true",
                    help="also print the run goal payload and other internal state")
+    b.description = (b.description or "") + BUILD_ENGLISH_NOTE
     # F2. `build` is NOT offered --lang this wave, deliberately. Its banner and
     # closing copy are translated, but the round-by-round narration is
     # `RunEvent` prose produced by the agent loop, and translating that needs a
