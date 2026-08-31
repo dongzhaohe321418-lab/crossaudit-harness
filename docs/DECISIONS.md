@@ -5515,3 +5515,55 @@ registry at all**, or must verdict authority be established somewhere a registry
 mutation cannot reach. Not a design request — an observation request. **"No
 opinion" is an acceptable answer; "yes, and here is the tell" changes what goes
 to the owner next.**
+
+## D129 — The merged fix verified on the frozen build, and a correct denial a Chinese user cannot read
+
+`FROZEN-GUI-R2` on the rebuilt artifact `0d6d8e0`/`fa36757638ad`:
+
+```
+window_reachable=yes  first_screen=pass  stale_url_403=readable  moved_since_last_artifact=none
+denial_visible_to_person=yes   (exit 21, 0 receipts, renders in both locales, no spinner/blank)
+a11y_first_screen=fail-at-compose-step   (AXTextArea title=[] desc=[])
+cells_before=40 cells_after=40
+new: the denial sentence is untranslated in zh — broker/routing.py:75, 0 catalogue entries
+```
+
+**The audit-core fix is now verified where it has to be.** I merged it on source
+evidence and a merge-commit suite, and recorded explicitly that I had *not*
+checked it on the frozen build. It is checked: a corrupt evidence ledger denies,
+**exit 21, zero receipts written, and the refusal reaches a person as a rendered
+sentence** — not a blank panel, not a spinner that never resolves. **A correct
+denial rendered as nothing would have been the failure this workstream was
+founded on**, and it is not that.
+
+**Condition 4 fails at a named step, which is what I asked for instead of a
+grade.** `AXTextArea title=[] desc=[]` — and it is **the field the on-screen
+"Enter 发送" instruction points at.** The product tells a person to press Enter
+to send, and points them at a control a screen reader cannot name. **Not a
+missing attribute: an instruction addressed to someone who cannot locate its
+object.**
+
+### The compound finding
+
+**The denial sentence is English for a Chinese user** (`broker/routing.py:75`,
+zero catalogue entries). The refusal is correct, fail-closed, reaches the screen,
+and **cannot be read by the person it is protecting.**
+
+That is a new shape for this cycle and worth naming: **a safety mechanism that
+works perfectly and is illegible to its subject.** Every honesty guarantee we
+have written down assumes the sentence is understood. It is the third
+translation boundary found tonight — after the server-side literals and the
+`aria-label`s — and the pattern across all three is the same: **the strings
+furthest from the happy path are the least translated**, because nobody walks
+those paths in another language.
+
+RULE: **a refusal, a denial and an error are the strings that most need
+translating**, not the least. A person who understands the product when it works
+and not when it stops is worse off than one who understands neither.
+
+### Ledger
+
+Condition 2's **GUI half is re-shown** on the current artifact, and
+`moved_since_last_artifact=none` — the rebuild changed nothing a person meets,
+which is itself the evidence that the audit-core change was contained.
+Condition 7 gains the frozen-build demonstration of the fail-closed denial.
