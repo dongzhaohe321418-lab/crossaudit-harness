@@ -5567,3 +5567,62 @@ Condition 2's **GUI half is re-shown** on the current artifact, and
 `moved_since_last_artifact=none` — the rebuild changed nothing a person meets,
 which is itself the evidence that the audit-core change was contained.
 Condition 7 gains the frozen-build demonstration of the fail-closed denial.
+
+## D130 — Denials are 10% translated, and text matching cannot tell our strings from the user's
+
+**Measured: 51 of 530 denial/error strings have a catalogue entry. 479 have
+none — roughly 10% coverage, the least-translated category in the product.**
+594 denial messages across 46 files.
+
+D129 proposed this from a single instance and the count confirms it: **the
+strings furthest from the happy path are the least translated.** Setup is
+translated because everyone runs setup. A denial that fires when an evidence
+ledger is corrupt is translated by nobody, because nobody ever sees it — **until
+the day it is the only thing between a person and a forged receipt.**
+
+### The one string, fixed properly
+
+Translated **as a pattern rather than as an entry**, because the sentence
+carries the verifier's reason after a colon and **an exact entry would never
+match what a person actually sees**:
+
+```
+before  evidence ledger cannot be shown to the Auditor: entry 0 digest mismatch…
+after   证据账本无法出示给审计方：entry 0 digest mismatch (content tampered)
+```
+
+**The reason is carried through rather than swallowed**, with a mutation on
+exactly that, on the engineer's own reasoning: *a translation that drops the
+detail is its own kind of illegibility.* **A translated sentence that says less
+than the English one has not been translated; it has been replaced.**
+
+And a third guard rewords the denial at its source to prove the pattern cannot
+silently orphan itself — *"a catalogue entry for a sentence nobody raises is an
+entry that rots."* **That is the timer-guard class (D121) pre-empted by its
+author rather than found by a reviewer.**
+
+### The finding underneath the 25 server-side literals
+
+Scoping came back **20 mechanical, 2 patterns, 3 needing a judgement** — and the
+3 are the important ones. They are `chats.py` titles, and the reason is
+`rename()`:
+
+> **a person can author text identical to ours, and client-side text matching
+> cannot tell them apart.**
+
+**This is not an i18n detail. It is an architectural boundary.** A translation
+strategy that matches English text and substitutes will, sooner or later,
+**translate a user's own words because they happened to look like ours.** That
+is not a display bug — it is the product editing user data on the basis of a
+coincidence.
+
+RULING: **server-side strings get keys, not text matches.** A key is
+unambiguous where a text match is a guess, and the collision is not
+hypothetical — `rename()` makes it reachable by anyone who types a chat title.
+The 20 mechanical and 2 patterns go with the same rule, so the boundary is drawn
+once rather than three times.
+
+RULE, general: **never identify your own content by its appearance when a user
+can author content with the same appearance.** Identity comes from provenance —
+a key, a tag, a wrapper — never from a string comparison against data a person
+controls.
