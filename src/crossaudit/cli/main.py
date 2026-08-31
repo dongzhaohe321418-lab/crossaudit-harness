@@ -307,7 +307,11 @@ def _speak(args: argparse.Namespace) -> None:
     which is how the console and the tests call these. Here, the set of
     translated commands is visible at the commands themselves.
     """
-    i18n.set_language(getattr(args, "lang", i18n.DEFAULT_LANGUAGE)
+    # An explicit flag wins; then the language the person's system already
+    # asked for; then English. The middle step is the one that matters: a Mac
+    # set to Chinese should not need a flag nobody documented.
+    i18n.set_language(getattr(args, "lang", None)
+                      or i18n.from_environment()
                       or i18n.DEFAULT_LANGUAGE)
     i18n.reset_fallbacks()
 
@@ -1701,6 +1705,13 @@ def build_parser() -> argparse.ArgumentParser:
                    version=f"crossaudit {__version__} "
                            f"(receipt schema {RECEIPT_SCHEMA}) · {_mode} · {_where}")
     p.add_argument("--json", action="store_true", help="machine-readable output")
+    # Registered on the TOP-LEVEL parser as well as on the commands that take
+    # it, because `crossaudit --lang zh doctor` is what a person types and it
+    # used to be read as a verb: "invalid choice: 'zh'". The per-command flags
+    # use SUPPRESS so an absent one cannot overwrite this with its own default —
+    # the argparse trap that would silently undo it.
+    p.add_argument("--lang", choices=i18n.LANGUAGES, default=None,
+                   help=LANG_HELP)
     sub = p.add_subparsers(dest="verb")
 
     i = sub.add_parser("init", help="guided setup: keys, rules, configuration")
@@ -1719,8 +1730,8 @@ def build_parser() -> argparse.ArgumentParser:
     # wrong, which is the half-translated product D21 refuses. LANG and LC_ALL
     # are deliberately NOT consulted: an environment that happens to be Chinese
     # must not opt a person into a partly-translated tool without asking.
-    i.add_argument("--lang", choices=i18n.LANGUAGES, default=i18n.DEFAULT_LANGUAGE,
-                   help=LANG_HELP)
+    i.add_argument("--lang", choices=i18n.LANGUAGES,
+                   default=argparse.SUPPRESS, help=LANG_HELP)
     i.add_argument("--auditor-vendor", choices=tuple(wizard.VENDORS),
                    help="auditor vendor; useful when stdin is not a terminal")
     i.add_argument("--auditor-model",
@@ -1746,7 +1757,7 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--all", action="store_true",
                    help="list every check instead of collapsing the passing ones")
     d.add_argument("--lang", choices=i18n.LANGUAGES,
-                   default=i18n.DEFAULT_LANGUAGE, help=LANG_HELP)
+                   default=argparse.SUPPRESS, help=LANG_HELP)
     d.set_defaults(func=cmd_doctor)
 
     c = sub.add_parser("check", help="run the deterministic layer, no model involved")

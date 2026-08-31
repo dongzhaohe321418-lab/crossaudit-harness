@@ -71,6 +71,33 @@ _language = DEFAULT_LANGUAGE
 _fallbacks: list[str] = []
 
 
+def from_environment() -> str | None:
+    """The language the person's system already asked for, or None.
+
+    A switch a user has to discover is a switch most users never find, and the
+    people who need this one most are the least likely to be reading English
+    documentation to find it. `LC_ALL` then `LANG` are the conventional signal
+    and the product ignored both, so a Mac set to Chinese got English.
+
+    Only a language we actually have is honoured; anything else returns None so
+    the caller keeps its own default rather than being handed a locale the
+    catalogue cannot serve.
+    """
+    import os as _os
+
+    for name in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        raw = (_os.environ.get(name) or "").strip()
+        if not raw or raw.upper() in {"C", "POSIX"}:
+            continue
+        tag = raw.split(".")[0].split("@")[0].replace("_", "-").lower()
+        primary = tag.split("-")[0]
+        for known in LANGUAGES:
+            if tag == known or primary == known:
+                return known
+        return None
+    return None
+
+
 def language() -> str:
     return _language
 
