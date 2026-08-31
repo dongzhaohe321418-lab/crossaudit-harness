@@ -4669,3 +4669,49 @@ have to be true for the property to be irrelevant to the measurement.** Here:
 was checkable in one run and would have closed the question before any option
 was ranked. **An analysis that produces three options without checking its own
 premise has produced three wrong options.**
+
+## D112 — Refusing "0 unnamed of 5" found an S1 in four minutes
+
+I declined to grade `a11y_first_screen=pass` on **`0 unnamed of 5`**, because
+naming coverage is not the condition — the condition is *a task completed
+through the accessibility tree.* The task was then run:
+
+```
+task=completed-to-bar  next_step=blocked
+s1 = composer textarea#say has no accessible name   (page.py:3003)
+i18n = aria-label "Toggle context panel" untranslated (page.py:2962)
+named=16 unnamed=1 glyph_only=0
+```
+
+**The main input — the box a person types into — has no accessible name.** A
+screen-reader user reaches the composer and is told nothing about what it is.
+The task gets to the bar and stops.
+
+Two things this settles.
+
+**The count was never the point.** A full task run exposes 16 named elements,
+not 5; the earlier figure was the first screen alone. Had I accepted it,
+condition 4 would read **SHOWN** in my own ledger while the product's primary
+input was nameless. *Containers present, contents absent* — committed by me,
+in the document written to prevent it.
+
+**And the S1 was four minutes away.** It did not need a new mechanism, a
+consolidation, or another sweep. It needed the condition to be read literally.
+**Every guard on that surface is green, `1,879` tests pass, three cross-vendor
+audits cleared it, and none of them tried to use the thing as a person would.**
+
+The engineer added the observation that matters most, about my own error in
+D107: *"my 'the token question dissolves' line came from running the thing, not
+from reasoning about it. The framing survived as long as nobody opened the
+window — the same shape as the refusal sentence surviving because nobody
+guarded it."*
+
+**An unchecked framing and an unguarded sentence fail identically: both hold
+until someone actually looks.** D107 was mine and it survived exactly as long as
+it took to open a window. That is the same failure as the 403 wording nobody
+asserted, as the guards that could not fire, and as *shown 0 of 7* — **a claim
+nothing was trying to break.**
+
+Also filed: an `aria-label` in English on a surface with a standing parity
+invariant. **`aria-label` is user-facing text that no sighted reviewer ever
+reads**, which is precisely why it is where untranslated strings survive.
