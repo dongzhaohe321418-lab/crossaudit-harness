@@ -118,3 +118,45 @@ def test_every_failing_doctor_row_tells_the_person_what_to_do_next(cfg, monkeypa
         assert row["fix"] in rendered, (
             f"the next action for {row['check']!r} never reaches the terminal: "
             f"{row['fix']!r}")
+
+
+# ---------------------------------------------------------------- 6 of 6
+# Sentence 3 of the presence-only three, routed into this slice because its
+# producer is Python. Sentence 1 (the frozen console refusal) is already fixed
+# on ux/forbidden-page; sentence 2 (the escalation banner) is browser-only and
+# is deliberately NOT guarded here — writing its guard against page source would
+# smuggle in the missing layer under a rename and close the ticket over the hole.
+def test_an_ungoverned_citation_says_the_rule_and_the_evidence_not_just_the_verdict():
+    """Softened, a citation nobody fetched appears source-backed."""
+    from crossaudit.dcl import provenance
+    from crossaudit.dcl.framework import CheckContext
+
+    body = b'```crossaudit-sources\n["' + b"f" * 64 + b'"]\n```\n'
+    ctx = CheckContext(governed_source_ids=frozenset())
+    findings = provenance.check_source_provenance({"report.md": body}, ctx)
+    assert findings, "no finding for an ungoverned citation; the guard is vacuous"
+    said = findings[0].observation
+
+    assert "was not retrieved through a governed tool" in said, said
+    assert "evidence-ledger record" in said, (
+        "the sentence no longer says WHAT would have made it governed, so it "
+        f"reads as a policy refusal rather than a missing record. Got: {said!r}")
+    assert "may only cite sources it fetched" in said, (
+        "the rule is gone: without it a person is told this citation failed, "
+        f"not that citing an unfetched source is never allowed. Got: {said!r}")
+
+
+def test_the_provenance_check_disclaims_judging_whether_the_claim_is_true():
+    """Rank-adjacent. Softened, a governed-fetch check appears to verify truth.
+
+    This is the clause that stops "source_provenance passed" being read as
+    "CrossAudit checked the sources say what the report claims". It checks that
+    a cited id was fetched under approval, and nothing about the content.
+    """
+    from crossaudit.dcl.framework import contracts
+
+    described = contracts(["source_provenance"])["source_provenance"]
+    assert "governed research tool" in described, described
+    assert "does not judge the truth" in described, (
+        "without this the description reads as verification of the claim "
+        f"itself, which is the overclaim §1.5 forbids. Got: {described!r}")
