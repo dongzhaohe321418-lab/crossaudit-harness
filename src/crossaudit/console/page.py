@@ -3585,6 +3585,14 @@ const ZH={
   ,"These are the rules the auditor judges against; an audit cannot run without them.":"这些是审计者据以判定的规则；缺少它们无法进行审计。"
 };
 const ZH_PATTERNS=[
+  // The fail-closed denial from the audit core: a corrupt evidence ledger
+  // refuses to produce a receipt. It carries the reason from the verifier after
+  // the colon, so it is a PATTERN — an exact entry would never match what a
+  // person sees. This is the sentence standing between somebody and a forged
+  // receipt, and it was the last string in the product anyone thought to
+  // translate.
+  [/^evidence ledger cannot be shown to the Auditor: ?(.*)$/,
+   m=>'证据账本无法出示给审计方：'+m[1]],
   [/^Typing `crossaudit` runs (.+) \(version (.+)\)\. This app is (.+) at (.+)\.$/,
    m=>'在终端里输入 `crossaudit` 运行的是 '+m[1]+'（版本 '+m[2]+'）。本应用是 '+m[3]+'，位于 '+m[4]+'。'],
   [/^Typing `crossaudit` runs (.+)\. Its version could not be determined without running it, which CrossAudit does not do\. This app is (.+) at (.+)\.$/,
