@@ -21,6 +21,7 @@ from ..config import Config
 from ..dispute import DISPUTES_LOG, parse_findings
 from ..router import history as routing_history
 from .chats import LEGACY_CHAT_ID, canonical_id
+from .overview import ReportSource, read_report_sources
 from .progress import context_events
 
 GENERATOR_LANES = {"generator", "project", "chat"}
@@ -193,22 +194,32 @@ def generator_stream(cfg: Config, routing: list[dict],
 def auditor_stream(cfg: Config, routing: list[dict],
                    commits: list[dict] | None = None,
                    commit_chats: dict[str, str] | None = None,
-                   reports: list[tuple[Path, str]] | None = None) -> list[dict]:
+                   reports: list[ReportSource] | None = None) -> list[dict]:
     """Every verdict, every dispute ruling, and the user's words about standards.
 
-    ``reports`` may carry a pre-read ``*/report.md`` set (see
-    overview.read_report_texts) so a snapshot reads each report once and shares
-    it with read_cycles; when absent the reports are read here as before.
+    ``reports`` may carry a pre-read set (see overview.read_report_sources) so
+    a snapshot reads each report once and shares it with read_cycles; when
+    absent they are read here through the same reader.
+
+    F1. This used to `read_text()` the working copy, and so did the dashboard.
+    A report rewritten after its audit therefore reached the screen as the
+    auditor's own words — driven, the rewrite flipped the reported verdict from
+    PASS to BLOCKED, moved the dashboard counters, and put a hand-typed BLOCKER
+    observation under the independent auditor's name. `verify` used to catch
+    this by accident, because it also read the working tree; the verifier merge
+    correctly moved it to the cited commit, and nothing replaced the accident.
+    So: the text is the audited text, and the row says when the copy on disk
+    disagrees.
     """
     stream: list[dict] = []
     ledger = cfg.root / cfg.ledger_dir
     commit_rows = commits if commits is not None else _commits(cfg.root)
     commit_chats = commit_chats or {row["sha"]: row["chat_id"]
                                     for row in commit_rows}
-    report_pairs = (reports if reports is not None else
-                    [(report, report.read_text(encoding="utf-8"))
-                     for report in ledger.glob("*/report.md")])
-    for report, text in report_pairs:
+    sources = (reports if reports is not None
+               else read_report_sources(cfg))
+    for source in sources:
+        report, text = source.path, source.text
         verdict = "?"
         m = re.search(r"\|\s*verdict\s*\|\s*\*\*(\w+)\*\*", text)
         if m:
@@ -223,6 +234,14 @@ def auditor_stream(cfg: Config, routing: list[dict],
             "findings": [{"severity": f.severity, "rule": f.rule,
                           "artifact": f.artifact, "observation": f.observation[:400]}
                          for f in parse_findings(text)],
+            # "committed" | "drifted" | "uncommitted", plus the sentence for
+            # the two that are not "committed". Additive, and the only thing on
+            # this row that is about the FILE rather than about what the
+            # auditor said — which is why it is a separate field and not folded
+            # into the findings, where it would read as something the auditor
+            # observed.
+            "report_state": source.state,
+            "report_note": source.note,
         })
     disputes = ledger / DISPUTES_LOG
     if disputes.is_file():
@@ -250,7 +269,7 @@ def auditor_stream(cfg: Config, routing: list[dict],
     return sorted(stream, key=lambda m: (m["t"], m.get("round", 0)))[-40:]
 
 
-def bundle(cfg: Config, reports: list[tuple[Path, str]] | None = None,
+def bundle(cfg: Config, reports: list[ReportSource] | None = None,
            progress: dict | None = None,
            ) -> tuple[list[dict], list[dict], dict[str, str]]:
     """Build both streams and the commit association map with one Git read.

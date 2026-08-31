@@ -417,6 +417,10 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 /* Message rows: a work record, not a chat app. */
 .turn{margin-bottom:var(--sp-6)}
 .turn.user{display:flex;justify-content:flex-end}
+.turn.draft .turn-main{border:1px dashed var(--line-strong);border-radius:var(--r-md);
+  padding:10px 12px;background:transparent}
+.turn.draft .draft-label{font-weight:500;color:var(--text-2);font-size:var(--fs-caption)}
+.turn.draft .draft-body{white-space:pre-wrap;color:var(--text-2)}
 .turn.user .turn-main{max-width:85%;min-width:0}
 .turn.user .turn-body{background:var(--surface-2);border-radius:var(--r-lg) var(--r-lg) 6px var(--r-lg);
   padding:var(--sp-3) var(--sp-4)}
@@ -433,6 +437,9 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
    speaker name — because nothing said this; attributing it to the generator
    would be a claim about who produced the words. */
 .turn.system-note{margin-bottom:var(--sp-5)}
+.report-provenance{margin:10px 0 0;padding:8px 10px;border-radius:var(--r-sm);
+  background:var(--surface-2);color:var(--text-2);font-size:var(--fs-caption);
+  border-left:2px solid var(--warn,var(--line-strong))}
 .turn.system-note .turn-main{border-left:2px solid var(--line-strong);
   padding:2px 0 2px var(--sp-4)}
 .turn.system-note .turn-meta{margin-bottom:4px;color:var(--text-3)}
@@ -3483,6 +3490,10 @@ const ZH={
   "Connect at least two different providers on the previous step to form an independent Generator / Auditor pair.":"请在上一步至少连接两家不同的供应商，以组成独立的生成者 / 审计者搭配。",
   "Generator and auditor must run on different providers. Independent review is the core of the protocol and cannot be turned off.":"生成者和审计者必须运行在不同的供应商上。独立审查是本协议的核心，无法关闭。",
   "You can swap either model later without losing history.":"你之后可以更换任一模型而不丢失历史记录。",
+  "The copy of this report on disk differs from the audited one shown here. Run crossaudit verify to check the record.":"磁盘上的这份报告与此处显示的已审计版本不同。请运行 crossaudit verify 核对记录。",
+  "Generator live draft · not yet audited":"生成者实时草稿 · 尚未审计",
+  "No receipt names the commit this report was audited at, so CrossAudit cannot confirm the version shown here is the one that was audited. Run crossaudit verify to check the record.":"没有收据记录这份报告在哪个提交上接受了审计，因此 CrossAudit 无法确认此处显示的版本就是当时被审计的版本。请运行 crossaudit verify 核对记录。",
+  "This report is not committed yet, so it cannot be verified yet.":"这份报告尚未提交，因此暂时无法核验。",
   "Start using CrossAudit":"开始使用 CrossAudit","Paste your API key":"粘贴你的 API key",
   "Paste a new key to replace the saved one":"粘贴新密钥以替换已保存的密钥",
   "Same provider — independent review is not possible.":"同一家供应商——无法进行独立审查。",
@@ -5484,6 +5495,14 @@ function turn(m,d){
       + '<div class="turn-meta"><span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b><span class="status ' + esc(m.verdict) + '">'
       + esc(m.verdict) + '</span><span class="turn-time">' + at(m.t) + '</span></div>'
       + (fs || '<div class="turn-body">'+(m.verdict==='PASS'?'No findings. The audited increment passed.':'No structured findings were recorded.')+'</div>')
+      // F1. What is shown above is the AUDITED report, read from the commit the
+      // receipt cites. When the copy on disk says something else the person is
+      // told, rather than silently corrected: they may have edited it for a
+      // good reason, and the one thing worth handing them is the command that
+      // settles it. Deliberately OUTSIDE the findings list — inside it, this
+      // would read as something the auditor observed, which is the exact
+      // confusion this whole fix exists to end.
+      + (m.report_note ? '<p class="report-provenance">'+esc(m.report_note)+'</p>' : '')
       + '</div></article>';
   }
   if(m.kind === 'context_condensed'){
@@ -5592,7 +5611,22 @@ function reviewCard(d){
   const cycle=cycles[cycles.length-1];
   const status=String(cycle.status||'').toLowerCase();
   if(!['passed','consumed','blocked','escalated'].includes(status))return '';
-  const p=chatProgress(d);if(p&&!p.finished)return '';
+  // R3. This card was suppressed for the whole duration of ANY run. The
+  // suppression predates F1 and F7 — the run card takes the stage — but F1
+  // attaches the report provenance to this card, so that line vanished
+  // exactly while the surface is busiest. A person watching a live draft over a
+  // completed cycle is precisely the person who needs to know what was reviewed
+  // and against what. The F1 property held except while streaming, which is
+  // except when it matters most.
+  //
+  // NARROWED, not removed. A run that is continuing THIS cycle is producing a
+  // verdict that supersedes the one on this card, and showing the old outcome
+  // while it is being replaced would be a false statement about what is
+  // current. A run on anything else is different work: this card stays a true
+  // statement about a settled cycle, it carries that cycle id in its Record,
+  // and the run card directly above it says what is live.
+  const p=chatProgress(d);
+  if(p&&!p.finished&&String(p.continuation_cycle||'')===String(cycle.id||''))return '';
   const reports=d.auditor_stream.filter(m=>m.kind==='auditor'&&(m.chat_id||'history')===activeChatId);
   const related=reports.filter(m=>m.sha&&cycle.sha&&(String(cycle.sha).startsWith(String(m.sha))||String(m.sha).startsWith(String(cycle.sha))));
   const rows=(related.length?related:reports.slice(-Number(cycle.round||1))).slice(-8);
@@ -5627,6 +5661,13 @@ function reviewCard(d){
     +'<div role="list" aria-labelledby="review-checks-title-'+esc(cycle.id)+'">'+renderCheckRows(checks)+'</div>'
     +'<div class="review-rounds">'+esc(d.rules)+(d.rules===1?' rule':' rules')+'</div></div>'
     +(findingRows?'<div class="review-section"><div class="review-section-title">Findings</div>'+findingRows+'</div>':'')
+    // F1. The review card is the surface a person actually reads for the audit
+    // result, so the provenance of the bytes above belongs here and not only in
+    // the Audits view. One line per distinct note, because several rounds of one
+    // cycle share the same edited file and repeating it would read as several
+    // problems.
+    +([...new Set(rows.map(m=>m.report_note).filter(Boolean))]
+        .map(note=>'<p class="report-provenance">'+esc(note)+'</p>').join(''))
     +'<div class="review-section"><div class="review-section-title">Record</div><div class="review-record">'
     +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
     +'<div class="review-record-row"><span>Cycle</span><code>'+esc(cycle.id)+'</code></div>'
@@ -6082,7 +6123,7 @@ function renderConversation(d){
     // One protagonist per screen: the welcome empty state renders only when
     // the timeline holds nothing at all, and the delivery band only when no
     // review card already states the outcome of the same cycle.
-    const body = messages.map(m=>turn(m,d)).join('') + optimistic + live + approval + review
+    const body = messages.map(m=>turn(m,d)).join('') + optimistic + liveDraftTurn(d) + live + approval + review
       + admissionCard() + (review ? '' : deliveryStatus(d));
     html = body || welcome();
   }
@@ -6334,10 +6375,78 @@ function connected(on,why){
 let poller=null;
 function startPolling(why){connected(false,why);if(poller)return;poller=setInterval(async()=>{
   try{render(await api('/api/state'));connected(true,'polling');}catch(e){connected(false,'offline');}},2000);}
+// F7. The transport was correct and nothing consumed it: production-shaped
+// `generation_chunk` frames reached the browser as NAMED SSE events and the page
+// registered no named listener. Thirty focused streaming tests passed because
+// they stop at the transport, so the merge could claim a visible live draft
+// while a person watching the console saw nothing arrive early.
+//
+// This is the page side of the contract held in the server module
+// docstring for `_generation_sse_frame` (D4), implemented not re-derived:
+// key by (run_id, stream.id); accept only seq == expected; on ANY gap discard
+// the WHOLE accumulated draft and never concatenate across it; done/aborted
+// discards; done/complete stays visibly provisional until the ordinary state
+// leaves GENERATING, which supersedes it with the committed turn.
+//
+// Discarding on a gap rather than showing what arrived is the fail-closed
+// choice and the only honest one: a draft with a hole in it is not what the
+// generator wrote, and presenting it would be a smaller version of the defect
+// F1 closes — text on screen that nothing stands behind.
+let liveDraft=null;
+function draftChunk(row){
+  const stream=row&&row.stream;
+  if(!stream||typeof stream!=='object')return;
+  const run=String(row.run_id||''),id=String(stream.id||'');
+  const seq=Number(stream.seq),done=stream.done===true;
+  if(!run||!id||!Number.isInteger(seq)||seq<0)return;
+  const same=liveDraft&&liveDraft.run===run&&liveDraft.id===id;
+  if(!same){
+    // A new stream may only begin at 0. Anything else means we joined midway —
+    // a reconnect, a dropped frame — and there is no complete draft to show.
+    if(seq!==0){liveDraft={run:run,id:id,seq:seq,text:'',done:true,broken:true};return;}
+    liveDraft={run:run,id:id,seq:-1,text:'',done:false,broken:false};
+  }
+  if(liveDraft.broken)return;
+  if(seq!==liveDraft.seq+1){liveDraft.text='';liveDraft.broken=true;liveDraft.done=true;
+    if(lastState)render(lastState);return;}
+  liveDraft.seq=seq;
+  if(!done)liveDraft.text+=String(row.text||'');
+  else{
+    liveDraft.done=true;
+    // Aborted means the completion did not finish. There is no draft.
+    if(stream.outcome!=='complete'){liveDraft.text='';liveDraft.broken=true;}
+  }
+  if(lastState)render(lastState);}
+// Shown only while the run it belongs to is still generating. Superseding is
+// therefore driven by the ordinary state — a failure, a cancellation, an
+// interruption or the move to AUDITING all end it — and never by a page-side
+// timer, which would be the page guessing about a run it cannot see.
+function liveDraftFor(d){
+  if(!liveDraft||liveDraft.broken||!liveDraft.text)return null;
+  const p=chatProgress(d);
+  if(!p||p.finished||String(p.run_id||'')!==liveDraft.run)return null;
+  if(String(p.state||'').toUpperCase()!=='GENERATING')return null;
+  return liveDraft;}
+function liveDraftTurn(d){
+  const draft=liveDraftFor(d);
+  if(!draft)return '';
+  // Deliberately none of: a file card, a download, a delivery band, a PASS mark
+  // or any audit styling. This is unaudited text and it may not borrow the
+  // furniture of text that has been through the auditor.
+  return '<article class="turn draft"><div class="turn-main">'
+    +'<div class="turn-meta"><span class="role-mark" aria-hidden="true">G</span>'
+    +'<b class="draft-label">Generator live draft · not yet audited</b>'
+    +'<span class="spacer"></span><span class="turn-time">'
+    +(currentLocale==='zh'?'刚刚':'now')+'</span></div>'
+    +'<div class="turn-body draft-body">'+esc(draft.text)+'</div></div></article>';}
 function startStream(){let source;try{source=new EventSource('/api/stream?t='+encodeURIComponent(T));}
   catch(e){startPolling('polling');return;}source.onopen=()=>{connected(true,'live');
   if(poller){clearInterval(poller);poller=null;}};source.onmessage=ev=>{try{render(JSON.parse(ev.data));
-  connected(true,'live');}catch(e){}};source.onerror=()=>startPolling('reconnecting');}
+  connected(true,'live');}catch(e){}};
+  // The named listener this whole finding is about. `onmessage` never sees it:
+  // a frame with an `event:` line is dispatched by name and by name only.
+  source.addEventListener('generation_chunk',ev=>{try{draftChunk(JSON.parse(ev.data));}catch(e){}});
+  source.onerror=()=>startPolling('reconnecting');}
 
 const form=document.getElementById('f');const say=document.getElementById('say');
 const send=document.getElementById('send');const stopRun=document.getElementById('stop-run');
