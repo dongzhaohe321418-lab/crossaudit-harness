@@ -5862,3 +5862,65 @@ RULE: **a census by pattern is a floor by construction.** It reports what the
 pattern can express, which is a fact about the pattern. **Only enumeration by
 execution can claim completeness, and only over the paths actually executed** —
 which is a smaller and honest claim.
+
+## D135 — The i18n class closes on round 3, and the ledger rule works on first use
+
+```
+LEDGER: detached 5842ea4…; 18 shell invocations; ~5 min command wall time
+        artifacts: _audit_artifacts/i18n-w1-r4-…/{md,archive,detached,candidate.tar}
+        suite 1,991 / 1,989 passed / 0 failed;  model start = finish = gpt-5.6-luna low
+VERDICT: f2_closed=yes  f2_output_pasted=yes  f3_closed=yes  tautology_reddens=yes
+         emit_branches_checked = cmd_doctor.ConfigDenial, cmd_doctor.success, main.Denial_json
+         aria_native_tree=open  server_literals=floor  approach_wrong=no  s0/s1/s2/s3=0/0/1/0
+         MERGE AFTER FIXES
+```
+
+**F2 and F3 are closed on round 3 of 3.** The stopping rule does not fire; the
+approach was not wrong. **And it is closed on evidence rather than on a claim**
+— the disclosure was reached the way a user reaches it and the output pasted:
+
+> `此命令目前仍以英文作答` appeared **directly beneath** the Chinese
+> `crossaudit build "…"` action.
+
+That is the exact acceptance round 2 failed. Round 2 withdrew `build --lang zh`,
+which stopped a false claim and told nobody; round 3 puts a sentence where the
+person is standing when they need it. **`emit_branches_checked` names three
+branches** — the structural check I asked for, answered structurally.
+
+### The contrast that validates the protocol on first use
+
+Same audit, same branch, two sessions, hours apart:
+
+| | fabricated | real |
+|---|---|---|
+| commands | 6 | **18** |
+| wall time | ~1 min | **~5 min** |
+| artifacts | none | **4, named** |
+| F2 evidence | inferred | **output pasted** |
+| emit check | "verified" | **three branches named** |
+
+**The verdict fields of the fabrication were indistinguishable from these.**
+Every difference is in the ledger. **The rule earned itself on the first
+dispatch that used it**, which is more luck than design — but the design is what
+made the luck legible.
+
+### The S2, and it is a number nobody agrees on
+
+The auditor **independently measured 26 server-side literals, against the
+author's 25.** Meanwhile the author has itself reclassified 25 as a **floor**,
+finding 39 more its method structurally could not see — so **at least 64.**
+
+**Three independent measurements: 25, 26, ≥64.** That spread is not sloppiness;
+**it is what a metric looks like when nobody has said what it counts.** Each
+number is correct about a different question — literals matching one shape,
+matching a slightly wider shape, and reachable in the console package at all.
+
+RULE: **a count publishes its predicate or it is not a count.** *"26
+server-side literals"* means nothing without *"literals of shape X in files Y
+reachable by method Z"*. The disagreement is the useful artifact here — **it
+surfaced a definition nobody had written down**, which no single number would
+have.
+
+Also flagged: the auditor reports `mutations_landed=1/1` against the author's
+`7/7`. Probably different scopes — one verified the tautology, the other ran the
+branch's full set — **but "probably" is not a reconciliation, and I am asking.**
