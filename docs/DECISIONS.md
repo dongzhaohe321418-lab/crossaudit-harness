@@ -4291,3 +4291,57 @@ frozen-only defect found so far has lived on that side.
 **Condition 5 cannot be shown on this tree at all**, and saying so is the point:
 it depends on a branch blocked by three S1s. A condition that is unreachable by
 construction is not a condition that is pending.
+
+## D103 — The frozen console refuses me, in plain language, and that is the result
+
+Launched the packaged GUI from a clean HOME and reached its console over
+loopback. The artifact answered:
+
+```
+HTTP/1.0 403 Forbidden
+forbidden: loopback-only, and the session token from the printed URL is required
+```
+
+Measured on the frozen bundle, not in source mode:
+
+- the parent process listens on **nothing**; its child listens on
+  **127.0.0.1 only**, ephemeral port — no `0.0.0.0`, nothing off-box;
+- an unauthenticated local request is **denied even though it is local**;
+- the denial **states both constraints in one sentence a person can read**;
+- `cache-control: no-store`.
+
+**Condition 7 gets its first real evidence** — an invariant demonstrated on the
+artifact by being enforced against me.
+
+### And the honest boundary
+
+The message says the token comes from *the printed URL*. **The GUI wrote zero
+bytes to stdout.** Presumably the window shows it — but I cannot see a window
+from a shell, and inferring one from `lsof` is not observing it.
+
+So: **condition 2's GUI half is `completable=no` from my seat**, and it is
+handed to the observation layer rather than guessed at. That is the same answer
+I have accepted from agents all cycle, applied to myself. A cell I could not
+observe is not a cell that passed.
+
+### Four instrument errors in one walkthrough
+
+1. `cmd | head; echo $?` reported **head's** exit status — nearly filed
+   "every failure exits 0" as an S1. The real codes are `20` / `10` / `2`,
+   correct and distinguishable.
+2. Tested Chinese first contact on a tree from which **I had personally removed
+   the i18n branch** an hour earlier.
+3. Ran `lsof` **after terminating the process**, and read "no ports" from a
+   corpse.
+4. `lsof -p … -i …` without `-a` ORs its filters; the "port list" was every
+   open file, including font caches.
+
+Two of those would have become **false S1s filed against my own team's work.**
+Every one produced a plausible answer of the right shape, which is why none of
+them announced itself.
+
+RULE, and it is the same rule as D84 with the scope widened: **assert the
+instrument, not just the target.** Before a number is allowed to mean anything,
+the thing that produced it must be shown to have been pointed at the right
+object, at a time when that object existed. Tonight the product was correct four
+times and my measurement was wrong four times.

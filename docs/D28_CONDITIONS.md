@@ -19,12 +19,12 @@ Rules for this file:
 | # | Condition | What would show it | Status |
 |---|---|---|---|
 | 1 | No open S0/S1 on merged code | A current cross-vendor audit of the merged tree, not per-branch verdicts collected over time | **BELIEVED** |
-| 2 | Frozen fresh-user walkthrough | Clean-HOME first contact with the DMG, completed end to end | **NOT SHOWN** |
+| 2 | Frozen fresh-user walkthrough | Clean-HOME first contact with the DMG, completed end to end | **PARTIAL** — CLI half done on `2c21ce7`; GUI half `completable=no` from a shell (D103) |
 | 3 | UX S1–S7 across themes / locales / widths | Cells observed on the packaged build; observed means screenshot + read_page, not reasoned about | **PARTIAL** (D81) |
 | 4 | Screen-reader first contact | A task completed via the accessibility tree — *containers present is not contents present* | **PARTIAL** (D81) |
 | 5 | First three minutes in Chinese | Frozen GUI parity, not source-string parity | **PARTIAL** (D81) |
 | 6 | Green suite + mutation-proved guards | Each guard demonstrated red by its own name (D64) | **BELIEVED** |
-| 7 | Invariants demonstrated | The disk-vs-cited sites guarded, each with its mutation | **NOT SHOWN** |
+| 7 | Invariants demonstrated | The disk-vs-cited sites guarded, each with its mutation | **PARTIAL** — frozen console enforces loopback + token against an unauthenticated local request (D103); the disk-vs-cited sites remain unguarded |
 
 ## Standing gaps
 
