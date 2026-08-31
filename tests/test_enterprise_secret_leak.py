@@ -227,7 +227,7 @@ def test_tool_evidence_binds_only_head_and_count(cfg):
                   _token(), cfg=cfg, run_id="r", now_epoch=0)
     assert r.ok
 
-    te = _tool_evidence(cfg)
+    te = _tool_evidence(cfg).block
     assert te is not None
     assert set(te) == {"ledger_head", "entries"}      # nothing else is bound
     assert len(te["ledger_head"]) == 64 and te["entries"] >= 1
@@ -243,7 +243,7 @@ def test_receipt_binding_cannot_surface_a_ledger_payload(cfg):
     led.append("tool_result", run_id="r",
                payload={"smuggled": AWS_KEY, "also": GH_TOKEN}, ts="t1")
 
-    te = _tool_evidence(cfg)
+    te = _tool_evidence(cfg).block
     assert te is not None and set(te) == {"ledger_head", "entries"}
     assert te["entries"] == 2
     _assert_no_secret(json.dumps(te))                 # the receipt stays clean
