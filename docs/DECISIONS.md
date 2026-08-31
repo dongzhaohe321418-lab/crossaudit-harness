@@ -4555,3 +4555,45 @@ verification need collide, look for the resolution *outside the product* before
 negotiating the property. The wall here was the automation's permissions, not
 the design. Had I gone straight to `CROSSAUDIT_CONSOLE_TOKEN_FILE`, I would
 have shipped a permanent weakening to solve a temporary one.
+
+## D109 — S1 on merged code: 3 of 52 error boxes announce, and the other 49 are silent
+
+`ui` supplied the intent document for the console surface and named two
+suspicions. I checked both against merged integration and **both are real.**
+
+```
+wizard-error lines = 52,  of which role="alert" = 3
+textContent = e.message  at 4289, 4327, 4335, 4407, 4835 (+)
+```
+
+**The finding is not the missing attribute. It is the distribution.** Three
+identical elements carry `role="alert"` and forty-nine do not. There is no
+design under which three of them need announcing and the rest do not — **the
+three prove the author knew the role was required.** This is the accessibility
+law of this workstream in its purest form: *the containers are present; the
+announcement is absent*, and every one of those boxes looks correct on screen.
+
+Consequence for a person: **a screen-reader user who hits an error in the setup
+wizard is told nothing at all.** The box appears, the sighted user sees red, and
+the assistive-technology user receives silence. Where a message *does* reach a
+live region, `textContent=e.message` means what they hear is **a raw exception
+string, untranslated.**
+
+Graded **S1**, twice over by our own rules: *a core task cannot be completed*
+(setup cannot be recovered from an error you were never told about), and
+accessibility with language is its own tier (D5/D25). It is **on merged code**,
+which means condition 1 was `BELIEVED` and is now demonstrably wrong for this
+surface — exactly the reason a collection of clean branch verdicts is not a
+clean tree.
+
+### How it was found is the part to keep
+
+`ui` wrote the surface. It could not verify its own work, so it wrote down
+*what the surface is supposed to do* and said explicitly: **"everything in it is
+intent — if a case built from it fails, the document is the more likely thing to
+be wrong."** That posture is what made the document useful: it named where its
+own author's confidence was thin, and the thin spots were the defects.
+
+Intent from the author, verification from someone else. **Separating those two
+found an S1 in twenty seconds that four sweeps, 1,879 tests and three
+cross-vendor audits had not.**
