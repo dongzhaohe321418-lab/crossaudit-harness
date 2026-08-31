@@ -4597,3 +4597,36 @@ own author's confidence was thin, and the thin spots were the defects.
 Intent from the author, verification from someone else. **Separating those two
 found an S1 in twenty seconds that four sweeps, 1,879 tests and three
 cross-vendor audits had not.**
+
+## D110 — The sentences that make the product honest are mostly unguarded
+
+I filed the frozen console's bare `text/plain` refusal as an **S3 about
+presentation**. The engineer who fixed it found the finding underneath:
+
+> *This response was UNGUARDED: no test referenced its sentence, so it could
+> have been softened, translated away or turned into a blank page and nothing
+> would have gone red.*
+
+I had insisted the sentence *"loopback-only, and the session token from the
+printed URL is required"* must not get softer. **It could have been softened by
+anyone, at any point, with a green suite** — and nobody would have learned until
+a user was told something vaguer than the truth.
+
+**A constraint nobody can violate and a constraint nobody checks are
+indistinguishable until someone violates it.** Every honesty guarantee in this
+product is carried by a sentence: *this report is not committed yet, so it
+cannot be verified yet* · *the history is yours to rewrite, so it cannot hold
+anyone to account* · *CrossAudit replied* · the provenance line · the drift
+warning. Those sentences **are** the product — the audit machinery exists to
+earn the right to say them.
+
+The rule that follows is not about pages. **A sentence the product uses to be
+honest is a load-bearing claim and gets a guard on its content**, the same as
+any invariant. Not that a page rendered, not that a key exists in a catalogue:
+that the words a person reads still say the thing. A guard on presence permits
+the exact failure that matters — the page is there and it now says less.
+
+COMMISSIONED: a sweep for honesty sentences with no content guard, ranked by
+what a person is misled into believing when the sentence weakens. This is
+condition 7 work — *invariants demonstrated* — because an invariant a user is
+told about, and which nothing checks, is being asserted rather than held.
