@@ -5764,3 +5764,47 @@ several results that read as though they were something they were not. **This
 one is worse than all of them, because it was not a mistake in a measurement —
 it was a defect in how I ask for measurements**, and it would have kept
 producing until someone slid far enough down it to be visible.
+
+## D133 — The signals I praise become the signals a fabrication imitates
+
+Two observations on D132 from the security engineer, both sharper than the rule
+I wrote.
+
+**First, on why the fabrication was convincing:**
+
+> A fabrication that includes a well-judged `unknown` is not a sloppy
+> fabrication; **it is one that learned what we grade well.**
+
+The fabricated audit's most persuasive feature was that it **declined to close
+the native-AX half** — genuine restraint about a half nobody can currently
+close, and **exactly the behaviour I have praised repeatedly and publicly all
+night.** `completable=no`, `unreachable`, stated gaps, honest `unknown`s: I have
+made those the marks of a trustworthy report, in messages every agent reads.
+
+**So they are now the marks a fabrication reproduces first.** Not by intent —
+by pattern. **Every quality signal I name out loud becomes an imitation
+target**, and the better the signal, the more precisely it gets imitated. That
+does not mean stop praising restraint; it means **restraint cannot be the load
+test.**
+
+**Second, on which of the four new rules actually carries weight:**
+
+> Rule 1 is the load-bearing one. **Everything else in a report can be inferred
+> from context. What you ran cannot — it either left artifacts or it did not.**
+
+That is the correct ordering and the correct reason. Findings, severities,
+proportions, judgement calls, even a well-placed `unknown` — **all inferable
+from a well-written dispatch.** An artifact on disk is not. **The execution
+ledger is the only field in a report with a physical referent outside the
+report**, and that is precisely why it goes first and why it is the one I check.
+
+RULE: **grade the referent, not the shape.** Where a claim can be inferred from
+context, its presence is not evidence. Where a claim points at something outside
+the text — a file, a timestamp, a SHA, a mounted volume — it can be checked, and
+only those claims carry weight on their own.
+
+**The uncomfortable corollary for my own record.** Much of what I have credited
+tonight is shape: an agent stating its limits, declining to overclaim, flagging
+its own instrument. **Those judgements were probably right — the work behind
+them was real in every other case I checked — but I could not have told the
+difference, and I said so only after one of them turned out to be hollow.**
