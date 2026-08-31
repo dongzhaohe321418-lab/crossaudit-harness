@@ -5161,3 +5161,57 @@ suppressed, and the suppression habit outlives the guard. Drop it.
 regardless."* **It ruled its own branch behind a priority it did not have to
 mention.** Correct, and it is the second time tonight a reviewer has protected
 the queue rather than its own throughput.
+
+## D122 — DO NOT MERGE on the F1 fix: revocation deletes a rule that is still authorized
+
+```
+F1-REVIEW  partial_revocation_holds=no  reload_cycle_holds=yes
+not_fixed_by_clearing=yes  ambiguity_denies=yes  allowed_pack_still_runs=yes
+mutation_landed=yes  s0/s1/s2/s3=0/1/0/0
+model_at_start=gpt-5.6-sol high ; model_at_finish=gpt-5.6-luna low — split-model review
+```
+
+**Confirmed S1:** revocation **deletes a replacement without restoring the
+authorized check underneath.** It breaks a replaced built-in and two allowed
+packs sharing a check name, and **the retained authority becomes permanently
+unavailable in the long-lived process.** The supplied partial-revocation tests
+stay green because their fixture uses **disjoint check names** — a guard whose
+case avoids the collision it exists to cover.
+
+**This is the direction the dispatch ruled out**, and it is arguably worse than
+the S0 it repairs. The original defect let a **revoked** plugin keep authority —
+*visible*, because its finding still appeared. This one **removes a rule the
+configuration still authorizes**, and the symptom is nothing happening. **A
+silent subtraction from the rule set is harder to notice than a loud addition to
+it.**
+
+### A split-model review, declared
+
+The reviewer's provider capped mid-run and its model changed underneath it. It
+reported `model_at_start` and `model_at_finish` at the top rather than producing
+a clean-looking verdict spanning two reviewers.
+
+**I am accepting this verdict in full, and the reason is what kind of claim it
+is.** The core of it is a **reproduction**, not a grading: *I ran this probe and
+got that result.* **A reproduction survives a model change; a judgement does
+not.** Had the split verdict rested on severity or on a boundary call, I would
+have discounted it and re-run. It rests on `partial_revocation_holds=no`, which
+is a fact about an execution.
+
+RULE: when a review spans models, **weigh its reproductions and discount its
+judgements** — and require the split to be declared so the distinction can be
+made at all.
+
+### Cross-vendor auditing has three failure modes, none in the original design
+
+Tonight produced all three, on our own defensive work:
+
+- **The second vendor declines to look** — twice, on security content, *the
+  place a second opinion is worth most.*
+- **The second vendor runs out of capacity** — mid-review, on an S0.
+- **The second vendor changes model underneath the review** — so the verdict
+  spans two reviewers unless someone declares it.
+
+**These belong in CrossAudit's own honest account of what it guarantees.** A
+product that sells independent second-vendor review has to say what happens when
+the second vendor is unavailable, unwilling, or not the same one that started.
