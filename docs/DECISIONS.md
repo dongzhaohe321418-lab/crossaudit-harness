@@ -5264,3 +5264,61 @@ Sentence 2 is also the highest-consequence of the three: *an audited deliverable
 appears to exist when CrossAudit only answered conversationally.* **The one we
 can least afford to leave unguarded is the one we cannot honestly guard yet** —
 that is the gap stated at its true size rather than papered over.
+
+## D124 — Correcting D117: the aria-label number was 5, not 74, and I measured the wrong thing
+
+D117 recorded *"74 of 74 aria-labels are English — not one untranslated string,
+the entire assistive-technology surface."* **That magnitude is wrong**, and the
+engineer said so rather than reporting the number I had put in the record:
+
+> I've reported against **64 static labels rather than 74**, because 74 counted
+> **source literals and the source is English by construction** — the gap was
+> **5**. If you'd rather the line read 74/74 for consistency with the finding,
+> say so, but **I'd be reporting a number I don't think is the real one.**
+
+**It is right.** The measurement behind D117 was: grep `page.py` for
+`aria-label` literals, count how many contain CJK, find zero. **In a codebase
+where source strings are English by design and translation happens at runtime
+through a catalogue, that result is guaranteed regardless of coverage.** It
+proves nothing. The real question — *how many are absent from the catalogue* —
+has the answer **5 of 64**.
+
+**This is the same defect as my four wrong measurements tonight, and it is the
+worst placed one.** A right-shaped number from the wrong source: `head`'s exit
+code, an `lsof` against a dead process, a locale test on a tree with no locale
+module, and now a CJK grep against source that cannot contain CJK. **The others
+died in a shell. This one reached the decision record and was promoted into an
+S1's severity argument**, where it would have outlived me.
+
+**The finding survives; the magnitude does not.** Untranslated `aria-label`s are
+real, and the class reasoning in D117 stands: `aria-label` is **user-facing text
+that no sighted reviewer reads and no visible-text scanner sees**, which is why
+it went unnoticed. **Five such labels is still a screen-reader user meeting
+English on a Chinese surface.** It is an S2, not the assistive surface being
+absent.
+
+RULE: **before counting how many of a set fail, state what a passing member
+would look like in the place you are looking.** If every member of the set looks
+identical at that layer — as English source literals do — **the layer cannot
+answer the question**, and a zero there is not evidence.
+
+### The rest of R4
+
+`f2_disclosed_to_user_where` = **the line under `crossaudit build "…"` in init's
+next actions, in Chinese, only when locale ≠ en.** A sentence a person reads
+before the language switch, which is the acceptance I set and not the source
+comment that failed round 3. `f3_error_route_enumerated=yes`,
+**`emit_boundary_common=yes`** — the boundary made common in fact rather than by
+convention, which is what round 3 got wrong. `help_contradiction_fixed=yes`.
+`mutations=7/7`, suite `1989/0`.
+
+**`server_side_literals_found=25`.** The second translation boundary has a
+population, and it is 25 — so the two leaks found by observation were the
+visible edge of a category, exactly as suspected. **That is now its own body of
+work, not a residue of this one.**
+
+And the native accessibility-tree check was **declined as out of reach**: *"the
+native-tree check belongs to the accessibility harness and I can't run it from
+here."* Correct — and it means the aria-label fix is **verified against the
+catalogue, not against the tree a screen reader reads.** Those are different
+claims (D120) and only the harness can close the second.
