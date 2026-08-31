@@ -3948,3 +3948,45 @@ This is the directive working in the direction that is easy to get wrong:
 consolidation pressure makes deletion feel like progress, and deletion that
 removes coverage while keeping the suite green is indistinguishable from
 progress until something breaks.
+
+## D98 — Consolidation silently cut 56 cells to 4, and only a question caught it
+
+The owner's directive — *stop piling on code, optimize what can be optimized* —
+produced its intended collapse within the hour: the watchdog, the escalation
+matrix and the accessibility harness became **one browser observation layer,
+one launcher, three checks, `silence=covered`.** That is real: the thing three
+rounds of watchdog work could not do from inside a process is covered from the
+layer where it is observable.
+
+**And the same collapse silently reduced coverage from 56 cells to 4.**
+
+I noticed only because a status field read `cells=4` where the matrix it
+consolidated had 56, and I asked whether that was a different unit, a first
+version, or a reduction. The answer: **`reduced_from=56→4 silently, now
+restored to 56`.**
+
+That is precisely the risk I had written into the dispatch: *consolidation that
+quietly reduces coverage while the suite stays green is indistinguishable from
+consolidation that works.* It then happened, in the first round under the
+directive, and the suite stayed green throughout.
+
+**Optimization pressure and deletion pressure fail the same way**: both make
+"less" feel like progress, and both leave a green suite behind. Tonight
+produced one of each —
+- **D97**: seven proposed duplicates, six were not; the proof requirement caught it.
+- **D98**: a real consolidation that took 52 cells with it; a question caught it.
+
+RULE: **a consolidation states its before and after coverage as a number, in
+the same report.** Not "collapsed 4 into 1" — *"56 cells before, 56 after, one
+launcher instead of four."* A count that is not stated cannot be noticed.
+
+### And the deliverable was untracked
+
+`branch=none-my-deliverable-is-untracked`, `sha=n-a` — the observation layer
+existed only as uncommitted files, and the SHA reported was integration's head
+at run time, which is why it matched another agent's line and mine. **Two
+agents reported my own decision-record commit as their work** because both read
+`HEAD` from a worktree sitting on integration.
+
+RULE unchanged but now mechanised: work goes on a named branch before it is
+reported. An untracked deliverable is one `rm -rf` from never having existed.
