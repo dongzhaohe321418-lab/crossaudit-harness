@@ -16,6 +16,7 @@ SEES, and only running it can show that.
 from __future__ import annotations
 
 import argparse
+import inspect
 import re
 from pathlib import Path
 
@@ -560,3 +561,59 @@ def test_the_drifted_row_is_chinese_with_no_fallback(tmp_path, monkeypatch,
                               "doctor.constitution_drifted.fix")
               if key in i18n.fallbacks()]
     assert leaked == [], f"the drifted copy fell back to English: {leaked}"
+
+
+# ----------------------------------------------------------- plural agreement
+def _count_bearing(catalogue: dict) -> dict:
+    """Keys whose English renders a count immediately before a plural noun."""
+    import re as _re
+
+    noun = _re.compile(r"\{(?:count|n|total)\}\s+([a-z]+s)\b")
+    return {key: text for key, text in catalogue.items()
+            if not key.endswith(".plural") and noun.search(text)}
+
+
+def test_every_counted_noun_has_a_singular_form():
+    """"1 rules" — found by the manager, and the class rather than the instance.
+
+    Derived from the catalogue rather than listed, so a new counted string
+    cannot be added without its singular. English agrees with its number and
+    Chinese does not, which is exactly why the `.plural` sibling convention
+    exists rather than a rule in code.
+    """
+    en = i18n.CATALOGUE["en"]
+    missing = sorted(key for key in _count_bearing(en)
+                     if f"{key}.plural" not in en)
+    assert missing == [], (
+        f"counted strings with no singular form, so they say '1 rules': "
+        f"{missing}. Add `<key>` as the singular and `<key>.plural` beside it, "
+        f"and select on n == 1 the way doctor does.")
+
+
+def test_a_plural_sibling_is_never_english_only():
+    """A missing zh `.plural` is not cosmetic: the lookup falls back.
+
+    Chinese has no plural agreement, so both forms are the same sentence — but
+    the KEY must exist in the zh catalogue, or a Chinese reader meets the
+    English header at exactly the moment a count appears.
+    """
+    en, zh = i18n.CATALOGUE["en"], i18n.CATALOGUE["zh"]
+    plural_keys = [key for key in en if key.endswith(".plural")]
+    assert plural_keys, "the plural convention has disappeared"
+    untranslated = sorted(key for key in plural_keys if key not in zh)
+    assert untranslated == [], (
+        f"plural forms missing from the Chinese catalogue: {untranslated}")
+
+
+def test_the_drafted_header_agrees_with_its_count(tmp_path, monkeypatch, capsys):
+    """Driven through the shipped selection, not the catalogue."""
+    from crossaudit.cli import wizard
+
+    source = inspect.getsource(wizard.run) if hasattr(wizard, "run") else ""
+    en = i18n.CATALOGUE["en"]
+    assert en["rules.drafted_header"].format(count=1).endswith("1 rule")
+    assert en["rules.drafted_header.plural"].format(count=4).endswith("4 rules")
+    for lang in ("en", "zh"):
+        for key in ("rules.drafted_header.plural",
+                    "rules.drafted_header.attributed.plural"):
+            assert key in i18n.CATALOGUE[lang], f"{key} missing from {lang}"

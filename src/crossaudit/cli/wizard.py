@@ -441,10 +441,14 @@ def _show_and_agree(*, target: Path, const_path: Path, const_name: str,
         if drafted is not None:
             attributed = [r for r in drafted.rules if getattr(r, "from_user", "")]
             frame = t(GATING_FRAME_KEY)
-            header = (t("rules.drafted_header.attributed",
-                        count=len(drafted.rules), attributed=len(attributed))
-                      if attributed else
-                      t("rules.drafted_header", count=len(drafted.rules)))
+            # One rule drafted said "1 rules". Selected the way doctor does it,
+            # rather than by a new mechanism.
+            count = len(drafted.rules)
+            base = ("rules.drafted_header.attributed" if attributed
+                    else "rules.drafted_header")
+            key = base if count == 1 else base + ".plural"
+            header = (t(key, count=count, attributed=len(attributed))
+                      if attributed else t(key, count=count))
             consequences = [r.title.strip().rstrip(".").lower()
                             for r in drafted.rules if r.severity == "BLOCKER"][:4]
             body = _substitute_project(drafted.render(target.name), target.name)
