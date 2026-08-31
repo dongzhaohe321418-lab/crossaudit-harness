@@ -90,3 +90,41 @@ raises is an entry that rots, and the guard fails when the two drift apart.
 The count is pinned as a test so it cannot slide silently — it does not assert
 the class is translated, which would be false. It asserts the measurement, so
 making coverage worse requires changing the number on purpose.
+
+
+---
+
+## The execution-scoped enumeration, and its predicate
+
+Committed as `tests/harness/enumerate_console_strings.py` plus
+`tests/test_console_strings_by_execution.py`, so the number cannot travel
+without what it counts.
+
+    unit          DISTINCT values, not occurrences
+    strings       11
+    paths driven  8, all returning JSON, across 2 fixture states
+      /api/health 200 · /api/state 200 · /api/projects 200 · /api/settings 200
+      /api/chats/new 200 · /api/projects/open 400 · /api/doctor 400 ·
+      /api/settings 400
+
+**Execution found two strings the pattern sweep structurally could not see** —
+`Keychain settings are available in the macOS app` and `Application Doctor
+repairs are available in the macOS app`, both reachable only through error
+routes, both from the 39 my AST method could not reach because they are passed
+to a call rather than assigned.
+
+**And execution produced only 11 of the 25.** The other 14 are not dead: they
+need states this fixture never had — existing projects, chats with titles,
+running jobs, escalations. That is a path-and-state coverage finding, and the
+harness says so rather than reporting a zero.
+
+**One refinement to the reporting rule, from the evidence.** Two runs over
+overlapping paths returned *different* elevens. `/api/state` on an empty project
+and on a populated one are different paths in every sense that matters, so a
+completeness claim is as wide as the paths **and the states** behind it. The
+harness records both.
+
+**And one thing I need that does not exist**, per the constraint: enumerating
+over all paths needs the console test suite as the driver, which needs a
+recording hook on the emit seam. I have not built it and I am not going to
+without it being scoped.
