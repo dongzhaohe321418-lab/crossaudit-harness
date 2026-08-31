@@ -19,9 +19,9 @@ Rules for this file:
 | # | Condition | What would show it | Status |
 |---|---|---|---|
 | 1 | No open S0/S1 on merged code | A current cross-vendor audit of the merged tree, not per-branch verdicts collected over time | **SHOWN for the UX surface** — auditor2 audited the combined tree `2c21ce7` (not per-branch): 0 S0, 0 S1. Not shown for the rest of the product. |
-| 2 | Frozen fresh-user walkthrough | Clean-HOME first contact with the DMG, completed end to end | **PARTIAL** — CLI half done on `2c21ce7`; GUI half `completable=no` from a shell (D103) |
+| 2 | Frozen fresh-user walkthrough | Clean-HOME first contact with the DMG, completed end to end | **BLOCKED** — CLI half done on `2c21ce7`; GUI half unreachable by construction: the session token exists only in the app window (D107). Needs an owner decision, not more tooling. |
 | 3 | UX S1–S7 across themes / locales / widths | Cells observed on the packaged build; observed means screenshot + read_page, not reasoned about | **PARTIAL** (D81) |
-| 4 | Screen-reader first contact | A task completed via the accessibility tree — *containers present is not contents present* | **PARTIAL** (D81) |
+| 4 | Screen-reader first contact | A task completed via the accessibility tree — *containers present is not contents present* | **BLOCKED** — same wall as condition 2 (D107); the first screen cannot be reached to be measured |
 | 5 | First three minutes in Chinese | Frozen GUI parity, not source-string parity | **PARTIAL** (D81) |
 | 6 | Green suite + mutation-proved guards | Each guard demonstrated red by its own name (D64) | **BELIEVED** |
 | 7 | Invariants demonstrated | The disk-vs-cited sites guarded, each with its mutation | **PARTIAL** — frozen console enforces loopback + token against an unauthenticated local request (D103); the disk-vs-cited sites remain unguarded |
