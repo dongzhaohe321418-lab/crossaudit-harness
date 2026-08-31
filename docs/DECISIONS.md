@@ -4715,3 +4715,55 @@ nothing was trying to break.**
 Also filed: an `aria-label` in English on a surface with a standing parity
 invariant. **`aria-label` is user-facing text that no sighted reviewer ever
 reads**, which is precisely why it is where untranslated strings survive.
+
+## D113 — Two S0s in the audit core, on merged code, found by auditing the tree instead of the branches
+
+`INTEG-AUDIT b856e0d`: **`s0/s1/s2/s3 = 2/3/1/0`**, scope CLI + runtime +
+receipt/verifier + DCL + seams, page-render excluded as already covered.
+Instrument asserted five ways; every mutation anchored, confirmed landed, and
+restored.
+
+**F1 — S0 — a removed DCL plugin retains verdict authority.** `plugins.py`
+holds loaded plugins in process-global state; when the allowed list becomes
+empty `load_allowed()` returns **without unregistering**, and `run_checks()`
+keeps executing the stale entry. Probed in-process: load a pack, remove it from
+the allowlist, run again — **the removed plugin still returns its hard
+finding.** Reachable in the long-lived console, which reloads configuration
+while the registry persists. **Authorization removal does not remove verdict
+authority**, which is the allowlist-only, non-bypassable DCL invariant stated
+and then not held.
+
+**F2 — S0 — a corrupt evidence ledger becomes a signed tool-free receipt.**
+`receipt/build.py::_tool_evidence()` returns `None` **both** when no evidence
+exists **and** when a present ledger fails verification. Probed: real ledger,
+appended tool call, tampered content, verification fails on digest mismatch —
+**and receipt construction and signing still succeed, with no `tool_evidence`
+block and a signature that verifies.** The broker denies the broken chain at
+its own seam; the builder then collapses that denial to absence.
+
+**F2 is the worse of the two and it is the product's own thesis inverted.** The
+receipt exists to say truthfully what happened. Here a *tampered* evidence chain
+becomes indistinguishable from *an audit that used no tools* — **the receipt
+lying by omission, under a valid signature.** Not a missing feature: a signed
+false statement.
+
+### Both are the two classes I asked for by name
+
+`cited_vs_actual=2`, `silent_success=2`, `absence_of_event=1`. **`None` meaning
+two different things is the same defect as an exit code of zero meaning two
+different things** — the shape that has recurred all cycle, now found in the
+core rather than in the tooling around it.
+
+### And the reason they surfaced now
+
+Every prior verdict was **per-branch, against integration as it stood before
+the others landed.** Nobody had audited the merged tree. My ledger recorded
+condition 1 as *believed*, and the honest reading of `2/3/1/0` is that
+**believed was wrong by two S0s.** A stack of clean branch verdicts is not a
+clean tree, and that sentence has now cost the real thing it was warning about.
+
+RULING: both S0s are fixed before anything else on the board. Audit-core work
+gets adversarial review (standing rule), and neither fix is reviewed by whoever
+writes it. **The auditor named its own weakest point — F2's S0 severity, a
+boundary judgement it wants a second security reviewer to confirm.** That
+confirmation is dispatched; the severity is not downgraded while it is pending.
