@@ -4907,7 +4907,7 @@ declines most readily at exactly the security boundaries where the second
 opinion is worth the most. That belongs in the product's own honest account of
 its limits, not just in this cycle's notes.
 
-## D117 — 74 of 74 aria-labels are English: the assistive surface has no translation at all
+## D117 — Untranslated aria-labels [MAGNITUDE CORRECTED BY D124: the gap was 5 of 64, not 74 of 74]
 
 I asked whether one untranslated `aria-label` belonged in the accessibility case
 set or the i18n wave, and told the engineer to say which rather than take it
