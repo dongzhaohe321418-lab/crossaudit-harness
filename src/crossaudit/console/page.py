@@ -3612,6 +3612,14 @@ const ZH_PATTERNS=[
    m=>'提供方失败，该任务正在等待人工处理：'+m[1]],
   [/^the selected PASS is not ready for admission: ?(.*)$/,
    m=>'所选的 PASS 尚未达到准入条件：'+m[1]],
+  // The fail-closed denial from the audit core: a corrupt evidence ledger
+  // refuses to produce a receipt. It carries the reason from the verifier after
+  // the colon, so it is a PATTERN — an exact entry would never match what a
+  // person sees. This is the sentence standing between somebody and a forged
+  // receipt, and it was the last string in the product anyone thought to
+  // translate.
+  [/^evidence ledger cannot be shown to the Auditor: ?(.*)$/,
+   m=>'证据账本无法出示给审计方：'+m[1]],
   [/^Typing `crossaudit` runs (.+) \(version (.+)\)\. This app is (.+) at (.+)\.$/,
    m=>'在终端里输入 `crossaudit` 运行的是 '+m[1]+'（版本 '+m[2]+'）。本应用是 '+m[3]+'，位于 '+m[4]+'。'],
   [/^Typing `crossaudit` runs (.+)\. Its version could not be determined without running it, which CrossAudit does not do\. This app is (.+) at (.+)\.$/,
