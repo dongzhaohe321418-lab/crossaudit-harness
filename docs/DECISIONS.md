@@ -6245,3 +6245,59 @@ because a good reviewer reasoned well.** The review's own demand is that rules
 earn authority through measured confirmation rates; **a default adopted on
 argument alone is that same error one level up.** Finding states come first —
 then the number decides.
+
+## D143 — The amplifier's root: the product refuses to run without something that can block, on a false premise
+
+The owner asked me to study the first recommendation seriously and reduce the
+defect. **I went to the code rather than to the argument, and the root is one
+config check.**
+
+`constitution.py:130`:
+
+```python
+if not any(r.severity == "BLOCKER" for r in self.rules):
+    raise ConfigDenial(
+        "every rule is ADVISORY, so nothing can ever gate: at least one "
+        "BLOCKER is needed for the loop to have teeth")
+```
+
+**CrossAudit refuses to start with an advisory-only constitution.** Not a
+default, not a nudge — a `ConfigDenial`. **You cannot configure this product to
+only advise.**
+
+And the message states the assumption out loud: *"for the loop to have teeth."*
+**The design equates being valuable with being able to stop someone.**
+
+### The premise is false, and I verified it
+
+*"nothing can ever gate"* is **not true**. The deterministic layer:
+
+- computes its own `hard_failures` and returns `"BLOCKED" if self.hard_failures else "PASS"` (`dcl/framework.py:60`),
+- **does not read the constitution at all** — grepped, no reference,
+- and is documented as **"verdict-in-code, which the model audit cannot waive"** (`dcl/provenance.py`).
+
+**With zero BLOCKER rules in the constitution, the deterministic floor still
+gates, and it gates in the one place a model cannot argue with.** The refusal is
+protecting a property that was never at risk.
+
+### Why this is the root rather than a symptom
+
+Everything the outside read describes downstream — a model verdict landing
+straight in `BLOCKED`, an automatic revision, a dashboard counting `BLOCKED` as
+a caught defect, a generator told it may not argue — is **coherent behaviour for
+a system that has decided, at configuration time, that a model must be able to
+stop the work.** Changing the prompt or the dashboard while this check stands
+treats the consequences and leaves the cause.
+
+**And it is the exact architecture the reviewer proposes, already present and
+being refused**: deterministic checks as the hard floor, model findings as
+contestable evidence. **The product has the floor. It just will not let anyone
+stand only on it.**
+
+RULING: **allow an advisory-only constitution.** The gate that remains is the
+deterministic one, which is the gate that was always doing the real work and the
+only one that cannot be waived.
+
+**This does not make Observe the default** — that still waits for measured
+confirmation rates, per D142. **It makes the default choosable**, which it
+currently is not, and removes a false statement from an error message.
