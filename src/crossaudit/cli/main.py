@@ -339,11 +339,12 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         ok = ok and passed
         checks.append({"check": name, "ok": passed, "detail": detail, "fix": fix,
                        "kind": "verdict", "copy": copy,
-                       "detail_copy": detail_copy,
+                       "detail_copy": detail_copy, "fix_copy": "",
                        "slots": {k: str(v) for k, v in (slots or {}).items()}})
 
-    def note(name: str, detail: str, *, copy: str = "",
-             slots: dict | None = None, detail_copy: str = "") -> None:
+    def note(name: str, detail: str, fix: str = "", *, copy: str = "",
+             slots: dict | None = None, detail_copy: str = "",
+             fix_copy: str = "") -> None:
         """A posture, a mode or a configured contract — NOT a test result.
 
         SPEC 2 (design/UX, Ledger D6): ``[PASS]`` means a condition was tested
@@ -353,9 +354,9 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         that says a guarantee does not hold — the CLI twin of the console's four
         green ticks for checks that never ran.
         """
-        checks.append({"check": name, "ok": None, "detail": detail, "fix": "",
+        checks.append({"check": name, "ok": None, "detail": detail, "fix": fix,
                        "kind": "info", "copy": copy,
-                       "detail_copy": detail_copy,
+                       "detail_copy": detail_copy, "fix_copy": fix_copy,
                        "slots": {k: str(v) for k, v in (slots or {}).items()}})
 
     ident = _selfid.identity()
@@ -436,7 +437,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     # which is the same false green as the console panel D6 flagged.
     from ..dcl import contracts as live_contracts
     for name, contract in live_contracts(cfg.checks).items():
-        note(f"machine:{name}", contract)
+        note(f"machine:{name}", contract,
+             "these run automatically before any model sees your work; "
+             "edit `checks:` in crossaudit.yml to change which ones",
+             fix_copy="doctor.machine_check.fix")
 
     het_ok, why = heterogeneity(cfg)
     add("heterogeneity (I1)", het_ok, why,
@@ -570,9 +574,17 @@ def cmd_doctor(args: argparse.Namespace) -> int:
                          controller_persistent=caps["persistent"],
                          controller_atomic=caps["atomic"], online=args.online)
     note("admission tier", f"{verdict.tier} — {adm.TIER_MEANING[verdict.tier]}",
-         copy="doctor.tier")
+         adm.TIER_NEXT_ACTION[verdict.tier], copy="doctor.tier",
+         fix_copy=f"doctor.tier.fix.{verdict.tier.lower()}")
     for shortfall in verdict.shortfalls:
-        note("  toward enforced", shortfall)
+        # A shortfall already says what is missing. The next action is what to
+        # do about it, and for a project that is content with self-review the
+        # honest answer is that there is nothing to do — said out loud, because
+        # leaving a person to infer it is what this row was doing before.
+        note("  toward enforced", shortfall,
+             "each of these is optional; do them only if you want this "
+             "project's history to prove more than self-review",
+             fix_copy="doctor.shortfall.fix")
 
     _emit({"ok": ok, "checks": checks, "verifier": ident,
            "admission": verdict.as_dict()}, args.json,
@@ -637,11 +649,20 @@ def _doctor_fix(check: dict) -> str:
     because it contains one.
     """
     stem = check.get("copy") or ""
-    if not stem:
+    if not stem and not check.get("fix_copy"):
         return check["fix"]
+    parallel = check.get("fix_copy") or ""
+    if parallel:
+        return i18n.t(parallel, **check.get("slots", {}))
     key = f"{stem}.fix"
     if stem == "doctor.auditor_key" and "no API key needed" in check["detail"]:
         key = f"{stem}.fix.subscription"
+    if key not in i18n.keys():
+        # A row may carry a copy stem for its LABEL and still have no parallel
+        # human `fix` — the tier row does, because its next action varies by
+        # tier and is translated at the call site. Rendering `[missing:…]` at a
+        # person is worse than rendering the machine text.
+        return check["fix"]
     return i18n.t(key, **check.get("slots", {}))
 
 
@@ -700,6 +721,8 @@ def _render_doctor(checks: list[dict], ok: bool, show_all: bool = False) -> str:
         if label:
             lines.append(f"  ℹ {label}")
         lines.append(f"      {_doctor_detail(c)}")
+        if c["fix"]:
+            lines.append(f"      → {_doctor_fix(c)}")
     if posture:
         lines.append("")
     if contracts:
@@ -721,7 +744,7 @@ def _render_doctor_full(checks: list[dict], ok: bool) -> str:
     for c in checks:
         mark = "INFO" if c.get("kind") == "info" else ("PASS" if c["ok"] else "FAIL")
         lines.append(f"[{mark}] {c['check']:{width}s} {c['detail']}")
-        if mark == "FAIL" and c["fix"]:
+        if c["fix"]:
             lines.append(f"       -> {c['fix']}")
     lines.append("=" * 60)
     lines.append("ready" if ok else "not ready — fix the FAIL lines above")
