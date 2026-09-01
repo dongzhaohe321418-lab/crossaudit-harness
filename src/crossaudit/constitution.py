@@ -127,10 +127,26 @@ class Draft:
             if r.id in seen:
                 raise ConfigDenial(f"duplicate rule id {r.id}")
             seen.add(r.id)
-        if not any(r.severity == "BLOCKER" for r in self.rules):
-            raise ConfigDenial(
-                "every rule is ADVISORY, so nothing can ever gate: at least one "
-                "BLOCKER is needed for the loop to have teeth")
+        # An advisory-only constitution used to be REFUSED here, on the premise
+        # that "nothing can ever gate". That premise was false in two independent
+        # ways, and refusing on it made the product unable to be configured to
+        # only advise — which is what taught every surface downstream that being
+        # valuable means being able to stop someone.
+        #
+        # 1. The deterministic layer gates on its own. `dcl/framework.py` computes
+        #    its own hard_failures and returns BLOCKED without consulting the
+        #    constitution at all (it contains no reference to it), and
+        #    `auditor/run.py` reads `dcl["total_hard_failures"] > 0 -> BLOCKED`
+        #    BEFORE it ever reads the model's verdict. The floor a model cannot
+        #    waive was never at risk.
+        # 2. `render()` unconditionally prepends CA-TASK-001, which is a BLOCKER.
+        #    So the document this check was guarding always contained one anyway,
+        #    and the check was testing a property of the draft that the renderer
+        #    made moot.
+        #
+        # No replacement warning is added. The obvious one — "the model reviewer
+        # will advise and not block" — would be FALSE while CA-TASK-001 renders as
+        # a BLOCKER, and a false reassurance is the thing being removed here.
 
     def render(self, project: str) -> str:
         head = [
