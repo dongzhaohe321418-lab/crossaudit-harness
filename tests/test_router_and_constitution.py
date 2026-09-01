@@ -78,12 +78,25 @@ def test_provider_cannot_weaken_or_duplicate_the_reserved_task_rule():
     assert "A length stated approximately must be within 5%" in rendered
 
 
-def test_a_rulebook_that_can_never_gate_is_refused():
+def test_a_rulebook_of_only_advisory_rules_is_accepted():
+    """REPLACES test_a_rulebook_that_can_never_gate_is_refused.
+
+    That test pinned a refusal whose premise was false, and its NAME was the
+    false claim: a rulebook of only ADVISORY rules can still gate. The
+    deterministic layer computes its own verdict without consulting the
+    constitution, and auditor/run.py reads it before the model's. The refusal is
+    gone, so the test that required it goes with it — replaced by the property
+    that is actually true, rather than deleted.
+
+    That the floor still holds with no BLOCKER rule is proved by running an
+    audit, in test_advisory_only_constitution.py; asserting it here would be a
+    shape check.
+    """
     payload = json.loads(json.dumps(GOOD_DRAFT))
     for r in payload["rules"]:
         r["severity"] = "ADVISORY"
-    with pytest.raises(ConfigDenial, match="at least one BLOCKER"):
-        const_mod.distil("something with only soft rules", complete=stub(payload))
+    draft = const_mod.distil("something with only soft rules", complete=stub(payload))
+    assert {r.severity for r in draft.rules} == {"ADVISORY"}
 
 
 def test_a_rule_without_a_criterion_is_refused():
