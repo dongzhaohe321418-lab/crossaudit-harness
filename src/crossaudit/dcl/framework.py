@@ -15,6 +15,21 @@ from ..errors import ConfigDenial
 
 BLOCKER, ADVISORY = "BLOCKER", "ADVISORY"
 
+#: What has become of a finding. `BLOCKER` was carrying two meanings at once —
+#: *a model believes there is a problem* and *there is a problem* — and the
+#: dashboard could only say "a defect was caught" because the structure had
+#: nothing else to offer. These separate the claim from its fate.
+#:
+#: INTERNAL. No user-facing surface renders these words; a person must never
+#: meet "alleged".
+ALLEGED = "alleged"          # raised, nothing yet establishes it
+CONFIRMED = "confirmed"      # a human or a deterministic check established it
+FIXED = "fixed"              # the artefact changed; it no longer reproduces
+WITHDRAWN = "withdrawn"      # the raiser retracted it
+OVERRIDDEN = "overridden"    # a human ruled against it, on the record
+UNRESOLVED = "unresolved"    # rounds ended, neither established nor retracted
+FINDING_STATES = (ALLEGED, CONFIRMED, FIXED, WITHDRAWN, OVERRIDDEN, UNRESOLVED)
+
 
 @dataclass(frozen=True)
 class CheckContext:
@@ -35,6 +50,12 @@ class Finding:
     artifact: str
     observation: str
     check: str = ""
+    #: Deterministic findings default to CONFIRMED, and that is the point of
+    #: having states at all. This layer is verdict-in-code: `hard_failures` is
+    #: computed without consulting any model, and `auditor/run.py` reads it
+    #: BEFORE the model's verdict. A deterministic finding was never an
+    #: allegation and must not be demoted into one.
+    state: str = CONFIRMED
 
     def as_dict(self) -> dict:
         data = asdict(self)

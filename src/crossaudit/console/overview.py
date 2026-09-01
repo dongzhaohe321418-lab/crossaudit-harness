@@ -265,7 +265,11 @@ def metrics(cfg: Config, cycles: list[Cycle]) -> list[dict]:
         {"label": "Passed", "value": passed, "badge": pct(passed),
          "note": "cleared both layers", "tone": "good"},
         {"label": "Blocked", "value": blocked, "badge": pct(blocked),
-         "note": "a defect was caught", "tone": "bad"},
+         # Not "a defect was caught": a blocked round means a concern was
+         # raised, and until something establishes it that is all the system
+         # knows. The old line was the only thing the data structure could
+         # offer; now that a finding can be `alleged`, it is checkably false.
+         "note": "a concern was raised", "tone": "bad"},
         {"label": "Waiting on you", "value": escalated,
          "note": "escalated; the loop cannot settle these", "tone": "warn"},
         {"label": "Admitted", "value": admitted,

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .. import RECEIPT_SCHEMA, __version__, _selfid
 from ..auditor import dcl_source_digest, run_audit
+from ..auditor.run import finding_states
 from ..config import CONFIG_NAME, Config, heterogeneity, load
 from ..controller import StateStore
 from ..dcl import run_checks
@@ -926,6 +927,14 @@ def cmd_audit(args: argparse.Namespace) -> int:
     ledger.mkdir(parents=True)
     report_path = ledger / "report.md"
     report_path.write_text(outcome.report, encoding="utf-8", newline="\n")
+    # Where the states live: a sidecar, not the report. The report is what a
+    # person reads and no user-facing surface renders these words. Not bound by
+    # the receipt digest either, so every receipt already written keeps
+    # verifying — the field is added where it costs history nothing.
+    (ledger / "findings.json").write_text(
+        json.dumps({"findings": finding_states(outcome.dcl, outcome.model_reply)},
+                   indent=2, sort_keys=True) + "\n",
+        encoding="utf-8", newline="\n")
     (ledger / "checks.json").write_text(json.dumps(outcome.dcl, indent=2),
                                           encoding="utf-8", newline="\n")
 
@@ -1626,6 +1635,14 @@ def cmd_run(args: argparse.Namespace) -> int:
         attempt += 1
     ledger.mkdir(parents=True)
     (ledger / "report.md").write_text(outcome.report, encoding="utf-8", newline="\n")
+    # Where the states live: a sidecar, not the report. The report is what a
+    # person reads and no user-facing surface renders these words. Not bound by
+    # the receipt digest either, so every receipt already written keeps
+    # verifying — the field is added where it costs history nothing.
+    (ledger / "findings.json").write_text(
+        json.dumps({"findings": finding_states(outcome.dcl, outcome.model_reply)},
+                   indent=2, sort_keys=True) + "\n",
+        encoding="utf-8", newline="\n")
     (ledger / "checks.json").write_text(json.dumps(outcome.dcl, indent=2),
                                           encoding="utf-8", newline="\n")
     rel = ledger.relative_to(cfg.root)
