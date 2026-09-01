@@ -6356,3 +6356,49 @@ advisory-only refusal — that turned out to be more fundamental than it argued.
 criticising us for building into the product.** Its authority comes from the
 claims that checked out, and this one did not, and the way to honour a good
 reviewer is to check it every time rather than to start trusting it.
+
+## D145 — I inferred network egress from an exception name and published it. It was wrong.
+
+The security engineer reported that an escaped thread *"makes a real call"* after
+teardown removes the socket guard. **I amplified that into a statement to the
+owner**: a product promising *一切都保留在你的 Mac 上* has a test suite that
+leaks a real request.
+
+**It reproduced the scenario deliberately. The guard held.**
+`_no_credentials_and_no_outbound_network` is `autouse`, so a thread still running
+during a later test is covered by *that* test's guard. **Nothing left the
+machine.** Its words, and they are aimed at me correctly:
+
+> I inferred "network" from the exception name without checking the host, **and
+> you built a serious framing on it. That framing should come down.**
+
+### The chain I accepted without checking a link
+
+`RemoteDisconnected` names a disconnect → a disconnect implies a socket → a
+socket implies egress. **Three inferences, no host checked, and I published the
+conclusion to the owner as a fact about data leaving their machine.**
+
+**I refused this exact chain from others tonight**, more than once, and recorded
+each refusal as a principle. **A report arriving with a plausible mechanism and
+no measurement is the thing I have been catching all night** — and when it
+arrived with a conclusion I found alarming, I forwarded it instead.
+
+**The tell was available and I skipped it**: the report said *a real call*, and
+the evidence was an exception type. **An exception name is not a destination.**
+
+### What is genuinely open, correctly scoped by its author
+
+**The guard covers in-process sockets only.** `gh`, `git` and `codex` are
+separate processes and `github_status` shells out to `gh`. **A Python-level
+socket guard cannot see a subprocess**, and the things we shell out to are the
+things that talk to the network for a living.
+
+**That is an unmeasured channel, not a defect claim**, and the instrument is
+being built. RULE for it, from the same failure: **measure before guarding.** A
+guard written to a suspicion inherits the suspicion; if the observed number is
+zero the guard is cheap insurance, and if it is not zero, a guard written first
+would have been aimed wrong.
+
+**And whatever it finds goes into any user-facing statement at the width of the
+evidence and no wider** — the receipt standard, applied to our own claims about
+our own product.
