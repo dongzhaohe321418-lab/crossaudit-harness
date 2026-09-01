@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -236,9 +237,7 @@ def test_background_validation_never_writes_setup_state_outside_workspace(
     marker.write_text('{"status":"belongs-to-someone-else"}')
     jobs = projects.ProjectJobs()
     jobs.start(current, payload(name="../outside-crossaudit-target"), lambda: None)
-    deadline = time.monotonic() + 2
-    while jobs.snapshot()[0]["status"] == "running" and time.monotonic() < deadline:
-        time.sleep(0.01)
+    assert jobs.wait(30), f"job still running: {jobs.alive()}"
     assert marker.read_text() == '{"status":"belongs-to-someone-else"}'
 
 
@@ -262,9 +261,7 @@ def test_stopped_project_job_can_retry_and_be_dismissed_without_touching_files(
     started = jobs.start(
         current, payload(name="retry-me", description="preserve this draft"),
         lambda: None)
-    deadline = time.monotonic() + 2
-    while jobs.snapshot()[0]["status"] == "running" and time.monotonic() < deadline:
-        time.sleep(0.01)
+    assert jobs.wait(30), f"job still running: {jobs.alive()}"
     first = jobs.snapshot()[0]
     assert first["status"] == "failed"
     assert first["issue"]["action"] == "review_workspace"
@@ -275,10 +272,7 @@ def test_stopped_project_job_can_retry_and_be_dismissed_without_touching_files(
     reopened = projects.ProjectJobs()
     assert reopened.snapshot(current)[0]["draft"]["description"] == "preserve this draft"
     retried = reopened.retry(started["job"], lambda: None, current)
-    deadline = time.monotonic() + 2
-    while next(row for row in reopened.snapshot(current) if row["id"] == retried["job"])[
-            "status"] == "running" and time.monotonic() < deadline:
-        time.sleep(0.01)
+    assert reopened.wait(30), f"job still running: {reopened.alive()}"
     assert next(row for row in reopened.snapshot(current) if row["id"] == retried["job"])[
         "status"] == "complete"
     assert len(attempts) == 2
@@ -751,9 +745,7 @@ def test_github_connection_job_surfaces_device_code_then_account(monkeypatch):
     auth = projects.GithubAuthJobs()
     notified = []
     result = auth.start(lambda: notified.append(True))
-    deadline = time.monotonic() + 1
-    while auth.snapshot()["status"] == "running" and time.monotonic() < deadline:
-        time.sleep(0.01)
+    assert auth.wait(30), f"job still running: {auth.alive()}"
 
     row = auth.snapshot()
     assert result["job"] == row["id"]
@@ -796,9 +788,7 @@ def test_github_delete_authorization_refreshes_only_delete_repo_scope(monkeypatc
     monkeypatch.setattr(projects.subprocess, "Popen", popen)
     auth = projects.GithubAuthJobs()
     result = auth.start(lambda: None, scopes=("delete_repo",))
-    deadline = time.monotonic() + 1
-    while auth.snapshot()["status"] == "running" and time.monotonic() < deadline:
-        time.sleep(0.01)
+    assert auth.wait(30), f"job still running: {auth.alive()}"
 
     assert result["job"] == auth.snapshot()["id"]
     assert auth.snapshot()["status"] == "complete"
@@ -848,9 +838,7 @@ def test_failed_github_setup_is_visible_and_resumes_idempotently(tmp_path, monke
     monkeypatch.setattr(pair, "apply_pair", fail_once)
     jobs = projects.ProjectJobs()
     jobs.start(current, payload(name="recover", github=True), lambda: None)
-    deadline = time.monotonic() + 3
-    while jobs.snapshot()[0]["status"] == "running" and time.monotonic() < deadline:
-        time.sleep(0.01)
+    assert jobs.wait(30), f"job still running: {jobs.alive()}"
     assert jobs.snapshot()[0]["status"] == "failed"
     setup = projects._read_setup(tmp_path / "recover")
     assert setup["status"] == "failed" and setup["github"] is True
@@ -1033,3 +1021,70 @@ def test_runtime_switch_never_overwrites_an_external_config_edit(tmp_path, monke
             "auditor_reasoning_effort": "medium",
         })
     assert config.read_bytes() == before
+
+
+def _live_provisioning_threads() -> list[str]:
+    """Worker threads started by ProjectJobs/GithubAuthJobs that are still running."""
+    out = []
+    for t in threading.enumerate():
+        if t is threading.current_thread() or not t.is_alive():
+            continue
+        target = getattr(t, "_target", None)
+        qual = getattr(target, "__qualname__", "")
+        if qual.startswith(("ProjectJobs.start", "GithubAuthJobs.start")):
+            out.append(t.name)
+    return out
+
+
+@pytest.fixture(autouse=True)
+def _no_job_thread_outlives_its_test():
+    """A worker started here must not still be running when the test ends.
+
+    THIS IS THE DEFECT THIS FILE HAD. Six tests waited on a fixed wall-clock
+    budget (1-3s) and then asserted a terminal state. Under load the job missed
+    the budget, so the assertion reported a slow machine as a wrong result --
+    and the thread carried on into the NEXT test, touching a tmp_path and a
+    local console server its own test had already torn down. Which member of
+    this file failed therefore depended on how long the whole suite took, which
+    is why adding tests in other files changed the answer.
+
+    NOT fixed by raising the budget: a bigger number postpones it until the
+    suite grows again and tells the next person nothing. The waits are joins
+    now, and this fixture is what keeps them joins.
+    """
+    yield
+    live = _live_provisioning_threads()
+    assert not live, (
+        f"a provisioning thread outlived its test: {live}. It will run inside "
+        f"the next test, against files and servers this one has torn down.")
+
+
+def test_the_outlived_thread_check_actually_sees_one():
+    """D64: the guard PLUS the observation of it firing.
+
+    A thread with the same target qualname as a real job is started and held
+    open; the detector must see it. If it cannot, the fixture above is a
+    decoration and the defect returns silently.
+    """
+    release = threading.Event()
+
+    class _Fake:
+        def start(self):
+            release.wait(5)
+
+    _Fake.start.__qualname__ = "ProjectJobs.start.<locals>.work"
+    fake = _Fake()
+    t = threading.Thread(target=fake.start, daemon=True)
+    t.start()
+    try:
+        for _ in range(50):
+            if _live_provisioning_threads():
+                break
+            time.sleep(0.02)
+        assert _live_provisioning_threads(), (
+            "the detector cannot see a running provisioning thread, so the "
+            "teardown check above would never fire")
+    finally:
+        release.set()
+        t.join(5)
+    assert not _live_provisioning_threads()
