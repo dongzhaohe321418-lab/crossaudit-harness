@@ -6131,3 +6131,57 @@ watches it fail, and stays failing until the state is fixed.**
 
 The three unreachable states and S29–S31 stay marked, with their reasons, rather
 than being quietly dropped to make a number look complete.
+
+## D141 — An outside read says the mechanism rewards over-reporting. Six claims checked; all six hold.
+
+The owner commissioned an independent read of the whole product and brought back
+a thesis I did not expect and cannot dismiss:
+
+> the system's semantics encourage the Auditor to over-report and the Generator
+> to comply — **an approval process manufactured by two models**, rather than
+> evidence-driven risk gating.
+
+**I verified every checkable claim before treating any of it as true.** All six
+are in the code, verbatim:
+
+| claim | verified |
+|---|---|
+| `BLOCKED` presented to the user as a caught defect | `overview.py:268` — `"note": "a defect was caught"` |
+| Generator told it may not argue | `generator.py:33` — *"you cannot talk to that auditor and you cannot argue with the rules"* |
+| The original auditor rules on its own finding | `dispute.py:44` — `Rule the finding UPHELD or WITHDRAWN` |
+| *"approximately"* enforced at ±5%, as a BLOCKER, in a non-optional rule | `constitution.py` `universal_task_rule()` |
+| `sealed` retention keeps no raw content | `providers/base.py:145` — `out["raw_retained"] = False` |
+| Settings admits retention/redaction are not configurable | `page.py` |
+
+### The two I am raising above the reviewer's own ordering
+
+**`sealed` is a word doing what this product exists to prevent.** The comment
+beside it — `0.x keeps commitments only; see roadmap` — proves the author knew.
+A person reading *sealed* understands *my raw exchanges are kept, safely*. What
+is kept is a hash. **That is a name asserting a capability the code does not
+have**, which is precisely the defect we merged an S0 to fix in the receipt
+path hours ago: *the product must not tell a person something it did not verify.*
+**We fixed it where a machine could catch it and left it standing where only a
+reader could.**
+
+**`"approximately" within 5%, as a BLOCKER, non-optional.** A user writes *about
+300 words*; 313 words blocks. **That is not strictness, it is redefining the
+word the user chose.** And the consequence is the thesis in miniature: the
+cheapest way to satisfy it is mechanical text counted to the character —
+**optimising for the auditor rather than for the person.**
+
+### What I accept, and one thing I do not concede yet
+
+The direction is right: **deterministic checks are the hard floor; model
+findings are contestable evidence; statistics constrain model authority; humans
+rule only on genuine boundaries.** That is a better product than two models
+manufacturing an approval queue, and most of this repo's real assets — the git
+ledger, receipt binding, path isolation, bounded rounds — survive the change
+untouched.
+
+**What I will not accept on argument alone: that `Observe` should be the
+default.** It is very likely right, and it is exactly the kind of claim this
+team has been wrong about in both directions tonight. **Before it becomes the
+default, I want the confirmation rate measured** — the same ranking the review
+itself demands for rules. **Shipping a default because a reviewer reasoned well
+is the behaviour the review is criticising**, one level up.
