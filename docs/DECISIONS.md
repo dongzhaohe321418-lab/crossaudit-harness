@@ -6402,3 +6402,53 @@ would have been aimed wrong.
 **And whatever it finds goes into any user-facing statement at the width of the
 evidence and no wider** — the receipt standard, applied to our own claims about
 our own product.
+
+## D146 — Measure-first paid immediately: the number was not zero, and a guard's name overstates
+
+The subprocess egress instrument was built **before** any guard, on the rule
+that a guard written to a suspicion inherits the suspicion. **The number came
+back non-zero.**
+
+> a test suite contacts GitHub, from one test, through `gh`, on this machine.
+> **That is the whole of the evidence.**
+
+And the author's reason for writing no guard, which is the rule vindicating
+itself: **"the number came back non-zero, so a guard written first would have
+been aimed at the wrong thing."** A guard authored on the assumption of zero
+would have been built to forbid something that legitimately happens.
+
+**The scope line is exactly right and I am keeping it verbatim**: nothing here
+says the product leaks user data. **It says a test suite, one test, `gh`, this
+machine.**
+
+### The part nobody said, and it is the weight of the finding
+
+The guard is called **`_no_credentials_and_no_outbound_network`**.
+
+**That name asserts a property the suite does not have.** It covers in-process
+sockets; a subprocess walks past it. **Same defect as `sealed`** — a name
+claiming a capability the code lacks — now in our own test infrastructure,
+protecting the promise this product is built on.
+
+**A guard that overstates its coverage is worse than a narrower one honestly
+named**, because everything downstream reads the name. I read it tonight and
+concluded the suite was hermetic; it is not.
+
+RULING, in order of honesty:
+
+1. **The name must stop overstating**, today. Either it covers subprocess egress
+   or it says it covers in-process sockets. **Renaming is not a downgrade; it is
+   the guard telling the truth about its own reach.**
+2. **Whether the suite should be hermetic is a real decision and it is mine to
+   take, not to defer.** For a product whose promise is local-first, a suite
+   that reaches GitHub during a run is a weaker foundation than one that does
+   not — and the single test doing it can be given a fixture. **I am taking
+   that**: the suite should not need the network to pass.
+3. **But not in the same slice.** Rename first, because it is true immediately.
+   Hermeticity second, because it changes what a test exercises and that wants
+   its own review.
+
+**The instrument stated its own blind spots** — macOS brokering, a grandchild
+forked by a child, one machine, one ordering, two runs. **A measurement that
+names what it could not see is the only kind whose zero would have meant
+anything.**
