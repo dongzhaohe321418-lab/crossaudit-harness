@@ -533,13 +533,20 @@ def test_default_check_uses_the_declared_scope_and_skips_the_scaffold(
 def test_every_command_the_readme_shows_actually_exists():
     """A README with a wrong command is worse than no README: the reader trusts
     it, and the tool has already spent their patience by the time it fails."""
+    import argparse
     import re
 
     from crossaudit.cli.main import build_parser
 
     readme = (Path(__file__).resolve().parents[1] / "README.md").read_text()
     parser = build_parser()
-    real = set(next(a.choices for a in parser._actions if a.choices))
+    # The SUBPARSERS action, named rather than "the first action with choices":
+    # any option carrying `choices=` (the global `--lang {en,zh}`) would
+    # otherwise be picked up as the command list and the test would compare the
+    # README against two locale names.
+    subparsers = next(a for a in parser._actions
+                      if isinstance(a, argparse._SubParsersAction))
+    real = set(subparsers.choices)
     used = set(re.findall(r"crossaudit ([a-z][a-z-]+)", readme))
     assert not (used - real), f"README shows commands that do not exist: {used - real}"
 

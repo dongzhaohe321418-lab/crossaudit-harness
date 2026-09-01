@@ -895,8 +895,12 @@ def test_init_and_doctor_state_the_same_wave_scope():
     helps = re.findall(r'help="language for [^"]*"', source)
     assert helps == [], (
         f"the wave scope is written inline again, so the two can drift: {helps}")
-    assert source.count("help=LANG_HELP") == 2, (
-        "init and doctor no longer share one wave-scope sentence")
+    # Three now: the top-level flag joined init and doctor when `--lang` was
+    # made reachable before the verb. The property is unchanged — one sentence,
+    # shared — and the count moves only when a registration is added on purpose.
+    assert source.count("help=LANG_HELP") == 3, (
+        "the wave-scope sentence is no longer shared by every --lang "
+        "registration; two copies is how init and doctor drifted apart")
     assert "wave 1: init and doctor only" in main.LANG_HELP
 
 
