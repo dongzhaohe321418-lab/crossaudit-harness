@@ -6185,3 +6185,63 @@ team has been wrong about in both directions tonight. **Before it becomes the
 default, I want the confirmation rate measured** — the same ranking the review
 itself demands for rules. **Shipping a default because a reviewer reasoned well
 is the behaviour the review is criticising**, one level up.
+
+## D142 — Revised direction: strict protocol, simple product. My sequencing.
+
+The owner added a product goal — **generally useful, and a black box to the
+user** — and the outside reviewer revised itself accordingly. **It withdrew its
+own UI proposals**: three review modes as a user setting, a Rule Health page,
+six actions on the decision screen, user-managed constitution, audit metrics on
+the main surface. Its revised thesis:
+
+> **Stricter at the protocol layer, simpler at the product layer. Most of the
+> changes still happen — in the background, not as settings and dashboards.**
+>
+> Keep looking like Codex on the outside; stop being an approval bureau that
+> rewards false positives on the inside.
+
+**A reviewer that revises its own recommendation when a constraint changes, and
+says which parts it is taking back, is worth more than one that defends the
+first version.** The withdrawn items were the ones I would have argued about.
+
+### What survives, and it is all backend
+
+Findings must carry state internally — *alleged, confirmed, fixed, withdrawn,
+overridden, unresolved* — even if a user never sees the words. The original
+auditor must not hold final appeal authority. The generator prompt must stop
+rewarding compliance. `CA-TASK-001` must relax. `sealed` must be renamed. Data
+egress must be disclosed once, then run under the granted policy.
+
+### My sequencing, and the reasoning is deliberately not the reviewer's ordering
+
+**First — cheap, independent, and aimed straight at the thesis:**
+
+1. **`sealed` → `hash-only`.** Dispatched. A name asserting a capability the
+   code lacks, in a product that merged an S0 tonight for exactly that.
+2. **The generator prompt.** *"You cannot argue with the rules"* is one string
+   and it is the mechanism the whole critique names. **The highest leverage per
+   line changed in the entire product.**
+3. **`CA-TASK-001`'s ±5% on "approximately".** Also small, also live: it is
+   producing mechanical output today.
+
+**Second — the structural change that makes everything else measurable:**
+finding states, and the dashboard no longer counting `BLOCKED` as a caught
+defect. **Nothing downstream — confirmation rates, automatic rule demotion,
+honest reporting — can be computed until a finding can be something other than
+true.**
+
+**Third — independence:** appeals routed away from the auditor that raised the
+finding. **This is our own hard law, that no agent reviews its own work,
+violated inside the product we are shipping.**
+
+**Held for the owner, not for me:** the dual-key friction and a hosted auditor.
+That is infrastructure, cost and a privacy posture — **a business decision
+wearing an engineering costume**, and not mine to take.
+
+### The one thing I am still not conceding to argument
+
+`Observe` as the default is very likely right. **It does not become the default
+because a good reviewer reasoned well.** The review's own demand is that rules
+earn authority through measured confirmation rates; **a default adopted on
+argument alone is that same error one level up.** Finding states come first —
+then the number decides.
