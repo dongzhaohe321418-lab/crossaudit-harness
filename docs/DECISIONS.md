@@ -6301,3 +6301,58 @@ only one that cannot be waived.
 **This does not make Observe the default** — that still waits for measured
 confirmation rates, per D142. **It makes the default choosable**, which it
 currently is not, and removes a false statement from an error message.
+
+## D144 — The generator prompt: the outside read overstated this one, and I am saying so
+
+The review's third item said our generator prompt *"is practically training
+defensive programming"* and proposed adding two things: a counter-evidence
+channel, and a ban on compliance-only bloat.
+
+**I read the whole prompt before changing it. Both already exist.**
+
+```
+Do not argue with a finding in your output: fix the artefact, or state in
+`notes` why the finding rests on a misreading, so a human can route it as a
+dispute.
+
+Prefer editing what exists over adding new files.
+Treat the requested deliverable count as a hard scope boundary.
+Do not add metadata, source notes, specifications, indexes, or other supporting
+files unless the task, the visible machine contract, or the Constitution
+explicitly requires them.
+```
+
+**The counter-evidence path is there and the anti-bloat constraints are stronger
+than the ones proposed to replace them.** Implementing the recommendation as
+written would have added a capability the product already has, and traded
+specific prohibitions for a vaguer one.
+
+### What is actually wrong, which is smaller and different
+
+**Not a missing capability — a distribution of emphasis.**
+
+- The opening sentence makes satisfying the auditor the primary objective:
+  *"you satisfy them, or your work is blocked and returned to you."*
+- *"address every BLOCKER"* appears **twice**, imperative and unconditional.
+- The counter-evidence channel is offered **as a concession inside a
+  prohibition** — *"Do not argue … or state in `notes` …"* — rather than as a
+  legitimate first response.
+
+**Three sentences say do not argue; one subordinate clause says you may present
+evidence.** A model reading that will comply, and it will be right to, because
+that is what the text weights.
+
+RULING: **reorder the emphasis; do not add capability.** The user's task becomes
+the stated primary objective, findings are described as claims requiring a
+response, and the two available responses — fix it, or give counter-evidence —
+are offered as peers. **Keep every existing anti-bloat prohibition verbatim;
+they are more precise than what was proposed to replace them.**
+
+### Why I am recording the disagreement rather than quietly narrowing the change
+
+The review has been right about six verified claims tonight, including one — the
+advisory-only refusal — that turned out to be more fundamental than it argued.
+**Accepting a seventh on that record would be exactly the deference it is
+criticising us for building into the product.** Its authority comes from the
+claims that checked out, and this one did not, and the way to honour a good
+reviewer is to check it every time rather than to start trusting it.
