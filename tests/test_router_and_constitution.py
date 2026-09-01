@@ -88,6 +88,10 @@ def test_a_rulebook_of_only_advisory_rules_is_accepted():
     gone, so the test that required it goes with it — replaced by the property
     that is actually true, rather than deleted.
 
+    Found by running the full suite, not by grepping for callers: nothing
+    referenced the refusal by name, and the search that would have found it is
+    the one nobody thinks to run. The suite named it in one line.
+
     That the floor still holds with no BLOCKER rule is proved by running an
     audit, in test_advisory_only_constitution.py; asserting it here would be a
     shape check.
