@@ -479,7 +479,11 @@ def _generation_sse_frame(run_id: str, event: dict) -> bytes:
     payload = json.dumps(
         {**event, "run_id": run_id}, sort_keys=True,
         separators=(",", ":"), ensure_ascii=False)
-    return (f"event: generation_chunk\nid: {int(event['event_id'])}\n"
+    # ``thinking_chunk`` (D150) rides the same path under its own name: the
+    # page keeps it apart from the draft, and a consumer that never subscribes
+    # to it simply never sees it.
+    name = "thinking_chunk" if event.get("kind") == "thinking_chunk" else "generation_chunk"
+    return (f"event: {name}\nid: {int(event['event_id'])}\n"
             f"data: {payload}\n\n").encode()
 
 

@@ -112,7 +112,7 @@ class Config:
     ledger_dir: str
     scope_dirs: list[str] | None
     checks: list[str]
-    generator_streaming: bool = False
+    generator_streaming: bool = True
     plugins: list[str] = field(default_factory=list)
     generator_fallbacks: tuple[Role, ...] = ()
     resilience: Resilience = field(default_factory=Resilience)
@@ -220,7 +220,10 @@ def load(path: Path | None = None) -> Config:
     if gen_unknown:
         raise ConfigDenial(f"generator: unknown keys {sorted(gen_unknown)}", file=str(p))
     generator_vendor = gen.get("vendor")
-    generator_streaming = gen.get("streaming", False)
+    # D150 (owner directive): streaming is on unless a project turns it off.
+    # Perceived latency is the only latency there is to win, and a silent
+    # generation is the whole complaint.
+    generator_streaming = gen.get("streaming", True)
     if not isinstance(generator_streaming, bool):
         raise ConfigDenial("generator.streaming must be true or false", file=str(p))
     generator_effort = gen.get("reasoning_effort")

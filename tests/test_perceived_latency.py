@@ -204,3 +204,236 @@ def test_consent_is_still_checked_before_anything_is_accepted(console):
     assert caught.value.code == 400
     assert "explicit consent" in caught.value.read().decode()
     assert not intake_mod.INTAKE.active
+
+
+# ------------------------------------------------------------------ (c)
+THINKING = "Weighing the two readings of the task"
+ANSWER = "First visible token · 中文 · final answer"
+
+
+def _anthropic_sse(*events: tuple[str, dict]) -> bytes:
+    out = b""
+    for name, data in events:
+        out += (f"event: {name}\ndata: "
+                + json.dumps(data, ensure_ascii=False) + "\n\n").encode("utf-8")
+    return out
+
+
+class _AnthropicFixture:
+    """A loopback Messages endpoint replaying one recorded stream with a
+    thinking block before the text, split inside a multi-byte code point."""
+
+    def __init__(self) -> None:
+        fixture = self
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, _format, *_args):
+                return
+
+            def do_POST(self):  # noqa: N802
+                size = int(self.headers.get("content-length", "0"))
+                payload = json.loads(self.rfile.read(size))
+                fixture.payloads.append(payload)
+                assert payload.get("stream") is True
+                self.send_response(200)
+                self.send_header("content-type", "text/event-stream")
+                self.send_header("request-id", "anthropic-header-rid")
+                self.end_headers()
+                head = _anthropic_sse(
+                    ("message_start", {"type": "message_start", "message": {
+                        "id": "msg_fixture", "usage": {"input_tokens": 4}}}),
+                    ("content_block_start", {"type": "content_block_start", "index": 0,
+                                             "content_block": {"type": "thinking"}}),
+                    ("content_block_delta", {"type": "content_block_delta", "index": 0,
+                                             "delta": {"type": "thinking_delta",
+                                                       "thinking": THINKING}}),
+                    ("content_block_delta", {"type": "content_block_delta", "index": 0,
+                                             "delta": {"type": "signature_delta",
+                                                       "signature": "sig"}}),
+                    ("content_block_stop", {"type": "content_block_stop", "index": 0}),
+                    ("content_block_start", {"type": "content_block_start", "index": 1,
+                                             "content_block": {"type": "text"}}),
+                    ("content_block_delta", {"type": "content_block_delta", "index": 1,
+                                             "delta": {"type": "text_delta",
+                                                       "text": "First visible token · "}}),
+                )
+                self.wfile.write(head)
+                self.wfile.flush()
+                time.sleep(0.24)
+                tail = _anthropic_sse(
+                    ("content_block_delta", {"type": "content_block_delta", "index": 1,
+                                             "delta": {"type": "text_delta", "text": "中文"}}),
+                    ("content_block_delta", {"type": "content_block_delta", "index": 1,
+                                             "delta": {"type": "text_delta",
+                                                       "text": " · final answer"}}),
+                    ("content_block_stop", {"type": "content_block_stop", "index": 1}),
+                    ("message_delta", {"type": "message_delta",
+                                       "delta": {"stop_reason": "end_turn"},
+                                       "usage": {"output_tokens": 9}}),
+                    ("message_stop", {"type": "message_stop"}),
+                )
+                marker = tail.index("中".encode("utf-8"))
+                for part in (tail[:marker + 1], tail[marker + 1:marker + 2],
+                             tail[marker + 2:]):
+                    self.wfile.write(part)
+                    self.wfile.flush()
+                    time.sleep(0.003)
+
+        self.payloads: list[dict] = []
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+
+    @property
+    def base_url(self) -> str:
+        return f"http://127.0.0.1:{self.server.server_port}"
+
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(self, *_exc):
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=3)
+
+
+def test_anthropic_streams_text_and_thinking_on_separate_contiguous_streams(
+        monkeypatch):
+    """(c) The Messages SSE stream is parsed incrementally; text deltas become
+    coalesced ``on_chunk`` calls with contiguous seq, thinking deltas become a
+    separate ``on_thinking`` stream, and the reply commits to the text alone.
+
+    Mutation: feed thinking into the text emitter and the reply text (and its
+    digest) would carry THINKING, which the last assertions refuse.
+    """
+    import hashlib
+
+    from crossaudit.providers import anthropic
+
+    monkeypatch.setenv("CROSSAUDIT_TEST_KEY", "local-fixture-key")
+    chunks: list[tuple[str, dict]] = []
+    thoughts: list[tuple[str, dict]] = []
+    with _AnthropicFixture() as fixture:
+        reply = anthropic.complete(
+            model="claude-fixture", system="system", prompt="prompt",
+            key_env="CROSSAUDIT_TEST_KEY", base_url=fixture.base_url,
+            allow_custom=True, timeout=2,
+            on_chunk=lambda text, stream: chunks.append((text, dict(stream))),
+            on_thinking=lambda text, stream: thoughts.append((text, dict(stream))))
+
+    assert fixture.payloads[0]["stream"] is True
+    assert reply.text == ANSWER
+    assert reply.request_id == "anthropic-header-rid"
+    assert reply.response_sha256 == hashlib.sha256(ANSWER.encode()).hexdigest()
+    assert reply.raw["usage"] == {"input_tokens": 4, "output_tokens": 9}
+
+    assert "".join(text for text, _ in chunks) == ANSWER
+    assert [meta["seq"] for _, meta in chunks] == list(range(len(chunks)))
+    assert chunks[0][0] == "First visible token · "      # first text at once
+    assert chunks[-1] == ("", {"id": chunks[0][1]["id"], "seq": len(chunks) - 1,
+                               "done": True, "outcome": "complete"})
+    assert len(chunks) < 6                                # coalesced, not per token
+
+    assert "".join(text for text, _ in thoughts) == THINKING
+    assert [meta["seq"] for _, meta in thoughts] == list(range(len(thoughts)))
+    assert thoughts[0][1]["id"] != chunks[0][1]["id"]     # two streams, two ids
+    assert thoughts[-1][1] == {"id": thoughts[0][1]["id"], "seq": len(thoughts) - 1,
+                               "done": True, "outcome": "complete"}
+    assert THINKING not in reply.text
+
+
+def test_a_dropped_thinking_frame_is_refused_at_the_journal(tmp_path):
+    """(c) Gap detection holds per stream kind: a thinking chunk whose seq
+    skips is refused, and the text stream's own contiguity is judged apart
+    from it (the two interleave in time by nature)."""
+    from crossaudit.runtime import RunEvent, RunJournal, RunState
+
+    journal = RunJournal(tmp_path / "runtime.sqlite3")
+    run_id = journal.start("stream it")
+
+    def chunk(kind: str, stream_id: str, seq: int, text: str = "x") -> RunEvent:
+        return RunEvent(kind=kind, actor="generator", text=text,
+                        state=RunState.GENERATING,
+                        stream={"id": stream_id, "seq": seq, "done": False})
+
+    journal.append(run_id, chunk("thinking_chunk", "think", 0))
+    journal.append(run_id, chunk("generation_chunk", "text", 0))
+    journal.append(run_id, chunk("thinking_chunk", "think", 1))
+    with pytest.raises(RuntimeError, match="not contiguous"):
+        journal.append(run_id, chunk("thinking_chunk", "think", 3))
+    journal.append(run_id, chunk("generation_chunk", "text", 1))
+    kinds = [row["kind"] for row in journal.generation_events(run_id)]
+    assert kinds == ["thinking_chunk", "generation_chunk", "thinking_chunk",
+                     "generation_chunk"]
+    assert all(step["kind"] not in ("thinking_chunk", "generation_chunk")
+               for step in journal.latest()["steps"])
+
+
+# ------------------------------------------------------------------ (e)
+def test_thinking_text_never_reaches_the_auditor_prompt_commit_or_receipt(
+        science, cfg):
+    """(e) Same guard as the draft sentinel, for thinking. Mutation: append
+    the thinking sentinel to the auditor prompt (or the receipt) and the
+    assertions go red."""
+    import subprocess as sp
+
+    from crossaudit.auditor import prompt as auditor_prompt
+    from crossaudit.broker.routing import evidence_view
+    from crossaudit.receipt import build as build_receipt
+    from crossaudit.runtime import RunEvent, RunJournal, RunState
+
+    sentinel = "THINKING-ONLY-SENTINEL-7a2c"
+    journal = RunJournal(science / cfg.state_dir / "runtime.sqlite3")
+    run_id = journal.start("thinking separation")
+    journal.append(run_id, RunEvent(
+        kind="thinking_chunk", actor="generator", text=sentinel,
+        state=RunState.GENERATING,
+        stream={"id": "think", "seq": 0, "done": False}))
+    journal.append(run_id, RunEvent(
+        kind="thinking_chunk", actor="generator", text="",
+        state=RunState.GENERATING,
+        stream={"id": "think", "seq": 1, "done": True, "outcome": "complete"}))
+    prompt, _bounded, _digest = auditor_prompt.build(
+        "rules", "c" * 40, {"findings": []}, {"work/a.txt": b"clean"},
+        tool_evidence=evidence_view(cfg))
+    receipt = build_receipt(
+        cfg=cfg,
+        subject={"sha": "a" * 40, "tree": "b" * 40, "scope": "experiments"},
+        cycle={"cycle_id": "cycle", "root_sha": "a" * 40,
+               "active_sha": "a" * 40, "round": 1},
+        manifest={}, constitution_path=cfg.constitution,
+        constitution_bytes=b"rules", constitution_commit="c" * 40,
+        dcl_source_sha256="d" * 64, prompt_sha256="e" * 64,
+        checks=[], verdict="PASS", exchange={}, retention="sealed",
+        report_bytes=b"clean report", report_commit="f" * 40,
+        cycle_path="cycles/clean", audit_repo="local", mode="local")
+    commit_messages = sp.run(["git", "log", "--format=%B"], cwd=science,
+                             check=True, capture_output=True, text=True).stdout
+    from crossaudit.console.progress import Tracker
+    tracker = Tracker()
+    tracker.bind(journal.path)
+
+    assert sentinel in repr(journal.generation_events(run_id))
+    assert sentinel not in prompt
+    assert sentinel not in commit_messages
+    assert sentinel not in repr(receipt)
+    assert sentinel not in repr(tracker.snapshot())       # not a run-card step
+
+
+def test_the_auditor_clock_narrates_time_and_never_the_reply_text():
+    """The auditor's chunks drive one line per 10 s of arriving tokens and
+    the chunk text is dropped on the floor. Mutation: pass the text through
+    and the sentinel shows up in what was said."""
+    from crossaudit.cli.build import _auditor_progress_clock
+
+    now = [100.0]
+    said: list[str] = []
+    on_chunk = _auditor_progress_clock(said.append, clock=lambda: now[0])
+    for step in range(0, 45, 3):
+        now[0] = 100.0 + step
+        on_chunk("VERDICT-DRAFT-SENTINEL", {"id": "a", "seq": step, "done": False})
+    on_chunk("", {"id": "a", "seq": 99, "done": True, "outcome": "complete"})
+    assert said == ["Still reviewing · 12 s", "Still reviewing · 24 s",
+                    "Still reviewing · 36 s"]
+    assert not any("SENTINEL" in line for line in said)

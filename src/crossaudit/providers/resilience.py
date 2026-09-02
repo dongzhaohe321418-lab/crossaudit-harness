@@ -19,7 +19,7 @@ from typing import Callable
 from ..config import Config, Role
 from ..errors import ConfigDenial, ProviderDenial, provider_remediations
 from ..usage import enforce_budget
-from .registry import NEEDS_KEY, get_provider
+from .registry import NEEDS_KEY, get_provider, supports_streaming
 
 STATE_NAME = "provider-resilience.json"
 _LOCK = threading.RLock()
@@ -202,12 +202,18 @@ def complete(cfg: Config, role_name: str, primary: Role, *, system: str,
                     "allow_custom": allow_custom,
                     "reasoning_effort": role.reasoning_effort,
                 }
+                # D150: any adapter that declares streaming streams, for any
+                # role whose caller asked for chunks. What the chunks become
+                # is the caller's decision (a live draft for the generator,
+                # a progress clock for the auditor); this layer only carries.
                 chunk_callback = getattr(on_event, "on_chunk", None)
-                if (role_name == "generator"
-                        and role.provider == "openai_compat"
-                        and cfg.generator_streaming
+                if (cfg.generator_streaming
+                        and supports_streaming(role.provider)
                         and callable(chunk_callback)):
                     provider_args["on_chunk"] = chunk_callback
+                    thinking_callback = getattr(on_event, "on_thinking", None)
+                    if callable(thinking_callback):
+                        provider_args["on_thinking"] = thinking_callback
                 reply = fn(**provider_args)
                 _record(cfg, route_id, success=True)
                 if isinstance(reply.raw, dict):

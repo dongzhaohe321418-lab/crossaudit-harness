@@ -3589,7 +3589,7 @@ const ZH={
   ,"resuming with tool result":"携工具结果继续","resuming with compute result":"携计算结果继续","requesting remote calculation":"正在请求远程计算","note":"备注","document export refused":"文档导出被拒绝"
   ,"the round could not be committed":"该轮次无法提交","rendering final document locally":"正在本地渲染最终文档","the round reproduced the previous one; nothing new to audit":"本轮与上一轮结果相同；没有新的内容可审计"
   ,"the loop cannot settle this itself":"循环无法自行解决此问题","this stop is waiting for a human":"此次停止正在等待人工处理"
-  ,"Generator live reply · not audited":"生成者实时回复 · 未经审计","Auditor live reply · direct reply":"审计者实时回复 · 直接回复"
+  ,"Thinking":"思考中","Generator live reply · not audited":"生成者实时回复 · 未经审计","Auditor live reply · direct reply":"审计者实时回复 · 直接回复"
   ,"Task started.":"任务已开始。","The result will appear in this conversation.":"结果会显示在此对话中。","Needs clarification.":"需要澄清。","Refused.":"已拒绝。","Message delivered.":"消息已送达。","Sending your files…":"正在发送文件…"
   ,"Pinned":"已置顶","Recent":"最近","Upload failed":"上传失败","Uploaded":"已上传"
   ,"Stored in chunks without an app quota. Model inspection depends on file support and context.":"分块存储，应用不设配额。模型能否读取取决于文件支持与上下文。"
@@ -3702,7 +3702,9 @@ const ZH_PATTERNS=[
   ,[/^(.+) key works, but no models are available to it\.$/,m=>m[1]+' 密钥可用，但没有可用的模型。']
   ,[/^Could not reach (.+)\. Check your connection and try again\.$/,m=>'无法连接 '+m[1]+'。请检查网络后重试。']
   ,[/^reading (\d+) owner message\(s\)$/,m=>'正在读取 '+m[1]+' 条所有者补充信息'],
-  [/^reading (\d+) owner message\(s\)$/,m=>'正在读取 '+m[1]+' 条所有者补充信息'],
+  [/^Draft: (\d+) words so far$/,m=>'草稿：已写 '+m[1]+' 字'],
+  [/^Still (routing|preparing|generating|auditing|replying|reviewing) · (\d+) s$/,m=>
+    ({routing:'仍在判断由谁处理',preparing:'仍在准备',generating:'仍在生成',auditing:'仍在审计',replying:'仍在回复',reviewing:'仍在审阅'})[m[1]]+' · '+m[2]+' 秒'],
   [/^queued as owner guidance for the running build \(#(\d+)\); it will be read at the next round$/,m=>'已作为所有者补充信息排队（第 '+m[1]+' 位），将在下一轮读取'],
   [/^(\d+) queued$/,m=>m[1]+' 条排队中'],
   [/^generator provider failure in round (\d+): (.+)$/,m=>'生成者在第 '+m[1]+' 轮失败：'+m[2]],
@@ -6088,8 +6090,22 @@ function runCard(d){
     + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
     + '<time class="event-time">' + at(s.t) + '</time></div>';
   }).join('') : '';
+  // D150: what is arriving right now, as one line each — a word count for the
+  // draft (the text itself lives in the unaudited draft article above) and
+  // the tail of the summarised thinking. Neither is a step; neither persists.
+  const draft = liveDraftFor(d), thinking = liveThinkingFor(d);
+  const liveRows = (thinking ? '<div class="audit-event live-thinking">'
+      + '<span class="event-mark runtime">…</span><div class="event-main"><div class="event-line"><b>'
+      + esc(currentLocale==='zh'?'思考中':'Thinking') + '</b><span>' + esc(thinking.text.slice(-160).replace(/\s+/g,' ')) + '</span></div></div>'
+      + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></div>' : '')
+    + (draft ? '<div class="audit-event live-draft">'
+      + '<span class="event-mark generator">G</span><div class="event-main"><div class="event-line"><b>'
+      + esc(t('Generator')) + '</b><span>' + esc(currentLocale==='zh'
+        ? '草稿：已写 ' + draftCount(draft.text) + ' 字'
+        : 'Draft: ' + draftCount(draft.text) + ' words so far') + '</span></div></div>'
+      + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></div>' : '');
   const activityTitle = p && !p.finished ? 'Live activity' : 'Run activity';
-  const activity = eventRows || '<div class="activity-empty">The generator and auditor show what they are doing here while a task runs.</div>';
+  const activity = (eventRows + liveRows) || '<div class="activity-empty">The generator and auditor show what they are doing here while a task runs.</div>';
   const task = p && p.task ? p.task : titleOf(d);
   const live = p && !p.finished;
   const stopBtn = live ? '<button type="button" class="run-stop"'
@@ -6922,6 +6938,37 @@ function startPolling(why){connected(false,why);if(poller)return;poller=setInter
 // generator wrote, and presenting it would be a smaller version of the defect
 // F1 closes — text on screen that nothing stands behind.
 let liveDraft=null;
+// D150. The summarised thinking of the generator, on its own named frame and its own
+// consumer: same gap rule, but only a bounded tail is kept, because it is a
+// glance at what the model is weighing, not a document.
+let liveThinking=null;
+const THINKING_TAIL=600;
+function thinkingChunk(row){
+  const stream=row&&row.stream;
+  if(!stream||typeof stream!=='object')return;
+  const run=String(row.run_id||''),id=String(stream.id||'');
+  const seq=Number(stream.seq),done=stream.done===true;
+  if(!run||!id||!Number.isInteger(seq)||seq<0)return;
+  const same=liveThinking&&liveThinking.run===run&&liveThinking.id===id;
+  if(!same){
+    if(seq!==0){liveThinking={run:run,id:id,seq:seq,text:'',done:true,broken:true};return;}
+    liveThinking={run:run,id:id,seq:-1,text:'',done:false,broken:false};
+  }
+  if(liveThinking.broken)return;
+  if(seq!==liveThinking.seq+1){liveThinking.text='';liveThinking.broken=true;liveThinking.done=true;return;}
+  liveThinking.seq=seq;
+  if(!done){liveThinking.text=(liveThinking.text+String(row.text||'')).slice(-THINKING_TAIL);}
+  else liveThinking.done=true;
+  if(lastState)render(lastState);}
+function liveThinkingFor(d){
+  if(!liveThinking||liveThinking.broken||!liveThinking.text||liveThinking.done)return null;
+  const p=chatProgress(d);
+  if(!p||p.finished||String(p.run_id||'')!==liveThinking.run)return null;
+  if(String(p.state||'').toUpperCase()!=='GENERATING')return null;
+  return liveThinking;}
+// Words for the draft line: CJK counts by character, everything else by word.
+function draftCount(text){const cjk=(String(text||'').match(/[\u4e00-\u9fff]/g)||[]).length;
+  const words=(String(text||'').replace(/[\u4e00-\u9fff]/g,' ').match(/\S+/g)||[]).length;return cjk+words;}
 function draftChunk(row){
   const stream=row&&row.stream;
   if(!stream||typeof stream!=='object')return;
@@ -6980,6 +7027,7 @@ function startStream(){let source;try{source=new EventSource('/api/stream?t='+en
   // The named listener this whole finding is about. `onmessage` never sees it:
   // a frame with an `event:` line is dispatched by name and by name only.
   source.addEventListener('generation_chunk',ev=>{try{draftChunk(JSON.parse(ev.data));}catch(e){}});
+  source.addEventListener('thinking_chunk',ev=>{try{thinkingChunk(JSON.parse(ev.data));}catch(e){}});
   source.onerror=()=>startPolling('reconnecting');}
 
 const form=document.getElementById('f');const say=document.getElementById('say');

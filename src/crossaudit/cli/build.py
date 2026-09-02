@@ -233,6 +233,30 @@ def _conversation_context(cfg: Config, chat_id: str, run_id: str,
     return "\n".join(lines)
 
 
+AUDITOR_PROGRESS_EVERY_S = 10.0
+
+
+def _auditor_progress_clock(say, *, clock=time.monotonic, every=AUDITOR_PROGRESS_EVERY_S):
+    """An ``on_chunk`` that narrates time, never text.
+
+    Each arriving chunk proves the auditor is still writing; every ``every``
+    seconds of that the caller gets one "Still reviewing · N s" line. The chunk
+    text itself is dropped here, which is the whole point.
+    """
+    started = clock()
+    last = [started]
+
+    def on_chunk(_text: str, stream: dict) -> None:
+        if stream.get("done"):
+            return
+        now = clock()
+        if now - last[0] >= every:
+            last[0] = now
+            say(f"Still reviewing · {int(now - started)} s")
+
+    return on_chunk
+
+
 def _workspace_file_count(cfg: Config) -> int:
     """How many files the workspace read below is about to open."""
     count = 0
@@ -578,12 +602,19 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         emit("generation_chunk", "generator", text,
              state=RunState.GENERATING, stream=stream)
 
+    def thinking_chunk(text: str, stream: dict) -> None:
+        """Summarised thinking, display-only (D150): its own stream kind, so
+        nothing that assembles the draft or the commit can pick it up."""
+        emit("thinking_chunk", "generator", text,
+             state=RunState.GENERATING, stream=stream)
+
     # The resilience layer renews the lease before each retry attempt through
     # the same attribute convention the run shell uses. Its streaming adapter
     # reads ``on_chunk`` from this callback, keeping existing provider-event
     # call signatures backward compatible for adapters without streaming.
     generator_provider_event.heartbeat = heartbeat
     generator_provider_event.on_chunk = generation_chunk
+    generator_provider_event.on_thinking = thinking_chunk
 
     if chat_id and not re.fullmatch(r"(?:history|[a-f0-9]{16})", chat_id):
         raise ConfigDenial("chat id is invalid")
@@ -1034,6 +1065,15 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         # The auditor's resilience layer renews the lease before each retry
         # attempt through the same handle convention as the generator's.
         run_args.on_step.heartbeat = heartbeat
+        # D150: the auditor's reply is not evidence until the verdict, so its
+        # chunks are never shown. They drive a progress clock instead — one
+        # line every 10 s while tokens arrive — and the phase narration
+        # (auditor_reading, check_*) lands through the same handle.
+        run_args.on_step.on_chunk = _auditor_progress_clock(
+            lambda text: emit("auditor_progress", "auditor", text,
+                              state=RunState.AUDITING))
+        run_args.on_step.narrate = lambda kind, text, detail="": emit(
+            kind, "auditor", text, detail, state=RunState.AUDITING)
         if heartbeat is not None:
             heartbeat()          # auditor provider turn: same silence problem
         try:

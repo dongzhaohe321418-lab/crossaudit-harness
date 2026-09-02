@@ -47,6 +47,21 @@ def known() -> frozenset[str]:
     return frozenset(_PROVIDERS)
 
 
+def supports_streaming(name: str) -> bool:
+    """Whether the adapter registered under ``name`` can stream a completion.
+
+    The capability is declared on the adapter itself (``supports_streaming``
+    on its ``complete``), so a vendor preset built on the OpenAI-compatible
+    adapter inherits it and a new adapter opts in by saying so — never by
+    being named in a gate somewhere else.
+    """
+    fn = _PROVIDERS.get(name)
+    if fn is None:
+        return False
+    target = getattr(fn, "func", fn)          # partials wrap the real adapter
+    return bool(getattr(target, "supports_streaming", False))
+
+
 def get_provider(name: str) -> Callable[..., object]:
     try:
         return _PROVIDERS[name]
