@@ -19,6 +19,7 @@ from pathlib import Path
 
 from ..config import Config
 from ..controller import StateStore
+from ..dcl.framework import CONFIRMED
 from ..dispute import DISPUTES_LOG, parse_findings
 from ..errors import classify_escalation_kind, escalation_remediations
 from ..gitio import git, is_repo, read_committed_bytes
@@ -120,6 +121,10 @@ class Cycle:
     # rendered came from a commit.
     report_state: str = "committed"
     report_note: str = ""
+    #: D148: the route the receipt's authority block recorded for this round
+    #: ("automatic-repair", "human-decision", "obtain-audit"), or "" when the
+    #: receipt predates the block. Inspector-only: nothing renders the name.
+    authority_route: str = ""
 
     @property
     def blockers(self) -> int:
@@ -144,6 +149,62 @@ def _cited_report_commit(cycle_dir: Path) -> str:
                    .get("ledger", {}).get("report_commit") or "")
     except (OSError, ValueError):
         return ""
+
+
+def _receipt_authority(cycle_dir: Path) -> dict:
+    """The receipt's evidence-authority block for this cycle, or ``{}``.
+
+    Same file `_cited_report_commit` reads; the block is verifier-bound, so it
+    is preferred over parsing the report's table. Absent for receipts written
+    before D148, and then nothing downstream changes.
+    """
+    receipt = cycle_dir / "receipt.json"
+    if not receipt.is_file():
+        return {}
+    try:
+        block = json.loads(receipt.read_text(encoding="utf-8")).get("authority")
+    except (OSError, ValueError, AttributeError):
+        return {}
+    return block if isinstance(block, dict) else {}
+
+
+def annotate_findings(findings: list[dict], authority: dict) -> list[dict]:
+    """Add each finding's evidence tier and whether a deterministic check
+    verified it, from the receipt's authority block. In place, and additive.
+
+    Keyed the way `records_from_audit` keys evidence (``rule@artifact``), with
+    a rule-only fallback when the report names the artifact differently and
+    the rule was raised once. A finding the block does not know is left
+    untouched, so an old receipt renders exactly as before. The finding STATE
+    is deliberately not copied: no user surface renders a state word.
+    """
+    records = authority.get("evidence") if authority else None
+    if not isinstance(records, list) or not records:
+        return findings
+    by_key: dict[str, dict] = {}
+    by_rule: dict[str, list[dict]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        key = str(record.get("finding_key", ""))
+        by_key.setdefault(key, record)
+        by_rule.setdefault(key.split("@", 1)[0], []).append(record)
+    for f in findings:
+        rule = str(f.get("rule", ""))
+        record = by_key.get(f"{rule}@{f.get('artifact', '')}")
+        if record is None and len(by_rule.get(rule, [])) == 1:
+            record = by_rule[rule][0]
+        if record is None:
+            continue
+        tier = str(record.get("tier", ""))
+        if tier not in ("deterministic", "model"):
+            continue
+        f["tier"] = tier
+        # A deterministic finding is verified by construction; a model finding
+        # only once something established it (the sidecar's own rule).
+        f["verified"] = bool(tier == "deterministic"
+                             or record.get("state") == CONFIRMED)
+    return findings
 
 
 def _derived_report_commit(root: Path, rel: str) -> str:
@@ -228,15 +289,19 @@ def read_cycles(cfg: Config,
         round_m = ROUND_RE.search(text)
         aud = AUDITOR_RE.search(text)
         const = CONST_RE.search(text)
+        authority = _receipt_authority(report.parent)
         out.append(Cycle(
             directory=name, sha=sha, round=int(round_m.group(1)) if round_m else 1,
             verdict=verdict,
-            findings=[{"severity": f.severity, "rule": f.rule, "artifact": f.artifact,
-                       "observation": f.observation} for f in parse_findings(text)],
+            findings=annotate_findings(
+                [{"severity": f.severity, "rule": f.rule, "artifact": f.artifact,
+                  "observation": f.observation} for f in parse_findings(text)],
+                authority),
             at=int(report.stat().st_mtime),
             auditor=aud.group(1) if aud else "",
             constitution=const.group(1) if const else "",
-            report_state=source.state, report_note=source.note))
+            report_state=source.state, report_note=source.note,
+            authority_route=str(authority.get("route", "") or "")))
     # Cycle directory names begin with a content hash, so lexical order is
     # random with respect to time. The UI's "latest" pipeline must follow the
     # ledger write order, with the protocol round as a deterministic tie-break.
@@ -356,6 +421,17 @@ def top_rules(cycles: list[Cycle], limit: int = 5) -> list[dict]:
     return [{"rule": r, "count": n} for r, n in ranked]
 
 
+def _is_auditor_concern(stop_reason: str, latest: Cycle | None) -> bool:
+    """Whether this content stop is the escalate dial handing a model-only
+    blocker to a person (D148). The receipt's route is the structured
+    source; the CLI's one sentence is the fallback for a cycle whose receipt
+    is not beside its report."""
+    if latest is not None and latest.authority_route == "human-decision":
+        return True
+    from ..cli.main import CONTESTED_MODEL_BLOCKER_REASON  # lazy: cli is heavy
+    return stop_reason.strip() == CONTESTED_MODEL_BLOCKER_REASON
+
+
 def escalations(cfg: Config) -> list[dict]:
     """What is waiting on a person, with enough evidence to make a decision.
 
@@ -388,13 +464,34 @@ def escalations(cfg: Config) -> list[dict]:
         related.sort(key=lambda c: (c.round, c.at, c.directory))
         latest = related[-1] if related else None
         issues = list(latest.findings[:8]) if latest else []
+        cause = str(s.get("escalation_cause", "") or "")
+        if not cause and kind == "audit" and _is_auditor_concern(stop_reason, latest):
+            # D148, escalate dial: cmd_run/cmd_audit record no cause, but the
+            # receipt's route (verifier-bound) and the one sentence they mint
+            # both say a model-only blocker was handed to a person. Derived
+            # here, once, so the page keys on a field rather than on prose.
+            cause = "auditor_concern"
         why = stop_reason
-        if latest:
+        if cause == "repair_refused":
+            # "the automatic repair was refused in round N because <reason>":
+            # the guard's own sentence names the file and the pattern, and
+            # that is the part a person needs on the screen.
+            why = stop_reason.partition(" because ")[2] or stop_reason
+        elif latest:
             if latest.verdict == "DCL_ONLY":
                 why = "no model audit ran, so the result cannot pass"
             elif issues:
                 why = issues[0]["observation"][:220]
-        if issues:
+        if cause == "repair_refused":
+            requested = (
+                "Tell the generator the smallest change that repairs the cause, "
+                "or stop the task without admitting its output.")
+        elif cause == "auditor_concern":
+            requested = (
+                "Review the auditor's concern and its evidence. Dispute a "
+                "misreading, reopen with a recorded reason, or stop without "
+                "admission.")
+        elif issues:
             requested = (
                 "Tell the generator how to correct the remaining blockers, or stop "
                 "the task without admitting its output.")
@@ -414,7 +511,7 @@ def escalations(cfg: Config) -> list[dict]:
                     "stop_reason": stop_reason, "issues": issues,
                     "kind": kind,
                     # Structured cause (additive) for human-readable rendering.
-                    "cause": str(s.get("escalation_cause", "") or ""),
+                    "cause": cause,
                     "remediations": escalation_remediations(kind),
                     "task": str(s.get("task", ""))[:12000],
                     "attempts": [{"round": c.round, "verdict": c.verdict,

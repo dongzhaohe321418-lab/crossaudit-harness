@@ -21,7 +21,8 @@ from ..config import Config
 from ..dispute import DISPUTES_LOG, parse_findings
 from ..router import history as routing_history
 from .chats import LEGACY_CHAT_ID, canonical_id
-from .overview import ReportSource, read_report_sources
+from .overview import (ReportSource, _receipt_authority, annotate_findings,
+                       read_report_sources)
 from .progress import context_events
 
 GENERATOR_LANES = {"generator", "project", "chat"}
@@ -231,9 +232,14 @@ def auditor_stream(cfg: Config, routing: list[dict],
                               if sha.startswith(report.parent.name.split("-r", 1)[0])),
                              LEGACY_CHAT_ID),
             "round": int(round_match.group(1)) if round_match else 1,
-            "findings": [{"severity": f.severity, "rule": f.rule,
-                          "artifact": f.artifact, "observation": f.observation[:400]}
-                         for f in parse_findings(text)],
+            # Each finding also says which tier raised it and whether a
+            # deterministic check verified it, from the receipt beside the
+            # report (D148) — the Audits detail shows that, never a route.
+            "findings": annotate_findings(
+                [{"severity": f.severity, "rule": f.rule,
+                  "artifact": f.artifact, "observation": f.observation[:400]}
+                 for f in parse_findings(text)],
+                _receipt_authority(report.parent)),
             # "committed" | "drifted" | "uncommitted", plus the sentence for
             # the two that are not "committed". Additive, and the only thing on
             # this row that is about the FILE rather than about what the
