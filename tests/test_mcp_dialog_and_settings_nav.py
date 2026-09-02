@@ -84,7 +84,11 @@ def test_enable_is_blocked_until_something_is_approved():
     assert "Approve at least one tool before the Generator can call this server." in PAGE
 
 
-def test_risk_labels_are_shown_but_never_presented_as_verified():
+def test_page_markup_carries_the_risk_labels_and_the_unverified_disclaimer():
+    """MARKUP ONLY. Asserts strings in ``page.py``; renders nothing and cannot
+    fail if the page never reaches a person — proved under D106 by serving an
+    empty document, which left it green.
+    """
     # Annotations come from the server. Surfacing them is useful; implying
     # CrossAudit checked them would be an overclaim (AGENTS.md §1.5).
     assert "note.destructiveHint" in PAGE and "note.readOnlyHint" in PAGE
@@ -270,7 +274,11 @@ def test_a_saved_stdio_server_carries_its_standing_command_approval():
             "&&mcpApprovalGranted();") in PAGE
 
 
-def test_the_standing_approval_is_shown_not_implied():
+def test_page_markup_declares_the_standing_approval_box_and_its_sentence():
+    """MARKUP ONLY. Asserts strings in ``page.py``; renders nothing and cannot
+    fail if the page never reaches a person — proved under D106 by serving an
+    empty document, which left it green.
+    """
     # The asymmetry has to be visible in the form, not discovered as a denial.
     assert 'id="mcp-approve-box"' in PAGE
     assert 'id="mcp-approved-note"' in PAGE

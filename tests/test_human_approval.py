@@ -235,7 +235,12 @@ def test_snapshot_pending_approval_defaults_none(cfg):
     assert snapshot(cfg)["pending_approval"] is None
 
 
-def test_page_renders_the_approval_card_and_calls_the_endpoint():
+def test_page_markup_declares_the_approval_card_and_the_endpoint_path():
+    """MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     from crossaudit.console.page import PAGE
     assert "approval-card" in PAGE and "Approval needed" in PAGE
     assert "resolveApproval" in PAGE and "/api/approval" in PAGE

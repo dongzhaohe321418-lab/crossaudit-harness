@@ -199,7 +199,12 @@ def test_doctor_problem_rows_explain_why_they_matter(cfg, monkeypatch, tmp_path)
             assert "why" not in row, f"{row['id']} should stay quiet when settled"
 
 
-def test_doctor_ui_renders_the_why_line():
+def test_page_markup_contains_the_doctor_why_field_and_class():
+    """MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     from crossaudit.console.page import PAGE
 
     assert "row.why" in PAGE

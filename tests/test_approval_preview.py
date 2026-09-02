@@ -85,6 +85,11 @@ def test_broker_puts_the_preview_on_the_pending_card(cfg, tmp_path):
     assert "+hi" not in blob and "write work/new.md" not in blob
 
 
-def test_page_renders_the_preview_block():
+def test_page_markup_contains_the_approval_preview_block():
+    """MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     from crossaudit.console.page import PAGE
     assert "approval-preview" in PAGE and "a.preview" in PAGE

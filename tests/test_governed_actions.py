@@ -52,7 +52,12 @@ def test_governed_actions_never_carry_raw_output(cfg):
     assert read["result_sha256"]
 
 
-def test_page_renders_the_governed_panel():
+def test_page_markup_contains_the_governed_panel():
+    """MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     assert 'data-view="evidence"' in PAGE
     assert "evidenceView" in PAGE and "governed_actions" in PAGE
     assert "Governed actions" in PAGE and "This is the audit trail" in PAGE

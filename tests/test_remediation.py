@@ -203,7 +203,12 @@ def test_a_legacy_record_missing_the_kind_falls_back_to_the_reason(cfg):
 
 
 # ------------------------------------------------------ the Console renders it
-def test_the_page_renders_provider_remedies_from_the_typed_list():
+def test_page_markup_contains_the_provider_remediation_table():
+    """MARKUP ONLY. This asserts strings are present in ``page.py``; it does not
+    render anything and cannot fail if the page never reaches a person. Renamed
+    under D106: serving an empty document leaves it green, so a name claiming
+    "renders"/"announces" was a property nobody tested.
+    """
     # The buttons are driven by the remediations list, not a hardcoded kind
     # branch, and the A40 labels are bound to the typed actions in one place.
     assert "const REMEDIATION=" in PAGE

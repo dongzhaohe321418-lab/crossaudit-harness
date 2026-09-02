@@ -303,7 +303,7 @@ def test_the_guard_is_shown_to_fail(why, module, before, after, audited, monkeyp
 
 
 # ------------------------------------------------------- what a person reads
-def test_the_console_renders_the_note_where_the_person_reads_the_verdict():
+def test_page_markup_places_the_provenance_note_outside_the_findings_list():
     """The payload carrying a sentence is not the same as a person seeing it.
 
     The auditor row is deliberately excluded from the conversation transcript,
@@ -314,6 +314,10 @@ def test_the_console_renders_the_note_where_the_person_reads_the_verdict():
 
     Driven in a real browser at 1440 and 390, light and dark, both locales:
     `_ui_findings/f1-report-source/evidence/render.json`.
+    
+    MARKUP ONLY. Asserts strings in ``page.py``; renders nothing and cannot
+    fail if the page never reaches a person — proved under D106 by serving an
+    empty document, which left it green.
     """
     from crossaudit.console.page import PAGE
 
