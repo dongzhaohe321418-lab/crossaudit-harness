@@ -233,6 +233,44 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--text-3)}
 .live-dot.on{background:var(--pass)}
 
+/* Usage pill: one element, no decoration; colour is the only state signal. */
+.usage-pill{height:28px;display:inline-flex;align-items:center;padding:0 10px;flex:none;
+  border:1px solid var(--line);border-radius:var(--r-pill);background:transparent;color:var(--text-2);
+  font-family:var(--font-label);font-size:var(--fs-caption);white-space:nowrap;cursor:pointer}
+.usage-pill:hover{color:var(--text)}
+.usage-pill.warning{border-color:var(--state-revise);color:color-mix(in srgb,var(--state-revise) 60%,var(--text))}
+.usage-pill.blocked{border-color:var(--blocked);color:var(--blocked)}
+/* Usage banner: a soft threshold notice, dismissable for the period. */
+.usage-banner{grid-column:1/-1;display:flex;align-items:center;gap:var(--sp-3);
+  margin:6px 8px 0;padding:var(--sp-2) var(--sp-4);min-height:40px;
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--state-revise);
+  border-radius:var(--r-md);box-shadow:var(--shadow-1);z-index:var(--z-chrome)}
+.usage-banner b{font-weight:500}
+.usage-banner span{color:var(--text-2);font-size:var(--fs-caption)}
+.usage-banner button{margin-left:auto}
+.run-cost{display:flex;flex-wrap:wrap;gap:var(--sp-3);padding:8px var(--sp-4);border-top:1px solid var(--line);
+  color:var(--text-3);font-family:var(--font-label);font-size:var(--fs-caption)}
+.run-cost .run-reset{color:color-mix(in srgb,var(--state-revise) 60%,var(--text))}
+.turn-cost{margin-top:6px;color:var(--text-3);font-family:var(--font-label);font-size:var(--fs-caption)}
+.usage-mode{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-pill);overflow:hidden;margin-left:auto;flex:none}
+.usage-mode button{border:0;background:transparent;padding:3px 10px;font-size:var(--fs-caption);color:var(--text-3);cursor:pointer}
+.usage-mode button[aria-pressed="true"]{background:var(--surface-2);color:var(--text)}
+.usage-heading{display:flex;align-items:flex-start;gap:var(--sp-3)}
+.usage-report{width:100%;border-collapse:collapse;font-size:var(--fs-caption);margin-bottom:10px}
+.usage-report th,.usage-report td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.usage-report th{color:var(--text-3);font-weight:600}
+.usage-report td:not(:first-child),.usage-report th:not(:first-child){text-align:right;font-family:var(--font-label)}
+.usage-report tr.total td,.usage-report tr.total th{border-top:2px solid var(--line);color:var(--text);font-weight:600}
+.usage-note.unpriced span:first-child,.unpriced-note span:first-child{color:var(--state-revise)}
+.unpriced-note{display:flex;align-items:flex-start;gap:9px;margin-top:10px;padding:10px 11px;
+  border:1px solid var(--line);border-left:3px solid var(--state-revise);border-radius:var(--r-md);
+  background:var(--surface-2);color:var(--text-2);font-size:var(--fs-caption);line-height:1.5}
+.price-head,.price-row{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(4,minmax(0,1fr)) 28px;gap:7px;align-items:center}
+.price-head{margin-top:10px;color:var(--text-3);font-size:var(--fs-caption)}
+.price-rows{display:grid;gap:8px;margin-top:6px}
+.price-row input{min-height:34px;padding:6px 8px;font-size:var(--fs-caption);min-width:0}
+.settings-usage-rollup{margin-top:14px}
+
 /* Decision banner: protocol state is never hidden or transient. */
 .decision-banner{grid-column:1/-1;display:flex;align-items:center;gap:var(--sp-3);
   margin:6px 8px 0;padding:var(--sp-2) var(--sp-4);min-height:40px;
@@ -2692,6 +2730,12 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
           <label class="field"><span>Monthly API-value warning (USD)</span><input id="runtime-monthly-cost-warning" type="number" min="0.01" step="0.01" placeholder="No warning"></label>
           <label class="field"><span>Monthly API-value hard limit (USD)</span><input id="runtime-monthly-cost-limit" type="number" min="0.01" step="0.01" placeholder="No limit"></label></div>
         <div class="guardrail-state" id="runtime-guardrail-state">Limits are local safeguards; provider billing remains authoritative.</div>
+        <div class="unpriced-note" id="runtime-unpriced" hidden><span aria-hidden="true">!</span><div id="runtime-unpriced-text"></div></div>
+        <div class="form-title" style="margin-top:16px">Model prices</div>
+        <small class="field-help">USD per 1M tokens for models the price snapshot does not carry. Used for this project's estimates only.</small>
+        <div class="price-head" aria-hidden="true"><span>Model</span><span>Input</span><span>Output</span><span>Cache write</span><span>Cache read</span><span></span></div>
+        <div class="price-rows" id="runtime-prices"></div>
+        <div class="model-actions"><button type="button" class="secondary" data-add-price>＋ Add price</button></div>
       </section>
       <section class="runtime-pane" data-runtime-pane="instructions" tabindex="-1" hidden><div class="runtime-pane-heading"><h3>Generator guidance</h3><p>Reusable project instructions shape the work without weakening the independent audit rules.</p></div>
         <div class="form-grid"><label class="field"><span>Edit guidance</span><select id="runtime-skill-select"><option value="__new__">Create new guidance…</option></select></label>
@@ -2799,7 +2843,10 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <p class="settings-empty">MCP servers and generator skills are configured inside the active project.</p>
       <div class="settings-jump"><button type="button" class="secondary" data-settings-open="tools">Open tools &amp; skills</button><button type="button" class="secondary" id="settings-open-skills" data-settings-open="skills">Manage Skills</button><small class="settings-empty" data-scope-note hidden></small></div>
     </section><section class="form-section settings-pane" data-settings-pane="usage" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Usage</span><h3>Usage and budgets</h3><p>Token and cost estimates, and the limits that pause a run.</p></div>
-      <p class="settings-empty">Usage and budgets are tracked per project. Export isn't available here yet.</p>
+      <p class="settings-hint">Usage and budgets are tracked per project, from each project's own local ledger. Nothing is sent anywhere.</p>
+      <div class="settings-jump"><label class="field"><span>Export period</span><select id="settings-usage-period"><option value="day">Today</option><option value="month" selected>This month</option><option value="all">Everything</option></select></label>
+        <button type="button" class="secondary" data-usage-export="csv">Export CSV</button><button type="button" class="secondary" data-usage-export="json">Export JSON</button><small class="settings-empty" data-scope-note hidden></small></div>
+      <div class="settings-usage-rollup" id="settings-usage-rollup"><p class="settings-empty">Open a project to see usage across projects.</p></div>
       <div class="settings-jump"><button type="button" class="secondary" data-settings-open="usage">Open usage</button><button type="button" class="secondary" data-settings-open="runtime-budgets">Set budgets</button><small class="settings-empty" data-scope-note hidden></small></div>
     </section><section class="form-section settings-pane" data-settings-pane="security" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Security &amp; privacy</span><h3>Security and privacy</h3><p>How credentials are stored and where your data goes.</p></div>
       <p class="settings-hint">API keys are stored as write-only macOS Keychain items and are never shown again.</p>
@@ -2956,6 +3003,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
     <button class="top-project" id="project-switcher"><b id="proj">…</b> <span id="branch-label">/ project folder</span></button>
     <button class="icon-button" id="current-project-pin" aria-label="Pin project" title="Pin project">☆</button>
     <span class="spacer"></span>
+    <button type="button" class="usage-pill" id="usage-pill" aria-label="Open usage" title="Open usage" hidden></button>
     <div class="live-pill"><span class="live-dot" id="livedot"></span><span id="conn-text">connecting</span></div>
     <button class="icon-button" id="palette-open" aria-label="Command palette" title="Command palette · ⌘K">⌘</button>
     <button class="icon-button" id="locale-toggle" aria-label="Switch to Chinese" title="Switch language">中文</button>
@@ -2973,6 +3021,10 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
   <div class="decision-banner" id="decision-banner" hidden><span class="banner-glyph" aria-hidden="true"></span>
     <b id="decision-banner-text">1 task needs your decision</b>
     <button type="button" class="secondary" id="decision-banner-review">Review</button></div>
+
+  <div class="usage-banner" id="usage-banner" role="status" hidden><span class="banner-glyph" aria-hidden="true"></span>
+    <b id="usage-banner-text"></b><span id="usage-banner-reset"></span>
+    <button type="button" class="secondary" id="usage-banner-dismiss">Dismiss</button></div>
 
   <button class="scrim" id="scrim" aria-label="Close open panel"></button>
 
@@ -3080,7 +3132,6 @@ const ZH={
   "Repository owner and defaults are chosen per project, when you create it.":"仓库所有者与默认值在创建项目时按项目选择。",
   "SSH hosts and scheduler limits are configured inside the active project. Transfer limits use built-in defaults.":"SSH 主机与调度器限制在当前项目内部配置。传输限制使用内置默认值。",
   "MCP servers and generator skills are configured inside the active project.":"MCP 服务器与生成者技能在当前项目内部配置。",
-  "Usage and budgets are tracked per project. Export isn't available here yet.":"用量与预算按项目跟踪。此处暂不支持导出。",
   "API keys are stored as write-only macOS Keychain items and are never shown again.":"API 密钥以只写方式存入 macOS 钥匙串，且不会再次显示。",
   "Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.":"供应商路由按项目设置。留存、脱敏与日志控制此处暂不可配置。",
   "Logs, support bundles, and per-subsystem reset aren't available here yet.":"日志、支持包与按子系统重置此处暂不可用。",
@@ -3371,6 +3422,17 @@ const ZH={
   "Recent calls":"最近调用","counts only · no prompt content":"仅统计数量 · 不包含提示词内容","No model calls this month.":"本月尚无模型调用。",
   "Usage will appear after the first model completion.":"第一次模型调用完成后会显示用量。","No calls recorded yet.":"尚无调用记录。",
   "Reported":"已报告","Estimated":"估算","Unpriced":"未计价",
+  // Billing slice: header pill, threshold banner, cost lines, prices, export.
+  "Open usage":"打开用量","Display mode":"显示模式","≈ value":"≈ 价值","Monthly report":"月度报告","Top models":"主要模型",
+  "Generator share":"生成者占比","Auditor share":"审计者占比","Passed audits":"通过的审计","Unpriced calls":"未计价调用","Calls":"调用次数",
+  "Model prices":"模型价格","＋ Add price":"＋ 添加价格","Input":"输入","Output":"输出","Cache write":"缓存写入","Cache read":"缓存读取","Model ID":"模型 ID",
+  "USD per 1M tokens for models the price snapshot does not carry. Used for this project's estimates only.":"价格快照未收录的模型按每 100 万 token 的美元价格计费。仅用于本项目的估算。",
+  "No overrides. Models missing from the price snapshot stay unpriced.":"没有覆盖价格。价格快照中缺失的模型保持未计价。",
+  "Usage and budgets are tracked per project, from each project's own local ledger. Nothing is sent anywhere.":"用量与预算按项目跟踪，来自每个项目自己的本地账本。不会发送到任何地方。",
+  "Export period":"导出范围","Export CSV":"导出 CSV","Export JSON":"导出 JSON","Everything":"全部",
+  "Open a project to see usage across projects.":"打开一个项目后即可查看各项目的用量。","This month across projects":"本月全部项目合计",
+  "Usage across projects":"各项目用量","Budget":"预算","Within budget":"预算内","Budget warning":"预算预警","Paused at limit":"已达上限暂停","No budget":"未设预算",
+  "Resets at midnight":"明天 0:00 重置","Usage warning":"用量预警",
   "SSH workstations and Slurm clusters, detached from this Mac.":"与此 Mac 解耦运行的 SSH 工作站和 Slurm 集群。","SSH workstations and Slurm clusters for manual jobs or Generator calculations.":"用于手动作业或生成者计算的 SSH 工作站和 Slurm 集群。",
   "Remote-owned execution.":"远程主机负责执行。","＋ Add SSH host":"＋ 添加 SSH 主机","Refresh now":"立即刷新",
   "CrossAudit stores only host aliases and job identifiers. Keys remain with OpenSSH; remote work continues if the app closes, the Mac sleeps, or the network drops. A host marked as a Generator tool can receive model-authored jobs automatically within its saved policy.":"CrossAudit 只保存主机别名和任务标识；密钥始终由 OpenSSH 管理。即使应用关闭、Mac 休眠或网络中断，远程任务也会继续运行。标记为生成者工具的主机可在已保存政策范围内自动接收模型编写的任务。",
@@ -3628,6 +3690,13 @@ const ZH={
   ,"These are the rules the auditor judges against; an audit cannot run without them.":"这些是审计者据以判定的规则；缺少它们无法进行审计。"
 };
 const ZH_PATTERNS=[
+  // Billing slice: threshold alarms carry their percentage and the monthly
+  // reset its date, so both are patterns (a fixed entry would fall back to
+  // English the moment the number changed).
+  [/^Today.s token budget is (\d+)% used$/, m=>'今日 token 预算已用 '+m[1]+'%'],
+  [/^This month.s cost budget is (\d+)% used$/, m=>'本月费用预算已用 '+m[1]+'%'],
+  [/^Resets on (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d+)$/,
+   m=>(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(m[1])+1)+' 月 '+m[2]+' 日重置'],
   // D148 repair guard. Every reason is COMPOSED from a path, a count or a
   // pattern name, so each is a pattern; the path is never translated. The
   // event detail joins several with "; " and the stop reason wraps the first
@@ -4243,6 +4312,7 @@ function showSettingsPanel(name,focus=true){
     button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));button.classList.remove('dim');});
   document.querySelectorAll('[data-settings-pane]').forEach(pane=>pane.hidden=pane.dataset.settingsPane!==next);
   const save=document.getElementById('save-settings');save.hidden=next!=='providers';
+  if(next==='usage')loadUsageRollup();
   document.getElementById('cancel-settings').textContent=currentLocale==='zh'?(next==='providers'?'取消':'完成'):(next==='providers'?'Cancel':'Done');
   document.getElementById('settings-foot-note').textContent=currentLocale==='zh'
     ?(next==='providers'?'API key 以只写方式存入 macOS 钥匙串；订阅凭据始终由官方供应商运行时持有。':'更改会立即生效；在“诊断”中可随时运行环境诊断。')
@@ -4537,7 +4607,8 @@ function openRuntime(){const config=lastState&&lastState.runtime_config;if(!conf
   document.getElementById('runtime-monthly-cost-warning').value=budgets.monthly_cost_warning_usd||'';
   document.getElementById('runtime-monthly-cost-limit').value=budgets.monthly_cost_limit_usd||'';
   const guard=lastState&&lastState.usage&&lastState.usage.budget||{};document.getElementById('runtime-guardrail-state').textContent=
-    guard.state==='blocked'?(guard.reasons||[]).join(' '):guard.state==='warning'?(guard.warnings||[]).join(' '):'Limits are local safeguards; provider billing remains authoritative.';
+    guard.state==='blocked'?((guard.reasons||[]).join(' ')+' '+resetWords(guard)).trim():guard.state==='warning'?(guard.warnings||[]).join(' '):'Limits are local safeguards; provider billing remains authoritative.';
+  renderRuntimeBudgetNotes(guard);renderPriceRows(config.prices||[]);
   renderRuntimeSkills(config.skills||[]);
   if(config.skills_error)document.getElementById('runtime-skill-status').textContent=config.skills_error;
   showRuntimePanel('models',false);syncRuntimeBusy(lastState);runtimeModal.className='project-modal on';}
@@ -4607,7 +4678,8 @@ runtimeForm.onsubmit=async ev=>{ev.preventDefault();const save=document.getEleme
     daily_token_warning:document.getElementById('runtime-daily-token-warning').value,
     daily_token_limit:document.getElementById('runtime-daily-token-limit').value,
     monthly_cost_warning_usd:document.getElementById('runtime-monthly-cost-warning').value,
-    monthly_cost_limit_usd:document.getElementById('runtime-monthly-cost-limit').value};
+    monthly_cost_limit_usd:document.getElementById('runtime-monthly-cost-limit').value,
+    prices:priceRows()};
   try{const result=await api('/api/runtime',payload);if(lastState)lastState.runtime_config=result;
     if(lastState)lastState.max_rounds=result.max_rounds;
     closeRuntime();route.className='route on';route.innerHTML='<b>Project controls updated.</b> Recovery routes, usage guardrails, models and loop limits apply to the next provider call.';}
@@ -4717,6 +4789,7 @@ function openResolution(value,action='',sha=''){
     :row.limit_reached
     ?'CrossAudit used all '+used+' of '+maximum+' automatic rounds without a passing result. Nothing will continue or be admitted until you decide.'
     :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
+  appendResolutionReset(row,budget,provider);   // billing: "Resets at midnight" / "resets in 2 h 10 min"
   document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
     ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
   // A refused repair leads with the sentence the repair guard wrote (it names
@@ -6085,7 +6158,7 @@ function runCard(d){
     + '<div class="loop-focus-copy"><b>' + esc(focus.title) + '</b><p>' + esc(focus.detail) + '</p></div></div>'
     + '<div class="activity"><div class="activity-head">' + activityTitle + '<span>'
     + (p && p.steps ? p.steps.length + ' event' + (p.steps.length===1?'':'s') : 'Ledger-backed state')
-    + '</span></div><div class="activity-list">' + activity + '</div></div></section>';
+    + '</span></div><div class="activity-list">' + activity + '</div></div>' + runCostLine(d) + '</section>';
 }
 function approvalCard(d){
   // A live build proposed a Level 3+ action and paused for the user. The card
@@ -6252,8 +6325,17 @@ function usageView(d){
     +(row.api_value_usd===null?'unpriced':formatUsd(row.api_value_usd))+' · '
     +esc(new Date(row.t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))+'</span></div></div>').join('');
   const guardrail=guard.state&&guard.state!=='unconfigured'?'<div class="usage-note"><span>'+(guard.blocked?'!':'◉')+'</span><div><b>Usage guardrail · '+esc(guard.state)+'</b><br>'
-    +esc([...(guard.reasons||[]),...(guard.warnings||[])].join(' ')||'Usage is below the configured thresholds.')+'</div></div>':'';
-  return '<div class="view-heading"><h2>Token usage</h2><p>Project-level model consumption, updated with every completion.</p></div>'
+    +esc([...(guard.reasons||[]),...(guard.warnings||[])].join(' ')||'Usage is below the configured thresholds.')
+    +(guard.blocked&&resetWords(guard)?' '+esc(resetWords(guard)):'')+'</div></div>':'';
+  // Billing slice: the fail-closed monthly limit names the model it could not
+  // price; the alarms already raised this period are listed; the mode toggle
+  // (≈ value / tokens) is remembered per viewer.
+  const unpriced=unpricedSentences(guard).map(line=>'<div class="usage-note unpriced"><span>!</span><div>'+esc(line)+'</div></div>').join('');
+  const fired=(guard.fired||[]).map(w=>'<div class="usage-note"><span>◉</span><div>'+esc(currentLocale==='zh'?(w.text_zh||w.text):w.text)+' · '+esc(currentLocale==='zh'?(w.resets_zh||w.resets):w.resets)+'</div></div>').join('');
+  const mode=usageMode();
+  const modeToggle='<div class="usage-mode" role="group" aria-label="Display mode"><button type="button" data-usage-mode="value" aria-pressed="'+(mode==='value')+'">≈ value</button><button type="button" data-usage-mode="tokens" aria-pressed="'+(mode==='tokens')+'">Tokens</button></div>';
+  return '<div class="view-heading usage-heading"><div><h2>Token usage</h2><p>Project-level model consumption, updated with every completion.</p></div>'+modeToggle+'</div>'
+    +unpriced+fired
     +'<div class="usage-note"><span>ⓘ</span><div><b>Local metering · '+esc(u.cost_label||'API-value estimate')+'</b><br>'
     +'Token counts come from the provider runtime when available. Costs use the '+esc(u.price_snapshot||'current')
     +' public API price snapshot and are not a provider invoice or subscription charge.</div></div>'+guardrail
@@ -6273,9 +6355,129 @@ function usageView(d){
     +'<section class="usage-section"><div class="usage-section-head"><h3>Models</h3><span>this month</span></div>'
     +(models?'<div class="usage-table"><div class="usage-row head"><span>Model</span><span>Tokens</span><span>Cached</span><span>≈ value</span><span>Source</span></div>'
       +models+'</div>':'<div class="empty">Usage will appear after the first model completion.</div>')+'</section>'
+    +monthlyReport(d)
     +'<section class="usage-section"><div class="usage-section-head"><h3>Recent calls</h3><span>counts only · no prompt content</span></div>'
     +(recent?'<div class="usage-recent">'+recent+'</div>':'<div class="empty">No calls recorded yet.</div>')+'</section>';
 }
+// ---------------------------------------------------------------- billing
+// Header pill, threshold banner, per-run / per-turn cost lines, 429 reset
+// countdown, price overrides, export and the cross-project roll-up. Every
+// figure comes from the project ledger (state.usage); the page never
+// reads the files of another app. No hash, id or provider:model string is ever
+// rendered on the main surface by anything below.
+const USAGE_MODE_KEY='crossaudit-usage-mode',USAGE_DISMISS_KEY='crossaudit-usage-dismissed';
+function usageMode(){try{return localStorage.getItem(USAGE_MODE_KEY)==='tokens'?'tokens':'value';}catch(e){return 'value';}}
+function setUsageMode(mode){try{localStorage.setItem(USAGE_MODE_KEY,mode==='tokens'?'tokens':'value');}catch(e){}if(lastState)render(lastState);}
+function shortUsd(value){const n=Number(value||0);if(!isFinite(n)||n<=0)return '$0.00';
+  if(n>=1000)return '$'+Math.round(n).toLocaleString();if(n>=100)return '$'+n.toFixed(0);return '$'+n.toFixed(2);}
+function usageFigure(bucket){const b=bucket||{};return usageMode()==='tokens'?formatTokens(b.tokens):shortUsd(b.api_value_usd);}
+function budgetState(g){g=g||{};if(g.state==='blocked')return 'blocked';if(g.state==='warning'||(g.fired||[]).length)return 'warning';return 'ok';}
+function renderUsagePill(d){const pill=document.getElementById('usage-pill');if(!pill)return;
+  const u=(d&&d.usage)||{};if(!Number((u.all||{}).calls||0)){pill.hidden=true;return;}
+  const g=u.budget||{},state=budgetState(g),zh=currentLocale==='zh';
+  const today=usageFigure(u.today),month=usageFigure(u.month);
+  pill.hidden=false;pill.className='usage-pill '+state;
+  pill.textContent=(zh?'今日 ':'Today ')+today+' · '+(zh?'本月 ':'Month ')+month;
+  const words=zh?{ok:'预算内',warning:'预算预警',blocked:'已达上限暂停'}:{ok:'within budget',warning:'budget warning',blocked:'paused at limit'};
+  const name=(zh?'用量：今日 ':'Usage: today ')+today+(zh?'，本月 ':', this month ')+month
+    +(g.state&&g.state!=='unconfigured'?' · '+words[state]:'')+(zh?'。打开用量':'. Open usage');
+  pill.setAttribute('aria-label',name);pill.title=name;}
+function dismissedWarnings(){try{return JSON.parse(localStorage.getItem(USAGE_DISMISS_KEY)||'[]').filter(k=>typeof k==='string');}catch(e){return [];}}
+function warningKey(d,w){return [(d&&d.project)||'',w.budget,w.period,w.threshold].join('|');}
+function warningDismissed(d,w){const own=[(d&&d.project)||'',w.budget,w.period].join('|');
+  // Dismissing 95 % also covers 80 % of the same period; a lower alarm never
+  // resurfaces behind a higher one the person already waved away.
+  return dismissedWarnings().some(k=>k.startsWith(own+'|')&&Number(k.split('|').pop())>=Number(w.threshold));}
+function renderUsageBanner(d){const banner=document.getElementById('usage-banner');if(!banner)return;
+  const fired=((d&&d.usage&&d.usage.budget&&d.usage.budget.fired)||[]).filter(w=>!warningDismissed(d,w));
+  const top=fired.slice().sort((a,b)=>Number(b.threshold)-Number(a.threshold))[0];
+  const show=Boolean(top)&&!document.body.classList.contains('hub-mode');banner.hidden=!show;if(!show)return;
+  const zh=currentLocale==='zh';
+  document.getElementById('usage-banner-text').textContent=zh?(top.text_zh||top.text):top.text;
+  document.getElementById('usage-banner-reset').textContent=zh?(top.resets_zh||top.resets):top.resets;
+  banner.dataset.key=warningKey(d,top);}
+document.getElementById('usage-banner-dismiss').onclick=()=>{const banner=document.getElementById('usage-banner');const key=banner.dataset.key||'';if(!key)return;
+  const keep=dismissedWarnings().filter(k=>k!==key).slice(-40);keep.push(key);try{localStorage.setItem(USAGE_DISMISS_KEY,JSON.stringify(keep));}catch(e){}banner.hidden=true;};
+document.getElementById('usage-pill').onclick=()=>openPanelTab('usage');
+document.addEventListener('click',ev=>{const b=ev.target.closest('[data-usage-mode]');if(b)setUsageMode(b.getAttribute('data-usage-mode'));});
+function countdownText(resetAt){const s=Math.floor(Number(resetAt)-Date.now()/1000),zh=currentLocale==='zh';
+  if(s<=0)return zh?'现在':'now';if(s<60)return zh?'不到 1 分钟':'under a minute';
+  const h=Math.floor(s/3600),m=Math.floor(s%3600/60);
+  if(zh)return (h?h+' 小时 ':'')+(m||!h?m+' 分钟':'').trim();return ((h?h+' h ':'')+(m||!h?m+' min':'')).trim();}
+function resetSentence(resetAt){const zh=currentLocale==='zh';
+  return zh?'已达供应商额度上限 · '+countdownText(resetAt)+'后重置':'Provider limit reached · resets in '+countdownText(resetAt);}
+function providerResetLine(p){const w=p&&p.waiting_reason;if(!w||!w.reset_at||p.state!=='PROVIDER_UNAVAILABLE')return '';
+  return '<span class="run-reset" data-reset-at="'+esc(w.reset_at)+'">'+esc(resetSentence(w.reset_at))+'</span>';}
+setInterval(()=>{document.querySelectorAll('[data-reset-at]').forEach(el=>{el.textContent=resetSentence(Number(el.getAttribute('data-reset-at')));});},30000);
+function resetWords(g){g=g||{};const zh=currentLocale==='zh',r=g.resets||{};
+  return (g.blocked_by||[]).filter(k=>k==='daily'||k==='monthly').map(k=>zh?(r[k+'_zh']||''):(r[k]||'')).filter(Boolean).join(' ');}
+function appendResolutionReset(row,budget,provider){const summary=document.getElementById('resolution-summary');if(!summary)return;
+  const g=lastState&&lastState.usage&&lastState.usage.budget||{},p=lastState&&lastState.progress;let extra='';
+  if(budget)extra=resetWords(g);
+  else if(provider&&p&&p.state==='PROVIDER_UNAVAILABLE'&&p.waiting_reason&&p.waiting_reason.reset_at)extra=resetSentence(p.waiting_reason.reset_at);
+  if(extra)summary.textContent=summary.textContent+' '+extra;}
+function runCostLine(d){const p=chatProgress(d);if(!p||!p.run_id)return '';
+  const b=((d.usage&&d.usage.attribution&&d.usage.attribution.runs)||{})[p.run_id];const reset=providerResetLine(p);
+  if(!b&&!reset)return '';const zh=currentLocale==='zh';let cost='';
+  if(b){cost=(zh?'本次任务：':'This task: ')+formatTokens(b.tokens)+' tokens';
+    if(!(b.unpriced_calls&&!b.api_value_usd))cost+=' · ≈'+formatUsd(b.api_value_usd);
+    if(b.unpriced_calls)cost+=zh?' · '+b.unpriced_calls+' 次未计价':' · '+b.unpriced_calls+' unpriced';
+    cost='<span>'+esc(cost)+'</span>';}
+  return '<div class="run-cost">'+cost+reset+'</div>';}
+function turnCost(m,d){const turns=(d&&d.usage&&d.usage.attribution&&d.usage.attribution.turns)||[];if(!turns.length)return '';
+  const chat=activeChatId||'';const want={generator:['generator','generation'],auditor:['auditor','audit'],
+    generator_chat:['generator','control'],auditor_chat:['auditor','control']}[m.kind];if(!want||!chat)return '';
+  const limit=(Number(m.t)||0)*1000+3000;
+  const hits=turns.filter(x=>x.role===want[0]&&x.phase===want[1]&&x.chat_id===chat&&x.t<=limit&&(!m.round||!x.round||x.round===m.round));
+  if(!hits.length)return '';const x=hits[hits.length-1];
+  const secs=x.duration_ms?Math.max(1,Math.round(x.duration_ms/1000))+' s':'';
+  const money=(x.api_value_usd===null||x.api_value_usd===undefined)?formatTokens(x.tokens)+' tokens':'≈'+formatUsd(x.api_value_usd);
+  return '<div class="turn-cost">'+esc(money+(secs?' · '+secs:''))+'</div>';}
+function withTurnCost(html,m,d){const line=turnCost(m,d);if(!line)return html;
+  const at=html.lastIndexOf('</div></article>');return at<0?html:html.slice(0,at)+line+html.slice(at);}
+function unpricedSentences(g){g=g||{};return (g.unpriced_models||[]).map(row=>{const snap=row.price_snapshot||g.price_snapshot||'';
+  return currentLocale==='zh'?'本月有 '+row.calls+' 次调用无法计价（模型 '+row.model+' 在 '+snap+' 的价格快照中没有价格）'
+    :row.calls+' call'+(row.calls===1?'':'s')+' this month could not be priced (model '+row.model+' has no price in the snapshot of '+snap+')';});}
+function monthlyReport(d){const u=(d&&d.usage)||{},month=u.month||{};const zh=currentLocale==='zh';
+  const cycleList=Object.values(d.cycles||{});const passed=cycleList.filter(c=>['passed','consumed'].includes(String(c.status||'').toLowerCase())).length;
+  const total=Math.max(1,Number(month.tokens||0));const roles={};(u.roles||[]).forEach(r=>{roles[r.role]=Math.round(Number(r.tokens||0)*100/total);});
+  const top=(u.models||[]).slice().sort((a,b)=>Number(b.tokens||0)-Number(a.tokens||0)).slice(0,5);
+  const row=(label,value)=>'<tr><th>'+label+'</th><td>'+esc(value)+'</td></tr>';
+  const facts='<table class="usage-report"><tbody>'+row('Calls',String(month.calls||0))+row('Tokens',formatTokens(month.tokens))
+    +row('≈ value',formatUsd(month.api_value_usd))+row('Generator share',(roles.generator||0)+'%')+row('Auditor share',(roles.auditor||0)+'%')
+    +row('Passed audits',String(passed))+row('Unpriced calls',String(month.unpriced_calls||0))+'</tbody></table>';
+  const models=top.length?'<table class="usage-report"><thead><tr><th>Top models</th><th>Tokens</th><th>≈ value</th></tr></thead><tbody>'
+    +top.map(r=>'<tr><td>'+esc(r.model)+'</td><td>'+formatTokens(r.tokens)+'</td><td>'+(r.unpriced_calls?t('Unpriced'):formatUsd(r.api_value_usd))+'</td></tr>').join('')+'</tbody></table>':'';
+  return '<section class="usage-section"><div class="usage-section-head"><h3>Monthly report</h3><span>this month</span></div>'+facts+models+'</section>';}
+function renderPriceRows(rows){const host=document.getElementById('runtime-prices');if(!host)return;
+  const labels={input:'Input',output:'Output',cache_write:'Cache write',cache_read:'Cache read'};
+  host.innerHTML=(rows||[]).map(row=>'<div class="price-row" data-price-row><input data-price-model maxlength="120" value="'+esc(row.model||'')+'" aria-label="Model ID" placeholder="Exact model ID">'
+    +Object.keys(labels).map(k=>'<input data-price-'+k+' type="number" min="0" step="0.01" value="'+esc(row[k]===undefined||row[k]===null?'':row[k])+'" aria-label="'+esc(t(labels[k]))+'" placeholder="0">').join('')
+    +'<button type="button" class="fallback-remove" data-remove-price title="Remove">×</button></div>').join('')
+    ||'<div class="fallback-empty">No overrides. Models missing from the price snapshot stay unpriced.</div>';}
+function priceRows(){return [...document.querySelectorAll('[data-price-row]')].map(row=>({model:row.querySelector('[data-price-model]').value.trim(),
+  input:row.querySelector('[data-price-input]').value,output:row.querySelector('[data-price-output]').value,
+  cache_write:row.querySelector('[data-price-cache_write]').value,cache_read:row.querySelector('[data-price-cache_read]').value}));}
+document.querySelectorAll('[data-add-price]').forEach(button=>button.onclick=()=>{const rows=priceRows();rows.push({model:'',input:'',output:'',cache_write:'',cache_read:''});renderPriceRows(rows);
+  const last=document.querySelector('[data-price-row]:last-child [data-price-model]');if(last)last.focus();});
+runtimeModal.addEventListener('click',ev=>{const button=ev.target.closest('[data-remove-price]');if(!button)return;button.closest('[data-price-row]').remove();if(!priceRows().length)renderPriceRows([]);});
+function renderRuntimeBudgetNotes(guard){const note=document.getElementById('runtime-unpriced'),text=document.getElementById('runtime-unpriced-text');if(!note)return;
+  const sentences=unpricedSentences(guard);note.hidden=!sentences.length;text.innerHTML=sentences.map(esc).join('<br>');}
+function budgetWord(state){return {ok:'Within budget',warning:'Budget warning',blocked:'Paused at limit'}[state]||'No budget';}
+function renderUsageRollup(r){const host=document.getElementById('settings-usage-rollup');if(!host)return;const rows=(r&&r.projects)||[],total=(r&&r.total)||{};
+  if(!rows.length){host.innerHTML='<p class="settings-empty">Open a project to see usage across projects.</p>';return;}
+  const cell=(tokens,value)=>usageMode()==='tokens'?formatTokens(tokens):formatUsd(value);
+  host.innerHTML='<table class="usage-report" aria-label="Usage across projects"><thead><tr><th>Project</th><th>Today</th><th>This month</th><th>Unpriced</th><th>Budget</th></tr></thead><tbody>'
+    +rows.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+cell(p.today_tokens,p.today_api_value_usd)+'</td><td>'+cell(p.month_tokens,p.month_api_value_usd)+'</td><td>'+esc(String(p.unpriced_calls||0))+'</td><td>'+esc(t(budgetWord(p.budget_state==='unconfigured'?'':p.budget_state)))+'</td></tr>').join('')
+    +'<tr class="total"><th>This month across projects</th><td>'+cell(total.today_tokens,total.today_api_value_usd)+'</td><td>'+cell(total.month_tokens,total.month_api_value_usd)+'</td><td>'+esc(String(total.unpriced_calls||0))+'</td><td></td></tr></tbody></table>';}
+async function loadUsageRollup(){const host=document.getElementById('settings-usage-rollup');if(!host)return;
+  if(!(lastState&&lastState.runtime_config)){host.innerHTML='<p class="settings-empty">Open a project to see usage across projects.</p>';return;}
+  try{renderUsageRollup(await api('/api/usage/rollup'));}catch(e){host.innerHTML='<p class="settings-empty">'+esc(e.message)+'</p>';}}
+document.querySelectorAll('[data-usage-export]').forEach(button=>button.onclick=()=>{
+  if(!(lastState&&lastState.runtime_config)){const note=button.parentElement.querySelector('[data-scope-note]');
+    if(note){note.textContent=currentLocale==='zh'?'请先打开一个项目再进行配置。':'Open a project to configure this.';note.hidden=false;}return;}
+  const period=document.getElementById('settings-usage-period').value||'month';
+  location.href='/api/usage/export?format='+encodeURIComponent(button.getAttribute('data-usage-export'))+'&period='+encodeURIComponent(period)+'&t='+encodeURIComponent(T);});
 const computePanels=new Map();
 function computeFileUrl(job,path){return '/api/hpc/file?t='+encodeURIComponent(T)+'&job='
   +encodeURIComponent(job)+'&path='+encodeURIComponent(path);}
@@ -6537,7 +6739,7 @@ function renderConversation(d){
     // One protagonist per screen: the welcome empty state renders only when
     // the timeline holds nothing at all, and the delivery band only when no
     // review card already states the outcome of the same cycle.
-    const body = messages.map(m=>turn(m,d)).join('') + optimistic + liveDraftTurn(d) + live + approval + review
+    const body = messages.map(m=>withTurnCost(turn(m,d),m,d)).join('') + optimistic + liveDraftTurn(d) + live + approval + review
       + admissionCard() + (review ? '' : deliveryStatus(d));
     html = body || welcome();
   }
@@ -6764,6 +6966,7 @@ function render(d){
   document.getElementById('thread-title').textContent = newTaskMode ? 'New chat' : titleOf(d);
   setStatePill(d);
   renderDecisionBanner(d);
+  renderUsagePill(d);renderUsageBanner(d);
   document.getElementById('model-summary').textContent = modelTag(d.generator) + ' → ' + modelTag(d.auditor);
   const activeRun=chatProgress(d),canCancel=Boolean(activeRun&&!activeRun.finished);
   stopRun.hidden=!canCancel;send.hidden=false;

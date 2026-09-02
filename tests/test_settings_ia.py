@@ -191,3 +191,22 @@ def test_every_new_settings_string_has_chinese_parity():
         '"Open remote compute":"打开远程计算"',
     ):
         assert pair in PAGE, pair
+
+
+# ------------------------------------------------------- Usage pane (billing)
+def test_the_usage_pane_exports_and_rolls_up_instead_of_apologising():
+    """Deliberate change: the Usage pane no longer says "Export isn't available
+    here yet". It carries a period selector, CSV/JSON export buttons that hit
+    the token-gated /api/usage/export, and the workspace roll-up table host
+    that /api/usage/rollup fills. The two honest entry points (open usage, set
+    budgets) stay. Mutation: restore the stub sentence — the first assertion
+    goes red; drop an export button — the second does."""
+    assert "Export isn't available here yet" not in PAGE
+    for marker in ('id="settings-usage-period"', 'data-usage-export="csv"',
+                   'data-usage-export="json"', 'id="settings-usage-rollup"',
+                   "location.href='/api/usage/export?format='"):
+        assert marker in PAGE, marker
+    for pair in ('"Export period":"导出范围"', '"Export CSV":"导出 CSV"',
+                 '"Export JSON":"导出 JSON"', '"Everything":"全部"',
+                 '"Open a project to see usage across projects.":"打开一个项目后即可查看各项目的用量。"'):
+        assert pair in PAGE, pair

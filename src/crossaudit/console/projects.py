@@ -1000,6 +1000,10 @@ def runtime_options(current: Config, role: str = "", model: str = "", *,
             "monthly_cost_warning_usd": current.budgets.monthly_cost_warning_usd,
             "monthly_cost_limit_usd": current.budgets.monthly_cost_limit_usd,
         },
+        # Per-project price overrides (USD per 1M tokens), editable beside the
+        # budgets: the remedy for a model the price snapshot does not carry.
+        "prices": [{"model": model, **rates}
+                   for model, rates in sorted(getattr(current, "prices", {}).items())],
         "skills": skill_rows,
         "skills_error": skill_error,
         "applies": "next_provider_call",
@@ -1150,6 +1154,56 @@ def _replace_top_mapping(text: str, name: str, value: dict) -> str:
         lines[-1] += "\n"
     lines.extend(part + "\n" for part in block.rstrip("\n").splitlines())
     return "".join(lines)
+
+
+def _remove_top_mapping(text: str, name: str) -> str:
+    """Drop one generated top-level mapping (its block) from the YAML text."""
+    lines = text.splitlines(keepends=True)
+    start = next((i for i, line in enumerate(lines)
+                  if re.match(rf"^{re.escape(name)}\s*:", line)), None)
+    if start is None:
+        return text
+    end = len(lines)
+    for i in range(start + 1, len(lines)):
+        if lines[i].strip() and not lines[i].startswith((" ", "\t", "#")):
+            end = i
+            break
+    del lines[start:end]
+    return "".join(lines)
+
+
+def _price_payload(rows: object) -> dict:
+    """Validate the Budgets pane's price rows into the ``prices:`` mapping."""
+    if rows in (None, ""):
+        return {}
+    if not isinstance(rows, list) or len(rows) > 40:
+        raise ConfigDenial("price overrides must be a list of up to 40 rows")
+    out: dict[str, dict] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ConfigDenial("price override rows must be objects")
+        model = str(row.get("model", "")).strip()
+        if not model:
+            continue                      # an empty row is a row being typed
+        if not MODEL.fullmatch(model):
+            raise ConfigDenial("price override model ids contain unsupported characters")
+        rates = {}
+        for key in ("input", "output", "cache_write", "cache_read"):
+            raw = row.get(key, 0)
+            if raw in (None, ""):
+                raw = 0
+            try:
+                value = float(raw)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise ConfigDenial(
+                    "price override rates must be non-negative numbers (USD per 1M tokens)"
+                ) from exc
+            if value < 0 or value != value or value > 1_000_000:
+                raise ConfigDenial(
+                    "price override rates must be non-negative numbers (USD per 1M tokens)")
+            rates[key] = value
+        out[model] = rates
+    return out
 
 
 def _fallback_payload(rows: object, role: str) -> list[dict]:
@@ -1320,6 +1374,8 @@ def update_runtime(current: Config, payload: dict) -> dict:
         if (budgets["monthly_cost_warning_usd"] and budgets["monthly_cost_limit_usd"] and
                 budgets["monthly_cost_warning_usd"] > budgets["monthly_cost_limit_usd"]):
             raise ConfigDenial("monthly cost warning cannot exceed the hard limit")
+        prices = (_price_payload(payload["prices"]) if "prices" in payload
+                  else dict(getattr(current, "prices", {}) or {}))
         existing_fallbacks = {
             "generator": current.generator_fallbacks,
             "auditor": current.auditor.fallbacks,
@@ -1347,6 +1403,8 @@ def update_runtime(current: Config, payload: dict) -> dict:
         revised = _replace_role_fallbacks(revised, "auditor", fallbacks["auditor"])
         revised = _replace_top_mapping(revised, "resilience", resilience)
         revised = _replace_top_mapping(revised, "budgets", budgets)
+        revised = _replace_top_mapping(revised, "prices", prices) if prices else (
+            _remove_top_mapping(revised, "prices"))
         if revised == original:
             return {**runtime_options(current), "changed": False, "commit": ""}
         temp = current.path.with_suffix(".runtime.tmp")
@@ -2287,3 +2345,35 @@ def set_project_pin(current: Config, root: str, pinned: bool) -> dict:
         raise ConfigDenial("that project is outside your selected workspaces")
     cfg = load(path / CONFIG_NAME)
     return {"root": str(path), "pinned": chats.set_project_pin(cfg, pinned)}
+
+
+def known_project_roots(current: Config) -> list[Path]:
+    """Every project folder the app knows (workspace roots and their children,
+    plus the current project), each holding a crossaudit.yml. Same candidate
+    rule as ``snapshot`` without the per-project probes."""
+    candidates: list[Path] = []
+    for root in workspace_roots(current):
+        if (root / CONFIG_NAME).is_file():
+            candidates.append(root)
+        try:
+            candidates.extend(p for p in root.iterdir() if p.is_dir())
+        except OSError:
+            continue
+    candidates = sorted(dict.fromkeys(path.resolve() for path in candidates))
+    app_home = os.environ.get("CROSSAUDIT_APP_MODE") == "1"
+    if current.root.resolve() not in candidates:
+        candidates.append(current.root.resolve())
+    return [path for path in candidates
+            if not (app_home and path.name == ".crossaudit-home")
+            and (path / CONFIG_NAME).is_file()]
+
+
+def known_project_configs(current: Config) -> list[Config]:
+    """Loadable configs for ``known_project_roots``; a broken one is skipped."""
+    out: list[Config] = []
+    for root in known_project_roots(current):
+        try:
+            out.append(load(root / CONFIG_NAME))
+        except Denial:
+            continue
+    return out
