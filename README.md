@@ -936,8 +936,9 @@ says what it does:
 
 Either way, a revision that follows a BLOCKED audit is screened before commit
 by the repair guard (`repair:`). Two things are refused outright and rolled
-back — a file outside the audited directories, or a binary the local renderer
-did not produce — with one free retry before the stop becomes a decision for
+back — a file outside the audited directories (the generator's own write
+boundary denies this first), or a binary the local renderer did not produce —
+with one free retry before the stop becomes a decision for
 you. Likely defensive edits in code (a catch-all `except`, a skipped test, a
 deleted assertion, a suppression marker, a change past `max_changed_lines`)
 are **cautions**: under the default `mode: caution` the round is still audited

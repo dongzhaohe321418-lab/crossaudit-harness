@@ -219,8 +219,8 @@ def test_a_file_outside_the_audited_directories_is_refused(
                                  [ROUND_ONE, {CALC: CALC_FIXED}, {CALC: CALC_FIXED}])
     refused = [e for e in events if e.kind == "repair_refused"]
     assert refused and refused[0].detail == (
-        "notes/stray.md is outside the audited directories (experiments); only files inside "
-        "them may change — if the fix needs another file, say so in `notes`")
+        "notes/stray.md is outside the audited directories (experiments). Only files inside "
+        "them may change; if the fix needs another file, say so in `notes`.")
     assert "stray" not in git("log", "--name-only", cwd=science)
     assert _cycle(scoped)["escalation_cause"] == "repair_refused"
 
@@ -292,8 +292,8 @@ def test_the_diff_size_cap_reports_unscreened_files_instead_of_hiding_them(
         cfg, science, monkeypatch,
         [ROUND_ONE, {SUMMARY: long_prose, CALC: CALC_DEFENSIVE}, {CALC: CALC_FIXED}])
     caution = next(e for e in events if e.kind == "repair_caution")
-    assert caution.detail == ("1 staged file(s) lay beyond the review size limit and were "
-                              f"not screened: {CALC}")
+    assert caution.detail == ("1 staged file(s) were larger than the review can read and "
+                              f"were not screened: {CALC}")
     assert "repair_refused" not in _kinds(events)
 
 
@@ -353,3 +353,72 @@ def test_repair_config_refuses_bad_values_with_the_config_error(science, block, 
     with pytest.raises(ConfigDenial) as exc:
         _load_with(science, block)
     assert message in exc.value.reason
+
+
+# ============================================================ review D2
+
+def test_a_chinese_report_name_in_scope_is_not_refused(science, cfg, transcripts, monkeypatch):
+    """T2. Mutation: read staged names without -z (git quotes them) -> the
+    round is refused twice as out of scope and the run stops."""
+    scoped = dataclasses.replace(cfg, scope_dirs=["experiments"])
+    code, events, calls = _drive(
+        scoped, science, monkeypatch,
+        [ROUND_ONE, {"experiments/demo/报告.md": "报告正文\n"}, {CALC: CALC_FIXED}])
+    assert not {"repair_refused", "repair_caution"} & set(_kinds(events))
+    assert "experiments/demo/报告.md" in git("-c", "core.quotepath=false", "log",
+                                             "--name-only", cwd=science)
+
+
+def test_scope_dirs_spelt_with_dot_slash_do_not_refuse_honest_repairs(
+        science, cfg, transcripts, monkeypatch):
+    """T3 / N11. Mutation: drop normalise_path from in_scope -> two refusals,
+    cause repair_refused."""
+    scoped = dataclasses.replace(cfg, scope_dirs=["./experiments"])
+    code, events, calls = _drive(
+        scoped, science, monkeypatch, [ROUND_ONE, {CALC: CALC_FIXED}, {SUMMARY: "three\n"}])
+    assert "repair_refused" not in _kinds(events)
+    assert "strict=True" in git("log", "-p", cwd=science)
+
+
+def test_a_model_written_binary_with_a_space_in_its_name_is_refused(
+        science, cfg, transcripts, monkeypatch):
+    """T8. Mutation: header regex `a/\\S+` (no space) -> the PNG is never
+    parsed and is committed."""
+    code, events, calls = _drive(
+        cfg, science, monkeypatch,
+        [ROUND_ONE, {"experiments/demo/fig 1.png": PNG}, {CALC: CALC_FIXED}])
+    refused = [e for e in events if e.kind == "repair_refused"]
+    assert len(refused) == 1 and refused[0].detail.startswith(
+        "experiments/demo/fig 1.png is a binary file written directly by the generator")
+    assert "fig 1.png" not in git("log", "--name-only", cwd=science)
+
+
+def test_the_apply_side_scope_denial_keeps_the_audit_findings_in_the_retry_prompt(
+        science, cfg, transcripts, monkeypatch):
+    """T4 / D2 #9: a real out-of-scope write is denied by gen_mod.apply before
+    the screen; that retry prompt must still carry the cause. Mutation:
+    rebuild `findings` from the denial alone -> "metadata.yml" is gone."""
+    scoped = dataclasses.replace(cfg, scope_dirs=["experiments"])
+    code, events, calls = _drive(
+        scoped, science, monkeypatch,
+        [ROUND_ONE, {"notes/stray.md": "outside\n"}, {CALC: CALC_FIXED}])
+    assert "generation_refused" in _kinds(events) and "repair_refused" not in _kinds(events)
+    third = calls[2]["findings"]
+    assert "metadata.yml" in third
+    assert third.index("metadata.yml") < third.index("refused before it reached the auditor")
+    assert "Return only files inside experiments/" in third
+    assert "strict=True" in git("log", "-p", cwd=science)
+
+
+def test_a_repeated_apply_denial_does_not_pile_up_refusal_blocks(
+        science, cfg, transcripts, monkeypatch):
+    """The audit's findings are kept once; each retry prompt has one refusal
+    block, not one per refused round. Mutation: append to `findings` instead
+    of `audit_findings` -> round 4's prompt carries two blocks."""
+    scoped = dataclasses.replace(cfg, scope_dirs=["experiments"], max_rounds=4)
+    stray = {"notes/stray.md": "outside\n"}
+    code, events, calls = _drive(scoped, science, monkeypatch,
+                                 [ROUND_ONE, stray, stray, {CALC: CALC_FIXED}])
+    fourth = calls[3]["findings"]
+    assert fourth.count("refused before it reached the auditor") == 1
+    assert fourth.count("metadata.yml") == calls[1]["findings"].count("metadata.yml")
