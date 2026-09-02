@@ -561,12 +561,12 @@ _denial_exact: dict[str, str] = {}
 _denial_patterns: list[tuple[re.Pattern[str], str]] = []
 
 
-def _compile_denials() -> None:
-    from .denials_zh import ENTRIES
-
-    for english, chinese in ENTRIES:
+def _compile(entries, exact: dict[str, str],
+             patterns: list[tuple[re.Pattern[str], str]]) -> None:
+    """Split a text-keyed table into exact entries and `{}` templates."""
+    for english, chinese in entries:
         if "{}" not in english:
-            _denial_exact[english] = chinese
+            exact[english] = chinese
             continue
         parts = english.split("{}")
         pattern = re.compile("^" + "(.*?)".join(re.escape(p) for p in parts) + "$",
@@ -577,13 +577,35 @@ def _compile_denials() -> None:
             pieces = chinese.split("{}")
             chinese = "".join(piece + ("{%d}" % i if i < len(pieces) - 1 else "")
                               for i, piece in enumerate(pieces))
-        _denial_patterns.append((pattern, chinese))
+        patterns.append((pattern, chinese))
     # First match wins, so the most specific template must be tried first: the
     # fewest slots, then the most literal text. Without this, `MCP {} failed:
     # {}` swallows "MCP server connection failed: …" into a half-translated
     # sentence — the exact defect the console's ZH_PATTERNS comment records.
-    _denial_patterns.sort(key=lambda item: (item[0].pattern.count("(.*?)"),
-                                            -len(item[0].pattern)))
+    patterns.sort(key=lambda item: (item[0].pattern.count("(.*?)"),
+                                    -len(item[0].pattern)))
+
+
+def _compile_denials() -> None:
+    from .denials_zh import ENTRIES
+
+    _compile(ENTRIES, _denial_exact, _denial_patterns)
+
+
+def _lookup(text: str, exact: dict[str, str],
+            patterns: list[tuple[re.Pattern[str], str]],
+            slot=None) -> str | None:
+    match_exact = exact.get(text)
+    if match_exact is not None:
+        return match_exact
+    for pattern, chinese in patterns:
+        match = pattern.match(text)
+        if match:
+            groups = match.groups()
+            if slot is not None:
+                groups = tuple(slot(g) for g in groups)
+            return chinese.format(*groups)
+    return None
 
 
 def denial_zh(reason: str) -> str | None:
@@ -599,14 +621,98 @@ def denial_zh(reason: str) -> str | None:
     """
     if not _denial_exact and not _denial_patterns:
         _compile_denials()
-    exact = _denial_exact.get(reason)
-    if exact is not None:
-        return exact
-    for pattern, chinese in _denial_patterns:
-        match = pattern.match(reason)
-        if match:
-            return chinese.format(*match.groups())
-    return None
+    return _lookup(reason, _denial_exact, _denial_patterns)
+
+
+# ------------------------------------------------ evidence-authority sentences
+# The sentences the evidence-authority decision writes for a person (D148,
+# `auditor/authority.py`): the route in plain words, each audit integrity as a
+# clause, and the one-or-two-sentence rationale. They are composed in the
+# audit core, which does not know the surface, so like the denials they are
+# translated at the seam by their English text — applied ONLY to those
+# sentences (`authority["rationale"]`, `ROUTE_LABELS`, the CLI's escalate
+# sentence), never to text a person or a model authored. A `{}` slot is a
+# count, or a clause from this same table, which is translated in turn.
+SENTENCES_ZH: tuple[tuple[str, str], ...] = (
+    # ROUTE_LABELS — the route row of the report, in words.
+    ("admission", "准入"),
+    ("another revision round", "再一轮修订"),
+    ("your decision", "由你决定"),
+    ("a model audit is still needed", "仍需模型审计"),
+    # INTEGRITY_IN_WORDS and its fallback.
+    ("nothing was audited: the scope holds no work yet",
+     "没有审计任何内容：范围内尚无工作"),
+    ("the audit prompt exceeded its size bound, so the auditor did not see everything",
+     "审计提示超出了大小上限，因此审计者没有看到全部内容"),
+    ("the auditor's reply was not valid", "审计者的回复无效"),
+    ("the model audit could not run", "模型审计无法运行"),
+    ("a fixture provider exercised the loop, and a fixture cannot bless a commit",
+     "本轮循环由测试桩供应商驱动，而测试桩不能为提交背书"),
+    ("the audit did not complete cleanly", "审计未能完整完成"),
+    # _rationale — first sentences.
+    ("An earlier escalation holds this cycle under human jurisdiction (the "
+     "escalation lock), so nothing here routes around it.",
+     "较早的一次升级已将此周期置于人工裁决之下（升级锁定），因此这里的任何路由都不会绕过它。"),
+    ("Nothing was audited: the scope holds no work yet, so a person owns this round.",
+     "没有审计任何内容：范围内尚无工作，因此本轮由人来负责。"),
+    ("The only block rests on a model reading without reproduced evidence, so it "
+     "goes to a person rather than to automatic revision.",
+     "唯一的阻断仅依据模型的判读、没有可复现的证据，因此交由人来处理，而不是自动修订。"),
+    ("{} deterministic check failure(s) on committed bytes block this round; the "
+     "block rests on reproduced evidence.",
+     "已提交内容上有 {} 项确定性检查失败阻断了本轮；该阻断基于可复现的证据。"),
+    ("The block rests on the auditor's reading, which no deterministic check "
+     "reproduced; it enters bounded revision by policy and is recorded as unverified.",
+     "该阻断基于审计者的判读，没有任何确定性检查复现它；按策略进入受限修订，并记录为未验证。"),
+    ("A model audit is still needed before this round can pass.",
+     "本轮通过之前仍需一次模型审计。"),
+    ("No finding blocks this round; the deterministic checks and the model audit "
+     "both completed.",
+     "没有发现阻断本轮；确定性检查和模型审计均已完成。"),
+    ("The auditor asked for human judgment on this round.",
+     "审计者要求对本轮进行人工判断。"),
+    # _rationale — composed from an integrity clause (translated in turn).
+    ("{}, so a person owns this round.", "{}，因此本轮由人来负责。"),
+    ("{}, so the receipt is not admissible.", "{}，因此该收据不可准入。"),
+    ("{} further blocking concern(s) from the auditor remain unverified.",
+     "审计者提出的另外 {} 项阻断性疑虑仍未验证。"),
+    # cli/main.py CONTESTED_MODEL_BLOCKER_REASON — the escalate-dial stop.
+    ("the auditor raised a concern that no deterministic check reproduces; it "
+     "needs your judgment",
+     "审计者提出了一项没有任何确定性检查能复现的疑虑；需要你来判断"),
+)
+_sentence_exact: dict[str, str] = {}
+_sentence_patterns: list[tuple[re.Pattern[str], str]] = []
+
+
+def _sentence_slot(part: str) -> str:
+    """A slot is a count (carried through) or a clause that begins a sentence
+    with its first letter raised; the clause is looked up in its own case."""
+    if not part:
+        return part
+    lowered = part[0].lower() + part[1:]
+    found = _lookup(lowered, _sentence_exact, _sentence_patterns)
+    return part if found is None else found
+
+
+def sentence_zh(text: str) -> str | None:
+    """The Chinese for one evidence-authority sentence, or None."""
+    if not _sentence_exact and not _sentence_patterns:
+        _compile(SENTENCES_ZH, _sentence_exact, _sentence_patterns)
+    return _lookup(text, _sentence_exact, _sentence_patterns, slot=_sentence_slot)
+
+
+def sentence_text(text: str) -> str:
+    """`text` in the selected language — the `denial_text` contract for the
+    evidence-authority sentences: English verbatim; in Chinese a sentence
+    without an entry is served marked and counted under `sentence:`."""
+    if _language == DEFAULT_LANGUAGE:
+        return text
+    translated = sentence_zh(text)
+    if translated is None:
+        _record("sentence:" + text)
+        return FALLBACK_MARK + text
+    return translated
 
 
 def denial_text(reason: str) -> str:

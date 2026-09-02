@@ -893,8 +893,8 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("governed-source set does not match the evidence ledger", "受管来源集合与证据账本不匹配"),
     ("verdict is {}, not PASS — nothing to admit", "判定是 {}，不是 PASS——没有可准入的内容"),
     ("audit integrity: {}", "审计完整性：{}"),
-    ("evidence route is {}, not receipt — nothing to admit",
-     "证据路径是 {}，不是 receipt——没有可准入的内容"),
+    ("bound report names an evidence route this verifier does not know: {}",
+     "绑定的报告指明了一个此验证器不认识的证据路由：{}"),
     ("isolation evidence is weaker than this deployment requires: missing {}",
      "隔离证据弱于此部署的要求：缺少 {}"),
     ("install mode {} may verify but never admit: its code can change under the "
