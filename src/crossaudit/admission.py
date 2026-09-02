@@ -49,22 +49,6 @@ TIER_MEANING = {
     ENFORCED: "a failed audit refuses the merge",
 }
 
-#: What a person DOES about the tier they are on. LOCAL is deliberately "there
-#: is nothing to do": it describes a state of the world rather than a fault to
-#: repair, and saying so is a next action — leaving the reader to infer it is
-#: what the row did before.
-TIER_NEXT_ACTION = {
-    LOCAL: ("nothing to change unless you want this history to prove more than "
-            "self-review; `crossaudit pair` separates the two agents"),
-    REMOTE: ("nothing to change unless you want privilege separation; "
-             "`crossaudit pair` puts the rules where the generator cannot write"),
-    PAIRED: ("nothing to change unless you want a failed audit to refuse the "
-             "merge; that needs branch protection on the audit repository"),
-    NOTIFICATION: ("nothing to change unless you want a failed audit to refuse "
-                   "the merge; make the audit check required on the branch"),
-    ENFORCED: "nothing to do — a failed audit already refuses the merge",
-}
-
 CHECK_NAME = "crossaudit/admission"
 
 
