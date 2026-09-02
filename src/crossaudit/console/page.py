@@ -530,6 +530,13 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .finding p{margin:5px 0 0;line-height:1.5;font-size:var(--fs-body)}
 .finding-tier{display:block;margin-top:6px;font-size:var(--fs-caption);color:var(--text-3)}
 .finding-tier.verified{color:var(--text-2)}
+/* R2. A finding leads with the observation; severity, place, evidence tier and
+   rule id share one muted details line under it. */
+.finding-observation{margin:0 0 4px}
+.finding-details{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:var(--fs-caption);color:var(--text-3)}
+.finding-details .finding-tier{display:inline;margin:0}
+.finding-details .severity.suggestion{color:var(--text-2)}
+.finding-sep{opacity:.5}
 /* .dt — a reusable clean data table (Claude-Code-style: muted header, hairline
    rows, hover, generous rows). Used for Skills, Connectors/MCP, and other lists. */
 .dt{width:100%;border-collapse:collapse;margin-top:6px;font-size:var(--fs-body)}
@@ -3629,6 +3636,8 @@ const ZH={
   // R1–R5 (results & decisions). Plain verdict words, finding details, the
   // Details record, the forecast line and one copy set per ESCALATE cause.
   ,"Needs you":"需要你","Checks only":"仅自动检查"
+  ,"must fix":"必须修改","suggestion":"建议"
+  ,"verified by a check":"已由检查验证","raised by the auditor":"由审计者提出","raised by the auditor, verified":"由审计者提出，已验证"
 };
 const ZH_PATTERNS=[
   // D148 repair guard. Every reason is COMPOSED from a path, a count or a
@@ -4739,10 +4748,13 @@ function openResolution(value,action='',sha=''){
   document.getElementById('resolution-goal').textContent=(lastState?titleOf(lastState):'')||'The task this conversation asked for.';
   const issues=row.issues||[];
   document.getElementById('resolution-issue-count').textContent=String(issues.length);
+  // R2. Each issue leads with the observation; severity as a consequence,
+  // the place and the rule id on one muted details line under it.
   document.getElementById('resolution-issues').innerHTML=issues.length?issues.map((issue,index)=>
-    '<article class="decision-issue"><div class="decision-issue-head"><span>'+esc(issue.severity||'BLOCKER')+'</span><span class="finding-rule" title="rule id">'
-    +esc(issue.rule||'Issue '+(index+1))+'</span></div><p>'+esc(issue.observation||'No explanation was recorded.')+'</p>'
-    +(issue.artifact?'<small>Affects '+esc(issue.artifact)+'</small>':'')+'</article>').join('')
+    '<article class="decision-issue"><p class="finding-observation">'+esc(issue.observation||'No explanation was recorded.')+'</p>'
+    +'<div class="finding-details"><span class="severity '+(severityWord(issue.severity||'BLOCKER')==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(issue.severity||'BLOCKER'))+'</span>'
+    +(issue.artifact?'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-where">'+esc(issue.artifact)+'</span>':'')
+    +'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-rule" title="rule id">'+esc(issue.rule||'Issue '+(index+1))+'</span></div></article>').join('')
     :'<div class="decision-empty">'+(budget
       ?'No audit findings were created because the task paused at a usage limit before producing a reviewable result.'
       :provider
@@ -5773,22 +5785,31 @@ function artifactList(items,status,sha){
     +'<button type="button" class="output-more" data-open-artifacts>Open Files panel</button>'
     +'</div></div></div></section>';
 }
-// D148. What a finding rests on, from the evidence record in the receipt: a
-// deterministic check verified it, or the auditor raised it and nothing has
-// reproduced it yet. Shown only where findings are already listed; a receipt
-// without the record renders nothing here, and no route or state word is ever
-// on screen.
-function findingTier(f){
-  if(!f||!f.tier)return '';
-  const text=f.tier==='deterministic'?'Verified by a deterministic check'
-    :f.verified?'Raised by the auditor and verified':'Raised by the auditor, not yet reproduced';
-  return '<small class="finding-tier'+(f.verified?' verified':'')+'">'+esc(text)+'</small>';}
 // R1. The verdict a person reads. The raw vocabulary (PASS / BLOCKED /
 // ESCALATE / DCL_ONLY) stays in --json, receipts, reports and the inspector;
 // the main surface says what it means. An unknown word passes through.
 const VERDICT_WORDS={PASS:'Passed',PASSED:'Passed',CONSUMED:'Admitted',BLOCKED:'Needs changes',
   ESCALATE:'Needs you',ESCALATED:'Needs you',DCL_ONLY:'Checks only'};
 function verdictWord(v){const key=String(v||'').toUpperCase();return VERDICT_WORDS[key]||String(v||'');}
+// R2. Severity as a consequence ("must fix") rather than a classification.
+function severityWord(sev){return String(sev||'').toUpperCase()==='BLOCKER'?'must fix':'suggestion';}
+// D148. What a finding rests on, from the evidence record in the receipt: a
+// deterministic check verified it, or the auditor raised it and nothing has
+// reproduced it yet. Shown only where findings are already listed, on the
+// details line; a receipt without the record renders nothing here, and no
+// route or state word is ever on screen.
+function tierWord(f){if(!f||!f.tier)return '';
+  return f.tier==='deterministic'?'verified by a check':f.verified?'raised by the auditor, verified':'raised by the auditor';}
+// R2. A finding leads with what was observed. Severity, place, evidence tier
+// and the rule id share ONE muted details line under it; the id never opens
+// the first line, and it carries its own title for the person who wants it.
+function findingCard(f){
+  const parts=['<span class="severity '+(severityWord(f.severity)==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(f.severity))+'</span>'];
+  if(f.artifact)parts.push('<span class="finding-where">'+esc(f.artifact)+'</span>');
+  if(tierWord(f))parts.push('<span class="finding-tier'+(f.verified?' verified':'')+'">'+esc(tierWord(f))+'</span>');
+  if(f.rule)parts.push('<span class="finding-rule" title="rule id">'+esc(f.rule)+'</span>');
+  return '<div class="finding"><p class="finding-observation">'+esc(f.observation||'No explanation was recorded.')+'</p>'
+    +'<div class="finding-details">'+parts.join('<span class="finding-sep" aria-hidden="true">·</span>')+'</div></div>';}
 function turn(m,d){
   if(m.kind === 'you'){
     const explicit=m.routing_mode==='explicit';const recipient=m.addressed_to||m.lane;
@@ -5805,10 +5826,7 @@ function turn(m,d){
     +'<div class="turn-meta"><span class="role-mark generator" aria-hidden="true">G</span><b>Generator</b><span>conversational reply · not audited</span>'
     +'<span class="turn-time">'+at(m.t)+'</span></div><div class="turn-body">'+esc(m.response)+'</div></div></article>';
   if(m.kind === 'auditor'){
-    const fs = (m.findings||[]).map(f => '<div class="finding"><div class="finding-head">'
-      + '<span class="severity">' + esc(f.severity) + '</span><span>' + esc(f.rule) + '</span>'
-      + '<span class="spacer"></span><span>' + esc(f.artifact) + '</span></div><p>'
-      + esc(f.observation) + '</p>' + findingTier(f) + '</div>').join('');
+    const fs = (m.findings||[]).map(findingCard).join('');
     return '<article class="turn audit"><div class="turn-main">'
       + '<div class="turn-meta"><span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b><span class="status ' + esc(m.verdict) + '">'
       + esc(verdictWord(m.verdict)) + '</span><span class="turn-time">' + at(m.t) + '</span></div>'
@@ -5987,10 +6005,7 @@ function reviewCard(d){
     :'';
   const findingRows=rows.filter(m=>(m.findings||[]).length).map(m=>
     '<div class="review-round-row"><span class="round-n">round '+esc(m.round)+'</span></div>'
-    +(m.findings||[]).map(f=>'<div class="finding"><div class="finding-head">'
-      +'<span class="severity">'+esc(f.severity)+'</span><span class="finding-where">'+esc(f.artifact)+'</span>'
-      +'<span class="spacer"></span><span class="finding-rule" title="rule id">'+esc(f.rule)+'</span></div><p>'
-      +esc(f.observation)+'</p>'+findingTier(f)+'</div>').join('')).join('');
+    +(m.findings||[]).map(findingCard).join('')).join('');
   const detail='<div class="review-detail"><div class="review-detail-inner">'
     +'<div class="review-section"><div class="review-section-title" id="review-checks-title-'+esc(cycle.id)+'">Automatic checks</div>'
     +'<p class="check-summary">'+esc(checkSummary(checks,auditCount(d)))+'</p>'
