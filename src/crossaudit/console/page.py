@@ -869,6 +869,11 @@ textarea::placeholder{color:var(--text-3)}
 .route{display:none;margin:7px 3px 0;padding:7px 9px;border-radius:var(--r-sm);background:var(--surface-2);
   color:var(--text-2);font-size:var(--fs-label);white-space:pre-wrap;word-break:break-word}
 .route.on{display:block}
+.route.setup{background:var(--escalated-bg,var(--surface-2))}
+.setup-card{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.setup-card b{flex:1 1 100%}
+.setup-card span{flex:1 1 auto;color:var(--text-2)}
+.setup-card-action{flex:0 0 auto}
 .route b{color:var(--text)}
 .route .ask{color:var(--escalated)}
 .drop-overlay{position:fixed;inset:0;z-index:var(--z-overlay);display:none;place-items:center;padding:26px;
@@ -3588,6 +3593,8 @@ const ZH={
   ,"resuming with tool result":"携工具结果继续","resuming with compute result":"携计算结果继续","requesting remote calculation":"正在请求远程计算","note":"备注","document export refused":"文档导出被拒绝"
   ,"the round could not be committed":"该轮次无法提交","rendering final document locally":"正在本地渲染最终文档","the round reproduced the previous one; nothing new to audit":"本轮与上一轮结果相同；没有新的内容可审计"
   ,"the loop cannot settle this itself":"循环无法自行解决此问题","this stop is waiting for a human":"此次停止正在等待人工处理"
+  ,"Connect a provider first":"请先连接供应商","The generator has no credential yet.":"生成者尚未连接凭据。","The auditor has no credential yet.":"审计者尚未连接凭据。"
+  ,"Neither the generator nor the auditor has a credential yet.":"生成者与审计者都尚未连接凭据。","Open Settings → Providers":"打开设置 → 供应商"
   ,"Task started.":"任务已开始。","The result will appear in this conversation.":"结果会显示在此对话中。","Needs clarification.":"需要澄清。","Refused.":"已拒绝。","Message delivered.":"消息已送达。","Sending your files…":"正在发送文件…"
   ,"Pinned":"已置顶","Recent":"最近","Upload failed":"上传失败","Uploaded":"已上传"
   ,"Stored in chunks without an app quota. Model inspection depends on file support and context.":"分块存储，应用不设配额。模型能否读取取决于文件支持与上下文。"
@@ -7678,6 +7685,12 @@ stopRun.onclick=async()=>{const progress=lastState&&chatProgress(lastState);if(!
     ?'<b>已请求停止。</b> 当前步骤结束后，任务会安全停止。'
     :'<b>Stop requested.</b> The task will stop safely at the next execution boundary.';}
   catch(e){route.className='route on error';route.textContent=e.message;stopRun.disabled=false;}};
+function setupCardMarkup(missing){
+  const both=missing.length>1,role=missing[0]||'generator';
+  const sentence=both?'Neither the generator nor the auditor has a credential yet.'
+    :role==='auditor'?'The auditor has no credential yet.':'The generator has no credential yet.';
+  return '<div class="setup-card"><b>Connect a provider first</b><span>'+sentence+'</span>'
+    +'<button type="button" class="primary setup-card-action" id="setup-open-providers">Open Settings → Providers</button></div>';}
 form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!rawText)return;
   const continuing=pendingContinuation.chat===activeChatId&&Boolean(pendingContinuation.cycle);
   const text=rawText;
@@ -7690,7 +7703,12 @@ form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!
   route.textContent=pendingFiles.length?'Sending your files…':'Starting…';
   try{const uploadBatch=pendingFiles.length?await uploadFiles(pendingFiles):null;
     const r=await api('/api/say',{text,chat_id:activeChatId,upload_batch:uploadBatch,attachment_consent:pendingFiles.length>0,
-      continuation_cycle:continuing?pendingContinuation.cycle:''});if(r.asked){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b class="ask">Needs clarification.</b> '
+      continuation_cycle:continuing?pendingContinuation.cycle:''});if(r.setup==='credentials'){optimisticSend=null;if(lastState)render(lastState);
+    // A setup step, not an audit event: nothing started, the message stays in
+    // the composer, and the one action is the place that fixes it.
+    route.className='route on setup';route.innerHTML=setupCardMarkup(r.missing||[]);
+    document.getElementById('setup-open-providers').onclick=()=>openSettings('providers');}
+    else if(r.asked){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b class="ask">Needs clarification.</b> '
     + esc(r.clarify);}else{activeChatId=r.chat_id||activeChatId;if(optimisticSend)optimisticSend.chat=activeChatId||'';
     // chat is synchronous: the echo + reply land in the next snapshot, so the
     // optimistic bubble stays until the real turns take over (echo-detection).

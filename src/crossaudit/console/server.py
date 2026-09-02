@@ -896,6 +896,27 @@ def start_build(cfg: Config, task: str, *, before_start=None,
                             for item in staged]}
 
 
+def setup_needed(cfg: Config) -> dict | None:
+    """The setup card the app shows instead of starting anything.
+
+    In the desktop app a role without a credential is a setup step still to
+    do, not an audit event: routing itself would ask the auditor, and a build
+    would stop in round one. So the check runs before either, presence only
+    (never a value), and answers with which role is unconnected and the one
+    place to fix it. Outside the app the same check is `preflight()`'s, and
+    surfaces as a refusal sentence — there is no Settings → Providers to open.
+    """
+    if os.environ.get("CROSSAUDIT_APP_MODE") != "1":
+        return None
+    from ..cli.build import missing_credentials
+
+    missing = missing_credentials(cfg)
+    if not missing:
+        return None
+    return {"setup": "credentials", "missing": missing,
+            "action": "providers", "asked": False, "lane": "setup"}
+
+
 def say(cfg: Config, text: str, *, attachments=None,
         attachment_consent: bool = False,
         chat_id: str = "", continuation_cycle: str = "") -> dict:
@@ -908,6 +929,9 @@ def say(cfg: Config, text: str, *, attachments=None,
     from .. import router as router_mod
     from ..appservice import talk as talk_mod
 
+    blocked = setup_needed(cfg)
+    if blocked is not None:
+        return blocked
     prepared = list(attachments or [])
     if prepared and not attachment_consent:
         raise TransferError(
@@ -1902,6 +1926,12 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                 return
             if not text:
                 self._deny(400, "say something")
+                return
+            # Before the chat is touched: a message the app could not send
+            # leaves no thread behind, and stays in the composer to be resent.
+            blocked = setup_needed(self._config())
+            if blocked is not None:
+                self._send(json.dumps(blocked).encode(), "application/json")
                 return
             try:
                 chat = chats.touch(self._config(),

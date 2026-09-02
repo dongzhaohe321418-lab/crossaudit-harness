@@ -107,6 +107,15 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ('say what to build: crossaudit build "..."',
      '请说明要构建什么：crossaudit build "..."'),
     ("{} is not a git repository; the ledger is git", "{} 不是 git 仓库；账本就是 git"),
+    ("connect a provider first: the generator has no credential (`crossaudit doctor` "
+     "will ask for it)",
+     "请先连接供应商：生成者没有凭据（`crossaudit doctor` 会提示输入）"),
+    ("connect a provider first: the auditor has no credential (`crossaudit doctor` "
+     "will ask for it)",
+     "请先连接供应商：审计者没有凭据（`crossaudit doctor` 会提示输入）"),
+    ("connect a provider first: neither the generator nor the auditor has a credential "
+     "(`crossaudit doctor` will ask for them)",
+     "请先连接供应商：生成者与审计者都没有凭据（`crossaudit doctor` 会提示输入）"),
     ("scope.dirs is not set: the generator must be told where it may write, or it "
      "could rewrite the rules it is judged by",
      "未设置 scope.dirs：必须告诉生成者它可以写入哪里，否则它可能改写用来评判它的规则"),
