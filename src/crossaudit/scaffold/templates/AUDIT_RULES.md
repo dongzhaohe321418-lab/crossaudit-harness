@@ -25,8 +25,13 @@ nothing is invalid.
 **BLOCKER.** When a committed `TASK.md` exists, the increment satisfies every
 objectively testable requirement it states. Substituting a different value,
 file, command, or declared environment is a defect even when the produced files
-are internally consistent. If the task conflicts with this Constitution, the
-auditor escalates instead of choosing one silently.
+are internally consistent. A length stated as exact must match exactly. A
+length stated approximately is a guide, not a threshold: note it as ADVISORY
+only if the increment departs from it by more than a quarter of the stated
+length, and it is not a BLOCKER on its own; a departure so large that the
+deliverable is a different thing (a fraction or a multiple of what was asked)
+is materially noncompliant and blocks. If the task conflicts with this
+Constitution, the auditor escalates instead of choosing one silently.
 
 ### CA-DATA-001
 **BLOCKER.** Every numeric entry in the results file carries a unit and a
