@@ -22,6 +22,7 @@ from ..controller import StateStore
 from ..dcl.framework import CONFIRMED
 from ..dispute import DISPUTES_LOG, parse_findings
 from ..errors import classify_escalation_kind, escalation_remediations
+from ..cli import i18n
 from ..gitio import git, is_repo, read_committed_bytes
 
 VERDICT_RE = re.compile(r"\|\s*verdict\s*\|\s*\*\*(\w+)\*\*")
@@ -509,6 +510,16 @@ def escalations(cfg: Config) -> list[dict]:
                     "limit_reached": s["round"] >= cfg.max_rounds,
                     "chat_id": s.get("chat_id", ""), "why": why,
                     "stop_reason": stop_reason, "issues": issues,
+                    # Additive, D130 provenance-first: the Chinese for THIS
+                    # stop reason, looked up by the sentence the controller
+                    # recorded (a provider refusal is a composite of our own
+                    # clauses — the route id and the vendor's words are
+                    # carried through). Absent when the table has none, and
+                    # the page then renders `why` exactly as before.
+                    **({"why_zh": i18n.denial_zh(why)}
+                       if i18n.denial_zh(why) is not None else {}),
+                    **({"stop_reason_zh": i18n.denial_zh(stop_reason)}
+                       if i18n.denial_zh(stop_reason) is not None else {}),
                     "kind": kind,
                     # Structured cause (additive) for human-readable rendering.
                     "cause": cause,
