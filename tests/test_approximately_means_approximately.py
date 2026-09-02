@@ -141,6 +141,7 @@ def test_the_auditor_prompt_states_the_same_reading():
     test_loop_integrity."""
     system = " ".join(pm.SYSTEM.split())
     assert "CA-TASK-001" in system
-    assert "quarter of the stated length" in system
+    assert "more than a quarter of the stated length is ADVISORY" in system, (
+        "the prompt's reading of an approximate departure is no longer ADVISORY")
     assert "guide, not a threshold" in system
     assert "a fraction or a multiple of what was asked" in system
