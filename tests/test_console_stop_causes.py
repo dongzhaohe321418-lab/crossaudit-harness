@@ -105,8 +105,26 @@ def test_the_decision_center_renders_each_cause_from_the_rows_the_dashboard_buil
     c = store.open_or_advance(cfg.science_repo, "c" * 40, None)
     store.record_verdict(c["cycle_id"], "c" * 40, "ESCALATE", "r" * 64, 1)
 
+    # a provider failure on a keyless first run: the row carries `why_zh`
+    # (overview, looked up by the recorded sentence) and the ZH pass of the
+    # page prefers it over translating the English by text
+    keyless = ("provider failure left this task waiting for a person: generator "
+               "provider failure in round 1: all configured generator provider "
+               "routes failed. anthropic:claude-opus-4-8 — anthropic credential "
+               "$CROSSAUDIT_GENERATOR_KEY is not configured")
+    store.record_build_escalation(cfg.science_repo, "e" * 40, keyless, 1,
+                                  "history", "写一份报告", kind="provider")
+
     rows = {r["sha"][0]: r for r in overview.escalations(cfg)}
-    out = render(WORKTREE, {"repair": rows["a"], "dial": rows["b"], "plain": rows["c"]})
+    out = render(WORKTREE, {"repair": rows["a"], "dial": rows["b"], "plain": rows["c"],
+                            "keyless": rows["e"]})
+    en, zh = out["keyless"]["en"], out["keyless"]["zh"]
+    assert en["resolution-limit-copy"] == keyless, "the English sentence must not change"
+    assert rows["e"]["why_zh"].startswith("供应商失败，该任务正在等待人工处理：生成者在第 1 轮失败：")
+    assert zh["resolution-limit-copy"] == rows["e"]["why_zh"], zh["resolution-limit-copy"]
+    assert "anthropic:claude-opus-4-8 — 未配置 anthropic 凭据 $CROSSAUDIT_GENERATOR_KEY" in zh["resolution-limit-copy"]
+    assert not re.search(r"(?:\b[A-Za-z]+\b[ ,]+){6,}\b[A-Za-z]+\b", zh["resolution-limit-copy"]), (
+        "a run of English inside the Chinese card: a slot swallowed a sentence")
     en, zh = out["repair"]["en"], out["repair"]["zh"]
     assert en["resolution-flag"] == "Automatic repair refused"
     assert "twice" not in en["resolution-summary"]

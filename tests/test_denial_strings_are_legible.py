@@ -629,4 +629,72 @@ def test_a_missing_key_provider_failure_is_chinese_on_both_surfaces(
                                    "anthropic:claude-opus-4-8 — 未配置 anthropic 凭据 "
                                    "$CROSSAUDIT_GENERATOR_KEY"), row["why_zh"]
     page = Path(page_mod.__file__).read_text()
-    assert "(currentLocale==='zh'&&(row.stop_reason_zh||row.why_zh))" in page
+    assert "(typeof currentLocale!=='undefined'&&currentLocale==='zh'&&(row.stop_reason_zh||row.why_zh))" in page
+
+
+# ------------------------------------------------- no half-translation, ever
+#: A run of more than six English words inside a Chinese refusal is a slot
+#: that swallowed a sentence: the live console showed
+#: `未配置 generator provider failure in round 1: all configured …` after the
+#: generic `{} is not configured` matched a whole composed refusal.
+ENGLISH_RUN = re.compile(r"(?:\b[A-Za-z][A-Za-z'\-]*\b[ ,]+){6,}\b[A-Za-z][A-Za-z'\-]*\b")
+
+#: The slots that carry ANOTHER party's words verbatim — the vendor's own
+#: sentence after `it said:` — and may therefore hold an English run. Listed
+#: as prefixes of the English reason, so nothing else is exempt.
+FOREIGN_WORDS_ALLOWED = (re.compile(r"^provider returned HTTP \d+\n  it said: "),)
+
+RUNTIME_REASONS = Path(__file__).parent / "fixtures" / "denial_reasons_runtime.jsonl"
+
+
+def _runtime_reasons() -> list[str]:
+    return [json.loads(line)["reason"]
+            for line in RUNTIME_REASONS.read_text(encoding="utf-8").splitlines()
+            if line and not line.startswith("#")]
+
+
+def test_a_leading_slot_template_refuses_to_swallow_a_sentence():
+    """The generic `{} credential ${} is not configured` still answers the
+    id-and-env-var it was written for, and no longer answers a paragraph.
+
+    D10 mutation: delete `_swallows_a_sentence` from `_lookup` — the second
+    assertion fails with `未配置 generator provider failure in round 1: …`.
+    """
+    assert i18n.denial_zh("anthropic credential $KEY is not configured") == "未配置 anthropic 凭据 $KEY"
+    composed = ("generator provider failure in round 1: all configured generator "
+                "provider routes failed. anthropic:claude-opus-4-8 — anthropic "
+                "credential $CROSSAUDIT_GENERATOR_KEY is not configured")
+    rendered = i18n.denial_zh(composed)
+    assert rendered == ("生成者在第 1 轮失败：已配置的所有生成者供应商路由都失败了。"
+                        "anthropic:claude-opus-4-8 — 未配置 anthropic 凭据 "
+                        "$CROSSAUDIT_GENERATOR_KEY"), rendered
+    assert not ENGLISH_RUN.search(rendered)
+    # A sentence that is NOT one of ours, wearing a generic template's tail,
+    # is left whole in English (marked and counted by denial_text) rather
+    # than half-translated.
+    stray = ("Please check the network. The gateway said nothing useful and the "
+             "retry budget is not configured")
+    assert i18n.denial_zh(stray) is None
+
+
+def test_no_runtime_refusal_is_half_translated():
+    """Every real Denial reason the suite constructs (the committed runtime
+    log) that the table answers comes out without a run of more than six
+    English words — except where the slot is the vendor's own sentence.
+
+    D10 mutation: add `("{} is missing", "缺少 {}")` to ENTRIES — a composed
+    reason ending in "is missing" would be half-translated and this names it.
+    """
+    reasons = _runtime_reasons()
+    assert len(reasons) > 300, "the runtime log has drifted"
+    garbled = []
+    for reason in reasons:
+        rendered = i18n.denial_zh(reason)
+        if rendered is None:
+            continue
+        if any(p.match(reason) for p in FOREIGN_WORDS_ALLOWED):
+            continue
+        run = ENGLISH_RUN.search(rendered)
+        if run:
+            garbled.append((reason[:100], run.group(0)[:60]))
+    assert garbled == [], f"half-translated refusals: {garbled!r}"

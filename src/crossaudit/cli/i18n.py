@@ -615,6 +615,26 @@ def _compile_denials() -> None:
                              if english in COMPOSITES)
 
 
+_SENTENCE_BREAK = re.compile(r"[.;!?]\s|\n")
+#: A whitespace-separated token that is a plain English word (a path, an id
+#: or an env var is one token however many letters it holds).
+_ENGLISH_WORD = re.compile(r"^[A-Za-z][A-Za-z'\-]*[.,;:]?$")
+
+
+def _swallows_a_sentence(pattern: re.Pattern[str], groups: tuple[str, ...]) -> bool:
+    """A template that BEGINS with a slot is anchored only by what follows
+    it, so `{} is not configured` matched a whole composed refusal and
+    answered `未配置 <an English paragraph>` — a half-translation that reads
+    as done. A slot of such a template may carry a path, an id, a name: not
+    sentence punctuation, and not more than six English words.
+    """
+    if not pattern.pattern.startswith("^(.*?)"):
+        return False
+    return any(_SENTENCE_BREAK.search(g)
+               or sum(1 for token in g.split() if _ENGLISH_WORD.match(token)) > 6
+               for g in groups)
+
+
 def _lookup(text: str, exact: dict[str, str],
             patterns: list[tuple[re.Pattern[str], str]],
             slot=None, composite: set[re.Pattern[str]] | None = None) -> str | None:
@@ -625,8 +645,14 @@ def _lookup(text: str, exact: dict[str, str],
         match = pattern.match(text)
         if match:
             groups = match.groups()
+            is_composite = bool(composite and pattern in composite)
+            # The guard is for the denial table's bare slots (a path, an id):
+            # a slot with its own translator (`_sentence_slot`, a composite's
+            # clause) is MEANT to carry a sentence.
+            if slot is None and not is_composite and _swallows_a_sentence(pattern, groups):
+                continue
             fill = slot if slot is not None else (
-                _denial_clause if composite and pattern in composite else None)
+                _denial_clause if is_composite else None)
             if fill is not None:
                 groups = tuple(fill(g) for g in groups)
             return chinese.format(*groups)
