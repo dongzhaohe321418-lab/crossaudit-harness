@@ -934,12 +934,17 @@ says what it does:
 | `block` (default) | the generator gets a bounded number of revision rounds, as before; the receipt records the finding as unverified |
 | `escalate` | the run stops at round one and the Decision Center asks you to rule: dispute, reopen with a reason, or stop |
 
-Either way, a revision that follows a BLOCKED audit is checked before commit by
-the repair guard (`repair:`): it must stay inside the files the findings named,
-within `max_changed_lines` of code, and must not make a finding disappear by
-adding broad exception handling, silent fallbacks or retries, suppressions, or
-skipped tests. Prose is never pattern-screened. A refused attempt is rolled back
-with one free retry; a second refusal becomes a decision for you.
+Either way, a revision that follows a BLOCKED audit is screened before commit
+by the repair guard (`repair:`). Two things are refused outright and rolled
+back — a file outside the audited directories, or a binary the local renderer
+did not produce — with one free retry before the stop becomes a decision for
+you. Likely defensive edits in code (a catch-all `except`, a skipped test, a
+deleted assertion, a suppression marker, a change past `max_changed_lines`)
+are **cautions**: under the default `mode: caution` the round is still audited
+and the auditor sees each caution as a note it can turn into a finding; under
+`mode: refuse` they are refused too. Prose and data files are never
+pattern-screened. The guard is a heuristic that points the auditor at likely
+evasions, not a guarantee.
 
 Fallback pools must preserve independence. No vendor may appear anywhere in
 both the Generator pool and the Auditor pool. CrossAudit validates the complete

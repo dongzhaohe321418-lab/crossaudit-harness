@@ -71,9 +71,14 @@ class Budgets:
 
 @dataclass(frozen=True)
 class RepairPolicy:
-    """Bounds on an automatic revision after a BLOCKED audit (repair_guard)."""
+    """The repair screen after a BLOCKED audit (repair_guard).
+
+    ``mode`` says what a likely defensive edit does: ``caution`` (default)
+    surfaces it to the auditor; ``refuse`` rolls the round back.
+    """
 
     enabled: bool = True
+    mode: str = "caution"
     max_changed_lines: int = 200
 
 
@@ -314,19 +319,23 @@ def load(path: Path | None = None) -> Config:
     repair_raw = raw.get("repair") or {}
     if not isinstance(repair_raw, dict):
         raise ConfigDenial("repair must be a mapping", file=str(p))
-    if set(repair_raw) - {"enabled", "max_changed_lines"}:
+    allowed_repair = {"enabled", "mode", "max_changed_lines"}
+    if set(repair_raw) - allowed_repair:
         raise ConfigDenial(
-            f"repair: unknown keys {sorted(set(repair_raw) - {'enabled', 'max_changed_lines'})}",
-            file=str(p))
+            f"repair: unknown keys {sorted(set(repair_raw) - allowed_repair)}", file=str(p))
     repair_enabled = repair_raw.get("enabled", True)
     if not isinstance(repair_enabled, bool):
         raise ConfigDenial("repair.enabled must be true or false", file=str(p))
+    repair_mode = repair_raw.get("mode", "caution")
+    if repair_mode not in ("caution", "refuse"):
+        raise ConfigDenial("repair.mode must be caution or refuse", file=str(p))
     repair_lines = repair_raw.get("max_changed_lines", 200)
     if (isinstance(repair_lines, bool) or not isinstance(repair_lines, int)
             or not 1 <= repair_lines <= 10000):
         raise ConfigDenial(
             "repair.max_changed_lines must be an integer from 1 to 10000", file=str(p))
-    repair = RepairPolicy(enabled=repair_enabled, max_changed_lines=repair_lines)
+    repair = RepairPolicy(enabled=repair_enabled, mode=repair_mode,
+                          max_changed_lines=repair_lines)
 
     return Config(
         path=p,

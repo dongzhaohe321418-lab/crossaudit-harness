@@ -79,27 +79,53 @@ cannot weaken the floor or the lock.
 ## The repair guard
 
 Whatever the dial, a revision that follows a BLOCKED audit is screened before it
-is committed (`repair_guard.py`, wired in `cli/build.py`):
+is committed (`repair_guard.py`, wired in `cli/build.py`). The screen is a
+heuristic — a handful of patterns over the staged diff — and it is named for
+what it does: it **surfaces likely defensive edits to the auditor**. It is not
+a guarantee that a finding cannot be hidden; the auditor is.
 
-- files outside the artifacts the findings named (a missing or unclear artifact
-  widens the scope to the whole increment);
-- a change-size budget over code files (`repair.max_changed_lines`, default 200;
-  documents are exempt from the budget, never from the scope);
-- on **added lines of code files only**: broad or bare `except`, silent `pass`,
-  new retry / fallback / best-effort paths, `noqa` / `type: ignore` style
-  suppressions, disabled or skipped tests;
-- binary patches that the local document renderer did not produce.
+Two kinds of outcome:
 
-Prose is never pattern-screened: a report that discusses a fallback strategy is
-not defensive programming (D121). A refusal rolls the attempt back, tells the
-generator in one sentence what stopped and why, and allows one free retry. A
-second refusal ends the run with cause `repair_refused` and a Decision Center
-card that says what to do next. The guard is a review trigger, not a theorem
-that every flagged construct is wrong: a person may approve a broader change.
+**Refusals** — the round is rolled back (files and index), the generator gets
+the audit's findings again plus one sentence on what was refused, and one free
+retry; a second refusal ends the run with cause `repair_refused` and a Decision
+Center card. Only two things are refused, in every mode, because nothing
+downstream could review them:
+
+- a file outside the audited directories (`scope.dirs`) — the whole increment
+  is in scope, not just the artifacts a finding named, because an honest repair
+  routinely touches the data *and* the prose that describes it;
+- a binary the local document renderer did not produce.
+
+**Cautions** — the round is committed and audited as usual; the caution rides
+along as a deterministic note (`dcl.notes`, in the auditor's prompt and in the
+round's `checks.json`) so the auditor model can raise it as a finding, and the
+run shows a `repair_caution` event:
+
+- on **code files only** (never data — JSON, YAML, TOML, INI, CSV, notebooks —
+  and never documents): a catch-all `except`, an error handler that does
+  nothing, `contextlib.suppress`, a checker-silencing marker (`noqa`,
+  `type: ignore`, `pragma: no cover`, ...), a warnings filter set to ignore, a
+  skipped or expected-to-fail test, an assertion that can no longer fail, a
+  shell step that ignores its own failure — matched on added lines with
+  comments, docstrings and string literals stripped first;
+- a **deleted** `assert`, `raise` or test that was not re-added — deleting the
+  failing check is the classic evasion;
+- a code change larger than `repair.max_changed_lines` (default 200; data and
+  documents are never budgeted);
+- staged files the screen could not read because the diff passed its size cap.
+
+`repair.mode` is the dial: `caution` (default) is the behaviour above;
+`refuse` turns every caution into a refusal for projects that would rather
+stop than let the auditor weigh it. Prose is never pattern-screened: a report
+that discusses a fallback strategy is not defensive programming (D121), and a
+guard that reddens honest work is as much a defect as one that misses
+defective work.
 
 ```yaml
 repair:
   enabled: true
+  mode: caution          # or refuse
   max_changed_lines: 200
 ```
 

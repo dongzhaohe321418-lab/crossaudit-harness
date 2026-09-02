@@ -61,10 +61,14 @@ scope:
 # live definitions are shown in DETERMINISTIC_CHECKS.md and to the generator.
 checks: [{checks}]
 
-# After a BLOCKED audit, the automatic repair may not hide the finding behind
-# broad exception handling, fallbacks or oversized patches (see repair_guard).
+# After a BLOCKED audit the repair is screened (docs/EVIDENCE_AUTHORITY.md).
+# Files outside the audited directories and unrendered binaries are refused.
+# Likely defensive edits (catch-all except, skipped tests, deleted asserts,
+# oversized code changes) are cautions the auditor weighs (mode: caution)
+# or refusals that roll the round back (mode: refuse).
 repair:
   enabled: true
+  mode: caution
   max_changed_lines: 200
 """
 
