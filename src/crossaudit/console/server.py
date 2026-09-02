@@ -54,6 +54,7 @@ from urllib.parse import parse_qs, quote, urlparse
 
 from .. import app_doctor, app_keys, connections, hpc, mcp, usage, workspace
 from ..autonomy import prepare_task
+from ..cli import i18n
 from ..config import Config, load
 from ..controller import StateStore
 from ..dispute import DISPUTES_LOG
@@ -1052,8 +1053,19 @@ def make_handler(cfg: Config, token: str, touch) -> type:
 
         def _deny(self, code: int, why: str | Denial) -> None:
             structured = isinstance(why, Denial)
-            body = (json.dumps(why.as_dict()).encode() if structured
-                    else str(why).encode())
+            if structured:
+                payload = why.as_dict()
+                # The Chinese for THIS refusal, looked up by the Denial's own
+                # reason (provenance first, D130) — never by matching prose
+                # that a person could have authored. Additive: absent when
+                # the table has no entry, and the page then falls back to its
+                # own catalogue exactly as before.
+                reason_zh = i18n.denial_zh(why.reason)
+                if reason_zh is not None:
+                    payload["reason_zh"] = reason_zh
+                body = json.dumps(payload).encode()
+            else:
+                body = str(why).encode()
             self.send_response(code)
             self.send_header("content-type", ("application/json" if structured
                                                 else "text/plain; charset=utf-8"))

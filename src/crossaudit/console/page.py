@@ -4038,12 +4038,19 @@ new ResizeObserver(syncComposerClearance).observe(composerWrap);
 window.addEventListener('resize',syncComposerClearance);
 syncComposerClearance();
 
+// The sentence of a refusal, in the language of the page. The server attaches
+// `reason_zh` beside `reason`, looked up by the reason the Denial carries (never by
+// its wording); a body without it renders the English, which the catalogue
+// below then translates where it can — exactly what happened before.
+function denialText(data){
+  if(!data||typeof data!=='object')return '';
+  return (currentLocale==='zh'&&data.reason_zh)||data.reason||'';}
 async function api(path, body){
   const opt = body ? {method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify(body)} : {};
   const r = await fetch(path + '?t=' + encodeURIComponent(T), opt);
   const text=await r.text();let data=null;try{data=text?JSON.parse(text):{};}catch(e){}
-  if(!r.ok){const error=new Error((data&&data.reason)||text||('Request failed ('+r.status+')'));
+  if(!r.ok){const error=new Error(denialText(data)||text||('Request failed ('+r.status+')'));
     if(data&&typeof data==='object')Object.assign(error,data);throw error;}
   return data||{};
 }
@@ -5326,7 +5333,7 @@ function fileUrl(path,view=false){return '/api/file?t=' + encodeURIComponent(T) 
 async function previewData(path){
   const response=await fetch('/api/preview?t='+encodeURIComponent(T)+'&path='+encodeURIComponent(path));
   const raw=await response.text();let data={};try{data=raw?JSON.parse(raw):{};}catch(e){}
-  if(!response.ok)throw new Error(data.reason||raw||('Preview failed ('+response.status+')'));
+  if(!response.ok)throw new Error(denialText(data)||raw||('Preview failed ('+response.status+')'));
   return data;
 }
 function formatBytes(value){

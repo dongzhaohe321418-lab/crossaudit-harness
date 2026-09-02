@@ -24,9 +24,11 @@ from pathlib import Path
 
 import pytest
 
+from crossaudit.cli import i18n
 from crossaudit.console import page as page_mod
 
 HARNESS = Path(__file__).parent / "harness"
+CJK = re.compile(r"[一-鿿]")
 SRC = Path(page_mod.__file__).parent.parent
 DENIAL_TYPES = {"Denial", "ConfigDenial", "IntegrityDenial", "ProviderDenial"}
 
@@ -99,36 +101,91 @@ def test_the_denial_still_exists_where_the_translation_expects_it():
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
-def test_the_denial_catalogue_gap_is_measured_not_guessed(tmp_path):
-    """The COUNT, recorded as a test so it cannot drift silently upward.
+def test_every_denial_reason_reaches_the_console_in_chinese(tmp_path):
+    """The console-driven COUNT, measured at the seam the console now uses.
 
-    This does not assert the class is translated — it is not, by a long way. It
-    pins the measurement so that a change making it worse has to change this
-    number deliberately, and so the scope of the work stays visible.
+    It was 52/540 when the console translated a refusal by its text alone
+    (`page.py` ZH + ZH_PATTERNS). The server now attaches `reason_zh`, looked
+    up by the Denial's own reason (`i18n.denial_zh`, D130 provenance-first),
+    and the page prefers it under zh, falling back to the text catalogue. So
+    a reason is covered when EITHER seam has Chinese for it, and the residual
+    may be at most the two sentences ALLOWED_RESIDUAL explains — never more.
+
+    D10 mutation: drop `reason_zh` from `server._deny` — this stays green
+    (the seam is measured, not the wire; see the wire test below). Add one
+    `ConfigDenial("anything new")` without an entry — red, naming it.
     """
     messages = _denial_messages()
     assert len(messages) > 400, f"the denial reader has drifted: {len(messages)}"
     distinct = sorted({m for _f, _l, m in messages if m.strip()})
     rendered = _translate(distinct, tmp_path)
-    covered = [m for m in distinct if re.search(r"[一-鿿]", rendered[m])]
+    by_text = {m for m in distinct if re.search(r"[一-鿿]", rendered[m])}
+    by_seam = {m for m in distinct if i18n.denial_zh(m) is not None}
+    covered = by_text | by_seam
+    residual = set(distinct) - covered
+    assert residual <= set(ALLOWED_RESIDUAL), (
+        f"refusals the console shows a Chinese reader in English: "
+        f"{sorted(residual - set(ALLOWED_RESIDUAL))!r}")
+    # The two seams are reported separately so the number keeps its unit.
+    assert len(by_text) >= 52 and len(covered) >= len(distinct) - len(ALLOWED_RESIDUAL)
 
-    # A floor, not a total: this counts the four Denial constructors only.
-    assert len(covered) >= 52, (
-        f"denial catalogue coverage fell to {len(covered)}/{len(distinct)}; it "
-        f"was 52 when measured. Refusals are the strings that most need "
-        f"translating, not the least.")
+
+def test_the_console_serves_the_refusal_in_both_languages_on_the_wire():
+    """Through the shipped server: a structured refusal carries `reason_zh`
+    beside `reason`, and `reason` is byte-identical to what it always was.
+
+    D10 mutation: drop the `reason_zh` line in `server._deny` — red here.
+    """
+    import threading
+    import urllib.error
+    import urllib.request
+
+    sys.path.insert(0, str(HARNESS))
+    import enumerate_console_strings as harness
+    from crossaudit.console.server import serve
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "p"
+        root.mkdir()
+        cfg = harness.project(root)
+        url, httpd = serve(cfg, port=0)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        try:
+            request = urllib.request.Request(
+                url.replace("/?t=", "/api/projects/open?t="),
+                data=b'{"root":"/nope"}', method="POST",
+                headers={"content-type": "application/json"})
+            try:
+                with urllib.request.urlopen(request, timeout=20) as response:
+                    raise AssertionError(f"expected a refusal, got {response.status}")
+            except urllib.error.HTTPError as denied:
+                body = json.loads(denied.read().decode("utf-8"))
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+    assert body.get("denied") is True and body.get("reason"), body
+    assert not CJK.search(body["reason"]), "the English reason must not change"
+    assert CJK.search(body.get("reason_zh", "")), body
+    assert body["reason_zh"] == i18n.denial_zh(body["reason"]), (
+        "reason_zh must be the table's answer for THIS reason, nothing else")
+
+
+def test_the_page_prefers_the_served_chinese_and_falls_back_to_its_catalogue():
+    """MARKUP ONLY: the page reads `reason_zh` under zh at both fetch seams
+    and still renders `reason` when the body has none."""
+    page = Path(page_mod.__file__).read_text()
+    assert "(currentLocale==='zh'&&data.reason_zh)||data.reason||''" in page
+    assert page.count("denialText(data)") == 3  # the definition and both seams
 
 
 # ----------------------------------------------------------- the CLI seam
-# The console translates a refusal by text in `page.py`; the CLI prints it on
-# stderr as `DENIED (kind): reason`, where the macOS shell parses the prefix
-# and a person reads the rest. `cli/denials_zh.py` is the Chinese for that
+# The console serves a refusal with `reason_zh` beside `reason` (server._deny,
+# tests above); the CLI prints it on stderr as `DENIED (kind): reason`, where
+# the macOS shell parses the prefix and a person reads the rest. `cli/denials_zh.py` is the Chinese for that
 # rest, keyed by the English reason, and these tests keep it complete, honest
 # and free of rot.
-from crossaudit.cli import i18n  # noqa: E402
 from crossaudit.cli.denials_zh import ENTRIES  # noqa: E402
-
-CJK = re.compile(r"[一-鿿]")
 
 #: Reasons deliberately left without an entry, each with the reason why. Keys
 #: are the rendering the static reader produces (`X` per interpolated part).
