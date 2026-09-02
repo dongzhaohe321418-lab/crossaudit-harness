@@ -69,10 +69,18 @@ class Thread:
                    created=now, updated=now)
 
     @classmethod
-    def recovered(cls, chat_id: str, now: int) -> "Thread":
-        """Materialise a thread known only from durable Git/legacy evidence."""
+    def recovered(cls, chat_id: str, now: int, updated: int | None = None) -> "Thread":
+        """Materialise a thread known only from durable Git/legacy evidence.
+
+        ``updated`` is when the evidence last moved (newest commit, report or
+        cycle event the caller knows of). It used to be ``now`` — which made a
+        thread nobody had touched for days read "just now" on every snapshot,
+        because the thread was re-materialised on every snapshot. Unknown is
+        0, which the list renders as no time rather than as a fresh one.
+        """
         title = "Project history" if chat_id == LEGACY_CHAT_ID else "Recovered chat"
-        return cls(id=chat_id, title=title, created=now, updated=now)
+        return cls(id=chat_id, title=title, created=now,
+                   updated=now if updated is None else int(updated))
 
     @classmethod
     def parse(cls, raw: object) -> "Thread | None":
@@ -386,11 +394,13 @@ def _order(row: dict) -> tuple:
     return (not row["pinned"], -row["updated"], row["id"])
 
 
-def snapshot(cfg: Config, known_chat_ids=()) -> dict:
+def snapshot(cfg: Config, known_chat_ids=(), last_seen: dict | None = None) -> dict:
     """Return sorted navigation metadata, including read-only legacy migration.
 
     ``items`` are the threads shown in the main navigation; ``archived`` holds
     the hidden-but-recoverable ones separately so the two never intermix.
+    ``last_seen`` (chat id -> epoch seconds) dates a recovered thread by its
+    newest evidence; absent, a recovered thread carries no time (0).
     """
     with _LOCK:
         state = _read(cfg)
@@ -402,8 +412,9 @@ def snapshot(cfg: Config, known_chat_ids=()) -> dict:
         known.difference_update(state["deleted"])
         existing = {row["id"] for row in rows}
         now = int(time.time())
+        seen = last_seen or {}
         for chat_id in sorted(known - existing):
-            rows.append(Thread.recovered(chat_id, now).as_row())
+            rows.append(Thread.recovered(chat_id, now, int(seen.get(chat_id, 0) or 0)).as_row())
         active = sorted((row for row in rows if not row.get("archived")), key=_order)
         archived = sorted((row for row in rows if row.get("archived")), key=_order)
         return {"project_pinned": bool(state["project_pinned"]),

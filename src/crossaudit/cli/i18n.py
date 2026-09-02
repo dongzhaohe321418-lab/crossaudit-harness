@@ -446,7 +446,7 @@ CATALOGUE: dict[str, dict[str, str]] = {
         'doctor.tier.standing.local': '无需更改，除非你希望这段历史能证明的不止是自我审查；`crossaudit pair` 会把两个代理分开',
         'doctor.tier.standing.verified-notification': '无需更改，除非你希望审计失败时拒绝合并；请把该审计检查设为分支的必需项',
         'doctor.tier.standing.paired': '无需更改，除非你希望审计失败时拒绝合并；那需要在审计仓库上启用分支保护',
-        'doctor.tier.standing.remote': '无需更改，除非你需要权限分离；`crossaudit pair` 会把规则放到生成端无法写入的地方',
+        'doctor.tier.standing.remote': '无需更改，除非你需要权限分离；`crossaudit pair` 会把规则放到生成者无法写入的地方',
         'doctor.title': 'crossaudit doctor',
         'doctor.tls.fix': '执行 pip install certifi，或导出 SSL_CERT_FILE=/path/to/ca-bundle.pem（macOS 的 python.org 版本：运行 Install Certificates.command）',
         'doctor.tls.label': '没有受信任的根证书',
