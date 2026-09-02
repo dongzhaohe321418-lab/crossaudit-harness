@@ -14,6 +14,7 @@ row rather than erasing the task.
 from __future__ import annotations
 
 import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +22,7 @@ from pathlib import Path
 from ..errors import (EXIT_ESCALATED, EXIT_OK, ConfigDenial, Denial,
                       park_escalation_kind)
 from .events import RunEvent
+from .pacing import RUN_PHASES, PhaseClock, still_working_text
 from .processes import pid_alive
 from .runs import (
     PROVIDER_WAIT_CATEGORIES,
@@ -65,10 +67,19 @@ class RunCommandService:
 
     def __init__(self, cfg, *, journal: RunJournal | None = None,
                  alive: Callable[[int], bool] = pid_alive,
-                 on_change: Callable[[], None] | None = None) -> None:
+                 on_change: Callable[[], None] | None = None,
+                 clock: Callable[[], float] = time.monotonic,
+                 silence_s: float = PhaseClock.SILENCE_S,
+                 pace_interval: float | None = 1.0) -> None:
         self.cfg = cfg
         self.journal = journal or RunJournal(journal_path(cfg))
         self._on_change = on_change
+        # D150: the silence clock. ``clock`` and ``silence_s`` are injectable
+        # so a test drives the decision with a fake clock; ``pace_interval``
+        # None runs no ticking thread (the caller checks explicitly).
+        self._clock = clock
+        self._silence_s = silence_s
+        self._pace_interval = pace_interval
         recovered = self.journal.recover_abandoned(alive=alive)
         if recovered:
             self._changed()
@@ -200,8 +211,27 @@ class RunCommandService:
 
     def _drive(self, run_id: str, prepared: PreparedRun, worker: Worker,
                slot, *, propagate: bool) -> int:
+        # D150: server-side silence clock (never a page timer, D4). Every
+        # event the worker emits touches it; when a narrated phase has gone
+        # SILENCE_S without one, it appends still_working in that phase with
+        # the seconds spent there. It writes through the same cancellation-
+        # aware emit as the worker, so a cancelled run ends the clock too.
+        last = {"state": RunState.QUEUED, "round_no": 0, "round_limit": 0}
+
+        def still(phase: str, seconds: int) -> None:
+            self._emit(run_id, RunEvent(
+                actor="loop", kind="still_working",
+                text=still_working_text(phase, seconds), state=last["state"],
+                round_no=last["round_no"], round_limit=last["round_limit"]))
+
+        pacer = PhaseClock(still, clock=self._clock, silence=self._silence_s)
+        pacer.touch(RUN_PHASES.get(RunState.QUEUED.value))
+
         def emit(event: RunEvent) -> None:
             self._emit(run_id, event)
+            last.update(state=event.state, round_no=event.round_no,
+                        round_limit=event.round_limit)
+            pacer.touch(RUN_PHASES.get(event.state.value))
 
         # The worker renews its lease at provider-call boundaries through this
         # handle; the signature of Worker stays unchanged so existing callers
@@ -216,6 +246,14 @@ class RunCommandService:
         # The loop drains queued owner guidance at each round boundary through
         # the same handle convention (consume-once inside the journal).
         emit.drain_guidance = lambda: self.journal.drain_messages(run_id)
+        # The clock rides the handle too, so a caller without the ticking
+        # thread (tests, a fake clock) can ask it to decide explicitly.
+        emit.phase_clock = pacer
+        pace_stop = threading.Event()
+        if self._pace_interval:
+            threading.Thread(
+                target=pacer.run, args=(pace_stop, self._pace_interval),
+                name=f"crossaudit-pace-{run_id[:8]}", daemon=True).start()
         try:
             code = worker(prepared, emit)
             if self._cancelled(run_id):
@@ -270,6 +308,7 @@ class RunCommandService:
                 raise
             return 1
         finally:
+            pace_stop.set()
             release_workspace_slot(slot)
 
     def start(self, prepare: Prepare, worker: Worker, *, background: bool) -> RunLaunch | int:

@@ -545,3 +545,98 @@ def test_events_run_from_submit_to_verdict_in_the_owner_facing_order(
         assert not any(token in event.text for token in (":claude", ":gpt", "CA-")), event.text
     assert any(event.text.endswith("check passed") for event in narrated)
     assert any(event.text.startswith("The auditor is reading") for event in narrated)
+
+
+# ------------------------------------------------------------------ (d)
+def test_still_working_fires_after_eight_silent_seconds_and_not_otherwise():
+    """(d) The phase clock, decided with a fake clock: silence in a narrated
+    phase becomes one ``still_working`` line naming the phase and the seconds
+    in it; activity resets the window; a phase the clock does not narrate
+    stays silent. Mutation: drop the ``touch`` on emit and the second check
+    fires early."""
+    from crossaudit.runtime.pacing import PhaseClock
+
+    now = [0.0]
+    said: list[tuple[str, int]] = []
+    clock = PhaseClock(lambda phase, secs: said.append((phase, secs)),
+                       clock=lambda: now[0])
+    clock.touch("generating")
+    now[0] = 7.9
+    assert clock.check() is False and said == []
+    now[0] = 8.0
+    assert clock.check() is True and said == [("generating", 8)]
+    now[0] = 12.0
+    assert clock.check() is False                     # the line itself was activity
+    clock.touch("generating")                         # a chunk arrived
+    now[0] = 19.9
+    assert clock.check() is False
+    now[0] = 20.0
+    assert clock.check() is True and said[-1] == ("generating", 20)
+    clock.touch("auditing")                           # phase change resets elapsed
+    now[0] = 28.0
+    assert clock.check() is True and said[-1] == ("auditing", 8)
+    clock.touch(None)                                 # waiting for a person: quiet
+    now[0] = 100.0
+    assert clock.check() is False
+
+
+def test_the_run_shell_appends_still_working_in_the_journal_with_the_phase(cfg):
+    """(d) Under the command shell the line is a durable journal event in the
+    run's current state, so the run card shows it like any other step and the
+    page needs no timer. A cancelled run ends the clock instead of erroring."""
+    from crossaudit.runtime import (PreparedRun, RunCommandService, RunEvent,
+                                    RunJournal, RunState, journal_path)
+
+    now = [1000.0]
+    service = RunCommandService(cfg, clock=lambda: now[0], pace_interval=None)
+
+    def worker(prepared, emit) -> int:
+        emit(RunEvent(actor="generator", text="writing", kind="generation_started",
+                      state=RunState.GENERATING, round_no=1, round_limit=3))
+        now[0] += 9
+        assert emit.phase_clock.check() is True
+        emit(RunEvent(actor="auditor", text="reviewing the commit",
+                      kind="audit_started", state=RunState.AUDITING,
+                      round_no=1, round_limit=3))
+        now[0] += 45
+        assert emit.phase_clock.check() is True
+        return 0
+
+    service.start(lambda: PreparedRun(task="pace it"), worker, background=False)
+    steps = RunJournal(journal_path(cfg)).latest()["steps"]
+    lines = [(s["text"], s["state"], s["round_no"]) for s in steps
+             if s["kind"] == "still_working"]
+    assert lines == [("Still generating · 9 s", "GENERATING", 1),
+                     ("Still auditing · 45 s", "AUDITING", 1)]
+
+    from crossaudit.console.progress import project_snapshot
+    projected = project_snapshot(RunJournal(journal_path(cfg)).latest())
+    zh = [s["text_i18n"]["zh"] for s in projected["steps"] if s["kind"] == "still_working"]
+    assert zh == ["仍在生成 · 9 秒", "仍在审计 · 45 秒"]
+
+
+def test_the_intake_clock_speaks_while_the_router_is_silent():
+    """(d) Same clock on the intake: eight silent seconds of routing produce
+    one line; finishing the intake stops it."""
+    from crossaudit.console.intake import Intake
+
+    now = [0.0]
+    intake = Intake(clock=lambda: now[0])
+    intake.begin("a" * 16, "hello")
+    now[0] = 7.0
+    assert intake.check_silence() is False
+    now[0] = 8.5
+    assert intake.check_silence() is True
+    steps = intake.snapshot()["steps"]
+    assert [s["kind"] for s in steps] == ["received", "still_working"]
+    assert steps[-1]["text"] == "Still routing · 8 s"
+    assert steps[-1]["text_i18n"]["zh"] == "仍在判断由谁处理 · 8 秒"
+    intake.routed("chat")
+    intake.answering("chat")
+    now[0] = 30.0
+    assert intake.check_silence() is True
+    assert intake.snapshot()["steps"][-1]["text"] == "Still replying · 21 s"
+    intake.finish({"lane": "chat"})
+    now[0] = 90.0
+    assert intake.check_silence() is False
+    intake.clear()

@@ -28,8 +28,8 @@ import threading
 import time
 from collections.abc import Callable
 
-from ..runtime.pacing import PhaseClock
-from .progress import TRACKER, phase_i18n, still_working_text
+from ..runtime.pacing import PhaseClock, still_working_text
+from .progress import TRACKER, phase_i18n
 
 #: Steps kept per intake; a message is handled in a handful of phases and the
 #: ``still_working`` clock adds one line per silent window, so this bounds a

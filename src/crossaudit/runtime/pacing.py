@@ -17,6 +17,22 @@ import time
 from collections.abc import Callable
 
 
+def still_working_text(phase: str, seconds: int) -> str:
+    """The one sentence the clock speaks: phase word, seconds in the phase."""
+    return f"Still {phase} · {int(seconds)} s"
+
+
+#: The phase word for each run state the clock narrates. Waiting states are
+#: not silence — a card already says what is being waited for — so they map
+#: to nothing and the clock stays quiet in them.
+RUN_PHASES = {
+    "QUEUED": "preparing",
+    "GENERATING": "generating",
+    "REVISING": "generating",
+    "AUDITING": "auditing",
+}
+
+
 class PhaseClock:
     SILENCE_S = 8.0
 

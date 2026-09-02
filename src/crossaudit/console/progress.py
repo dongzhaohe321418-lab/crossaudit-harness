@@ -16,6 +16,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from ..runtime import ACTIVE_STATES, RunJournal, RunState
+from ..runtime.pacing import still_working_text  # noqa: F401  (re-export: one sentence, one place)
 
 
 # Fixed event copy is translated here because run events are also consumed by
@@ -147,10 +148,6 @@ def phase_i18n(text: str) -> dict[str, str]:
                 zh = render(match)
                 break
     return {"en": text, "zh": zh if zh is not None else text}
-
-
-def still_working_text(phase: str, seconds: int) -> str:
-    return f"Still {phase} · {int(seconds)} s"
 
 
 #: Recovery narration carries ``vendor:model · attempt N`` in its detail. The
