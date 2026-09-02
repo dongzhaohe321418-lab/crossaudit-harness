@@ -2531,8 +2531,8 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
         </div></details></div>
     </div></section>
     <section class="form-section project-step" data-project-step="3" tabindex="-1" hidden><div class="step-heading"><span>Step 3 of 3</span><h3>Choose delivery and review</h3><p>GitHub pairing is optional. Review the local and model setup before creating anything.</p></div><div class="github-box">
-      <label class="toggle-line"><input type="checkbox" name="github" id="github-toggle" checked><span><b>Create and connect two repositories</b>
-        <small>The work repository holds deliverables. The audit repository holds rules, reports and the auditor secret.</small></span></label>
+      <label class="toggle-line"><input type="checkbox" name="github" id="github-toggle"><span><b>Create and connect two repositories</b>
+        <small>Recommended for shared or reviewed work; a single local project is fine to start.</small></span></label>
       <div class="connection" id="github-connection">Checking GitHub connection…</div>
       <div class="github-fields" id="github-fields"><div class="form-grid">
         <label class="field"><span>Work repository name</span><input name="science_repo" id="science-repo" maxlength="161" placeholder="owner/project"></label>
@@ -3126,7 +3126,7 @@ const ZH={
   "Connection details":"连接详情","API region":"API 区域","The region must match the API key.":"区域必须与 API key 匹配。","Model":"模型",
   "Model available to your account":"你的账户可用的模型","Custom model ID":"自定义模型 ID","Exact provider model ID":"准确的供应商模型 ID",
   "Refresh from provider":"从供应商刷新","GitHub":"GitHub","Create and connect two repositories":"创建并连接两个仓库",
-  "The work repository holds deliverables. The audit repository holds rules, reports and the auditor secret.":"工作仓库存放交付物；审计仓库存放规则、报告和审计密钥。",
+  "Recommended for shared or reviewed work; a single local project is fine to start.":"适合共享或需要评审的工作；一开始只用一个本地项目也完全可以。",
   "Checking GitHub connection…":"正在检查 GitHub 连接…","Work repository name":"工作仓库名称","Audit repository name":"审计仓库名称",
   "Use accessible repositories if these names already exist":"若这些名称已存在，则使用可访问的仓库",
   "Off by default. Leave it off when you want two new repositories.":"默认关闭。需要创建两个新仓库时请保持关闭。",
@@ -5310,7 +5310,7 @@ function restoreProjectDraft(row){
     syncCustomModel(role);};
   setRole('auditor',draft.auditor_connection,draft.auditor_endpoint,draft.auditor_model);
   setRole('generator',draft.generator_connection,draft.generator_endpoint,draft.generator_model);
-  document.getElementById('github-toggle').checked=draft.github!==false;
+  document.getElementById('github-toggle').checked=draft.github===true;
   document.getElementById('adopt-existing').checked=draft.adopt_existing===true;
   document.querySelector('[name="public"]').checked=draft.public===true;
   set('#science-repo',draft.science_repo||row.science);set('#audit-repo',draft.audit_repo||row.audit);
