@@ -60,6 +60,12 @@ scope:
 # Machine-enforced contracts are independent of AUDIT_RULES.md. Their exact
 # live definitions are shown in DETERMINISTIC_CHECKS.md and to the generator.
 checks: [{checks}]
+
+# After a BLOCKED audit, the automatic repair may not hide the finding behind
+# broad exception handling, fallbacks or oversized patches (see repair_guard).
+repair:
+  enabled: true
+  max_changed_lines: 200
 """
 
 
