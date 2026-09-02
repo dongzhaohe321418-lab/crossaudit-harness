@@ -203,6 +203,22 @@ The app also reports this: open it and look at "The `crossaudit` command" in
 its readiness list. It names both programs, and it never runs the other one to
 ask its version.
 DMGNOTE
+# The first thing macOS does with an ad-hoc signed app is refuse to open it.
+# Nothing inside the app can say so — it has not run yet — so the sentence sits
+# in the DMG window, beside the app, in both languages, before the person
+# meets the dialog. Ships whether or not the build was notarized: a notarized
+# build never shows the dialog and the note costs nothing.
+cat > "$DMG_ROOT/如何打开 · How to open.txt" <<'OPENNOTE'
+How to open CrossAudit
+
+macOS may say the app can't be verified. Right-click CrossAudit.app → Open
+→ Open. This happens once.
+
+如何打开 CrossAudit
+
+macOS 可能提示无法验证此应用。右键点击 CrossAudit.app → 打开 → 打开。
+只需这样做一次。
+OPENNOTE
 hdiutil create -quiet -volname "CrossAudit $VERSION" -srcfolder "$DMG_ROOT" \
   -ov -format UDZO "$DIST/CrossAudit-$VERSION-arm64.dmg"
 if [[ -n "$NOTARY_PROFILE" ]]; then
