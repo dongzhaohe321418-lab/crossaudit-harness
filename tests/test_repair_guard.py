@@ -335,7 +335,7 @@ def test_scope_uses_the_staged_list_so_a_capped_diff_cannot_hide_a_file():
     assert G.assess(cut, staged_files=["docs/A_big.md", "src/calc.py"]).cautions == ()
 
 
-def test_only_a_locally_rendered_binary_may_be_committed():
+def test_a_binary_passes_only_when_the_local_document_export_produced_it():
     """Mutation: drop report.pdf from locally_rendered_files -> refused."""
     text = ("diff --git a/report.pdf b/report.pdf\nindex 1111111..2222222 100644\n"
             "Binary files a/report.pdf and b/report.pdf differ\n")

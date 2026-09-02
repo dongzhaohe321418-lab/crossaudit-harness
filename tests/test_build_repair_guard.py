@@ -244,7 +244,7 @@ def test_refuse_mode_rolls_back_a_defensive_repair_and_keeps_the_findings(
 
 # ------------------------------------------- surviving mutations M9 / M12
 
-def test_a_locally_rendered_pdf_is_not_a_model_written_binary(
+def test_a_pdf_from_the_local_document_export_is_not_a_model_written_binary(
         science, cfg, transcripts, monkeypatch):
     """M9. The export task makes CrossAudit render a PDF from the model's
     Markdown source; that binary is in round 2's diff and must pass. A
