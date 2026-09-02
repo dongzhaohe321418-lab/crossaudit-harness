@@ -6452,3 +6452,44 @@ RULING, in order of honesty:
 forked by a child, one machine, one ordering, two runs. **A measurement that
 names what it could not see is the only kind whose zero would have meant
 anything.**
+
+## D147 — The reviewer corrected my load-bearing sentence, and its version is the one that holds
+
+I wrote in D143 that the deterministic floor is safe because
+`auditor/run.py` reads `total_hard_failures > 0 -> BLOCKED` **before it ever
+reads the model's verdict.** The cross-vendor review of the change corrected it:
+
+> the load-bearing statement is that **DCL executes before the provider and
+> final verdict synthesis gives hard failures priority over a validated model
+> verdict.** The comment and matching test prose should say that instead of
+> claiming the model verdict has never yet been read.
+
+**Not "never read" — read and outranked.** On the ordinary path the two are
+indistinguishable. **They diverge exactly where this change is most dangerous:
+when the model returns PASS over a deterministic failure.** My sentence would
+have been consistent with a system that reads the verdict first and happens not
+to act on it yet; theirs states the property that actually protects the floor.
+
+**A comment that is true today because of an ordering, rather than true because
+of a priority, is a comment that a refactor can quietly falsify.**
+
+### And it strengthened the justification by removing my second argument
+
+I had argued the old refusal was moot because `render()` always prepends
+`CA-TASK-001`, a BLOCKER. The reviewer tested **a raw advisory-only constitution
+with no `CA-TASK-001` at all** — **the deterministic floor still held.**
+
+**So the safety of this change does not depend on the renderer's behaviour at
+all.** That is a stronger result than the one I dispatched, and it was obtained
+by deleting a premise I had supplied rather than by confirming it.
+
+### Boundaries it recorded rather than smoothed
+
+- *"Advisory-only" does not mean the rendered constitution lacks the
+  protocol-level task BLOCKER* — stated explicitly, and put into the new tests
+  rather than left in a report.
+- **Its own weakest point, named**: the existing-configuration claim rests on a
+  representative draft compared byte-for-byte plus a source diff proving no
+  other production function changed. **Not an exhaustive enumeration of every
+  historical constitution**, and it said so instead of letting "unchanged" stand
+  unqualified.
