@@ -21,7 +21,8 @@ from ..config import Config
 from ..controller import StateStore
 from ..dcl.framework import CONFIRMED
 from ..dispute import DISPUTES_LOG, parse_findings
-from ..errors import classify_escalation_kind, escalation_remediations
+from ..errors import (CONTESTED_MODEL_BLOCKER_REASON, classify_escalation_kind,
+                      escalation_remediations)
 from ..gitio import git, is_repo, read_committed_bytes
 
 VERDICT_RE = re.compile(r"\|\s*verdict\s*\|\s*\*\*(\w+)\*\*")
@@ -125,6 +126,11 @@ class Cycle:
     #: ("automatic-repair", "human-decision", "obtain-audit"), or "" when the
     #: receipt predates the block. Inspector-only: nothing renders the name.
     authority_route: str = ""
+    #: Whether the receipt names a contested blocker — a model-only block
+    #: the escalate dial handed to a person. THE field the cause reads: every
+    #: ESCALATE routes to human-decision, so the route cannot tell the dial
+    #: from the auditor's own escalation or an integrity stop.
+    authority_contested: bool = False
 
     @property
     def blockers(self) -> int:
@@ -151,7 +157,7 @@ def _cited_report_commit(cycle_dir: Path) -> str:
         return ""
 
 
-def _receipt_authority(cycle_dir: Path) -> dict:
+def receipt_authority(cycle_dir: Path) -> dict:
     """The receipt's evidence-authority block for this cycle, or ``{}``.
 
     Same file `_cited_report_commit` reads; the block is verifier-bound, so it
@@ -166,6 +172,9 @@ def _receipt_authority(cycle_dir: Path) -> dict:
     except (OSError, ValueError, AttributeError):
         return {}
     return block if isinstance(block, dict) else {}
+
+
+_receipt_authority = receipt_authority  # the name the first slice used
 
 
 def annotate_findings(findings: list[dict], authority: dict) -> list[dict]:
@@ -289,7 +298,7 @@ def read_cycles(cfg: Config,
         round_m = ROUND_RE.search(text)
         aud = AUDITOR_RE.search(text)
         const = CONST_RE.search(text)
-        authority = _receipt_authority(report.parent)
+        authority = receipt_authority(report.parent)
         out.append(Cycle(
             directory=name, sha=sha, round=int(round_m.group(1)) if round_m else 1,
             verdict=verdict,
@@ -301,7 +310,8 @@ def read_cycles(cfg: Config,
             auditor=aud.group(1) if aud else "",
             constitution=const.group(1) if const else "",
             report_state=source.state, report_note=source.note,
-            authority_route=str(authority.get("route", "") or "")))
+            authority_route=str(authority.get("route", "") or ""),
+            authority_contested=bool(authority.get("contested_evidence_ids"))))
     # Cycle directory names begin with a content hash, so lexical order is
     # random with respect to time. The UI's "latest" pipeline must follow the
     # ledger write order, with the protocol round as a deterministic tie-break.
@@ -423,12 +433,12 @@ def top_rules(cycles: list[Cycle], limit: int = 5) -> list[dict]:
 
 def _is_auditor_concern(stop_reason: str, latest: Cycle | None) -> bool:
     """Whether this content stop is the escalate dial handing a model-only
-    blocker to a person (D148). The receipt's route is the structured
-    source; the CLI's one sentence is the fallback for a cycle whose receipt
-    is not beside its report."""
-    if latest is not None and latest.authority_route == "human-decision":
+    blocker to a person (D148). The receipt's contested ids are the
+    structured source — never the route, which every ESCALATE shares; the
+    CLI's one sentence is the fallback for a cycle whose receipt is not
+    beside its report. A plain ESCALATE keeps the generic copy."""
+    if latest is not None and latest.authority_contested:
         return True
-    from ..cli.main import CONTESTED_MODEL_BLOCKER_REASON  # lazy: cli is heavy
     return stop_reason.strip() == CONTESTED_MODEL_BLOCKER_REASON
 
 
@@ -484,13 +494,16 @@ def escalations(cfg: Config) -> list[dict]:
                 why = issues[0]["observation"][:220]
         if cause == "repair_refused":
             requested = (
-                "Tell the generator the smallest change that repairs the cause, "
-                "or stop the task without admitting its output.")
+                "Tell the generator to keep the fix inside the audited files, or "
+                "stop the task without admitting its output.")
         elif cause == "auditor_concern":
+            # Names only what the dialog offers: continue with a reason
+            # (Revise) or stop. There is no third control.
             requested = (
-                "Review the auditor's concern and its evidence. Dispute a "
-                "misreading, reopen with a recorded reason, or stop without "
-                "admission.")
+                "Review the auditor's concern and its evidence. If it is a "
+                "misreading, say so in your reason and continue; if it is right, "
+                "tell the generator how to address it; or stop without admitting "
+                "the work.")
         elif issues:
             requested = (
                 "Tell the generator how to correct the remaining blockers, or stop "

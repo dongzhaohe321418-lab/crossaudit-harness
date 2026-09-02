@@ -20,7 +20,7 @@ from crossaudit.auditor import authority as authority_mod
 from crossaudit.auditor.authority import (INTEGRITY_IN_WORDS, ROUTE_LABELS,
                                           _INTEGRITY_FALLBACK)
 from crossaudit.cli import i18n
-from crossaudit.cli.main import CONTESTED_MODEL_BLOCKER_REASON
+from crossaudit.errors import CONTESTED_MODEL_BLOCKER_REASON
 
 from .test_evidence_authority import DCL_BLOCKER, MODEL_BLOCKED, _decide, _records
 
@@ -76,9 +76,11 @@ def test_no_entry_is_for_a_sentence_nobody_writes():
     line-wrapped forms the source uses."""
     import inspect
 
+    from crossaudit import errors as errors_mod
     from crossaudit.cli import main as main_mod
 
-    source = inspect.getsource(authority_mod) + inspect.getsource(main_mod)
+    source = (inspect.getsource(authority_mod) + inspect.getsource(main_mod)
+              + inspect.getsource(errors_mod))
     flat = re.sub(r'"\s*\n\s*f?"', "", source)  # join wrapped string literals
     orphans = []
     for english, _zh in i18n.SENTENCES_ZH:
@@ -101,6 +103,26 @@ def test_sentence_text_marks_and_counts_a_gap_the_way_t_does():
         i18n.set_language("en")
         i18n.reset_fallbacks()
     assert i18n.sentence_text("your decision") == "your decision"
+
+
+def test_the_escalated_line_translates_only_our_own_sentence():
+    """Review defect 4: the auditor's invalid-reply prose must never pass
+    through the sentence seam (it would be marked `[en]` and counted as OUR
+    missing entry), and the literal fallback is a catalogue key."""
+    import inspect
+
+    from crossaudit.cli import main as main_mod
+
+    source = inspect.getsource(main_mod.cmd_run)
+    assert "i18n.sentence_text(rationale[0])" in source
+    assert "sentence_text(why)" not in source and "sentence_text(outcome.invalid_reason" not in source
+    assert 'i18n.t("run.human_decision_needed")' in source
+    i18n.set_language("zh")
+    try:
+        assert i18n.t("run.human_decision_needed") == "需要人工决定"
+    finally:
+        i18n.set_language("en")
+    assert i18n.t("run.human_decision_needed") == "a human decision is needed"
 
 
 def test_the_denial_seam_is_unchanged_by_sharing_its_compiler():

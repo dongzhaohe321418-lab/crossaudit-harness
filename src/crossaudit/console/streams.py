@@ -21,8 +21,8 @@ from ..config import Config
 from ..dispute import DISPUTES_LOG, parse_findings
 from ..router import history as routing_history
 from .chats import LEGACY_CHAT_ID, canonical_id
-from .overview import (ReportSource, _receipt_authority, annotate_findings,
-                       read_report_sources)
+from .overview import (ReportSource, annotate_findings, read_report_sources,
+                       receipt_authority)
 from .progress import context_events
 
 GENERATOR_LANES = {"generator", "project", "chat"}
@@ -239,7 +239,7 @@ def auditor_stream(cfg: Config, routing: list[dict],
                 [{"severity": f.severity, "rule": f.rule,
                   "artifact": f.artifact, "observation": f.observation[:400]}
                  for f in parse_findings(text)],
-                _receipt_authority(report.parent)),
+                receipt_authority(report.parent)),
             # "committed" | "drifted" | "uncommitted", plus the sentence for
             # the two that are not "committed". Additive, and the only thing on
             # this row that is about the FILE rather than about what the

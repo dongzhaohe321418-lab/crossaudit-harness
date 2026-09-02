@@ -21,8 +21,9 @@ from ..controller import StateStore
 from ..dcl import run_checks
 from .. import doctor_shared
 from ..doctor_shared import constitution_state, CONSTITUTION_READY_SENTENCE
-from ..errors import (EXIT_BLOCKED, EXIT_CONFIG, EXIT_ESCALATED, EXIT_INTEGRITY,
-                      EXIT_OK, ConfigDenial, Denial, IntegrityDenial)
+from ..errors import (CONTESTED_MODEL_BLOCKER_REASON, EXIT_BLOCKED, EXIT_CONFIG,
+                      EXIT_ESCALATED, EXIT_INTEGRITY, EXIT_OK, ConfigDenial, Denial,
+                      IntegrityDenial)
 from ..gitio import (changed_paths, entries, git, is_ancestor, is_repo, materialise,
                      parent, read_cap, read_committed_bytes, resolve)
 from ..receipt import build as build_receipt
@@ -869,11 +870,7 @@ def _provider_stop_reason(outcome) -> str:
     return ""
 
 
-#: The one sentence a person reads when the escalate dial routes a model-only
-#: block to them. No internal vocabulary (record ids, routes, states).
-CONTESTED_MODEL_BLOCKER_REASON = (
-    "the auditor raised a concern that no deterministic check reproduces; "
-    "it needs your judgment")
+# CONTESTED_MODEL_BLOCKER_REASON lives in errors.py (the console reads it too).
 
 
 def _authority_summary(authority: dict) -> dict:
@@ -1767,13 +1764,13 @@ def cmd_run(args: argparse.Namespace) -> int:
         print("  never be PASS. Add a key (`crossaudit init --force`), then re-run.")
     else:
         rationale = (getattr(outcome, "authority", None) or {}).get("rationale") or ()
-        why = (outcome.invalid_reason or (rationale[0] if rationale else "")
-               or "a human decision is needed")
-        # The rationale is one of the evidence-authority sentences, served in
-        # the language the command was asked for; an invalid-reply reason is
-        # the auditor's own words and passes through the same seam unmarked
-        # only when the table knows it (it is counted otherwise, like t()).
-        print(f"  Escalated: {i18n.sentence_text(why)}")
+        # Only the rationale — one of OUR evidence-authority sentences — goes
+        # through the sentence seam. An invalid-reply reason is the auditor's
+        # own words and is never marked as a missing catalogue entry (D130).
+        why = (outcome.invalid_reason
+               or (i18n.sentence_text(rationale[0]) if rationale
+                   else i18n.t("run.human_decision_needed")))
+        print(f"  Escalated: {why}")
         print(f"  Report: {rel}/report.md")
     if status == "ESCALATED":
         return EXIT_ESCALATED
