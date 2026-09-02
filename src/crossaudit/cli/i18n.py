@@ -57,6 +57,8 @@ What is NOT translated, and why the seam is here
 """
 from __future__ import annotations
 
+import re
+
 DEFAULT_LANGUAGE = "en"
 LANGUAGES = ("en", "zh")
 
@@ -546,3 +548,78 @@ CATALOGUE: dict[str, dict[str, str]] = {
         'start.science.label': '科学与数据',
     },
 }
+
+
+# ------------------------------------------------------------------ denials
+# A refusal is raised where it is decided and printed where it is met; the
+# raise site cannot call `t()` because it does not know the surface. So the
+# refusals are translated at the seam where a person meets them, by the
+# English `reason` — see `denials_zh.py` for why that is not the text-matching
+# D130 forbids: the lookup is applied to `Denial.reason` only, never to text a
+# person could have authored.
+_denial_exact: dict[str, str] = {}
+_denial_patterns: list[tuple[re.Pattern[str], str]] = []
+
+
+def _compile_denials() -> None:
+    from .denials_zh import ENTRIES
+
+    for english, chinese in ENTRIES:
+        if "{}" not in english:
+            _denial_exact[english] = chinese
+            continue
+        parts = english.split("{}")
+        pattern = re.compile("^" + "(.*?)".join(re.escape(p) for p in parts) + "$",
+                             re.S)
+        if "{}" in chinese:
+            # Sequential slots become numbered ones so `format` can fill them
+            # from the captured groups in order.
+            pieces = chinese.split("{}")
+            chinese = "".join(piece + ("{%d}" % i if i < len(pieces) - 1 else "")
+                              for i, piece in enumerate(pieces))
+        _denial_patterns.append((pattern, chinese))
+    # First match wins, so the most specific template must be tried first: the
+    # fewest slots, then the most literal text. Without this, `MCP {} failed:
+    # {}` swallows "MCP server connection failed: …" into a half-translated
+    # sentence — the exact defect the console's ZH_PATTERNS comment records.
+    _denial_patterns.sort(key=lambda item: (item[0].pattern.count("(.*?)"),
+                                            -len(item[0].pattern)))
+
+
+def denial_zh(reason: str) -> str | None:
+    """The Chinese for a `Denial.reason`, or None when the table has none.
+
+    Exact entries first, then templates, first match wins. The interpolated
+    parts of a templated reason — paths, ids, another component's words — are
+    carried through untranslated, so the sentence never says less than the
+    English one did.
+
+    None rather than the English, deliberately: the caller decides how to
+    mark and count a gap, the same way `t()` does for keyed strings.
+    """
+    if not _denial_exact and not _denial_patterns:
+        _compile_denials()
+    exact = _denial_exact.get(reason)
+    if exact is not None:
+        return exact
+    for pattern, chinese in _denial_patterns:
+        match = pattern.match(reason)
+        if match:
+            return chinese.format(*match.groups())
+    return None
+
+
+def denial_text(reason: str) -> str:
+    """`reason` in the selected language, marked and counted when missing.
+
+    English is served verbatim. In Chinese a reason without an entry is served
+    in English behind FALLBACK_MARK and recorded under `denial:` so the
+    end-of-run notice can name it — the same contract as `t()`.
+    """
+    if _language == DEFAULT_LANGUAGE:
+        return reason
+    translated = denial_zh(reason)
+    if translated is None:
+        _record("denial:" + reason)
+        return FALLBACK_MARK + reason
+    return translated

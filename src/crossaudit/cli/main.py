@@ -1988,7 +1988,15 @@ def main(argv: list[str] | None = None) -> int:
             print(exc.human, file=sys.stderr)
             _report_untranslated()
         else:
-            print(f"DENIED ({exc.kind}): {exc.reason}", file=sys.stderr)
+            # `DENIED (kind): ` is parsed by the macOS shell (CrossAuditApp.swift
+            # reads the reason after "): "), so the prefix is a contract and
+            # stays Latin; the sentence after it is the one a person reads, and
+            # it is served in the language the command was asked for (D130:
+            # a refusal is the string that most needs translating).
+            print(f"DENIED ({exc.kind}): {i18n.denial_text(exc.reason)}",
+                  file=sys.stderr)
+            if not getattr(args, "json", False):
+                _report_untranslated()
         return exc.exit_code
     except KeyboardInterrupt:
         print("\n" + i18n.t("build.interrupted"), file=sys.stderr)
