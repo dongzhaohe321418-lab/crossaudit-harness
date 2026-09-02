@@ -142,6 +142,16 @@ LANG_HELP = ("language for this command; overrides your system locale "
 #: a limitation only an engineer can read is not disclosed.
 BUILD_ENGLISH_NOTE = ("  Output is English in this wave; --lang is not offered "
                       "here until the round-by-round narration can follow it.")
+#: What `check` says when there is nothing to check yet. Deliberately free of
+#: `DCL:schema` and `audited scope`: this is the first thing a new user sees
+#: after setup, and it has to be readable by someone who has not learned the
+#: product's vocabulary. It states what the command is for, that it has nothing
+#: to look at, and what would give it something.
+NOTHING_TO_AUDIT_SENTENCE = (
+    "Nothing to check yet — this command reviews work you have added, and "
+    "there is none here so far.")
+NOTHING_TO_AUDIT_NEXT = (
+    "  Add a folder under {scope}/ with your results, then run this again.")
 
 
 def _emit(obj: dict, as_json: bool, human: str = "") -> None:
@@ -819,6 +829,15 @@ def cmd_check(args: argparse.Namespace) -> int:
         from ..dcl.framework import CheckContext
         ctx = CheckContext(governed_source_ids=_sources.governed_source_ids(cfg))
     result = run_checks(files, cfg.checks, notes, cfg.plugins, context=ctx).as_dict()
+    if not result["scope_started"]:
+        # What a first-time user meets straight after `init`. No rule ids, no
+        # "audited scope": this command has nothing to look at yet, and saying
+        # BLOCKED with two hard failures told them they had done something
+        # wrong before they had done anything at all.
+        human = [NOTHING_TO_AUDIT_SENTENCE,
+                 NOTHING_TO_AUDIT_NEXT.format(scope=cfg.scope_dirs[0])]
+        _emit(result, args.json, "\n".join(human))
+        return EXIT_OK
     human = [f"deterministic layer over {where}",
              f"verdict: {result['verdict']}  ({result['total_hard_failures']} hard failures)"]
     for f in result["findings"]:

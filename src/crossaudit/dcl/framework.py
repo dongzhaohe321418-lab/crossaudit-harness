@@ -15,6 +15,39 @@ from ..errors import ConfigDenial
 
 BLOCKER, ADVISORY = "BLOCKER", "ADVISORY"
 
+#: The third state. A scope with nothing in it is not a scope that failed, and
+#: it is not a scope that passed. Collapsing the two is the same defect the
+#: receipt path carried tonight — there a corrupt evidence ledger became
+#: indistinguishable from "no tools used"; here "no work yet" was
+#: indistinguishable from "work that fails its schema", and it was the first
+#: thing a new user saw after setup.
+#:
+#: It must never read as a pass and must never admit anything.
+NOTHING_TO_AUDIT = "NOTHING_TO_AUDIT"
+
+
+def scope_started(files) -> bool:
+    """Whether anything in the audited scope is WORK rather than scaffolding.
+
+    Deliberately biased toward "started", because saying started when it is not
+    keeps today's behaviour, while saying not-started when work exists would
+    hide a real failure. Any of three signals is enough:
+
+    * a `results.json` or `metadata.yml` anywhere — the increment has begun
+      declaring itself, however badly;
+    * any file below the scope root, since an increment is a directory and a
+      file sitting at the root is what `init` wrote;
+
+    and nothing else counts. An empty scope, or one holding only the scaffold
+    README, is not started.
+    """
+    for path in files:
+        if path.endswith("results.json") or path.endswith("metadata.yml"):
+            return True
+        if len(path.split("/")) >= 3:
+            return True
+    return False
+
 
 @dataclass(frozen=True)
 class CheckContext:
@@ -49,6 +82,9 @@ class CheckResult:
     findings: list[Finding] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     contracts: dict[str, str] = field(default_factory=dict)
+    #: False when the scope holds no work yet. Additive: a caller that never
+    #: sets it keeps the previous two-state behaviour exactly.
+    started: bool = True
 
     @property
     def hard_failures(self) -> int:
@@ -57,7 +93,12 @@ class CheckResult:
     def as_dict(self) -> dict:
         return {
             "crossaudit_dcl_version": 3,
-            "verdict": "BLOCKED" if self.hard_failures else "PASS",
+            # Three states, decided here so every consumer reads the same one.
+            # A hard failure still blocks even on a scope we call unstarted, so
+            # this can only ever be reached when nothing failed.
+            "verdict": ("BLOCKED" if self.hard_failures
+                        else "PASS" if self.started else NOTHING_TO_AUDIT),
+            "scope_started": self.started,
             "total_hard_failures": self.hard_failures,
             "findings": [f.as_dict() for f in self.findings],
             "notes": self.notes,
@@ -124,7 +165,8 @@ def run_checks(files: Mapping[str, bytes], names: list[str],
     missing = [n for n in names if n not in _REGISTRY]
     if missing:
         raise ConfigDenial(f"unknown checks {missing}; available: {available()}")
-    result = CheckResult(notes=list(notes or []), contracts=contracts(names))
+    result = CheckResult(notes=list(notes or []), contracts=contracts(names),
+                         started=scope_started(files))
     for name in names:
         fn = _REGISTRY[name]
         findings = fn(files, ctx) if _WANTS_CONTEXT.get(name) else fn(files)

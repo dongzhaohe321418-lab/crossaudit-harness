@@ -238,6 +238,14 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
         verdict = "ESCALATE"
     elif dcl["total_hard_failures"] > 0:
         verdict = "BLOCKED"
+    elif not dcl.get("scope_started", True):
+        # THE WEAKENING GUARD. An unstarted scope produces no hard failures, so
+        # without this it would fall through to the model tier and could reach
+        # PASS — an empty directory becoming a route to a clean verdict, which
+        # is the one outcome worse than the alarming message this replaces.
+        # ESCALATE is honest: nothing was audited, and a person owns that.
+        verdict = "ESCALATE"
+        integrity = integrity if integrity != "OK" else "NOTHING_AUDITED"
     elif invalid:
         verdict = "ESCALATE"
         integrity = integrity if integrity != "OK" else "INVALID_REPLY"
