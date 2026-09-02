@@ -1105,7 +1105,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         _emit(out, args.json,
               "SIGNATURE INVALID  the receipt or its signature was altered; "
               "refusing to admit")
-        return EXIT_DENIED
+        return EXIT_INTEGRITY
     if args.admit:
         out.update(admit_receipt(receipt, _state(cfg), evidence, cfg=cfg))
     sig_line = ("\nSIGNED  " + sig["keyid"] + "  verifiable offline with the "
@@ -1657,6 +1657,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     _step(1, total, "deterministic checks")
     files, notes = materialise(cfg.root, sha, "", only=science)
     task = _committed_task(cfg, sha)
+    # Additive: the build loop's repair screen hands its cautions to the audit
+    # as notes (repair_guard); a manual `crossaudit run` has none.
+    notes = [*notes, *getattr(args, "extra_notes", ())]
     outcome = run_audit(cfg=cfg, sha=sha, round_=cycle["round"], files=files, notes=notes,
                         constitution=const_text, constitution_commit=const_commit,
                         task=task,

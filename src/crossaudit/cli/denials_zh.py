@@ -278,6 +278,8 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("repair.enabled must be true or false", "repair.enabled 必须是 true 或 false"),
     ("repair.max_changed_lines must be an integer from 1 to 10000",
      "repair.max_changed_lines 必须是 1 到 10000 之间的整数"),
+    ("repair.mode must be caution or refuse",
+     "repair.mode 必须是 caution（提醒）或 refuse（拒绝）"),
     # ----------------------------------------------------- connections.py
     ("the official Codex runtime returned no safe login URL",
      "官方 Codex 运行时没有返回安全的登录 URL"),

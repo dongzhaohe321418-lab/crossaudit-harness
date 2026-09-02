@@ -1,12 +1,14 @@
-"""The build loop's repair guard, driven through run_loop (D148 slice D).
+"""The build loop's repair screen, driven through run_loop (D148 slice D).
 
 Round 1 commits an incomplete increment (no metadata), so the audit BLOCKS on
-the deterministic tier and the next round is a repair round. What that round
-is allowed to do is the subject here. Each test names its D10 mutation.
+the deterministic tier and round 2 is a repair round. What that round may do,
+what the auditor is told about it, and what is refused is the subject here.
+Each test names its D10 mutation.
 """
 from __future__ import annotations
 
 import dataclasses
+import json
 
 import pytest
 
@@ -23,14 +25,16 @@ CALC_DEFENSIVE = ("def run():\n    try:\n        return compute()\n"
                   "    except Exception:\n        pass\n")
 CALC_FIXED = "def run():\n    return compute(strict=True)\n"
 ROUND_ONE = {SUMMARY: "attempt one\n", CALC: CALC_OK}
+PNG = "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00"
+CAUTIONS = (f"{CALC} adds a catch-all `except` that swallows every error",
+            f"{CALC} adds an error handler that does nothing")
 
 
 def _drive(cfg, science, monkeypatch, rounds, *, task="produce the experiment"):
     """Run the loop with a scripted generator; return (code, events, calls).
 
-    Each call records what the generator was shown and what the tree looked
-    like at that moment: the findings text, calc.py's bytes, and the staged
-    paths — so a rollback can be asserted mid-run, not inferred afterwards.
+    Each generator call records what it was shown and what the tree looked
+    like at that moment, so a rollback is asserted mid-run, not inferred.
     """
     from crossaudit import generator as generator_mod
     from crossaudit.cli import build as build_mod
@@ -47,7 +51,12 @@ def _drive(cfg, science, monkeypatch, rounds, *, task="produce the experiment"):
         })
         return generator_mod.Work(summary="revision", files=next(script))
 
-    monkeypatch.setattr(build_mod, "_generator_complete", lambda *_a, **_k: object())
+    # A route-bearing completer, so commits carry the CrossAudit-Generator
+    # trailer that marks rendered documents as CrossAudit's own (re-render).
+    from types import SimpleNamespace
+    completer = SimpleNamespace(last_route={"vendor": "openai", "provider": "fake",
+                                            "model": "scripted", "fallback": False})
+    monkeypatch.setattr(build_mod, "_generator_complete", lambda *_a, **_k: completer)
     monkeypatch.setattr(build_mod.gen_mod, "generate", fake_generate)
     monkeypatch.chdir(science)
     events = []
@@ -65,160 +74,233 @@ def _cycle(cfg) -> dict:
     return next(iter(cycles.values()))
 
 
-def test_a_defensive_repair_is_refused_rolled_back_and_explained(
+def _ledger_notes(cfg) -> list[str]:
+    notes: list[str] = []
+    for path in (cfg.root / cfg.ledger_dir).glob("*/checks.json"):
+        notes.extend(json.loads(path.read_text()).get("notes", []))
+    return notes
+
+
+def _ledger_reports(cfg) -> str:
+    return "\n".join(p.read_text() for p in (cfg.root / cfg.ledger_dir).glob("*/report.md"))
+
+
+# ------------------------------------------------------------ caution mode
+
+def test_a_defensive_repair_is_committed_with_a_caution_the_auditor_sees(
         science, cfg, transcripts, monkeypatch):
-    """(a) Mutation: comment out the guard call in run_loop -> the except
-    Exception lands in git history and no repair_refused event is emitted."""
+    """Default mode. Mutation: comment out the guard call -> no repair_caution
+    event; drop the extra_notes line in main.py -> the note never reaches
+    the ledger's checks.json (the auditor's dcl input)."""
     code, events, calls = _drive(
-        cfg, science, monkeypatch,
-        [ROUND_ONE, {CALC: CALC_DEFENSIVE}, {CALC: CALC_FIXED}])
+        cfg, science, monkeypatch, [ROUND_ONE, {CALC: CALC_DEFENSIVE}, {CALC: CALC_FIXED}])
 
     kinds = _kinds(events)
-    assert kinds.count("repair_refused") == 1
-    refused = next(e for e in events if e.kind == "repair_refused")
-    assert "calc.py adds a catch-all `except`" in refused.detail
-    # Files and index were rolled back before the generator was asked again.
-    assert len(calls) == 3
-    assert calls[2]["calc"] == CALC_OK and calls[2]["staged"] == ""
-    # The next prompt reads as: what stopped, why, what happens next.
-    third = calls[2]["findings"]
-    assert third.startswith("[BLOCKER] The repair guard refused the last revision:")
-    assert f"- {CALC} adds a catch-all `except` that swallows every error" in third
-    assert "The previous attempt was rolled back; make a smaller change" in third
-    # The defensive bytes never reached history; the honest round-3 fix did.
-    log = git("log", "-p", cwd=science)
-    assert "except Exception" not in log and "strict=True" in log
-    assert code == EXIT_ESCALATED          # round budget spent on the DCL blocker
-    assert _cycle(cfg).get("escalation_cause") != "repair_refused"
+    assert "repair_refused" not in kinds and kinds.count("repair_caution") == 1
+    caution = next(e for e in events if e.kind == "repair_caution")
+    assert caution.detail == "; ".join(CAUTIONS)
+    assert "except Exception" in git("log", "-p", cwd=science)       # committed, not rolled back
+    # The auditor was told, through the deterministic notes it reads.
+    for sentence in CAUTIONS:
+        assert f"revision caution: {sentence}" in _ledger_notes(cfg)
+    # ...and the note is a note, not an input-bound blocker (CA-META-004).
+    assert "CA-META-004" not in _ledger_reports(cfg)
+    # Round 3 carried no caution of its own: the note is per revision.
+    assert _ledger_notes(cfg).count(f"revision caution: {CAUTIONS[0]}") == 1
+    assert code == EXIT_ESCALATED and _cycle(cfg).get("escalation_cause") != "repair_refused"
 
 
-def test_a_second_refusal_stops_the_run_with_the_repair_refused_cause(
+def test_a_docs_only_revision_using_the_word_fallback_has_no_caution(
         science, cfg, transcripts, monkeypatch):
-    """(b) One free retry, then a clear stop the Decision Center can explain.
-
-    max_rounds is raised to 5 so the stop is provably the second refusal and
-    not the round budget. Mutation: never set repair_refusal_used -> the loop
-    burns all five rounds re-asking.
-    """
-    five = dataclasses.replace(cfg, max_rounds=5)
-    code, events, calls = _drive(
-        five, science, monkeypatch,
-        [ROUND_ONE, {CALC: CALC_DEFENSIVE}, {CALC: CALC_DEFENSIVE},
-         {CALC: CALC_FIXED}, {CALC: CALC_FIXED}])
-
-    assert code == EXIT_ESCALATED
-    assert _kinds(events).count("repair_refused") == 2
-    assert len(calls) == 3                 # round 4 was never asked for
-    cycle = _cycle(five)
-    assert cycle["status"] == "ESCALATED"
-    assert cycle["escalation_cause"] == "repair_refused"
-    assert cycle["escalation_kind"] == "audit"
-    assert cycle["escalation_reason"].startswith(
-        "the automatic repair was refused in round 3 because "
-        f"{CALC} adds a catch-all `except`")
-    # Nothing of the refused attempts survives in the tree, index or history.
-    assert (science / CALC).read_text() == CALC_OK
-    assert git("diff", "--cached", "--name-only", cwd=science) == ""
-    assert "except Exception" not in git("log", "-p", cwd=science)
-
-
-def test_a_docs_only_revision_using_the_word_fallback_is_not_refused(
-        science, cfg, transcripts, monkeypatch):
-    """(c) D121: honest prose is never reddened.
-
-    Mutation: add ".md" to CODE_SUFFIXES -> this revision is refused.
-    """
+    """D121. Mutation: classify .md as code -> a caution appears."""
     prose = "We skip the retry and fallback to the plan.\n"
     code, events, calls = _drive(
-        cfg, science, monkeypatch,
-        [ROUND_ONE, {SUMMARY: prose}, {SUMMARY: "attempt three\n"}])
-    assert "repair_refused" not in _kinds(events)
-    assert prose.strip() in git("log", "-p", cwd=science)
-    assert "revision (round 2)" in git("log", "--format=%s", cwd=science)
+        cfg, science, monkeypatch, [ROUND_ONE, {SUMMARY: prose}, {SUMMARY: "attempt three\n"}])
+    assert not {"repair_refused", "repair_caution"} & set(_kinds(events))
+    assert _ledger_notes(cfg) == [] and prose.strip() in git("log", "-p", cwd=science)
 
 
-def test_repair_enabled_false_disables_the_guard(science, cfg, transcripts, monkeypatch):
-    """(d) The dial is honoured. Mutation: ignore cfg.repair.enabled ->
-    the defensive revision is refused here too."""
-    off = dataclasses.replace(cfg, repair=RepairPolicy(enabled=False))
+def test_an_honest_small_fix_passes_with_no_caution(science, cfg, transcripts, monkeypatch):
     code, events, calls = _drive(
-        off, science, monkeypatch,
-        [ROUND_ONE, {CALC: CALC_DEFENSIVE}, {CALC: CALC_FIXED}])
-    assert "repair_refused" not in _kinds(events)
-    assert "except Exception" in git("log", "-p", cwd=science)
-
-
-def test_an_honest_small_fix_passes_the_guard_and_commits(
-        science, cfg, transcripts, monkeypatch):
-    """(e) The guard exists to stop hiding, not to block honest edits."""
-    code, events, calls = _drive(
-        cfg, science, monkeypatch,
-        [ROUND_ONE, {CALC: CALC_FIXED}, {SUMMARY: "attempt three\n"}])
-    assert "repair_refused" not in _kinds(events)
+        cfg, science, monkeypatch, [ROUND_ONE, {CALC: CALC_FIXED}, {SUMMARY: "attempt three\n"}])
+    assert not {"repair_refused", "repair_caution"} & set(_kinds(events))
     assert "strict=True" in git("log", "-p", cwd=science)
     assert "revision (round 2)" in git("log", "--format=%s", cwd=science)
 
 
-def _report_naming(artifact: str) -> str:
-    return ("# Audit Report\n\n## Deterministic findings\n\nNone.\n\n"
-            "## Model findings\n\n"
-            f"### [BLOCKER] CA-DATA-002 — {artifact}\n"
-            "The requested correction is still absent.\n")
-
-
-def test_a_repair_outside_the_named_artifacts_is_refused_by_name(
-        science, cfg, transcripts, monkeypatch):
-    """A model BLOCKER names SUMMARY.md; the repair edits calc.py instead.
-
-    Mutation: derive revision_scope from DCL findings only -> a model-named
-    scope is never enforced and calc.py commits.
-    """
-    from crossaudit.cli import build as build_mod
-    monkeypatch.setattr(build_mod, "_last_report", lambda _cfg: _report_naming(SUMMARY))
+def test_repair_enabled_false_disables_the_screen(science, cfg, transcripts, monkeypatch):
+    """Mutation: ignore cfg.repair.enabled -> a caution appears."""
+    off = dataclasses.replace(cfg, repair=RepairPolicy(enabled=False))
     code, events, calls = _drive(
-        cfg, science, monkeypatch,
-        [ROUND_ONE, {CALC: CALC_FIXED}, {SUMMARY: "attempt three\n"}])
-    refused = [e for e in events if e.kind == "repair_refused"]
-    assert len(refused) == 1
-    assert refused[0].detail == (
-        f"{CALC} is outside what the last audit asked to change (allowed: {SUMMARY})")
-    assert "strict=True" not in git("log", "-p", cwd=science)
-
-
-def test_a_basename_only_model_artifact_still_admits_the_honest_edit(
-        science, cfg, transcripts, monkeypatch):
-    """D121: a model that writes "SUMMARY.md" for experiments/demo/SUMMARY.md
-    must not get an honest edit of that file refused for its spelling.
-
-    Mutation: make _resolve_scope exact-match only -> refused.
-    """
-    from crossaudit.cli import build as build_mod
-    monkeypatch.setattr(build_mod, "_last_report", lambda _cfg: _report_naming("SUMMARY.md"))
-    code, events, calls = _drive(
-        cfg, science, monkeypatch,
-        [ROUND_ONE, {SUMMARY: "attempt two\n"}, {SUMMARY: "attempt three\n"}])
-    assert "repair_refused" not in _kinds(events)
-    assert "revision (round 2)" in git("log", "--format=%s", cwd=science)
+        off, science, monkeypatch, [ROUND_ONE, {CALC: CALC_DEFENSIVE}, {CALC: CALC_FIXED}])
+    assert not {"repair_refused", "repair_caution"} & set(_kinds(events))
+    assert _ledger_notes(off) == []
 
 
 def test_round_one_is_never_a_repair_round(science, cfg, transcripts, monkeypatch):
-    """The guard screens repairs of a BLOCKED audit, not first drafts.
-
-    Mutation: initialise revision_scope to set() -> round 1 is refused.
-    """
+    """Mutation: initialise repair_round = True -> a round-1 caution."""
     code, events, calls = _drive(
         cfg, science, monkeypatch,
         [{SUMMARY: "attempt one\n", CALC: CALC_DEFENSIVE},
          {SUMMARY: "attempt two\n"}, {SUMMARY: "attempt three\n"}])
-    assert _kinds(events).count("repair_refused") == 0
-    assert "except Exception" in git("log", "-p", cwd=science)
+    assert not {"repair_refused", "repair_caution"} & set(_kinds(events))
 
+
+# -------------------------------------------------------- hard refusals
+
+def test_a_model_written_binary_is_refused_rolled_back_and_the_findings_kept(
+        science, cfg, transcripts, monkeypatch):
+    """Mutation: drop the binary screen -> the PNG lands in history; replace
+    `findings` instead of appending -> the DCL cause vanishes from round 3's
+    prompt."""
+    code, events, calls = _drive(
+        cfg, science, monkeypatch,
+        [ROUND_ONE, {"experiments/demo/fig.png": PNG, CALC: CALC_FIXED}, {CALC: CALC_FIXED}])
+
+    assert _kinds(events).count("repair_refused") == 1
+    refused = next(e for e in events if e.kind == "repair_refused")
+    assert refused.detail == ("experiments/demo/fig.png is a binary file written directly by "
+                              "the generator, which cannot be reviewed line by line")
+    # Files and index were rolled back before the generator was asked again.
+    assert calls[2]["calc"] == CALC_OK and calls[2]["staged"] == ""
+    assert not (science / "experiments/demo/fig.png").exists()
+    # Round 3's prompt: the audit's own findings first, then the refusal.
+    third = calls[2]["findings"]
+    assert "metadata.yml" in third                                   # the DCL cause survives
+    assert third.index("metadata.yml") < third.index("[BLOCKER] The repair guard refused")
+    assert "- experiments/demo/fig.png is a binary file" in third
+    assert "The previous attempt was rolled back." in third
+    assert "fig.png" not in git("log", "--name-only", cwd=science)
+    assert "strict=True" in git("log", "-p", cwd=science)            # the honest retry committed
+
+
+def test_a_second_refusal_stops_the_run_with_the_repair_refused_cause(
+        science, cfg, transcripts, monkeypatch):
+    """One free retry, then a clear stop. max_rounds 5 proves the stop is the
+    second refusal, not the budget. Mutation: never set repair_refusal_used
+    -> the loop burns all five rounds."""
+    five = dataclasses.replace(cfg, max_rounds=5)
+    bad = {"experiments/demo/fig.png": PNG}
+    code, events, calls = _drive(five, science, monkeypatch,
+                                 [ROUND_ONE, bad, bad, {CALC: CALC_FIXED}, {CALC: CALC_FIXED}])
+    assert code == EXIT_ESCALATED and len(calls) == 3
+    assert _kinds(events).count("repair_refused") == 2
+    cycle = _cycle(five)
+    assert cycle["status"] == "ESCALATED" and cycle["escalation_kind"] == "audit"
+    assert cycle["escalation_cause"] == "repair_refused"
+    assert cycle["escalation_reason"].startswith(
+        "the automatic repair was refused in round 3 because experiments/demo/fig.png is a binary")
+    assert (science / CALC).read_text() == CALC_OK
+    assert git("diff", "--cached", "--name-only", cwd=science) == ""
+
+
+def test_a_file_outside_the_audited_directories_is_refused(
+        science, cfg, transcripts, monkeypatch):
+    """gen_mod.apply already confines the generator to scope.dirs, so the
+    screen is reached only by something else staging a stray path; that is
+    simulated by wrapping _stage_generated. Mutation: drop the scope screen
+    -> the stray file is committed in round 2."""
+    from crossaudit.cli import build as build_mod
+
+    scoped = dataclasses.replace(cfg, scope_dirs=["experiments"])
+    (science / "notes").mkdir()
+    (science / "notes/stray.md").write_text("not part of the increment\n")
+    real_stage = build_mod._stage_generated
+    seen = {"n": 0}
+
+    def staging_a_stray(cfg_, written):
+        seen["n"] += 1
+        if seen["n"] >= 2:
+            git("add", "--", "notes/stray.md", cwd=science)
+        return real_stage(cfg_, written)
+
+    monkeypatch.setattr(build_mod, "_stage_generated", staging_a_stray)
+    code, events, calls = _drive(scoped, science, monkeypatch,
+                                 [ROUND_ONE, {CALC: CALC_FIXED}, {CALC: CALC_FIXED}])
+    refused = [e for e in events if e.kind == "repair_refused"]
+    assert refused and refused[0].detail == (
+        "notes/stray.md is outside the audited directories (experiments); only files inside "
+        "them may change — if the fix needs another file, say so in `notes`")
+    assert "stray" not in git("log", "--name-only", cwd=science)
+    assert _cycle(scoped)["escalation_cause"] == "repair_refused"
+
+
+# ------------------------------------------------------------ refuse mode
+
+def test_refuse_mode_rolls_back_a_defensive_repair_and_keeps_the_findings(
+        science, cfg, transcripts, monkeypatch):
+    """Mutation: ignore cfg.repair.mode -> committed with a caution instead."""
+    strict = dataclasses.replace(cfg, repair=RepairPolicy(mode="refuse"))
+    code, events, calls = _drive(
+        strict, science, monkeypatch, [ROUND_ONE, {CALC: CALC_DEFENSIVE}, {CALC: CALC_FIXED}])
+    refused = [e for e in events if e.kind == "repair_refused"]
+    assert len(refused) == 1 and refused[0].detail == "; ".join(CAUTIONS)
+    assert "repair_caution" not in _kinds(events)
+    assert calls[2]["calc"] == CALC_OK and calls[2]["staged"] == ""
+    assert "metadata.yml" in calls[2]["findings"] and f"- {CAUTIONS[0]}" in calls[2]["findings"]
+    assert "except Exception" not in git("log", "-p", cwd=science)
+    assert "strict=True" in git("log", "-p", cwd=science)
+
+
+# ------------------------------------------- surviving mutations M9 / M12
+
+def test_a_pdf_from_the_local_document_export_is_not_a_model_written_binary(
+        science, cfg, transcripts, monkeypatch):
+    """M9. The export task makes CrossAudit render a PDF from the model's
+    Markdown source; that binary is in round 2's diff and must pass. A
+    rendered-only increment has no failing deterministic check, so the audit
+    is faked as BLOCKED (the pattern test_document_export uses) to make round
+    2 a repair round. Mutation: `locally_rendered = set()` in run_loop ->
+    refused."""
+    from crossaudit.cli import build as build_mod
+    from crossaudit.document_export import SOURCE_SUFFIX, export_instructions
+    from crossaudit.errors import EXIT_BLOCKED
+
+    from .test_document_export import SOURCE
+
+    def fake_audit(_args):
+        sha = git("rev-parse", "HEAD", cwd=science)
+        store = StateStore(cfg.root / cfg.state_dir / "state.json")
+        cycle = store.open_or_advance(cfg.science_repo, sha, None)
+        store.record_verdict(cycle["cycle_id"], sha, "BLOCKED", "receipt", cfg.max_rounds)
+        return EXIT_BLOCKED
+
+    monkeypatch.setattr(build_mod, "cmd_run", fake_audit)
+    scoped = dataclasses.replace(cfg, scope_dirs=["experiments"])
+    task = "Write a verified report" + export_instructions("pdf")
+    source = f"experiments/report{SOURCE_SUFFIX}"
+    code, events, calls = _drive(
+        scoped, science, monkeypatch,
+        [{source: SOURCE}, {source: SOURCE + "\n\nA second paragraph.\n"},
+         {source: SOURCE + "\n\nA third paragraph.\n"}], task=task)
+    assert "repair_refused" not in _kinds(events)
+    names = git("log", "--format=%s", "--name-only", cwd=science)
+    assert names.count("experiments/report.pdf") == 3 and "revision (round 2)" in names
+
+
+def test_the_diff_size_cap_reports_unscreened_files_instead_of_hiding_them(
+        science, cfg, transcripts, monkeypatch):
+    """M12. With the cap lowered, a long SUMMARY.md sorts before calc.py in
+    the diff and pushes it past the cap. Mutation: drop the `[:_MAX_SCAN_BYTES]`
+    slice -> calc.py is screened normally and the unscreened caution never
+    appears."""
+    from crossaudit.cli import build as build_mod
+
+    monkeypatch.setattr(build_mod, "_MAX_SCAN_BYTES", 4096)
+    long_prose = "".join(f"paragraph {i} of an honest but long report\n" for i in range(300))
+    code, events, calls = _drive(
+        cfg, science, monkeypatch,
+        [ROUND_ONE, {SUMMARY: long_prose, CALC: CALC_DEFENSIVE}, {CALC: CALC_FIXED}])
+    caution = next(e for e in events if e.kind == "repair_caution")
+    assert caution.detail == ("1 staged file(s) lay beyond the review size limit and were "
+                              f"not screened: {CALC}")
+    assert "repair_refused" not in _kinds(events)
+
+
+# ----------------------------------------------------------- config knob
 
 def test_init_then_load_accepts_the_scaffolded_repair_block(tmp_path, monkeypatch):
-    """The scaffold's repair: block is a key config knows.
-
-    Mutation: drop "repair" from _ALLOWED_TOP -> load refuses its own template.
-    """
+    """Mutation: drop "repair" from _ALLOWED_TOP -> load refuses its own template."""
     import argparse
 
     from crossaudit.cli import main
@@ -233,12 +315,10 @@ def test_init_then_load_accepts_the_scaffolded_repair_block(tmp_path, monkeypatc
         auditor_vendor="anthropic", auditor_model="claude-opus-4",
         generator_vendor="openai", generator_model="gpt-5"))
     text = (project / "crossaudit.yml").read_text()
-    assert "repair:\n  enabled: true\n  max_changed_lines: 200\n" in text
+    assert "repair:\n  enabled: true\n  mode: caution\n  max_changed_lines: 200\n" in text
     assert load(project / "crossaudit.yml").repair == RepairPolicy(
-        enabled=True, max_changed_lines=200)
+        enabled=True, mode="caution", max_changed_lines=200)
 
-
-# ------------------------------------------------------------ config knob
 
 def _load_with(science, block: str):
     from crossaudit.config import load
@@ -249,22 +329,23 @@ def _load_with(science, block: str):
 
 
 def test_repair_config_defaults_when_absent(cfg):
-    assert cfg.repair == RepairPolicy(enabled=True, max_changed_lines=200)
+    assert cfg.repair == RepairPolicy(enabled=True, mode="caution", max_changed_lines=200)
 
 
-def test_repair_config_reads_both_knobs(science):
-    loaded = _load_with(science, "repair:\n  enabled: false\n  max_changed_lines: 50\n")
-    assert loaded.repair == RepairPolicy(enabled=False, max_changed_lines=50)
+def test_repair_config_reads_all_knobs(science):
+    loaded = _load_with(science, "repair:\n  enabled: false\n  mode: refuse\n  max_changed_lines: 50\n")
+    assert loaded.repair == RepairPolicy(enabled=False, mode="refuse", max_changed_lines=50)
 
 
 @pytest.mark.parametrize("block,message", [
     ("repair: 3\n", "repair must be a mapping"),
     ("repair:\n  budget: 1\n", "repair: unknown keys ['budget']"),
     ("repair:\n  enabled: yes please\n", "repair.enabled must be true or false"),
+    ("repair:\n  mode: loud\n", "repair.mode must be caution or refuse"),
+    ("repair:\n  mode: true\n", "repair.mode must be caution or refuse"),
     ("repair:\n  max_changed_lines: 0\n", "repair.max_changed_lines must be an integer from 1 to 10000"),
     ("repair:\n  max_changed_lines: 10001\n", "repair.max_changed_lines must be an integer from 1 to 10000"),
     ("repair:\n  max_changed_lines: true\n", "repair.max_changed_lines must be an integer from 1 to 10000"),
-    ("repair:\n  max_changed_lines: many\n", "repair.max_changed_lines must be an integer from 1 to 10000"),
 ])
 def test_repair_config_refuses_bad_values_with_the_config_error(science, block, message):
     """Mutation: accept bool for max_changed_lines -> `true` loads as 1."""
