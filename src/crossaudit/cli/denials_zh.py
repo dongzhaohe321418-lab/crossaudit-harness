@@ -829,6 +829,18 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("all configured {} provider routes failed. {}",
      "已配置的所有 {} 供应商路由都失败了。{}"),
     ("{} credential ${} is not configured", "未配置 {} 凭据 ${}"),
+    # cli/build.py wraps the round's provider refusal for the ledger and the
+    # Decision Center: "<role> provider failure in round N: <refusal>". The
+    # keyless first run, spelled out in full so it can never be answered by
+    # a generic template; then the composite prefix for every other refusal.
+    ("generator provider failure in round {}: all configured generator provider "
+     "routes failed. {} — {} credential ${} is not configured",
+     "生成者在第 {} 轮失败：已配置的所有生成者供应商路由都失败了。{} — 未配置 {} 凭据 ${}"),
+    ("auditor provider failure in round {}: all configured auditor provider "
+     "routes failed. {} — {} credential ${} is not configured",
+     "审计者在第 {} 轮失败：已配置的所有审计者供应商路由都失败了。{} — 未配置 {} 凭据 ${}"),
+    ("generator provider failure in round {}: {}", "生成者在第 {} 轮失败：{}"),
+    ("auditor provider failure in round {}: {}", "审计者在第 {} 轮失败：{}"),
     # ----------------------------------------------------- receipt/build.py
     # Raised through a constant (`f"{EVIDENCE_BROKEN_REASON}: {reason}"`), so
     # the static reader sees only `{}: {}`; this is the sentence a person meets.
@@ -1398,4 +1410,6 @@ COMPOSITES: frozenset[str] = frozenset({
     "all configured auditor provider routes failed. {}",
     "all configured {} provider routes failed. {}",
     "provider failure left this task waiting for a person: {}",
+    "generator provider failure in round {}: {}",
+    "auditor provider failure in round {}: {}",
 })
