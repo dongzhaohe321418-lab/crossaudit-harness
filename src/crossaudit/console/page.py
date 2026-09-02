@@ -4678,8 +4678,8 @@ function openResolution(value,action='',sha=''){
     :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
   document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
     ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
-  // A refused repair leads with the guard's own sentence — it names the file
-  // and the pattern — rather than the round-numbered wrapper around it.
+  // A refused repair leads with the sentence the repair guard wrote (it names
+  // the file and the pattern) rather than the round-numbered wrapper around it.
   document.getElementById('resolution-limit-copy').textContent=(formatCause
     ?'The reply was corrected once automatically and still failed to parse. Technical detail: '
     :noProgress?'One corrective retry was already made automatically. Technical detail: ':'')
@@ -5727,7 +5727,7 @@ function artifactList(items,status,sha){
     +'<button type="button" class="output-more" data-open-artifacts>Open Files panel</button>'
     +'</div></div></div></section>';
 }
-// D148. What a finding rests on, from the receipt's evidence record: a
+// D148. What a finding rests on, from the evidence record in the receipt: a
 // deterministic check verified it, or the auditor raised it and nothing has
 // reproduced it yet. Shown only where findings are already listed; a receipt
 // without the record renders nothing here, and no route or state word is ever
