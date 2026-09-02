@@ -543,6 +543,9 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .review-details>summary::after{content:'';width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform var(--dur-base)}
 .review-details[open]>summary::after{transform:rotate(45deg)}
 .review-details .review-record{margin-top:var(--sp-2)}
+/* R4. One forecast line at task start and in the run card header. */
+.run-forecast,.turn-forecast{color:var(--text-3);font-size:var(--fs-caption)}
+.turn-forecast{margin-top:6px}
 /* .dt — a reusable clean data table (Claude-Code-style: muted header, hairline
    rows, hover, generous rows). Used for Skills, Connectors/MCP, and other lists. */
 .dt{width:100%;border-collapse:collapse;margin-top:6px;font-size:var(--fs-body)}
@@ -3645,6 +3648,7 @@ const ZH={
   ,"must fix":"必须修改","suggestion":"建议"
   ,"verified by a check":"已由检查验证","raised by the auditor":"由审计者提出","raised by the auditor, verified":"由审计者提出，已验证"
   ,"Details":"详情","Human":"人工"
+  ,"First run here — no estimate yet":"首次运行，暂无预估"
 };
 const ZH_PATTERNS=[
   // D148 repair guard. Every reason is COMPOSED from a path, a count or a
@@ -3776,6 +3780,8 @@ const ZH_PATTERNS=[
   ,[/^round (\d+)\/(\d+)$/i,m=>'第 '+m[1]+'/'+m[2]+' 轮']
   ,[/^(\d+) findings?$/i,m=>m[1]+' 项发现']
   ,[/^(\d+) issues?$/i,m=>m[1]+' 个问题']
+  ,[/^Usually (\d+)–(\d+) min( · about \$[\d.]+)?$/,m=>'通常 '+m[1]+'–'+m[2]+' 分钟'+(m[3]?' · 约 '+m[3].slice(9):'')]
+  ,[/^Usually about (\d+) min( · about \$[\d.]+)?$/,m=>'通常约 '+m[1]+' 分钟'+(m[2]?' · 约 '+m[2].slice(9):'')]
   ,[/^(\d+) deterministic checks? passed$/i,m=>m[1]+' 项确定性检查已通过']
   ,[/^(\d+) files$/i,m=>m[1]+' 个文件']
   ,[/^Waiting for the provider · heartbeat (.+)$/,m=>'等待供应商 · 心跳 '+zhValue(m[1])]
@@ -5838,6 +5844,20 @@ function friendlyModel(value){const raw=String(value||'').trim();if(!raw)return 
     if(/^v\d+$/i.test(tk)){words.push('V'+tk.slice(1));continue;}
     words.push(MODEL_FAMILY[tk.toLowerCase()]||(tk.charAt(0).toUpperCase()+tk.slice(1)));}
   return words.join(' ')||id;}
+// R4. What this task will probably take, from the completed runs of this
+// project (usage.run_forecast): the middle half of wall times when three or more
+// runs exist, the median alone below that, and the median API value. One
+// line; no new element. Localised here because the numbers are composed.
+function forecastText(d){const f=d&&d.usage&&d.usage.forecast;const zh=currentLocale==='zh';
+  if(!f||!f.runs||!f.seconds)return zh?'首次运行，暂无预估':'First run here — no estimate yet';
+  const mins=x=>Math.max(1,Math.round(Number(x)/60));
+  const lo=mins(f.seconds.p25),hi=mins(f.seconds.p75),mid=mins(f.seconds.p50);
+  const ranged=f.runs>=3&&lo!==hi;
+  const time=zh?(ranged?'通常 '+lo+'–'+hi+' 分钟':'通常约 '+mid+' 分钟')
+    :(ranged?'Usually '+lo+'–'+hi+' min':'Usually about '+mid+' min');
+  const cost=(f.usd&&f.usd.p50!=null)?(zh?' · 约 ':' · about ')+formatUsd(f.usd.p50):'';
+  return time+cost;}
+function forecastLine(d){return '<span class="run-forecast">'+esc(forecastText(d))+'</span>';}
 function turn(m,d){
   if(m.kind === 'you'){
     const explicit=m.routing_mode==='explicit';const recipient=m.addressed_to||m.lane;
@@ -5913,7 +5933,8 @@ function optimisticTurn(text, queued){
     + '<article class="turn"><div class="turn-main">'
     + '<div class="turn-meta"><span class="role-mark generator" aria-hidden="true">G</span>'
     + '<b>Generator</b></div><div class="turn-body"><span class="thinking-dots" aria-label="'
-    + (currentLocale==='zh'?'处理中':'Working') + '"><i></i><i></i><i></i></span></div></div></article>';
+    + (currentLocale==='zh'?'处理中':'Working') + '"><i></i><i></i><i></i></span>'
+    + '<div class="turn-forecast">' + esc(forecastText(lastState)) + '</div></div></div></article>';
 }
 function modelTag(value){const raw=String(value||'');if(!raw)return '';
   const tail=raw.split(':').pop()||raw;
@@ -6128,7 +6149,8 @@ function runCard(d){
     + '<span>Round <strong>' + esc(round) + '</strong> of ' + esc(roundLimit) + '</span>'
     + '<span><strong>' + reached + '</strong> of ' + pipeline.length + ' steps done</span>'
     + '<span>' + (p ? elapsedText(p.elapsed) : 'Ledger snapshot') + '</span>'
-    + (p&&p.queued&&!p.finished?'<span><strong>'+esc(p.queued)+'</strong> queued</span>':'') + '</div>'
+    + (p&&p.queued&&!p.finished?'<span><strong>'+esc(p.queued)+'</strong> queued</span>':'')
+    + (live ? forecastLine(d) : '') + '</div>'
     + '<div class="run-handoff" aria-hidden="true"><i></i></div>'
     + '<div class="run-meter" role="progressbar" aria-label="Audit steps done" aria-valuemin="0" '
     + 'aria-valuemax="100" aria-valuenow="' + meter + '"><i style="width:' + meter + '%"></i></div></div>'
