@@ -40,7 +40,6 @@ from .. import skills as skills_mod
 from ..config import Config, heterogeneity, load
 from ..controller import StateStore
 from ..dcl import describe as describe_checks
-from ..dispute import parse_findings
 from ..errors import (EXIT_ESCALATED, EXIT_OK, ConfigDenial, Denial,
                       ProviderDenial, park_escalation_kind)
 from ..file_identity import AppliedFiles
@@ -382,40 +381,6 @@ def _last_report(cfg: Config) -> str:
     return reports[-1].read_text(encoding="utf-8") if reports else ""
 
 
-#: Artifacts a finding names when it means the whole increment rather than
-#: one file (the DCL's "increment", the auditor's invalid-reply placeholder).
-_WHOLE_INCREMENT = frozenset({"increment", "?", "invalid Auditor reply"})
-
-
-def _blocker_scope(report: str) -> set[str]:
-    """The artifacts every [BLOCKER] in ``report`` names — the repair scope.
-
-    Deterministic and model findings alike: a model blocker is exactly where a
-    defensive "fix" tends to appear. Empty when any finding names the whole
-    increment, which the guard reads as "every staged file is in scope".
-    """
-    artifacts = [f.artifact for f in parse_findings(report) if f.severity == "BLOCKER"]
-    if any(a in _WHOLE_INCREMENT for a in artifacts):
-        return set()
-    return set(artifacts)
-
-
-def _resolve_scope(scope: set[str], staged: list[str]) -> set[str]:
-    """The staged paths ``scope`` names, matched exactly or by path suffix.
-
-    A DCL finding carries the materialised relative path; a model finding may
-    carry only the file's basename. Both resolve to the staged path so an
-    honest edit to the named file is never refused for its spelling (D121).
-    An empty scope means the whole increment: every staged path is allowed.
-    """
-    if not scope:
-        return set(staged)
-    resolved = {path for path in staged
-                if any(path == name or path.endswith("/" + name.lstrip("/"))
-                       for name in scope)}
-    return resolved | set(scope)
-
-
 class _Args:
     """The argument shape `cmd_run` expects, when the loop calls it rather than a user."""
 
@@ -629,12 +594,13 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     #: structured cause instead of a bare sentence.
     no_progress_retry_used = False
     no_progress_stop = False
-    #: The artifacts the last BLOCKED audit named, model and deterministic
-    #: findings alike, so the repair guard can hold the next revision to them
-    #: (D148 slice D). None: not a repair round (round 1, or no audit has
-    #: blocked since). An empty set: a finding named the whole increment, so
-    #: every staged file is in scope. Re-derived by every audit.
-    revision_scope: set[str] | None = None
+    #: Whether the next revision repairs a BLOCKED audit (D148 slice D): the
+    #: repair screen runs only then. False on round 1 and after every audit
+    #: until it blocks again.
+    repair_round = False
+    #: What the screen flagged in this round's revision, handed to the next
+    #: audit as deterministic notes so the auditor model can weigh them.
+    revision_cautions: list[str] = []
     #: One free re-ask after a refused repair (self-heal before a human is
     #: bothered); a second refusal stops with the structured cause
     #: "repair_refused" (the string the Decision Center keys on — stable).
@@ -856,6 +822,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             continue
 
         written: AppliedFiles | None = None
+        revision_cautions = []
         try:
             document_export.validate_export_work(cfg.root, work.files, task)
             written = gen_mod.apply(work, cfg.root, cfg.scope_dirs)
@@ -942,37 +909,51 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                 termination_reason = (
                     f"generator revision would have committed {secret} in round {round_no}")
                 break
-            # A repair round may not make the finding disappear instead of
-            # fixing it (D148 slice D): same insertion point as the secret
-            # scan, the staged diff is the whole candidate. A refusal takes
-            # the `with written:` exit, which restores files AND index.
-            if revision_scope is not None and cfg.repair.enabled:
-                allowed = _resolve_scope(revision_scope, staged)
+            # A repair round is screened before it is committed (D148 slice
+            # D): same insertion point as the secret scan, the staged diff is
+            # the whole candidate. Out-of-scope files and unrendered binaries
+            # are refused — the `with written:` exit restores files AND
+            # index. Likely defensive edits are cautions: they ride to the
+            # next audit as notes (mode caution) or refuse too (mode refuse).
+            if repair_round and cfg.repair.enabled:
                 diff = git("diff", "--cached", "--binary", "--no-ext-diff",
                            cwd=cfg.root, check=False)[:_MAX_SCAN_BYTES]
-                assessment = RepairGuard(cfg.repair.max_changed_lines).assess(
-                    diff, allowed, locally_rendered_files=locally_rendered)
+                assessment = RepairGuard(
+                    cfg.repair.max_changed_lines, mode=cfg.repair.mode).assess(
+                    diff, scope_dirs=cfg.scope_dirs, staged_files=staged,
+                    locally_rendered_files=locally_rendered,
+                    truncated=len(diff) >= _MAX_SCAN_BYTES)
                 if not assessment.allowed:
                     emit("repair_refused", "loop",
                          "the revision was refused before the audit",
-                         "; ".join(assessment.reasons)[:2000],
+                         "; ".join(assessment.refusals)[:2000],
                          state=RunState.REVISING)
-                    findings = (
+                    refusal = (
                         "[BLOCKER] The repair guard refused the last revision:\n"
-                        + "\n".join(f"- {reason}" for reason in assessment.reasons)
-                        + "\nThe previous attempt was rolled back; make a smaller "
-                          "change that fixes the cause.")
+                        + "\n".join(f"- {reason}" for reason in assessment.refusals)
+                        + "\nThe previous attempt was rolled back. Repair the "
+                          "findings above without that change; if the fix "
+                          "genuinely needs it, say so in `notes`.")
+                    # The audit's findings stay in the prompt: the generator
+                    # must still see the cause it is being asked to repair.
+                    findings = f"{findings}\n\n{refusal}" if findings else refusal
                     if repair_refusal_used or round_no == cfg.max_rounds:
                         repair_refusal_stop = True
                         termination_reason = (
                             f"the automatic repair was refused in round {round_no} "
-                            f"because {assessment.reasons[0][:300]}")
+                            f"because {assessment.refusals[0][:300]}")
                         break
                     repair_refusal_used = True
                     emit("revision_retry", "loop",
-                         "asking for a smaller repair that fixes the cause",
+                         "asking for a repair that stays within the audited files",
                          state=RunState.REVISING)
                     continue
+                if assessment.cautions:
+                    revision_cautions = list(assessment.cautions)
+                    emit("repair_caution", "loop",
+                         "the revision has edits the auditor should weigh",
+                         "; ".join(assessment.cautions)[:2000],
+                         state=RunState.REVISING)
             try:
                 commit_args = ["commit", "-q", "-m",
                                f"{work.summary} (round {round_no})"]
@@ -999,12 +980,16 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             written.finalize()
 
         audit_sha = git("rev-parse", "HEAD", cwd=cfg.root)
-        revision_scope = None          # every audit re-derives the repair scope
+        repair_round = False           # every audit re-decides the next round
         emit("audit_started", "auditor", "reviewing the commit",
              state=RunState.AUDITING)
         buffer = io.StringIO()
         run_args = _Args()
         run_args.continue_cycle = build_cycle_id
+        # The screen's cautions reach the auditor as deterministic notes (the
+        # `dcl.notes` the prompt and the ledger's checks.json carry), never as
+        # findings: the auditor decides whether a caution is a defect.
+        run_args.extra_notes = [f"revision caution: {c}" for c in revision_cautions]
         run_args.on_step = lambda actor, text, detail="": emit(
             "provider_recovery", actor, text, detail, state=RunState.AUDITING)
         # The auditor's resilience layer renews the lease before each retry
@@ -1055,9 +1040,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     if ln.strip().startswith("- [")]
         emit("audit_blocked", "auditor", "BLOCKED",
              "; ".join(blocking[:2])[:300], state=RunState.AUDITING)
-        report = _last_report(cfg)
-        findings = gen_mod.render_findings(report)
-        revision_scope = _blocker_scope(report)
+        findings = gen_mod.render_findings(_last_report(cfg))
+        repair_round = True
         emit("revision_requested", "loop", "findings returned to the generator",
              state=RunState.REVISING)
 
@@ -1097,9 +1081,9 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         elif terminal_denial is not None:
             cause = "generator_refused"
         elif repair_refusal_stop:
-            # The repair guard refused twice (or on the last round): the
-            # revision would have hidden the finding, moved outside the
-            # audited artifacts, or grown past the automatic budget.
+            # The repair screen refused twice (or on the last round): the
+            # revision left the audited directories, wrote a binary no local
+            # renderer produced, or (mode refuse) made a likely defensive edit.
             cause = "repair_refused"
         elif no_progress_stop:
             cause = "no_progress"

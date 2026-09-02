@@ -41,8 +41,8 @@ replaces what is there; a file you omit is left untouched.
 finding in your output: fix the artefact, or state in `notes` why the finding \
 rests on a misreading, so a human can route it as a dispute.
 - Do not make a check disappear by adding broad exception handling, silent \
-fallbacks, retries, suppressions, skipped tests, or relaxed assertions. Repair \
-the cause with the smallest change; a revision that hides a finding is refused.
+fallbacks, retries, suppressions, skipped tests, or relaxed assertions: such \
+edits are pointed out to the auditor, who judges whether the finding was fixed.
 - Keep claims and data consistent with each other. Most blocked rounds are prose \
 that disagrees with the file it summarises.
 - Prefer editing what exists over adding new files.
