@@ -205,6 +205,15 @@ def park_escalation_kind(waiting_kind: str | None) -> str:
 #: connection failure for records written before ``escalation_kind`` existed.
 _BUDGET_REASON_MARKER = "usage guardrail"
 
+#: The one sentence a person reads when the escalate dial (D148) routes a
+#: model-only block to them. Minted by the CLI, read by the console to name
+#: the stop's cause for a cycle whose receipt is not beside its report — by
+#: equality with this constant, never by matching prose. No internal
+#: vocabulary (record ids, routes, states).
+CONTESTED_MODEL_BLOCKER_REASON = (
+    "the auditor raised a concern that no deterministic check reproduces; "
+    "it needs your judgment")
+
 
 def classify_escalation_kind(reason: str) -> str:
     """Infer an escalation's kind from its prose reason — the legacy shim.

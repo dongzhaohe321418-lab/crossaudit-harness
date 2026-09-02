@@ -3291,17 +3291,18 @@ const ZH={
   "The automatic audit loop stopped.":"自动审计循环已停止。","Review why the loop stopped, then decide whether to revise or stop.":"检查循环停止原因，再决定修订或停止。",
   "The audit controller paused this task.":"审计控制器已暂停此任务。","No explanation was recorded.":"未记录说明。","A human decision is required.":"需要人工决定。",
   "Tell the generator how to correct the remaining blockers, or stop the task without admitting its output.":"请告诉生成者如何修复剩余阻断问题，或停止任务且不准入其输出。",
-  "Automatic repair refused":"自动修复被拒绝","The revision did not repair the cause":"修订没有修复问题的根源",
-  "The generator\u2019s revision was refused twice: instead of repairing the cause, it tried to make the finding disappear, changed files the audit did not name, or grew larger than an automatic repair may be. Each attempt was rolled back, so the audited files are unchanged and nothing was admitted.":"生成者的修订已两次被拒绝：它没有修复根源，而是试图让问题消失、改动了审计未提及的文件，或超出了自动修复允许的规模。每次尝试都已回滚，因此已审计的文件未被改动，也没有任何结果被准入。",
+  "Automatic repair refused":"自动修复被拒绝","The revision reached outside the audited files":"修订改动了已审计文件之外的内容",
+  "The generator\u2019s revision was refused: it changed files outside the audited directories, or wrote a binary file that cannot be reviewed line by line. The refused attempt was rolled back, so the audited files are unchanged and nothing was admitted.":"生成者的修订被拒绝：它改动了已审计目录之外的文件，或写入了无法逐行审查的二进制文件。被拒绝的尝试已回滚，因此已审计的文件未被改动，也没有任何结果被准入。",
   "Why the last revision was refused":"上一次修订被拒绝的原因",
-  "Tell the generator the smallest change that repairs the cause, or stop the task without admitting its output.":"请告诉生成者能修复根源的最小改动，或停止任务且不准入其输出。",
-  "Name the file and the smallest change that repairs the cause, then unlock one additional audited round.":"指出文件以及能修复根源的最小改动，然后解锁再一轮受审计尝试。",
+  "Tell the generator to keep the fix inside the audited files, or stop the task without admitting its output.":"请告诉生成者把修复限制在已审计文件之内，或停止任务且不准入其输出。",
+  "Name the file inside the audited directories that should change, then unlock one additional audited round.":"指出已审计目录内应当修改的文件，然后解锁额外一轮受审计执行。",
   "the revision changed nothing that could be reviewed":"该修订没有做出任何可供审查的改动",
-  "the revision was refused before the audit":"修订在审计前被拒绝","asking for a smaller repair that fixes the cause":"正在要求一次更小、能修复根源的修复",
+  "the revision was refused before the audit":"修订在审计前被拒绝","asking for a repair that stays within the audited files":"正在要求生成者做出不超出已审计文件范围的修复",
+  "the revision has edits the auditor should weigh":"本次修订包含需要审计者权衡的改动",
   "The auditor raised a concern":"审计者提出了一项疑虑",
   "The auditor blocked this round on its own reading; no deterministic check reproduces the concern. CrossAudit does not let a model-only claim drive automatic rewrites, so it stopped and left the files unchanged.":"审计者依据自身判读阻断了本轮；没有任何确定性检查能复现这项疑虑。CrossAudit 不允许仅凭模型的说法驱动自动改写，因此已停止并保持文件不变。",
   "the auditor raised a concern that no deterministic check reproduces; it needs your judgment":"审计者提出了一项没有任何确定性检查能复现的疑虑；需要你来判断",
-  "Review the auditor's concern and its evidence. Dispute a misreading, reopen with a recorded reason, or stop without admission.":"请审查审计者的疑虑及其证据。若属误读可提出争议，也可记录理由后重开，或停止且不准入。",
+  "Review the auditor's concern and its evidence. If it is a misreading, say so in your reason and continue; if it is right, tell the generator how to address it; or stop without admitting the work.":"请审查审计者的疑虑及其证据。若属误读，请在理由中说明后继续；若疑虑成立，请告诉生成者如何处理；也可停止任务且不准入其输出。",
   "If the concern is right, tell the generator how to address it. If it is a misreading, say so here; your reason is recorded.":"如果疑虑成立，请告诉生成者如何处理；如果属于误读，请在此说明，你的理由会被记录。",
   "Verified by a deterministic check":"已由确定性检查验证","Raised by the auditor, not yet reproduced":"由审计者提出，尚未被复现","Raised by the auditor and verified":"由审计者提出，并已验证",
   "Your task or message":"你的任务或消息","Search projects":"搜索项目",
@@ -3632,19 +3633,31 @@ const ZH_PATTERNS=[
   // in a round number, so those two shapes delegate to the per-reason rows.
   [/^the automatic repair was refused in round (\d+) because (.+)$/,
    m=>'第 '+m[1]+' 轮的自动修复被拒绝，原因：'+zhValue(m[2])],
-  [/^(?=.*; )(?=.*(?: is outside what the last audit asked to change| is a binary file written directly by the generator|the code change touches \d+ lines| adds a (?:catch-all|bare|retry|suppression|skipped) |the revision changed nothing that could be reviewed))/,
-   m=>m.input.split('; ').map(part=>zhValue(part)).join('；')],
-  [/^(.+) is outside what the last audit asked to change(?: \(allowed: (.+)\))?$/,
-   m=>m[1]+' 不在上次审计要求修改的范围内'+(m[2]?'（允许：'+m[2]+'）':'')],
+  // The pattern IS the boundary between two guard sentences, so a string
+  // matches only when it really joins two (no recursion on one sentence), and
+  // the semicolon inside the scope sentence (only files inside them ...) is
+  // not a boundary.
+  [/; (?=\S+ (?:is outside the audited|is a binary file|adds an? |removes an? )|the code change touches|\d+ staged file|the revision changed nothing)/,
+   m=>m.input.split(/; (?=\S+ (?:is outside the audited|is a binary file|adds an? |removes an? )|the code change touches|\d+ staged file|the revision changed nothing)/).map(part=>zhValue(part)).join('；')],
+  [/^(.+) is outside the audited directories \((.*)\); only files inside them may change — if the fix needs another file, say so in `notes`$/,
+   m=>m[1]+' 不在已审计目录（'+m[2]+'）内；只有这些目录内的文件可以修改——如果修复确实需要其他文件，请在 `notes` 中说明'],
   [/^(.+) is a binary file written directly by the generator, which cannot be reviewed line by line$/,
    m=>m[1]+' 是生成者直接写入的二进制文件，无法逐行审查'],
   [/^the code change touches (\d+) lines, more than the (\d+)-line limit for an automatic repair$/,
    m=>'代码改动涉及 '+m[1]+' 行，超过了自动修复的 '+m[2]+' 行上限'],
+  [/^(\d+) staged file\(s\) lay beyond the review size limit and were not screened: (.+)$/,
+   m=>'有 '+m[1]+' 个已暂存文件超出审查大小上限而未被筛查：'+m[2]],
+  // The cautions the auditor weighs (repair_guard ADDED/MARKER/REMOVED_PATTERNS).
   [/^(.+) adds a catch-all `except` that swallows every error$/,m=>m[1]+' 新增了会吞掉所有错误的 catch-all `except`'],
-  [/^(.+) adds a bare `pass` where a failure would otherwise surface$/,m=>m[1]+' 在本应暴露失败的位置新增了空的 `pass`'],
-  [/^(.+) adds a retry or fallback path instead of fixing the cause$/,m=>m[1]+' 新增了重试或回退路径，而不是修复根源'],
-  [/^(.+) adds a suppression that hides a warning or check$/,m=>m[1]+' 新增了会隐藏警告或检查的抑制'],
-  [/^(.+) adds a skipped test or a relaxed assertion$/,m=>m[1]+' 新增了被跳过的测试或被放宽的断言'],
+  [/^(.+) adds a `suppress\(\.\.\.\)` block that hides errors$/,m=>m[1]+' 新增了会隐藏错误的 `suppress(...)` 块'],
+  [/^(.+) adds an error handler that does nothing$/,m=>m[1]+' 新增了一个什么也不做的错误处理'],
+  [/^(.+) adds an assertion that can no longer fail$/,m=>m[1]+' 新增了一个不再可能失败的断言'],
+  [/^(.+) adds a skipped or expected-to-fail test$/,m=>m[1]+' 新增了被跳过或预期失败的测试'],
+  [/^(.+) adds a shell step that ignores its own failure$/,m=>m[1]+' 新增了会忽略自身失败的 shell 步骤'],
+  [/^(.+) adds a marker that silences a checker \(`noqa`, `type: ignore`, `pragma: no cover`, \.\.\.\)$/,m=>m[1]+' 新增了会让检查器静默的标记（`noqa`、`type: ignore`、`pragma: no cover` 等）'],
+  [/^(.+) adds a warnings filter set to ignore$/,m=>m[1]+' 新增了设为忽略的警告过滤器'],
+  [/^(.+) removes an `assert` or `raise` without replacing it$/,m=>m[1]+' 删除了一个 `assert` 或 `raise` 而没有替代'],
+  [/^(.+) removes a test$/,m=>m[1]+' 删除了一个测试'],
   [/^provider failure left this task waiting for a person: ?(.*)$/,
    m=>'提供方失败，该任务正在等待人工处理：'+m[1]],
   [/^the selected PASS is not ready for admission: ?(.*)$/,
@@ -4467,7 +4480,7 @@ function renderFallbacks(role,rows){const host=document.getElementById('runtime-
   host.innerHTML=rows.map((row,index)=>{const listId='fallback-models-'+role+'-'+index;
     const options=choices.map(item=>'<option value="'+esc(item.vendor)+'"'+(item.vendor===row.vendor?' selected':'')+'>'+esc(item.label)+(item.connected?' · connected':' · key needed')+'</option>').join('');
     const selected=choices.find(item=>item.vendor===row.vendor)||choices[0]||{models:[]};
-    return '<div class="fallback-row" data-fallback-role="'+role+'"><select data-fallback-vendor>'+options+'</select>'
+    return '<div class="fallback-row" data-fallback-role="'+role+'"><select data-fallback-vendor aria-label="Provider">'+options+'</select>'
       +'<input data-fallback-model list="'+listId+'" maxlength="120" value="'+esc(row.model||((selected.models||[])[0]||{}).id||'')+'" aria-label="Exact model ID" placeholder="Exact model ID"><datalist id="'+listId+'">'
       +(selected.models||[]).map(model=>'<option value="'+esc(model.id)+'">'+esc(model.hint||'')+'</option>').join('')+'</datalist>'
       +'<select data-fallback-credential title="Credential"><option value="primary"'+(row.credential==='backup'?'':' selected')+'>Primary key</option><option value="backup"'+(row.credential==='backup'?' selected':'')+'>Backup key</option></select>'
@@ -4659,19 +4672,19 @@ function openResolution(value,action='',sha=''){
   const noProgress=row.cause==='no_progress';
   const answered=row.cause==='answered';
   // D148. Two content stops that are not "the rounds ran out": the automatic
-  // repair was refused twice (the revision hid the finding, left the audited
-  // files, or grew past the budget), and the escalate dial handing a
-  // model-only blocker to a person. Same slots, no new elements.
+  // repair was refused (the revision left the audited directories or wrote a
+  // binary; a single refusal on the last round also stops), and the escalate
+  // dial handing a model-only blocker to a person. Same slots, no new elements.
   const repairRefused=row.cause==='repair_refused';
   const auditorConcern=row.cause==='auditor_concern';
   document.getElementById('resolution-flag').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':repairRefused?'Automatic repair refused':auditorConcern?'The auditor raised a concern':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
-  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':repairRefused?'The revision did not repair the cause':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
+  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':repairRefused?'The revision reached outside the audited files':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
   document.getElementById('resolution-summary').textContent=budget
     ?'CrossAudit stopped before spending past your usage limit. No result was admitted and the original task is ready once you raise or clear the limit.'
     :provider
     ?'CrossAudit stopped before an audit began. No result was admitted and the original task is ready to retry.'
     :repairRefused
-    ?'The generator\u2019s revision was refused twice: instead of repairing the cause, it tried to make the finding disappear, changed files the audit did not name, or grew larger than an automatic repair may be. Each attempt was rolled back, so the audited files are unchanged and nothing was admitted.'
+    ?'The generator\u2019s revision was refused: it changed files outside the audited directories, or wrote a binary file that cannot be reviewed line by line. The refused attempt was rolled back, so the audited files are unchanged and nothing was admitted.'
     :auditorConcern
     ?'The auditor blocked this round on its own reading; no deterministic check reproduces the concern. CrossAudit does not let a model-only claim drive automatic rewrites, so it stopped and left the files unchanged.'
     :answered
@@ -4724,7 +4737,7 @@ function openResolution(value,action='',sha=''){
     :provider
     ?'Use the current connection and rerun the original task.'
     :repairRefused
-    ?'Name the file and the smallest change that repairs the cause, then unlock one additional audited round.'
+    ?'Name the file inside the audited directories that should change, then unlock one additional audited round.'
     :auditorConcern
     ?'If the concern is right, tell the generator how to address it. If it is a misreading, say so here; your reason is recorded.'
     :'Give the generator specific correction guidance and unlock one additional audited round.';

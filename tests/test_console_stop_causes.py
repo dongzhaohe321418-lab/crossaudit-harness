@@ -20,16 +20,18 @@ from pathlib import Path
 
 import pytest
 
-from crossaudit.cli.main import CONTESTED_MODEL_BLOCKER_REASON
 from crossaudit.console import overview, streams
 from crossaudit.console.page import PAGE
 from crossaudit.controller import StateStore
 from crossaudit.dcl.framework import FINDING_STATES
+from crossaudit.errors import CONTESTED_MODEL_BLOCKER_REASON
 
 from .test_finding_states import _strings
 from .test_overview import BLOCKER, DCL_BLOCKER, add_audit, cfg  # noqa: F401
 
 HARNESS = Path(__file__).parent / "harness"
+sys.path.insert(0, str(HARNESS))
+WORKTREE = Path(overview.__file__).parents[3]
 STATE_WORD = re.compile(r"\b(" + "|".join(FINDING_STATES) + r")\b", re.I)
 ROUTE_NAME = re.compile(r"automatic-repair|human-decision|obtain-audit")
 GUARD_REASON = "src/x.py adds a catch-all `except` that swallows every error"
@@ -70,9 +72,59 @@ def test_a_refused_repair_leads_with_the_guards_own_sentence(cfg):
     row = overview.escalations(cfg)[0]
     assert row["cause"] == "repair_refused" and row["kind"] == "audit"
     assert row["why"] == GUARD_REASON
-    assert row["requested"].startswith("Tell the generator the smallest change")
+    assert row["requested"].startswith("Tell the generator to keep the fix inside")
     assert row["issues"][0]["rule"] == "CA-TXT-001"
     assert row["remediations"] == ["revise", "stop"]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_the_decision_center_renders_each_cause_from_the_rows_the_dashboard_builds(cfg):
+    """Review item 12: the shipped `openResolution()` driven under node over
+    rows `escalations()` actually produced — a refused repair, the dial, a
+    plain ESCALATE with an empty contested list — so a wrong branch shows up
+    as the wrong sentence, in both languages, not as a missing string."""
+    from render_decision import render
+
+    store = StateStore(cfg.root / cfg.state_dir / "state.json")
+    # a refused repair (build-level stop)
+    add_audit(cfg, "a" * 12, "BLOCKED", BLOCKER)
+    store.record_build_escalation(
+        cfg.science_repo, "a" * 40,
+        f"the automatic repair was refused in round 2 because {GUARD_REASON}",
+        2, "history", "Fix the summary", kind="audit", cause="repair_refused")
+    # the escalate dial (contested ids, no reason)
+    dial = add_audit(cfg, "b" * 12, "ESCALATE", BLOCKER)
+    _receipt(dial, _authority("human-decision"))
+    c = store.open_or_advance(cfg.science_repo, "b" * 40, None)
+    store.record_verdict(c["cycle_id"], "b" * 40, "ESCALATE", "r" * 64, 1)
+    # a plain ESCALATE (empty contested list)
+    plain = add_audit(cfg, "c" * 12, "ESCALATE", "")
+    block = _authority("human-decision")
+    block["contested_evidence_ids"] = []
+    _receipt(plain, block)
+    c = store.open_or_advance(cfg.science_repo, "c" * 40, None)
+    store.record_verdict(c["cycle_id"], "c" * 40, "ESCALATE", "r" * 64, 1)
+
+    rows = {r["sha"][0]: r for r in overview.escalations(cfg)}
+    out = render(WORKTREE, {"repair": rows["a"], "dial": rows["b"], "plain": rows["c"]})
+    en, zh = out["repair"]["en"], out["repair"]["zh"]
+    assert en["resolution-flag"] == "Automatic repair refused"
+    assert "twice" not in en["resolution-summary"]
+    assert en["resolution-limit-copy"] == GUARD_REASON
+    assert zh["resolution-limit-copy"].startswith("src/x.py ") and "except" in zh["resolution-limit-copy"]
+    assert "两次" not in zh["resolution-summary"] and "解锁额外一轮受审计执行" in zh["resolution-reopen-copy"]
+    en, zh = out["dial"]["en"], out["dial"]["zh"]
+    assert en["resolution-flag"] == "The auditor raised a concern"
+    assert "Dispute" not in en["resolution-request"] and "提出争议" not in zh["resolution-request"]
+    assert zh["resolution-flag"] == "审计者提出了一项疑虑"
+    en, zh = out["plain"]["en"], out["plain"]["zh"]
+    assert en["resolution-flag"] == "Automatic loop paused", en
+    assert "auditor" not in en["resolution-summary"].lower()
+    assert zh["resolution-flag"] == "自动循环已暂停"
+    for name in out:
+        for slot, text in out[name]["zh"].items():
+            if slot != "resolution-issues" and text:
+                assert re.search(r"[一-鿿]", text), (name, slot, text)
 
 
 def test_the_page_keys_both_causes_on_the_structured_field():
@@ -85,19 +137,39 @@ def test_the_page_keys_both_causes_on_the_structured_field():
 
 
 # ----------------------------------------------------------- auditor concern
-def test_the_escalate_dial_stop_is_named_from_the_receipt_route(cfg):
-    cycle_dir = add_audit(cfg, SHA[:12], "BLOCKED", BLOCKER)
+def test_the_escalate_dial_stop_is_named_from_the_receipts_contested_ids(cfg):
+    """The receipt ALONE names it: the verdict is recorded with no reason, so
+    only `contested_evidence_ids` can. Mutation M13 (review): delete the
+    id-based branch and keep the sentence fallback — red here."""
+    cycle_dir = add_audit(cfg, SHA[:12], "ESCALATE", BLOCKER)
     _receipt(cycle_dir, _authority("human-decision"))
     store = StateStore(cfg.root / cfg.state_dir / "state.json")
     cycle = store.open_or_advance(cfg.science_repo, SHA, None)
-    assert store.record_verdict(cycle["cycle_id"], SHA, "BLOCKED", "r" * 64, 1,
-                                escalation_reason=CONTESTED_MODEL_BLOCKER_REASON
-                                ) == "ESCALATED"
+    assert store.record_verdict(cycle["cycle_id"], SHA, "ESCALATE", "r" * 64, 1,
+                                escalation_reason="") == "ESCALATED"
     row = overview.escalations(cfg)[0]
     assert row["cause"] == "auditor_concern" and row["kind"] == "audit"
-    assert "Dispute a misreading" in row["requested"]
-    assert row["stop_reason"] == CONTESTED_MODEL_BLOCKER_REASON
+    assert row["requested"].startswith("Review the auditor's concern")
+    latest = overview.read_cycles(cfg)[0]
+    assert latest.authority_contested is True
+    assert latest.authority_route == "human-decision"
+
+
+def test_a_plain_escalate_keeps_the_generic_copy(cfg):
+    """Review defect 1: every ESCALATE routes to human-decision — the
+    auditor's own escalation, the lock, an integrity stop. Only a contested
+    blocker is the dial. Mutation: derive from the route — red here."""
+    cycle_dir = add_audit(cfg, SHA[:12], "ESCALATE", "")
+    block = _authority("human-decision")
+    block["contested_evidence_ids"] = []
+    _receipt(cycle_dir, block)
+    store = StateStore(cfg.root / cfg.state_dir / "state.json")
+    cycle = store.open_or_advance(cfg.science_repo, SHA, None)
+    store.record_verdict(cycle["cycle_id"], SHA, "ESCALATE", "r" * 64, 1)
+    row = overview.escalations(cfg)[0]
+    assert row["cause"] == ""
     assert overview.read_cycles(cfg)[0].authority_route == "human-decision"
+    assert row["requested"].startswith("Review why the loop stopped")
 
 
 def test_the_sentence_alone_names_the_cause_when_no_receipt_is_beside_the_report(cfg):
@@ -175,27 +247,40 @@ def test_the_page_names_the_tier_in_a_sentence_and_never_a_route():
 
 # ----------------------------------------------------------------- Chinese
 NEW_COPY = [
-    "Automatic repair refused", "The revision did not repair the cause",
+    "Automatic repair refused", "The revision reached outside the audited files",
     "Why the last revision was refused",
-    "Tell the generator the smallest change that repairs the cause, or stop the task without admitting its output.",
-    "Name the file and the smallest change that repairs the cause, then unlock one additional audited round.",
+    "Tell the generator to keep the fix inside the audited files, or stop the task without admitting its output.",
+    "Name the file inside the audited directories that should change, then unlock one additional audited round.",
     "The auditor raised a concern",
     "The auditor blocked this round on its own reading; no deterministic check reproduces the concern. CrossAudit does not let a model-only claim drive automatic rewrites, so it stopped and left the files unchanged.",
     CONTESTED_MODEL_BLOCKER_REASON,
-    "Review the auditor's concern and its evidence. Dispute a misreading, reopen with a recorded reason, or stop without admission.",
+    "Review the auditor's concern and its evidence. If it is a misreading, say so in your reason and continue; if it is right, tell the generator how to address it; or stop without admitting the work.",
     "If the concern is right, tell the generator how to address it. If it is a misreading, say so here; your reason is recorded.",
     "Verified by a deterministic check", "Raised by the auditor, not yet reproduced",
     "Raised by the auditor and verified",
     "the revision was refused before the audit",
-    "asking for a smaller repair that fixes the cause",
+    "asking for a repair that stays within the audited files",
+    "the revision has edits the auditor should weigh",
     "Your task or message", "Search projects",
     # The guard's composed sentences: the path survives, the rest is Chinese.
     GUARD_REASON,
-    "docs/other.md is outside what the last audit asked to change (allowed: report.md)",
+    "docs/other.md is outside the audited directories (work, experiments); only files inside them may change — if the fix needs another file, say so in `notes`",
+    "assets/a.png is a binary file written directly by the generator, which cannot be reviewed line by line",
     "the code change touches 90 lines, more than the 60-line limit for an automatic repair",
-    "src/x.py adds a bare `pass` where a failure would otherwise surface; src/y.py adds a retry or fallback path instead of fixing the cause",
+    "2 staged file(s) lay beyond the review size limit and were not screened: a.py, b.py",
+    "src/x.py adds an error handler that does nothing; src/y.py removes a test",
+    "src/x.py adds a `suppress(...)` block that hides errors",
+    "src/x.py adds an assertion that can no longer fail",
+    "src/x.py adds a skipped or expected-to-fail test",
+    "src/x.py adds a shell step that ignores its own failure",
+    "src/x.py adds a marker that silences a checker (`noqa`, `type: ignore`, `pragma: no cover`, ...)",
+    "src/x.py adds a warnings filter set to ignore",
+    "src/x.py removes an `assert` or `raise` without replacing it",
+    "the revision changed nothing that could be reviewed",
     f"the automatic repair was refused in round 2 because {GUARD_REASON}",
 ]
+JOINED = "src/x.py adds an error handler that does nothing; src/y.py removes a test"
+
 
 
 def _translate(values: list[str], tmp_path: Path) -> dict:
@@ -219,6 +304,6 @@ def test_every_new_sentence_reaches_a_chinese_reader(tmp_path):
     # Paths are never translated; the sentence around them is.
     assert rendered[GUARD_REASON].startswith("src/x.py ")
     assert "except" in rendered[GUARD_REASON]
-    joined = rendered[NEW_COPY[-2]]
+    joined = rendered[JOINED]
     assert joined.startswith("src/x.py ") and "src/y.py " in joined and "；" in joined
     assert rendered[NEW_COPY[-1]].startswith("第 2 轮")
