@@ -31,6 +31,11 @@ CORE="$APP/Contents/Resources/core/CrossAuditCore"
   exit 4
 }
 plutil -lint "$APP/Contents/Info.plist"
+# The two notes a person reads in the DMG window before the app has ever run.
+# A DMG without them installs fine and leaves the first-open dialog unexplained.
+for note in "如何打开 · How to open.txt" "About the crossaudit command.txt"; do
+  [[ -s "$MOUNT/$note" ]] || { echo "DMG is missing the note: $note" >&2; exit 7; }
+done
 codesign --verify --deep --strict --verbose=2 "$APP"
 ARCHS="$(lipo -archs "$APP/Contents/MacOS/CrossAudit")"
 [[ " $ARCHS " == *" arm64 "* ]] || { echo "native shell is not arm64" >&2; exit 5; }

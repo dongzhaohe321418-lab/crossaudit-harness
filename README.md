@@ -151,6 +151,17 @@ official OpenAI Codex runtime.
 
 ### macOS application
 
+> **First open.** macOS may say the app can't be verified. Right-click
+> **CrossAudit.app** → **Open** → **Open**. This happens once.
+>
+> This community build is ad-hoc signed but not Apple-notarized because the
+> project does not yet have an Apple Developer ID certificate; the same
+> instruction, in English and Chinese, sits beside the app in the DMG window
+> as the `How to open` note. The
+> checksum below verifies the downloaded bytes; it is not a substitute for
+> notarization. A production distribution should use Developer ID Application
+> signing, hardened runtime, notarization, and stapling.
+
 1. Download `CrossAudit-4.16.0-arm64.dmg` and its checksum from the
    [V4.16.0 release](https://github.com/dongzhaohe321418-lab/crossaudit_v4/releases/tag/v4.16.0).
 2. Optionally verify it in Terminal:
@@ -165,12 +176,20 @@ official OpenAI Codex runtime.
    second first-party provider from the same screen. API keys go to the macOS
    login Keychain; ChatGPT credentials remain owned by the official Codex runtime.
 
-This initial community build is ad-hoc signed but not Apple-notarized because
-the project does not yet have an Apple Developer ID certificate. macOS may
-therefore require Control-clicking the app, choosing **Open**, and confirming
-the first launch. The checksum verifies the downloaded bytes; it is not a
-substitute for notarization. A production distribution should use Developer ID
-Application signing, hardened runtime, notarization, and stapling.
+### Uninstall / remove all data
+
+CrossAudit keeps everything it stores in three places. Removing them removes
+every trace; nothing else is written to the system.
+
+| What | Where | Remove with |
+| --- | --- | --- |
+| The app and its workspace of projects | `~/Library/Application Support/CrossAudit` (or the folder `CROSSAUDIT_APP_SUPPORT` points to) | Drag **CrossAudit.app** from Applications to the Trash, then delete this folder. |
+| A project's private state (run journal, provider circuit state, drafts) | `.crossaudit/` inside each project folder; the audit ledger stays in `cycles/` because it is part of the repository | Delete the project folder, or just `.crossaudit/` to keep the repository and its ledger. |
+| API keys | macOS login Keychain items named `io.crossaudit.app.provider.<vendor>` (and `.backup` for a backup key) | **Settings → Providers → Remove** in the app, or delete the items in Keychain Access. |
+
+A ChatGPT subscription sign-in is owned by the bundled Codex runtime, not by
+CrossAudit; sign out from **Settings → Providers**. The same three locations
+are listed in the app under **Settings → Security & privacy**.
 
 ### Command-line installation
 
@@ -1174,10 +1193,11 @@ daemon keeps the Python code that was loaded when it started.
 
 ### The macOS app is blocked on first launch
 
-V4.16.0 is structurally signed with the hardened runtime but is not notarized.
-Control-click **CrossAudit.app**, choose **Open**, and confirm only after you
-have verified the published SHA-256 checksum. An Apple Developer ID signed and
-notarized build is required before broad organizational deployment.
+Right-click **CrossAudit.app** → **Open** → **Open**; macOS asks once. V4.16.0
+is structurally signed with the hardened runtime but is not notarized, so
+verify the published SHA-256 checksum first (see [Install](#install)). An Apple
+Developer ID signed and notarized build is required before broad
+organizational deployment.
 
 ### Settings says Git is unavailable
 

@@ -2803,6 +2803,9 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <div class="settings-jump"><button type="button" class="secondary" data-settings-open="usage">Open usage</button><button type="button" class="secondary" data-settings-open="runtime-budgets">Set budgets</button><small class="settings-empty" data-scope-note hidden></small></div>
     </section><section class="form-section settings-pane" data-settings-pane="security" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Security &amp; privacy</span><h3>Security and privacy</h3><p>How credentials are stored and where your data goes.</p></div>
       <p class="settings-hint">API keys are stored as write-only macOS Keychain items and are never shown again.</p>
+      <div class="form-title">Where CrossAudit keeps data</div>
+      <p class="settings-hint">Everything CrossAudit stores lives in three places; removing them removes every trace.</p>
+      <ul class="settings-hint" id="data-locations"><li><b>App and workspace</b> — <code>~/Library/Application Support/CrossAudit</code></li><li><b>Project state</b> — <code>.crossaudit/</code> inside each project folder (the audit ledger in <code>cycles/</code> is part of the repository)</li><li><b>API keys</b> — macOS Keychain items named <code>io.crossaudit.app.provider.&lt;vendor&gt;</code>; remove them under Providers</li></ul>
       <p class="settings-empty">Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.</p>
     </section><section class="form-section settings-pane" data-settings-pane="diagnostics" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Diagnostics</span><h3>Diagnostics</h3><p>Check this Mac's setup and versions, and repair problems.</p></div>
       <div class="settings-readiness"><div class="readiness-item">Git<span id="git-state">…</span></div>
@@ -3082,6 +3085,7 @@ const ZH={
   "MCP servers and generator skills are configured inside the active project.":"MCP 服务器与生成者技能在当前项目内部配置。",
   "Usage and budgets are tracked per project. Export isn't available here yet.":"用量与预算按项目跟踪。此处暂不支持导出。",
   "API keys are stored as write-only macOS Keychain items and are never shown again.":"API 密钥以只写方式存入 macOS 钥匙串，且不会再次显示。",
+  "Where CrossAudit keeps data":"CrossAudit 的数据存放位置","Everything CrossAudit stores lives in three places; removing them removes every trace.":"CrossAudit 保存的所有内容只在三个位置；删除它们即可清除全部痕迹。","App and workspace":"应用与工作区","Project state":"项目状态","API keys":"API 密钥","inside each project folder (the audit ledger in":"位于每个项目文件夹内（","is part of the repository)":"中的审计账本属于仓库的一部分）","— macOS Keychain items named":"—— macOS 钥匙串条目，名为","; remove them under Providers":"；可在“供应商”中移除",
   "Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.":"供应商路由按项目设置。留存、脱敏与日志控制此处暂不可配置。",
   "Logs, support bundles, and per-subsystem reset aren't available here yet.":"日志、支持包与按子系统重置此处暂不可用。",
   "No developer settings, experiments, local endpoints, or debug logging are configurable here yet.":"暂无可配置的开发者设置、实验、本地端点或调试日志。",
