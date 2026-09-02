@@ -41,7 +41,10 @@ CrossAudit makes the separation explicit:
 - The generator and auditor must use different vendors.
 - The auditor reads committed files, not the generator's private reasoning.
 - Objective checks run before the model review.
-- A BLOCKED result goes back to the generator for a bounded number of rounds.
+- A BLOCKED result goes back to the generator for a bounded number of rounds;
+  each revision is screened by a repair guard before it is committed.
+- A model-only blocker is recorded as unverified evidence; whether it drives
+  a revision or a human decision is a project dial, and the receipt says which.
 - Every round is committed, so the final result has a replayable history.
 - PASS creates a cryptographically bound receipt that can be verified later.
 - Ambiguous or unresolved cases escalate to a human instead of looping forever.
@@ -120,6 +123,11 @@ structured content.
   receipt IDs and Terminal commands stay out of the user flow.
 - Correct OpenAI `max_completion_tokens` handling.
 - Deterministic schema, units, convergence, and provenance checks.
+- Evidence authority: every receipt binds each finding's tier (deterministic
+  or model), whether it was verified, the route taken, and a digest over the set.
+- A repair guard that refuses out-of-scope or oversized code revisions and
+  flags broad exception handling, silent fallbacks or retries, suppressions and
+  disabled tests on added code lines before an automatic repair is committed.
 - Git-backed reports and receipt verification.
 - Stable exit codes and JSON output for automation.
 - Local and two-repository deployment modes.
@@ -743,6 +751,10 @@ A cycle can end in four meaningful states:
 | `ESCALATED` | The loop cannot make a safe decision and needs a person. |
 | `DCL_ONLY` | Deterministic checks ran without a model audit; this can never count as PASS. |
 
+The report's `Evidence` section lists every finding with its tier and whether a
+deterministic check verified it, and the receipt binds that list. See
+[`docs/EVIDENCE_AUTHORITY.md`](docs/EVIDENCE_AUTHORITY.md).
+
 The generator cannot edit the rule file, configuration, state, or audit ledger.
 It may write only inside the configured scope, which defaults to `experiments/`.
 The auditor receives the committed files and rules, not the generator's hidden
@@ -837,6 +849,13 @@ budgets:
   monthly_cost_warning_usd: 50
   monthly_cost_limit_usd: 100
 
+authority:
+  lone_model_blocker: block   # or escalate
+
+repair:
+  enabled: true
+  max_changed_lines: 200
+
 isolation:
   minimum:
     parametric: true
@@ -903,6 +922,24 @@ then exponential backoff is used. Repeated failures open a durable local
 circuit; the next configured fallback route is tried immediately. The actual
 vendor, provider, model, effort, and whether a fallback was used are recorded in
 usage and audit evidence.
+
+### Where a finding's authority comes from (also a dial)
+
+A deterministic check that fails blocks, always. A finding only the auditor
+model raised is evidence, not yet a verified defect, and `authority.lone_model_blocker`
+says what it does:
+
+| value | behaviour |
+| --- | --- |
+| `block` (default) | the generator gets a bounded number of revision rounds, as before; the receipt records the finding as unverified |
+| `escalate` | the run stops at round one and the Decision Center asks you to rule: dispute, reopen with a reason, or stop |
+
+Either way, a revision that follows a BLOCKED audit is checked before commit by
+the repair guard (`repair:`): it must stay inside the files the findings named,
+within `max_changed_lines` of code, and must not make a finding disappear by
+adding broad exception handling, silent fallbacks or retries, suppressions, or
+skipped tests. Prose is never pattern-screened. A refused attempt is rolled back
+with one free retry; a second refusal becomes a decision for you.
 
 Fallback pools must preserve independence. No vendor may appear anywhere in
 both the Generator pool and the Auditor pool. CrossAudit validates the complete

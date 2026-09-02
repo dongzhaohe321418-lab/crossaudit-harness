@@ -415,10 +415,13 @@ digest moves — with polling as the fallback.
 │   router · narrator · confirmation            │     the only surface
 ├───────────────────────────────────────────────┤
 │ 两个 agent Two agents                          │  ← 自动分配角色
-│   generator (writes) │ auditor (judges)       │
+│   generator (writes) │ auditor (proposes)     │
+├───────────────────────────────────────────────┤
+│ 证据与权限 Evidence and authority              │  ← 阻断权在这里派生
+│   DCL · evidence authority · repair guard     │     blocking power derived here
 ├───────────────────────────────────────────────┤
 │ CrossAudit 引擎 Engine (v1, 已建成 built)      │  ← 不变量在这里执行
-│   loop · DCL · receipts · controller · ledger │     invariants enforced here
+│   loop · receipts · controller · ledger       │     invariants enforced here
 └───────────────────────────────────────────────┘
 ```
 
@@ -429,6 +432,34 @@ digest moves — with polling as the fallback.
 **EN** — v1's CLI becomes the engine interface, still present and still usable
 on its own; the conversation box is the product surface. **The engine relaxes
 nothing for the box**: the box cannot do what the CLI could not.
+
+### 7.1 证据先于权限 · Evidence before authority
+
+**中文** — 审计端负责提出语义 finding；它的置信度和"跨厂商"身份本身不授予
+阻断权。注册检查器产生的可复现失败自动 BLOCK；已升级给人的 cycle 保持升级。
+只有模型单方提出的 BLOCKER 走哪条路由是一个**档位**（`authority.lone_model_blocker`）：
+默认 `block`，即今天的有界自动修订，回执把该 finding 记为"未验证"，以便统计确认率；
+`escalate` 则在第一轮交给人裁决。判定仍由 `auditor/run.py` 的代码阶梯产生，
+`auditor/authority.py` 只在其后派生路由、证据划分与摘要，并绑进回执。
+修复守卫在提交前审查修订：越界文件、超预算的代码改动、在代码新增行里出现的
+宽泛异常捕获 / 静默 pass / 新增重试回退 / 抑制 / 禁用测试、以及非本地渲染的
+二进制。散文从不做模式筛查。守卫是复核触发器，不是定理。见
+`docs/EVIDENCE_AUTHORITY.md`。
+
+**EN** — The auditor proposes semantic findings; its confidence and vendor
+identity grant no blocking power by themselves. A reproduced deterministic
+failure blocks automatically; an escalated cycle stays escalated. What a
+model-only BLOCKER does is a **dial** (`authority.lone_model_blocker`): `block`,
+the default, is today's bounded automatic revision with the finding recorded as
+unverified so a confirmation rate can be measured; `escalate` hands it to a
+person at round one. The verdict is still produced by the code ladder in
+`auditor/run.py`; `auditor/authority.py` only derives the route, the evidence
+partition and their digest afterwards and binds them into the receipt. The
+repair guard screens a revision before commit: out-of-scope files, an
+over-budget code change, broad exception handling / silent pass / new retry or
+fallback paths / suppressions / disabled tests on added code lines, and binaries
+the local renderer did not produce. Prose is never pattern-screened. The guard is
+a review trigger, not a theorem. See `docs/EVIDENCE_AUTHORITY.md`.
 
 ---
 
