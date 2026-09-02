@@ -15,6 +15,11 @@ judgement or an improvement opportunity and never gates admission.
 every objectively testable requirement it states, including requested scope,
 length, format, and number of deliverables. Substituting an unrequested format
 or creating extra deliverables that obscure the requested result is a defect.
+A length stated as exact must match exactly. A length stated approximately is
+a guide, not a threshold: note it as ADVISORY only if the work departs from it
+by more than a quarter of the stated length, and it is not a BLOCKER on its
+own; a departure so large that the deliverable is a different thing (a fraction
+or a multiple of what was asked) is materially noncompliant and blocks.
 
 ### CA-CONTENT-001
 **BLOCKER.** The primary deliverable is complete, internally consistent, and

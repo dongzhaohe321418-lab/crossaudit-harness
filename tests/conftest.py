@@ -20,27 +20,80 @@ from crossaudit.scaffold import read as read_template
 _LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "0.0.0.0", ""}
 
 
+def _is_local(host) -> bool:
+    """Loopback by name or by address (127.0.0.0/8, ::1, ::ffff:127.x)."""
+    import ipaddress
+
+    text = str(host)
+    if text.lower() in _LOCAL_HOSTS:
+        return True
+    try:
+        return ipaddress.ip_address(text).is_loopback
+    except ValueError:
+        return False
+
+
+def _peer_host(address):
+    """The host of a socket address, or None for a unix socket / no address."""
+    if isinstance(address, tuple) and address:
+        return address[0]
+    return None
+
+
 @pytest.fixture(autouse=True)
-def _no_credentials_and_no_outbound_network(monkeypatch, tmp_path_factory):
-    """No test may reach the developer's credentials or the open network.
+def _sandboxed_keys_file_and_no_in_process_network(monkeypatch, tmp_path_factory):
+    """Sandboxes the keys FILE and blocks IN-PROCESS outbound sockets.
 
-    Both channels were open and both produced real defects.
+    The old name was `_no_credentials_and_no_outbound_network`, which asserted a
+    property this suite does not have. It was read as "the suite is hermetic" —
+    by the engineering manager, in writing — and the name is what everything
+    downstream reads. A narrower guard honestly named is worth more than a broad
+    one that is wrong.
 
-    CREDENTIALS. `wizard.keys_file()` resolves `DEFAULT_KEYS_FILE`, computed
-    from the real home at import, so setting `HOME` does not move it. Exactly
-    one test file was sandboxing it; every other test could load the developer's
-    real keys. A suite whose behaviour depends on whether the developer happens
-    to have credentials is not a suite.
+    WHAT IS COVERED
+      * `CROSSAUDIT_KEYS_FILE` is moved to a temp path. `wizard.keys_file()`
+        resolves `DEFAULT_KEYS_FILE` from the real home at import, so setting
+        `HOME` does not move it; exactly one test file was sandboxing it and
+        every other test could load the developer's real keys.
+      * `socket.socket.connect`, `connect_ex`, `sendto` and `sendmsg` are
+        refused for any non-loopback peer, FOR CALLS MADE IN THIS PROCESS
+        through the Python `socket.socket` class (which `ssl`, `http.client`,
+        `urllib`, `asyncio` and `socket.create_connection` all go through).
+        With a key loaded, provider code makes live calls, and a test that
+        passes when the network is up and fails when it blinks is
+        non-deterministic for a reason nobody is looking at.
+      * Loopback stays open — TCP and UDP — because the console tests serve
+        on it.
 
-    NETWORK. With a key loaded, provider code makes live calls. Three
-    consecutive full runs failed with three DIFFERENT tests in
-    `test_projects_ui.py`, and one failure was `http.client.RemoteDisconnected`
-    — not load, a real socket. A test that passes when the network is up and
-    fails when it blinks is non-deterministic for a reason nobody was looking
-    at, and re-running it in isolation "to confirm the flake" confirmed only
-    that the network was up again.
+    WHAT IS **NOT** COVERED, and both were measured rather than supposed
+      * **A SUBPROCESS.** A Python-level patch cannot reach a child process. A
+        census of 9,889 children in one full run found four invocations that
+        genuinely leave the machine — `gh auth status` and `gh api user`, via
+        `github_status()` → `pair._owner()` — from
+        test_console_strings_by_execution.py. `git`, `gh` and `codex` are the
+        known network-capable children; the 9,385 `git` calls were all local
+        (no fetch, push, clone, ls-remote or pull).
+      * **THE LOGIN KEYCHAIN.** `security find-generic-password` reads the
+        developer's real keychain. This fixture moves the keys FILE; the
+        keychain is a different channel and is not moved.
+      * **DNS RESOLUTION.** `socket.getaddrinfo` (and `gethostbyname`) is not
+        patched: a name lookup leaves the machine, in this process, before any
+        socket is connected. `mcp.py` and `broker/tools_research.py` call
+        `getaddrinfo`, so this is a product path, not a hypothetical.
+      * **THE RAW `_socket.socket`.** The patch is on the Python class
+        `socket.socket`; a caller that instantiates the C-level
+        `_socket.socket` directly bypasses it (measured: a SYN to TEST-NET
+        left the machine).
 
-    Loopback stays open, because the console tests serve on it.
+    Whether the suite should need the network at all is a decision, not a
+    defect, and is held separately. This docstring exists so nobody concludes
+    it has already been made.
+
+    One correction to this file's own history: an earlier version of this
+    docstring called a `RemoteDisconnected` failure "a real socket", which was
+    read as evidence of egress. A recorder over `socket.connect` that was never
+    torn down logged 290 connects in a full run and **every one was 127.0.0.1**.
+    That failure was a local console server closing, not the open network.
     """
     import socket
 
@@ -48,18 +101,43 @@ def _no_credentials_and_no_outbound_network(monkeypatch, tmp_path_factory):
         "CROSSAUDIT_KEYS_FILE",
         str(tmp_path_factory.mktemp("keys") / "crossaudit-keys.env"))
 
-    real_connect = socket.socket.connect
-
-    def guarded(self, address):
-        host = address[0] if isinstance(address, tuple) else None
-        if host is not None and str(host) not in _LOCAL_HOSTS:
+    def refuse_unless_local(address):
+        host = _peer_host(address)
+        if host is not None and not _is_local(host):
             raise AssertionError(
                 f"a test tried to open a network connection to {host!r}. Tests "
                 f"must not reach the network: stub the provider, or use the "
                 f"`replay` provider, which ships for exactly this.")
+
+    real_connect = socket.socket.connect
+    real_connect_ex = socket.socket.connect_ex
+    real_sendto = socket.socket.sendto
+    real_sendmsg = socket.socket.sendmsg
+
+    def guarded_connect(self, address):
+        refuse_unless_local(address)
         return real_connect(self, address)
 
-    monkeypatch.setattr(socket.socket, "connect", guarded)
+    def guarded_connect_ex(self, address):
+        refuse_unless_local(address)
+        return real_connect_ex(self, address)
+
+    def guarded_sendto(self, data, *rest):
+        # sendto(data, address) or sendto(data, flags, address)
+        if rest:
+            refuse_unless_local(rest[-1])
+        return real_sendto(self, data, *rest)
+
+    def guarded_sendmsg(self, buffers, *rest):
+        # sendmsg(buffers[, ancdata[, flags[, address]]])
+        if len(rest) >= 3:
+            refuse_unless_local(rest[2])
+        return real_sendmsg(self, buffers, *rest)
+
+    monkeypatch.setattr(socket.socket, "connect", guarded_connect)
+    monkeypatch.setattr(socket.socket, "connect_ex", guarded_connect_ex)
+    monkeypatch.setattr(socket.socket, "sendto", guarded_sendto)
+    monkeypatch.setattr(socket.socket, "sendmsg", guarded_sendmsg)
     yield
 
 

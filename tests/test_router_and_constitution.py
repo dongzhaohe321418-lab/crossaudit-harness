@@ -75,7 +75,15 @@ def test_provider_cannot_weaken_or_duplicate_the_reserved_task_rule():
 
     assert rendered.count("### CA-TASK-001") == 1
     assert "The task is optional" not in rendered
-    assert "A length stated approximately must be within 5%" in rendered
+    # Derived from the shipped rule rather than transcribed. The property is
+    # that the provider's substitute loses to OURS — pinning one sentence of
+    # ours made the test fail when that sentence legitimately changed, which
+    # tests the wording rather than the substitution.
+    shipped = " ".join(const_mod.universal_task_rule().criterion.split())
+    assert shipped in " ".join(rendered.split()), (
+        "the reserved rule's own text did not survive the provider's attempt "
+        "to replace it")
+    assert const_mod.universal_task_rule().severity == "BLOCKER"
 
 
 def test_a_rulebook_of_only_advisory_rules_is_accepted():
