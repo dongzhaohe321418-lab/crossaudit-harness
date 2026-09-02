@@ -4703,7 +4703,7 @@ function openResolution(value,action='',sha=''){
   document.getElementById('resolution-limit-copy').textContent=(formatCause
     ?'The reply was corrected once automatically and still failed to parse. Technical detail: '
     :noProgress?'One corrective retry was already made automatically. Technical detail: ':'')
-    +String((repairRefused&&row.why)||row.stop_reason||row.why||'The audit controller paused this task.');
+    +String((repairRefused&&row.why)||(currentLocale==='zh'&&(row.stop_reason_zh||row.why_zh))||row.stop_reason||row.why||'The audit controller paused this task.');
   const attemptRows=row.attempts||[];
   document.getElementById('resolution-attempts').innerHTML=attemptRows.map(item=>{
     const word=String(item.verdict||'').toLowerCase();

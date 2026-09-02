@@ -88,7 +88,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "打包版应用缺少确定性层的身份标识；请从经过验证的构建重新安装 CrossAudit"),
     # ------------------------------------------------------- autonomy.py
     ("choose one primary output format: PDF and Word/DOCX were both requested",
-     "请只选择一种主要输出格式：PDF 和 Word/DOCX 同时被要求了"),
+     "请只选择一种主要输出格式：不能同时要求 PDF 和 Word/DOCX"),
     ("the task is empty", "任务为空"),
     # ------------------------------------------------------------ broker/
     ("recovery snapshot is missing; cannot restore", "恢复快照缺失，无法还原"),
@@ -137,7 +137,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "{} 在本周期（{}）已有记录在案的决定；已作出的决定不会因重新运行而被替换。请提交"
      "一次修订以继续本周期，或开启新的增量重新接受评判。"),
     ("resolve is a human act; it refuses to run without a terminal",
-     "resolve 是人的操作；没有终端时它拒绝运行"),
+     "resolve 是人工操作；没有终端时它拒绝运行"),
     ("{} already exists", "{} 已存在"),
     ('say what should change: crossaudit amend "from now on ..."',
      '请说明要改什么：crossaudit amend "from now on ..."'),
@@ -273,7 +273,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("monthly cost warning cannot exceed the hard limit", "每月费用警告线不能超过硬上限"),
     ("authority.lone_model_blocker must be 'block' (bounded revision, the default) "
      "or 'escalate' (a person decides at round one)",
-     "authority.lone_model_blocker 必须是 'block'（有限修订，默认值）或 'escalate'"
+     "authority.lone_model_blocker 必须是 'block'（受限修订，默认值）或 'escalate'"
      "（第一轮就交由人决定）"),
     ("repair.enabled must be true or false", "repair.enabled 必须是 true 或 false"),
     ("repair.max_changed_lines must be an integer from 1 to 10000",
@@ -284,7 +284,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the official Codex runtime returned no safe login URL",
      "官方 Codex 运行时没有返回安全的登录 URL"),
     ("{} does not support connection {}", "{} 不支持连接方式 {}"),
-    ("unsupported provider vendor {}", "不支持的供应商厂商 {}"),
+    ("unsupported provider vendor {}", "不支持的厂商 {}"),
     # --------------------------------------------------- console/chats.py
     ("chat navigation state is unreadable: {}", "对话导航状态无法读取：{}"),
     ("chat navigation state has an invalid structure", "对话导航状态的结构无效"),
@@ -316,7 +316,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("project guidance requires this project to be a git repository",
      "项目指导要求此项目是 git 仓库"),
     ("guidance names use letters, numbers, hyphens or underscores (60 characters max)",
-     "指导名称只能使用字母、数字、连字符或下划线（最多 60 个字符）"),
+     "指导名称只能使用字母、数字、短横线或下划线（最多 60 个字符）"),
     ("project guidance cannot be empty", "项目指导不能为空"),
     ("project guidance is larger than {} bytes", "项目指导超过 {} 字节"),
     ("guidance paths must be a comma-separated list", "指导路径必须是以逗号分隔的列表"),
@@ -364,6 +364,13 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("choose a supported auditor vendor", "请选择受支持的审计者厂商"),
     ("choose a supported generator vendor", "请选择受支持的生成者厂商"),
     ("auditor and generator must use different vendors", "审计者与生成者必须使用不同的厂商"),
+    ("Connect {} API key in Settings before creating this project",
+     "创建此项目前，请先在设置中连接 {} 的 API key"),
+    ("Connect {} subscription in Settings before creating this project",
+     "创建此项目前，请先在设置中连接 {} 订阅"),
+    # The template the static reader sees (`{'API key' if … else 'subscription'}`
+    # is our own conditional literal); never reached, the two forms above sort
+    # first. It exists so the reader's rendering has an entry.
     ("Connect {} {} in Settings before creating this project",
      "创建此项目前，请先在设置中连接 {} {}"),
     ("The workspace changed in another window. Review the selected folder and "
@@ -405,7 +412,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     # -------------------------------------------------- console/server.py
     ("the selected PASS carries a signature that does not verify: {}; the receipt "
      "or its signature was altered after it was minted",
-     "所选 PASS 的签名无法通过验证：{}；收据或其签名在铸出之后被改动过"),
+     "所选 PASS 的签名无法通过验证：{}；收据或其签名在签发之后被改动过"),
     ("the human continuation cycle id is invalid", "人工继续的周期 id 无效"),
     ("that audit cycle is not waiting for a human-authorized revision",
      "该审计周期并不在等待人工授权的修订"),
@@ -485,7 +492,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("cycle status is {}, not PASSED", "周期状态是 {}，不是 PASSED"),
     ("stale: receipt sha {} is not the cycle's active {}",
      "已过期：收据 sha {} 不是该周期当前的 {}"),
-    ("receipt already consumed (replay)", "收据已被消费（重放）"),
+    ("receipt already consumed (replay)", "收据已核销（重放）"),
     ("receipt is not the cycle's recorded latest receipt", "该收据不是此周期记录的最新收据"),
     ("unknown resolution {}; use reopen or close", "未知的裁定 {}；请使用 reopen 或 close"),
     ("a resolution must state its reason; it becomes ledger",
@@ -502,11 +509,11 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("check pack {} exposes no register_checks()", "检查包 {} 没有提供 register_checks()"),
     ("check pack {} has no source file to hash (namespace or frozen import); "
      "refusing to mint a receipt that cannot pin the check code that ran",
-     "检查包 {} 没有可供哈希的源文件（命名空间包或冻结导入）；拒绝铸出无法锁定所运行"
+     "检查包 {} 没有可供哈希的源文件（命名空间包或打包版中的导入）；拒绝签发无法锁定所运行"
      "检查代码的收据"),
     ("check pack {} source at {} is unreadable ({}); refusing to mint a receipt "
      "that cannot pin the check code that ran",
-     "检查包 {} 位于 {} 的源文件无法读取（{}）；拒绝铸出无法锁定所运行检查代码的收据"),
+     "检查包 {} 位于 {} 的源文件无法读取（{}）；拒绝签发无法锁定所运行检查代码的收据"),
     ("unknown check profile {}; choose one of {} or list check names explicitly",
      "未知的检查方案 {}；请从 {} 中选择，或明确列出检查名称"),
     ("checks must be a profile name or a list of check names",
@@ -568,7 +575,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the generator MCP tool request must be a JSON object",
      "生成者的 MCP 工具请求必须是 JSON 对象"),
     ("the generator replied in prose instead of the required file envelope",
-     "生成者用散文作答，而不是要求的文件信封"),
+     "生成者回复的是普通文字，而不是要求的文件信封"),
     ("the generator returned malformed file blocks: the opening file marker is "
      "missing its path",
      "生成者返回了格式错误的文件块：文件起始标记缺少路径"),
@@ -731,7 +738,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("this MCP tool is not approved for automatic use", "此 MCP 工具未被批准自动使用"),
     # --------------------------------------------------------- providers/
     ("unexpected Anthropic response shape: {}", "Anthropic 返回了意料之外的响应结构：{}"),
-    ("Anthropic returned an empty completion", "Anthropic 返回了空的补全"),
+    ("Anthropic returned an empty completion", "Anthropic 返回了空回复"),
     ("provider stopped sending before the response body completed within the time "
      "budget",
      "供应商在时间预算内未发送完响应正文就停止了"),
@@ -770,7 +777,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "官方 Codex 运行时返回了意料之外的登录源"),
     ("the official Codex runtime returned no thread id",
      "官方 Codex 运行时没有返回 thread id"),
-    ("ChatGPT subscription completion timed out", "ChatGPT 订阅补全超时"),
+    ("ChatGPT subscription completion timed out", "ChatGPT 订阅回复超时"),
     ("ChatGPT subscription access uses the official Codex service and cannot be "
      "redirected to a custom endpoint",
      "ChatGPT 订阅访问使用官方 Codex 服务，不能重定向到自定义端点"),
@@ -781,33 +788,47 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("Sign in with ChatGPT in Settings before reading model options",
      "读取模型选项前，请先在设置中使用 ChatGPT 登录"),
     ("provider returned invalid UTF-8 in completion stream: {}",
-     "供应商在补全流中返回了无效的 UTF-8：{}"),
+     "供应商在回复流中返回了无效的 UTF-8：{}"),
     ("provider returned malformed completion stream data: {}",
-     "供应商返回了格式错误的补全流数据：{}"),
+     "供应商返回了格式错误的回复流数据：{}"),
     ("provider returned a non-object completion stream event",
-     "供应商返回了非对象的补全流事件"),
+     "供应商返回了非对象的回复流事件"),
     ("provider returned non-text completion stream content",
-     "供应商返回了非文本的补全流内容"),
+     "供应商返回了非文本的回复流内容"),
     ("provider completion stream ended without a terminal marker",
-     "供应商的补全流在没有结束标记的情况下结束了"),
-    ("provider returned an empty completion", "供应商返回了空的补全"),
+     "供应商的回复流在没有结束标记的情况下结束了"),
+    ("provider returned an empty completion", "供应商返回了空回复"),
     ("unexpected chat-completions response shape: {}",
      "chat-completions 返回了意料之外的响应结构：{}"),
     ("unknown provider {}; available: {}", "未知的供应商 {}；可用的有：{}"),
     ("provider 'replay' needs ${} pointing at a transcript directory",
-     "供应商 'replay' 需要 ${} 指向一个转录目录"),
+     "供应商 'replay' 需要 ${} 指向一个对话记录目录"),
     ("${} is not a directory: {}", "${} 不是目录：{}"),
     ("no recorded reply for this exact prompt ({}); the transcript cannot answer a "
      "question it was not asked",
-     "没有为这条提示（{}）录制的回复；转录无法回答它未被问过的问题"),
+     "没有为这条提示（{}）录制的回复；对话记录无法回答它未被问过的问题"),
     ("this project selected a human generator: make and commit the change, then "
      "run `crossaudit run`",
      "此项目选择了由人担任生成者：请自行完成并提交更改，然后运行 `crossaudit run`"),
     ("the generator provider and model must be configured", "必须配置生成者的供应商和模型"),
+    # The role is our own word (generator / auditor); the specific forms sort
+    # first, the `{}` forms exist for the static reader's rendering.
+    ("all configured generator provider routes are cooling down; retry in {}s",
+     "已配置的所有生成者供应商路由都在冷却中；请在 {} 秒后重试"),
+    ("all configured auditor provider routes are cooling down; retry in {}s",
+     "已配置的所有审计者供应商路由都在冷却中；请在 {} 秒后重试"),
     ("all configured {} provider routes are cooling down; retry in {}s",
      "已配置的所有 {} 供应商路由都在冷却中；请在 {} 秒后重试"),
+    # The summary after the full stop is `vendor:model — first line of the
+    # route's own refusal`, `; `-joined: a COMPOSITE, so each route's reason
+    # is translated in turn and the route id is carried through.
+    ("all configured generator provider routes failed. {}",
+     "已配置的所有生成者供应商路由都失败了。{}"),
+    ("all configured auditor provider routes failed. {}",
+     "已配置的所有审计者供应商路由都失败了。{}"),
     ("all configured {} provider routes failed. {}",
      "已配置的所有 {} 供应商路由都失败了。{}"),
+    ("{} credential ${} is not configured", "未配置 {} 凭据 ${}"),
     # ----------------------------------------------------- receipt/build.py
     # Raised through a constant (`f"{EVIDENCE_BROKEN_REASON}: {reason}"`), so
     # the static reader sees only `{}: {}`; this is the sentence a person meets.
@@ -849,7 +870,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("sources present without tool_evidence to bind it",
      "存在 sources 却没有绑定它的 tool_evidence"),
     ("authority workflow verdict {} differs from audit verdict {}",
-     "权威工作流的判定 {} 与审计判定 {} 不一致"),
+     "收据 authority 区块的工作流判定 {} 与审计判定 {} 不一致"),
     # ---------------------------------------------------- receipt/verify.py
     ("skill {} is {} bytes, over the {}-byte limit skills.load enforces",
      "技能 {} 有 {} 字节，超过了 skills.load 强制的 {} 字节上限"),
@@ -880,9 +901,9 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("bound report has no machine-readable verdict row", "绑定的报告没有机器可读的判定行"),
     ("receipt verdict {} differs from bound report verdict {}",
      "收据判定 {} 与绑定报告的判定 {} 不一致"),
-    ("bound report has no evidence-route row", "绑定的报告没有证据路径行"),
+    ("bound report has no evidence-route row", "绑定的报告没有证据路由行"),
     ("receipt evidence route {} differs from bound report route {}",
-     "收据的证据路径 {} 与绑定报告的路径 {} 不一致"),
+     "收据的证据路由 {} 与绑定报告的路由 {} 不一致"),
     ("cycle directory {} does not belong to {}", "周期目录 {} 不属于 {}"),
     ("report commit is not an ancestor of the audit head", "报告提交不是审计仓库 head 的祖先"),
     ("report commit named by the receipt is not in the audit repo",
@@ -904,7 +925,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "安装模式 {} 可以验证但永远不能准入：它的代码可能在它所报告的摘要之下被改动"),
     ("the verifier that minted this receipt is not the one admitting it; re-verify "
      "with the recorded version before admitting",
-     "铸出此收据的验证器与准入它的不是同一个；请先用记录的版本重新验证，再准入"),
+     "签发此收据的验证器与准入它的不是同一个；请先用记录的版本重新验证，再准入"),
     # ------------------------------------------------------------ router.py
     ("router returned an unknown lane {}", "路由器返回了未知的通道 {}"),
     ("name a recipient and include the instruction after it",
@@ -912,7 +933,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     # --------------------------------------------------- runtime/workspaces
     ("workspace runtime manager is busy; retry shortly", "工作区运行时管理器正忙；请稍后重试"),
     ("this project already owns a workspace build slot", "此项目已占有一个工作区构建槽位"),
-    ("workspace build capacity is {}; wait for {}", "工作区构建容量为 {}；请等待 {}"),
+    ("workspace build capacity is {}; wait for {}", "工作区构建容量为 {}；请等 {} 完成"),
     # ------------------------------------------------------------ skills.py
     ("refusing a symlinked skill: {}", "拒绝通过符号链接指向的技能：{}"),
     ("skill {} is {} bytes (limit {}); a skill is guidance, and one this long "
@@ -941,10 +962,440 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     # -------------------------------------------- console/server.py (admit)
     ("the selected PASS receipt is missing — no receipt file was minted for this "
      "cycle (sample data never mints one)",
-     "所选 PASS 的收据缺失——本周期没有铸出任何收据文件（示例数据从不铸出收据）"),
-    ("there is no unconsumed passing result to admit", "没有未消费的 PASS 结果可供准入"),
+     "所选 PASS 的收据缺失——本周期没有签发任何收据文件（示例数据从不签发收据）"),
+    ("there is no unconsumed passing result to admit", "没有尚未核销的 PASS 结果可供准入"),
     # ------------------------------------------------- broker/routing.py
     # D130's one string, as the console carries it: the verifier's reason is
     # carried through after the colon rather than swallowed.
-    ("evidence ledger cannot be shown to the Auditor: {}", "证据账本无法出示给审计方：{}"),
+    ("evidence ledger cannot be shown to the Auditor: {}", "证据账本无法出示给审计者：{}"),
+    # ================================================================
+    # Review round 2: the Denial SUBCLASSES (ToolError, TokenError,
+    # LedgerError, SSHFailure), the reasons assembled from a constant or a
+    # variable, and the specific sentences that a generic template would
+    # otherwise half-translate.
+    # ================================================================
+    # ------------------------------------------ broker/ (ToolError)
+    ("self-installation is not permitted; a candidate build is reviewed by the "
+     "independent auditor and installed only by the user",
+     "不允许自行安装；候选构建由独立审计者复核，且只能由用户安装"),
+    ("run_check needs 'command' as a non-empty list of argv strings",
+     "run_check 需要 'command'：一个非空的 argv 字符串列表"),
+    ("command {} is not in this project's allowed commands",
+     "命令 {} 不在此项目允许的命令列表中"),
+    ("command could not run: {}", "命令无法运行：{}"),
+    ("path {} is outside the grant", "路径 {} 超出了授权范围"),
+    ("git_commit needs a non-empty 'message'", "git_commit 需要非空的 'message'"),
+    ("commit refused: the staged changes appear to contain {}; remove the secret "
+     "(or add the file to .gitignore) and try again",
+     "提交被拒绝：暂存的更改似乎含有{}；请移除该机密（或把文件加入 .gitignore）后重试"),
+    ("repo_create needs a 'name'", "repo_create 需要 'name'"),
+    ("hpc_status needs a 'job_id'", "hpc_status 需要 'job_id'"),
+    ("hpc_output needs a 'job_id'", "hpc_output 需要 'job_id'"),
+    ("hpc_submit needs a non-empty 'manifest'", "hpc_submit 需要非空的 'manifest'"),
+    ("mcp_call needs a request with 'server_id' and 'tool'",
+     "mcp_call 需要包含 'server_id' 和 'tool' 的请求"),
+    ("this tool needs a 'path' argument", "此工具需要 'path' 参数"),
+    ("{} is not in the committed tree", "{} 不在已提交的树中"),
+    ("this tool needs a 'query' argument", "此工具需要 'query' 参数"),
+    ("the hostname {} resolves to a private or reserved address; only public web "
+     "hosts can be fetched",
+     "主机名 {} 解析到专用或保留地址；只能抓取公网主机"),
+    ("the hostname {} could not be resolved", "无法解析主机名 {}"),
+    ("web_fetch needs a plain public https:// URL without credentials or fragment",
+     "web_fetch 需要不含凭据和片段的纯公网 https:// URL"),
+    ("the server answered HTTP {}", "服务器返回了 HTTP {}"),
+    ("the fetch failed: {}", "抓取失败：{}"),
+    ("the response exceeded the 5 MiB fetch cap", "响应超出了 5 MiB 的抓取上限"),
+    ("the service returned malformed JSON", "服务返回了格式错误的 JSON"),
+    ("the service returned an unexpected JSON shape", "服务返回了意料之外的 JSON 结构"),
+    ("arXiv returned malformed XML", "arXiv 返回了格式错误的 XML"),
+    ("paper_search needs a non-empty 'query'", "paper_search 需要非空的 'query'"),
+    ("unknown source {}; choose one of {}", "未知的来源 {}；请从 {} 中选择"),
+    ("the PDF could not be parsed", "无法解析该 PDF"),
+    ("file_write needs a 'path' argument", "file_write 需要 'path' 参数"),
+    ("file_write 'content' must be a string", "file_write 的 'content' 必须是字符串"),
+    ("content exceeds the {}-byte write limit", "内容超出了 {} 字节的写入上限"),
+    ("path {} escapes the workspace", "路径 {} 越出了工作区"),
+    ("old_string was not found; it must match the file exactly, whitespace and all "
+     "(read the file first)",
+     "找不到 old_string；它必须与文件内容完全一致，包括空白字符（请先读取文件）"),
+    ("old_string matches {} places; make it unique with more surrounding context, "
+     "or pass replace_all=true",
+     "old_string 匹配到 {} 处；请加入更多上下文使其唯一，或传入 replace_all=true"),
+    ("file_edit needs a 'path' argument", "file_edit 需要 'path' 参数"),
+    ("file_edit needs string 'old_string' and 'new_string'",
+     "file_edit 需要字符串类型的 'old_string' 和 'new_string'"),
+    ("file_edit 'old_string' and 'new_string' are identical",
+     "file_edit 的 'old_string' 与 'new_string' 相同"),
+    ("file_edit 'old_string' must not be empty", "file_edit 的 'old_string' 不能为空"),
+    ("file {} does not exist; use file_write to create it",
+     "文件 {} 不存在；请用 file_write 创建它"),
+    ("file {} could not be read as UTF-8 text: {}", "文件 {} 无法作为 UTF-8 文本读取：{}"),
+    ("the edited file exceeds the {}-byte limit", "编辑后的文件超出了 {} 字节上限"),
+    # ------------------------------------------ policy/tokens.py (TokenError)
+    ("a capability token needs a project_id and run_id", "能力令牌需要 project_id 和 run_id"),
+    ("a capability token must be a mapping", "能力令牌必须是映射"),
+    ("invalid path pattern in token: {}", "令牌中的路径模式无效：{}"),
+    ("unparseable token expiry: {}", "无法解析的令牌过期时间：{}"),
+    ("unknown token fields: {}", "未知的令牌字段：{}"),
+    # ------------------------------------------ ledger/chain.py (LedgerError)
+    ("the evidence ledger has an incomplete final entry (a crash left a torn tail); "
+     "refusing to append onto a damaged chain until it is recovered",
+     "证据账本的最后一条记录不完整（崩溃留下了残缺的尾部）；在恢复之前拒绝向受损的链上追加记录"),
+    # ------------------------------------------ hpc.py (SSHFailure and labels)
+    ("This host is not trusted yet. Verify the hostname, then choose Trust first "
+     "key & connect. CrossAudit will use OpenSSH trust-on-first-use.",
+     "此主机尚未受信任。请核实主机名，然后选择「信任首个密钥并连接」。CrossAudit 将使用 "
+     "OpenSSH 的首次使用信任机制。"),
+    ("The saved SSH host key changed. CrossAudit will not replace it. Contact the "
+     "cluster administrator and repair known_hosts outside the app.",
+     "已保存的 SSH 主机密钥发生了变化。CrossAudit 不会替换它。请联系集群管理员，并在应用之外"
+     "修复 known_hosts。"),
+    ("SSH authentication was refused. Add the correct key to ssh-agent or fix "
+     "IdentityFile/User in ~/.ssh/config.",
+     "SSH 认证被拒绝。请把正确的密钥加入 ssh-agent，或修正 ~/.ssh/config 中的 IdentityFile/User。"),
+    ("The SSH hostname could not be resolved. Check the alias and any ProxyJump "
+     "entry in ~/.ssh/config.",
+     "无法解析 SSH 主机名。请检查 ~/.ssh/config 中的别名和 ProxyJump 条目。"),
+    ("The SSH connection timed out. Connect the required VPN and retry.",
+     "SSH 连接超时。请连接所需的 VPN 后重试。"),
+    ("The SSH host is unreachable from this Mac.", "从这台 Mac 无法访问该 SSH 主机。"),
+    ("OpenSSH could not connect to the host", "OpenSSH 无法连接到该主机"),
+    ("OpenSSH was not found on this computer", "此电脑上找不到 OpenSSH"),
+    ("OpenSSH could not resolve that host alias", "OpenSSH 无法解析该主机别名"),
+    ("The remote operation timed out", "远程操作超时"),
+    ("The remote input transfer timed out", "远程输入传输超时"),
+    ("the remote scheduler returned an invalid job identifier",
+     "远程调度器返回了无效的作业标识符"),
+    ("remote path must be an absolute normalized POSIX path",
+     "远程路径必须是绝对且规范化的 POSIX 路径"),
+    ("remote input path must be an absolute normalized POSIX path",
+     "远程输入路径必须是绝对且规范化的 POSIX 路径"),
+    ("scratch directory must be an absolute normalized POSIX path",
+     "临时目录必须是绝对且规范化的 POSIX 路径"),
+    ("concurrent job limit must be a whole number", "并发作业上限必须是整数"),
+    ("concurrent job limit must be between {} and {}", "并发作业上限必须在 {} 到 {} 之间"),
+    ("Generator jobs per task must be a whole number", "生成者每任务作业数必须是整数"),
+    ("Generator jobs per task must be between {} and {}",
+     "生成者每任务作业数必须在 {} 到 {} 之间"),
+    ("Generator node limit must be a whole number", "生成者节点上限必须是整数"),
+    ("Generator node limit must be between {} and {}", "生成者节点上限必须在 {} 到 {} 之间"),
+    ("Generator CPU limit must be a whole number", "生成者 CPU 上限必须是整数"),
+    ("Generator CPU limit must be between {} and {}", "生成者 CPU 上限必须在 {} 到 {} 之间"),
+    ("Generator GPU limit must be a whole number", "生成者 GPU 上限必须是整数"),
+    ("Generator GPU limit must be between {} and {}", "生成者 GPU 上限必须在 {} 到 {} 之间"),
+    ("nodes must be a whole number", "节点数必须是整数"),
+    ("nodes must be between {} and {}", "节点数必须在 {} 到 {} 之间"),
+    ("CPUs per task must be a whole number", "每任务 CPU 数必须是整数"),
+    ("CPUs per task must be between {} and {}", "每任务 CPU 数必须在 {} 到 {} 之间"),
+    ("GPUs must be a whole number", "GPU 数必须是整数"),
+    ("GPUs must be between {} and {}", "GPU 数必须在 {} 到 {} 之间"),
+    # ------------------------------------------ mcp.py (labels and composed)
+    ("MCP server closed its input. {}", "MCP 服务器关闭了它的输入。{}"),
+    ("MCP server exited before replying. {}", "MCP 服务器在回复之前退出了。{}"),
+    ("MCP message must be valid JSON", "MCP 消息必须是有效的 JSON"),
+    ("MCP message exceeds the {}-byte safety limit", "MCP 消息超出了 {} 字节的安全上限"),
+    ("MCP tool metadata must be valid JSON", "MCP 工具元数据必须是有效的 JSON"),
+    ("MCP tool metadata exceeds the {}-byte safety limit",
+     "MCP 工具元数据超出了 {} 字节的安全上限"),
+    ("MCP tool arguments must be valid JSON", "MCP 工具参数必须是有效的 JSON"),
+    ("MCP tool arguments exceeds the {}-byte safety limit",
+     "MCP 工具参数超出了 {} 字节的安全上限"),
+    ("MCP structured result must be valid JSON", "MCP 结构化结果必须是有效的 JSON"),
+    ("MCP structured result exceeds the {}-byte safety limit",
+     "MCP 结构化结果超出了 {} 字节的安全上限"),
+    # ------------------------------------------ cli/pair.py (composed)
+    ("gh {} failed: {}.{}", "gh {} 失败：{}。{}"),
+    ("science repository must be owner/name, got {}",
+     "科学仓库必须写成 owner/name，实际得到 {}"),
+    ("audit repository must be owner/name, got {}", "审计仓库必须写成 owner/name，实际得到 {}"),
+    # ------------------------------------------ console/projects.py (composed, labels)
+    ("Already exists: {}. Edit the names, or explicitly allow CrossAudit to use "
+     "repositories you can access.",
+     "已存在：{}。请修改名称，或明确允许 CrossAudit 使用你能访问的仓库。"),
+    ("project cannot be deleted while {}", "存在以下活动时无法删除项目：{}"),
+    ("GitHub connection unavailable: {}", "GitHub 连接不可用：{}"),
+    ("name is required", "必须填写名称"),
+    ("name is too long", "名称过长"),
+    ("description is required", "必须填写描述"),
+    ("description is too long", "描述过长"),
+    ("auditor vendor is required", "必须选择审计者厂商"),
+    ("auditor vendor is too long", "审计者厂商过长"),
+    ("generator vendor is required", "必须选择生成者厂商"),
+    ("generator vendor is too long", "生成者厂商过长"),
+    ("auditor model is required", "必须填写审计者模型"),
+    ("auditor model is too long", "审计者模型过长"),
+    ("generator model is required", "必须填写生成者模型"),
+    ("generator model is too long", "生成者模型过长"),
+    ("max attempts must be a number", "最大尝试次数必须是数字"),
+    ("max attempts must be between {} and {}", "最大尝试次数必须在 {} 到 {} 之间"),
+    ("initial backoff seconds must be a number", "首次退避秒数必须是数字"),
+    ("initial backoff seconds must be between {} and {}", "首次退避秒数必须在 {} 到 {} 之间"),
+    ("max backoff seconds must be a number", "最大退避秒数必须是数字"),
+    ("max backoff seconds must be between {} and {}", "最大退避秒数必须在 {} 到 {} 之间"),
+    ("retry after cap seconds must be a number", "Retry-After 上限秒数必须是数字"),
+    ("retry after cap seconds must be between {} and {}",
+     "Retry-After 上限秒数必须在 {} 到 {} 之间"),
+    ("circuit breaker failures must be a number", "熔断失败次数必须是数字"),
+    ("circuit breaker failures must be between {} and {}",
+     "熔断失败次数必须在 {} 到 {} 之间"),
+    ("circuit breaker cooldown seconds must be a number", "熔断冷却秒数必须是数字"),
+    ("circuit breaker cooldown seconds must be between {} and {}",
+     "熔断冷却秒数必须在 {} 到 {} 之间"),
+    ("daily token warning must be a positive number", "每日 token 警告线必须是正数"),
+    ("daily token limit must be a positive number", "每日 token 上限必须是正数"),
+    ("monthly cost warning usd must be a positive number", "每月费用警告线（美元）必须是正数"),
+    ("monthly cost limit usd must be a positive number", "每月费用上限（美元）必须是正数"),
+    # ------------------------------------------ console/daemon.py (via projects)
+    ("the console on port {} (pid {}) did not stop; its record is kept so it can "
+     "be found again",
+     "端口 {} 上的控制台（pid {}）没有停止；其记录已保留，以便再次找到它"),
+    # ------------------------------------------ console/server.py (composed)
+    ("the selected PASS is not ready for admission: {}", "所选的 PASS 尚未达到准入条件：{}"),
+    # ------------------------------------------ dispute.py (composed)
+    ("{} was raised against {} artefacts; name one: {}",
+     "{} 针对 {} 个产物被提出；请指定其中一个：{}"),
+    ("name the finding to dispute by its rule id: {}", "请用规则 id 指定要申辩的发现：{}"),
+    # ------------------------------------------ config.py heterogeneity (variable)
+    ("generator vendor not declared: I1 cannot be asserted from config",
+     "未声明生成者厂商：无法从配置断言 I1"),
+    ("I1 violated: generator and auditor recovery pools overlap at {}",
+     "违反 I1：生成者与审计者的恢复池在 {} 处重叠"),
+    # ------------------------------------------ connections.py (variable)
+    ("that provider login method is not supported", "不支持该供应商的登录方式"),
+    ("Official ChatGPT subscription sign-in is available through the bundled Codex "
+     "runtime; CrossAudit never receives its OAuth token.",
+     "可通过内置 Codex 运行时使用官方 ChatGPT 订阅登录；CrossAudit 绝不会接收其 OAuth token。"),
+    ("Anthropic does not permit Claude consumer subscriptions to be bound to "
+     "third-party apps. Use an Anthropic API key or a separately implemented "
+     "enterprise cloud route.",
+     "Anthropic 不允许把 Claude 消费者订阅绑定到第三方应用。请使用 Anthropic API key，或单独"
+     "实现的企业云路由。"),
+    ("A Gemini consumer subscription is not an API credential. Google AI Studio "
+     "API/auth keys are supported; Vertex AI IAM is a separate cloud connection.",
+     "Gemini 消费者订阅不是 API 凭据。支持 Google AI Studio 的 API/auth key；Vertex AI IAM "
+     "是另一种云连接。"),
+    ("Qwen Code offers its own official Coding Plan login, but CrossAudit does not "
+     "reuse CLI session files as general inference credentials. Use a Model Studio "
+     "API key here.",
+     "Qwen Code 提供自己的官方 Coding Plan 登录，但 CrossAudit 不会把 CLI 会话文件当作通用推理"
+     "凭据复用。请在此使用 Model Studio API key。"),
+    ("xAI's inference API supports API credentials (and documented OAuth tokens for "
+     "approved integrations), but an X consumer subscription is not automatically "
+     "an inference entitlement. API key is enabled here.",
+     "xAI 的推理 API 支持 API 凭据（以及面向已批准集成的、有文档说明的 OAuth token），但 X "
+     "消费者订阅并不自动等于推理权限。此处启用的是 API key。"),
+    # ------------------------------------------ app.py (variable)
+    ("CrossAudit could not prepare its private application data in {} — grant "
+     "access in System Settings › Privacy & Security › Files and Folders, then retry.",
+     "CrossAudit 无法在 {} 准备其私有应用数据 —— 请在「系统设置 › 隐私与安全性 › 文件和文件夹」"
+     "中授予访问权限，然后重试。"),
+    ("CrossAudit could not create its workspace in {} — grant access in System "
+     "Settings › Privacy & Security › Files and Folders, or choose another location.",
+     "CrossAudit 无法在 {} 创建工作区 —— 请在「系统设置 › 隐私与安全性 › 文件和文件夹」中授予"
+     "访问权限，或选择其他位置。"),
+    ("CrossAudit could not read its saved connection settings — unlock the login "
+     "Keychain and retry.",
+     "CrossAudit 无法读取已保存的连接设置 —— 请解锁登录钥匙串后重试。"),
+    ("CrossAudit could not start its private local console — allow local "
+     "connections and retry.",
+     "CrossAudit 无法启动其私有本地控制台 —— 请允许本地连接后重试。"),
+    # ------------------------------------------ usage.py (composed)
+    ("Local usage guardrail paused provider calls. {} Open Project controls to "
+     "raise or clear the limit, then retry.",
+     "本地用量保护线已暂停供应商调用。{}请打开「项目控制」提高或清除该上限，然后重试。"),
+    # ------------------------------------------ providers/ (composed)
+    ("provider returned HTTP {}\n  it said: {}\n  {}", "供应商返回了 HTTP {}\n  它说：{}\n  {}"),
+    ("provider returned HTTP {}\n  it said: {}", "供应商返回了 HTTP {}\n  它说：{}"),
+    ("provider returned HTTP {}\n  {}", "供应商返回了 HTTP {}\n  {}"),
+    ("provider returned HTTP {}", "供应商返回了 HTTP {}"),
+    ("provider stream failed: {}", "供应商的流式响应失败：{}"),
+    ("ChatGPT subscription completion failed{}", "ChatGPT 订阅请求失败{}"),
+    ("ChatGPT subscription completion failed", "ChatGPT 订阅请求失败"),
+    ("ChatGPT subscription completion failed: {}", "ChatGPT 订阅请求失败：{}"),
+    ("ChatGPT subscription returned an empty completion{}", "ChatGPT 订阅返回了空回复{}"),
+    ("ChatGPT subscription returned an empty completion", "ChatGPT 订阅返回了空回复"),
+    ("ChatGPT subscription returned an empty completion; its tool request was "
+     "safely blocked, but it did not recover with a text answer",
+     "ChatGPT 订阅返回了空回复；它的工具请求已被安全拦截，但之后没有恢复为文本回答"),
+    # ------------------------------------------ console/daemon.py, runtime/commands.py
+    # The escalation sentence the Decision Center leads with; its slot is the
+    # provider refusal itself, translated in turn (COMPOSITE).
+    ("provider failure left this task waiting for a person: {}",
+     "供应商失败，该任务正在等待人工处理：{}"),
+    ("no provider route is available", "没有可用的供应商路由"),
+    # runtime/runs.py raises RuntimeError; runtime/commands.py re-wraps it as
+    # ConfigDenial(str(exc)) — the one variable-carried reason the review's
+    # runtime log still showed in English.
+    ("there is no active run to cancel", "没有可取消的活动运行"),
+    ("the run stopped for a person before its decision record was written",
+     "运行在写入决定记录之前就停下来等人处理了"),
+    # ------------------------------------------ receipt/ (composed)
+    ("authority block does not validate: {}", "authority 区块未通过校验：{}"),
+    # ------------------------------------------ file_identity.py (_path_denial)
+    ("refusing an empty or invalid generated file path", "拒绝空的或无效的生成文件路径"),
+    ("refusing a generated file path with directory syntax: {}",
+     "拒绝带有目录语法的生成文件路径：{}"),
+    ("refusing a path that escapes the project: {}", "拒绝越出项目的路径：{}"),
+    ("refusing an unusable generated file path: {}", "拒绝无法使用的生成文件路径：{}"),
+    ("the project root is not a directory", "项目根不是目录"),
+    ("refusing generated files whose physical identity changed before apply",
+     "拒绝在应用前物理身份已改变的生成文件"),
+    ("generated payloads do not match their authorized targets",
+     "生成的内容与其授权目标不匹配"),
+    ("generated file authorization receipt is no longer active",
+     "生成文件的授权凭证已失效"),
+    ("generated file staging receipt is not available", "生成文件的暂存凭证不可用"),
+    ("cannot transfer a generated file authorization receipt",
+     "无法转移生成文件的授权凭证"),
+    ("resolved target is outside the project: {}", "解析后的目标在项目之外：{}"),
+    ("could not establish one directory identity for {}", "无法为 {} 确定唯一的目录身份"),
+    ("could not resolve generated file path {}", "无法解析生成文件路径 {}"),
+    ("could not inspect generated file target {}", "无法检查生成文件的目标 {}"),
+    ("working directory {} resolves outside the project", "工作目录 {} 解析到了项目之外"),
+    ("working directory is not a directory: {}", "工作目录不是目录：{}"),
+    ("could not establish filename identity rules on the project filesystem",
+     "无法在项目文件系统上确定文件名身份规则"),
+    ("could not establish the physical project directory", "无法确定项目的物理目录"),
+    ("{} resolves outside the project to {}", "{} 解析到了项目之外的 {}"),
+    ("{} resolves outside the authorized working directories; the generator may "
+     "not write rules, ledger or configuration",
+     "{} 解析到了授权工作目录之外；生成者不得写入规则、账本或配置"),
+    ("refusing a hidden physical target: {}", "拒绝隐藏的物理目标：{}"),
+    ("refusing to edit scaffold template {}; create a new increment directory instead",
+     "拒绝编辑脚手架模板 {}；请改为创建新的增量目录"),
+    ("refusing filesystem-equivalent generated paths: {} and {}",
+     "拒绝在文件系统上等价的生成路径：{} 和 {}"),
+    ("the physical project directory changed before apply", "项目的物理目录在应用前发生了变化"),
+    ("could not atomically apply the generated file round", "无法原子地应用本轮生成的文件"),
+    ("generated file identity changed before staging: {}",
+     "生成文件的身份在暂存前发生了变化：{}"),
+    ("could not establish physical file identity for {}", "无法确定 {} 的物理文件身份"),
+    ("refusing dangling symlink target {}", "拒绝悬空的符号链接目标 {}"),
+    ("generated file parent is not a directory: {}", "生成文件的上级不是目录：{}"),
+    ("generated file target is not a regular file: {}", "生成文件的目标不是常规文件：{}"),
+    ("refusing hardlinked file target with non-unique identity: {}",
+     "拒绝身份不唯一的硬链接文件目标：{}"),
+    ("refusing two generated paths for one physical file: {} and {}",
+     "拒绝指向同一物理文件的两个生成路径：{} 和 {}"),
+    ("refusing generated paths where one physical target contains another",
+     "拒绝一个物理目标包含另一个的生成路径"),
+    ("refusing a generated file created after authorization: {}",
+     "拒绝在授权之后才创建的生成文件：{}"),
+    ("refusing a generated file that changed before publish: {}",
+     "拒绝在发布前发生变化的生成文件：{}"),
+    ("refusing dangling symlink parent {}", "拒绝悬空的符号链接上级 {}"),
+    ("could not establish a parent for {}", "无法确定 {} 的上级目录"),
+    ("refusing a generated file that changed during apply: {}",
+     "拒绝在应用过程中发生变化的生成文件：{}"),
 )
+
+
+#: Sentences of ours that only ever appear INSIDE another refusal's slot —
+#: never raised on their own, so they are not in ENTRIES (the orphan guard
+#: would rightly reject them there). They are looked up only from the slots
+#: of the templates in COMPOSITES.
+CLAUSES: tuple[tuple[str, str], ...] = (
+    # broker/secretscan.py — the KIND of secret a refused commit carried.
+    ("a private key block", "私钥块"),
+    ("an AWS access key id", "AWS 访问密钥 ID"),
+    ("a GitHub token", "GitHub token"),
+    ("a GitHub fine-grained token", "GitHub 细粒度 token"),
+    ("a Slack token", "Slack token"),
+    ("a Google API key", "Google API key"),
+    ("a Stripe secret key", "Stripe 密钥"),
+    ("a private OpenAI key", "OpenAI 私密密钥"),
+    ("an environment file that may contain secrets", "可能含有机密的环境文件"),
+    # cli/pair.py — the hint after a failed `gh` command.
+    ("Authorize GitHub CLI for the organisation's SSO, then retry.",
+     "请为该组织的 SSO 授权 GitHub CLI，然后重试。"),
+    ("GitHub rate-limited this account; wait for the reset, then retry.",
+     "GitHub 对此账户限流了；请等待重置后重试。"),
+    ("The connected account lacks repository or organisation permission.",
+     "已连接的账户缺少仓库或组织权限。"),
+    ("The name exists but may not be visible to this account; verify ownership.",
+     "该名称已存在，但此账户可能看不到它；请核实归属。"),
+    # console/projects.py — what is still running when a delete is refused.
+    ("project setup is still running", "项目创建仍在运行"),
+    ("a Generator/Auditor task is running", "有生成者/审计者任务正在运行"),
+    ("{} remote compute job(s) are active", "有 {} 个远程计算作业处于活动状态"),
+    # receipt/verify.py — admission shortfalls.
+    ("verdict is {}, not PASS", "判定是 {}，不是 PASS"),
+    ("audit integrity is {}", "审计完整性是 {}"),
+    ("evidence route is {}, not receipt", "证据路由是 {}，不是 receipt"),
+    ("isolation evidence is missing {}", "缺少隔离证据 {}"),
+    ("this receipt is not the one recorded for the cycle — re-run the audit",
+     "此收据不是该周期记录的那份 —— 请重新运行审计"),
+    # usage.py — why the guardrail paused.
+    ("Daily token limit reached: {} / {}.", "已达到每日 token 上限：{} / {}。"),
+    ("Monthly API-value limit reached: ${} / ${}.", "已达到每月 API 费用上限：${} / ${}。"),
+    ("The monthly cost limit cannot be proven because one or more calls use an "
+     "unpriced model. Remove the cost limit or select priced models.",
+     "由于一次或多次调用使用了未定价的模型，无法证明每月费用上限。请移除费用上限，或选择已定价"
+     "的模型。"),
+    ("The next request is estimated to exceed the daily token limit: {} used + "
+     "approximately {} input > {}.",
+     "下一次请求预计会超出每日 token 上限：已用 {} + 约 {} 输入 > {}。"),
+    # providers/base.py — the advice under an HTTP status.
+    ("the key was rejected. Check the one in your keys file is for this vendor "
+     "and not truncated — re-enter it if the paste may be incomplete",
+     "密钥被拒绝。请检查密钥文件中的这把密钥属于该厂商且未被截断 —— 如果粘贴可能不完整，"
+     "请重新输入"),
+    ("the key is valid but not permitted here — often a workspace or a region "
+     "restriction on the account",
+     "密钥有效但在此处不被允许 —— 通常是账户上的工作区或区域限制"),
+    ("the endpoint does not exist. If you set a custom base URL, check it",
+     "该端点不存在。如果你设置了自定义 base URL，请检查它"),
+    ("rate limited or out of credit. This is the vendor's limit, not ours",
+     "被限流或额度用尽。这是厂商的限制，不是我们的"),
+    ("that is the model id, not your key. Set a model this account can use — "
+     "`crossaudit init` lists the current ones, or edit `model:` in crossaudit.yml",
+     "问题出在模型 id，不是你的密钥。请设置此账户可用的模型 —— `crossaudit init` 会列出当前"
+     "可用的模型，或编辑 crossaudit.yml 里的 `model:`"),
+    # auditor/authority.py — why an authority block does not validate.
+    ("authority block carries unknown keys {}", "authority 区块含有未知的键 {}"),
+    ("authority policy version {} is not one this verifier knows ({})",
+     "authority 策略版本 {} 不是此验证器认识的版本（{}）"),
+    ("authority workflow verdict {} is unknown", "authority 工作流判定 {} 未知"),
+    ("authority route {} is unknown", "authority 路由 {} 未知"),
+    ("authority route {} does not follow from verdict {}",
+     "authority 路由 {} 与判定 {} 不相符"),
+    ("authority requires_human disagrees with its route",
+     "authority 的 requires_human 与其路由不一致"),
+    ("authority lone_model_blocker names an unknown policy dial",
+     "authority 的 lone_model_blocker 指定了未知的策略档位"),
+    ("authority evidence is not a list", "authority 的 evidence 不是列表"),
+    ("authority evidence digest does not match its records",
+     "authority 的证据摘要与其记录不匹配"),
+    ("authority evidence ids are not unique, one per record",
+     "authority 的证据 id 不唯一（每条记录应有一个）"),
+    ("authority {} is not a list", "authority 的 {} 不是列表"),
+    ("authority {} repeats an id", "authority 的 {} 重复了某个 id"),
+    ("authority {} names evidence not in the block: {}",
+     "authority 的 {} 指向了区块中不存在的证据：{}"),
+    ("authority rationale is empty", "authority 的 rationale 为空"),
+    ("authority decision_id does not re-derive from the block: a partition, "
+     "sentence, dial or route was edited",
+     "authority 的 decision_id 无法从区块重新推导出来：某个分区、句子、档位或路由被改动过"),
+)
+
+#: The templates whose slot carries our OWN clause(s) rather than a path, an
+#: id or a person's words. Only these slots are looked up in CLAUSES; every
+#: other slot is carried through untouched (D130: never match text a person
+#: could have authored).
+COMPOSITES: frozenset[str] = frozenset({
+    "commit refused: the staged changes appear to contain {}; remove the secret "
+    "(or add the file to .gitignore) and try again",
+    "gh {} failed: {}.{}",
+    "project cannot be deleted while {}",
+    "the selected PASS is not ready for admission: {}",
+    "Local usage guardrail paused provider calls. {} Open Project controls to "
+    "raise or clear the limit, then retry.",
+    "provider returned HTTP {}\n  it said: {}\n  {}",
+    "provider returned HTTP {}\n  {}",
+    "authority block does not validate: {}",
+    "all configured generator provider routes failed. {}",
+    "all configured auditor provider routes failed. {}",
+    "all configured {} provider routes failed. {}",
+    "provider failure left this task waiting for a person: {}",
+})

@@ -320,13 +320,22 @@ def _speak(args: argparse.Namespace) -> None:
     which is how the console and the tests call these. Here, the set of
     translated commands is visible at the commands themselves.
     """
-    # An explicit flag wins; then the language the person's system already
-    # asked for; then English. The middle step is the one that matters: a Mac
-    # set to Chinese should not need a flag nobody documented.
-    i18n.set_language(getattr(args, "lang", None)
-                      or i18n.from_environment()
-                      or i18n.DEFAULT_LANGUAGE)
+    i18n.set_language(_language_for(args))
     i18n.reset_fallbacks()
+
+
+def _language_for(args: argparse.Namespace) -> str:
+    """The ONE resolver: an explicit flag wins; then the language the person's
+    system already asked for (`LC_ALL` / `LC_MESSAGES` / `LANG`); then
+    English. The middle step is the one that matters: a Mac set to Chinese
+    should not need a flag nobody documented. There is no saved CLI
+    preference to consult — the console keeps one in a cookie, the CLI reads
+    the environment — so a saved preference would be a fourth source and is
+    deliberately not invented here.
+    """
+    return (getattr(args, "lang", None)
+            or i18n.from_environment()
+            or i18n.DEFAULT_LANGUAGE)
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -1995,12 +2004,16 @@ def main(argv: list[str] | None = None) -> int:
             # `DENIED (kind): ` is parsed by the macOS shell (CrossAuditApp.swift
             # reads the reason after "): "), so the prefix is a contract and
             # stays Latin; the sentence after it is the one a person reads, and
-            # it is served in the language the command was asked for (D130:
-            # a refusal is the string that most needs translating).
+            # it is served in the language the person asked for (D130: a
+            # refusal is the string that most needs translating). Resolved
+            # HERE, for every command: `_speak()` is per-command by design
+            # (D21 — a half-translated screen must not ship), but a refusal
+            # is one sentence, and the person who could not read it is worse
+            # off than one who read a screen with a seam in it.
+            i18n.set_language(_language_for(args))
             print(f"DENIED ({exc.kind}): {i18n.denial_text(exc.reason)}",
                   file=sys.stderr)
-            if not getattr(args, "json", False):
-                _report_untranslated()
+            _report_untranslated()
         return exc.exit_code
     except KeyboardInterrupt:
         print("\n" + i18n.t("build.interrupted"), file=sys.stderr)

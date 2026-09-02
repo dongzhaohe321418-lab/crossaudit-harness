@@ -374,12 +374,12 @@ CATALOGUE: dict[str, dict[str, str]] = {
         'checks.proposal.keep': '保持「{label}」检查',
         'checks.proposal.prompt': '自动检查：',
         'checks.proposal.said': '来自你说的话：“{said}”',
-        'doctor.admission_capable.fix': '安装构建好的 wheel 才能采信收据',
-        'doctor.admission_capable.label': '此安装无法采信收据',
-        'doctor.admission_capable.why': '它可以生成、审计和验证；但不能把收据作为已采信的证据使用。',
+        'doctor.admission_capable.fix': '安装构建好的 wheel 才能准入收据',
+        'doctor.admission_capable.label': '此安装无法准入收据',
+        'doctor.admission_capable.why': '它可以生成、审计和验证；但不能把收据作为已准入的证据使用。',
         'doctor.auditor_key.fix': '执行 source {path}，或导出 {env}',
         'doctor.auditor_key.fix.subscription': '在 CrossAudit 设置中登录',
-        'doctor.auditor_key.label': '没有审计方 API 密钥',
+        'doctor.auditor_key.label': '没有审计者 API 密钥',
         'doctor.auditor_key.why': '没有它 CrossAudit 无法进行审计。',
         'doctor.config.fix': '运行 `crossaudit init` 来写入 {name}',
         'doctor.config.label': '这里没有 CrossAudit 项目',
@@ -404,7 +404,7 @@ CATALOGUE: dict[str, dict[str, str]] = {
         'doctor.contracts': '已配置 {n} 项自动检查   （它们会在你的第一个任务上运行）',
         'doctor.contracts.plural': '已配置 {n} 项自动检查   （它们会在你的第一个任务上运行）',
         'doctor.generator_key.fix': '执行 source {path}，或导出 {env} — 缺少它 `crossaudit build` 会在第一轮就停下',
-        'doctor.generator_key.label': '没有生成方 API 密钥',
+        'doctor.generator_key.label': '没有生成者 API 密钥',
         'doctor.generator_key.why': '没有它 CrossAudit 无法写出任何东西。',
         'doctor.gh.fix': '安装 gh 并运行 `gh auth login`',
         'doctor.gh.label': 'GitHub CLI 不可用',
@@ -416,12 +416,12 @@ CATALOGUE: dict[str, dict[str, str]] = {
         'doctor.git_identity.label': '这个克隆没有 git 身份',
         'doctor.git_identity.why': '提交无法归属，账本会失去来源信息。',
         'doctor.heterogeneity.fix': '声明 generator.vendor，并使其不同于 auditor.vendor',
-        'doctor.heterogeneity.label': '生成方与审计方是同一厂商（I1）',
+        'doctor.heterogeneity.label': '生成者与审计者是同一厂商（I1）',
         'doctor.heterogeneity.why': '同源监督不是独立审计，协议因此拒绝它。',
         'doctor.install.fix': '从 wheel 重新安装',
         'doctor.install.label': '此安装无法标识自身',
         'doctor.install.why': '收据无法记录是哪份代码产生了它们。',
-        'doctor.isolation.fix': '在独立的凭据边界中运行审计方，或在两个周期之间有意调低 isolation.minimum.permissive',
+        'doctor.isolation.fix': '在独立的凭据边界中运行审计者，或在两个周期之间有意调低 isolation.minimum.permissive',
         'doctor.isolation.label': '两个角色的密钥可以被同一个进程读到',
         'doctor.isolation.why': '此处要求宽松隔离，而这个进程两者都能读到。',
         'doctor.not_ready': '尚未就绪 — 有 {n} 项需要处理。',
@@ -429,7 +429,7 @@ CATALOGUE: dict[str, dict[str, str]] = {
         'doctor.other_passed': '另有 {n} 项检查通过        （用 crossaudit doctor --all 逐条查看）',
         'doctor.other_passed.plural': '另有 {n} 项检查通过        （用 crossaudit doctor --all 逐条查看）',
         'doctor.provider.fix': '把 auditor.provider 设为其中之一：{providers}',
-        'doctor.provider.label': '审计方 provider 不是 CrossAudit 认识的',
+        'doctor.provider.label': '审计者 provider 不是 CrossAudit 认识的',
         'doctor.provider.why': '无法向它请求任何审计。',
         'doctor.python.fix': '安装 Python 3.10 或更高版本',
         'doctor.python.label': 'Python 版本过旧',
@@ -440,7 +440,7 @@ CATALOGUE: dict[str, dict[str, str]] = {
         'doctor.repo.why': '账本是 git 而不是一个目录，因此没有东西能被提交。',
         'doctor.state.fix': '让 {path} 可写',
         'doctor.state.label': '控制器无法保存状态',
-        'doctor.state.why': '已采信的收据无法记录，因此没有任何东西是持久的。',
+        'doctor.state.why': '已准入的收据无法记录，因此没有任何东西是持久的。',
         'doctor.tier.label': '这个项目的历史能证明到什么程度',
         'doctor.tier.standing.enforced': '无需处理——审计失败已经会拒绝合并',
         'doctor.tier.standing.local': '无需更改，除非你希望这段历史能证明的不止是自我审查；`crossaudit pair` 会把两个代理分开',
@@ -489,13 +489,13 @@ CATALOGUE: dict[str, dict[str, str]] = {
         'prepare.created': '已创建 {path}',
         'prepare.git_init': 'git init — 账本就是 git，审计读取的是提交',
         'prepare.gitignore': '已忽略 CrossAudit 的本地状态目录 — 它们不是账本',
-        'prompt.auditor_key': '{vendor} 密钥 — 审计方',
-        'prompt.auditor_vendor': '审计方厂商：',
+        'prompt.auditor_key': '{vendor} 密钥 — 审计者',
+        'prompt.auditor_vendor': '审计者厂商：',
         'prompt.base_url': '兼容 OpenAI 的 base URL',
         'prompt.description': '用一到三句话描述你的项目',
         'prompt.description.placeholder': '例如：一份光伏产业综述；每个数字都必须能追溯到来源',
-        'prompt.generator_key': '{vendor} 密钥 — 生成方（留空则由你自己导出）',
-        'prompt.generator_vendor': '生成方厂商：',
+        'prompt.generator_key': '{vendor} 密钥 — 生成者（留空则由你自己导出）',
+        'prompt.generator_vendor': '生成者厂商：',
         'prompt.model': '{role} 模型：',
         'prompt.model_id': '模型 id',
         'prompt.model_id.placeholder': '与厂商的写法完全一致',
@@ -503,8 +503,8 @@ CATALOGUE: dict[str, dict[str, str]] = {
         'refusal.no_project.fix': 'crossaudit init     就在这里建立一个',
         'refusal.no_project.looked': '已在 {where} 及其每一级上层目录中查找 {name}。',
         'refusal.no_project.title': '这里没有 CrossAudit 项目。',
-        'role.auditor': '审计方',
-        'role.generator': '生成方',
+        'role.auditor': '审计者',
+        'role.generator': '生成者',
         'rules.draft_failed': '无法根据你的描述起草规则：{reason}',
         'rules.draft_failed.fallback': '改为显示一个起点 — 你可以在这里编辑它，或另选一个。',
         'rules.drafted_header': '根据你说的话起草的规则 · {count} 条',
@@ -564,7 +564,8 @@ _denial_patterns: list[tuple[re.Pattern[str], str]] = []
 
 
 def _compile(entries, exact: dict[str, str],
-             patterns: list[tuple[re.Pattern[str], str]]) -> None:
+             patterns: list[tuple[re.Pattern[str], str]],
+             origin: dict[re.Pattern[str], str] | None = None) -> None:
     """Split a text-keyed table into exact entries and `{}` templates."""
     for english, chinese in entries:
         if "{}" not in english:
@@ -580,23 +581,43 @@ def _compile(entries, exact: dict[str, str],
             chinese = "".join(piece + ("{%d}" % i if i < len(pieces) - 1 else "")
                               for i, piece in enumerate(pieces))
         patterns.append((pattern, chinese))
+        if origin is not None:
+            origin[pattern] = english
     # First match wins, so the most specific template must be tried first: the
-    # fewest slots, then the most literal text. Without this, `MCP {} failed:
+    # most literal text, then the fewest slots. Without this, `MCP {} failed:
     # {}` swallows "MCP server connection failed: …" into a half-translated
     # sentence — the exact defect the console's ZH_PATTERNS comment records.
-    patterns.sort(key=lambda item: (item[0].pattern.count("(.*?)"),
-                                    -len(item[0].pattern)))
+    # Literal text before slot count, so a specific sentence with two slots
+    # ("Daily token limit reached: {} / {}") still beats the one-slot frame
+    # that would otherwise capture it whole.
+    patterns.sort(key=lambda item: (-(len(item[0].pattern)
+                                      - 5 * item[0].pattern.count("(.*?)")),
+                                    item[0].pattern.count("(.*?)")))
+
+
+_denial_clause_exact: dict[str, str] = {}
+_denial_clause_patterns: list[tuple[re.Pattern[str], str]] = []
+_denial_composite: set[re.Pattern[str]] = set()
 
 
 def _compile_denials() -> None:
-    from .denials_zh import ENTRIES
+    from .denials_zh import CLAUSES, COMPOSITES, ENTRIES
 
-    _compile(ENTRIES, _denial_exact, _denial_patterns)
+    origin: dict[re.Pattern[str], str] = {}
+    _compile(ENTRIES, _denial_exact, _denial_patterns, origin)
+    # A clause is a sentence of ours that only ever appears INSIDE another
+    # refusal's slot (a secret kind, a gh hint, an admission shortfall). It is
+    # looked up only from the slots of the templates named in COMPOSITES, so
+    # a slot that carries a person's own text is never matched against it.
+    _compile([*CLAUSES, *ENTRIES], _denial_clause_exact, _denial_clause_patterns,
+             origin)
+    _denial_composite.update(p for p, english in origin.items()
+                             if english in COMPOSITES)
 
 
 def _lookup(text: str, exact: dict[str, str],
             patterns: list[tuple[re.Pattern[str], str]],
-            slot=None) -> str | None:
+            slot=None, composite: set[re.Pattern[str]] | None = None) -> str | None:
     match_exact = exact.get(text)
     if match_exact is not None:
         return match_exact
@@ -604,10 +625,67 @@ def _lookup(text: str, exact: dict[str, str],
         match = pattern.match(text)
         if match:
             groups = match.groups()
-            if slot is not None:
-                groups = tuple(slot(g) for g in groups)
+            fill = slot if slot is not None else (
+                _denial_clause if composite and pattern in composite else None)
+            if fill is not None:
+                groups = tuple(fill(g) for g in groups)
             return chinese.format(*groups)
     return None
+
+
+def _clause_once(text: str) -> str | None:
+    """One clause of ours: exact, then a `vendor:model — refusal` route line
+    (providers/resilience.py — the id is carried through and only the refusal
+    after the dash is looked up, and only when the left side IS a bare route
+    id, so a dash inside a person's text never triggers a translation), then
+    a template."""
+    exact = _denial_clause_exact.get(text)
+    if exact is not None:
+        return exact
+    route, dash, refusal = text.partition(" — ")
+    if dash and route and " " not in route:
+        after = _clause_once(refusal)
+        if after is not None:
+            return route + " — " + after
+    return _lookup(text, _denial_clause_exact, _denial_clause_patterns,
+                   composite=_denial_composite)
+
+
+def _denial_clause(part: str) -> str:
+    """A slot of a composite refusal: our own clause(s), translated in turn.
+
+    An exact sentence; else a `; `-joined list piece by piece; else a run of
+    sentences one by one; only THEN the whole against a template — a one-slot
+    template tried first would capture a whole list as its slot ("{} remote
+    compute job(s) are active"). A piece the table does not know is carried
+    through as it is, so a translated composite never says less than the
+    English did.
+    """
+    text = part.strip()
+    if not text:
+        return part
+    exact = _denial_clause_exact.get(text)
+    if exact is not None:
+        return exact
+    pieces = text.split("; ") if "; " in text else []
+    found = [_clause_once(piece) for piece in pieces]
+    if pieces and all(f is not None for f in found):
+        return "；".join(found)
+    sentences = re.split(r"(?<=\.) (?=[A-Z$])", text)
+    by_sentence = ([_clause_once(sentence) for sentence in sentences]
+                   if len(sentences) > 1 else [])
+    if by_sentence and all(f is not None for f in by_sentence):
+        return "".join(by_sentence)
+    whole = _clause_once(text)
+    if whole is not None:
+        return whole
+    if any(f is not None for f in found):
+        return "；".join(f if f is not None else piece
+                         for f, piece in zip(found, pieces))
+    if any(f is not None for f in by_sentence):
+        return "".join(f if f is not None else sentence + " "
+                       for f, sentence in zip(by_sentence, sentences)).rstrip()
+    return part
 
 
 def denial_zh(reason: str) -> str | None:
@@ -623,7 +701,8 @@ def denial_zh(reason: str) -> str | None:
     """
     if not _denial_exact and not _denial_patterns:
         _compile_denials()
-    return _lookup(reason, _denial_exact, _denial_patterns)
+    return _lookup(reason, _denial_exact, _denial_patterns,
+                   composite=_denial_composite)
 
 
 # ------------------------------------------------ evidence-authority sentences
