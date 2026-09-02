@@ -131,6 +131,20 @@ def render_increment(files: Mapping[str, bytes]) -> tuple[str, bool]:
     return "\n".join(parts), bounded
 
 
+def _model_view(dcl: dict) -> dict:
+    """The deterministic output as the auditor is shown it.
+
+    A finding's `state` (dcl.framework.FINDING_STATES) is internal bookkeeping:
+    it is never a cue to the model, and leaving it out keeps the prompt — and
+    the receipt-bound prompt_sha256 — a function of what was checked, not of
+    how the record is kept. Everything else is passed through unchanged.
+    """
+    view = dict(dcl)
+    view["findings"] = [{k: v for k, v in f.items() if k != "state"}
+                        for f in dcl.get("findings", [])]
+    return view
+
+
 def build(constitution: str, constitution_commit: str, dcl: dict,
           files: Mapping[str, bytes], task: str = "",
           tool_evidence=None) -> tuple[str, bool, str]:
@@ -168,7 +182,8 @@ def build(constitution: str, constitution_commit: str, dcl: dict,
     # dict (run.py reads that, not this text), so metering the *rendered* copy
     # only bounds what the model sees; overflow escalates rather than silently
     # inflating the prompt.
-    dcl_json, dcl_bounded = _bound_text(json.dumps(dcl, indent=2), MAX_DCL_BYTES)
+    dcl_json, dcl_bounded = _bound_text(json.dumps(_model_view(dcl), indent=2),
+                                        MAX_DCL_BYTES)
     const_text, const_bounded = _bound_text(constitution, MAX_CONSTITUTION_BYTES)
     prompt = (
         f"CONSTITUTION @ {constitution_commit}\n"

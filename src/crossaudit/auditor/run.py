@@ -64,12 +64,20 @@ def finding_states(dcl: dict, model_reply: dict | None) -> list[dict]:
     INTERNAL. Nothing renders these words to a person, and the report is
     deliberately not their home: it is the surface a user reads.
     """
-    from ..dcl.framework import ALLEGED
+    from ..dcl.framework import ALLEGED, CONFIRMED, FINDING_STATES
 
-    rows = [{"tier": "deterministic", "severity": f.get("severity", ""),
-             "rule": f.get("rule", ""), "artifact": f.get("artifact", ""),
-             "state": f.get("state", "")}
-            for f in dcl.get("findings", [])]
+    rows = []
+    for f in dcl.get("findings", []):
+        # The default lives here as well as on the dataclass: a plain dict
+        # (checks.json read back, a hand-built fixture) without the key is a
+        # deterministic finding all the same, and an unknown word is a bug,
+        # not a seventh state.
+        state = f.get("state") or CONFIRMED
+        if state not in FINDING_STATES:
+            raise ValueError(f"finding state {state!r} is not one of {FINDING_STATES}")
+        rows.append({"tier": "deterministic", "severity": f.get("severity", ""),
+                     "rule": f.get("rule", ""), "artifact": f.get("artifact", "?"),
+                     "state": state})
     for f in (model_reply or {}).get("findings", []) or []:
         rows.append({"tier": "model", "severity": f.get("severity", ""),
                      "rule": f.get("rule", ""),

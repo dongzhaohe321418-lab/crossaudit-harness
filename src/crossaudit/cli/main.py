@@ -1022,7 +1022,8 @@ def cmd_audit(args: argparse.Namespace) -> int:
     # why this is two commits rather than one.
     if args.write_ledger:
         rel = ledger.relative_to(cfg.root)
-        git("add", "--", str(rel / "receipt.json"), str(rel / "checks.json"), cwd=cfg.root)
+        git("add", "--", str(rel / "receipt.json"), str(rel / "checks.json"),
+            str(rel / "findings.json"), cwd=cfg.root)
         if signed_keyid:
             git("add", "--", str(rel / "receipt.dsse.json"), cwd=cfg.root, check=False)
         if repro_written:
@@ -1699,7 +1700,8 @@ def cmd_run(args: argparse.Namespace) -> int:
     (ledger / "checks.json").write_text(json.dumps(outcome.dcl, indent=2),
                                           encoding="utf-8", newline="\n")
     rel = ledger.relative_to(cfg.root)
-    git("add", "--", str(rel / "report.md"), str(rel / "checks.json"), cwd=cfg.root)
+    git("add", "--", str(rel / "report.md"), str(rel / "checks.json"),
+        str(rel / "findings.json"), cwd=cfg.root)
     git("commit", "-q", "-m", f"audit report {sha[:12]} r{cycle['round']}", cwd=cfg.root)
     report_commit = git("rev-parse", "HEAD", cwd=cfg.root)
     manifest = {p_: __import__("hashlib").sha256(b).hexdigest()
