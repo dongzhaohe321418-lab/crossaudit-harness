@@ -280,24 +280,11 @@ NEW_COPY = [
     "asking for a repair that stays within the audited files",
     "the revision has edits the auditor should weigh",
     "Your task or message", "Search projects",
-    # The guard's composed sentences: the path survives, the rest is Chinese.
+    # The repair guard's own sentences are gated by tests/test_repair_guard_console_zh.py,
+    # which drives what the guard REALLY emits rather than a hand list.
     GUARD_REASON,
-    "docs/other.md is outside the audited directories (work, experiments); only files inside them may change — if the fix needs another file, say so in `notes`",
-    "assets/a.png is a binary file written directly by the generator, which cannot be reviewed line by line",
-    "the code change touches 90 lines, more than the 60-line limit for an automatic repair",
-    "2 staged file(s) lay beyond the review size limit and were not screened: a.py, b.py",
-    "src/x.py adds an error handler that does nothing; src/y.py removes a test",
-    "src/x.py adds a `suppress(...)` block that hides errors",
-    "src/x.py adds an assertion that can no longer fail",
-    "src/x.py adds a skipped or expected-to-fail test",
-    "src/x.py adds a shell step that ignores its own failure",
-    "src/x.py adds a marker that silences a checker (`noqa`, `type: ignore`, `pragma: no cover`, ...)",
-    "src/x.py adds a warnings filter set to ignore",
-    "src/x.py removes an `assert` or `raise` without replacing it",
-    "the revision changed nothing that could be reviewed",
     f"the automatic repair was refused in round 2 because {GUARD_REASON}",
 ]
-JOINED = "src/x.py adds an error handler that does nothing; src/y.py removes a test"
 
 
 
@@ -322,6 +309,4 @@ def test_every_new_sentence_reaches_a_chinese_reader(tmp_path):
     # Paths are never translated; the sentence around them is.
     assert rendered[GUARD_REASON].startswith("src/x.py ")
     assert "except" in rendered[GUARD_REASON]
-    joined = rendered[JOINED]
-    assert joined.startswith("src/x.py ") and "src/y.py " in joined and "；" in joined
     assert rendered[NEW_COPY[-1]].startswith("第 2 轮")
