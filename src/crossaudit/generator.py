@@ -40,6 +40,9 @@ replaces what is there; a file you omit is left untouched.
 - When findings are shown to you, address every BLOCKER. Do not argue with a \
 finding in your output: fix the artefact, or state in `notes` why the finding \
 rests on a misreading, so a human can route it as a dispute.
+- Do not make a check disappear by adding broad exception handling, silent \
+fallbacks, retries, suppressions, skipped tests, or relaxed assertions. Repair \
+the cause with the smallest change; a revision that hides a finding is refused.
 - Keep claims and data consistent with each other. Most blocked rounds are prose \
 that disagrees with the file it summarises.
 - Prefer editing what exists over adding new files.
@@ -436,9 +439,14 @@ def build_prompt(*, task: str, constitution: str, current: dict[str, str],
     else:
         parts.append("\nTHE WORK AS IT STANDS\n(nothing yet; this is the first round)")
     if findings:
-        parts.append(f"\nTHE AUDITOR BLOCKED THE LAST ROUND WITH THESE FINDINGS\n"
+        parts.append(f"\nWHAT STOPPED THE LAST ROUND\n"
                      f"<<<FINDINGS\n{findings}\nFINDINGS\n\n"
-                     f"Address every BLOCKER. Return the whole of each file you change.")
+                     f"Address every BLOCKER. Make the smallest causal repair. Do not "
+                     f"make a check disappear by adding broad exception handling, "
+                     f"silent fallbacks, retries, suppressions, skipped tests, or "
+                     f"relaxed assertions; if the finding rests on a misreading, say "
+                     f"so in `notes` so a human can route it as a dispute. Return the "
+                     f"whole of each file you change.")
     # Recite the authoritative task last, where the model's attention is
     # strongest, so it does not drift after a long RULES / WORK / FINDINGS body
     # (the lost-in-the-middle failure behind the qled->Transformer incident). A
