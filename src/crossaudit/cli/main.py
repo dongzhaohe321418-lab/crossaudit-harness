@@ -1051,7 +1051,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
     if outcome.invalid_reason:
         human += f"\n  audit rejected: {outcome.invalid_reason}"
     elif outcome.verdict == "ESCALATE" and authority.get("rationale"):
-        human += f"\n  why: {authority['rationale'][0]}"
+        human += f"\n  why: {i18n.sentence_text(authority['rationale'][0])}"
     _emit(result, args.json, human)
     # The cycle's status outranks the round's verdict: a BLOCKED round that
     # exhausted the budget has escalated, and a caller scripting the loop needs
@@ -1766,7 +1766,11 @@ def cmd_run(args: argparse.Namespace) -> int:
         rationale = (getattr(outcome, "authority", None) or {}).get("rationale") or ()
         why = (outcome.invalid_reason or (rationale[0] if rationale else "")
                or "a human decision is needed")
-        print(f"  Escalated: {why}")
+        # The rationale is one of the evidence-authority sentences, served in
+        # the language the command was asked for; an invalid-reply reason is
+        # the auditor's own words and passes through the same seam unmarked
+        # only when the table knows it (it is counted otherwise, like t()).
+        print(f"  Escalated: {i18n.sentence_text(why)}")
         print(f"  Report: {rel}/report.md")
     if status == "ESCALATED":
         return EXIT_ESCALATED
