@@ -453,8 +453,14 @@ def verify(receipt: dict, *, science_root: Path, audit_root: Path,
             f"report verdict {reported.group(1)}")
     authority = receipt.get("authority")
     if authority is not None:
-        # D148: the report's route row is bound to the receipt's authority
-        # block the same way its verdict row is bound to the audit verdict.
+        # D148: re-derive the block's own bindings (evidence digest, ids, route
+        # from verdict) even for a receipt handed in as a dict, then bind the
+        # report's route row to it the way its verdict row is bound above.
+        from ..auditor.authority import validate_block
+        block_errors = validate_block(authority)
+        if block_errors:
+            raise IntegrityDenial("authority block does not validate: "
+                                  + "; ".join(block_errors), errors=block_errors)
         route_row = re.search(r"^\| evidence route \| \*\*([a-z-]+)\*\* \|$",
                               report_text, re.MULTILINE)
         if route_row is None:

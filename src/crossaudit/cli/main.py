@@ -1007,7 +1007,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
         retention=args.retention, report_bytes=report_path.read_bytes(),
         report_commit=report_commit, cycle_path=ledger.relative_to(cfg.root).as_posix(),
         audit_repo=cfg.audit_repo or "local", mode=args.mode,
-        integrity=outcome.integrity, authority=outcome.authority)
+        integrity=outcome.integrity, authority=getattr(outcome, "authority", None))
     (ledger / "receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True),
                                            encoding="utf-8", newline="\n")
     # A1: sign the receipt additively (detached sidecar; the receipt bytes are
@@ -1042,14 +1042,15 @@ def cmd_audit(args: argparse.Namespace) -> int:
               "integrity": outcome.integrity, "receipt": str(ledger / "receipt.json"),
               "report": str(report_path),
               "invalid_reason": outcome.invalid_reason}
-    if outcome.authority:
-        result["authority"] = _authority_summary(outcome.authority)
+    authority = getattr(outcome, "authority", None) or {}
+    if authority:
+        result["authority"] = _authority_summary(authority)
     human = (f"{outcome.verdict}  (cycle {cycle['cycle_id']} round {cycle['round']}"
              f" -> {status})\n  report:  {report_path}\n  receipt: {ledger}/receipt.json")
     if outcome.invalid_reason:
         human += f"\n  audit rejected: {outcome.invalid_reason}"
-    elif outcome.verdict == "ESCALATE" and outcome.authority.get("rationale"):
-        human += f"\n  why: {outcome.authority['rationale'][0]}"
+    elif outcome.verdict == "ESCALATE" and authority.get("rationale"):
+        human += f"\n  why: {authority['rationale'][0]}"
     _emit(result, args.json, human)
     # The cycle's status outranks the round's verdict: a BLOCKED round that
     # exhausted the budget has escalated, and a caller scripting the loop needs
@@ -1716,7 +1717,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         retention="sealed", report_bytes=outcome.report.encode(),
         report_commit=report_commit, cycle_path=str(rel),
         audit_repo=cfg.audit_repo or "local", mode="local",
-        integrity=outcome.integrity, authority=outcome.authority)
+        integrity=outcome.integrity, authority=getattr(outcome, "authority", None))
     (ledger / "receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True),
                                            encoding="utf-8", newline="\n")
     if sign_receipt(cfg, receipt, ledger):
@@ -1760,7 +1761,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         print("  Checks passed, but no model reviewed this (no API key), so it can")
         print("  never be PASS. Add a key (`crossaudit init --force`), then re-run.")
     else:
-        rationale = outcome.authority.get("rationale") or ()
+        rationale = (getattr(outcome, "authority", None) or {}).get("rationale") or ()
         why = (outcome.invalid_reason or (rationale[0] if rationale else "")
                or "a human decision is needed")
         print(f"  Escalated: {why}")

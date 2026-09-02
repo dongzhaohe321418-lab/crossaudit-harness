@@ -97,8 +97,14 @@ class AuthorityDecision:
     evidence_digest: str
 
     def as_dict(self) -> dict:
+        """JSON-shaped: lists, not tuples, so the in-memory block equals the
+        one read back from a receipt."""
         return {
             **asdict(self),
+            "blocking_evidence_ids": list(self.blocking_evidence_ids),
+            "contested_evidence_ids": list(self.contested_evidence_ids),
+            "advisory_evidence_ids": list(self.advisory_evidence_ids),
+            "rationale": list(self.rationale),
             "evidence": [item.as_dict() for item in self.evidence],
         }
 
