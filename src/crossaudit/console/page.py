@@ -528,6 +528,8 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 /* the rule id is provenance, not the message — small, dim, out of the way */
 .finding-rule{font-size:var(--fs-micro,10px);color:var(--text-3);font-variant-numeric:tabular-nums;opacity:.75}
 .finding p{margin:5px 0 0;line-height:1.5;font-size:var(--fs-body)}
+.finding-tier{display:block;margin-top:6px;font-size:var(--fs-caption);color:var(--text-3)}
+.finding-tier.verified{color:var(--text-2)}
 /* .dt — a reusable clean data table (Claude-Code-style: muted header, hairline
    rows, hover, generous rows). Used for Skills, Connectors/MCP, and other lists. */
 .dt{width:100%;border-collapse:collapse;margin-top:6px;font-size:var(--fs-body)}
@@ -2362,7 +2364,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <ul class="job-steps" id="job-steps"></ul><div class="job-guidance" id="job-guidance"></div></div>
       <button class="secondary" id="open-created" hidden>Open project</button></div>
     <div class="hub-note" id="hub-note" hidden></div>
-    <div class="hub-tools"><input class="hub-search" id="project-search" placeholder="Search projects…"></div>
+    <div class="hub-tools"><input class="hub-search" id="project-search" aria-label="Search projects" placeholder="Search projects…"></div>
     <div class="project-table" id="project-list"><div class="hub-empty">Loading projects…</div></div>
   </main>
 </section>
@@ -3000,7 +3002,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <button type="button" class="audience-chip" data-audience="generator">@ Generator</button>
       <button type="button" class="audience-chip" data-audience="auditor">@ Auditor</button></div>
     <div class="compose-row"><button type="button" class="compose-button" id="attach" aria-label="Add files" title="Add files"><span class="attach-glyph" aria-hidden="true"></span></button>
-      <div class="compose-well"><textarea id="say" rows="1" placeholder="Message the group, or @ someone…"></textarea></div>
+      <div class="compose-well"><textarea id="say" rows="1" aria-label="Your task or message" placeholder="Message the group, or @ someone…"></textarea></div>
       <button type="button" id="stop-run" class="compose-button stop" aria-label="Cancel running task" title="Cancel running task" hidden><span class="stop-glyph" aria-hidden="true"></span></button>
       <button id="send" class="compose-button send" aria-label="Run task"><span class="send-glyph" aria-hidden="true"></span></button></div>
     <div class="composer-meta"><button type="button" id="model-summary">Generator → Auditor</button>
@@ -3289,6 +3291,20 @@ const ZH={
   "The automatic audit loop stopped.":"自动审计循环已停止。","Review why the loop stopped, then decide whether to revise or stop.":"检查循环停止原因，再决定修订或停止。",
   "The audit controller paused this task.":"审计控制器已暂停此任务。","No explanation was recorded.":"未记录说明。","A human decision is required.":"需要人工决定。",
   "Tell the generator how to correct the remaining blockers, or stop the task without admitting its output.":"请告诉生成者如何修复剩余阻断问题，或停止任务且不准入其输出。",
+  "Automatic repair refused":"自动修复被拒绝","The revision did not repair the cause":"修订没有修复问题的根源",
+  "The generator\u2019s revision was refused twice: instead of repairing the cause, it tried to make the finding disappear, changed files the audit did not name, or grew larger than an automatic repair may be. Each attempt was rolled back, so the audited files are unchanged and nothing was admitted.":"生成者的修订已两次被拒绝：它没有修复根源，而是试图让问题消失、改动了审计未提及的文件，或超出了自动修复允许的规模。每次尝试都已回滚，因此已审计的文件未被改动，也没有任何结果被准入。",
+  "Why the last revision was refused":"上一次修订被拒绝的原因",
+  "Tell the generator the smallest change that repairs the cause, or stop the task without admitting its output.":"请告诉生成者能修复根源的最小改动，或停止任务且不准入其输出。",
+  "Name the file and the smallest change that repairs the cause, then unlock one additional audited round.":"指出文件以及能修复根源的最小改动，然后解锁再一轮受审计尝试。",
+  "the revision changed nothing that could be reviewed":"该修订没有做出任何可供审查的改动",
+  "the revision was refused before the audit":"修订在审计前被拒绝","asking for a smaller repair that fixes the cause":"正在要求一次更小、能修复根源的修复",
+  "The auditor raised a concern":"审计者提出了一项疑虑",
+  "The auditor blocked this round on its own reading; no deterministic check reproduces the concern. CrossAudit does not let a model-only claim drive automatic rewrites, so it stopped and left the files unchanged.":"审计者依据自身判读阻断了本轮；没有任何确定性检查能复现这项疑虑。CrossAudit 不允许仅凭模型的说法驱动自动改写，因此已停止并保持文件不变。",
+  "the auditor raised a concern that no deterministic check reproduces; it needs your judgment":"审计者提出了一项没有任何确定性检查能复现的疑虑；需要你来判断",
+  "Review the auditor's concern and its evidence. Dispute a misreading, reopen with a recorded reason, or stop without admission.":"请审查审计者的疑虑及其证据。若属误读可提出争议，也可记录理由后重开，或停止且不准入。",
+  "If the concern is right, tell the generator how to address it. If it is a misreading, say so here; your reason is recorded.":"如果疑虑成立，请告诉生成者如何处理；如果属于误读，请在此说明，你的理由会被记录。",
+  "Verified by a deterministic check":"已由确定性检查验证","Raised by the auditor, not yet reproduced":"由审计者提出，尚未被复现","Raised by the auditor and verified":"由审计者提出，并已验证",
+  "Your task or message":"你的任务或消息","Search projects":"搜索项目",
   "Fix the provider, model, or credential setting before allowing another round, or stop the task.":"再给一轮前，请先修复供应商、模型或凭据设置；否则停止任务。",
   "Review why the loop stopped, then either give concrete guidance for one more round or stop the task.":"检查循环停止原因，然后提供具体指导再进行一轮，或停止任务。",
   "no model audit ran, so the result cannot pass":"没有运行模型审计，因此结果无法通过","the automatic audit loop stopped":"自动审计循环已停止"
@@ -3610,6 +3626,25 @@ const ZH={
   ,"These are the rules the auditor judges against; an audit cannot run without them.":"这些是审计者据以判定的规则；缺少它们无法进行审计。"
 };
 const ZH_PATTERNS=[
+  // D148 repair guard. Every reason is COMPOSED from a path, a count or a
+  // pattern name, so each is a pattern; the path is never translated. The
+  // event detail joins several with "; " and the stop reason wraps the first
+  // in a round number, so those two shapes delegate to the per-reason rows.
+  [/^the automatic repair was refused in round (\d+) because (.+)$/,
+   m=>'第 '+m[1]+' 轮的自动修复被拒绝，原因：'+zhValue(m[2])],
+  [/^(?=.*; )(?=.*(?: is outside what the last audit asked to change| is a binary file written directly by the generator|the code change touches \d+ lines| adds a (?:catch-all|bare|retry|suppression|skipped) |the revision changed nothing that could be reviewed))/,
+   m=>m.input.split('; ').map(part=>zhValue(part)).join('；')],
+  [/^(.+) is outside what the last audit asked to change(?: \(allowed: (.+)\))?$/,
+   m=>m[1]+' 不在上次审计要求修改的范围内'+(m[2]?'（允许：'+m[2]+'）':'')],
+  [/^(.+) is a binary file written directly by the generator, which cannot be reviewed line by line$/,
+   m=>m[1]+' 是生成者直接写入的二进制文件，无法逐行审查'],
+  [/^the code change touches (\d+) lines, more than the (\d+)-line limit for an automatic repair$/,
+   m=>'代码改动涉及 '+m[1]+' 行，超过了自动修复的 '+m[2]+' 行上限'],
+  [/^(.+) adds a catch-all `except` that swallows every error$/,m=>m[1]+' 新增了会吞掉所有错误的 catch-all `except`'],
+  [/^(.+) adds a bare `pass` where a failure would otherwise surface$/,m=>m[1]+' 在本应暴露失败的位置新增了空的 `pass`'],
+  [/^(.+) adds a retry or fallback path instead of fixing the cause$/,m=>m[1]+' 新增了重试或回退路径，而不是修复根源'],
+  [/^(.+) adds a suppression that hides a warning or check$/,m=>m[1]+' 新增了会隐藏警告或检查的抑制'],
+  [/^(.+) adds a skipped test or a relaxed assertion$/,m=>m[1]+' 新增了被跳过的测试或被放宽的断言'],
   [/^provider failure left this task waiting for a person: ?(.*)$/,
    m=>'提供方失败，该任务正在等待人工处理：'+m[1]],
   [/^the selected PASS is not ready for admission: ?(.*)$/,
@@ -4003,12 +4038,19 @@ new ResizeObserver(syncComposerClearance).observe(composerWrap);
 window.addEventListener('resize',syncComposerClearance);
 syncComposerClearance();
 
+// The sentence of a refusal, in the language of the page. The server attaches
+// `reason_zh` beside `reason`, looked up by the reason the Denial carries (never by
+// its wording); a body without it renders the English, which the catalogue
+// below then translates where it can — exactly what happened before.
+function denialText(data){
+  if(!data||typeof data!=='object')return '';
+  return (currentLocale==='zh'&&data.reason_zh)||data.reason||'';}
 async function api(path, body){
   const opt = body ? {method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify(body)} : {};
   const r = await fetch(path + '?t=' + encodeURIComponent(T), opt);
   const text=await r.text();let data=null;try{data=text?JSON.parse(text):{};}catch(e){}
-  if(!r.ok){const error=new Error((data&&data.reason)||text||('Request failed ('+r.status+')'));
+  if(!r.ok){const error=new Error(denialText(data)||text||('Request failed ('+r.status+')'));
     if(data&&typeof data==='object')Object.assign(error,data);throw error;}
   return data||{};
 }
@@ -4237,7 +4279,7 @@ function renderDoctor(doctor){
   document.getElementById('doctor-checks').innerHTML=rows.length?rows.map(row=>{
     const repair=row.repair||{};let action='';
     if(repair.inputs){
-      action='<div class="doctor-action"><div class="doctor-identity"><input data-doctor-name maxlength="100" placeholder="Git author name"><input data-doctor-email type="email" maxlength="200" placeholder="Git author email"><button type="button" class="secondary" data-doctor-action="'+esc(repair.action)+'">'+esc(repair.label||'Save')+'</button></div></div>';
+      action='<div class="doctor-action"><div class="doctor-identity"><input data-doctor-name maxlength="100" aria-label="Git author name" placeholder="Git author name"><input data-doctor-email type="email" maxlength="200" aria-label="Git author email" placeholder="Git author email"><button type="button" class="secondary" data-doctor-action="'+esc(repair.action)+'">'+esc(repair.label||'Save')+'</button></div></div>';
     }else if(repair.url){
       action='<div class="doctor-action"><a class="secondary" href="'+esc(repair.url)+'" target="_blank" rel="noopener">'+esc(repair.label||'Open help')+'<span aria-hidden="true"> ↗</span></a></div>';
     }else if(repair.action){
@@ -4426,7 +4468,7 @@ function renderFallbacks(role,rows){const host=document.getElementById('runtime-
     const options=choices.map(item=>'<option value="'+esc(item.vendor)+'"'+(item.vendor===row.vendor?' selected':'')+'>'+esc(item.label)+(item.connected?' · connected':' · key needed')+'</option>').join('');
     const selected=choices.find(item=>item.vendor===row.vendor)||choices[0]||{models:[]};
     return '<div class="fallback-row" data-fallback-role="'+role+'"><select data-fallback-vendor>'+options+'</select>'
-      +'<input data-fallback-model list="'+listId+'" maxlength="120" value="'+esc(row.model||((selected.models||[])[0]||{}).id||'')+'" placeholder="Exact model ID"><datalist id="'+listId+'">'
+      +'<input data-fallback-model list="'+listId+'" maxlength="120" value="'+esc(row.model||((selected.models||[])[0]||{}).id||'')+'" aria-label="Exact model ID" placeholder="Exact model ID"><datalist id="'+listId+'">'
       +(selected.models||[]).map(model=>'<option value="'+esc(model.id)+'">'+esc(model.hint||'')+'</option>').join('')+'</datalist>'
       +'<select data-fallback-credential title="Credential"><option value="primary"'+(row.credential==='backup'?'':' selected')+'>Primary key</option><option value="backup"'+(row.credential==='backup'?' selected':'')+'>Backup key</option></select>'
       +'<button type="button" class="fallback-remove" data-remove-fallback title="Remove">×</button></div>';}).join('');}
@@ -4616,12 +4658,22 @@ function openResolution(value,action='',sha=''){
   const refusedCause=row.cause==='generator_refused';
   const noProgress=row.cause==='no_progress';
   const answered=row.cause==='answered';
-  document.getElementById('resolution-flag').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
-  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
+  // D148. Two content stops that are not "the rounds ran out": the automatic
+  // repair was refused twice (the revision hid the finding, left the audited
+  // files, or grew past the budget), and the escalate dial handing a
+  // model-only blocker to a person. Same slots, no new elements.
+  const repairRefused=row.cause==='repair_refused';
+  const auditorConcern=row.cause==='auditor_concern';
+  document.getElementById('resolution-flag').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':repairRefused?'Automatic repair refused':auditorConcern?'The auditor raised a concern':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
+  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':repairRefused?'The revision did not repair the cause':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
   document.getElementById('resolution-summary').textContent=budget
     ?'CrossAudit stopped before spending past your usage limit. No result was admitted and the original task is ready once you raise or clear the limit.'
     :provider
     ?'CrossAudit stopped before an audit began. No result was admitted and the original task is ready to retry.'
+    :repairRefused
+    ?'The generator\u2019s revision was refused twice: instead of repairing the cause, it tried to make the finding disappear, changed files the audit did not name, or grew larger than an automatic repair may be. Each attempt was rolled back, so the audited files are unchanged and nothing was admitted.'
+    :auditorConcern
+    ?'The auditor blocked this round on its own reading; no deterministic check reproduces the concern. CrossAudit does not let a model-only claim drive automatic rewrites, so it stopped and left the files unchanged.'
     :answered
     ?'This request could not become an audited deliverable — often because it refers to something that is not in the project. CrossAudit reply is shown below. Refine the task and run again, or stop it.'
     :formatCause
@@ -4631,12 +4683,14 @@ function openResolution(value,action='',sha=''){
     :row.limit_reached
     ?'CrossAudit used all '+used+' of '+maximum+' automatic rounds without a passing result. Nothing will continue or be admitted until you decide.'
     :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
-  document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress)?'What happened':row.limit_reached
+  document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
     ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
+  // A refused repair leads with the sentence the repair guard wrote (it names
+  // the file and the pattern) rather than the round-numbered wrapper around it.
   document.getElementById('resolution-limit-copy').textContent=(formatCause
     ?'The reply was corrected once automatically and still failed to parse. Technical detail: '
     :noProgress?'One corrective retry was already made automatically. Technical detail: ':'')
-    +String(row.stop_reason||row.why||'The audit controller paused this task.');
+    +String((repairRefused&&row.why)||row.stop_reason||row.why||'The audit controller paused this task.');
   const attemptRows=row.attempts||[];
   document.getElementById('resolution-attempts').innerHTML=attemptRows.map(item=>{
     const word=String(item.verdict||'').toLowerCase();
@@ -4669,6 +4723,10 @@ function openResolution(value,action='',sha=''){
     ?'Adjust the usage limit in Project controls, then rerun the original task.'
     :provider
     ?'Use the current connection and rerun the original task.'
+    :repairRefused
+    ?'Name the file and the smallest change that repairs the cause, then unlock one additional audited round.'
+    :auditorConcern
+    ?'If the concern is right, tell the generator how to address it. If it is a misreading, say so here; your reason is recorded.'
     :'Give the generator specific correction guidance and unlock one additional audited round.';
   // The runtime affordance carries the budget person to the same Project
   // controls that hold the usage limits; relabel it so it names that, not a
@@ -5275,7 +5333,7 @@ function fileUrl(path,view=false){return '/api/file?t=' + encodeURIComponent(T) 
 async function previewData(path){
   const response=await fetch('/api/preview?t='+encodeURIComponent(T)+'&path='+encodeURIComponent(path));
   const raw=await response.text();let data={};try{data=raw?JSON.parse(raw):{};}catch(e){}
-  if(!response.ok)throw new Error(data.reason||raw||('Preview failed ('+response.status+')'));
+  if(!response.ok)throw new Error(denialText(data)||raw||('Preview failed ('+response.status+')'));
   return data;
 }
 function formatBytes(value){
@@ -5676,6 +5734,16 @@ function artifactList(items,status,sha){
     +'<button type="button" class="output-more" data-open-artifacts>Open Files panel</button>'
     +'</div></div></div></section>';
 }
+// D148. What a finding rests on, from the evidence record in the receipt: a
+// deterministic check verified it, or the auditor raised it and nothing has
+// reproduced it yet. Shown only where findings are already listed; a receipt
+// without the record renders nothing here, and no route or state word is ever
+// on screen.
+function findingTier(f){
+  if(!f||!f.tier)return '';
+  const text=f.tier==='deterministic'?'Verified by a deterministic check'
+    :f.verified?'Raised by the auditor and verified':'Raised by the auditor, not yet reproduced';
+  return '<small class="finding-tier'+(f.verified?' verified':'')+'">'+esc(text)+'</small>';}
 function turn(m,d){
   if(m.kind === 'you'){
     const explicit=m.routing_mode==='explicit';const recipient=m.addressed_to||m.lane;
@@ -5695,7 +5763,7 @@ function turn(m,d){
     const fs = (m.findings||[]).map(f => '<div class="finding"><div class="finding-head">'
       + '<span class="severity">' + esc(f.severity) + '</span><span>' + esc(f.rule) + '</span>'
       + '<span class="spacer"></span><span>' + esc(f.artifact) + '</span></div><p>'
-      + esc(f.observation) + '</p></div>').join('');
+      + esc(f.observation) + '</p>' + findingTier(f) + '</div>').join('');
     return '<article class="turn audit"><div class="turn-main">'
       + '<div class="turn-meta"><span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b><span class="status ' + esc(m.verdict) + '">'
       + esc(m.verdict) + '</span><span class="turn-time">' + at(m.t) + '</span></div>'
@@ -5859,7 +5927,7 @@ function reviewCard(d){
     +(m.findings||[]).map(f=>'<div class="finding"><div class="finding-head">'
       +'<span class="severity">'+esc(f.severity)+'</span><span class="finding-where">'+esc(f.artifact)+'</span>'
       +'<span class="spacer"></span><span class="finding-rule" title="rule id">'+esc(f.rule)+'</span></div><p>'
-      +esc(f.observation)+'</p></div>').join('')).join('');
+      +esc(f.observation)+'</p>'+findingTier(f)+'</div>').join('')).join('');
   const detail='<div class="review-detail"><div class="review-detail-inner">'
     +'<div class="review-section"><div class="review-section-title" id="review-checks-title-'+esc(cycle.id)+'">Automatic checks</div>'
     +'<p class="check-summary">'+esc(checkSummary(checks,auditCount(d)))+'</p>'
