@@ -190,6 +190,12 @@ class ProjectJobs:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._paths: set[Path] = set()
+        #: Live worker threads. Daemon threads are right for the app -- closing
+        #: the window must not be blocked by provisioning -- but "nobody can
+        #: join it" is a different property from "it does not block exit", and
+        #: only the second one was wanted. A caller that needs to know the work
+        #: finished (a test, a shutdown path) had no way to ask.
+        self._threads: list[threading.Thread] = []
 
     def _journal(self, current: Config) -> ProvisioningJournal:
         path = journal_path(current).resolve()
@@ -297,8 +303,36 @@ class ProjectJobs:
                                      (failure_root / CONFIG_NAME).is_file()))
             notify()
 
-        threading.Thread(target=work, daemon=True).start()
+        thread = threading.Thread(target=work, daemon=True)
+        with self._lock:
+            self._threads = [t for t in self._threads if t.is_alive()]
+            self._threads.append(thread)
+        thread.start()
         return {"job": job_id}
+
+    def wait(self, timeout: float = 5.0) -> bool:
+        """Block until every worker this instance started has finished.
+
+        Returns False if any is still running when `timeout` expires, so a
+        caller can say "still running after N seconds" instead of asserting
+        over a state that simply has not arrived yet. A fixed wall-clock budget
+        followed by an equality assertion reports a slow machine as a wrong
+        result, which is what it did.
+        """
+        deadline = time.monotonic() + timeout
+        with self._lock:
+            live = list(self._threads)
+        for t in live:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            t.join(remaining)
+        return not any(t.is_alive() for t in live)
+
+    def alive(self) -> list[str]:
+        """Names of workers still running. For teardown checks."""
+        with self._lock:
+            return [t.name for t in self._threads if t.is_alive()]
 
     @staticmethod
     def _execute(specification: dict, step) -> dict:
@@ -609,6 +643,9 @@ class GithubAuthJobs:
         self._lock = threading.Lock()
         self._job: dict | None = None
         self._proc = None
+        #: Same reason as ProjectJobs: daemon means "does not block exit", not
+        #: "nobody may wait for it".
+        self._threads: list[threading.Thread] = []
 
     def start(self, notify, *, scopes: tuple[str, ...] = ()) -> dict:
         status = github_status(force=True)
@@ -697,9 +734,29 @@ class GithubAuthJobs:
                     self._proc = None
                 notify()
 
-        threading.Thread(target=work, daemon=True).start()
+        thread = threading.Thread(target=work, daemon=True)
+        with self._lock:
+            self._threads = [t for t in self._threads if t.is_alive()]
+            self._threads.append(thread)
+        thread.start()
         notify()
         return {"job": row["id"]}
+
+    def wait(self, timeout: float = 5.0) -> bool:
+        """Block until this job's worker finishes. See ProjectJobs.wait."""
+        deadline = time.monotonic() + timeout
+        with self._lock:
+            live = list(self._threads)
+        for t in live:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            t.join(remaining)
+        return not any(t.is_alive() for t in live)
+
+    def alive(self) -> list[str]:
+        with self._lock:
+            return [t.name for t in self._threads if t.is_alive()]
 
     def snapshot(self) -> dict | None:
         with self._lock:
