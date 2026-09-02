@@ -135,6 +135,11 @@ def _drive_to_receipt(cfg, monkeypatch, sha, *, continuation=None):
             dcl={"crossaudit_dcl_version": 3, "verdict": "PASS",
                  "total_hard_failures": 0, "findings": [], "notes": [],
                  "contracts": {}},
+            # `model_reply` is part of AuditOutcome; the stand-in omitted it and
+            # only stayed green because nothing read it. It is read now, and a
+            # fake that is missing a field the real type always has is a fake
+            # that can hide a defect.
+            model_reply=None,
             prompt_sha256="0" * 64, verdict="PASS", exchange=None, integrity=None)
 
     def capture_receipt(**kw):

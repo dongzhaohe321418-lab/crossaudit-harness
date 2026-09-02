@@ -42,6 +42,30 @@ class AuditOutcome:
     report: str
 
 
+def finding_states(dcl: dict, model_reply: dict | None) -> list[dict]:
+    """Every finding this round raised, with what has become of it so far.
+
+    Two tiers, two honest defaults. Deterministic findings are CONFIRMED: that
+    layer is verdict-in-code and never consulted a model. Model findings are
+    ALLEGED: raised, with nothing yet establishing them — which is what makes a
+    confirmation rate computable later.
+
+    INTERNAL. Nothing renders these words to a person, and the report is
+    deliberately not their home: it is the surface a user reads.
+    """
+    from ..dcl.framework import ALLEGED
+
+    rows = [{"tier": "deterministic", "severity": f.get("severity", ""),
+             "rule": f.get("rule", ""), "artifact": f.get("artifact", ""),
+             "state": f.get("state", "")}
+            for f in dcl.get("findings", [])]
+    for f in (model_reply or {}).get("findings", []) or []:
+        rows.append({"tier": "model", "severity": f.get("severity", ""),
+                     "rule": f.get("rule", ""),
+                     "artifact": f.get("artifact", "?"), "state": ALLEGED})
+    return rows
+
+
 def dcl_source_digest() -> str:
     """Hash of the check layer's own source, so a receipt pins what ran."""
     # Allowlisted check packs contribute findings with the same authority as

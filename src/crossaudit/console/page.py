@@ -3478,7 +3478,7 @@ const ZH={
   "Stop requested.":"已请求停止。","Task interrupted safely":"任务已安全中断",
   "Task restarted.":"任务已重新启动。",
   "Deleted chat":"已删除的对话","rounds the ledger holds":"账本中保存的轮次",
-  "cleared both layers":"两层检查均已通过","a defect was caught":"发现了一处缺陷",
+  "cleared both layers":"两层检查均已通过","a concern was raised":"提出了一处疑虑",
   "escalated; the loop cannot settle these":"已升级；循环无法自行了结这些",
   "receipts consumed, once each":"已消费的回执，每份一次",
   "Creating the local project":"正在创建本地项目",
