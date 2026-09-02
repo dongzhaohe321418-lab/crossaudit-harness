@@ -6047,6 +6047,36 @@ function reviewCard(d){
     +'</button>'+detail
     +'<div class="review-actions">'+actionRow+'</div></section>';
 }
+const ACTOR_NAMES = {generator:'Generator',auditor:'Auditor',compute:'Compute',tool:'Tool',loop:'Process',done:'Result',input:'You'};
+const ACTOR_MARKS = {generator:'G',auditor:'A',compute:'H',tool:'M',loop:'↻',done:'✓'};
+// The main surface carries words, never identifiers (D150 / North Star §12):
+// a raw payload (the goal record is JSON for the Plan tab) is not shown at
+// all, and a hash, sha, cycle id, provider:model route or rule id that an
+// older event still carries in its detail is dropped from the line here.
+function conciseDetail(s){
+  const raw=String(s.detail||'');
+  if(!raw||/^\s*[\x5b\x7b]/.test(raw))return '';
+  return humaniseDetail(raw)
+    .replace(/\bcycle [a-f0-9]{16}\b/g,'this cycle')
+    .replace(/\b[a-f0-9]{40}\b/g,'').replace(/\b[a-f0-9]{16}\b/g,'').replace(/\b[a-f0-9]{12}\b/g,'')
+    .replace(/\b[A-Za-z0-9_.-]+:(?:claude|gpt|gemini|deepseek|grok|o[0-9])[A-Za-z0-9_.-]*\b/g,'')
+    .replace(/\bCA-[A-Z]+-\d+\b/g,'').replace(/\s{2,}/g,' ').replace(/^[\s·;,:—-]+|[\s·;,:—-]+$/g,'');}
+// One live-activity row. A condensation notice is the runtime reporting on
+// itself, so it does not borrow the generator name or mark, and every row
+// localises from the wire fields (text_i18n) rather than showing English
+// under 中文.
+function activityRow(s){
+  const system = s.kind === 'context_condensed';
+  const mark = system ? '↻' : (ACTOR_MARKS[s.actor]||'·');
+  const who = system ? t('Context reduced') : t(ACTOR_NAMES[s.actor]||s.actor);
+  const line = (system || s.text_i18n) ? localeText(s.text_i18n, s.text) : s.text;
+  const detail = system ? localeText(s.detail_i18n, s.detail) : conciseDetail(s);
+  return '<div class="audit-event">'
+  + '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>'
+  + '<div class="event-main"><div class="event-line"><b>' + esc(who)
+  + '</b><span>' + esc(line) + '</span></div>'
+  + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
+  + '<time class="event-time">' + at(s.t) + '</time></div>';}
 function runCard(d){
   const p = chatProgress(d),cycles=chatCycles(d);
   const latestCycle=cycles.length?cycles[cycles.length-1]:null;
@@ -6072,24 +6102,7 @@ function runCard(d){
   const focusLabel = focus.state === 'current' ? 'Current step' : focus.state === 'failed' ? 'Stopped at'
     : focus.state === 'pending' ? 'Next step' : 'Completed step';
   const stateNames = {done:'Done',failed:'Stopped',current:'Active',pending:'Waiting'};
-  const actorNames = {generator:'Generator',auditor:'Auditor',compute:'Compute',tool:'Tool',loop:'Process',done:'Result',input:'You'};
-  const actorMarks = {generator:'G',auditor:'A',compute:'H',tool:'M',loop:'↻',done:'✓'};
-  const eventRows = p && p.steps ? p.steps.slice(-12).map(s => {
-    // A condensation notice is the runtime reporting on itself, so it does not
-    // borrow the generator name or mark here either, and it localises from
-    // the wire fields rather than showing English under 中文.
-    const system = s.kind === 'context_condensed';
-    const mark = system ? '↻' : (actorMarks[s.actor]||'·');
-    const who = system ? t('Context reduced') : (actorNames[s.actor]||s.actor);
-    const line = (system || s.text_i18n) ? localeText(s.text_i18n, s.text) : s.text;
-    const detail = system ? localeText(s.detail_i18n, s.detail) : humaniseDetail(s.detail);
-    return '<div class="audit-event">'
-    + '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>'
-    + '<div class="event-main"><div class="event-line"><b>' + esc(who)
-    + '</b><span>' + esc(line) + '</span></div>'
-    + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
-    + '<time class="event-time">' + at(s.t) + '</time></div>';
-  }).join('') : '';
+  const eventRows = p && p.steps ? p.steps.slice(-12).map(activityRow).join('') : '';
   // D150: what is arriving right now, as one line each — a word count for the
   // draft (the text itself lives in the unaudited draft article above) and
   // the tail of the summarised thinking. Neither is a step; neither persists.

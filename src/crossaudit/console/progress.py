@@ -156,20 +156,36 @@ def phase_i18n(text: str) -> dict[str, str]:
 _ROUTE_DETAIL = re.compile(r"^\S+:\S+ · (.+)$")
 
 
+#: Details older events compose with an identifier in them. The projection
+#: says the same thing in words; the identifier stays in the journal, the
+#: ledger and the audit detail, which is where a person looks it up.
+_CYCLE_REF = re.compile(r"\bcycle [a-f0-9]{16}\b")
+#: Kinds whose detail is a payload for another surface (the Plan tab parses
+#: the goal JSON) or a path list already handled by its own projection.
+_DETAIL_KEPT = frozenset({"goal", "context_condensed"})
+
+
+def concise_detail(kind: str, detail: str) -> str:
+    if kind in _DETAIL_KEPT or not detail:
+        return detail
+    match = _ROUTE_DETAIL.match(detail)
+    if match:
+        detail = match.group(1)
+    return _CYCLE_REF.sub("this cycle", detail)
+
+
 def _project_phase_step(step: dict) -> dict:
-    kind = step.get("kind")
+    kind = str(step.get("kind") or "")
+    projected = step
     if kind in PHASE_KINDS:
         projected = dict(step)
         projected["text_i18n"] = phase_i18n(str(step.get("text") or ""))
-        return projected
-    if kind == "provider_recovery":
-        detail = str(step.get("detail") or "")
-        match = _ROUTE_DETAIL.match(detail)
-        if match:
-            projected = dict(step)
-            projected["detail"] = match.group(1)
-            return projected
-    return step
+    detail = str(step.get("detail") or "")
+    concise = concise_detail(kind, detail)
+    if concise != detail:
+        projected = dict(projected)
+        projected["detail"] = concise
+    return projected
 
 
 def _project_context_step(step: dict) -> dict:

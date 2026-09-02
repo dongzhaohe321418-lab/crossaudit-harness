@@ -640,3 +640,161 @@ def test_the_intake_clock_speaks_while_the_router_is_silent():
     now[0] = 90.0
     assert intake.check_silence() is False
     intake.clear()
+
+
+# ------------------------------------------------------------------ (f)
+def _page_snippet(script: str, signature: str) -> str:
+    start = script.index(signature)
+    first_line = script[start:script.index("\n", start)]
+    if signature.startswith("const ") and "{" not in first_line:
+        # A one-expression arrow: runs to the first line that ends the statement.
+        end = start
+        while True:
+            end = script.index("\n", end + 1)
+            if script[start:end].rstrip().endswith(";"):
+                return script[start:end]
+    depth, i = 0, script.index("{", start)
+    while i < len(script):
+        depth += (script[i] == "{") - (script[i] == "}")
+        if depth == 0:
+            return script[start:i + 1]
+        i += 1
+    raise AssertionError(signature)
+
+
+NEW_KINDS = ("received", "routed", "answering", "preparing", "prompt_ready",
+             "still_working", "auditor_reading", "auditor_progress",
+             "check_started", "check_finished")
+
+
+def _sample_steps() -> list[dict]:
+    texts = {
+        "received": "Got it — working out who should handle this",
+        "routed": "The generator will do this",
+        "answering": "The generator is replying",
+        "preparing": "Reading the workspace · 12 files",
+        "prompt_ready": "Asking the generator to write",
+        "still_working": "Still generating · 45 s",
+        "auditor_reading": "The auditor is reading 3 files",
+        "auditor_progress": "Still reviewing · 40 s",
+        "check_started": "Running the Schema check",
+        "check_finished": "Units check found 2 issues",
+    }
+    steps = [{"t": 1, "actor": "loop", "kind": kind, "text": text, "detail": "",
+              "state": "GENERATING", "round_no": 1, "round_limit": 3}
+             for kind, text in texts.items()]
+    # Older events whose details carry identifiers the surface must not show.
+    steps += [
+        {"t": 2, "actor": "auditor", "kind": "audit_escalated", "text": "ESCALATED",
+         "detail": "cycle " + "4a0cac15dc4e061b" + " is waiting for a human",
+         "state": "AUDITING", "round_no": 1, "round_limit": 3},
+        {"t": 3, "actor": "generator", "kind": "provider_recovery",
+         "text": "provider recovery", "detail": "anthropic:claude-fable-5 · attempt 2",
+         "state": "GENERATING", "round_no": 1, "round_limit": 3},
+        {"t": 4, "actor": "auditor", "kind": "audit_blocked", "text": "BLOCKED",
+         "detail": "[BLOCKER] CA-DATA-001 the value has no unit; [MAJOR] CA-METH-002 x",
+         "state": "AUDITING", "round_no": 1, "round_limit": 3},
+        {"t": 5, "actor": "loop", "kind": "goal", "text": "produce the experiment",
+         "detail": json.dumps({"task": "x", "sha": "a" * 40}),
+         "state": "QUEUED", "round_no": 0, "round_limit": 3},
+        {"t": 6, "actor": "loop", "kind": "commit_refused",
+         "text": "the round could not be committed",
+         "detail": "commit " + "b" * 40 + " refused; see " + "c" * 12,
+         "state": "GENERATING", "round_no": 1, "round_limit": 3},
+    ]
+    return steps
+
+
+@pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node is not installed")
+def test_the_run_card_renders_every_new_event_in_both_locales_without_identifiers(
+        tmp_path):
+    """(f) The shipped activityRow, driven under node over the server's own
+    projection of every new event kind plus older events that carry
+    identifiers. In zh every phase line is Chinese; in both locales the
+    rendered HTML holds no 40-hex, no 16-hex, no 12-hex, no rule id, no
+    provider:model route and no raw JSON.
+
+    Mutations: drop ``text_i18n`` from activityRow and the zh assertion is
+    red; drop a scrub from conciseDetail and the identifier grep is red.
+    """
+    import re
+    import subprocess as sp
+    import sys
+
+    from crossaudit.console import page as page_mod
+    from crossaudit.console.progress import project_snapshot
+
+    harness = Path(__file__).parent / "harness" / "extract_zh.py"
+    zh_js = sp.run([sys.executable, str(harness), str(Path(page_mod.__file__).parents[3])],
+                   capture_output=True, text=True, check=True).stdout
+    script = page_mod.PAGE.split("<script>")[1].split("</script>")[0]
+    pieces = [zh_js, "let currentLocale='en';",
+              "const at=()=>'';",
+              _page_snippet(script, "const esc = "),
+              _page_snippet(script, "const localeText = "),
+              _page_snippet(script, "const t = "),
+              _page_snippet(script, "function durationText("),
+              _page_snippet(script, "function humaniseDetail("),
+              _page_snippet(script, "const ACTOR_NAMES"),
+              _page_snippet(script, "const ACTOR_MARKS"),
+              _page_snippet(script, "function conciseDetail("),
+              _page_snippet(script, "function activityRow(")]
+    projected = project_snapshot({"steps": _sample_steps()})["steps"]
+    driver = "\n".join(pieces) + "\nconst STEPS=" + json.dumps(projected, ensure_ascii=False) + ";" + """
+const out={};
+for(const locale of ['en','zh']){currentLocale=locale;out[locale]=STEPS.map(s=>[s.kind,activityRow(s)]);}
+console.log(JSON.stringify(out));
+"""
+    (tmp_path / "rows.js").write_text(driver)
+    run = sp.run(["node", str(tmp_path / "rows.js")], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    rendered = json.loads(run.stdout)
+
+    forbidden = re.compile(r"[a-f0-9]{40}|[a-f0-9]{16}|(?<![a-z0-9])[a-f0-9]{12}(?![a-z0-9])"
+                           r"|CA-[A-Z]+-\d|:claude|:gpt|[{\[]\"")
+    for locale in ("en", "zh"):
+        html = "\n".join(row for _kind, row in rendered[locale])
+        assert not forbidden.search(html), (locale, forbidden.search(html).group(0))
+        assert "attempt 2" in html                     # the fact survives the scrub
+        assert "this cycle is waiting for a human" in html
+    kinds_seen = [kind for kind, _row in rendered["zh"]]
+    assert set(NEW_KINDS) <= set(kinds_seen)
+    for kind, row in rendered["zh"]:
+        if kind in NEW_KINDS:
+            assert re.search(r"[一-鿿]", row), (kind, row)
+            en_text = next(s["text"] for s in projected if s["kind"] == kind)
+            assert en_text not in row, (kind, row)         # translated, not echoed
+    for kind, row in rendered["en"]:
+        if kind in NEW_KINDS:
+            en_text = next(s["text"] for s in projected if s["kind"] == kind)
+            assert en_text in row and len(en_text) <= 60
+
+
+def test_phase_copy_is_short_bilingual_and_free_of_identifiers():
+    """(f, server half) Every fixed phase sentence and every counted pattern
+    has a Chinese form, and none is longer than 60 characters."""
+    import re
+
+    from crossaudit.console.progress import (PHASE_TEXT_ZH, CHECK_WORDS_ZH,
+                                             phase_i18n)
+    from crossaudit.auditor.run import CHECK_NAMES
+
+    for en, zh in PHASE_TEXT_ZH.items():
+        assert len(en) <= 60 and re.search(r"[一-鿿]", zh), en
+        assert phase_i18n(en)["zh"] == zh
+    assert set(CHECK_NAMES.values()) <= set(CHECK_WORDS_ZH)
+    for text in ("Still generating · 45 s", "Reading the workspace · 12 files",
+                 "The auditor is reading 1 file", "Running the Units check",
+                 "Schema check passed", "Provenance check found 3 issues",
+                 "Still reviewing · 40 s"):
+        pair = phase_i18n(text)
+        assert pair["zh"] != text and re.search(r"[一-鿿]", pair["zh"]), text
+
+
+def test_the_pipeline_commit_step_names_the_round_not_the_sha(science, cfg):
+    from crossaudit.console import overview
+
+    cycle = overview.Cycle(directory="dddddddddddd-r2", sha="d" * 40, round=2,
+                           verdict="PASS", findings=[], at=0)
+    steps = overview.pipeline(cfg, [cycle])
+    assert steps[0]["title"] == "Commit" and steps[0]["detail"] == "round 2"
