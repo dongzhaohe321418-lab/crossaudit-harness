@@ -233,6 +233,21 @@ def _conversation_context(cfg: Config, chat_id: str, run_id: str,
     return "\n".join(lines)
 
 
+def _workspace_file_count(cfg: Config) -> int:
+    """How many files the workspace read below is about to open."""
+    count = 0
+    for d in (cfg.scope_dirs or []):
+        base = cfg.root / d
+        if not base.is_dir():
+            continue
+        for p in base.rglob("*"):
+            if "TEMPLATE" in p.parts:
+                continue
+            if p.is_file() and not p.is_symlink():
+                count += 1
+    return count
+
+
 def _current_work(cfg: Config, task: str = "", findings: str = "",
                   on_condense=None) -> dict[str, str]:
     """The work as it stands, read from the working tree inside the scope dirs.
@@ -657,8 +672,16 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                      joined[:2000], state=RunState.GENERATING)
         emit("generation_started", "generator", "writing",
              state=RunState.GENERATING)
+        # D150: the workspace read is the longest silent stretch before the
+        # first token, so it is announced before it starts (the count is a
+        # cheap walk; the read is the cost) and the prompt hand-off after it.
+        emit("preparing", "generator",
+             f"Reading the workspace · {_workspace_file_count(cfg)} files",
+             state=RunState.GENERATING)
         current = _current_work(cfg, task, findings, context_report)
         in_force = skills_mod.select(house, list(current) or cfg.scope_dirs)
+        emit("prompt_ready", "generator", "Asking the generator to write",
+             state=RunState.GENERATING)
         try:
             while True:
                 outcome = gen_mod.generate(
@@ -1242,7 +1265,7 @@ def cmd_build(args) -> int:
             # A raw edit envelope on stdout has no live-draft affordance yet, so
             # the CLI keeps its existing phase narration rather than presenting
             # unaudited structured bytes as a finished-looking result.
-            if event.kind == "generation_chunk":
+            if event.kind in ("generation_chunk", "thinking_chunk"):
                 return
             if event.kind == "round_started":
                 label = f"round {event.round_no} of {event.round_limit}"

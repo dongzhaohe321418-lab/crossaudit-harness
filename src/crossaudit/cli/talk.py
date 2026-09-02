@@ -25,18 +25,20 @@ from ..usage import record_completion
 ROUTING_LOG = "routing.jsonl"
 
 
-def _auditor_complete(cfg: Config):
+def _auditor_complete(cfg: Config, on_event=None):
     """A `complete(system, prompt)` bound to the auditor role.
 
     Routing and rule drafting run on the auditor side: it is the end whose job
     is understanding standards, and it is the end that must never receive the
     generator's internal narrative — so nothing here forwards anything but the
-    user's own words (P2).
+    user's own words (P2). ``on_event`` is the resilience layer's narration
+    callback (recovery lines; ``on_chunk`` when the reply may stream).
     """
     def complete(*, system: str, prompt: str):
         reply = provider_resilience.complete(
             cfg, "auditor", cfg.auditor, system=system, prompt=prompt,
-            allow_custom=bool(os.environ.get("CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT")))
+            allow_custom=bool(os.environ.get("CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT")),
+            on_event=on_event)
         route = provider_resilience.route_from_reply(reply, cfg.auditor)
         record_completion(root=cfg.root, state_dir=cfg.state_dir, role="auditor",
                           phase="control", vendor=route["vendor"],
@@ -168,10 +170,11 @@ inspected them or that a formal audit ran. You may clarify audit intent, explain
 your role, or recommend sending work through the formal audit loop. Be concise."""
 
 
-def lane_auditor(cfg: Config, routing) -> str:
+def lane_auditor(cfg: Config, routing, on_event=None) -> str:
     """A direct auditor reply that transmits only the user's addressed message."""
-    reply = _auditor_complete(cfg)(system=AUDITOR_CHAT_SYSTEM,
-                                   prompt=routing.restated)
+    complete = (_auditor_complete(cfg, on_event) if on_event is not None
+                else _auditor_complete(cfg))
+    reply = complete(system=AUDITOR_CHAT_SYSTEM, prompt=routing.restated)
     answer = reply.text.strip()
     if not answer:
         raise ConfigDenial("the auditor returned an empty reply")
@@ -189,7 +192,7 @@ seems to want actual work done, say they can simply ask for it and it will run
 through the audited loop."""
 
 
-def _generator_chat_complete(cfg: Config):
+def _generator_chat_complete(cfg: Config, on_event=None):
     """A `complete(system, prompt)` bound to the generator role for direct chat.
 
     The generator role keeps its own credential (never the auditor's — the two
@@ -201,7 +204,8 @@ def _generator_chat_complete(cfg: Config):
     def complete(*, system: str, prompt: str):
         reply = provider_resilience.complete(
             cfg, "generator", primary, system=system, prompt=prompt,
-            allow_custom=bool(os.environ.get("CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT")))
+            allow_custom=bool(os.environ.get("CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT")),
+            on_event=on_event)
         route = provider_resilience.route_from_reply(reply, primary)
         record_completion(root=cfg.root, state_dir=cfg.state_dir, role="generator",
                           phase="control", vendor=route["vendor"],
@@ -213,14 +217,15 @@ def _generator_chat_complete(cfg: Config):
     return complete
 
 
-def lane_chat(cfg: Config, routing) -> str:
+def lane_chat(cfg: Config, routing, on_event=None) -> str:
     """A direct, unaudited conversational answer from the generator.
 
     Transmits only the user's own words (P2); runs no build, writes no files,
     and mints no receipt — the reply is labeled as unaudited wherever it shows.
     """
-    reply = _generator_chat_complete(cfg)(system=GENERATOR_CHAT_SYSTEM,
-                                          prompt=routing.restated)
+    complete = (_generator_chat_complete(cfg, on_event) if on_event is not None
+                else _generator_chat_complete(cfg))
+    reply = complete(system=GENERATOR_CHAT_SYSTEM, prompt=routing.restated)
     answer = reply.text.strip()
     if not answer:
         raise ConfigDenial("the generator returned an empty reply")
