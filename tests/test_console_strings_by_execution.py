@@ -27,12 +27,24 @@ PLAN = [
 ]
 
 
-def test_the_execution_scoped_count_is_reported_with_its_paths(tmp_path, capsys):
+def test_the_execution_scoped_count_is_reported_with_its_paths(
+        tmp_path, capsys, monkeypatch):
     """Publishes the number AND what it counts, in one place.
 
     The number on its own is what made 25 and 26 look like a disagreement when
     they were the same measurement in different units.
+
+    `/api/projects` calls `projects.github_status()` -> `pair._owner()` ->
+    `gh auth status` / `gh api user`: the only three subprocess invocations in
+    a full run that leave the machine (tests/conftest.py, NOT COVERED). Stubbed
+    the way test_projects_ui.py stubs it, so this file is hermetic; the strings
+    it enumerates are the console's, and a stub returns a comparable shape.
     """
+    from crossaudit.console import projects
+
+    monkeypatch.setattr(projects, "github_status", lambda force=False: {
+        "connected": False, "owner": None,
+        "detail": "GitHub CLI is not signed in on this machine"})
     root = tmp_path / "p"
     root.mkdir()
     cfg = harness.project(root)
