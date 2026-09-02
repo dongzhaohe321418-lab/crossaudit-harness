@@ -329,6 +329,17 @@ def _stage_authorized(cfg: Config, written: AppliedFiles) -> None:
               input_data=b"".join(rows))
 
 
+def _staged_paths(cfg: Config) -> list[str]:
+    """The staged paths exactly as git holds them (NUL-separated, unquoted).
+
+    ``--name-only`` without ``-z`` quotes non-ASCII and unusual names
+    (``"\346\212\245\345\221\212.md"``), and a screen that compared those
+    spellings refused a Chinese report name as out of scope.
+    """
+    raw = git_bytes("diff", "--cached", "--name-only", "-z", cwd=cfg.root)
+    return [p.decode("utf-8", "replace") for p in raw.split(b"\0") if p]
+
+
 def _stage_generated(cfg: Config, written: list[str] | AppliedFiles) -> list[str]:
     """Stage exactly the files returned by the generator, and nothing else.
 
@@ -349,8 +360,7 @@ def _stage_generated(cfg: Config, written: list[str] | AppliedFiles) -> list[str
         # Backward-compatible for trusted callers outside the generator loop.
         # Generator output is required to carry AppliedFiles authority.
         git("add", "--", *written, cwd=cfg.root)
-    return git("diff", "--cached", "--name-only", cwd=cfg.root,
-               check=False).splitlines()
+    return _staged_paths(cfg)
 
 
 #: Bound the staged-diff the commit secret-scan reads (mirrors tools_git).
@@ -370,9 +380,7 @@ def _staged_secret(cfg: Config) -> str:
                cwd=cfg.root, check=False)[:_MAX_SCAN_BYTES]
     added = "\n".join(ln[1:] for ln in diff.splitlines()
                       if ln.startswith("+") and not ln.startswith("+++"))
-    names = git("diff", "--cached", "--name-only", cwd=cfg.root,
-                check=False).splitlines()
-    return secretscan.first_finding(added, names)
+    return secretscan.first_finding(added, _staged_paths(cfg))
 
 
 def _last_report(cfg: Config) -> str:
@@ -571,6 +579,10 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     store = StateStore(cfg.root / cfg.state_dir / "state.json")
     house = skills_mod.load(cfg.root)
     findings = ""
+    #: The last BLOCKED audit's findings on their own, so a refusal before the
+    #: next audit (apply, document export, the repair screen) can be appended
+    #: to them instead of replacing the cause the generator must still fix.
+    audit_findings = ""
     deterministic_contract = describe_checks(cfg.checks)
     compute_hosts = hpc.MANAGER.agent_context(cfg)
     compute_results: list[dict] = []
@@ -787,8 +799,9 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             scope_note = (f"Return only files inside "
                           f"{', '.join(cfg.scope_dirs)}/ and try again."
                           if cfg.scope_dirs else "Try again.")
-            findings = (f"[BLOCKER] Your last round was refused before it reached "
-                        f"the auditor: {exc.reason}\n{scope_note}")
+            refusal = (f"[BLOCKER] Your last round was refused before it reached "
+                       f"the auditor: {exc.reason}\n{scope_note}")
+            findings = f"{audit_findings}\n\n{refusal}" if audit_findings else refusal
             # A non-retryable denial (authentication, permission, endpoint,
             # invalid model, an exceeded automation limit) cannot improve by
             # sending the same request for every remaining round. Stop once,
@@ -830,9 +843,10 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         except ProviderDenial as exc:
             emit("document_refused", "generator", "document export refused",
                  exc.reason, state=RunState.GENERATING)
-            findings = ("[BLOCKER] The local document export boundary refused the "
-                        f"last round: {exc.reason}\nReturn exactly one valid "
-                        f"*{document_export.SOURCE_SUFFIX} Markdown source and try again.")
+            refusal = ("[BLOCKER] The local document export boundary refused the "
+                       f"last round: {exc.reason}\nReturn exactly one valid "
+                       f"*{document_export.SOURCE_SUFFIX} Markdown source and try again.")
+            findings = f"{audit_findings}\n\n{refusal}" if audit_findings else refusal
             if round_no == cfg.max_rounds:
                 termination_reason = (
                     f"document export failed in round {round_no}: {exc.reason[:400]}")
@@ -858,9 +872,10 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             except ProviderDenial as exc:
                 emit("document_refused", "generator", "document export refused",
                      exc.reason, state=RunState.GENERATING)
-                findings = ("[BLOCKER] The local document export boundary refused the "
-                            f"last round: {exc.reason}\nReturn exactly one valid "
-                            f"*{document_export.SOURCE_SUFFIX} Markdown source and try again.")
+                refusal = ("[BLOCKER] The local document export boundary refused the "
+                           f"last round: {exc.reason}\nReturn exactly one valid "
+                           f"*{document_export.SOURCE_SUFFIX} Markdown source and try again.")
+                findings = f"{audit_findings}\n\n{refusal}" if audit_findings else refusal
                 if round_no == cfg.max_rounds:
                     termination_reason = (
                         f"document export failed in round {round_no}: {exc.reason[:400]}")
@@ -916,7 +931,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             # index. Likely defensive edits are cautions: they ride to the
             # next audit as notes (mode caution) or refuse too (mode refuse).
             if repair_round and cfg.repair.enabled:
-                diff = git("diff", "--cached", "--binary", "--no-ext-diff",
+                diff = git("-c", "core.quotepath=false", "diff", "--cached",
+                           "--binary", "--no-ext-diff",
                            cwd=cfg.root, check=False)[:_MAX_SCAN_BYTES]
                 assessment = RepairGuard(
                     cfg.repair.max_changed_lines, mode=cfg.repair.mode).assess(
@@ -936,7 +952,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                           "genuinely needs it, say so in `notes`.")
                     # The audit's findings stay in the prompt: the generator
                     # must still see the cause it is being asked to repair.
-                    findings = f"{findings}\n\n{refusal}" if findings else refusal
+                    findings = f"{audit_findings}\n\n{refusal}" if audit_findings else refusal
                     if repair_refusal_used or round_no == cfg.max_rounds:
                         repair_refusal_stop = True
                         termination_reason = (
@@ -1040,7 +1056,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     if ln.strip().startswith("- [")]
         emit("audit_blocked", "auditor", "BLOCKED",
              "; ".join(blocking[:2])[:300], state=RunState.AUDITING)
-        findings = gen_mod.render_findings(_last_report(cfg))
+        audit_findings = findings = gen_mod.render_findings(_last_report(cfg))
         repair_round = True
         emit("revision_requested", "loop", "findings returned to the generator",
              state=RunState.REVISING)
