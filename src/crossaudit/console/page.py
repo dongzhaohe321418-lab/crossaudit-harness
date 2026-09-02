@@ -3629,36 +3629,43 @@ const ZH={
 };
 const ZH_PATTERNS=[
   // D148 repair guard. Every reason is COMPOSED from a path, a count or a
-  // pattern name, so each is a pattern; the path is never translated. The
+  // construct name, so each is a pattern; the path is never translated. The
   // event detail joins several with "; " and the stop reason wraps the first
   // in a round number, so those two shapes delegate to the per-reason rows.
+  // Gate: tests/test_repair_guard_console_zh.py drives every sentence the
+  // guard and build.py can emit (enumerated from their source) through zhValue.
   [/^the automatic repair was refused in round (\d+) because (.+)$/,
    m=>'第 '+m[1]+' 轮的自动修复被拒绝，原因：'+zhValue(m[2])],
   // The pattern IS the boundary between two guard sentences, so a string
   // matches only when it really joins two (no recursion on one sentence), and
-  // the semicolon inside the scope sentence (only files inside them ...) is
-  // not a boundary.
-  [/; (?=\S+ (?:is outside the audited|is a binary file|adds an? |removes an? )|the code change touches|\d+ staged file|the revision changed nothing)/,
-   m=>m.input.split(/; (?=\S+ (?:is outside the audited|is a binary file|adds an? |removes an? )|the code change touches|\d+ staged file|the revision changed nothing)/).map(part=>zhValue(part)).join('；')],
-  [/^(.+) is outside the audited directories \((.*)\); only files inside them may change — if the fix needs another file, say so in `notes`$/,
-   m=>m[1]+' 不在已审计目录（'+m[2]+'）内；只有这些目录内的文件可以修改——如果修复确实需要其他文件，请在 `notes` 中说明'],
+  // the semicolon inside the scope sentence (if the fix needs ...) is not one.
+  [/; (?=\S+ (?:is outside the audited|is a binary file|adds |removes |changes |renames )|the code change touches|\d+ staged file|the revision changed nothing)/,
+   m=>m.input.split(/; (?=\S+ (?:is outside the audited|is a binary file|adds |removes |changes |renames )|the code change touches|\d+ staged file|the revision changed nothing)/).map(part=>zhValue(part)).join('；')],
+  [/^(.+) is outside the audited directories \((.*)\)\. Only files inside them may change; if the fix needs another file, say so in `notes`\.$/,
+   m=>m[1]+' 不在已审计目录（'+m[2]+'）内。只有这些目录内的文件可以修改；如果修复确实需要其他文件，请在 `notes` 中说明。'],
   [/^(.+) is a binary file written directly by the generator, which cannot be reviewed line by line$/,
    m=>m[1]+' 是生成者直接写入的二进制文件，无法逐行审查'],
   [/^the code change touches (\d+) lines, more than the (\d+)-line limit for an automatic repair$/,
    m=>'代码改动涉及 '+m[1]+' 行，超过了自动修复的 '+m[2]+' 行上限'],
-  [/^(\d+) staged file\(s\) lay beyond the review size limit and were not screened: (.+)$/,
-   m=>'有 '+m[1]+' 个已暂存文件超出审查大小上限而未被筛查：'+m[2]],
-  // The cautions the auditor weighs (repair_guard ADDED/MARKER/REMOVED_PATTERNS).
-  [/^(.+) adds a catch-all `except` that swallows every error$/,m=>m[1]+' 新增了会吞掉所有错误的 catch-all `except`'],
-  [/^(.+) adds a `suppress\(\.\.\.\)` block that hides errors$/,m=>m[1]+' 新增了会隐藏错误的 `suppress(...)` 块'],
-  [/^(.+) adds an error handler that does nothing$/,m=>m[1]+' 新增了一个什么也不做的错误处理'],
-  [/^(.+) adds an assertion that can no longer fail$/,m=>m[1]+' 新增了一个不再可能失败的断言'],
-  [/^(.+) adds a skipped or expected-to-fail test$/,m=>m[1]+' 新增了被跳过或预期失败的测试'],
-  [/^(.+) adds a shell step that ignores its own failure$/,m=>m[1]+' 新增了会忽略自身失败的 shell 步骤'],
-  [/^(.+) adds a marker that silences a checker \(`noqa`, `type: ignore`, `pragma: no cover`, \.\.\.\)$/,m=>m[1]+' 新增了会让检查器静默的标记（`noqa`、`type: ignore`、`pragma: no cover` 等）'],
-  [/^(.+) adds a warnings filter set to ignore$/,m=>m[1]+' 新增了设为忽略的警告过滤器'],
-  [/^(.+) removes an `assert` or `raise` without replacing it$/,m=>m[1]+' 删除了一个 `assert` 或 `raise` 而没有替代'],
-  [/^(.+) removes a test$/,m=>m[1]+' 删除了一个测试'],
+  [/^(\d+) staged file\(s\) were larger than the review can read and were not screened: (.+)$/,
+   m=>'有 '+m[1]+' 个已暂存文件超出审查可读取的大小而未被筛查：'+m[2]],
+  // "<path> adds|removes|changes|renames <construct>": the constructs are
+  // repair_guard's ADDED/MARKER/REMOVED tables and its re-raise sentence.
+  [/^(\S+) (adds|removes|changes|renames) (.+)$/,m=>{const zh={
+    'adds a catch-all `except` that swallows every error':'新增了会吞掉所有错误的 catch-all `except`',
+    'adds a catch-all `except` (its handler re-raises)':'新增了 catch-all `except`（其处理程序会重新抛出）',
+    'adds a `suppress(...)` block that hides errors':'新增了会隐藏错误的 `suppress(...)` 块',
+    'adds an error handler that does nothing':'新增了一个什么也不做的错误处理',
+    'adds an assertion that can no longer fail':'新增了一个不再可能失败的断言',
+    'adds a skipped or expected-to-fail test':'新增了被跳过或预期失败的测试',
+    'adds code under a branch that never runs (`if TYPE_CHECKING:` / `if False:`)':'在永远不会执行的分支下新增了代码（`if TYPE_CHECKING:` / `if False:`）',
+    'adds a shell or make step that ignores its own failure':'新增了会忽略自身失败的 shell 或 make 步骤',
+    'adds a marker that silences a checker (`noqa`, `type: ignore`, `pragma: no cover`, ...)':'新增了会让检查器静默的标记（`noqa`、`type: ignore`、`pragma: no cover` 等）',
+    'adds a warnings filter set to ignore':'新增了设为忽略的警告过滤器',
+    'removes an `assert` or `raise` without replacing it':'删除了一个 `assert` 或 `raise` 而没有替代',
+    'changes an `assert` or `raise`':'改动了一个 `assert` 或 `raise`',
+    'removes a test':'删除了一个测试','renames a test':'重命名了一个测试'}[m[2]+' '+m[3]];
+    return zh?m[1]+' '+zh:m[0];}],
   [/^provider failure left this task waiting for a person: ?(.*)$/,
    m=>'提供方失败，该任务正在等待人工处理：'+m[1]],
   [/^the selected PASS is not ready for admission: ?(.*)$/,
@@ -3670,7 +3677,7 @@ const ZH_PATTERNS=[
   // receipt, and it was the last string in the product anyone thought to
   // translate.
   [/^evidence ledger cannot be shown to the Auditor: ?(.*)$/,
-   m=>'证据账本无法出示给审计方：'+m[1]],
+   m=>'证据账本无法出示给审计者：'+m[1]],
   [/^Typing `crossaudit` runs (.+) \(version (.+)\)\. This app is (.+) at (.+)\.$/,
    m=>'在终端里输入 `crossaudit` 运行的是 '+m[1]+'（版本 '+m[2]+'）。本应用是 '+m[3]+'，位于 '+m[4]+'。'],
   [/^Typing `crossaudit` runs (.+)\. Its version could not be determined without running it, which CrossAudit does not do\. This app is (.+) at (.+)\.$/,
