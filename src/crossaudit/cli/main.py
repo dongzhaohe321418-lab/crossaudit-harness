@@ -343,7 +343,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
                        "slots": {k: str(v) for k, v in (slots or {}).items()}})
 
     def note(name: str, detail: str, *, copy: str = "",
-             slots: dict | None = None, detail_copy: str = "") -> None:
+             slots: dict | None = None, detail_copy: str = "",
+             standing: str = "") -> None:
         """A posture, a mode or a configured contract — NOT a test result.
 
         SPEC 2 (design/UX, Ledger D6): ``[PASS]`` means a condition was tested
@@ -355,7 +356,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         """
         checks.append({"check": name, "ok": None, "detail": detail, "fix": "",
                        "kind": "info", "copy": copy,
-                       "detail_copy": detail_copy,
+                       "detail_copy": detail_copy, "standing": standing,
                        "slots": {k: str(v) for k, v in (slots or {}).items()}})
 
     ident = _selfid.identity()
@@ -570,7 +571,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
                          controller_persistent=caps["persistent"],
                          controller_atomic=caps["atomic"], online=args.online)
     note("admission tier", f"{verdict.tier} — {adm.TIER_MEANING[verdict.tier]}",
-         copy="doctor.tier")
+         copy="doctor.tier",
+         standing=f"doctor.tier.standing.{verdict.tier.lower()}")
     for shortfall in verdict.shortfalls:
         note("  toward enforced", shortfall)
 
@@ -700,6 +702,13 @@ def _render_doctor(checks: list[dict], ok: bool, show_all: bool = False) -> str:
         if label:
             lines.append(f"  ℹ {label}")
         lines.append(f"      {_doctor_detail(c)}")
+        # The row's own second sentence, never an arrow. `→` means "you have
+        # something to do"; a posture has nothing to do, and putting one here
+        # manufactures a task out of a state of the world. What a person is
+        # missing is not a remedy but whether this state needs anything --
+        # which is why the sentence starts by saying that it does not.
+        if c["standing"]:
+            lines.append(f"      {i18n.t(c['standing'])}")
     if posture:
         lines.append("")
     if contracts:
