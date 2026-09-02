@@ -49,11 +49,12 @@
 
 ## 下一步(按优先级)
 
-1. **逐文件对比我这条线和 `codex/evidence-governance-fusion`(未做完)**
-   已看 3 个文件(`repair_guard.py`、`generator.py`、`receipt/verify.py`),初步结论是**两条线互补不冲突**:
-   codex 那条从"检测防御性编程"和"模型单方面的判定不能自动变成修复指令"入手;
-   我这条从"消除产生防御性编程的激励"入手(废掉只能咨询的宪法、finding 状态、prompt 侧重)。
-   还没看完 18 个文件里剩下的 15 个。
+1. **逐文件对比 codex 那条线 —— 已完成（D148）**
+   18 个文件全部看完，记录在 `docs/findings/codex-fusion-dd725d3.md`（含三份分簇报告）。
+   结论：目标一致、机制互补；证据层（回执 `authority` 块 + 校验）可加性吸收；
+   `auditor/run.py` 判定阶梯的整体替换**不能合**（锁优先级回退、丢 NOTHING_AUDITED）。
+   融合分五个切片（A finding-states 先合 → B authority 重述版 → C 档位 → D repair guard → E 文档）。
+   **等你裁定三件事**：模型 BLOCKER 默认路由、裁决依据进回执还是 sidecar、consensus 删或补第二 producer。
 
 2. **三个已完成但没独立复核的分支**(按你上次选 B,先扣住不合):
    `fix/approximately-means-approximately`、`fix/guard-name-states-its-reach`、`feat/finding-states`

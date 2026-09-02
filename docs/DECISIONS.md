@@ -6493,3 +6493,50 @@ by deleting a premise I had supplied rather than by confirming it.
   other production function changed. **Not an exhaustive enumeration of every
   historical constitution**, and it said so instead of letting "unchanged" stand
   unqualified.
+
+## D148 — The codex line is complementary in aim and non-additive in mechanism; absorb its evidence layer, refuse its ladder replacement
+
+The remaining 15 of the 18 files on `codex/evidence-governance-fusion`
+(`dd725d3`) are now compared against `v5-redesign@c170c17`. Full record in
+`docs/findings/codex-fusion-dd725d3.md` with three cluster reports beside it.
+
+**Same thesis, two mechanisms.** codex answers "a lone model BLOCKER must not
+become a patch instruction" with an admission policy (`authority.py`) and a
+diff guard (`repair_guard.py`). We answered it by removing the incentive
+(D141–D147). Neither contradicts the other's *aim*. The evidence layer —
+an optional `authority` block in the receipt, digest-bound, checked by the
+verifier — is a genuine gap on our side and is additive. It comes in.
+
+**The ladder replacement does not.** codex rewrote the verdict synthesis in
+`auditor/run.py` wholesale, and the rewrite is weaker in two places that no
+argument about defensive programming touches:
+
+- `decide()` tests `hard or consensus → BLOCK` **before** `escalation_lock`.
+  A cycle a human has taken jurisdiction over would return to automatic
+  repair on the next DCL failure. D147's sentence applies here in reverse:
+  the lock is safe today because of a priority, and this reorders it.
+- `decide()` has no `scope_started` input. The empty scope that D38/w1
+  made into NOTHING_AUDITED falls through to the model tier and can PASS.
+
+Both are what "never weakened" was written for. They are not codex's
+intent; they are what happens when a ladder is rewritten from a base that
+predates the branches it now has to carry.
+
+**The default is a product decision D142 already sequenced.** Routing every
+lone model BLOCKER to a human at round one is the Observe-default D142
+declined to adopt on argument alone. It becomes a dial —
+`authority.lone_model_blocker: block | escalate`, default `block` — and the
+default moves when finding-states produce a confirmation rate, not before.
+This is the same shape as `checks:` profiles: strictness is a setting, not
+the identity.
+
+**Consensus is unreachable and says otherwise.** The "two producers and two
+mechanism families" rule cannot fire: the only verified records are DCL
+blockers, already hard evidence. Under D141/D146 a rule that names a
+capability the code lacks is stripped, and the version string reserves the
+slot.
+
+**Three rulings I am not making.** Default route; receipt versus sidecar as
+the landing spot for adjudication evidence (finding-states chose sidecar
+and wrote a guard); whether to delete consensus or register broker tool
+evidence as the second producer. Listed for the owner in the finding.
