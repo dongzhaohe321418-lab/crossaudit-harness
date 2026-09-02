@@ -253,14 +253,19 @@ def test_no_dashboard_surface_carries_a_route_name_or_a_state_word(cfg):
 
 
 def test_the_page_names_the_tier_in_a_sentence_and_never_a_route():
-    assert "function findingTier(f)" in PAGE
-    assert PAGE.count("findingTier(f)") == 3  # the definition and the two lists
-    assert "'Verified by a deterministic check'" in PAGE
-    assert "'Raised by the auditor, not yet reproduced'" in PAGE
+    """Mutation (results & decisions slice R2): the tier sentence moved from
+    its own row (`findingTier`) onto the finding's details line (`tierWord`,
+    rendered by `findingCard`, the one renderer both lists share). Still a
+    sentence, still only where findings are listed, still never a route."""
+    assert "function tierWord(f)" in PAGE
+    assert "findingTier" not in PAGE, "the separate tier row is gone; one details line"
+    assert PAGE.count("findingCard") == 3  # the definition and the two lists
+    assert "'verified by a check'" in PAGE
+    assert "'raised by the auditor'" in PAGE
     assert ROUTE_NAME.search(PAGE) is None
     # The run card's loop steps are untouched: no tier or route on the main surface.
     loop = PAGE[PAGE.index("function runCard(d){"):PAGE.index("function approvalCard(d){")]
-    assert "findingTier" not in loop and "authority" not in loop
+    assert "tierWord" not in loop and "authority" not in loop
 
 
 # ----------------------------------------------------------------- Chinese

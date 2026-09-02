@@ -132,6 +132,11 @@ class Cycle:
     #: ESCALATE routes to human-decision, so the route cannot tell the dial
     #: from the auditor's own escalation or an integrity stop.
     authority_contested: bool = False
+    #: The receipt's ``audit_integrity`` ("OK", "NOTHING_AUDITED",
+    #: "INVALID_REPLY", "BOUNDS_EXCEEDED", ...), or "" without a receipt. Read
+    #: so a record written before ``escalation_cause`` was stored can still
+    #: name its branch; never rendered as a word.
+    integrity: str = ""
 
     @property
     def blockers(self) -> int:
@@ -176,6 +181,51 @@ def receipt_authority(cycle_dir: Path) -> dict:
 
 
 _receipt_authority = receipt_authority  # the name the first slice used
+
+
+def receipt_integrity(cycle_dir: Path) -> str:
+    """The receipt's ``audit_integrity`` field, or "" when there is none."""
+    receipt = cycle_dir / "receipt.json"
+    if not receipt.is_file():
+        return ""
+    try:
+        value = json.loads(receipt.read_text(encoding="utf-8")).get("audit_integrity")
+    except (OSError, ValueError, AttributeError):
+        return ""
+    return str(value or "")
+
+
+#: Receipt integrity -> the cause a legacy ESCALATE record is told (R5). The
+#: same names errors.escalation_cause mints at write time.
+_INTEGRITY_CAUSES = {"NOTHING_AUDITED": "nothing_audited",
+                     "INVALID_REPLY": "invalid_reply",
+                     "BOUNDS_EXCEEDED": "bounds_exceeded"}
+
+#: What happened, per structured cause: the sentence the Decision Center's
+#: detail line carries. Fixed English; the page holds the Chinese.
+CAUSE_WHY = {
+    "nothing_audited": ("the task produced no work in the audited folder, so "
+                        "there was nothing to review"),
+    "invalid_reply": "the auditor's reply could not be read",
+    "bounds_exceeded": "the task is too large for one audit",
+    "auditor_escalated": "the auditor asked for your judgment",
+    "escalation_locked": ("this task is already waiting for your earlier "
+                          "decision"),
+}
+
+#: What to do next, per structured cause. Names only what the dialog offers.
+CAUSE_REQUESTED = {
+    "nothing_audited": ("Tell the generator what to create inside the audited "
+                        "folder and run one more round, or stop this task."),
+    "invalid_reply": ("Run the audit again on the same work, switch the auditor "
+                      "model, or stop this task."),
+    "bounds_exceeded": ("Narrow the scope or split the task into smaller pieces "
+                        "and run one more round, or stop this task."),
+    "auditor_escalated": ("Read the auditor's reason, then tell the generator "
+                          "how to address it or stop this task."),
+    "escalation_locked": ("Open the earlier decision and settle it; this task "
+                          "continues from there."),
+}
 
 
 def annotate_findings(findings: list[dict], authority: dict) -> list[dict]:
@@ -312,7 +362,8 @@ def read_cycles(cfg: Config,
             constitution=const.group(1) if const else "",
             report_state=source.state, report_note=source.note,
             authority_route=str(authority.get("route", "") or ""),
-            authority_contested=bool(authority.get("contested_evidence_ids"))))
+            authority_contested=bool(authority.get("contested_evidence_ids")),
+            integrity=receipt_integrity(report.parent)))
     # Cycle directory names begin with a content hash, so lexical order is
     # random with respect to time. The UI's "latest" pipeline must follow the
     # ledger write order, with the protocol round as a deterministic tie-break.
@@ -443,6 +494,19 @@ def _is_auditor_concern(stop_reason: str, latest: Cycle | None) -> bool:
     return stop_reason.strip() == CONTESTED_MODEL_BLOCKER_REASON
 
 
+def _earliest_other_open(state: dict, cid: str) -> str:
+    """The other ESCALATED cycle a locked one is waiting on: the one the
+    controller history opened first (state.json is written key-sorted, so the
+    dict order says nothing about time)."""
+    first_seen: dict[str, int] = {}
+    for index, row in enumerate(state.get("history", [])):
+        first_seen.setdefault(str(row.get("cycle", "")), index)
+    others = [other for other, row in state.get("cycles", {}).items()
+              if other != cid and row.get("status") == "ESCALATED"]
+    others.sort(key=lambda other: (first_seen.get(other, len(first_seen)), other))
+    return others[0] if others else ""
+
+
 def escalations(cfg: Config) -> list[dict]:
     """What is waiting on a person, with enough evidence to make a decision.
 
@@ -482,8 +546,22 @@ def escalations(cfg: Config) -> list[dict]:
             # both say a model-only blocker was handed to a person. Derived
             # here, once, so the page keys on a field rather than on prose.
             cause = "auditor_concern"
+        if not cause and kind == "audit" and latest is not None:
+            # A record written before the cause was stored: the receipt's
+            # integrity field names the ladder branch on its own.
+            cause = _INTEGRITY_CAUSES.get(latest.integrity, "")
         why = stop_reason
-        if cause == "repair_refused":
+        if cause in CAUSE_WHY:
+            # R5. A fixed sentence per branch; the auditor's own escalation
+            # keeps its stated reason (the first finding) when it gave one.
+            # These rounds record no reason of their own (cmd_run mints one
+            # only for provider stops), so the sentence IS the stop reason the
+            # detail line shows — never the generic "the loop stopped".
+            why = (issues[0]["observation"][:220]
+                   if cause == "auditor_escalated" and issues else CAUSE_WHY[cause])
+            if not s.get("escalation_reason"):
+                stop_reason = why
+        elif cause == "repair_refused":
             # "the automatic repair was refused in round N because <reason>":
             # the guard's own sentence names the file and the pattern, and
             # that is the part a person needs on the screen.
@@ -493,7 +571,9 @@ def escalations(cfg: Config) -> list[dict]:
                 why = "no model audit ran, so the result cannot pass"
             elif issues:
                 why = issues[0]["observation"][:220]
-        if cause == "repair_refused":
+        if cause in CAUSE_REQUESTED:
+            requested = CAUSE_REQUESTED[cause]
+        elif cause == "repair_refused":
             requested = (
                 "Tell the generator to keep the fix inside the audited files, or "
                 "stop the task without admitting its output.")
@@ -536,6 +616,11 @@ def escalations(cfg: Config) -> list[dict]:
                     "kind": kind,
                     # Structured cause (additive) for human-readable rendering.
                     "cause": cause,
+                    # R5. The decision a locked cycle is waiting on: the other
+                    # open escalation, oldest first, so the page can open it.
+                    **({"earlier_cycle_id": earlier}
+                       if cause == "escalation_locked"
+                       and (earlier := _earliest_other_open(state, cid)) else {}),
                     "remediations": escalation_remediations(kind),
                     "task": str(s.get("task", ""))[:12000],
                     "attempts": [{"round": c.round, "verdict": c.verdict,

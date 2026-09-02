@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import math
 import os
+import sqlite3
+import statistics
 import threading
 import time
 import uuid
@@ -345,6 +347,8 @@ def summary(cfg) -> dict:
         signature = (stat.st_mtime_ns, stat.st_size, now.date().toordinal())
     except OSError:
         signature = (0, 0, now.date().toordinal())
+    journal = _journal_signature(cfg)
+    signature += journal
     policy = getattr(cfg, "budgets", None)
     signature += tuple(getattr(policy, name, None) for name in (
         "daily_token_warning", "daily_token_limit", "monthly_cost_warning_usd",
@@ -433,6 +437,124 @@ def summary(cfg) -> dict:
         "cost_label": "API-value estimate",
     }
     result["budget"] = _budget_view(cfg, result["today"], result["month"])
+    # R4. What the next task will probably take, from this project's own
+    # completed runs. Pure over rows the journal and this ledger already hold.
+    result["forecast"] = run_forecast(
+        forecast_rows(events, _journal_runs(cfg) if journal != (0, 0) else []))
     with _CACHE_LOCK:
         _SUMMARY_CACHE[cache_key] = (signature, result)
     return result
+
+
+# ------------------------------------------------------------------ forecast
+#: Run states that ran to a verdict. A cancelled, interrupted or parked run
+#: ended early, so its wall time would drag the forecast below what a task
+#: really takes; it is left out rather than averaged in.
+FORECAST_STATES = ("PASSED", "WAITING_FOR_HUMAN")
+
+
+def _journal_signature(cfg) -> tuple:
+    try:
+        from .runtime.runs import journal_path
+        stat = journal_path(cfg).stat()
+        return (stat.st_mtime_ns, stat.st_size)
+    except (OSError, ImportError, AttributeError, TypeError):
+        return (0, 0)
+
+
+def _journal_runs(cfg) -> list[dict]:
+    """``{"started": s, "finished": s}`` for every run that ran to a verdict.
+
+    Read-only, and best-effort: a missing journal, an old schema or a locked
+    database yields no rows, never an exception — the forecast is a
+    convenience line, not evidence.
+    """
+    try:
+        from .runtime.runs import journal_path
+        path = journal_path(cfg)
+        if not path.is_file():
+            return []
+        db = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=0.5)
+        try:
+            rows = db.execute(
+                "SELECT started, finished, state FROM runs "
+                "WHERE finished IS NOT NULL ORDER BY started").fetchall()
+        finally:
+            db.close()
+    except (sqlite3.Error, OSError, ImportError, AttributeError, TypeError):
+        return []
+    return [{"started": float(started), "finished": float(finished)}
+            for started, finished, state in rows
+            if str(state) in FORECAST_STATES and finished and started]
+
+
+def forecast_rows(events: list[dict], runs: list[dict]) -> list[dict]:
+    """One ``{"seconds", "usd"}`` row per completed run.
+
+    A run's cost is the API value of every ledger event that fell inside its
+    wall-clock window (the ledger carries no run id, so the window is the
+    join). ``usd`` is None when no priced call fell in the window, so an
+    unpriced project forecasts time without inventing a cost.
+    """
+    out = []
+    for run in runs:
+        try:
+            start = float(run["started"]) * 1000
+            end = float(run["finished"]) * 1000
+        except (KeyError, TypeError, ValueError):
+            continue
+        if end < start:
+            continue
+        usd: float | None = None
+        for event in events:
+            try:
+                when = int(event.get("t", 0) or 0)
+            except (TypeError, ValueError):
+                continue
+            if not (start <= when <= end):
+                continue
+            value = event.get("api_value_usd")
+            if isinstance(value, (int, float)) and math.isfinite(value):
+                usd = (usd or 0.0) + float(value)
+        out.append({"seconds": (end - start) / 1000, "usd": usd})
+    return out
+
+
+def _quartiles(values: list[float]) -> dict:
+    """p25 / p50 / p75 by linear interpolation; robust to a single outlier,
+    which is the whole reason a forecast reads the middle of the record
+    rather than its mean."""
+    data = sorted(float(v) for v in values)
+    if not data:
+        return {}
+    if len(data) == 1:
+        return {"p25": data[0], "p50": data[0], "p75": data[0]}
+
+    def at(q: float) -> float:
+        pos = (len(data) - 1) * q
+        lo, hi = int(math.floor(pos)), int(math.ceil(pos))
+        return data[lo] + (data[hi] - data[lo]) * (pos - lo)
+
+    return {"p25": round(at(0.25), 3), "p50": round(statistics.median(data), 3),
+            "p75": round(at(0.75), 3)}
+
+
+def run_forecast(rows: list[dict]) -> dict:
+    """The estimate a person reads before a task starts.
+
+    ``runs`` completed runs; ``seconds`` and ``usd`` each carry p25/p50/p75
+    (a range only means something from three runs; the page shows the median
+    alone below that) or are None when nothing can be said. Pure.
+    """
+    valid = [r for r in rows
+             if isinstance(r.get("seconds"), (int, float))
+             and math.isfinite(float(r["seconds"])) and r["seconds"] >= 0]
+    seconds = [float(r["seconds"]) for r in valid]
+    usd = [float(r["usd"]) for r in valid
+           if isinstance(r.get("usd"), (int, float)) and math.isfinite(float(r["usd"]))]
+    return {
+        "runs": len(seconds),
+        "priced_runs": len(usd),
+        "seconds": _quartiles(seconds) or None,
+        "usd": _quartiles(usd) or None,
+    }
