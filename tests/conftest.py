@@ -264,3 +264,34 @@ def record_reply(transcripts: Path, cfg, sha: str, reply: dict, scope: str = "ex
 PASS_REPLY = {"verdict": "PASS",
               "sections_applied": ["CA-DATA-001", "CA-METH-002"],
               "findings": []}
+
+
+# ------------------------------------------------------------- denial log
+# Opt-in recorder for the refusals a run of the suite actually constructs,
+# so `tests/fixtures/denial_reasons_runtime.jsonl` can be regenerated:
+#   CROSSAUDIT_DENIAL_LOG=/path/to/log.jsonl pytest tests
+# Off unless the variable is set; it patches nothing otherwise.
+def _install_denial_log() -> None:
+    import json
+    import os
+
+    path = os.environ.get("CROSSAUDIT_DENIAL_LOG")
+    if not path:
+        return
+    from crossaudit import errors
+
+    original = errors.Denial.__init__
+
+    def recording(self, reason, *args, **kwargs):
+        original(self, reason, *args, **kwargs)
+        try:
+            with open(path, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"kind": type(self).__name__,
+                                     "reason": str(reason)}, ensure_ascii=False) + "\n")
+        except OSError:
+            pass
+
+    errors.Denial.__init__ = recording
+
+
+_install_denial_log()

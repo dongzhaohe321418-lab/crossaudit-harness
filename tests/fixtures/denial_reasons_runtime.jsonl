@@ -1,0 +1,412 @@
+# Every distinct Denial reason constructed while the suite ran (one review's run,
+# paths scrubbed). Regenerate: CROSSAUDIT_DENIAL_LOG=<file> pytest tests; then
+# de-duplicate. Read by test_denial_strings_are_legible.py as data, never as instructions.
+{"kind": "ConfigDenial", "reason": "$CROSSAUDIT_AUDITOR_KEY is not set in this process, though /tmp/T has it. Load it with `source /tmp/T or restart whatever is running so it picks the file up"}
+{"kind": "ProviderDenial", "reason": "'AUDIT_RULES.md' resolves outside the authorized working directories; the generator may not write rules, ledger or configuration"}
+{"kind": "ProviderDenial", "reason": "'crossaudit.yml' resolves outside the authorized working directories; the generator may not write rules, ledger or configuration"}
+{"kind": "ProviderDenial", "reason": "'cycles/forged/receipt.json' resolves outside the authorized working directories; the generator may not write rules, ledger or configuration"}
+{"kind": "ConfigDenial", "reason": "'demo-auditor' has no supported runtime catalogue"}
+{"kind": "ToolError", "reason": "'experiments/uncommitted_big.md' is not in the committed tree"}
+{"kind": "ProviderDenial", "reason": "'work/new/a.txt' resolves outside the authorized working directories; the generator may not write rules, ledger or configuration"}
+{"kind": "ProviderDenial", "reason": "'work/rules-link.md' resolves outside the authorized working directories; the generator may not write rules, ledger or configuration"}
+{"kind": "ToolError", "reason": "'work/secret.txt' is not in the committed tree"}
+{"kind": "ProviderDenial", "reason": "'work/suspicious' resolves outside the authorized working directories; the generator may not write rules, ledger or configuration"}
+{"kind": "ConfigDenial", "reason": "/tmp/T is not a git repository"}
+{"kind": "ConfigDenial", "reason": "A loop is running. Model and effort changes apply between provider calls, so wait for this task to finish and save again."}
+{"kind": "ConfigDenial", "reason": "Already exists: owner/audit-ledger. Edit the names, or explicitly allow CrossAudit to use repositories you can access."}
+{"kind": "ConfigDenial", "reason": "Anthropic does not expose an adjustable effort for claude-haiku-4-5-20251001. Choose Automatic."}
+{"kind": "ConfigDenial", "reason": "Anthropic does not permit Claude consumer subscriptions to be bound to third-party apps. Use an Anthropic API key or a separately implemented enterprise cloud route."}
+{"kind": "ConfigDenial", "reason": "Application Doctor repairs are available in the macOS app"}
+{"kind": "ConfigDenial", "reason": "Authorize GitHub repository deletion, then submit this dialog again. CrossAudit will request only the delete_repo scope through the official GitHub device flow."}
+{"kind": "ConfigDenial", "reason": "ChatGPT subscription access uses the official Codex service and cannot be redirected to a custom endpoint"}
+{"kind": "ProviderDenial", "reason": "ChatGPT subscription returned an empty completion; its tool request was safely blocked, but it did not recover with a text answer"}
+{"kind": "ConfigDenial", "reason": "Choose folder is available in the CrossAudit macOS app"}
+{"kind": "ConfigDenial", "reason": "Connect Openai API key in Settings before creating this project"}
+{"kind": "ConfigDenial", "reason": "Credential checks are available in the macOS app"}
+{"kind": "ConfigDenial", "reason": "CrossAudit could not create its workspace in /tmp/T Projects — grant access in System Settings › Privacy & Security › Files and Folders, or choose another location."}
+{"kind": "ConfigDenial", "reason": "CrossAudit could not create its workspace in /tmp/T — grant access in System Settings › Privacy & Security › Files and Folders, or choose another location."}
+{"kind": "ConfigDenial", "reason": "CrossAudit could not prepare its private application data in /tmp/T — grant access in System Settings › Privacy & Security › Files and Folders, then retry."}
+{"kind": "ConfigDenial", "reason": "CrossAudit could not read its saved connection settings — unlock the login Keychain and retry."}
+{"kind": "ConfigDenial", "reason": "CrossAudit could not start its private local console — allow local connections and retry."}
+{"kind": "ConfigDenial", "reason": "Enter a valid Git author email address"}
+{"kind": "ConfigDenial", "reason": "Generator compute input 'crossaudit.yml' is outside project work scope"}
+{"kind": "ConfigDenial", "reason": "Generator compute input 'experiments/looks-like-data.yml' resolves outside project work scope"}
+{"kind": "ConfigDenial", "reason": "Generator compute output paths must be unique"}
+{"kind": "ConfigDenial", "reason": "Generator requested 32 cpus; this host allows 4"}
+{"kind": "ConfigDenial", "reason": "GitHub could not check owner/project: connection reset by peer"}
+{"kind": "ConfigDenial", "reason": "GitHub did not respond within 5 seconds. Check the network or close any hidden sign-in prompt, then retry."}
+{"kind": "ProviderDenial", "reason": "HTTP 500"}
+{"kind": "ProviderDenial", "reason": "I could not find anything called 'eled' in this project. The files here are report.md and data.csv — did you mean the report?"}
+{"kind": "ProviderDenial", "reason": "I need to read the repository before I can write a detailed review, but no MCP tool is configured for that here. Point me at the files to review and I will go through them."}
+{"kind": "ConfigDenial", "reason": "Keychain settings are available in the macOS app"}
+{"kind": "ProviderDenial", "reason": "Local usage guardrail paused provider calls. Daily cost limit reached. Open Project controls to raise or clear the limit, then retry."}
+{"kind": "ProviderDenial", "reason": "Local usage guardrail paused provider calls. Daily token limit reached: 3 / 1. Open Project controls to raise or clear the limit, then retry."}
+{"kind": "ProviderDenial", "reason": "Local usage guardrail paused provider calls. The next request is estimated to exceed the daily token limit."}
+{"kind": "ConfigDenial", "reason": "MCP URL must be a plain HTTP(S) endpoint without credentials, query or fragment"}
+{"kind": "ConfigDenial", "reason": "MCP executable '/home/U -c' was not found or is not executable"}
+{"kind": "ConfigDenial", "reason": "MCP request timed out"}
+{"kind": "ConfigDenial", "reason": "MCP server response exceeded the safety limit"}
+{"kind": "ConfigDenial", "reason": "Onboarding is managed by the macOS app"}
+{"kind": "ProviderDenial", "reason": "PDF (.pdf) export requires exactly one temporary Markdown source; the Generator returned 2 files"}
+{"kind": "ConfigDenial", "reason": "Sign in with ChatGPT in Settings before refreshing models"}
+{"kind": "ConfigDenial", "reason": "That Doctor repair action is not supported"}
+{"kind": "ConfigDenial", "reason": "That workspace folder no longer exists; choose it again"}
+{"kind": "SSHFailure", "reason": "The saved SSH host key changed. CrossAudit will not replace it. Contact the cluster administrator and repair known_hosts outside the app."}
+{"kind": "SSHFailure", "reason": "VPN unavailable"}
+{"kind": "TokenError", "reason": "a capability token must be a mapping"}
+{"kind": "TokenError", "reason": "a capability token needs a project_id and run_id"}
+{"kind": "ConfigDenial", "reason": "a dispute needs grounds: say what the auditor misread, and why"}
+{"kind": "ConfigDenial", "reason": "a sentence with no entry"}
+{"kind": "ProviderDenial", "reason": "adjudication returned an unusable ruling 'MAYBE'"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. HTTP 401"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude — provider returned HTTP 503"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — HTTP 500; anthropic:claude-fable-5 — HTTP 500; anthropic:claude-fable-5 — HTTP 500"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (005cb09477db); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (051edc63b235); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (1034b50abe6c); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (15ff3526e8df); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (235a517b1793); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (2df6bc6175f2); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (2f71b12238e4); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (33832780a210); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (396492038ac7); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (40e11fa92654); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (4b832ba1bc5f); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (4f5a8e71e5b4); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (52912614b195); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (533f030df17d); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (566753b21159); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (59f94e8a8d66); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (65aeb0748824); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (6f320a5e25ba); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (76b2664f1b2c); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (76da432dbd82); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (7915f2fe380b); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (7de70f51aef0); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (850894c1fa21); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (932e0d0f07fc); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (98167986b91c); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (98c013a4a1bd); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (98f1432891b7); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (9c5be2aa1236); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (a5b7f87af58f); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (a95a94d0fd0a); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (ba8a055b3965); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (bad5dae6ddf7); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (c1d59ca9ecc9); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (cd059ccffad5); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (e82c9683fd6e); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (f5862f29cc58); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured auditor provider routes failed. anthropic:claude-fable-5 — no recorded reply for this exact prompt (fd2fde517bd2); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "all configured generator provider routes failed"}
+{"kind": "ProviderDenial", "reason": "all configured generator provider routes failed. anthropic:claude - invalid key"}
+{"kind": "ProviderDenial", "reason": "amendment names an invalid rule id 'nope'"}
+{"kind": "ConfigDenial", "reason": "approve the exact local MCP command before it runs"}
+{"kind": "ToolError", "reason": "arXiv returned malformed XML"}
+{"kind": "ConfigDenial", "reason": "auditor and generator are both 'openai': that is same-source supervision, which the protocol refuses"}
+{"kind": "ConfigDenial", "reason": "auditor and generator must use different vendors"}
+{"kind": "IntegrityDenial", "reason": "authority block does not validate: authority evidence digest does not match its records; authority decision_id does not re-derive from the block: a partition, sentence, dial or route was edited"}
+{"kind": "IntegrityDenial", "reason": "authority block does not validate: authority route 'bounded-revision' does not follow from verdict 'PASS'; authority decision_id does not re-derive from the block: a partition, sentence, dial or route was edited"}
+{"kind": "IntegrityDenial", "reason": "authority workflow verdict BLOCKED differs from audit verdict PASS"}
+{"kind": "ConfigDenial", "reason": "authority.lone_model_blocker must be 'block' (bounded revision, the default) or 'escalate' (a person decides at round one)"}
+{"kind": "ProviderDenial", "reason": "boom"}
+{"kind": "ProviderDenial", "reason": "busy"}
+{"kind": "ConfigDenial", "reason": "chat id is invalid"}
+{"kind": "ConfigDenial", "reason": "chat navigation state has an invalid structure"}
+{"kind": "ConfigDenial", "reason": "check pack 'domain' declares dcl api 2, this build speaks 1; refusing rather than guessing"}
+{"kind": "ConfigDenial", "reason": "check pack 'domain' exposes no register_checks()"}
+{"kind": "ConfigDenial", "reason": "check pack 'ghost' has no source file to hash (namespace or frozen import); refusing to mint a receipt that cannot pin the check code that ran"}
+{"kind": "ConfigDenial", "reason": "check pack 'something-else' is named in plugins: but is not installed; available: ['evil']"}
+{"kind": "ConfigDenial", "reason": "checks must be a profile name or a list of check names"}
+{"kind": "ConfigDenial", "reason": "choose one primary output format: PDF and Word/DOCX were both requested"}
+{"kind": "ToolError", "reason": "command '/bin/echo' is not in this project's allowed commands"}
+{"kind": "ToolError", "reason": "command '/home/U is not in this project's allowed commands"}
+{"kind": "ToolError", "reason": "commit refused: the staged changes appear to contain a private key block; remove the secret (or add the file to .gitignore) and try again"}
+{"kind": "ConfigDenial", "reason": "connect the MCP server without Generator access first, review the advertised tool list, then configure and enable it"}
+{"kind": "IntegrityDenial", "reason": "constitution content differs from the receipt's hash"}
+{"kind": "ToolError", "reason": "content exceeds the 1048576-byte write limit"}
+{"kind": "ProviderDenial", "reason": "could not atomically apply the generated file round"}
+{"kind": "ProviderDenial", "reason": "could not resolve generated file path /tmp/W"}
+{"kind": "ConfigDenial", "reason": "crossaudit.yml has changes; commit or restore them before pairing"}
+{"kind": "ConfigDenial", "reason": "crossaudit.yml has uncommitted changes. Commit or discard that edit, then retry; the UI will not overwrite it."}
+{"kind": "IntegrityDenial", "reason": "cycle is CONSUMED; it cannot be escalated"}
+{"kind": "IntegrityDenial", "reason": "cycle is PASSED; a recorded verdict cannot be overwritten with an escalation"}
+{"kind": "IntegrityDenial", "reason": "cycle is PASSED; it cannot be escalated"}
+{"kind": "IntegrityDenial", "reason": "cycle status is CONSUMED, not PASSED"}
+{"kind": "IntegrityDenial", "reason": "deterministic-layer source digest mismatch"}
+{"kind": "ConfigDenial", "reason": "endpoint http://127.0.0.1:9999 is not this provider's built-in origin (https://api.anthropic.com); pass --allow-custom-endpoint to send a key there"}
+{"kind": "ProviderDenial", "reason": "endpoint rejected the key"}
+{"kind": "IntegrityDenial", "reason": "evidence ledger cannot be shown to the Auditor: entry 0 digest mismatch (content tampered)"}
+{"kind": "IntegrityDenial", "reason": "evidence ledger failed re-derivation: entry 0 digest mismatch (content tampered)"}
+{"kind": "IntegrityDenial", "reason": "evidence ledger failed re-derivation: entry 1 digest mismatch (content tampered)"}
+{"kind": "ConfigDenial", "reason": "evidence payload must be a mapping"}
+{"kind": "ToolError", "reason": "file 'work/missing.py' does not exist; use file_write to create it"}
+{"kind": "ToolError", "reason": "file_edit 'old_string' and 'new_string' are identical"}
+{"kind": "ToolError", "reason": "file_write needs a 'path' argument"}
+{"kind": "ProviderDenial", "reason": "generated file identity changed before staging: 'work/a.txt'"}
+{"kind": "ProviderDenial", "reason": "generated file target is not a regular file: 'work/suspicious'"}
+{"kind": "ConfigDenial", "reason": "generator.streaming must be true or false"}
+{"kind": "ConfigDenial", "reason": "gh repo create failed: API rate limit exceeded. GitHub rate-limited this account; wait for the reset, then retry."}
+{"kind": "ConfigDenial", "reason": "gh repo create failed: HTTP 403: Resource not accessible. The connected account lacks repository or organisation permission."}
+{"kind": "ConfigDenial", "reason": "gh repo create failed: organization has SAML SSO enforcement. Authorize GitHub CLI for the organisation's SSO, then retry."}
+{"kind": "ConfigDenial", "reason": "gh repo create failed: repository already exists. The name exists but may not be visible to this account; verify ownership."}
+{"kind": "ConfigDenial", "reason": "git commit -q -m one attempt (round 1) did not finish within 2s and was abandoned (a stale index.lock, a blocking hook, or a credential/GPG prompt can hang git); raise CROSSAUDIT_GIT_TIMEOUT if this is a legitimately large operation"}
+{"kind": "ConfigDenial", "reason": "git log -1 --format=%H -- cycles/111111111111-r2/report.md failed: fatal: your current branch 'main' does not have any commits yet"}
+{"kind": "ConfigDenial", "reason": "git log -1 --format=%H -- cycles/aaaaaaaaaaaa-r1/report.md failed: fatal: your current branch 'main' does not have any commits yet"}
+{"kind": "ConfigDenial", "reason": "git log -1 --format=%H -- cycles/bbbbbbbbbbbb-r1/report.md failed: fatal: your current branch 'main' does not have any commits yet"}
+{"kind": "ConfigDenial", "reason": "git log -1 --format=%H -- cycles/cccccccccccc-r1/report.md failed: fatal: your current branch 'main' does not have any commits yet"}
+{"kind": "ConfigDenial", "reason": "git log -1 --format=%H -- cycles/cccccccccccc-r2/report.md failed: fatal: your current branch 'main' does not have any commits yet"}
+{"kind": "ConfigDenial", "reason": "git log -1 --format=%H -- cycles/dddddddddddd-r1/report.md failed: fatal: your current branch 'main' does not have any commits yet"}
+{"kind": "ConfigDenial", "reason": "git log -1 --format=%H -- cycles/dddddddddddd-r3/report.md failed: fatal: your current branch 'main' does not have any commits yet"}
+{"kind": "ConfigDenial", "reason": "git log -1 --format=%H -- cycles/ffffffffffff-r1/report.md failed: fatal: your current branch 'main' does not have any commits yet"}
+{"kind": "ConfigDenial", "reason": "git ls-tree -z 5b21ba54263fd9f4092ee7d0e6978518fec75cfc -- crossaudit.yml failed: fatal: not a tree object"}
+{"kind": "ConfigDenial", "reason": "git ls-tree failed: fatal: not a tree object"}
+{"kind": "ConfigDenial", "reason": "git rev-parse HEAD did not finish within 1s and was abandoned (a stale index.lock, a blocking hook, or a credential/GPG prompt can hang git); raise CROSSAUDIT_GIT_TIMEOUT if this is a legitimately large operation"}
+{"kind": "IntegrityDenial", "reason": "governed-source set does not match the evidence ledger"}
+{"kind": "ConfigDenial", "reason": "guidance names use letters, numbers, hyphens or underscores (60 characters max)"}
+{"kind": "ConfigDenial", "reason": "guidance paths must be safe project-relative prefixes"}
+{"kind": "IntegrityDenial", "reason": "increment contains a symlink: experiments/demo/secrets.txt"}
+{"kind": "ConfigDenial", "reason": "injected provider failure"}
+{"kind": "IntegrityDenial", "reason": "install mode 'editable' may verify but never admit: its code can change under the digest it reports"}
+{"kind": "ToolError", "reason": "intentional failure"}
+{"kind": "IntegrityDenial", "reason": "isolation evidence is weaker than this deployment requires: missing ['parametric']"}
+{"kind": "IntegrityDenial", "reason": "isolation evidence is weaker than this deployment requires: missing ['permissive']"}
+{"kind": "ConfigDenial", "reason": "job name may use letters, numbers, spaces, dots, dashes and underscores"}
+{"kind": "ConfigDenial", "reason": "local changes need attention"}
+{"kind": "ConfigDenial", "reason": "local origin is https://github.com/someone/other.git, not https://github.com/owner/project.git; refusing to replace it"}
+{"kind": "IntegrityDenial", "reason": "manifest mismatch for experiments/demo/requirements.txt"}
+{"kind": "IntegrityDenial", "reason": "manifest mismatch for experiments/demo/results.json"}
+{"kind": "ConfigDenial", "reason": "max_attempts must be between 1 and 10"}
+{"kind": "ConfigDenial", "reason": "maximum audit rounds must be between 1 and 10"}
+{"kind": "ConfigDenial", "reason": "maximum rounds must be a number between 1 and 10"}
+{"kind": "ConfigDenial", "reason": "maximum rounds must be between 1 and 10"}
+{"kind": "ProviderDenial", "reason": "model unavailable"}
+{"kind": "ProviderDenial", "reason": "name a recipient and include the instruction after it"}
+{"kind": "ConfigDenial", "reason": "name the finding to dispute by its rule id: CA-FILE-004@work/intro.md, CA-TXT-001@work/summary.md"}
+{"kind": "ConfigDenial", "reason": "no API key in $CROSSAUDIT_AUDITOR_KEY. Run `crossaudit init` to store one, or export it yourself — it never goes in crossaudit.yml"}
+{"kind": "ConfigDenial", "reason": "no crossaudit.yml found from /tmp/T upward — run `crossaudit init`"}
+{"kind": "ConfigDenial", "reason": "no crossaudit.yml found from /tmp/W upward — run `crossaudit init`"}
+{"kind": "ConfigDenial", "reason": "no crossaudit.yml found in /tmp/T folder — run `crossaudit init` there"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (005cb09477db); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (051edc63b235); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (1034b50abe6c); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (15ff3526e8df); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (235a517b1793); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (2df6bc6175f2); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (2f71b12238e4); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (33832780a210); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (396492038ac7); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (40e11fa92654); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (4b832ba1bc5f); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (4f5a8e71e5b4); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (52912614b195); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (533f030df17d); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (566753b21159); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (59f94e8a8d66); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (65aeb0748824); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (6f320a5e25ba); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (76b2664f1b2c); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (76da432dbd82); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (7915f2fe380b); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (7de70f51aef0); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (850894c1fa21); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (932e0d0f07fc); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (98167986b91c); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (98c013a4a1bd); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (98f1432891b7); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (9c5be2aa1236); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (a5b7f87af58f); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (a95a94d0fd0a); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (ba8a055b3965); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (bad5dae6ddf7); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (c1d59ca9ecc9); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (cd059ccffad5); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (e82c9683fd6e); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (f5862f29cc58); the transcript cannot answer a question it was not asked"}
+{"kind": "ProviderDenial", "reason": "no recorded reply for this exact prompt (fd2fde517bd2); the transcript cannot answer a question it was not asked"}
+{"kind": "ToolError", "reason": "nope"}
+{"kind": "ConfigDenial", "reason": "nothing to do here"}
+{"kind": "ProviderDenial", "reason": "offline"}
+{"kind": "ToolError", "reason": "old_string matches 2 places; make it unique with more surrounding context, or pass replace_all=true"}
+{"kind": "ToolError", "reason": "old_string was not found; it must match the file exactly, whitespace and all (read the file first)"}
+{"kind": "ConfigDenial", "reason": "onboarding action must be complete or skip"}
+{"kind": "ConfigDenial", "reason": "output path is not a safe relative path"}
+{"kind": "ToolError", "reason": "paper_search needs a non-empty 'query'"}
+{"kind": "ConfigDenial", "reason": "partition contains unsupported characters"}
+{"kind": "ToolError", "reason": "path '../../etc/passwd' is outside the grant"}
+{"kind": "ToolError", "reason": "path '../escape.txt' is outside the grant"}
+{"kind": "ToolError", "reason": "path '../outside' is outside the grant"}
+{"kind": "ToolError", "reason": "path '../outside.txt' is outside the grant"}
+{"kind": "ToolError", "reason": "path '..\\\\win' is outside the grant"}
+{"kind": "ToolError", "reason": "path '/etc/passwd' is outside the grant"}
+{"kind": "ToolError", "reason": "path 'a/../../b' is outside the grant"}
+{"kind": "ToolError", "reason": "path 'a\\x00b' is outside the grant"}
+{"kind": "ToolError", "reason": "path 'blink/evil.txt' escapes the workspace"}
+{"kind": "ToolError", "reason": "path 'leak.txt' escapes the workspace"}
+{"kind": "ToolError", "reason": "path 'link/evil.txt' escapes the workspace"}
+{"kind": "ToolError", "reason": "path 'secret.env' is outside the grant"}
+{"kind": "ToolError", "reason": "path 'sneaky_link/pwned.txt' escapes the workspace"}
+{"kind": "ToolError", "reason": "path 'work/../../../x' is outside the grant"}
+{"kind": "ToolError", "reason": "path 'work/\\x00/x' is outside the grant"}
+{"kind": "ToolError", "reason": "path '~/x' is outside the grant"}
+{"kind": "ConfigDenial", "reason": "project cannot be deleted while a task is running"}
+{"kind": "ConfigDenial", "reason": "project guidance cannot be empty"}
+{"kind": "ConfigDenial", "reason": "project name may use letters, numbers, dots, dashes and underscores"}
+{"kind": "ConfigDenial", "reason": "project-console port must be an integer, not 'not-a-port'"}
+{"kind": "ConfigDenial", "reason": "project-console port must be between 0 and 65535"}
+{"kind": "ConfigDenial", "reason": "project-console requires DIRECTORY and an optional PORT"}
+{"kind": "ConfigDenial", "reason": "projects can only be created inside this workspace"}
+{"kind": "ProviderDenial", "reason": "provider response exceeded the size cap"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 400"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 400\n  it said: bad input"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 400\n  it said: messages: at least one required"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 400\n  it said: model: claude-opus-9 not found\n  that is the model id, not your key. Set a model this account can use — `crossaudit init` lists the current ones, or edit `model:` in crossaudit.yml"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 400\n  it said: model: missing\n  that is the model id, not your key. Set a model this account can use — `crossaudit init` lists the current ones, or edit `model:` in crossaudit.yml"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 400\n  it said: model: nonesuch-1 not found\n  that is the model id, not your key. Set a model this account can use — `crossaudit init` lists the current ones, or edit `model:` in crossaudit.yml"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 401"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 401\n  it said: Incorrect API key provided: test-onl****cret. You can find your API key at https://platform.openai.com/account/api-keys.\n  the key was rejected. Check the one in your keys file is for this vendor and not truncated — re-enter it if the paste may be incomplete"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 401\n  it said: bad key\n  the key was rejected. Check the one in your keys file is for this vendor and not truncated — re-enter it if the paste may be incomplete"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 401\n  it said: invalid x-api-key\n  the key was rejected. Check the one in your keys file is for this vendor and not truncated — re-enter it if the paste may be incomplete"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 401\n  it said: {}\n  the key was rejected. Check the one in your keys file is for this vendor and not truncated — re-enter it if the paste may be incomplete"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 403\n  it said: forbidden\n  the key is valid but not permitted here — often a workspace or a region restriction on the account"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 404\n  it said: gone\n  the endpoint does not exist. If you set a custom base URL, check it"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 429\n  it said: rate_limit_error\n  rate limited or out of credit. This is the vendor's limit, not ours"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 429\n  it said: slow down\n  rate limited or out of credit. This is the vendor's limit, not ours"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 500"}
+{"kind": "ProviderDenial", "reason": "provider returned HTTP 500\n  it said: vendor down"}
+{"kind": "ProviderDenial", "reason": "provider stopped sending before the response body completed within the time budget"}
+{"kind": "ProviderDenial", "reason": "provider unreachable: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1028)>"}
+{"kind": "ProviderDenial", "reason": "provider unreachable: <urlopen error nodename nor servname>"}
+{"kind": "IntegrityDenial", "reason": "receipt cycle does not match its pinned constitution"}
+{"kind": "IntegrityDenial", "reason": "receipt declares the constitution unversioned"}
+{"kind": "IntegrityDenial", "reason": "receipt evidence route receipt differs from bound report route human-decision"}
+{"kind": "IntegrityDenial", "reason": "receipt has no receipt_schema; pre-v2 receipts are inspectable with --legacy-inspect but are never admissible"}
+{"kind": "IntegrityDenial", "reason": "receipt reproduction is missing ['bundle_sha256']"}
+{"kind": "IntegrityDenial", "reason": "receipt schema 99 is not supported by this verifier (expects 2)"}
+{"kind": "IntegrityDenial", "reason": "receipt sha 3d3937ffb546 != expected cccccccccccc"}
+{"kind": "IntegrityDenial", "reason": "receipt tool_evidence head does not match the evidence ledger"}
+{"kind": "IntegrityDenial", "reason": "receipt verdict BLOCKED differs from bound report verdict PASS"}
+{"kind": "IntegrityDenial", "reason": "recorded but not in cc2e78c4df26:skills/: ['skills/late.md']"}
+{"kind": "ProviderDenial", "reason": "refusing a generated file path with directory syntax: 'work/report/'"}
+{"kind": "ProviderDenial", "reason": "refusing a path that escapes the project: '../evil.md'"}
+{"kind": "ProviderDenial", "reason": "refusing a path that escapes the project: '../outside.md'"}
+{"kind": "ProviderDenial", "reason": "refusing a path that escapes the project: '/etc/passwd'"}
+{"kind": "ProviderDenial", "reason": "refusing a path that escapes the project: 'work/../../escape.md'"}
+{"kind": "ConfigDenial", "reason": "refusing a symlinked skill: evil.md"}
+{"kind": "ProviderDenial", "reason": "refusing dangling symlink target /tmp/T"}
+{"kind": "ProviderDenial", "reason": "refusing filesystem-equivalent generated paths: 'work/New.txt' and 'work/new.txt'"}
+{"kind": "ProviderDenial", "reason": "refusing filesystem-equivalent generated paths: 'work/café.txt' and 'work/café.txt'"}
+{"kind": "ProviderDenial", "reason": "refusing generated files whose physical identity changed before apply"}
+{"kind": "ProviderDenial", "reason": "refusing generated paths where one physical target contains another"}
+{"kind": "ProviderDenial", "reason": "refusing hardlinked file target with non-unique identity: 'work/a.md'"}
+{"kind": "ProviderDenial", "reason": "refusing to edit scaffold template 'work/TEMPLATE/results.json'; create a new increment directory instead"}
+{"kind": "ProviderDenial", "reason": "refusing to overwrite a document not previously generated by CrossAudit: experiments/report.pdf"}
+{"kind": "ProviderDenial", "reason": "refusing two generated paths for one physical file: 'work/Case-alias.txt' and 'work/case-alias.txt'"}
+{"kind": "ProviderDenial", "reason": "refusing two generated paths for one physical file: 'work/a.md' and 'work/./a.md'"}
+{"kind": "ProviderDenial", "reason": "refusing two generated paths for one physical file: 'work/a.md' and 'work//a.md'"}
+{"kind": "ProviderDenial", "reason": "refusing two generated paths for one physical file: 'work/a.md' and 'work/alias.md'"}
+{"kind": "ProviderDenial", "reason": "refusing two generated paths for one physical file: 'work/café.txt' and 'work/café.txt'"}
+{"kind": "ConfigDenial", "reason": "remote MCP servers require HTTPS; HTTP is allowed only on loopback"}
+{"kind": "ConfigDenial", "reason": "repair must be a mapping"}
+{"kind": "ConfigDenial", "reason": "repair.enabled must be true or false"}
+{"kind": "ConfigDenial", "reason": "repair.max_changed_lines must be an integer from 1 to 10000"}
+{"kind": "ConfigDenial", "reason": "repair: unknown keys ['budget']"}
+{"kind": "IntegrityDenial", "reason": "report blob hash mismatch"}
+{"kind": "IntegrityDenial", "reason": "reproduction bundle digest does not match the receipt"}
+{"kind": "IntegrityDenial", "reason": "reproduction.bundle_sha256 must be a non-empty string"}
+{"kind": "IntegrityDenial", "reason": "reproduction.lock_kinds must be a list"}
+{"kind": "IntegrityDenial", "reason": "reproduction.locks must be a positive integer"}
+{"kind": "ProviderDenial", "reason": "resolved target is outside the project: /tmp/T"}
+{"kind": "ConfigDenial", "reason": "return to the main Projects window before deleting the project that is open"}
+{"kind": "IntegrityDenial", "reason": "round 1 of this cycle already recorded a verdict; a decision already made cannot be replaced"}
+{"kind": "ProviderDenial", "reason": "router returned an unknown lane 'whatever'"}
+{"kind": "ProviderDenial", "reason": "routes gone before work began"}
+{"kind": "ConfigDenial", "reason": "rule CA-SRC-001: a rule with no criterion is not a rule"}
+{"kind": "ConfigDenial", "reason": "rule id 'RULE ONE' is not of the form CA-AREA-NNN"}
+{"kind": "ConfigDenial", "reason": "scratch directory must be an absolute normalized POSIX path"}
+{"kind": "ToolError", "reason": "self-installation is not permitted; a candidate build is reviewed by the independent auditor and installed only by the user"}
+{"kind": "ConfigDenial", "reason": "simulated failure after the first repository"}
+{"kind": "ConfigDenial", "reason": "skill huge.md is 60001 bytes (limit 60000); a skill is guidance, and one this long crowds out the work itself"}
+{"kind": "ConfigDenial", "reason": "skill skills/huge.md is 60001 bytes, over the 60000-byte limit skills.load enforces"}
+{"kind": "ConfigDenial", "reason": "skill too-large.md is 60001 bytes (limit 60000); a skill is guidance, and one this long crowds out the work itself"}
+{"kind": "IntegrityDenial", "reason": "sources present without tool_evidence to bind it"}
+{"kind": "IntegrityDenial", "reason": "sources.count must be a positive integer"}
+{"kind": "ProviderDenial", "reason": "stop after context probe"}
+{"kind": "ProviderDenial", "reason": "stop after refresh probes"}
+{"kind": "ProviderDenial", "reason": "stop after stream probe"}
+{"kind": "ProviderDenial", "reason": "temperature is not supported with this model; only the default"}
+{"kind": "ProviderDenial", "reason": "temperature is unsupported for this deployment"}
+{"kind": "ProviderDenial", "reason": "test provider rejected the key"}
+{"kind": "ConfigDenial", "reason": "that chat has a task running; wait for it to finish before deleting"}
+{"kind": "ConfigDenial", "reason": "that chat has remote compute running; cancel or finish it first"}
+{"kind": "ConfigDenial", "reason": "that chat no longer exists; create a new chat"}
+{"kind": "ConfigDenial", "reason": "that chat was deleted"}
+{"kind": "ConfigDenial", "reason": "that chat was deleted; create a new chat"}
+{"kind": "ConfigDenial", "reason": "that is too short to draft rules from — say what the project is and what you are most afraid of getting wrong"}
+{"kind": "ConfigDenial", "reason": "that project is outside your selected workspaces"}
+{"kind": "ConfigDenial", "reason": "the Generator reached this MCP server's calls-per-task limit"}
+{"kind": "ConfigDenial", "reason": "the Generator reached this host's automatic jobs-per-task limit"}
+{"kind": "ProviderDenial", "reason": "the MCP tool request envelope must be the entire reply"}
+{"kind": "ProviderDenial", "reason": "the amendment produced no changes"}
+{"kind": "ProviderDenial", "reason": "the drafting model returned no JSON object"}
+{"kind": "ToolError", "reason": "the edited file exceeds the 1048576-byte limit"}
+{"kind": "IntegrityDenial", "reason": "the evidence ledger for this project is present and does not verify, so a receipt cannot be signed for it: omitting the block would state, over a valid signature, that this audit used no tools: entry 0 digest mismatch (content tampered) (at entry 0)"}
+{"kind": "LedgerError", "reason": "the evidence ledger has an incomplete final entry (a crash left a torn tail); refusing to append onto a damaged chain until it is recovered"}
+{"kind": "ConfigDenial", "reason": "the frozen application is missing its identity"}
+{"kind": "ProviderDenial", "reason": "the generator must return exactly one MCP tool request and no other envelope"}
+{"kind": "ProviderDenial", "reason": "the generator must return exactly one compute request and no files"}
+{"kind": "ConfigDenial", "reason": "the generator needs a task; say what you want built"}
+{"kind": "ProviderDenial", "reason": "the generator replied in prose instead of the required file envelope"}
+{"kind": "ConfigDenial", "reason": "the generator returned an empty reply"}
+{"kind": "ProviderDenial", "reason": "the generator returned duplicate file request 'a.md'"}
+{"kind": "ProviderDenial", "reason": "the generator returned duplicate file request 'work/a.txt'"}
+{"kind": "ProviderDenial", "reason": "the generator returned duplicate file request 'work/review.md'"}
+{"kind": "ProviderDenial", "reason": "the generator returned malformed file blocks: the opening file marker is missing its path"}
+{"kind": "ProviderDenial", "reason": "the generator returned no files; nothing to commit"}
+{"kind": "ToolError", "reason": "the hostname 'internal.corp' resolves to a private or reserved address; only public web hosts can be fetched"}
+{"kind": "ToolError", "reason": "the hostname 'rebind.test' resolves to a private or reserved address; only public web hosts can be fetched"}
+{"kind": "ConfigDenial", "reason": "the model returned nothing this run"}
+{"kind": "ProviderDenial", "reason": "the official Codex runtime returned an unexpected login origin"}
+{"kind": "IntegrityDenial", "reason": "the receipt records checks ['schema'] but 84d1a695442c:crossaudit.yml selects ['schema', 'units', 'convergence', 'provenance']"}
+{"kind": "ToolError", "reason": "the response exceeded the 5 MiB fetch cap"}
+{"kind": "ConfigDenial", "reason": "the selected PASS is not ready for admission: audit integrity is NON_EVIDENTIAL_PROVIDER"}
+{"kind": "ConfigDenial", "reason": "the selected PASS is not ready for admission: this receipt is not the one recorded for the cycle — re-run the audit"}
+{"kind": "ConfigDenial", "reason": "the selected working repository has uncommitted changes; commit or stash them, then choose Try again. CrossAudit will not alter or discard your work"}
+{"kind": "ConfigDenial", "reason": "the skills total more than 200000 bytes; trim them, or scope them with applies_to so each round loads only what it needs"}
+{"kind": "ConfigDenial", "reason": "the task asked for something the rules forbid"}
+{"kind": "ProviderDenial", "reason": "the task contains conflicting document export formats"}
+{"kind": "IntegrityDenial", "reason": "the verifier that minted this receipt is not the one admitting it; re-verify with the recorded version before admitting"}
+{"kind": "ConfigDenial", "reason": "there is no active run to cancel"}
+{"kind": "ConfigDenial", "reason": "there is no unconsumed passing result to admit"}
+{"kind": "ConfigDenial", "reason": "this MCP server is not enabled for the Generator"}
+{"kind": "ConfigDenial", "reason": "this MCP tool is not approved for automatic use"}
+{"kind": "ProviderDenial", "reason": "this Python cannot verify TLS certificates.\n  interpreter  /home/U\n  trust store  /Library/Frameworks/Python.framework/Versions/3.13/etc/openssl/cert.pem\n\nFix any one of these:\n  · python.org install: run \"/Applications/Python 3.13/Install Certificates.command\"\n  · pip install certifi        (crossaudit picks it up automatically)\n  · export SSL_CERT_FILE=/path/to/ca-bundle.pem\n\nIf your network inspects TLS (a corporate proxy or VPN), point\nCROSSAUDIT_CA_BUNDLE at your organisation's root certificate.\nVerification is never skipped: a receipt that names a vendor nobody\nauthenticated would be attesting to nothing.\n\n  underlying: ('unable to get local issuer certificate',)"}
+{"kind": "IntegrityDenial", "reason": "this cycle is judged against 3d95c79c63ce, but the round was audited against adf4cce3c7fe; a decision cannot name a standard its cycle does not"}
+{"kind": "ConfigDenial", "reason": "this host has reached its configured concurrent job limit"}
+{"kind": "ConfigDenial", "reason": "this project already owns a workspace build slot"}
+{"kind": "ConfigDenial", "reason": "this workstation does not provide setsid, so CrossAudit cannot guarantee that a detached process and its children can be managed safely"}
+{"kind": "IntegrityDenial", "reason": "tool_evidence.entries must be a positive integer"}
+{"kind": "ConfigDenial", "reason": "type 'victim' exactly to confirm project deletion"}
+{"kind": "ConfigDenial", "reason": "type DELETE GITHUB to confirm permanent repository deletion"}
+{"kind": "ConfigDenial", "reason": "unknown check profile 'ultra-strict'; choose one of ['general', 'off', 'research', 'science'] or list check names explicitly"}
+{"kind": "ToolError", "reason": "unknown source 'google'; choose one of arxiv, pubmed, semantic_scholar"}
+{"kind": "TokenError", "reason": "unknown token fields: ['_expires_epoch']"}
+{"kind": "TokenError", "reason": "unknown token fields: ['admin']"}
+{"kind": "TokenError", "reason": "unknown token fields: ['allow_all']"}
+{"kind": "TokenError", "reason": "unknown token fields: ['cost']"}
+{"kind": "TokenError", "reason": "unknown token fields: ['extra_tools']"}
+{"kind": "TokenError", "reason": "unknown token fields: ['level']"}
+{"kind": "TokenError", "reason": "unknown token fields: ['max_byte']"}
+{"kind": "TokenError", "reason": "unknown token fields: ['max_cost']"}
+{"kind": "TokenError", "reason": "unknown token fields: ['max_cost_usd_']"}
+{"kind": "TokenError", "reason": "unknown token fields: ['privileged']"}
+{"kind": "TokenError", "reason": "unknown token fields: ['scope']"}
+{"kind": "TokenError", "reason": "unknown token fields: ['wat']"}
+{"kind": "TokenError", "reason": "unparseable token expiry: 'not-a-date'"}
+{"kind": "IntegrityDenial", "reason": "verdict is BLOCKED, not PASS — nothing to admit"}
+{"kind": "IntegrityDenial", "reason": "verdict is DCL_ONLY, not PASS — nothing to admit"}
+{"kind": "ConfigDenial", "reason": "wall time must look like HH:MM:SS or D-HH:MM:SS"}
+{"kind": "ToolError", "reason": "web_fetch needs a plain public https:// URL without credentials or fragment"}
+{"kind": "ConfigDenial", "reason": "workspace build capacity is 1; wait for proj"}
+{"kind": "ConfigDenial", "reason": "x"}

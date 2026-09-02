@@ -1,10 +1,10 @@
-# CrossAudit 4.15.0
+# CrossAudit 4.16.0
 
-[![Version 4.15.0](https://img.shields.io/badge/version-4.15.0-6d5dfc)](https://github.com/dongzhaohe321418-lab/crossaudit_v4/releases/tag/v4.15.0)
+[![Version 4.16.0](https://img.shields.io/badge/version-4.16.0-6d5dfc)](https://github.com/dongzhaohe321418-lab/crossaudit_v4/releases/tag/v4.16.0)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-111111)](https://github.com/dongzhaohe321418-lab/crossaudit_v4#install)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab)](https://github.com/dongzhaohe321418-lab/crossaudit_v4#command-line-installation)
 
-**Latest release: CrossAudit 4.15.0.** The source on `main` is authoritative
+**Latest release: CrossAudit 4.16.0.** The source on `main` is authoritative
 until the matching DMG is attached to a GitHub release.
 
 CrossAudit is a local, cross-vendor AI work loop. One model creates files, a
@@ -151,12 +151,12 @@ official OpenAI Codex runtime.
 
 ### macOS application
 
-1. Download `CrossAudit-4.15.0-arm64.dmg` and its checksum from the
-   [V4.15.0 release](https://github.com/dongzhaohe321418-lab/crossaudit_v4/releases/tag/v4.15.0).
+1. Download `CrossAudit-4.16.0-arm64.dmg` and its checksum from the
+   [V4.16.0 release](https://github.com/dongzhaohe321418-lab/crossaudit_v4/releases/tag/v4.16.0).
 2. Optionally verify it in Terminal:
 
    ```bash
-   shasum -a 256 -c CrossAudit-4.15.0-arm64.dmg.sha256
+   shasum -a 256 -c CrossAudit-4.16.0-arm64.dmg.sha256
    ```
 
 3. Open the DMG and drag **CrossAudit** to **Applications**.
@@ -186,7 +186,7 @@ crossaudit --version
 Expected version output:
 
 ```text
-crossaudit 4.15.0 (receipt schema 2)
+crossaudit 4.16.0 (receipt schema 2)
 ```
 
 Use a virtual environment instead when developing CrossAudit, testing source
@@ -1168,13 +1168,13 @@ Exit codes are stable so scripts do not need to parse prose:
 
 V4 sends `max_completion_tokens` to the built-in OpenAI endpoint and retries
 once when a compatible endpoint explicitly asks for that field. Confirm that
-`crossaudit --version` reports 4.15.0 and reinstall if an older package is still
+`crossaudit --version` reports 4.16.0 and reinstall if an older package is still
 on your PATH. Restart a background console after upgrading because an existing
 daemon keeps the Python code that was loaded when it started.
 
 ### The macOS app is blocked on first launch
 
-V4.15.0 is structurally signed with the hardened runtime but is not notarized.
+V4.16.0 is structurally signed with the hardened runtime but is not notarized.
 Control-click **CrossAudit.app**, choose **Open**, and confirm only after you
 have verified the published SHA-256 checksum. An Apple Developer ID signed and
 notarized build is required before broad organizational deployment.

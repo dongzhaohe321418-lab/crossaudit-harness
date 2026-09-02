@@ -40,7 +40,7 @@ def test_release_version_has_one_consistent_public_identity():
     assert f"V{__version__}" in PAGE
     assert f'__version__ = "{__version__}"' in (
         ROOT / "src/crossaudit/__init__.py").read_text()
-    assert '"pypdf>=6.15,<7"' in pyproject
+    assert '"pypdf>=6.16.1,<7"' in pyproject
 
 
 def test_ci_tests_installed_wheels_with_timeouts_coverage_and_audit():

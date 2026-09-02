@@ -44,11 +44,16 @@ globalThis.resolutionChoice=()=>{};globalThis.renderDecisionBanner=()=>{};global
 globalThis.titleOf=()=>'';globalThis.setTimeout=()=>{};
 const ROWS=%s;const SLOTS=%s;const out={};
 const strip=h=>String(h).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+// Two passes per row: the page's own locale accessor is `currentLocale`,
+// and a row may carry a pre-localised field (`why_zh`) the ZH pass prefers.
 for(const [name,row] of Object.entries(ROWS)){
-  for(const k in slots)delete slots[k];
-  openResolution(row);out[name]={en:{},zh:{}};
-  for(const k of SLOTS){let v=slots[k]||'';if(k==='resolution-issues')v=strip(v);
-    out[name].en[k]=v;out[name].zh[k]=zhValue(v);}}
+  out[name]={en:{},zh:{}};
+  for(const locale of ['en','zh']){
+    globalThis.currentLocale=locale;
+    for(const k in slots)delete slots[k];
+    openResolution(row);
+    for(const k of SLOTS){let v=slots[k]||'';if(k==='resolution-issues')v=strip(v);
+      out[name][locale][k]=locale==='zh'?zhValue(v):v;}}}
 console.log(JSON.stringify(out));
 """
 

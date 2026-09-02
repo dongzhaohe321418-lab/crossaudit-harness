@@ -6540,3 +6540,59 @@ slot.
 the landing spot for adjudication evidence (finding-states chose sidecar
 and wrote a guard); whether to delete consensus or register broker tool
 evidence as the second producer. Listed for the owner in the finding.
+
+## D149 — The fusion, executed: five slices, seven independent reviews, and what each review changed
+
+D148 said what to absorb from `codex/evidence-governance-fusion` and what to
+refuse. This entry records what actually happened when it was built, on
+branch `fusion/evidence-authority`, because three of the reviews changed the
+design and one changed a ruling.
+
+**The rulings the owner delegated, and how they came out.**
+
+1. *Lone model BLOCKER*: a dial, `authority.lone_model_blocker`, default
+   `block` (today's bounded revision), `escalate` opt-in. Unchanged by review.
+2. *Where adjudication evidence lives*: in the receipt as a snapshot at
+   verdict time (tier, state then, producer digest, bounded claim), digest- and
+   decision-id-bound; lifecycle states stay in the finding-states sidecar.
+   The first review of the receipt block found the decision id minted but
+   never re-derived — a rewritten rationale or a flipped dial passed
+   verification. It is re-derived now, and unknown keys are refused.
+3. *Consensus*: stripped; `POLICY_VERSION` reserves the slot.
+
+**The ruling a review changed: the repair guard refuses almost nothing.**
+The first build of the guard, ported faithfully from codex, refused 12 of 24
+honest revisions (a `pytest.skip` for a platform, `retries: 3` in a YAML,
+the word "fallback" in a docstring) and passed 14 of 19 evasions. A guard
+that reddens honest work is a defect (D121), and one that misses most
+evasions is a name claiming a capability (D146). So the contract changed:
+only a file outside the audited directories and a binary the renderer did
+not produce are refused. Everything else — catch-all excepts, deleted
+assertions, skipped tests, over-budget code changes — is a **caution**: the
+round is committed and audited as usual, and the caution rides into the
+next audit's notes so the auditor model can raise it as a finding. That is
+the dual-source audit doing what a regex cannot. `repair.mode: refuse`
+exists for projects that would rather stop. The second review of the rework
+then found that non-ASCII filenames were hard-refused (git quotes them in
+`--name-only`), which a Chinese user would have hit on the first repair;
+paths are now read NUL-separated.
+
+**What the other reviews changed.** finding-states: the sidecar was written
+but never staged, so every round left the workspace dirty and the console's
+dirty-tree refusal fired; and the state word reached the model prompt. Both
+fixed. Console: the "auditor raised a concern" copy keyed on the route,
+which every ESCALATE shares, so an ordinary escalation showed a false
+sentence in two languages; it keys on contested evidence ids now. i18n:
+the Chinese denial line existed but only `init`/`doctor` set the language,
+so `run`/`check`/`verify` printed English under a Chinese locale.
+
+**Found on the way, unrelated to the fusion.** `verify --admit` returned a
+name that did not exist (`EXIT_DENIED`, since 79562cb): an invalid
+signature raised NameError instead of exiting. The release gate's ruff step
+would have caught it; nobody had run the gate. The check now lives in the
+suite (`tests/test_no_undefined_names.py`).
+
+**Owner's product rule, recorded.** Smooth use, no needless errors, clear
+information; strictness is a dial. Every refusal states what stopped, why,
+and what happens next, in both languages, and allows one free retry before
+it becomes a decision card.
