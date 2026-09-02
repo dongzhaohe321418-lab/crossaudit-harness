@@ -162,7 +162,11 @@ def test_every_sentence_the_guard_emits_reaches_a_chinese_reader(tmp_path):
     assert rendered[assessed["scope"]].startswith("docs/o.md ") and "`notes`" in rendered[assessed["scope"]]
     assert rendered[assessed["budget"]].startswith("代码改动涉及 3 行")
     assert "work/big.py" in rendered[assessed["unscreened"]]
-    assert rendered[joined].count("；") == 3 and "work/x.py " in rendered[joined]
+    # The joined detail carries every part's own Chinese (the scope sentence
+    # keeps its inner semicolon, so parts are checked, not counted).
+    for part in (screened["empty_handler"], screened["removed_test:weak"],
+                 assessed["scope"], assessed["budget"]):
+        assert rendered[part] in rendered[joined], part
     assert rendered[values["termination"]].startswith("第 3 轮")
 
 
