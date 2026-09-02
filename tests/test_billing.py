@@ -608,3 +608,24 @@ def test_rollup_totals_this_month_across_two_projects(tmp_path, monkeypatch):
         httpd.shutdown(); thread.join(timeout=5); httpd.server_close()
     assert {row["name"] for row in served["projects"]} == {"alpha", "beta"}
     assert served["total"] == rollup["total"] and served["local_only"] is True
+
+
+def test_the_forecast_reuses_run_attribution_and_falls_back_to_the_time_window():
+    """R4's estimator and this slice's per-run accounting share the ledger:
+    an attributed run is costed by run_id (events outside its window still
+    count, events inside it from another run do not); an old, unattributed
+    run keeps the wall-clock join."""
+    events = [
+        {"t": 5_000, "run_id": "r1", "total": 10, "api_value_usd": 0.10, "method": "reported"},
+        {"t": 50_000, "run_id": "r1", "total": 10, "api_value_usd": 0.20, "method": "reported"},   # after r1's window
+        {"t": 15_000, "run_id": "r2", "total": 10, "api_value_usd": 0.50, "method": "reported"},   # inside r1's window
+        {"t": 105_000, "total": 10, "api_value_usd": 0.05, "method": "reported"},                 # unattributed
+    ]
+    rows = usage.forecast_rows(events, [
+        {"started": 1.0, "finished": 20.0, "run_id": "r1"},
+        {"started": 100.0, "finished": 110.0, "run_id": "old"},
+        {"started": 200.0, "finished": 210.0, "run_id": "r3"},
+    ])
+    assert rows[0] == {"seconds": 19.0, "usd": pytest.approx(0.30)}
+    assert rows[1] == {"seconds": 10.0, "usd": pytest.approx(0.05)}
+    assert rows[2] == {"seconds": 10.0, "usd": None}

@@ -31,8 +31,9 @@ def _extract(script: str, sig: str) -> str:
 
 _SHIM = r"""
 const slots={};
-const mk=id=>({_id:id,hidden:false,className:'',value:'',classList:{add(){},remove(){}},
-  setAttribute(){},removeAttribute(){},querySelector:()=>null,querySelectorAll:()=>[],focus(){},
+const mk=id=>({_id:id,hidden:false,className:'',value:'',classList:{add(){},remove(){}},attrs:{},
+  setAttribute(k,v){this.attrs[k]=String(v);},getAttribute(k){return k in this.attrs?this.attrs[k]:null;},
+  removeAttribute(k){delete this.attrs[k];},querySelector:()=>null,querySelectorAll:()=>[],focus(){},
   set textContent(v){slots[id]=String(v);},get textContent(){return slots[id]||'';},
   set innerHTML(v){slots[id]=String(v);},get innerHTML(){return slots[id]||'';}});
 const els={};
@@ -41,6 +42,8 @@ globalThis.document={getElementById:id=>els[id]||(els[id]=mk(id)),
 globalThis.lastState=null;globalThis.activeResolution=null;globalThis.promptedEscalations=new Set();
 globalThis.resolutionModal=mk('resolution-modal');globalThis.resolutionForm=mk('resolution-form');
 globalThis.resolutionChoice=()=>{};globalThis.renderDecisionBanner=()=>{};globalThis.announce=()=>{};
+// The page's short-word translator (`t`), the way page.py defines it.
+globalThis.t=v=>globalThis.currentLocale==='zh'?zhValue(v):v;
 globalThis.titleOf=()=>'';globalThis.setTimeout=()=>{};
 const ROWS=%s;const SLOTS=%s;const out={};
 const strip=h=>String(h).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
@@ -53,22 +56,47 @@ for(const [name,row] of Object.entries(ROWS)){
     for(const k in slots)delete slots[k];
     openResolution(row);
     for(const k of SLOTS){let v=slots[k]||'';if(k==='resolution-issues')v=strip(v);
-      out[name][locale][k]=locale==='zh'?zhValue(v):v;}}}
+      out[name][locale][k]=locale==='zh'?zhValue(v):v;}
+    // Additive: the guidance box's prefilled value (already localised by the
+    // page's own `t`) and the secondary button's label, visibility and target.
+    // Kept OUTSIDE the slot maps (which older tests sweep as text).
+    out[name].extra=out[name].extra||{};
+    const sb=els['resolution-open-settings'];
+    out[name].extra[locale]={reason_value:els['resolution-reason']?els['resolution-reason'].value:'',
+      settings_text:sb?(locale==='zh'?zhValue(sb.textContent):sb.textContent):'',
+      settings_hidden:sb?Boolean(sb.hidden):true,
+      settings_earlier:sb?(sb.getAttribute('data-earlier-cycle')||''):''};}}
 console.log(JSON.stringify(out));
 """
 
 
 def render(worktree: pathlib.Path, rows: dict) -> dict:
-    """{row name: {"en": {slot: text}, "zh": {slot: text}}} for each row."""
+    """{row name: {"en": {slot: text}, "zh": {slot: text}, "extra": {...}}}
+    for each row; `extra[locale]` carries the guidance box's prefilled value
+    and the secondary button's label / visibility / target cycle."""
     src = (worktree / "src/crossaudit/console/page.py").read_text()
     script = src.split("<script>")[1].split("</script>")[0]
     esc = script[script.index("const esc = s =>"):]
     esc = esc[:esc.index(";\n") + 1]
     parts = [shipped_js(worktree), esc,
              _extract(script, "function hasRemediation(row,action)"),
+             # R1/R5: the cause copy table and the plain verdict words the
+             # Decision Center renders through.
+             _extract(script, "const CAUSE_COPY={"),
+             _extract(script, "const VERDICT_WORDS={"),
+             _extract(script, "function verdictWord(v)"),
+             _extract(script, "function severityWord(sev)"),
              _extract(script, "function openResolution(value,action='',sha='')"),
              _extract(script, "function decisionSentence()"),
-             _extract(script, "function setDecidingInert(on)")]
+             _extract(script, "function setDecidingInert(on)"),
+             # Billing slice: openResolution appends the reset moment (budget
+             # pause) or the 429 countdown (provider pause) to the summary.
+             # With the shim's lastState=null both read nothing and the slots
+             # stay exactly what the branches wrote.
+             _extract(script, "function resetWords(g)"),
+             _extract(script, "function countdownText(resetAt)"),
+             _extract(script, "function resetSentence(resetAt)"),
+             _extract(script, "function appendResolutionReset(row,budget,provider)")]
     js = "\n".join(parts) + _SHIM % (json.dumps(rows), json.dumps(SLOTS))
     out = subprocess.run(["node", "-e", js], text=True, capture_output=True)
     assert out.returncode == 0, out.stderr

@@ -21,7 +21,7 @@ from ..controller import StateStore
 from ..dcl import run_checks
 from .. import doctor_shared
 from ..doctor_shared import constitution_state, CONSTITUTION_READY_SENTENCE
-from ..errors import (CONTESTED_MODEL_BLOCKER_REASON, EXIT_BLOCKED, EXIT_CONFIG,
+from ..errors import (CONTESTED_MODEL_BLOCKER_REASON, escalation_cause, EXIT_BLOCKED, EXIT_CONFIG,
                       EXIT_ESCALATED, EXIT_INTEGRITY, EXIT_OK, ConfigDenial, Denial,
                       IntegrityDenial)
 from ..gitio import (changed_paths, entries, git, is_ancestor, is_repo, materialise,
@@ -889,6 +889,18 @@ def _authority_summary(authority: dict) -> dict:
         "blocking_evidence_ids", "contested_evidence_ids")}
 
 
+def _escalation_cause(outcome, cycle: dict) -> str:
+    """The structured cause for an ESCALATE round (errors.escalation_cause),
+    read off the outcome the ladder produced and the cycle's lock flag."""
+    authority = getattr(outcome, "authority", None) or {}
+    reply = outcome.model_reply or {}
+    return escalation_cause(
+        integrity=outcome.integrity, verdict=outcome.verdict,
+        model_verdict=str(reply.get("verdict", "") or ""),
+        escalation_lock=bool(cycle.get("blocked_by_escalation")),
+        contested=bool(authority.get("contested_evidence_ids")))
+
+
 def _provider_stop_kind(outcome) -> str:
     """The structured escalation kind for a round's stop.
 
@@ -1044,7 +1056,8 @@ def cmd_audit(args: argparse.Namespace) -> int:
                                   receipt_digest(receipt), cfg.max_rounds,
                                   escalation_reason=_provider_stop_reason(outcome),
                                   escalation_kind=_provider_stop_kind(outcome),
-                                  constitution_commit=const_commit)
+                                  constitution_commit=const_commit,
+                                  escalation_cause=_escalation_cause(outcome, cycle))
     result = {"verdict": outcome.verdict, "cycle_status": status,
               "cycle_id": cycle["cycle_id"], "round": cycle["round"],
               "integrity": outcome.integrity, "receipt": str(ledger / "receipt.json"),
@@ -1757,7 +1770,8 @@ def cmd_run(args: argparse.Namespace) -> int:
                                   receipt_digest(receipt), cfg.max_rounds,
                                   escalation_reason=_provider_stop_reason(outcome),
                                   escalation_kind=_provider_stop_kind(outcome),
-                                  constitution_commit=const_commit)
+                                  constitution_commit=const_commit,
+                                  escalation_cause=_escalation_cause(outcome, cycle))
     _done("report + receipt committed")
 
     print()
