@@ -103,7 +103,10 @@ def test_every_failing_doctor_row_tells_the_person_what_to_do_next(cfg, monkeypa
     main.cmd_doctor(argparse.Namespace(json=True, all=True, fix=False, online=False))
     payload = capsys.readouterr().out
     checks = json.loads(payload[payload.index("{"):payload.rindex("}") + 1])["checks"]
-    failing = [c for c in checks if not c["ok"]]
+    # `ok` is tri-valued: True held, False did not, None NOT A TEST. `not ok`
+    # reads None the same as False, which swept six posture rows in as failing
+    # rows with nothing to do. Only a verdict row can be said to have failed.
+    failing = [c for c in checks if c["kind"] != "info" and not c["ok"]]
     assert failing, "no failing row in this fixture; the guard would be vacuous"
 
     without_next_action = [c["check"] for c in failing if not str(c.get("fix", "")).strip()]
