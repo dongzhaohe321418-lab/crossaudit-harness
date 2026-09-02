@@ -14,8 +14,8 @@ from pathlib import Path
 import pytest
 
 from crossaudit.repair_guard import (ADDED_PATTERNS, MARKER_PATTERNS, REMOVED_PATTERNS,
-                                     RepairGuard, classify, in_scope,
-                                     parse_unified_diff, strip_code)
+                                     RepairGuard, classify, in_scope, normalise_path,
+                                     parse_unified_diff, strip_code, unquote_path)
 
 
 def diff(path: str, added: list[str], removed: list[str] = ()) -> str:
@@ -145,7 +145,8 @@ def test_evasions_are_cautions_in_caution_mode_and_refusals_in_refuse_mode(name)
 def test_pattern_collection_surface_has_not_shrunk():
     """D10 amendment: a refactor that drops a pattern must fail loudly."""
     assert set(ADDED_PATTERNS) == {"broad_exception", "suppress_context", "empty_handler",
-                                   "relaxed_assertion", "disabled_test", "shell_ignore_errors"}
+                                   "relaxed_assertion", "disabled_test", "dead_branch",
+                                   "shell_ignore_errors"}
     assert set(MARKER_PATTERNS) == {"lint_suppression", "warning_suppression"}
     assert set(REMOVED_PATTERNS) == {"removed_check", "removed_test"}
 
@@ -186,6 +187,7 @@ ADDED_RED_GREEN = {
     "relaxed_assertion": ("assert result == 1 or True", "assert result == 1"),
     "disabled_test": ("@pytest.mark.skip", "@pytest.mark.parametrize('x', [1])"),
     "shell_ignore_errors": ("set +e", "set -e"),
+    "dead_branch": ("if TYPE_CHECKING:", "if typing_ok:"),
 }
 MARKER_RED_GREEN = {
     "lint_suppression": ("x = 1  # noqa", "x = 1  # note"),
@@ -262,6 +264,15 @@ def test_file_classification(path, kind):
 
 
 def test_scope_is_the_audited_directories():
+    """Mutation: drop normalise_path from in_scope -> `./experiments`,
+    `experiments/./demo` and `experiments//demo` refuse every repair (N11)."""
+    for spelling in ("./experiments", "experiments/", "experiments/./demo",
+                     "experiments//demo", "experiments/demo/", "./experiments/demo"):
+        assert in_scope("experiments/demo/x.py", [spelling]), spelling
+        assert in_scope("./experiments/demo/x.py", [spelling]), spelling
+    assert normalise_path("./experiments/") == "experiments"
+    assert normalise_path("experiments//demo/./x.py") == "experiments/demo/x.py"
+    assert normalise_path("./") == "" and normalise_path(".") == ""
     assert in_scope("anything/at/all.py", None)
     assert in_scope("anything/at/all.py", [])
     assert in_scope("experiments/demo/x.py", ["experiments"])
@@ -310,8 +321,8 @@ def test_a_file_outside_the_audited_directories_is_refused_by_name():
     r = G.assess(diff("notes/x.md", ["hello"]), scope_dirs=["experiments", "src"])
     assert not r.allowed and r.unsupported_files == ("notes/x.md",)
     assert r.refusals == (
-        "notes/x.md is outside the audited directories (experiments, src); only files "
-        "inside them may change — if the fix needs another file, say so in `notes`",)
+        "notes/x.md is outside the audited directories (experiments, src). Only files "
+        "inside them may change; if the fix needs another file, say so in `notes`.",)
     assert G.assess(diff("notes/x.md", ["hello"])).allowed          # no scope: whole tree
 
 
@@ -327,8 +338,8 @@ def test_scope_uses_the_staged_list_so_a_capped_diff_cannot_hide_a_file():
     inside = G.assess(cut, scope_dirs=["docs", "src"],
                       staged_files=["docs/A_big.md", "src/calc.py"], truncated=True)
     assert inside.allowed and inside.unscreened_files == ("src/calc.py",)
-    assert inside.cautions == ("1 staged file(s) lay beyond the review size limit and were "
-                               "not screened: src/calc.py",)
+    assert inside.cautions == ("1 staged file(s) were larger than the review can read and "
+                               "were not screened: src/calc.py",)
     assert not R.assess(cut, scope_dirs=["docs", "src"],
                         staged_files=["docs/A_big.md", "src/calc.py"], truncated=True).allowed
     # Not truncated: a staged path the diff does not show is not "unscreened".
@@ -408,3 +419,191 @@ def test_a_deleted_file_is_still_a_changed_file():
     r = G.assess(text, scope_dirs=["docs"])
     assert r.changed_files == ("src/old.py",) and r.unsupported_files == ("src/old.py",)
     assert r.changed_lines == 2 and "removed_check" in r.patterns
+
+
+# ============================================================ review D2
+
+# ------------------------------------------ truthful sentences (D2 #4, #5)
+
+TRUTHFUL = {
+    "N1 except Exception + raise ... from": (
+        diff("src/calc.py", ["    except Exception as exc:",
+                             "        raise ConvergenceError(str(exc)) from exc"]),
+        "src/calc.py adds a catch-all `except` (its handler re-raises)"),
+    "N2 except Exception: log; raise": (
+        diff("src/calc.py", ["    except Exception:", "        log.exception('fit failed')",
+                             "        raise"]),
+        "src/calc.py adds a catch-all `except` (its handler re-raises)"),
+    "N2b one-line except Exception: raise": (
+        diff("src/calc.py", ["    except Exception: raise"]),
+        "src/calc.py adds a catch-all `except` (its handler re-raises)"),
+    "N4 assert tightened to pytest.approx": (
+        diff("tests/test_x.py", ["    assert result == pytest.approx(0.42, rel=1e-6)"],
+             removed=["    assert result == 0.42"]),
+        "tests/test_x.py changes an `assert` or `raise`"),
+    "N5 raise reworded": (
+        diff("src/calc.py", ["    raise ConvergenceError(f'not converged after {n} steps')"],
+             removed=["    raise RuntimeError('not converged')"]),
+        "src/calc.py changes an `assert` or `raise`"),
+    "N8 test renamed, still a test": (
+        diff("tests/test_x.py", ["def test_convergence_strict():"],
+             removed=["def test_convergence():"]),
+        "tests/test_x.py renames a test"),
+    "E16 except BaseException: return None (no re-raise)": (
+        diff("src/calc.py", ["    except BaseException:", "        return None"]),
+        "src/calc.py adds a catch-all `except` that swallows every error"),
+    "E6 assert deleted, nothing replaced it": (
+        diff("tests/test_x.py", ["    x = 1"], removed=["    assert result == 0.42"]),
+        "tests/test_x.py removes an `assert` or `raise` without replacing it"),
+    "X13 assert turned into if/print": (
+        diff("tests/test_x.py", ["    if not result == 0.42:", "        print('mismatch')"],
+             removed=["    assert result == 0.42"]),
+        "tests/test_x.py removes an `assert` or `raise` without replacing it"),
+    "E7 test_x -> _test_x is a removal": (
+        diff("tests/test_x.py", ["def _test_convergence():"], removed=["def test_convergence():"]),
+        "tests/test_x.py removes a test"),
+}
+
+
+@pytest.mark.parametrize("name", list(TRUTHFUL))
+def test_caution_sentences_are_true_as_written(name):
+    """Mutation: drop _handler_reraises / the same-hunk keyword check / the
+    added-test check -> the strong sentence is said of an honest edit."""
+    text, sentence = TRUTHFUL[name]
+    result = G.assess(text)
+    assert result.allowed and sentence in result.cautions, result.cautions
+
+
+def test_the_reraise_check_stops_at_the_handler_s_dedent():
+    """A `raise` after the handler is not the handler's. Mutation: ignore
+    indentation in _handler_reraises -> the strong sentence disappears."""
+    text = diff("src/calc.py", ["    except Exception:", "        return None",
+                                "    raise RuntimeError('unreachable')"])
+    assert "src/calc.py adds a catch-all `except` that swallows every error" in G.assess(text).cautions
+
+
+@pytest.mark.parametrize("text", [
+    diff("src/calc.py", ['    """Run the fit.', "", "    >>> try:", "    ...     run()",
+                         "    ... except Exception:", "    ...     pass", '    """']),
+    diff("src/calc.py", ['    """Notes.', "    except Exception:", "        pass",
+                         "    set +e", '    """']),
+    diff("src/calc.py", ["    >>> assert x  # doctest", "    ... except Exception: pass"]),
+])
+def test_doctest_lines_and_docstring_interiors_are_not_code(text):
+    """N7. Mutation: drop `>>>`/`...` from _COMMENT_START or the per-hunk
+    docstring state -> a doctest reddens."""
+    assert G.assess(text).cautions == ()
+
+
+# ------------------------------------ every alternative bites (D2 #6, #7)
+
+ALTERNATIVES = [
+    ("broad_exception", "except:"), ("broad_exception", "except Exception:"),
+    ("broad_exception", "except BaseException as e:"),
+    ("broad_exception", "except (ValueError, Exception):"),
+    ("broad_exception", "except(Exception):"), ("broad_exception", "} catch (Throwable t) {"),
+    ("broad_exception", "} catch (Exception e) {"),
+    ("suppress_context", "with contextlib.suppress(OSError):"),
+    ("empty_handler", "except OSError: pass"), ("empty_handler", "except OSError: ..."),
+    ("empty_handler", "try { run() } catch (e) {}"), ("empty_handler", "catch {}"),
+    ("relaxed_assertion", "assert True"), ("relaxed_assertion", "assert 1"),
+    ("relaxed_assertion", "assert x == 1 or True"),
+    ("disabled_test", "@pytest.mark.skip"), ("disabled_test", "@pytest.mark.skipif(True, reason='x')"),
+    ("disabled_test", "@pytest.mark.xfail"), ("disabled_test", "@unittest.skip('x')"),
+    ("disabled_test", "pytest.importorskip('nope')"),
+    ("disabled_test", "pytestmark = pytest.mark.skip(reason='later')"),
+    ("dead_branch", "if TYPE_CHECKING:"), ("dead_branch", "if False:"), ("dead_branch", "if 0:"),
+    ("shell_ignore_errors", "set +e"), ("shell_ignore_errors", "python calc.py || true"),
+    ("shell_ignore_errors", "python calc.py || exit 0"), ("shell_ignore_errors", "\t-python calc.py"),
+    ("lint_suppression", "x = 1  # noqa"), ("lint_suppression", "x = 1  # noqa: E501"),
+    ("lint_suppression", "x = 1  # type: ignore"), ("lint_suppression", "x = risky()  # pragma: no cover"),
+    ("lint_suppression", "y = 1  # pylint: disable=all"), ("lint_suppression", "z = 2  # pyright: ignore"),
+    ("lint_suppression", "z = 2  # mypy: ignore-errors"), ("lint_suppression", "/* eslint-disable */"),
+    ("lint_suppression", "// @ts-ignore"), ("lint_suppression", "// @ts-nocheck"),
+    ("warning_suppression", "warnings.filterwarnings('ignore')"),
+    ("warning_suppression", "warnings.simplefilter(\"ignore\", RuntimeWarning)"),
+]
+
+
+@pytest.mark.parametrize("name,line", ALTERNATIVES, ids=[f"{n}:{l.strip()[:28]}" for n, l in ALTERNATIVES])
+def test_every_pattern_alternative_bites(name, line):
+    """Mutation: delete any single alternative from its regex -> its row fails
+    (review D2 survivors R1, R5-R9)."""
+    result = G.assess(diff("src/x.py", [line]))
+    assert name in result.patterns, (line, result.patterns, result.cautions)
+
+
+def test_two_line_js_catch_is_an_empty_handler():
+    """R1. Mutation: drop `}` from _PASS_ONLY -> unseen."""
+    result = G.assess(diff("src/app.js", ["try { run() } catch (e) {", "}"]))
+    assert "empty_handler" in result.patterns
+    assert G.assess(diff("src/app.js", ["try { run() } catch (e) {", "  report(e)", "}"])).cautions == ()
+
+
+def test_pyx_is_code_and_makefile_recipe_prefix_is_a_caution():
+    """X10, X15. Mutation: drop .pyx from CODE_SUFFIXES / `^\t-` from the
+    shell pattern -> silent."""
+    assert classify("fast.pyx") == "code" and classify("fast.pxd") == "code"
+    assert "broad_exception" in G.assess(diff("src/fast.pyx", ["except Exception:", "    pass"])).patterns
+    assert "shell_ignore_errors" in G.assess(diff("Makefile", ["\t-python calc.py"])).patterns
+    assert G.assess(diff("Makefile", ["\tpython calc.py"])).cautions == ()
+
+
+def test_wrapping_the_reinstated_line_in_a_dead_branch_is_a_caution():
+    """X1. Mutation: drop dead_branch -> the moved-line equality hides it."""
+    text = diff("src/calc.py", ["if TYPE_CHECKING:", "    check_convergence(result)"],
+                removed=["check_convergence(result)"])
+    assert "dead_branch" in G.assess(text).patterns
+
+
+# ---------------------------------------- path spellings (D2 #1, #2, #3)
+
+def test_git_quoted_paths_unquote_to_their_utf8_text():
+    """R10. Mutation: return the raw token -> the refusal names
+    `"\\346\\212\\245..."` and the scope screen refuses a Chinese name."""
+    assert unquote_path('"\\346\\212\\245\\345\\221\\212.md"') == "报告.md"
+    assert unquote_path('"say \\"hi\\".md"') == 'say "hi".md'
+    assert unquote_path("plain.md") == "plain.md"
+
+
+def test_a_real_staged_diff_with_cjk_space_and_quote_names(tmp_path):
+    """The exact bytes build.py hands the screen with core.quotepath=false and
+    the NUL-separated staged list. Mutation: drop the equal-halves header
+    split -> `fig 1.png` is never parsed and the model-written binary
+    passes; drop quotepath=false / -z -> `报告.md` is refused as out of
+    scope."""
+    repo = tmp_path / "repo"
+    (repo / "experiments").mkdir(parents=True)
+    _git("init", "-q", "-b", "main", cwd=repo)
+    _git("config", "user.email", "t@example.invalid", cwd=repo)
+    _git("config", "user.name", "T", cwd=repo)
+    (repo / "a.md").write_text("x\n")
+    _git("add", "-A", cwd=repo)
+    _git("commit", "-q", "-m", "base", cwd=repo)
+    (repo / "experiments/报告.md").write_text("报告正文\n")
+    (repo / "experiments/fig 1.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00new")
+    (repo / 'experiments/say "hi".py').write_text("except Exception:\n    pass\n")
+    _git("add", "-A", cwd=repo)
+    text = _git("-c", "core.quotepath=false", "diff", "--cached", "--binary", "--no-ext-diff", cwd=repo)
+    raw = subprocess.run(["git", "diff", "--cached", "--name-only", "-z"], cwd=str(repo),
+                         capture_output=True, check=True).stdout
+    staged = [p.decode("utf-8") for p in raw.split(b"\0") if p]
+    assert set(staged) == {"experiments/报告.md", "experiments/fig 1.png", 'experiments/say "hi".py'}
+
+    files = parse_unified_diff(text)
+    assert set(files) == set(staged)
+    assert files["experiments/fig 1.png"].binary
+    assert files["experiments/报告.md"].added == ["报告正文"]
+
+    r = G.assess(text, scope_dirs=["./experiments"], staged_files=staged)
+    assert r.unsupported_files == ()                       # all three are in scope
+    assert r.binary_files == ("experiments/fig 1.png",)    # the space did not hide it
+    assert r.refusals == ("experiments/fig 1.png is a binary file written directly by the "
+                          "generator, which cannot be reviewed line by line",)
+    assert 'experiments/say "hi".py adds a catch-all `except` that swallows every error' in r.cautions
+    ok = G.assess(text, scope_dirs=["experiments"], staged_files=staged,
+                  locally_rendered_files={"experiments/fig 1.png"})
+    assert ok.allowed
+    # And the quoted (quotepath=true) spelling of the same diff still parses.
+    quoted = _git("-c", "core.quotepath=true", "diff", "--cached", "--binary", "--no-ext-diff", cwd=repo)
+    assert set(parse_unified_diff(quoted)) == set(staged)

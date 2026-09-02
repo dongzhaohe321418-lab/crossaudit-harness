@@ -7,21 +7,30 @@ kinds of outcome:
 **Refusals** (hard, in every mode) are the two things no automatic round may
 do because nothing downstream could review them: change a file outside the
 audited directories, or commit a binary that CrossAudit's own document
-renderer did not produce.
+renderer did not produce.  (``generator.apply`` is the first line for the
+scope boundary — it denies an out-of-scope write before anything is staged;
+this screen is the second, over what actually reached the index.)
 
 **Cautions** are *likely* defensive edits — a catch-all ``except``, an
-empty error handler, a suppression marker, a skipped test, a relaxed or
-deleted assertion, a shell step that ignores its own failure, or a code change
-larger than the automatic budget.  Under the default ``repair.mode: caution``
-they never stop a round: they are surfaced to the auditor (as deterministic
-notes in the next audit's input, so the auditor model can raise a finding)
-and shown in the run's events.  Under ``repair.mode: refuse`` they are
-refusals.
+empty error handler, a suppression marker, a skipped test, a relaxed,
+changed or deleted assertion, a branch that never runs, a shell or make step
+that ignores its own failure, or a code change larger than the automatic
+budget.  Under the default ``repair.mode: caution`` they never stop a round:
+they are surfaced to the auditor (as deterministic notes in the next audit's
+input, so the auditor model can raise a finding) and shown in the run's
+events.  Under ``repair.mode: refuse`` they are refusals.
+
+Every caution sentence is meant to be TRUE as written: a catch-all handler
+that re-raises is reported as re-raising, an assertion replaced in the same
+hunk is reported as changed, a test re-added under another name as renamed.
 
 What this is not (D10, D146): a guarantee.  It is a handful of regular
-expressions over the added and removed lines of code files.  It cannot see an
-early ``return {}``, a narrowed ``except`` that ``continue``s, or a relaxed
-threshold in a data file; the auditor can, and that is why cautions go to the
+expressions over the added and removed lines of code files.  It cannot see
+an early ``return {}``, a narrowed ``except`` that ``continue``s, a relaxed
+threshold in a data file, ``sys.exit(0)``, an assert moved into an unused
+fixture, or a suppression reached through ``getattr``; a docstring or
+heredoc whose opening lies outside the hunk is read as code (noise, never a
+refusal).  The auditor can see those, and that is why cautions go to the
 auditor instead of ending the round.
 
 Three file classes (`classify`):
@@ -34,10 +43,11 @@ Three file classes (`classify`):
   pattern-screened, never budgeted.  A report that says "skip the
   introduction" is honest prose (D121).
 
-Comments, docstrings and string literals are stripped from a code line before
-the construct patterns run; the suppression markers, which live in comments,
-are matched on the raw line.  Pure: the caller passes the diff text; nothing
-here calls git.
+Comments, docstrings, doctest lines and string literals are stripped from a
+code line before the construct patterns run; the suppression markers, which
+live in comments, are matched on the raw line.  Pure: the caller passes the
+diff text (``git -c core.quotepath=false diff --cached --binary``) and git's
+NUL-separated staged-path list; nothing here calls git.
 """
 from __future__ import annotations
 
@@ -50,7 +60,7 @@ from typing import Iterable, Sequence
 MODES = ("caution", "refuse")
 
 CODE_SUFFIXES = frozenset({
-    ".py", ".pyi", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
+    ".py", ".pyi", ".pyx", ".pxd", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
     ".sh", ".bash", ".zsh", ".go", ".rs", ".java", ".kt", ".scala",
     ".c", ".h", ".cc", ".cpp", ".hpp", ".rb", ".php", ".cs", ".swift", ".m",
     ".r", ".R", ".jl", ".sql", ".make", ".mk",
@@ -79,18 +89,27 @@ def is_code_file(path: str) -> bool:
     return classify(path) == "code"
 
 
+def normalise_path(path: str) -> str:
+    """One spelling for a repository path: no ``./``, ``//`` or trailing ``/``."""
+    text = posixpath.normpath(path.strip())
+    return "" if text == "." else text.lstrip("/")
+
+
 def in_scope(path: str, scope_dirs: Sequence[str] | None) -> bool:
     """Whether ``path`` lies under one of the audited directories.
 
-    No scope directories means the whole tree is audited.
+    Both sides are normalised the way ``generator.apply`` reads them
+    (``./experiments``, ``experiments/``, ``experiments/./demo`` all name the
+    same directory).  No scope directories means the whole tree is audited.
     """
     if not scope_dirs:
         return True
+    target = normalise_path(path)
     for raw in scope_dirs:
-        d = raw.strip().strip("/")
-        if not d or d == ".":
+        d = normalise_path(raw)
+        if not d:
             return True
-        if path == d or path.startswith(d + "/"):
+        if target == d or target.startswith(d + "/"):
             return True
     return False
 
@@ -98,11 +117,16 @@ def in_scope(path: str, scope_dirs: Sequence[str] | None) -> bool:
 # ------------------------------------------------------------- the patterns
 
 _STRING = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
-_COMMENT_START = ("#", "//", "/*", "*", '"""', "'''")
+_COMMENT_START = ("#", "//", "/*", "*", '"""', "'''", ">>>", "...")
+_TRIPLE = re.compile(r'"""|\'\'\'')
 
 
 def strip_code(line: str) -> str:
-    """The construct-bearing part of a code line: no comments, no strings."""
+    """The construct-bearing part of a code line: no comments, no strings.
+
+    A line that opens with a comment marker, a docstring quote or a doctest
+    prompt (``>>>`` / ``...``) is not code at all.
+    """
     text = line.strip()
     if not text or text.startswith(_COMMENT_START):
         return ""
@@ -122,20 +146,27 @@ ADDED_PATTERNS: dict[str, tuple[re.Pattern[str], str]] = {
         re.compile(r"\bsuppress\s*\("),
         "a `suppress(...)` block that hides errors"),
     "empty_handler": (
-        # `except ...: pass` on one line, or `catch (e) {}` in JS; the
-        # two-line `except ...:` / `pass` form is matched with context below.
-        re.compile(r"\bexcept\b[^:]*:\s*pass\s*$|\bcatch\s*(?:\([^)]*\))?\s*\{\s*\}"),
+        # `except ...: pass` / `except ...: ...` on one line, or `catch (e) {}`
+        # in JS; the two-line forms are matched with context below.
+        re.compile(r"\bexcept\b[^:]*:\s*(?:pass|\.\.\.)\s*$|\bcatch\s*(?:\([^)]*\))?\s*\{\s*\}"),
         "an error handler that does nothing"),
     "relaxed_assertion": (
         re.compile(r"^\s*assert\s+(?:True|1)\b|^\s*assert\b.*\bor\s+True\b"),
         "an assertion that can no longer fail"),
     "disabled_test": (
-        re.compile(r"\bmark\.skip\b|\bskipif\(\s*True\b|\bmark\.xfail\b|\bunittest\.skip\b"),
+        re.compile(r"\bmark\.skip\b|\bskipif\(\s*True\b|\bmark\.xfail\b|\bunittest\.skip\b"
+                   r"|\bimportorskip\s*\("),
         "a skipped or expected-to-fail test"),
+    "dead_branch": (
+        re.compile(r"^\s*if\s+(?:TYPE_CHECKING|False|0)\s*:"),
+        "code under a branch that never runs (`if TYPE_CHECKING:` / `if False:`)"),
     "shell_ignore_errors": (
-        re.compile(r"^\s*set\s+\+e\b|\|\|\s*true\b"),
-        "a shell step that ignores its own failure"),
+        re.compile(r"^\s*set\s+\+e\b|\|\|\s*(?:true|exit\s+0)\b|^\t-\S"),
+        "a shell or make step that ignores its own failure"),
 }
+#: The catch-all sentence when the handler visibly re-raises (the weaker,
+#: true statement).
+_BROAD_RERAISE_SENTENCE = "a catch-all `except` (its handler re-raises)"
 
 #: Marker patterns over the RAW added line (these live in comments/strings).
 MARKER_PATTERNS: dict[str, tuple[re.Pattern[str], str]] = {
@@ -149,29 +180,38 @@ MARKER_PATTERNS: dict[str, tuple[re.Pattern[str], str]] = {
         "a warnings filter set to ignore"),
 }
 
-#: Patterns over a REMOVED code line that was not re-added anywhere in the
-#: same file: deleting the failing check is the classic evasion.
-REMOVED_PATTERNS: dict[str, tuple[re.Pattern[str], str]] = {
+#: Patterns over a REMOVED code line that was not re-added in the file.  Each
+#: carries the strong sentence (nothing replaced it) and the weaker one used
+#: when a line of the same kind was added in the same hunk / file.
+REMOVED_PATTERNS: dict[str, tuple[re.Pattern[str], str, str]] = {
     "removed_check": (
         re.compile(r"^\s*(?:assert|raise)\b"),
-        "removes an `assert` or `raise` without replacing it"),
+        "removes an `assert` or `raise` without replacing it",
+        "changes an `assert` or `raise`"),
     "removed_test": (
         re.compile(r"^\s*(?:def\s+test_\w+|func\s+Test\w+|it\(|test\()"),
-        "removes a test"),
+        "removes a test",
+        "renames a test"),
 }
 
 _EXCEPT_HEADER = re.compile(r"^\s*except\b[^:]*:\s*$|\bcatch\s*(?:\([^)]*\))?\s*\{\s*$")
 _PASS_ONLY = re.compile(r"^\s*(?:pass|\.\.\.|\})\s*$")
+_RERAISE = re.compile(r"^\s*(?:raise\b|throw\b)")
+_TEST_DEF = REMOVED_PATTERNS["removed_test"][0]
 
 
 # ------------------------------------------------------------------ parsing
 
 @dataclass
 class FileDiff:
-    """One file's hunk lines: (kind, text) with kind in '+', '-', ' '."""
+    """One file's hunks: lists of (kind, text) with kind in '+', '-', ' '."""
 
-    hunk: list[tuple[str, str]] = field(default_factory=list)
+    hunks: list[list[tuple[str, str]]] = field(default_factory=list)
     binary: bool = False
+
+    @property
+    def hunk(self) -> list[tuple[str, str]]:
+        return [row for h in self.hunks for row in h]
 
     @property
     def added(self) -> list[str]:
@@ -186,46 +226,69 @@ class FileDiff:
         return sum(1 for k, _ in self.hunk if k != " ")
 
 
-_HEADER_PREFIXES = ("--- ", "index ", "@@", "similarity index", "dissimilarity index",
-                    "rename from", "rename to", "copy from", "copy to",
+_HEADER_PREFIXES = ("--- ", "index ", "similarity index", "dissimilarity index",
+                    "rename from", "copy from", "copy to",
                     "new file mode", "deleted file mode", "old mode", "new mode",
                     "\\ No newline")
+_QUOTED = r'"(?:\\.|[^"\\])*"'
 
 
-def _unquote(token: str) -> str:
+def unquote_path(token: str) -> str:
+    """A git-quoted path (``"a/\\346\\212\\245.md"``) back to its UTF-8 text."""
     if len(token) >= 2 and token[0] == '"' and token[-1] == '"':
         try:
-            return token[1:-1].encode("latin-1").decode("unicode_escape")
+            raw = token[1:-1].encode("latin-1").decode("unicode_escape")
+            return raw.encode("latin-1").decode("utf-8", "replace")
         except (UnicodeDecodeError, UnicodeEncodeError):
             return token[1:-1]
     return token
 
 
-def parse_unified_diff(unified_diff: str) -> dict[str, FileDiff]:
-    """Per-file hunk lines and binary flags, in order of appearance.
+def _header_path(rest: str) -> str:
+    """The post-image path of a ``diff --git`` header remainder.
 
-    Accepts the shape of ``git diff --cached --binary --no-ext-diff``: a
-    ``diff --git a/X b/Y`` header names each file (post-image path), ``+++
-    b/Y`` confirms it, and ``Binary files ... differ`` / ``GIT binary patch``
-    mark a binary.  Git-quoted paths are unquoted.
+    Git quotes a path only for ``"``, ``\\`` and control characters when
+    ``core.quotepath=false``; an unquoted path may contain spaces, so the
+    remainder is accepted when it reads as ``a/P b/P`` with equal halves.
+    A rename (unequal halves) is resolved from the ``rename to`` / ``+++``
+    lines instead.
+    """
+    m = re.match(rf"^(?:{_QUOTED}|a/.*?)\s+({_QUOTED})$", rest)
+    if m:
+        return unquote_path(m.group(1)).removeprefix("b/")
+    if rest.startswith("a/") and (len(rest) - 5) % 2 == 0:
+        half = (len(rest) - 5) // 2
+        p = rest[2:2 + half]
+        if rest == f"a/{p} b/{p}":
+            return p
+    return ""
+
+
+def parse_unified_diff(unified_diff: str) -> dict[str, FileDiff]:
+    """Per-file hunks and binary flags, in order of appearance.
+
+    Accepts the shape of ``git -c core.quotepath=false diff --cached --binary
+    --no-ext-diff``: a ``diff --git a/X b/Y`` header names each file (post-
+    image path), ``rename to`` / ``+++ b/Y`` confirm or refine it, and
+    ``Binary files ... differ`` / ``GIT binary patch`` mark a binary.
     """
     files: dict[str, FileDiff] = {}
     current: FileDiff | None = None
     in_hunk = False
     for line in unified_diff.splitlines():
         if line.startswith("diff --git "):
-            rest = line[len("diff --git "):]
-            path = ""
-            m = re.match(r'^(?:"a/(?:\\.|[^"\\])*"|a/\S+)\s+("b/(?:\\.|[^"\\])*"|b/.+)$', rest)
-            if m:
-                path = _unquote(m.group(1)).removeprefix("b/")
-            current = files.setdefault(path, FileDiff()) if path else None
+            path = _header_path(line[len("diff --git "):])
+            current = files.setdefault(path, FileDiff()) if path else FileDiff()
             in_hunk = False
             continue
-        if line.startswith("+++ "):
-            path = _unquote(line[4:].strip()).removeprefix("b/")
+        if line.startswith("rename to ") or line.startswith("+++ "):
+            token = line.split(" ", 2 if line.startswith("rename") else 1)[-1].strip()
+            path = unquote_path(token).removeprefix("b/")
             if path and path != "/dev/null":
-                current = files.setdefault(path, FileDiff())
+                if current is not None and current not in files.values():
+                    files[path] = current           # header could not be read
+                else:
+                    current = files.setdefault(path, FileDiff())
             continue
         if line.startswith(("Binary files ", "GIT binary patch")):
             if current is not None:
@@ -233,13 +296,15 @@ def parse_unified_diff(unified_diff: str) -> dict[str, FileDiff]:
             continue
         if line.startswith("@@"):
             in_hunk = True
+            if current is not None:
+                current.hunks.append([])
             continue
         if line.startswith(_HEADER_PREFIXES):
             continue
-        if current is None or not in_hunk:
+        if current is None or not in_hunk or not current.hunks:
             continue
         if line.startswith(("+", "-", " ")):
-            current.hunk.append((line[0], line[1:]))
+            current.hunks[-1].append((line[0], line[1:]))
     return files
 
 
@@ -280,6 +345,52 @@ def _squash(text: str) -> str:
     return "".join(text.split())
 
 
+def _indent(text: str) -> int:
+    return len(text) - len(text.lstrip())
+
+
+def _handler_reraises(hunk: list[tuple[str, str]], start: int) -> bool:
+    """Whether the handler opened at ``hunk[start]`` visibly re-raises."""
+    header = hunk[start][1]
+    if re.search(r"(?::|\{)\s*(?:raise|throw)\b", strip_code(header)):
+        return True                                   # `except X: raise` on one line
+    base = _indent(header)
+    for kind, text in hunk[start + 1:]:
+        if kind == "-":
+            continue
+        stripped = strip_code(text)
+        if not stripped:
+            continue
+        if _indent(text) <= base and not stripped.lstrip().startswith("}"):
+            break
+        if _RERAISE.match(stripped):
+            return True
+    return False
+
+
+def _code_rows(hunk: list[tuple[str, str]]) -> list[tuple[int, str, str, str]]:
+    """(index, kind, raw, stripped) for post-image-relevant rows, with
+    docstring interiors and doctest lines blanked.  Docstring state is
+    tracked per hunk from what the hunk shows (an opening outside the hunk
+    is a documented blind spot)."""
+    rows: list[tuple[int, str, str, str]] = []
+    in_doc = False
+    for i, (kind, text) in enumerate(hunk):
+        quotes = len(_TRIPLE.findall(text))
+        if in_doc:
+            rows.append((i, kind, text, ""))
+            if quotes % 2 == 1 and kind != "-":
+                in_doc = False
+            continue
+        if quotes % 2 == 1:
+            if kind != "-":
+                in_doc = True
+            rows.append((i, kind, text, ""))
+            continue
+        rows.append((i, kind, text, strip_code(text)))
+    return rows
+
+
 def screen_code_file(path: str, diff: FileDiff) -> list[tuple[str, str]]:
     """(pattern name, sentence) for every construct the file's change shows."""
     hits: list[tuple[str, str]] = []
@@ -290,28 +401,39 @@ def screen_code_file(path: str, diff: FileDiff) -> list[tuple[str, str]]:
             seen.add(name)
             hits.append((name, sentence))
 
-    previous = ""
-    for kind, text in diff.hunk:
-        stripped = strip_code(text)
-        if kind == "+":
-            for name, (pattern, what) in ADDED_PATTERNS.items():
-                if stripped and pattern.search(stripped):
-                    hit(name, f"{path} adds {what}")
-            for name, (pattern, what) in MARKER_PATTERNS.items():
-                if pattern.search(text):
-                    hit(name, f"{path} adds {what}")
-            if stripped and _PASS_ONLY.match(stripped) and _EXCEPT_HEADER.search(previous):
-                hit("empty_handler", f"{path} adds {ADDED_PATTERNS['empty_handler'][1]}")
-        if stripped and kind != "-":       # the post-image is what runs
-            previous = stripped
-    added_squashed = {_squash(strip_code(t)) for t in diff.added}
-    for text in diff.removed:
-        stripped = strip_code(text)
-        if not stripped or _squash(stripped) in added_squashed:
-            continue
-        for name, (pattern, what) in REMOVED_PATTERNS.items():
-            if pattern.search(stripped):
-                hit(name, f"{path} {what}")
+    added_tests = any(_TEST_DEF.search(strip_code(t)) for t in diff.added)
+    for hunk in diff.hunks:
+        rows = _code_rows(hunk)
+        previous = ""
+        added_stripped = [s for _i, k, _r, s in rows if k == "+" and s]
+        for i, kind, raw, stripped in rows:
+            if kind == "+":
+                for name, (pattern, what) in ADDED_PATTERNS.items():
+                    if stripped and pattern.search(stripped):
+                        if name == "broad_exception" and _handler_reraises(hunk, i):
+                            hit(name, f"{path} adds {_BROAD_RERAISE_SENTENCE}")
+                        else:
+                            hit(name, f"{path} adds {what}")
+                for name, (pattern, what) in MARKER_PATTERNS.items():
+                    if pattern.search(raw):
+                        hit(name, f"{path} adds {what}")
+                if stripped and _PASS_ONLY.match(stripped) and _EXCEPT_HEADER.search(previous):
+                    hit("empty_handler", f"{path} adds {ADDED_PATTERNS['empty_handler'][1]}")
+            if stripped and kind != "-":            # the post-image is what runs
+                previous = stripped
+        added_squashed = {_squash(s) for s in added_stripped}
+        for _i, kind, _raw, stripped in rows:
+            if kind != "-" or not stripped or _squash(stripped) in added_squashed:
+                continue
+            for name, (pattern, strong, weak) in REMOVED_PATTERNS.items():
+                if not pattern.search(stripped):
+                    continue
+                if name == "removed_test":
+                    replaced = added_tests
+                else:
+                    keyword = stripped.split()[0].rstrip("(")
+                    replaced = any(s.lstrip().startswith(keyword) for s in added_stripped)
+                hit(name, f"{path} {weak if replaced else strong}")
     return hits
 
 
@@ -333,26 +455,26 @@ class RepairGuard:
         """Screen a staged diff.
 
         ``scope_dirs`` are the audited directories (None: the whole tree).
-        ``staged_files`` is git's own list of staged paths; it drives the scope
-        screen so a diff cut at the caller's size cap cannot hide a file, and
-        with ``truncated=True`` every staged file the diff no longer shows is
-        reported as unscreened.  ``locally_rendered_files`` are the documents
-        CrossAudit itself rendered from the model's source — the one kind of
-        binary a round may commit.
+        ``staged_files`` is git's own NUL-separated list of staged paths; it
+        drives the scope screen so a diff cut at the caller's size cap cannot
+        hide a file, and with ``truncated=True`` every staged file the diff no
+        longer shows is reported as unscreened.  ``locally_rendered_files``
+        are the documents CrossAudit itself rendered from the model's source
+        — the one kind of binary a round may commit.
         """
-        rendered = set(locally_rendered_files or ())
-        staged = list(dict.fromkeys(staged_files or ()))
-        files = parse_unified_diff(unified_diff)
+        rendered = {normalise_path(p) for p in (locally_rendered_files or ())}
+        staged = list(dict.fromkeys(normalise_path(p) for p in (staged_files or ()) if p))
+        files = {normalise_path(p): d for p, d in parse_unified_diff(unified_diff).items()}
         known = list(dict.fromkeys([*files, *staged]))
         refusals: list[str] = []
         cautions: list[str] = []
 
         unsupported = sorted(p for p in known if not in_scope(p, scope_dirs))
-        dirs = ", ".join(d.strip().strip("/") for d in (scope_dirs or ()))
+        dirs = ", ".join(normalise_path(d) or "." for d in (scope_dirs or ()))
         for path in unsupported:
             refusals.append(
-                f"{path} is outside the audited directories ({dirs}); only files "
-                "inside them may change — if the fix needs another file, say so in `notes`")
+                f"{path} is outside the audited directories ({dirs}). Only files inside "
+                "them may change; if the fix needs another file, say so in `notes`.")
 
         untrusted_binary = sorted(
             p for p, d in files.items() if d.binary and p not in rendered)
@@ -379,7 +501,7 @@ class RepairGuard:
         unscreened = sorted(set(staged) - set(files)) if truncated else []
         if unscreened:
             cautions.append(
-                f"{len(unscreened)} staged file(s) lay beyond the review size limit "
+                f"{len(unscreened)} staged file(s) were larger than the review can read "
                 f"and were not screened: {', '.join(unscreened)}")
 
         if not known:

@@ -98,7 +98,10 @@ downstream could review them:
 
 - a file outside the audited directories (`scope.dirs`) — the whole increment
   is in scope, not just the artifacts a finding named, because an honest repair
-  routinely touches the data *and* the prose that describes it;
+  routinely touches the data *and* the prose that describes it. The generator's
+  `apply` is the first line for this boundary (it denies the write before
+  anything is staged, and that refusal too keeps the audit's findings in the
+  retry prompt); the screen is the second, over what reached the index;
 - a binary the local document renderer did not produce.
 
 **Cautions** — the round is committed and audited as usual; the caution rides
