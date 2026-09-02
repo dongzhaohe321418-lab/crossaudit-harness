@@ -340,6 +340,18 @@ def _staged_paths(cfg: Config) -> list[str]:
     return [p.decode("utf-8", "replace") for p in raw.split(b"\0") if p]
 
 
+def _staged_binaries(cfg: Config) -> list[str]:
+    """The staged paths git reports as binary (``--numstat -z``: ``-\t-``).
+
+    Independent of the patch-text cap: a binary beside a long document must
+    be refused even when the diff the screen reads was cut before it.
+    """
+    from ..repair_guard import parse_numstat
+
+    raw = git_bytes("diff", "--cached", "--numstat", "-z", cwd=cfg.root)
+    return [p for p, (_a, _r, binary) in parse_numstat(raw).items() if binary]
+
+
 def _stage_generated(cfg: Config, written: list[str] | AppliedFiles) -> list[str]:
     """Stage exactly the files returned by the generator, and nothing else.
 
@@ -938,6 +950,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     cfg.repair.max_changed_lines, mode=cfg.repair.mode).assess(
                     diff, scope_dirs=cfg.scope_dirs, staged_files=staged,
                     locally_rendered_files=locally_rendered,
+                    binary_files=_staged_binaries(cfg),
                     truncated=len(diff) >= _MAX_SCAN_BYTES)
                 if not assessment.allowed:
                     emit("repair_refused", "loop",

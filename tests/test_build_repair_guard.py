@@ -422,3 +422,27 @@ def test_a_repeated_apply_denial_does_not_pile_up_refusal_blocks(
     fourth = calls[3]["findings"]
     assert fourth.count("refused before it reached the auditor") == 1
     assert fourth.count("metadata.yml") == calls[1]["findings"].count("metadata.yml")
+
+
+# ==================================================== closure audit D #6
+
+def test_a_model_written_binary_past_the_diff_cap_is_still_refused(
+        science, cfg, transcripts, monkeypatch):
+    """The closure audit's loop: cap lowered to 4 KB, a long SUMMARY.md sorts
+    before `fig 1.png` and pushes it past the cap. Mutation: drop
+    `binary_files=_staged_binaries(cfg)` -> the PNG is committed with only an
+    'unscreened' caution."""
+    from crossaudit.cli import build as build_mod
+
+    monkeypatch.setattr(build_mod, "_MAX_SCAN_BYTES", 4096)
+    long_prose = "".join(f"paragraph {i} of an honest but long report\n" for i in range(300))
+    code, events, calls = _drive(
+        cfg, science, monkeypatch,
+        [ROUND_ONE, {SUMMARY: long_prose, "experiments/demo/fig 1.png": PNG}, {CALC: CALC_FIXED}])
+    refused = [e for e in events if e.kind == "repair_refused"]
+    assert len(refused) == 1 and refused[0].detail == (
+        "experiments/demo/fig 1.png is a binary file written directly by the generator, "
+        "which cannot be reviewed line by line")
+    assert calls[2]["staged"] == "" and not (science / "experiments/demo/fig 1.png").exists()
+    assert "fig 1.png" not in git("log", "--name-only", cwd=science)
+    assert "strict=True" in git("log", "-p", cwd=science)

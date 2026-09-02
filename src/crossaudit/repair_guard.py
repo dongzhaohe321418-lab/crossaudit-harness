@@ -308,6 +308,36 @@ def parse_unified_diff(unified_diff: str) -> dict[str, FileDiff]:
     return files
 
 
+def parse_numstat(raw: bytes) -> dict[str, tuple[int | None, int | None, bool]]:
+    """``git diff --cached --numstat -z`` → path: (added, removed, binary).
+
+    Binary entries show ``-\t-``.  A rename is ``added\tremoved\t\0old\0new\0``;
+    the post-image path is kept.  Cheap and independent of any size cap on the
+    patch text, which is why the binary screen trusts it over the diff.
+    """
+    out: dict[str, tuple[int | None, int | None, bool]] = {}
+    tokens = raw.split(b"\0")
+    i = 0
+    while i < len(tokens):
+        entry = tokens[i].decode("utf-8", "replace")
+        i += 1
+        if not entry:
+            continue
+        parts = entry.split("\t", 2)
+        if len(parts) < 3:
+            continue
+        added_s, removed_s, path = parts
+        if path == "" and i + 1 < len(tokens):        # rename: old, new follow
+            path = tokens[i + 1].decode("utf-8", "replace")
+            i += 2
+        binary = added_s == "-" or removed_s == "-"
+        added = None if binary else int(added_s)
+        removed = None if binary else int(removed_s)
+        if path:
+            out[normalise_path(path)] = (added, removed, binary)
+    return out
+
+
 # ------------------------------------------------------------ the decision
 
 @dataclass(frozen=True)
@@ -451,6 +481,7 @@ class RepairGuard:
     def assess(self, unified_diff: str, *, scope_dirs: Sequence[str] | None = None,
                staged_files: Iterable[str] | None = None,
                locally_rendered_files: Iterable[str] | None = None,
+               binary_files: Iterable[str] | None = None,
                truncated: bool = False) -> RepairAssessment:
         """Screen a staged diff.
 
@@ -460,12 +491,16 @@ class RepairGuard:
         hide a file, and with ``truncated=True`` every staged file the diff no
         longer shows is reported as unscreened.  ``locally_rendered_files``
         are the documents CrossAudit itself rendered from the model's source
-        — the one kind of binary a round may commit.
+        — the one kind of binary a round may commit.  ``binary_files`` are
+        the paths git itself reports as binary (``parse_numstat``); they are
+        refused whether or not the diff text still shows them, so the cap
+        limits only the pattern screen, never the binary screen.
         """
         rendered = {normalise_path(p) for p in (locally_rendered_files or ())}
         staged = list(dict.fromkeys(normalise_path(p) for p in (staged_files or ()) if p))
         files = {normalise_path(p): d for p, d in parse_unified_diff(unified_diff).items()}
-        known = list(dict.fromkeys([*files, *staged]))
+        reported_binary = {normalise_path(p) for p in (binary_files or ()) if p}
+        known = list(dict.fromkeys([*files, *staged, *reported_binary]))
         refusals: list[str] = []
         cautions: list[str] = []
 
@@ -477,7 +512,7 @@ class RepairGuard:
                 "them may change; if the fix needs another file, say so in `notes`.")
 
         untrusted_binary = sorted(
-            p for p, d in files.items() if d.binary and p not in rendered)
+            ({p for p, d in files.items() if d.binary} | reported_binary) - rendered)
         for path in untrusted_binary:
             refusals.append(
                 f"{path} is a binary file written directly by the generator, "
@@ -498,7 +533,7 @@ class RepairGuard:
                 patterns.append(name)
                 cautions.append(sentence)
 
-        unscreened = sorted(set(staged) - set(files)) if truncated else []
+        unscreened = sorted(set(staged) - set(files) - reported_binary) if truncated else []
         if unscreened:
             cautions.append(
                 f"{len(unscreened)} staged file(s) were larger than the review can read "
