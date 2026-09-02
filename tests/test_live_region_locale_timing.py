@@ -135,7 +135,9 @@ def test_the_sweep_still_sees_every_live_region_it_claims_to():
     assert _live_ids() == [
         "announcer", "compute-message", "file-preview-find-count", "fr-role-msg",
         "mcp-approve-count", "mcp-connected", "mcp-error", "mcp-message",
-        "project-review", "settings-error", "wizard-error"]
+        # Billing slice: the threshold banner is a role="status" region; its
+        # text arrives from the wire (text / text_zh), never as a literal.
+        "project-review", "settings-error", "usage-banner", "wizard-error"]
     # And the dictionary it is checked against is a real one, not an empty set
     # that would make every literal look untranslatable and the guard vacuous.
     assert len(_zh_keys()) > 500
