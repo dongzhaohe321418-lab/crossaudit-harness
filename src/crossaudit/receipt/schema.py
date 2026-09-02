@@ -140,6 +140,25 @@ def validate(raw: Any) -> dict:
         # KeyError).
         if raw.get("tool_evidence") is None:
             raise IntegrityDenial("sources present without tool_evidence to bind it")
+
+    # Optional evidence-authority record (D148): present only on receipts whose
+    # audit derived one. Validated when present — structure, known policy
+    # version, digest over its evidence, ids within the evidence, route
+    # following the verdict — and bound to the audit verdict. Absent keeps the
+    # receipt byte-identical, so no schema bump.
+    auth = raw.get("authority")
+    if auth is not None:
+        if not isinstance(auth, dict):
+            raise IntegrityDenial("authority must be a mapping")
+        from ..auditor.authority import validate_block
+        errors = validate_block(auth)
+        if errors:
+            raise IntegrityDenial("authority block does not validate: "
+                                  + "; ".join(errors), errors=errors)
+        if auth["workflow_verdict"] != raw["audit"]["verdict"]:
+            raise IntegrityDenial(
+                f"authority workflow verdict {auth['workflow_verdict']} differs "
+                f"from audit verdict {raw['audit']['verdict']}")
     return raw
 
 

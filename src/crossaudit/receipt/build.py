@@ -173,7 +173,7 @@ def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
           verdict: str, exchange: dict, retention: str, report_bytes: bytes,
           report_commit: str, cycle_path: str, audit_repo: str,
           mode: str, provisioner: str = "cli", admission: str = "local-controller",
-          integrity: str = "OK") -> dict:
+          integrity: str = "OK", authority: dict | None = None) -> dict:
     """Assemble a v2 receipt. Every field is derived, none is caller prose."""
     receipt = {
         "receipt_schema": RECEIPT_SCHEMA,
@@ -253,4 +253,11 @@ def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
     sblock = sources.receipt_block(cfg, receipt)
     if sblock:
         receipt["sources"] = sblock
+    # Optional, back-compatible evidence-authority record (D148): present ONLY
+    # when the audit derived one (an outcome built by hand carries none), so a
+    # receipt without it stays byte-identical to a plain v2 receipt. The block
+    # binds its own evidence by digest; validate() and verify() refuse a
+    # mismatch and bind the report's route row to it.
+    if authority:
+        receipt["authority"] = authority
     return receipt
