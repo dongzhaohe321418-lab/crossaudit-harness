@@ -437,3 +437,111 @@ def test_the_auditor_clock_narrates_time_and_never_the_reply_text():
     assert said == ["Still reviewing · 12 s", "Still reviewing · 24 s",
                     "Still reviewing · 36 s"]
     assert not any("SENTINEL" in line for line in said)
+
+
+# ------------------------------------------------------------------ (b), L3
+GOOD_INCREMENT = {
+    "experiments/demo/metadata.yml":
+        "code_version: a1b2c3d\ninputs:\n  - scripts/run_demo.py@a1b2c3d\n",
+    "experiments/demo/results.json": json.dumps({
+        "quantities": [
+            {"name": "binding_energy", "value": -3.65, "unit": "kcal/mol",
+             "source": "scripts/run_demo.py@a1b2c3d"},
+            {"name": "distance", "value": 2.73, "unit": "angstrom",
+             "source": "scripts/run_demo.py@a1b2c3d"},
+        ],
+        "convergence": {"converged": True, "achieved": 7.4e-07, "threshold": 1e-06},
+    }, indent=1),
+    "experiments/demo/SUMMARY.md": "attempt one\n",
+}
+def test_run_checks_tells_an_observer_and_decides_nothing_by_it():
+    """L3: ``run_checks(on_check=...)`` is additive — started/finished per
+    check with the finding count — and the result is identical without it.
+    Mutation: make the observer's presence skip a check and the two results
+    differ."""
+    from crossaudit.dcl import run_checks
+
+    files = {"experiments/demo/results.json": b'{"quantities": [{"name": "x", "value": 1, "unit": "m", "source": "a@b"}], "convergence": {"converged": true, "achieved": 1e-7, "threshold": 1e-6}}'}
+    seen: list[tuple[str, str, int]] = []
+    observed = run_checks(files, ["schema", "units"],
+                          on_check=lambda *row: seen.append(row))
+    silent = run_checks(files, ["schema", "units"])
+    assert [row[:2] for row in seen] == [("schema", "started"), ("schema", "finished"),
+                                         ("units", "started"), ("units", "finished")]
+    assert all(isinstance(row[2], int) for row in seen)
+    assert observed.as_dict() == silent.as_dict()
+
+
+def test_events_run_from_submit_to_verdict_in_the_owner_facing_order(
+        science, cfg, monkeypatch):
+    """(b) One build, providers stubbed: the journal-bound event order is
+    goal → round_started → generation_started → preparing → prompt_ready →
+    generation_chunk… → generation_completed → audit_started → check_* →
+    auditor_reading → audit_passed, and every narrated line is concise.
+    (received → routed precede these on the intake; see the HTTP tests.)
+
+    Mutation: drop the ``preparing`` emit in run_loop and the order assertion
+    fails; route a check event through ``provider_recovery`` and the kinds
+    list loses ``check_finished``.
+    """
+    from crossaudit import generator as generator_mod
+    from crossaudit.auditor import run as audit_run
+    from crossaudit.cli import build as build_mod
+    from crossaudit.providers.base import Reply, sha256_text
+    PASS_REPLY = {"verdict": "PASS",
+                  "sections_applied": ["CA-DATA-001", "CA-METH-002"],
+                  "findings": []}
+
+    events = []
+    bridge = {}
+
+    def complete_factory(_cfg, _allow_custom, on_event=None, _heartbeat=None):
+        bridge["provider"] = on_event
+
+        def complete(*, system, prompt):
+            on_event.on_chunk("draft text ", {"id": "s", "seq": 0, "done": False})
+            on_event.on_thinking("weighing", {"id": "t", "seq": 0, "done": False})
+            on_event.on_thinking("", {"id": "t", "seq": 1, "done": True, "outcome": "complete"})
+            on_event.on_chunk("", {"id": "s", "seq": 1, "done": True, "outcome": "complete"})
+            return Reply("ok", "id", "a" * 64, "b" * 64)
+        return complete
+
+    def fake_generate(**kwargs):
+        kwargs["complete"](system="s", prompt="p")
+        return generator_mod.Work(summary="attempt", files=GOOD_INCREMENT)
+
+    def auditor_complete(_cfg, _role, _primary, *, system, prompt, **_kw):
+        text = json.dumps(PASS_REPLY)
+        return Reply(text, "audit-id", sha256_text(system + "\n" + prompt),
+                     sha256_text(text), raw={})
+
+    monkeypatch.setattr(build_mod, "_generator_complete", complete_factory)
+    monkeypatch.setattr(build_mod.gen_mod, "generate", fake_generate)
+    monkeypatch.setattr(audit_run.provider_resilience, "complete", auditor_complete)
+    monkeypatch.chdir(science)
+    from crossaudit.config import load
+    cfg.path.write_text(cfg.path.read_text(encoding="utf-8")
+                        + "scope:\n  dirs: [experiments]\n", encoding="utf-8")
+    cfg = load(cfg.path)
+    code = build_mod.run_loop(cfg, "produce the experiment", on_event=events.append)
+    assert code == 0, [(e.kind, e.text) for e in events][-4:]
+
+    kinds = [event.kind for event in events]
+    expected = ["goal", "round_started", "generation_started", "preparing",
+                "prompt_ready", "generation_chunk", "thinking_chunk",
+                "generation_completed", "audit_started", "check_started",
+                "check_finished", "auditor_reading", "audit_passed"]
+    positions = [kinds.index(kind) for kind in expected]
+    assert positions == sorted(positions), list(zip(expected, positions))
+    assert kinds.count("check_started") == len(cfg.checks)
+    assert kinds.count("check_finished") == len(cfg.checks)
+
+    from crossaudit.console.progress import PHASE_KINDS, phase_i18n
+    narrated = [event for event in events if event.kind in PHASE_KINDS]
+    assert narrated, "no phase narration reached the journal"
+    for event in narrated:
+        assert len(event.text) <= 60, event.text
+        assert phase_i18n(event.text)["zh"] != event.text, event.text
+        assert not any(token in event.text for token in (":claude", ":gpt", "CA-")), event.text
+    assert any(event.text.endswith("check passed") for event in narrated)
+    assert any(event.text.startswith("The auditor is reading") for event in narrated)

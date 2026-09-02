@@ -172,12 +172,17 @@ def describe(names: list[str]) -> str:
 def run_checks(files: Mapping[str, bytes], names: list[str],
                notes: list[str] | None = None,
                plugins: list[str] | None = None,
-               context: CheckContext | None = None) -> CheckResult:
+               context: CheckContext | None = None,
+               on_check=None) -> CheckResult:
     """Run the named checks. An unknown name denies rather than being skipped.
 
     A check registered with ``wants_context=True`` is called ``fn(files, ctx)``;
     every other check stays ``fn(files)``. ``context`` is optional and defaults to
     an empty ``CheckContext``, so existing callers are unaffected.
+
+    ``on_check`` (D150, additive, default None) is told ``(name, "started",
+    0)`` before each check runs and ``(name, "finished", n_findings)`` after;
+    it observes and never decides — the result is the same with or without it.
     """
     from . import builtin, neutral, provenance  # noqa: F401  (registration on import)
     from .plugins import load_allowed
@@ -191,8 +196,12 @@ def run_checks(files: Mapping[str, bytes], names: list[str],
                          started=scope_started(files))
     for name in names:
         fn = _REGISTRY[name]
+        if on_check is not None:
+            on_check(name, "started", 0)
         findings = fn(files, ctx) if _WANTS_CONTEXT.get(name) else fn(files)
         result.findings.extend(replace(f, check=name) for f in findings)
+        if on_check is not None:
+            on_check(name, "finished", len(findings))
     # Final office documents are opaque containers, so this integrity boundary
     # is mandatory rather than a project-selectable quality rule.
     from . import documents

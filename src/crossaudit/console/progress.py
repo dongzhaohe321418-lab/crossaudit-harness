@@ -103,28 +103,22 @@ STILL_WORKING_ZH = {
     "reviewing": "仍在审阅",
 }
 
-#: Deterministic checks named in words. A plugin or future check falls back to
-#: its configured name, which is a word, not an id.
-CHECK_WORDS = {
-    "schema": ("Schema", "结构"),
-    "units": ("Units", "单位"),
-    "convergence": ("Convergence", "收敛"),
-    "provenance": ("Provenance", "来源"),
-    "parseable": ("Parseable", "可解析"),
-    "source_provenance": ("Source provenance", "来源出处"),
-    "documents": ("Document integrity", "文档完整性"),
+#: The Chinese form of each check word the auditor narrates (auditor.run
+#: CHECK_NAMES is the English source; a word missing here stays English, and
+#: the parity test below the catalogue is what notices).
+CHECK_WORDS_ZH = {
+    "Schema": "结构",
+    "Units": "单位",
+    "Convergence": "收敛",
+    "Provenance": "来源",
+    "Parseable": "可解析",
+    "Source provenance": "来源出处",
+    "Document integrity": "文档完整性",
 }
 
 
-def check_words(name: str) -> tuple[str, str]:
-    return CHECK_WORDS.get(name, (name.replace("_", " "), name.replace("_", " ")))
-
-
 def _zh_check(word: str) -> str:
-    for en, zh in CHECK_WORDS.values():
-        if en == word:
-            return zh
-    return word
+    return CHECK_WORDS_ZH.get(word, word)
 
 
 PHASE_PATTERNS_ZH = (

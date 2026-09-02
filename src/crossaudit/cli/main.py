@@ -1666,12 +1666,16 @@ def cmd_run(args: argparse.Namespace) -> int:
     # Additive: the build loop's repair screen hands its cautions to the audit
     # as notes (repair_guard); a manual `crossaudit run` has none.
     notes = [*notes, *getattr(args, "extra_notes", ())]
+    # The build loop hands its narration handle in as ``on_step`` (recovery
+    # lines, and under D150 the check/reading phase lines); the verb run by a
+    # person has none, and the audit is the same either way.
     outcome = run_audit(cfg=cfg, sha=sha, round_=cycle["round"], files=files, notes=notes,
                         constitution=const_text, constitution_commit=const_commit,
                         task=task,
                         offline=offline,
                         allow_custom_endpoint=_allow_custom(args),
-                        retention="sealed")
+                        retention="sealed",
+                        on_event=getattr(args, "on_step", None))
     hard = outcome.dcl["total_hard_failures"]
     _done("clean" if hard == 0 else f"{hard} hard failure(s)")
     if not offline:

@@ -37,6 +37,23 @@ from . import prompt as prompt_mod
 from .authority import decide_authority, records_from_audit
 from .validate import known_rules, parse_reply, validate_reply
 
+#: Deterministic checks named in words for the phase narration (D150). A
+#: plugin or future check falls back to its configured name — a word, not an
+#: id. The console maps these English words to Chinese; one list, here.
+CHECK_NAMES = {
+    "schema": "Schema",
+    "units": "Units",
+    "convergence": "Convergence",
+    "provenance": "Provenance",
+    "parseable": "Parseable",
+    "source_provenance": "Source provenance",
+    "documents": "Document integrity",
+}
+
+
+def check_words(name: str) -> str:
+    return CHECK_NAMES.get(name, name.replace("_", " "))
+
 
 @dataclass
 class AuditOutcome:
@@ -233,7 +250,24 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
         from ..dcl.framework import CheckContext
         from ..receipt.sources import governed_source_ids
         ctx = CheckContext(governed_source_ids=governed_source_ids(cfg))
-    dcl = run_checks(files, cfg.checks, notes, cfg.plugins, context=ctx).as_dict()
+    # D150: phase narration rides the same handle the recovery callback uses
+    # (``on_event.narrate``); absent for the CLI verbs, present under a run.
+    narrate = getattr(on_event, "narrate", None)
+
+    def on_check(name: str, status: str, count: int) -> None:
+        if narrate is None:
+            return
+        word = check_words(name)
+        if status == "started":
+            narrate("check_started", f"Running the {word} check")
+        elif count == 0:
+            narrate("check_finished", f"{word} check passed")
+        else:
+            narrate("check_finished", f"{word} check found {count} issue"
+                    + ("" if count == 1 else "s"))
+
+    dcl = run_checks(files, cfg.checks, notes, cfg.plugins, context=ctx,
+                     on_check=on_check).as_dict()
     from ..broker.routing import evidence_view
     prompt, bounded, prompt_sha = prompt_mod.build(
         constitution, constitution_commit, dcl, files, task,
@@ -250,6 +284,9 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
         ok, why = heterogeneity(cfg)
         if not ok and cfg.generator_vendor:
             raise ConfigDenial(why)                   # a same-vendor pair is not CrossAudit
+        if narrate is not None:
+            narrate("auditor_reading", f"The auditor is reading {len(files)} file"
+                    + ("" if len(files) == 1 else "s"))
         try:
             raw = provider_resilience.complete(
                 cfg, "auditor", cfg.auditor, system=prompt_mod.SYSTEM,
