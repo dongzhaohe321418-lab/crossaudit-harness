@@ -452,7 +452,13 @@ def test_role_selection_rejects_a_same_vendor_pair(tmp_path: Path):
     assert ok is True and "anthropic" in why
 
     denied, reason = heterogeneity(_cfg("openai", "openai"))
-    assert denied is False and "I1" in reason
+    # The sentence is the one a person reads in the CLI and the console's
+    # project controls: what to do first, the technical detail (which vendor
+    # overlaps) second, and the invariant's name (I1) nowhere in it.
+    assert denied is False
+    assert reason.startswith("The generator and the auditor must use different providers")
+    assert "Project controls" in reason and "overlap at openai" in reason
+    assert "I1" not in reason
 
 
 def test_unknown_or_custom_origin_never_masquerades_as_independent():

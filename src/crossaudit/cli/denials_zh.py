@@ -1178,10 +1178,14 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "{} 针对 {} 个产物被提出；请指定其中一个：{}"),
     ("name the finding to dispute by its rule id: {}", "请用规则 id 指定要申辩的发现：{}"),
     # ------------------------------------------ config.py heterogeneity (variable)
-    ("generator vendor not declared: I1 cannot be asserted from config",
-     "未声明生成者厂商：无法从配置断言 I1"),
-    ("I1 violated: generator and auditor recovery pools overlap at {}",
-     "违反 I1：生成者与审计者的恢复池在 {} 处重叠"),
+    ("the generator's provider is not declared, so independent review cannot be "
+     "asserted; choose one in Project controls",
+     "未声明生成者的供应商，因此无法断言独立审查；请在项目控制里选择一个"),
+    ("The generator and the auditor must use different providers — independent review "
+     "is the core of the protocol. Change one of them in Project controls. Their routes "
+     "overlap at {}.",
+     "生成者与审计者必须使用不同的供应商——独立审查是协议的核心。请在项目控制里更改其中一个。"
+     "两者的路由在 {} 处重叠。"),
     # ------------------------------------------ connections.py (variable)
     ("that provider login method is not supported", "不支持该供应商的登录方式"),
     ("Official ChatGPT subscription sign-in is available through the bundled Codex "
