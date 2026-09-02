@@ -171,6 +171,10 @@ def _render(cases: list[dict]) -> dict[str, str]:
         _extract_fn("const t = value =>") + ";",
         _extract_fn("function turn(m,d)"),
         _extract_fn("function runCard(d)"),
+        # Round 3: the run card reads elapsed time and event details in words.
+        _extract_fn("function durationText(seconds)"),
+        _extract_fn("function elapsedText(seconds)"),
+        _extract_fn("function humaniseDetail(text)"),
         f"const CASES = {json.dumps(cases, ensure_ascii=False)};",
         """
 const out = {};
