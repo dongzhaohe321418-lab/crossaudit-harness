@@ -1105,7 +1105,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         _emit(out, args.json,
               "SIGNATURE INVALID  the receipt or its signature was altered; "
               "refusing to admit")
-        return EXIT_DENIED
+        return EXIT_INTEGRITY
     if args.admit:
         out.update(admit_receipt(receipt, _state(cfg), evidence, cfg=cfg))
     sig_line = ("\nSIGNED  " + sig["keyid"] + "  verifiable offline with the "
