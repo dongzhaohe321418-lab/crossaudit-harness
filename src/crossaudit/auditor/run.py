@@ -152,9 +152,11 @@ def render_report(*, cfg: Config, sha: str, round_: int, verdict: str, dcl: dict
         f"| deterministic layer | {dcl['total_hard_failures']} hard failure(s) |",
     ]
     if authority:
-        # verify() binds the route row to the receipt's authority block.
-        lines += [f"| evidence policy | `{authority['policy_version']}` |",
-                  f"| evidence route | **{authority['route']}** |"]
+        # verify() binds this row to the receipt's authority block, mapping the
+        # plain words back to the route name; the policy version stays in the
+        # receipt, where a verifier reads it, and out of the report.
+        from .authority import ROUTE_LABELS
+        lines += [f"| evidence route | **{ROUTE_LABELS[authority['route']]}** |"]
     lines += [
         "",
         "## Deterministic findings",
@@ -205,7 +207,8 @@ def render_report(*, cfg: Config, sha: str, round_: int, verdict: str, dcl: dict
         lines += [str(sentence) for sentence in authority.get("rationale", ())]
         rows = authority.get("evidence") or []
         if rows:
-            lines += ["", "| finding | artifact | tier | verified |", "|---|---|---|---|"]
+            lines += ["", "| finding | artifact | tier | verified by a check |",
+                      "|---|---|---|---|"]
             for row in rows:
                 verified = "yes" if row.get("state") == CONFIRMED else "no"
                 lines.append(f"| {row['finding_key'].split('@', 1)[0]} | "
