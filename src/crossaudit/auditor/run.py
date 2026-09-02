@@ -7,8 +7,15 @@ a clean, valid, model-backed PASS lands somewhere other than PASS (I8):
     DCL hard failure           -> BLOCKED    (dominates any model opinion)
     invalid or failed audit    -> ESCALATE
     prompt bound exceeded      -> ESCALATE   (the model did not see everything)
+    unstarted scope            -> ESCALATE   (NOTHING_AUDITED: an empty scope is not clean)
     no model ran               -> DCL_ONLY   (never a conforming PASS)
     otherwise                  -> the model's own verdict
+    lone model BLOCKER         -> BLOCKED by default (bounded revision, recorded as
+                                  unverified); ESCALATE under
+                                  authority.lone_model_blocker: escalate
+
+The evidence-authority layer (authority.py) runs AFTER the ladder and derives
+from its result; it changes the verdict only under that opt-in dial.
 """
 from __future__ import annotations
 
@@ -16,7 +23,7 @@ import hashlib
 import json
 import sys
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..config import Config, Role, heterogeneity
@@ -27,6 +34,7 @@ from ..providers.registry import NON_EVIDENTIAL
 from ..runtime.runs import PROVIDER_WAIT_CATEGORIES
 from ..usage import record_completion
 from . import prompt as prompt_mod
+from .authority import decide_authority, records_from_audit
 from .validate import known_rules, parse_reply, validate_reply
 
 
@@ -40,6 +48,9 @@ class AuditOutcome:
     exchange: dict
     prompt_sha256: str
     report: str
+    #: The evidence-authority record (authority.py); empty when an outcome is
+    #: constructed by hand, so every existing construction keeps working.
+    authority: dict = field(default_factory=dict)
 
 
 def finding_states(dcl: dict, model_reply: dict | None) -> list[dict]:
@@ -118,7 +129,8 @@ def render_report(*, cfg: Config, sha: str, round_: int, verdict: str, dcl: dict
                   reply: dict | None, invalid: str | None, constitution_commit: str,
                   provider: str, model: str, vendor: str | None = None,
                   reasoning_effort: str | None = None,
-                  provider_failure: str | None = None) -> str:
+                  provider_failure: str | None = None,
+                  authority: dict | None = None) -> str:
     lines = [
         f"# Audit Report — {cfg.science_repo}@{sha[:12]}",
         "",
@@ -130,6 +142,12 @@ def render_report(*, cfg: Config, sha: str, round_: int, verdict: str, dcl: dict
         (f"| auditor | `{provider}:{model}` (vendor {vendor or cfg.auditor.vendor}; effort "
          f"{reasoning_effort or 'provider-default'}) |"),
         f"| deterministic layer | {dcl['total_hard_failures']} hard failure(s) |",
+    ]
+    if authority:
+        # verify() binds the route row to the receipt's authority block.
+        lines += [f"| evidence policy | `{authority['policy_version']}` |",
+                  f"| evidence route | **{authority['route']}** |"]
+    lines += [
         "",
         "## Deterministic findings",
         "",
@@ -173,6 +191,20 @@ def render_report(*, cfg: Config, sha: str, round_: int, verdict: str, dcl: dict
         lines += [f"Rules applied: {', '.join(reply.get('sections_applied', []))}", ""]
     else:
         lines += ["No model audit ran; this is a deterministic-tier result only.", ""]
+    if authority:
+        from ..dcl.framework import CONFIRMED
+        lines += ["## Evidence", ""]
+        lines += [str(sentence) for sentence in authority.get("rationale", ())]
+        rows = authority.get("evidence") or []
+        if rows:
+            lines += ["", "| finding | artifact | tier | verified |", "|---|---|---|---|"]
+            for row in rows:
+                verified = "yes" if row.get("state") == CONFIRMED else "no"
+                lines.append(f"| {row['finding_key'].split('@', 1)[0]} | "
+                             f"{row['artifact']} | {row['tier']} | {verified} |")
+        else:
+            lines += ["", "No finding was raised by either tier."]
+        lines.append("")
     return "\n".join(lines)
 
 
@@ -201,6 +233,7 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
     integrity = "OK"
     exchange: dict = {"mode": "none"}
     actual = cfg.auditor
+    model_decided = False
 
     if not offline:
         ok, why = heterogeneity(cfg)
@@ -278,6 +311,7 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
         integrity = "BOUNDS_EXCEEDED"
     elif reply:
         verdict = reply["verdict"]
+        model_decided = True
     else:
         # No model opinion exists (offline, or the provider failed with the
         # deterministic tier already decisive): a deterministic-tier result,
@@ -288,13 +322,31 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
         # A fixture is not an audit; it may exercise the loop, never bless a commit.
         integrity = "NON_EVIDENTIAL_PROVIDER"
 
+    # Evidence authority (D148): derive the route and the evidence partition
+    # from the ladder's verdict. Under the default dial this returns the verdict
+    # unchanged; only `authority.lone_model_blocker: escalate` can move a
+    # model-only BLOCKED to ESCALATE.
+    records = records_from_audit(
+        dcl, reply, provider=actual.provider, model=actual.model,
+        vendor=actual.vendor, dcl_digest=dcl_source_digest(),
+        prompt_sha256=prompt_sha)
+    decision = decide_authority(
+        records, verdict=verdict, integrity=integrity,
+        escalation_lock=escalation_lock,
+        scope_started=bool(dcl.get("scope_started", True)),
+        model_decided=model_decided,
+        lone_model_blocker=cfg.authority.lone_model_blocker)
+    verdict = decision.workflow_verdict
+    authority = decision.as_dict()
+
     report = render_report(cfg=cfg, sha=sha, round_=round_, verdict=verdict, dcl=dcl,
                            reply=reply, invalid=invalid,
                            constitution_commit=constitution_commit,
                            provider=actual.provider, model=actual.model,
                            vendor=actual.vendor,
                            reasoning_effort=actual.reasoning_effort,
-                           provider_failure=provider_failure)
+                           provider_failure=provider_failure,
+                           authority=authority)
     return AuditOutcome(verdict=verdict, dcl=dcl, model_reply=reply,
                         invalid_reason=invalid, integrity=integrity, exchange=exchange,
-                        prompt_sha256=prompt_sha, report=report)
+                        prompt_sha256=prompt_sha, report=report, authority=authority)

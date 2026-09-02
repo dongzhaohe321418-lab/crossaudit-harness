@@ -22,7 +22,7 @@ ISOLATION_DIMS = ("parametric", "contextual", "permissive")
 
 _ALLOWED_TOP = {"version", "science_repo", "audit_repo", "constitution", "max_rounds",
                 "auditor", "generator", "isolation", "state", "ledger", "scope",
-                "checks", "plugins", "resilience", "budgets"}
+                "checks", "plugins", "resilience", "budgets", "authority"}
 _ALLOWED_ROLE = {"provider", "model", "base_url", "key_env", "vendor",
                  "reasoning_effort", "fallbacks"}
 _ALLOWED_GENERATOR = _ALLOWED_ROLE | {"streaming"}
@@ -70,6 +70,17 @@ class Budgets:
 
 
 @dataclass(frozen=True)
+class AuthorityPolicy:
+    """How a blocking finding only the model raised is routed (D148).
+
+    ``block`` (default): bounded automatic revision, recorded as unverified.
+    ``escalate``: a person decides at round one; no patch is requested for it.
+    """
+
+    lone_model_blocker: str = "block"
+
+
+@dataclass(frozen=True)
 class Config:
     path: Path
     science_repo: str
@@ -93,6 +104,7 @@ class Config:
     generator_fallbacks: tuple[Role, ...] = ()
     resilience: Resilience = field(default_factory=Resilience)
     budgets: Budgets = field(default_factory=Budgets)
+    authority: AuthorityPolicy = field(default_factory=AuthorityPolicy)
 
     @property
     def root(self) -> Path:
@@ -302,6 +314,20 @@ def load(path: Path | None = None) -> Config:
             budgets.monthly_cost_warning_usd > budgets.monthly_cost_limit_usd):
         raise ConfigDenial("monthly cost warning cannot exceed the hard limit", file=str(p))
 
+    authority_raw = raw.get("authority") or {}
+    if not isinstance(authority_raw, dict):
+        raise ConfigDenial("authority must be a mapping", file=str(p))
+    if set(authority_raw) - {"lone_model_blocker"}:
+        raise ConfigDenial(
+            f"authority: unknown keys {sorted(set(authority_raw) - {'lone_model_blocker'})}",
+            file=str(p))
+    lone_model_blocker = authority_raw.get("lone_model_blocker", "block")
+    if lone_model_blocker not in ("block", "escalate"):
+        raise ConfigDenial(
+            "authority.lone_model_blocker must be 'block' (bounded revision, the "
+            "default) or 'escalate' (a person decides at round one)", file=str(p))
+    authority = AuthorityPolicy(lone_model_blocker=lone_model_blocker)
+
     return Config(
         path=p,
         science_repo=raw["science_repo"],
@@ -325,6 +351,7 @@ def load(path: Path | None = None) -> Config:
         generator_fallbacks=generator_fallbacks,
         resilience=resilience,
         budgets=budgets,
+        authority=authority,
     )
 
 
