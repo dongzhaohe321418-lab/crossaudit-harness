@@ -68,3 +68,20 @@ def render(worktree: pathlib.Path, rows: dict) -> dict:
     out = subprocess.run(["node", "-e", js], text=True, capture_output=True)
     assert out.returncode == 0, out.stderr
     return json.loads(out.stdout)
+
+
+def eval_page(worktree: pathlib.Path, signatures: list[str], body: str,
+              prelude: str = "") -> str:
+    """Run `body` under node with the shipped catalogue, `esc`, and the page
+    functions named by `signatures` (each a `function name(` prefix) in scope.
+    `prelude` may define stubs the functions expect. Returns stdout."""
+    src = (worktree / "src/crossaudit/console/page.py").read_text()
+    script = src.split("<script>")[1].split("</script>")[0]
+    esc = script[script.index("const esc = s =>"):]
+    esc = esc[:esc.index(";\n") + 1]
+    parts = [shipped_js(worktree), esc, prelude]
+    parts += [_extract(script, sig) for sig in signatures]
+    js = "\n".join(parts) + "\n" + body
+    out = subprocess.run(["node", "-e", js], text=True, capture_output=True)
+    assert out.returncode == 0, out.stderr
+    return out.stdout

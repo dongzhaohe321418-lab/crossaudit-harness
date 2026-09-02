@@ -695,7 +695,15 @@ def snapshot(cfg: Config) -> dict:
     known_chats = {str(row.get("chat_id", ""))
                    for row in (*gen_stream, *aud_stream, *cycles)
                    if row.get("chat_id")}
-    chat_state = chats.snapshot(cfg, known_chats)
+    # When each chat's evidence last moved, so a recovered thread is dated by
+    # its newest commit, report or cycle event — never by this snapshot.
+    last_seen: dict[str, int] = {}
+    for row in (*gen_stream, *aud_stream, *cycles):
+        chat_id = str(row.get("chat_id", "") or "")
+        when = int(row.get("t") or row.get("updated") or 0)
+        if chat_id and when > last_seen.get(chat_id, 0):
+            last_seen[chat_id] = when
+    chat_state = chats.snapshot(cfg, known_chats, last_seen=last_seen)
     for row in chat_state["items"]:
         related = [cycle for cycle in cycles if cycle["chat_id"] == row["id"]]
         row["cycles"] = len(related)

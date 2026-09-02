@@ -2714,7 +2714,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
     <div class="decision-flag" id="resolution-flag">Automatic loop paused</div>
     <h1 id="resolution-title">The audit needs your decision</h1>
     <p id="resolution-summary">CrossAudit stopped safely. Nothing will continue or be admitted until you decide.</p></div>
-    <span class="spacer"></span><button type="button" class="icon-button" id="close-resolution" aria-label="Review later" title="Review later">×</button></header>
+    <span class="spacer"></span><button type="button" class="icon-button" id="decision-locale" aria-label="Switch to Chinese" title="Switch language">中文</button><button type="button" class="icon-button" id="close-resolution" aria-label="Review later" title="Review later">×</button></header>
     <input type="hidden" id="resolution-cycle"><input type="hidden" id="resolution-action">
     <section class="decision-block"><div class="decision-label">Goal</div>
       <p class="decision-goal" id="resolution-goal">The task this conversation asked for.</p></section>
@@ -3177,7 +3177,8 @@ const ZH={
   "Retry the same task now, review the model connection first, or stop this task.":"立即重试同一任务、先检查模型连接，或停止此任务。",
   "Retry provider":"重试供应商","Use the current connection and rerun the original task.":"使用当前连接重新运行原任务。",
   "Review provider connection":"检查供应商连接","Change model or fallback":"更改模型或备用路由","Retry provider now":"立即重试供应商","Provider retry started.":"供应商重试已开始。",
-  "Waiting for provider":"等待 provider","waiting for provider":"等待 provider","stalled":"已停滞",
+  "Waiting for the provider":"等待供应商","waiting for provider":"等待供应商","stalled":"已停滞","just now":"刚刚",
+  "Needs your decision · later round":"需要你决定 · 更晚的一轮",
   "no heartbeat was ever recorded for this run":"此任务从未记录过心跳",
   "The original task is running again; live progress will appear here.":"原任务已重新运行；实时进度会显示在这里。",
   "Retry note (optional)":"重试备注（可选）","Optional note for the audit ledger.":"可选：为审计账本添加备注。",
@@ -3501,7 +3502,7 @@ const ZH={
   "Creating the local project":"正在创建本地项目",
   "No API key is stored for this provider yet.":"尚未为此提供方保存 API 密钥。",
   "The key authenticated but exposes no compatible models.":"密钥通过了验证，但没有可用的兼容模型。",
-  "A human generator has no model settings.":"人工生成端没有模型设置。",
+  "A human generator has no model settings.":"人工生成者没有模型设置。",
   "Sample role — no model runs in the local demo.":"示例角色——本地演示不会运行任何模型。",
   "current project model":"当前项目模型",
   "GitHub authorization timed out":"GitHub 授权超时",
@@ -3698,7 +3699,7 @@ const ZH_PATTERNS=[
   [/^reading (\d+) owner message\(s\)$/,m=>'正在读取 '+m[1]+' 条所有者补充信息'],
   [/^queued as owner guidance for the running build \(#(\d+)\); it will be read at the next round$/,m=>'已作为所有者补充信息排队（第 '+m[1]+' 位），将在下一轮读取'],
   [/^(\d+) queued$/,m=>m[1]+' 条排队中'],
-  [/^generator provider failure in round (\d+): (.+)$/,m=>'生成端在第 '+m[1]+' 轮失败：'+m[2]],
+  [/^generator provider failure in round (\d+): (.+)$/,m=>'生成者在第 '+m[1]+' 轮失败：'+m[2]],
   [/^the generator returned malformed file blocks: (.+)$/,m=>'生成者返回了格式错误的文件块：'+m[1]],
   [/^the selected PASS is not ready for admission: (.+)$/,m=>'所选 PASS 尚不满足准入条件：'+m[1]],
   [/^the selected PASS receipt is missing — (.+)$/,m=>'所选 PASS 的收据缺失——'+m[1]],
@@ -3757,9 +3758,13 @@ const ZH_PATTERNS=[
   ,[/^(\d+) findings?$/i,m=>m[1]+' 项发现']
   ,[/^(\d+) deterministic checks? passed$/i,m=>m[1]+' 项确定性检查已通过']
   ,[/^(\d+) files$/i,m=>m[1]+' 个文件']
-  ,[/^Waiting for provider · heartbeat (\d+)s ago$/i,m=>'等待 provider · 心跳 '+m[1]+' 秒前']
-  ,[/^last heartbeat (\d+)s ago$/i,m=>'最后心跳 '+m[1]+' 秒前']
-  ,[/^no heartbeat for (\d+)s$/i,m=>'已 '+m[1]+' 秒无心跳']
+  ,[/^Waiting for the provider · heartbeat (.+)$/,m=>'等待供应商 · 心跳 '+zhValue(m[1])]
+  ,[/^last heartbeat (.+)$/,m=>'最后心跳 '+zhValue(m[1])]
+  ,[/^no heartbeat for (.+)$/,m=>'已 '+zhValue(m[1])+'无心跳']
+  ,[/^(\d+) min ago$/,m=>m[1]+' 分钟前'],[/^(\d+) h ago$/,m=>m[1]+' 小时前'],[/^(\d+) days? ago$/,m=>m[1]+' 天前']
+  ,[/^(\d+) s$/,m=>m[1]+' 秒'],[/^(\d+) min$/,m=>m[1]+' 分钟'],[/^(\d+) h$/,m=>m[1]+' 小时']
+  ,[/^(\d+)m (\d+)s elapsed$/,m=>'已运行 '+m[1]+' 分 '+m[2]+' 秒'],[/^(\d+)h (\d+)m elapsed$/,m=>'已运行 '+m[1]+' 小时 '+m[2]+' 分']
+  ,[/^(.+) · round (\d+)$/,m=>zhValue(m[1])+' · 第 '+m[2]+' 轮']
   ,[/^(\d+)([mhd])$/,m=>m[1]+({m:' 分钟前',h:' 小时前',d:' 天前'})[m[2]]]
   ,[/^The local demo could not be prepared: (.+?)( — you can still create or import a project\.)?$/i,m=>'无法准备本地演示：'+m[1]+(m[2]?'——你仍可以创建或导入项目。':'')]
   ,[/^L(\d) (infer|read|write|command|network|high-impact|destructive)$/,m=>'L'+m[1]+' '+(({infer:'推断',read:'读取',write:'写入',command:'命令',network:'网络','high-impact':'高影响',destructive:'破坏性'})[m[2]]||m[2])]
@@ -3854,7 +3859,10 @@ function localizeTree(root){if(root.nodeType===Node.TEXT_NODE){renderLocaleText(
   if(root.nodeType===Node.ELEMENT_NODE)renderLocaleAttributes(root);const walker=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT);
   while(walker.nextNode()){const node=walker.currentNode;if(node.nodeType===Node.TEXT_NODE)renderLocaleText(node);else renderLocaleAttributes(node);}}
 function applyLocale(locale,remember=true){currentLocale=locale==='zh'?'zh':'en';document.documentElement.lang=currentLocale==='zh'?'zh-CN':'en';
-  for(const id of ['locale-toggle','hub-locale']){const button=document.getElementById(id);button.textContent=currentLocale==='zh'?'EN':'中文';
+  // decision-locale: the Decision Center makes the shell inert (setDecidingInert),
+  // so the top bar toggle is unreachable while a card is open; the card header
+  // carries its own, the same control under a third id.
+  for(const id of ['locale-toggle','hub-locale','decision-locale']){const button=document.getElementById(id);if(!button)continue;button.textContent=currentLocale==='zh'?'EN':'中文';
     button.setAttribute('aria-label',currentLocale==='zh'?'切换到英文':'Switch to Chinese');button.title=currentLocale==='zh'?'切换到英文':'Switch language';}
   localizeTree(document.body);if(remember){try{localStorage.setItem(LOCALE_KEY,currentLocale);}catch(e){}
     document.cookie=LOCALE_COOKIE+'='+encodeURIComponent(currentLocale)+'; Path=/; Max-Age=31536000; SameSite=Strict';}
@@ -3869,6 +3877,7 @@ const localeObserver=new MutationObserver(records=>{for(const record of records)
 localeObserver.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label']});
 document.getElementById('locale-toggle').onclick=()=>applyLocale(currentLocale==='zh'?'en':'zh');
 document.getElementById('hub-locale').onclick=document.getElementById('locale-toggle').onclick;
+document.getElementById('decision-locale').onclick=document.getElementById('locale-toggle').onclick;
 applyLocale(storedLocale()==='zh'?'zh':'en',false);
 // SPEC-9 §2.1 — one polite region for the whole console, written IN PLACE.
 // Progress-class changes call this with a SENTENCE, never a value: a live
@@ -4009,9 +4018,21 @@ const expandedReviews = new Set();
 let lastPillKey = '';
 let handoffDirection = '';
 let handoffAt = 0;
-function ago(t){if(!t)return '';const s=Math.max(0,Date.now()/1000-Number(t));
-  if(s<60)return 'now';if(s<3600)return Math.floor(s/60)+'m';
-  if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';}
+// Relative time in words. Every relative age or duration a person reads goes
+// through one of these three, in English; the catalogue turns each shape into
+// Chinese by pattern. A raw seconds count ("205214s ago") is never rendered.
+function relAge(seconds){const s=Math.max(0,Math.floor(Number(seconds)||0));
+  if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+' min ago';
+  if(s<86400)return Math.floor(s/3600)+' h ago';const d=Math.floor(s/86400);return d+(d===1?' day ago':' days ago');}
+function durationText(seconds){const s=Math.max(0,Math.floor(Number(seconds)||0));
+  if(s<60)return s+' s';if(s<3600)return Math.floor(s/60)+' min';return Math.floor(s/3600)+' h';}
+function elapsedText(seconds){const s=Math.max(0,Math.floor(Number(seconds)||0));
+  if(s<60)return s+'s elapsed';if(s<3600)return Math.floor(s/60)+'m '+(s%60)+'s elapsed';
+  return Math.floor(s/3600)+'h '+Math.floor(s%3600/60)+'m elapsed';}
+// The runtime writes "no heartbeat for 205214s" into an event detail; read it
+// back in words before it reaches the screen.
+function humaniseDetail(text){const m=/^no heartbeat for (\d+)s$/.exec(String(text||''));return m?'no heartbeat for '+durationText(m[1]):text;}
+function ago(t){if(!t)return '';return relAge(Date.now()/1000-Number(t));}
 const USER_STATES={DRAFT:'understand',QUEUED:'understand',GENERATING:'work',
   WAITING_FOR_PROVIDER:'work',WAITING_FOR_CAPABILITY:'work',AUDITING:'check',
   REVISING:'revise',PASSED:'done',WAITING_FOR_HUMAN:'decide',
@@ -5877,9 +5898,9 @@ function setStatePill(d){
   const heartbeatAge=p&&p.heartbeat_at?Math.max(0,Math.floor(Date.now()/1000-p.heartbeat_at)):null;
   const lastStep=p&&p.steps&&p.steps.length?p.steps[p.steps.length-1]:null;
   if(p&&p.state==='PROVIDER_UNAVAILABLE'){detail.hidden=false;
-    detail.textContent='Waiting for provider'+(heartbeatAge===null?'':' · heartbeat '+heartbeatAge+'s ago');}
+    detail.textContent='Waiting for the provider'+(heartbeatAge===null?'':' · heartbeat '+relAge(heartbeatAge));}
   else if(lastStep&&lastStep.kind==='run_stalled'&&heartbeatAge!==null&&s&&s.live){
-    detail.hidden=false;detail.textContent='last heartbeat '+heartbeatAge+'s ago';}
+    detail.hidden=false;detail.textContent='last heartbeat '+relAge(heartbeatAge);}
   else if(roundEvent&&s&&s.live){detail.hidden=false;
     detail.textContent='round '+roundEvent.round_no+'/'+roundEvent.round_limit;}
   else{detail.hidden=true;detail.textContent='';}
@@ -5892,6 +5913,22 @@ function setStatePill(d){
     glyph.classList.add('pill-swap');label.classList.add('pill-swap');
   }
 }
+// The decision the review card button opens: the row for THIS cycle first,
+// then one for the same commit, then whatever the chat has open. The card and
+// the banner used to read different lists (the banner every escalation, the
+// card only those filed under the active chat), so a dismissed card could
+// find nothing and open the models panel instead — "does nothing" to a person.
+function decisionRowFor(d,cycleId,sha){const rows=(d&&d.escalations)||[];
+  return rows.find(r=>r.cycle_id===cycleId)||rows.find(r=>sha&&r.sha&&(String(r.sha).startsWith(String(sha))||String(sha).startsWith(String(r.sha))))
+    ||currentEscalations(d).slice(-1)[0]||null;}
+// One line under the round rows when the pending decision is not about the
+// rounds shown: a provider or usage stop, or a later round than the last
+// report. Otherwise "" — the round rows already say it.
+function pendingDecisionLine(row,lastRound){if(!row)return '';
+  const what=row.kind==='provider'?'Waiting for the provider':row.kind==='budget'?'Usage limit reached':'Needs your decision';
+  const round=Number(row.round||0),shown=Number(lastRound||0);
+  if(row.kind!=='provider'&&row.kind!=='budget'&&(!round||round===shown))return '';
+  return what+(round&&round!==shown?' · round '+round:'');}
 function reviewCard(d){
   const cycles=chatCycles(d);if(!cycles.length)return '';
   const cycle=cycles[cycles.length-1];
@@ -5930,6 +5967,8 @@ function reviewCard(d){
   // them passed. That is the same fabrication as the ticks below it: the console
   // is not told which checks ran. The claim is removed rather than restated, and
   // the check list in the detail carries its real state instead.
+  const pending=status==='escalated'?decisionRowFor(d,cycle.id,cycle.sha):null;
+  const pendingLine=pendingDecisionLine(pending,rows.length?rows[rows.length-1].round:cycle.round);
   const checkLines=passed
     ?'<ul class="review-checks"><li>Independent auditor approved the result</li>'
       +'<li>No blocking findings</li>'
@@ -5963,14 +6002,14 @@ function reviewCard(d){
   const actionRow=status==='passed'
     ?'<button type="button" class="review-action" data-admit data-admit-cycle="'+esc(cycle.id)+'">Admit result</button>'
     :status==='escalated'
-    ?'<button type="button" class="review-action" data-open-decisions>Review issues & decide</button>'
+    ?'<button type="button" class="review-action" data-open-decisions="'+esc(cycle.id)+'" data-open-decisions-sha="'+esc(cycle.sha||'')+'">Review issues & decide</button>'
     :'<button type="button" class="review-action" data-open-audits>View audit details</button>';
   return '<section class="review-card'+(open?' open':'')+'" aria-label="Independent review">'
     +'<button type="button" class="review-summary" data-review-toggle="'+esc(cycle.id)+'" aria-expanded="'+(open?'true':'false')+'">'
     +'<div class="review-top"><span class="review-mark" aria-hidden="true"></span><b>Independent review</b>'
     +'<span class="status '+esc(cycle.status)+'">'+esc(statusLabel)+'</span><span class="review-chevron" aria-hidden="true"></span></div>'
     +checkLines
-    +'<div class="review-rounds">'+roundLines+'</div>'
+    +'<div class="review-rounds">'+roundLines+(pendingLine?'<div class="review-round-row review-pending"><span>'+esc(pendingLine)+'</span></div>':'')+'</div>'
     +'</button>'+detail
     +'<div class="review-actions">'+actionRow+'</div></section>';
 }
@@ -6009,7 +6048,7 @@ function runCard(d){
     const mark = system ? '↻' : (actorMarks[s.actor]||'·');
     const who = system ? t('Context reduced') : (actorNames[s.actor]||s.actor);
     const line = system ? localeText(s.text_i18n, s.text) : s.text;
-    const detail = system ? localeText(s.detail_i18n, s.detail) : s.detail;
+    const detail = system ? localeText(s.detail_i18n, s.detail) : humaniseDetail(s.detail);
     return '<div class="audit-event">'
     + '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>'
     + '<div class="event-main"><div class="event-line"><b>' + esc(who)
@@ -6031,7 +6070,7 @@ function runCard(d){
     + esc(outcomeLabel) + '</span>' + stopBtn + '</div><div class="run-task">' + esc(task) + '</div><div class="run-meta">'
     + '<span>Round <strong>' + esc(round) + '</strong> of ' + esc(roundLimit) + '</span>'
     + '<span><strong>' + reached + '</strong> of ' + pipeline.length + ' steps done</span>'
-    + '<span>' + (p ? p.elapsed + 's elapsed' : 'Ledger snapshot') + '</span>'
+    + '<span>' + (p ? elapsedText(p.elapsed) : 'Ledger snapshot') + '</span>'
     + (p&&p.queued&&!p.finished?'<span><strong>'+esc(p.queued)+'</strong> queued</span>':'') + '</div>'
     + '<div class="run-handoff" aria-hidden="true"><i></i></div>'
     + '<div class="run-meter" role="progressbar" aria-label="Audit steps done" aria-valuemin="0" '
@@ -7316,8 +7355,13 @@ function handleActionClick(ev){
     return;}
   if(ev.target.closest('[data-open-artifacts]'))openPanelTab('artifacts');
   if(ev.target.closest('[data-open-audits]'))openPanelTab('audits');
-  if(ev.target.closest('[data-open-decisions]')){
-    const row=lastState&&currentEscalations(lastState).slice(-1)[0];if(row)openResolution(row);else openInspector();
+  const openDecisions=ev.target.closest('[data-open-decisions]');
+  if(openDecisions){
+    const id=openDecisions.getAttribute('data-open-decisions')||'',sha=openDecisions.getAttribute('data-open-decisions-sha')||'';
+    const row=lastState&&decisionRowFor(lastState,id,sha);
+    if(row)openResolution(row);
+    else if(id){expandedReviews.add(id);render(lastState);openPanelTab('audits');}
+    else openInspector();
   }
   if(ev.target.closest('[data-hpc-add]'))openComputeHost();
   if(ev.target.closest('[data-mcp-add]'))openMcp();

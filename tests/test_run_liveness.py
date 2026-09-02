@@ -526,8 +526,8 @@ def test_the_page_carries_the_provider_wait_vocabulary():
     # The parked state feeds the six-state pill and the existing provider
     # escalation pipeline; the remedies themselves are A40 contract strings.
     assert "PROVIDER_UNAVAILABLE:'decide'" in PAGE
-    assert "Waiting for provider" in PAGE
-    assert "等待 provider" in PAGE
+    assert "Waiting for the provider" in PAGE
+    assert "等待供应商" in PAGE
     assert "last heartbeat " in PAGE
     assert "最后心跳 " in PAGE
     assert "run_stalled" in PAGE
