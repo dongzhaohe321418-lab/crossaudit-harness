@@ -3626,6 +3626,9 @@ const ZH={
   ,"Every commit needs an author; without a name and email CrossAudit cannot record audit history.":"每个提交都需要作者；没有姓名和邮箱，CrossAudit 无法记录审计历史。","Another CrossAudit is earlier on your PATH, so typing `crossaudit` in a terminal runs that one instead of this app.":"你的 PATH 中有另一个更靠前的 CrossAudit，因此在终端里输入 `crossaudit` 运行的是那一个，而不是这个应用。"
   ,"This file defines the project's roles, routes, and rules; the project cannot run without it.":"此文件定义项目的角色、路由和规则；缺少它项目无法运行。"
   ,"These are the rules the auditor judges against; an audit cannot run without them.":"这些是审计者据以判定的规则；缺少它们无法进行审计。"
+  // R1–R5 (results & decisions). Plain verdict words, finding details, the
+  // Details record, the forecast line and one copy set per ESCALATE cause.
+  ,"Needs you":"需要你","Checks only":"仅自动检查"
 };
 const ZH_PATTERNS=[
   // D148 repair guard. Every reason is COMPOSED from a path, a count or a
@@ -3756,6 +3759,7 @@ const ZH_PATTERNS=[
   ,[/^(\d+) tasks? needs? your decision$/i,m=>m[1]+' 个任务需要你决定']
   ,[/^round (\d+)\/(\d+)$/i,m=>'第 '+m[1]+'/'+m[2]+' 轮']
   ,[/^(\d+) findings?$/i,m=>m[1]+' 项发现']
+  ,[/^(\d+) issues?$/i,m=>m[1]+' 个问题']
   ,[/^(\d+) deterministic checks? passed$/i,m=>m[1]+' 项确定性检查已通过']
   ,[/^(\d+) files$/i,m=>m[1]+' 个文件']
   ,[/^Waiting for the provider · heartbeat (.+)$/,m=>'等待供应商 · 心跳 '+zhValue(m[1])]
@@ -4728,9 +4732,10 @@ function openResolution(value,action='',sha=''){
   const attemptRows=row.attempts||[];
   document.getElementById('resolution-attempts').innerHTML=attemptRows.map(item=>{
     const word=String(item.verdict||'').toLowerCase();
+    // R1. The verdict word a person reads; the raw word stays as the class.
     return '<div class="decision-attempt"><span class="round-n">round '+esc(item.round)+'</span><span>'
       +esc(item.findings)+' issue'+(item.findings===1?'':'s')+'</span><span class="verdict-word '+esc(word)
-      +'">'+esc(item.verdict)+'</span></div>';}).join('');
+      +'">'+esc(verdictWord(item.verdict))+'</span></div>';}).join('');
   document.getElementById('resolution-goal').textContent=(lastState?titleOf(lastState):'')||'The task this conversation asked for.';
   const issues=row.issues||[];
   document.getElementById('resolution-issue-count').textContent=String(issues.length);
@@ -5778,6 +5783,12 @@ function findingTier(f){
   const text=f.tier==='deterministic'?'Verified by a deterministic check'
     :f.verified?'Raised by the auditor and verified':'Raised by the auditor, not yet reproduced';
   return '<small class="finding-tier'+(f.verified?' verified':'')+'">'+esc(text)+'</small>';}
+// R1. The verdict a person reads. The raw vocabulary (PASS / BLOCKED /
+// ESCALATE / DCL_ONLY) stays in --json, receipts, reports and the inspector;
+// the main surface says what it means. An unknown word passes through.
+const VERDICT_WORDS={PASS:'Passed',PASSED:'Passed',CONSUMED:'Admitted',BLOCKED:'Needs changes',
+  ESCALATE:'Needs you',ESCALATED:'Needs you',DCL_ONLY:'Checks only'};
+function verdictWord(v){const key=String(v||'').toUpperCase();return VERDICT_WORDS[key]||String(v||'');}
 function turn(m,d){
   if(m.kind === 'you'){
     const explicit=m.routing_mode==='explicit';const recipient=m.addressed_to||m.lane;
@@ -5800,7 +5811,7 @@ function turn(m,d){
       + esc(f.observation) + '</p>' + findingTier(f) + '</div>').join('');
     return '<article class="turn audit"><div class="turn-main">'
       + '<div class="turn-meta"><span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b><span class="status ' + esc(m.verdict) + '">'
-      + esc(m.verdict) + '</span><span class="turn-time">' + at(m.t) + '</span></div>'
+      + esc(verdictWord(m.verdict)) + '</span><span class="turn-time">' + at(m.t) + '</span></div>'
       + (fs || '<div class="turn-body">'+(m.verdict==='PASS'?'No findings. The audited increment passed.':'No structured findings were recorded.')+'</div>')
       // F1. What is shown above is the AUDITED report, read from the commit the
       // receipt cites. When the copy on disk says something else the person is
@@ -5960,7 +5971,7 @@ function reviewCard(d){
   const roundLines=(rows.length?rows.map(m=>{
     const count=(m.findings||[]).length;
     return '<div class="review-round-row"><span class="round-n">Round '+esc(m.round)+'/'+esc(d.max_rounds)
-      +'</span> · <span>'+(count?count+' finding'+(count===1?'':'s'):esc(m.verdict||'PASS'))
+      +'</span> · <span>'+(count?count+' finding'+(count===1?'':'s'):esc(verdictWord(m.verdict||'PASS')))
       +'</span></div>';}):['<div class="review-round-row"><span class="round-n">Round '
       +esc(cycle.round)+'/'+esc(d.max_rounds)+'</span></div>']).join('');
   // "N deterministic checks passed" counted the CONFIGURED checks and called
