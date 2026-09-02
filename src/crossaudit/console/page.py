@@ -537,6 +537,12 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .finding-details .finding-tier{display:inline;margin:0}
 .finding-details .severity.suggestion{color:var(--text-2)}
 .finding-sep{opacity:.5}
+/* R3. The record (commit, cycle, models) sits behind a closed disclosure. */
+.review-details>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px}
+.review-details>summary::-webkit-details-marker{display:none}
+.review-details>summary::after{content:'';width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform var(--dur-base)}
+.review-details[open]>summary::after{transform:rotate(45deg)}
+.review-details .review-record{margin-top:var(--sp-2)}
 /* .dt — a reusable clean data table (Claude-Code-style: muted header, hairline
    rows, hover, generous rows). Used for Skills, Connectors/MCP, and other lists. */
 .dt{width:100%;border-collapse:collapse;margin-top:6px;font-size:var(--fs-body)}
@@ -3638,6 +3644,7 @@ const ZH={
   ,"Needs you":"需要你","Checks only":"仅自动检查"
   ,"must fix":"必须修改","suggestion":"建议"
   ,"verified by a check":"已由检查验证","raised by the auditor":"由审计者提出","raised by the auditor, verified":"由审计者提出，已验证"
+  ,"Details":"详情","Human":"人工"
 };
 const ZH_PATTERNS=[
   // D148 repair guard. Every reason is COMPOSED from a path, a count or a
@@ -5810,6 +5817,27 @@ function findingCard(f){
   if(f.rule)parts.push('<span class="finding-rule" title="rule id">'+esc(f.rule)+'</span>');
   return '<div class="finding"><p class="finding-observation">'+esc(f.observation||'No explanation was recorded.')+'</p>'
     +'<div class="finding-details">'+parts.join('<span class="finding-sep" aria-hidden="true">·</span>')+'</div></div>';}
+// R3. "anthropic · anthropic:claude-opus-4-8 · high" → "Claude Opus 4.8". The
+// model specs carry ids and a capability note, not display names, so the name
+// is derived from the id: family words are capitalised, version digits are
+// joined with dots (GPT keeps its hyphen), a trailing release date is dropped.
+// The raw id stays in the inspector.
+const MODEL_FAMILY={gpt:'GPT',o1:'o1',o3:'o3',o4:'o4',deepseek:'DeepSeek',glm:'GLM',qwen:'Qwen',
+  kimi:'Kimi',minimax:'MiniMax',claude:'Claude',gemini:'Gemini',llama:'Llama',mistral:'Mistral',grok:'Grok'};
+function friendlyModel(value){const raw=String(value||'').trim();if(!raw)return '';
+  if(raw.toLowerCase()==='human')return 'Human';
+  const segs=raw.split(' · ');const seg=segs.find(x=>x.includes(':'))||segs[0]||raw;
+  const id=(seg.split(':').pop()||seg).trim();if(!id)return raw;
+  const tokens=id.split(/[-_/]+/).filter(Boolean);const words=[];
+  for(let i=0;i<tokens.length;i++){const tk=tokens[i];
+    if(/^\d{8}$/.test(tk)&&i===tokens.length-1)continue;
+    if(/^\d+(\.\d+)?$/.test(tk)){const last=words[words.length-1]||'';
+      if(last==='GPT')words[words.length-1]=last+'-'+tk;
+      else if(/^\d+(\.\d+)*$/.test(last)||/-\d+(\.\d+)*$/.test(last))words[words.length-1]=last+'.'+tk;
+      else words.push(tk);continue;}
+    if(/^v\d+$/i.test(tk)){words.push('V'+tk.slice(1));continue;}
+    words.push(MODEL_FAMILY[tk.toLowerCase()]||(tk.charAt(0).toUpperCase()+tk.slice(1)));}
+  return words.join(' ')||id;}
 function turn(m,d){
   if(m.kind === 'you'){
     const explicit=m.routing_mode==='explicit';const recipient=m.addressed_to||m.lane;
@@ -6019,12 +6047,15 @@ function reviewCard(d){
     // problems.
     +([...new Set(rows.map(m=>m.report_note).filter(Boolean))]
         .map(note=>'<p class="report-provenance">'+esc(note)+'</p>').join(''))
-    +'<div class="review-section"><div class="review-section-title">Record</div><div class="review-record">'
+    // R3. The record — who generated, who audited, which commit and cycle —
+    // sits behind a closed disclosure. Models by their friendly names; the
+    // identifiers never reach the first paint.
+    +'<details class="review-section review-details"><summary class="review-section-title">Details</summary><div class="review-record">'
+    +'<div class="review-record-row"><span>Generator</span><span>'+esc(friendlyModel(d.generator))+'</span></div>'
+    +'<div class="review-record-row"><span>Auditor</span><span>'+esc(friendlyModel(d.auditor))+'</span></div>'
     +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
     +'<div class="review-record-row"><span>Cycle</span><code>'+esc(cycle.id)+'</code></div>'
-    +'<div class="review-record-row"><span>Generator</span><code>'+esc(d.generator)+'</code></div>'
-    +'<div class="review-record-row"><span>Auditor</span><code>'+esc(d.auditor)+'</code></div>'
-    +'</div></div></div></div>';
+    +'</div></details></div></div>';
   const actionRow=status==='passed'
     ?'<button type="button" class="review-action" data-admit data-admit-cycle="'+esc(cycle.id)+'">Admit result</button>'
     :status==='escalated'
