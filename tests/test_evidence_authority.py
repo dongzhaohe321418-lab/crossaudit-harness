@@ -9,14 +9,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 
 import pytest
 
 from crossaudit.auditor import run_audit
-from crossaudit.auditor.authority import (KNOWN_POLICY_VERSIONS, POLICY_VERSION,
-                                          EvidenceRecord, decide_authority,
-                                          records_from_audit, validate_block)
+from crossaudit.auditor.authority import (CLAIM_CHARS, KNOWN_POLICY_VERSIONS,
+                                          POLICY_VERSION, ROUTE_FROM_LABEL,
+                                          ROUTE_LABELS, EvidenceRecord,
+                                          decide_authority, records_from_audit,
+                                          validate_block)
 from crossaudit.config import load
 from crossaudit.controller import StateStore
 from crossaudit.dcl.framework import ALLEGED, CONFIRMED
@@ -78,7 +81,10 @@ def test_deterministic_blocker_keeps_blocking_authority_offline():
 
 def test_default_dial_keeps_blocked_for_a_lone_model_blocker():
     """Mutation: default the dial to 'escalate' — the verdict flips to
-    ESCALATE and the three-round bounded revision contract breaks."""
+    ESCALATE and the three-round bounded revision contract breaks. Mutation:
+    drop `model_decided` from the flip's conjunction — this still holds (dial
+    is block) but test_escalate_dial_does_not_touch_a_deterministic_block
+    goes red."""
     decision = _decide(_records({"findings": [], "total_hard_failures": 0},
                                 MODEL_BLOCKED), "BLOCKED", model_decided=True)
     assert decision.workflow_verdict == "BLOCKED"
@@ -89,8 +95,10 @@ def test_default_dial_keeps_blocked_for_a_lone_model_blocker():
 
 
 def test_escalate_dial_routes_a_lone_model_blocker_to_a_person():
-    """Mutation: remove the `not confirmed_blockers` guard — a round with a
-    DCL blocker would also escalate, and test_..._keeps_blocking fails."""
+    """Mutation: drop `verdict == "BLOCKED"` from the flip's conjunction — a
+    model PASS under the escalate dial would read ESCALATE and
+    test_escalate_dial_leaves_a_model_pass_alone goes red; drop `model_decided`
+    and test_escalate_dial_does_not_touch_a_deterministic_block goes red."""
     decision = _decide(_records({"findings": [], "total_hard_failures": 0},
                                 MODEL_BLOCKED), "BLOCKED", model_decided=True,
                        lone_model_blocker="escalate")
@@ -103,19 +111,64 @@ def test_escalate_dial_routes_a_lone_model_blocker_to_a_person():
 
 
 def test_escalate_dial_does_not_touch_a_deterministic_block():
+    """A DCL hard failure decides BLOCKED before the ladder reaches the model
+    (model_decided is False), so the dial has nothing to flip. Mutation: drop
+    `model_decided` from the flip's conjunction — this reads ESCALATE."""
     decision = _decide(_records(DCL_BLOCKER, MODEL_BLOCKED), "BLOCKED",
                        model_decided=False, lone_model_blocker="escalate")
     assert decision.workflow_verdict == "BLOCKED"
     assert decision.contested_evidence_ids == ()
+    assert len(decision.blocking_evidence_ids) == 1
+
+
+def test_escalate_dial_leaves_a_model_pass_alone():
+    """Mutation: drop `verdict == "BLOCKED"` from the flip — this reads ESCALATE."""
+    decision = _decide((), "PASS", model_decided=True, lone_model_blocker="escalate")
+    assert decision.workflow_verdict == "PASS" and decision.route == "receipt"
 
 
 @pytest.mark.parametrize("verdict", ["ESCALATE", "DCL_ONLY"])
 def test_an_unstarted_scope_never_yields_the_receipt_route(verdict):
-    """Mutation: make the rationale ignore scope_started — NOTHING_AUDITED
-    disappears from the sentence."""
+    """Mutation: make the rationale ignore scope_started — "nothing was
+    audited" disappears from the sentence."""
     decision = _decide((), verdict, integrity="NOTHING_AUDITED", scope_started=False)
     assert decision.route != "receipt"
-    assert "NOTHING_AUDITED" in decision.rationale[0]
+    assert "nothing was audited" in decision.rationale[0].lower()
+
+
+def test_an_unstarted_scope_under_a_provider_failure_says_both_plainly():
+    """The ladder keeps the earlier integrity (PROVIDER_FAILURE) for an
+    unstarted scope; the sentence must not then claim NOTHING_AUDITED was
+    recorded. Mutation: hard-code the scope sentence's second half — the
+    'could not run' clause disappears."""
+    decision = _decide((), "ESCALATE", integrity="PROVIDER_FAILURE", scope_started=False)
+    text = " ".join(decision.rationale)
+    assert "nothing was audited" in text.lower()
+    assert "the model audit could not run" in text.lower()
+
+
+_ALL_CAPS = re.compile(r"\b[A-Z][A-Z_]{2,}\b")
+
+
+@pytest.mark.parametrize("integrity", ["OK", "NOTHING_AUDITED", "BOUNDS_EXCEEDED",
+                                       "INVALID_REPLY", "PROVIDER_FAILURE",
+                                       "NON_EVIDENTIAL_PROVIDER", "SOMETHING_NEW"])
+@pytest.mark.parametrize("verdict", ["PASS", "BLOCKED", "ESCALATE", "DCL_ONLY"])
+@pytest.mark.parametrize("flags", [dict(), dict(escalation_lock=True),
+                                   dict(scope_started=False),
+                                   dict(model_decided=True, lone_model_blocker="escalate")])
+def test_no_rationale_carries_an_integrity_code(integrity, verdict, flags):
+    """Review B defect 5: the terminal prints rationale[0]. Mutation: put the
+    integrity code back into any sentence — red for that cell. An unknown
+    code falls back to plain words rather than being echoed."""
+    for records in ((), _records(DCL_BLOCKER, MODEL_BLOCKED)):
+        decision = _decide(records, verdict, integrity=integrity, **flags)
+        assert decision.rationale
+        for sentence in decision.rationale:
+            assert _ALL_CAPS.search(sentence) is None, sentence
+            assert "SOMETHING_NEW" not in sentence
+        if integrity != "OK":
+            assert len(decision.rationale) >= 1
 
 
 def test_the_lock_is_named_and_outranks_everything():
@@ -132,6 +185,62 @@ def test_unknown_dial_and_verdict_are_refused():
 
 
 # ------------------------------------------------------------ validate_block
+def test_decision_id_binds_every_field_outside_the_evidence():
+    """Review B defect 2: moving an id between partitions, rewriting the
+    rationale, flipping the dial and smuggling a key all left a receipt that
+    verified. Mutation: skip the decision_id re-derivation — every cell but
+    the unknown-key one goes green."""
+    good = _decide(_records({"findings": [], "total_hard_failures": 0},
+                            MODEL_BLOCKED), "BLOCKED", model_decided=True).as_dict()
+    assert validate_block(good) == []
+    tampers = {
+        "advisory id moved to blocking": lambda b: (
+            b["blocking_evidence_ids"].append(b["advisory_evidence_ids"].pop())),
+        "advisory id moved to contested": lambda b: (
+            b["contested_evidence_ids"].append(b["advisory_evidence_ids"].pop())),
+        "rationale rewritten": lambda b: b.__setitem__(
+            "rationale", ["Everything is fine, trust me."]),
+        "dial flipped": lambda b: b.__setitem__("lone_model_blocker", "escalate"),
+        "decision id replaced": lambda b: b.__setitem__(
+            "decision_id", "authority-0000000000000000"),
+    }
+    for name, tamper in tampers.items():
+        block = json.loads(json.dumps(good))
+        tamper(block)
+        errors = validate_block(block)
+        assert any("decision_id does not re-derive" in e for e in errors), (name, errors)
+    block = json.loads(json.dumps(good))
+    block["note"] = "smuggled"
+    assert any("unknown keys ['note']" in e for e in validate_block(block))
+    block = json.loads(json.dumps(good))
+    block["advisory_evidence_ids"] *= 2
+    assert any("repeats an id" in e for e in validate_block(block))
+
+
+def test_two_identical_findings_are_two_records():
+    """Review B defect 7. Mutation: drop the ordinal from the id payload — the
+    two ids collide and validate_block reports them as not unique."""
+    twice = {"verdict": "BLOCKED", "sections_applied": ["CA-DATA-001"],
+             "findings": [MODEL_BLOCKED["findings"][0], MODEL_BLOCKED["findings"][0]]}
+    records = _records({"findings": [], "total_hard_failures": 0}, twice)
+    assert len({r.evidence_id for r in records}) == 2
+    block = _decide(records, "BLOCKED", model_decided=True).as_dict()
+    assert validate_block(block) == []
+    block["evidence"][1] = dict(block["evidence"][0])
+    assert any("not unique" in e for e in validate_block(block))
+
+
+def test_a_claim_is_bounded_and_the_full_text_is_hashed():
+    """Review B defect 6: a 3 MB observation was copied into the receipt.
+    Mutation: store the observation unbounded — the length assertion fails."""
+    long_text = "x" * (CLAIM_CHARS * 8)
+    reply = {"verdict": "BLOCKED", "sections_applied": ["CA-DATA-001"],
+             "findings": [dict(MODEL_BLOCKED["findings"][0], observation=long_text)]}
+    (record,) = _records({"findings": [], "total_hard_failures": 0}, reply)
+    assert len(record.claim) == CLAIM_CHARS
+    assert record.claim_sha256 == hashlib.sha256(long_text.encode()).hexdigest()
+
+
 def test_authority_evidence_digest_detects_mutation():
     """Mutation: skip the digest comparison — the edited claim validates."""
     block = _decide(_records(DCL_BLOCKER, MODEL_BLOCKED), "BLOCKED").as_dict()
@@ -246,7 +355,7 @@ def test_escalate_dial_run_routes_a_model_blocker_to_a_person(science, cfg, tran
     assert outcome.authority["route"] == "human-decision"
     assert len(outcome.authority["contested_evidence_ids"]) == 1
     assert "| verdict | **ESCALATE** |" in outcome.report
-    assert "| evidence route | **human-decision** |" in outcome.report
+    assert "| evidence route | **your decision** |" in outcome.report
 
 
 def test_the_escalate_dial_stop_reason_is_one_plain_sentence(science, cfg, transcripts):
@@ -265,6 +374,26 @@ def test_the_escalate_dial_stop_reason_is_one_plain_sentence(science, cfg, trans
         assert word not in reason
 
 
+def test_the_cli_escalated_line_is_plain_words(science, cfg, transcripts, monkeypatch, capsys):
+    """cmd_run prints rationale[0] after `Escalated:`. Mutation: put the
+    integrity code back into the bounded/invalid sentence — the all-caps
+    check reddens."""
+    from types import SimpleNamespace
+
+    from crossaudit.cli.main import cmd_run
+
+    cfg = _escalate_dial(science)
+    monkeypatch.chdir(science)
+    sha = write_increment(science, GOOD_RESULTS, "Fine.", "clean")
+    record_reply(transcripts, cfg, sha, MODEL_BLOCKED)
+    cmd_run(SimpleNamespace(sha=sha, json=False, allow_custom_endpoint=False,
+                            continue_cycle=None))
+    out = capsys.readouterr().out
+    line = next(l for l in out.splitlines() if "Escalated:" in l)
+    assert "model reading" in line
+    assert _ALL_CAPS.search(line.split("Escalated:", 1)[1]) is None, line
+
+
 def test_config_rejects_an_unknown_dial(science):
     yml = science / "crossaudit.yml"
     yml.write_text(yml.read_text() + "authority:\n  lone_model_blocker: maybe\n")
@@ -273,17 +402,32 @@ def test_config_rejects_an_unknown_dial(science):
 
 
 # -------------------------------------------------------- report rendering
-def test_report_carries_the_policy_route_and_evidence_section(science, cfg, transcripts):
+def test_report_carries_the_route_in_plain_words_and_an_evidence_section(
+        science, cfg, transcripts):
+    """Review B item 9: the policy version stays in the receipt; the route row
+    says what happens next in words verify() can map back. Mutation: print the
+    route name — the label assertion and ROUTE_FROM_LABEL both fail."""
     sha = write_increment(science, GOOD_RESULTS, "Fine.", "clean")
     outcome, _c, _s = _audit(cfg, sha, transcripts, MODEL_BLOCKED)
     report = outcome.report
-    assert f"| evidence policy | `{POLICY_VERSION}` |" in report
-    assert "| evidence route | **bounded-revision** |" in report
+    assert "evidence policy" not in report and POLICY_VERSION not in report
+    assert "| evidence route | **another revision round** |" in report
+    assert "bounded-revision" not in report
     assert "## Evidence" in report
+    assert "| finding | artifact | tier | verified by a check |" in report
     assert outcome.authority["rationale"][0] in report
     assert "| CA-DATA-001 | experiments/demo/SUMMARY.md | model | no |" in report
     for word in (ALLEGED, CONFIRMED):
         assert f'"{word}"' not in report and f" {word} " not in report
+    assert set(ROUTE_FROM_LABEL.values()) == set(ROUTE_LABELS)
+
+
+def test_a_dcl_only_report_says_the_model_audit_is_missing_once(science, cfg, transcripts):
+    sha = write_increment(science, GOOD_RESULTS, "Fine.", "clean")
+    outcome, _c, _s = _audit(cfg, sha, transcripts, offline=True)
+    assert outcome.verdict == "DCL_ONLY"
+    assert outcome.report.count("No model audit ran") == 1
+    assert "| evidence route | **a model audit is still needed** |" in outcome.report
 
 
 # ------------------------------------------------------- receipt round trip
@@ -342,16 +486,42 @@ def test_a_receipt_with_authority_verifies_and_a_tampered_claim_is_refused(
 
 
 def test_a_non_receipt_route_is_a_shortfall_and_admit_refuses(science, cfg, transcripts):
-    """Mutation: drop the route shortfall — a BLOCKED receipt still fails on
-    verdict, so also flip the receipt verdict to PASS in the block and the
-    audit: the verdict/route consistency check catches it in validate."""
+    """Mutation: drop the route shortfall in verify() — the shortfall line is
+    missing. admit() refuses on the verdict; see the next test for why it has
+    no route branch of its own."""
     sha = write_increment(science, GOOD_RESULTS, "Fine.", "clean")
     outcome, cycle, store = _audit(cfg, sha, transcripts, MODEL_BLOCKED)
     receipt, _l = _receipt_for(cfg, sha, cycle, outcome, authority=outcome.authority)
     evidence = _verify(receipt, science, cfg, sha)
     assert "evidence route is bounded-revision, not receipt" in evidence["admission_shortfalls"]
-    with pytest.raises(IntegrityDenial):
+    with pytest.raises(IntegrityDenial, match="not PASS"):
         admit(receipt, store, evidence, cfg=cfg)
+
+
+def test_the_block_verdict_is_bound_to_the_audit_verdict(science, cfg, transcripts, monkeypatch):
+    """Review B defect 3 (and 4). An internally consistent BLOCKED block on a
+    PASS receipt is refused by validate — which is also why admit() has no
+    route branch: a validated receipt with a non-receipt route cannot carry a
+    PASS verdict. Mutation M7: `if False:` around the schema binding — the
+    doctored receipt validates and this goes red."""
+    from crossaudit.auditor.authority import decide_authority, records_from_audit
+    monkeypatch.setattr("crossaudit.auditor.run.NON_EVIDENTIAL", frozenset())
+    sha = write_increment(science, GOOD_RESULTS, "Fine.", "clean")
+    outcome, cycle, _s = _audit(cfg, sha, transcripts, PASS_REPLY)
+    receipt, _l = _receipt_for(cfg, sha, cycle, outcome, authority=outcome.authority)
+    assert receipt["audit"]["verdict"] == "PASS"
+    doctored = decide_authority((), verdict="BLOCKED", integrity="OK",
+                                escalation_lock=False, scope_started=True,
+                                model_decided=True).as_dict()
+    assert validate_block(doctored) == []
+    receipt["authority"] = doctored
+    with pytest.raises(IntegrityDenial, match="differs from audit verdict"):
+        validate(json.loads(json.dumps(receipt)))
+    # And the other way to reach a non-receipt route on a PASS verdict — a
+    # PASS block whose route is edited — is refused by validate_block itself.
+    receipt["authority"] = dict(outcome.authority, route="bounded-revision")
+    with pytest.raises(IntegrityDenial, match="does not follow from verdict"):
+        validate(json.loads(json.dumps(receipt)))
 
 
 def test_verify_binds_the_route_row_of_the_report(science, cfg, transcripts, monkeypatch):
@@ -362,8 +532,8 @@ def test_verify_binds_the_route_row_of_the_report(science, cfg, transcripts, mon
     outcome, cycle, _s = _audit(cfg, sha, transcripts, PASS_REPLY)
     receipt, ledger = _receipt_for(cfg, sha, cycle, outcome, authority=outcome.authority)
     report = (ledger / "report.md").read_text()
-    edited = report.replace("| evidence route | **receipt** |",
-                            "| evidence route | **human-decision** |")
+    edited = report.replace("| evidence route | **admission** |",
+                            "| evidence route | **your decision** |")
     assert edited != report
     receipt["ledger"]["report_sha256"] = hashlib.sha256(edited.encode()).hexdigest()
     (ledger / "report.md").write_text(edited)
@@ -371,14 +541,17 @@ def test_verify_binds_the_route_row_of_the_report(science, cfg, transcripts, mon
         _verify(receipt, science, cfg, sha)
 
 
+@pytest.mark.parametrize("absent", [None, {}])
 def test_a_receipt_without_the_block_is_byte_identical_and_verifies(
-        science, cfg, transcripts, monkeypatch):
-    """Absent ⇒ identical. Mutation: write the key when authority is None —
-    the two canonical byte strings differ and the key set grows."""
+        science, cfg, transcripts, monkeypatch, absent):
+    """Absent ⇒ identical, for None AND for the dataclass default {} that a
+    hand-built AuditOutcome carries. Mutation M11: `if authority is not None:`
+    in build.py — the {} cell writes an empty block, the key set grows and
+    validate refuses it."""
     monkeypatch.setattr("crossaudit.auditor.run.NON_EVIDENTIAL", frozenset())
     sha = write_increment(science, GOOD_RESULTS, "Fine.", "clean")
     outcome, cycle, _s = _audit(cfg, sha, transcripts, PASS_REPLY)
-    without, _l = _receipt_for(cfg, sha, cycle, outcome, authority=None)
+    without, _l = _receipt_for(cfg, sha, cycle, outcome, authority=absent)
     legacy, _l = _receipt_for(cfg, sha, cycle, outcome)
     assert canonical(without) == canonical(legacy)
     assert "authority" not in without

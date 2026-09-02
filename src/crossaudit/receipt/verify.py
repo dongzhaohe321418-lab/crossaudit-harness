@@ -461,14 +461,20 @@ def verify(receipt: dict, *, science_root: Path, audit_root: Path,
         if block_errors:
             raise IntegrityDenial("authority block does not validate: "
                                   + "; ".join(block_errors), errors=block_errors)
-        route_row = re.search(r"^\| evidence route \| \*\*([a-z-]+)\*\* \|$",
+        from ..auditor.authority import ROUTE_FROM_LABEL
+        route_row = re.search(r"^\| evidence route \| \*\*([^*|]+)\*\* \|$",
                               report_text, re.MULTILINE)
         if route_row is None:
             raise IntegrityDenial("bound report has no evidence-route row")
-        if route_row.group(1) != authority["route"]:
+        reported_route = ROUTE_FROM_LABEL.get(route_row.group(1).strip())
+        if reported_route is None:
+            raise IntegrityDenial(
+                f"bound report names an evidence route this verifier does not "
+                f"know: {route_row.group(1).strip()!r}")
+        if reported_route != authority["route"]:
             raise IntegrityDenial(
                 f"receipt evidence route {authority['route']} differs from bound "
-                f"report route {route_row.group(1)}")
+                f"report route {reported_route}")
     if not cycle_dir.name.startswith(subject["sha"][:12]):
         raise IntegrityDenial(f"cycle directory {cycle_dir.name} does not belong to "
                               f"{subject['sha'][:12]}")
@@ -573,11 +579,10 @@ def admit(receipt: dict, store: StateStore, evidence: dict,
                               f"nothing to admit", verdict=receipt["audit"]["verdict"])
     if receipt["audit"]["audit_integrity"] != "OK":
         raise IntegrityDenial(f"audit integrity: {receipt['audit']['audit_integrity']}")
-    authority = receipt.get("authority")
-    if authority is not None and authority["route"] != "receipt":
-        raise IntegrityDenial(
-            f"evidence route is {authority['route']}, not receipt — nothing to admit",
-            route=authority["route"])
+    # No route check here, deliberately: validate_block binds route to
+    # workflow_verdict and schema.validate binds that to audit.verdict, so a
+    # validated receipt with a non-receipt route already fails the verdict
+    # check above. A branch nothing can reach is not a defence (D141/D146).
     if cfg is not None:
         short = schema.isolation_shortfall(receipt, cfg.isolation_minimum)
         if short:

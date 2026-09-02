@@ -29,7 +29,8 @@ trusted derivation plane
 A deterministic finding is emitted by a registered check over committed bytes:
 it is **verified**. A model finding is a reading of the same bytes by an auditor
 of a different vendor: it is **raised, not yet reproduced**. Both appear in the
-report's `Evidence` table with their tier and whether they are verified. That
+report's `Evidence` table with their tier and whether they were verified by a
+check. That
 table is what a dual-source audit adds over a single model review: the reader can
 see which findings rest on a reproducible check and which rest on a judgment.
 
@@ -49,10 +50,13 @@ verdict is synthesised:
 `auditor/authority.py` runs **after** the ladder and derives from its result:
 
 - the route the workflow must take (`receipt`, `bounded-revision`,
-  `human-decision`, `obtain-audit`);
+  `human-decision`, `obtain-audit`); the report writes it in plain words
+  ("admission", "another revision round", "your decision", "a model audit is
+  still needed") and the verifier maps the words back;
 - the partition of the evidence into blocking, contested and advisory ids;
-- a rationale of one or two plain sentences;
-- a digest over every evidence record, and a decision id over the whole block.
+- a rationale of one or two plain sentences — never an integrity code, a route
+  name, a record id or a finding state (the terminal prints the first one);
+- a digest over every evidence record, and a decision id over every other field.
 
 Under the default configuration it never changes the verdict. The receipt's
 `authority` block is therefore a record of *why*, bound to the report and to the
@@ -110,12 +114,18 @@ New receipts carry an optional `authority` block:
 - `policy_version` (`crossaudit-evidence-authority-v1`; unknown versions are refused, known older ones stay verifiable);
 - `decision_id`, `workflow_verdict`, `route`, `requires_human`, `lone_model_blocker`;
 - `blocking_evidence_ids`, `contested_evidence_ids`, `advisory_evidence_ids`;
-- `evidence` (one record per finding: key, severity, tier, state at verdict time, artifact, producer, producer digest) and `evidence_digest`;
+- `evidence` (one record per finding: key, severity, tier, state at verdict time, the first 400 characters of the claim plus `claim_sha256` of the full text, artifact, producer, producer digest) and `evidence_digest`;
 - `rationale`.
 
-The verifier re-derives the evidence digest, checks that every id names a record,
-that the route matches the verdict, and that the report's `evidence route` row
-says the same thing; `admit` refuses a receipt whose route is not `receipt`.
+The verifier re-derives the evidence digest and the decision id (so a moved id,
+a rewritten sentence, a flipped dial or an added key is caught), checks that
+every id names exactly one record, that the route matches the verdict and the
+verdict matches the receipt's, and that the report's `evidence route` row says
+the same thing in words. Both digests are unkeyed self-checks; tamper-evidence
+against a recompute comes from the receipt digest in the controller store and
+the signed sidecar. A non-`receipt` route is an admission shortfall; `admit`
+needs no route check of its own, because a validated receipt with such a route
+cannot carry a PASS verdict.
 A receipt without the block is byte-identical to one written before this work
 and verifies exactly as before. `RECEIPT_SCHEMA` stays 2.
 
