@@ -372,7 +372,8 @@ class StateStore:
     def record_verdict(self, cycle_id: str, sha: str, verdict: str,
                        receipt_hash: str, max_rounds: int,
                        escalation_reason: str = "", escalation_kind: str = "", *,
-                       constitution_commit: str = "") -> str:
+                       constitution_commit: str = "",
+                       escalation_cause: str = "") -> str:
         """Record one round's verdict; ``escalation_reason`` names the stop.
 
         When the round's failure was infrastructural (the model audit could
@@ -448,6 +449,10 @@ class StateStore:
                 c["escalation_kind"] = (
                     escalation_kind
                     or classify_escalation_kind(c.get("escalation_reason", "")))
+                if escalation_cause:
+                    # The ladder branch that escalated (errors.escalation_cause);
+                    # additive, so records without it keep their fallbacks.
+                    c["escalation_cause"] = escalation_cause[:64]
             c["parent_receipt"] = receipt_hash
             c["awaiting_verdict"] = False
             # The append-only half. Every decision this cycle ever reached stays

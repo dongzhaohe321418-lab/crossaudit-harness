@@ -3649,6 +3649,41 @@ const ZH={
   ,"verified by a check":"已由检查验证","raised by the auditor":"由审计者提出","raised by the auditor, verified":"由审计者提出，已验证"
   ,"Details":"详情","Human":"人工"
   ,"First run here — no estimate yet":"首次运行，暂无预估"
+  ,"Nothing to review yet":"尚无可审内容","The task produced no work in the audited folder":"任务未在受审文件夹中产生任何工作"
+  ,"There is nothing to review yet: the generator produced no files inside the folder the auditor checks, so no audit could run and nothing was admitted.":"目前没有可审查的内容：生成者没有在审计者检查的文件夹中产生任何文件，因此无法进行审计，也没有准入任何结果。"
+  ,"Tell the generator what to create inside the audited folder and run one more round, or stop this task.":"告诉生成者应在受审文件夹中创建什么，然后再运行一轮；或停止此任务。"
+  ,"Say which files should be created inside the audited folder, then unlock one additional audited round.":"说明应在受审文件夹中创建哪些文件，然后解锁额外一轮受审计执行。"
+  ,"Create the deliverable inside the audited folder; nothing was produced there.":"请在受审文件夹中创建交付物；此前那里没有产生任何内容。"
+  ,"No audit findings were created because there was no work in the audited folder to review.":"由于受审文件夹中没有可审查的工作，未产生任何审计发现。"
+  ,"the task produced no work in the audited folder, so there was nothing to review":"任务未在受审文件夹中产生任何工作，因此没有可审查的内容"
+  ,"Auditor reply unreadable":"审计者回复无法读取","The auditor’s reply could not be read":"审计者的回复无法读取"
+  ,"The auditor answered, but its reply was not in the required form, so no verdict could be recorded. The files are unchanged and nothing was admitted.":"审计者作出了回复，但其格式不符合要求，因此无法记录裁定。文件未改动，也没有准入任何结果。"
+  ,"Run the audit again on the same work, switch the auditor model, or stop this task.":"对同一份工作再次运行审计、更换审计者模型，或停止此任务。"
+  ,"Run the audit again":"再次运行审计","Unlock one more round with the work unchanged so the auditor can answer again.":"在工作不变的情况下解锁一轮，让审计者再次作答。"
+  ,"Run the audit again on the same work; the previous auditor reply could not be read.":"请对同一份工作再次运行审计；上一次审计者的回复无法读取。"
+  ,"No audit findings were recorded because the auditor’s reply could not be read.":"由于审计者的回复无法读取，未记录任何审计发现。"
+  ,"the auditor's reply could not be read":"审计者的回复无法读取"
+  ,"Task too large for one audit":"任务过大，无法一次审计","The task is too large for one audit":"该任务过大，无法在一次审计中完成"
+  ,"The work exceeds what one audit can read at once, so the auditor stopped rather than judge part of it. Nothing was admitted.":"工作量超出了一次审计能够读取的范围，审计者因此停止，而不是只评判其中一部分。没有准入任何结果。"
+  ,"Narrow the scope or split the task into smaller pieces and run one more round, or stop this task.":"缩小范围或将任务拆分为更小的部分，然后再运行一轮；或停止此任务。"
+  ,"Name the smaller piece the next round should cover, then unlock one additional audited round.":"指明下一轮应覆盖的较小部分，然后解锁额外一轮受审计执行。"
+  ,"No audit findings were recorded because the work was too large to audit in one pass.":"由于工作量过大，无法一次审计完成，未记录任何审计发现。"
+  ,"the task is too large for one audit":"该任务过大，无法一次审计"
+  ,"The auditor asked for you":"审计者请你介入","The auditor asked for your judgment":"审计者请你作出判断"
+  ,"The auditor could not settle this round on its own and handed it to you. Its stated reason is below. Nothing was admitted.":"审计者无法独自裁定本轮，已交由你处理。其陈述的原因见下方。没有准入任何结果。"
+  ,"What the auditor said":"审计者的说明"
+  ,"Read the auditor’s reason, then tell the generator how to address it or stop this task.":"阅读审计者的原因，然后告诉生成者如何处理；或停止此任务。"
+  ,"Tell the generator how to address the auditor’s reason, then unlock one additional audited round.":"告诉生成者如何处理审计者的原因，然后解锁额外一轮受审计执行。"
+  ,"The auditor recorded no structured findings. Its stated reason is above.":"审计者未记录结构化问题。其陈述的原因见上方。"
+  ,"the auditor asked for your judgment":"审计者请你作出判断"
+  ,"Read the auditor's reason, then tell the generator how to address it or stop this task.":"阅读审计者的原因，然后告诉生成者如何处理；或停止此任务。"
+  ,"Waiting on an earlier decision":"等待更早的决定","This task is already waiting for your earlier decision":"此任务仍在等待你更早的决定"
+  ,"An earlier round of this task is still waiting for you. No new round can run until that decision is made.":"此任务更早的一轮仍在等待你。在作出该决定前，无法运行新的一轮。"
+  ,"Open the earlier decision and settle it; this task continues from there.":"打开更早的决定并作出处理；此任务将从那里继续。"
+  ,"Settle the earlier decision":"先处理更早的决定","Open the earlier decision first. Guidance recorded here applies once it is settled.":"请先打开更早的决定。此处记录的指引将在其处理完毕后生效。"
+  ,"No new findings were recorded because the earlier decision is still open.":"由于更早的决定仍未处理，未记录新的发现。"
+  ,"Open the earlier decision":"打开更早的决定"
+  ,"this task is already waiting for your earlier decision":"此任务仍在等待你更早的决定"
 };
 const ZH_PATTERNS=[
   // D148 repair guard. Every reason is COMPOSED from a path, a count or a
@@ -4696,6 +4731,49 @@ const REMEDIATION={
   stop:{label:'Stop this task'},
   revise:{label:'Revise and continue'}};
 function hasRemediation(row,action){return ((row&&row.remediations)||[]).indexOf(action)>=0;}
+// R5. Every ESCALATE branch of the auditor ladder tells the person what
+// happened, why, and what to do next — through the existing slots, keyed on
+// the structured cause (errors.escalation_cause). `hint` prefills the
+// guidance box where the next step is obvious; `empty` is the findings slot
+// when no finding was recorded. An unknown cause keeps the generic copy.
+const CAUSE_COPY={
+  nothing_audited:{flag:'Nothing to review yet',title:'The task produced no work in the audited folder',
+    summary:'There is nothing to review yet: the generator produced no files inside the folder the auditor checks, so no audit could run and nothing was admitted.',
+    limitTitle:'What happened',
+    request:'Tell the generator what to create inside the audited folder and run one more round, or stop this task.',
+    reopenTitle:'Revise and continue',
+    reopenCopy:'Say which files should be created inside the audited folder, then unlock one additional audited round.',
+    hint:'Create the deliverable inside the audited folder; nothing was produced there.',
+    empty:'No audit findings were created because there was no work in the audited folder to review.'},
+  invalid_reply:{flag:'Auditor reply unreadable',title:'The auditor\u2019s reply could not be read',
+    summary:'The auditor answered, but its reply was not in the required form, so no verdict could be recorded. The files are unchanged and nothing was admitted.',
+    limitTitle:'What happened',
+    request:'Run the audit again on the same work, switch the auditor model, or stop this task.',
+    reopenTitle:'Run the audit again',
+    reopenCopy:'Unlock one more round with the work unchanged so the auditor can answer again.',
+    hint:'Run the audit again on the same work; the previous auditor reply could not be read.',
+    empty:'No audit findings were recorded because the auditor\u2019s reply could not be read.'},
+  bounds_exceeded:{flag:'Task too large for one audit',title:'The task is too large for one audit',
+    summary:'The work exceeds what one audit can read at once, so the auditor stopped rather than judge part of it. Nothing was admitted.',
+    limitTitle:'What happened',
+    request:'Narrow the scope or split the task into smaller pieces and run one more round, or stop this task.',
+    reopenTitle:'Revise and continue',
+    reopenCopy:'Name the smaller piece the next round should cover, then unlock one additional audited round.',
+    hint:'',empty:'No audit findings were recorded because the work was too large to audit in one pass.'},
+  auditor_escalated:{flag:'The auditor asked for you',title:'The auditor asked for your judgment',
+    summary:'The auditor could not settle this round on its own and handed it to you. Its stated reason is below. Nothing was admitted.',
+    limitTitle:'What the auditor said',
+    request:'Read the auditor\u2019s reason, then tell the generator how to address it or stop this task.',
+    reopenTitle:'Revise and continue',
+    reopenCopy:'Tell the generator how to address the auditor\u2019s reason, then unlock one additional audited round.',
+    hint:'',empty:'The auditor recorded no structured findings. Its stated reason is above.'},
+  escalation_locked:{flag:'Waiting on an earlier decision',title:'This task is already waiting for your earlier decision',
+    summary:'An earlier round of this task is still waiting for you. No new round can run until that decision is made.',
+    limitTitle:'What happened',
+    request:'Open the earlier decision and settle it; this task continues from there.',
+    reopenTitle:'Settle the earlier decision',
+    reopenCopy:'Open the earlier decision first. Guidance recorded here applies once it is settled.',
+    hint:'',empty:'No new findings were recorded because the earlier decision is still open.'}};
 function openResolution(value,action='',sha=''){
   let row=typeof value==='object'&&value?value:null;
   if(!row&&lastState)row=(lastState.escalations||[]).find(item=>item.cycle_id===value);
@@ -4703,8 +4781,11 @@ function openResolution(value,action='',sha=''){
     limit_reached:false,why:'The automatic audit loop stopped.',issues:[],attempts:[],
     requested:'Review why the loop stopped, then decide whether to revise or stop.'};
   activeResolution=row;promptedEscalations.add(row.cycle_id);
+  const copy=CAUSE_COPY[String(row.cause||'')]||null;
   document.getElementById('resolution-cycle').value=row.cycle_id||'';
-  document.getElementById('resolution-reason').value='';
+  // R5. The guidance box opens prefilled where the next step is obvious
+  // (nothing produced, unreadable reply); the person can still change it.
+  document.getElementById('resolution-reason').value=copy&&copy.hint?t(copy.hint):'';
   const used=Number(row.round||0),maximum=Number(row.max_rounds||(lastState&&lastState.max_rounds)||0);
   // A budget (usage-guardrail) pause is a provider-family stop — no audit ran,
   // nothing was admitted — but its remedy is to raise or clear the local limit,
@@ -4724,9 +4805,9 @@ function openResolution(value,action='',sha=''){
   // dial handing a model-only blocker to a person. Same slots, no new elements.
   const repairRefused=row.cause==='repair_refused';
   const auditorConcern=row.cause==='auditor_concern';
-  document.getElementById('resolution-flag').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':repairRefused?'Automatic repair refused':auditorConcern?'The auditor raised a concern':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
-  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':repairRefused?'The revision reached outside the audited files':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
-  document.getElementById('resolution-summary').textContent=budget
+  document.getElementById('resolution-flag').textContent=copy?copy.flag:budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':repairRefused?'Automatic repair refused':auditorConcern?'The auditor raised a concern':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
+  document.getElementById('resolution-title').textContent=copy?copy.title:budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':repairRefused?'The revision reached outside the audited files':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
+  document.getElementById('resolution-summary').textContent=copy?copy.summary:budget
     ?'CrossAudit stopped before spending past your usage limit. No result was admitted and the original task is ready once you raise or clear the limit.'
     :provider
     ?'CrossAudit stopped before an audit began. No result was admitted and the original task is ready to retry.'
@@ -4743,7 +4824,7 @@ function openResolution(value,action='',sha=''){
     :row.limit_reached
     ?'CrossAudit used all '+used+' of '+maximum+' automatic rounds without a passing result. Nothing will continue or be admitted until you decide.'
     :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
-  document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
+  document.getElementById('resolution-limit-title').textContent=copy?copy.limitTitle:budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
     ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
   // A refused repair leads with the sentence the repair guard wrote (it names
   // the file and the pattern) rather than the round-numbered wrapper around it.
@@ -4768,22 +4849,22 @@ function openResolution(value,action='',sha=''){
     +'<div class="finding-details"><span class="severity '+(severityWord(issue.severity||'BLOCKER')==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(issue.severity||'BLOCKER'))+'</span>'
     +(issue.artifact?'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-where">'+esc(issue.artifact)+'</span>':'')
     +'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-rule" title="rule id">'+esc(issue.rule||'Issue '+(index+1))+'</span></div></article>').join('')
-    :'<div class="decision-empty">'+(budget
+    :'<div class="decision-empty">'+(copy?copy.empty:budget
       ?'No audit findings were created because the task paused at a usage limit before producing a reviewable result.'
       :provider
       ?'No audit findings were created because the Generator stopped before producing a reviewable result.'
       :formatCause
       ?'No audit ran because the generator never produced readable work. What usually helps: rewrite the task as one concrete instruction, or switch the generator model in Settings, then run one more round.'
       :'No structured findings were recorded. Review the stop reason above before continuing.')+'</div>';
-  document.getElementById('resolution-request').textContent=budget
+  document.getElementById('resolution-request').textContent=copy?copy.request:budget
     ?'Raise or clear the usage limit and rerun the original task, or stop this task.'
     :provider
     ?'Retry the same task now, review the model connection first, or stop this task.'
     :formatCause
     ?'Rewrite the task as one concrete instruction and run one more round, switch the generator model, or stop this task.'
     :(row.requested||'Choose whether to revise and continue, or stop this task.');
-  document.getElementById('resolution-reopen-title').textContent=budget?'Raise the limit & retry':provider?'Retry provider':'Revise and continue';
-  document.getElementById('resolution-reopen-copy').textContent=budget
+  document.getElementById('resolution-reopen-title').textContent=copy?copy.reopenTitle:budget?'Raise the limit & retry':provider?'Retry provider':'Revise and continue';
+  document.getElementById('resolution-reopen-copy').textContent=copy?copy.reopenCopy:budget
     ?'Adjust the usage limit in Project controls, then rerun the original task.'
     :provider
     ?'Use the current connection and rerun the original task.'
@@ -4797,7 +4878,14 @@ function openResolution(value,action='',sha=''){
   // model change, when the stop is a guardrail pause.
   document.getElementById('resolution-open-runtime').textContent=budget?'Adjust usage limits':'Change model or fallback';
   document.getElementById('resolution-open-runtime').hidden=!(hasRemediation(row,'select_model')||hasRemediation(row,'open_billing'));
-  document.getElementById('resolution-open-settings').hidden=!hasRemediation(row,'validate_credential');
+  // R5. The one real action of a locked cycle is the EARLIER decision; the
+  // secondary button carries it (relabelled, with the cycle to open) so no new
+  // control is added. Cleared for every other row so the label stays honest.
+  const settingsButton=document.getElementById('resolution-open-settings');
+  const earlier=row.cause==='escalation_locked'?String(row.earlier_cycle_id||''):'';
+  settingsButton.setAttribute('data-earlier-cycle',earlier);
+  settingsButton.textContent=earlier?'Open the earlier decision':'Review provider connection';
+  settingsButton.hidden=!hasRemediation(row,'validate_credential')&&!earlier;
   resolutionChoice(action||'reopen');
   document.getElementById('resolution-error').className='wizard-error';
   resolutionModal.classList.add('on');document.body.classList.add('deciding');
@@ -4833,7 +4921,9 @@ resolutionForm.querySelectorAll('input[name="resolution-choice"]').forEach(input
 document.getElementById('close-resolution').onclick=closeResolution;
 document.getElementById('cancel-resolution').onclick=closeResolution;
 document.getElementById('resolution-open-runtime').onclick=()=>{closeResolution();openRuntime();};
-document.getElementById('resolution-open-settings').onclick=()=>{closeResolution();openSettings('providers');};
+document.getElementById('resolution-open-settings').onclick=()=>{
+  const earlier=document.getElementById('resolution-open-settings').getAttribute('data-earlier-cycle')||'';
+  closeResolution();if(earlier)openResolution(earlier);else openSettings('providers');};
 resolutionForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElementById('submit-resolution');
   const cycleId=document.getElementById('resolution-cycle').value;
   const action=document.getElementById('resolution-action').value,reason=document.getElementById('resolution-reason').value.trim();
