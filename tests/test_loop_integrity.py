@@ -74,7 +74,7 @@ def _receipt_for(cfg, sha, cycle, outcome, mode="local"):
                  report_bytes=(ledger / "report.md").read_bytes(), report_commit="",
                  cycle_path=str(ledger.relative_to(cfg.root)),
                  audit_repo=cfg.audit_repo or "local", mode=mode,
-                 integrity=outcome.integrity), ledger
+                 integrity=outcome.integrity, authority=outcome.authority), ledger
 
 
 # ---------------------------------------------------------------- happy path
@@ -284,6 +284,48 @@ def test_three_cli_build_revisions_remain_one_cycle_and_end_escalated(
         assert code == (EXIT_ESCALATED if round_no == 3 else EXIT_BLOCKED)
 
     assert store.cycle(cycle_id)["status"] == "ESCALATED"
+
+
+def test_escalate_dial_stops_a_model_blocker_at_round_one(
+        science, cfg, transcripts, monkeypatch):
+    """The opt-in half of D148 slice C: `authority.lone_model_blocker: escalate`
+    routes a model-only block to a person at round one instead of spending the
+    revision budget. The default-dial three-round contract above is untouched.
+    Mutation: read the dial but never pass it to decide_authority — round 1
+    exits EXIT_BLOCKED and the cycle is not ESCALATED."""
+    from types import SimpleNamespace
+
+    from crossaudit.cli.main import cmd_run
+    from crossaudit.config import load
+    from crossaudit.errors import EXIT_ESCALATED
+
+    yml = science / "crossaudit.yml"
+    yml.write_text(yml.read_text() + "authority:\n  lone_model_blocker: escalate\n")
+    git("add", "-A", cwd=science)
+    git("commit", "-q", "-m", "escalate dial", cwd=science)
+    cfg = load(yml)
+    blocked = {
+        "verdict": "BLOCKED",
+        "sections_applied": ["CA-DATA-002"],
+        "findings": [{"severity": "BLOCKER", "rule": "CA-DATA-002",
+                      "artifact": "experiments/demo/SUMMARY.md",
+                      "observation": "The requested correction is still absent."}],
+    }
+    monkeypatch.chdir(science)
+    store = StateStore(cfg.root / cfg.state_dir / "state.json")
+    sha = write_increment(science, GOOD_RESULTS, "attempt 1", "generator round 1")
+    record_reply(transcripts, cfg, sha, blocked)
+    args = SimpleNamespace(sha=sha, json=False, allow_custom_endpoint=False,
+                           continue_cycle=None)
+    assert cmd_run(args) == EXIT_ESCALATED
+    cycles = store.snapshot()["cycles"]
+    assert len(cycles) == 1
+    cycle = next(iter(cycles.values()))
+    assert cycle["round"] == 1 and cycle["status"] == "ESCALATED"
+    assert cycle["escalation_reason"].startswith("the auditor raised a concern")
+    receipt = json.loads((science / "cycles" / f"{sha[:12]}-r1" / "receipt.json").read_text())
+    assert receipt["authority"]["route"] == "human-decision"
+    assert receipt["authority"]["lone_model_blocker"] == "escalate"
 
 
 def test_build_loop_itself_passes_the_cycle_through_all_three_rounds(
