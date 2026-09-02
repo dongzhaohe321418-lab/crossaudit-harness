@@ -3,6 +3,42 @@
 All notable changes to CrossAudit are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH` scheme; the source on `main` is authoritative.
 
+## 4.16.0 — Evidence Authority
+
+The audit records where a finding's power to block comes from, and the loop
+stops asking the generator to hide findings behind defensive code.
+
+### Added
+- **Evidence authority.** Every receipt binds each finding's tier
+  (deterministic check or auditor model), whether a check verified it, the
+  route the workflow took, and a digest over the set; the report gains an
+  `Evidence` section. Verdict synthesis is unchanged under default settings.
+- **`authority.lone_model_blocker` dial.** `block` (default) keeps bounded
+  automatic revision; `escalate` hands a model-only blocker to a person at
+  round one.
+- **Repair guard.** A revision after a BLOCKED audit is screened before commit:
+  a file outside the audited directories or a binary the renderer did not
+  produce is refused (one free retry, then a decision card); catch-all excepts,
+  deleted assertions, skipped tests and over-budget code changes are cautions
+  the auditor sees in the next round. `repair.mode: refuse` makes them refusals.
+  Prose and data files are never pattern-screened.
+- **Finding states** (`findings.json` beside each round) so a confirmation
+  rate for auditor findings can be measured.
+- **Chinese for refusals.** 538 of 540 distinct denial messages have Chinese at
+  the CLI and in the console; the language is resolved for every command.
+- Decision Center copy for the two new stop causes; per-finding "verified by a
+  check / raised by the auditor" in the review detail; composer, search and
+  provider controls have accessible names.
+
+### Fixed
+- `verify --admit` on an invalid signature raised NameError instead of
+  returning an exit code (since 4.14).
+- "approximately" in a task no longer makes a 5% length deviation a blocker;
+  the rule text says what it means and reaches template projects too.
+- The in-process network guard names exactly what it covers; the test suite no
+  longer calls `gh`.
+- Test-suite guard: no undefined names anywhere in `src/`.
+
 ## 4.15.0 — Agentic Runtime
 
 CrossAudit becomes a Claude-Code / Codex-class capable agent **without giving up
