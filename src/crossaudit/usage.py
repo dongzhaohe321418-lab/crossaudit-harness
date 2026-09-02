@@ -404,10 +404,14 @@ def enforce_budget(cfg, *, system: str = "", prompt: str = "") -> dict:
     return view
 
 
-def summary(cfg) -> dict:
-    """Aggregate one project's local ledger for the live console snapshot."""
+def summary(cfg, *, now: datetime | None = None) -> dict:
+    """Aggregate one project's local ledger for the live console snapshot.
+
+    ``now`` exists for callers with a clock of their own (the budget alarms and
+    their tests); the console always reads the real one.
+    """
     path = cfg.root / cfg.state_dir / LEDGER_NAME
-    now = datetime.now().astimezone()
+    now = now or datetime.now().astimezone()
     try:
         stat = path.stat()
         signature = (stat.st_mtime_ns, stat.st_size, now.date().toordinal())
@@ -768,7 +772,7 @@ def check_budget_warnings(cfg, *, now: datetime | None = None) -> list[dict]:
     the next frame carries the new state.
     """
     now = now or datetime.now().astimezone()
-    view = summary(cfg).get("budget", {})
+    view = summary(cfg, now=now).get("budget", {})
     figures = budget_figures(cfg, view)
     if not figures:
         return []

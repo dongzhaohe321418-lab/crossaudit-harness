@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import queue
+import re
 import socket
 import ssl
 import sys
@@ -382,6 +383,122 @@ def _retry_after(headers: dict | None) -> float | None:
             return None
 
 
+# Rate-limit reset moments. A 429 usually says when the limit reopens, in one
+# of several dialects: `Retry-After` (seconds or an HTTP date), OpenAI's
+# `x-ratelimit-reset-requests: 6m0s` style durations, Anthropic's RFC 3339
+# `anthropic-ratelimit-*-reset` stamps, and occasionally a field in the JSON
+# body. The parsed moment rides on the denial so a parked run can say
+# "resets in 2 h 10 min" instead of "try again later". Never read from another
+# app's files: only this response's own headers and body are consulted.
+_RESET_HEADERS = ("retry-after", "x-ratelimit-reset", "x-ratelimit-reset-requests",
+                  "x-ratelimit-reset-tokens", "anthropic-ratelimit-requests-reset",
+                  "anthropic-ratelimit-tokens-reset",
+                  "anthropic-ratelimit-input-tokens-reset",
+                  "anthropic-ratelimit-output-tokens-reset")
+_RESET_BODY_KEYS = ("reset_at", "resets_at", "resetsAt", "reset_time", "resetTime",
+                    "resets_in_seconds", "resetsInSeconds", "retry_after",
+                    "retryAfter", "retry_after_seconds")
+_DURATION_RE = re.compile(
+    r"^(?:(?P<h>\d+(?:\.\d+)?)h)?(?:(?P<m>\d+(?:\.\d+)?)m(?!s))?"
+    r"(?:(?P<s>\d+(?:\.\d+)?)s)?(?:(?P<ms>\d+(?:\.\d+)?)ms)?$")
+
+
+def _parse_duration_seconds(text: str) -> float | None:
+    """'6m0s', '1h2m3.5s', '250ms', '12' (bare seconds) -> seconds."""
+    value = text.strip().casefold()
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        pass
+    match = _DURATION_RE.match(value)
+    if not match or not any(match.groupdict().values()):
+        return None
+    parts = {k: float(v) for k, v in match.groupdict().items() if v}
+    return (parts.get("h", 0.0) * 3600 + parts.get("m", 0.0) * 60
+            + parts.get("s", 0.0) + parts.get("ms", 0.0) / 1000)
+
+
+def _parse_reset_moment(value, now: float) -> float | None:
+    """One header/body value -> an epoch second, or None when it says nothing.
+
+    Accepts a duration (relative), an epoch number, an HTTP date, or RFC 3339.
+    Epoch numbers larger than a year are absolute; smaller ones are durations.
+    """
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        number = float(value)
+        return number if number > 31_536_000 else now + max(0.0, number)
+    text = str(value or "").strip()
+    if not text:
+        return None
+    seconds = _parse_duration_seconds(text)
+    if seconds is not None:
+        if seconds > 31_536_000:               # an epoch stamp, not a duration
+            return seconds
+        return now + seconds
+    try:
+        stamp = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=timezone.utc)
+        return stamp.timestamp()
+    except ValueError:
+        pass
+    try:
+        stamp = parsedate_to_datetime(text)
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=timezone.utc)
+        return stamp.timestamp()
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def _reset_values_in_body(body: str) -> list:
+    try:
+        data = json.loads(body)
+    except (ValueError, TypeError):
+        return []
+    found: list = []
+
+    def walk(node, depth: int) -> None:
+        if depth > 4:
+            return
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key in _RESET_BODY_KEYS and isinstance(value, (str, int, float)):
+                    found.append(value)
+                else:
+                    walk(value, depth + 1)
+        elif isinstance(node, list):
+            for value in node[:8]:
+                walk(value, depth + 1)
+
+    walk(data, 0)
+    return found
+
+
+def rate_limit_reset(headers: dict | None, body: str = "", *,
+                     now: float | None = None) -> float | None:
+    """The epoch second when a 429'd limit reopens, from headers and/or body.
+
+    When several windows are named (requests AND tokens), the later one wins:
+    that is the moment the call can actually succeed again. None when the
+    response gives no usable reset information.
+    """
+    now = time.time() if now is None else now
+    moments: list[float] = []
+    for key, value in (headers or {}).items():
+        if str(key).casefold() in _RESET_HEADERS:
+            moment = _parse_reset_moment(value, now)
+            if moment is not None:
+                moments.append(moment)
+    for value in _reset_values_in_body(body):
+        moment = _parse_reset_moment(value, now)
+        if moment is not None:
+            moments.append(moment)
+    return max(moments) if moments else None
+
+
 def _http_denial(status: int, body: str, url: str,
                  headers: dict | None = None) -> ProviderDenial:
     said = vendor_message(body)
@@ -399,11 +516,16 @@ def _http_denial(status: int, body: str, url: str,
                 .get(status, "provider" if status >= 500 else "request"))
     if status == 400 and _looks_like_a_model_problem(said):
         category = "model"
+    extra: dict = {}
+    if status == 429:
+        reset_at = rate_limit_reset(headers, body)
+        if reset_at is not None:
+            extra["rate_limit_reset_at"] = round(reset_at, 3)
     return ProviderDenial("\n".join(lines), status=status, detail=said,
                           endpoint=url, category=category,
                           retryable=status == 429 or status >= 500,
                           retry_after_seconds=_retry_after(headers),
-                          remediations=provider_remediations(category))
+                          remediations=provider_remediations(category), **extra)
 
 
 def _looks_like_a_model_problem(said: str) -> bool:
