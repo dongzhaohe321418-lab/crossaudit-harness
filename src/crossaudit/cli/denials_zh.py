@@ -1224,6 +1224,10 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("provider failure left this task waiting for a person: {}",
      "供应商失败，该任务正在等待人工处理：{}"),
     ("no provider route is available", "没有可用的供应商路由"),
+    # runtime/runs.py raises RuntimeError; runtime/commands.py re-wraps it as
+    # ConfigDenial(str(exc)) — the one variable-carried reason the review's
+    # runtime log still showed in English.
+    ("there is no active run to cancel", "没有可取消的活动运行"),
     ("the run stopped for a person before its decision record was written",
      "运行在写入决定记录之前就停下来等人处理了"),
     # ------------------------------------------ receipt/ (composed)
