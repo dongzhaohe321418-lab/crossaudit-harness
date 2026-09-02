@@ -856,11 +856,31 @@ def _provider_stop_reason(outcome) -> str:
     before the field existed still classifies. Content rounds keep their
     default reasons.
     """
-    if outcome.integrity != "PROVIDER_FAILURE":
-        return ""
-    detail = str(outcome.exchange.get("error", "")).strip()
-    return ("provider failure: the model audit could not run"
-            + (f" — {detail[:300]}" if detail else ""))
+    if outcome.integrity == "PROVIDER_FAILURE":
+        detail = str(outcome.exchange.get("error", "")).strip()
+        return ("provider failure: the model audit could not run"
+                + (f" — {detail[:300]}" if detail else ""))
+    authority = getattr(outcome, "authority", None) or {}
+    if (authority.get("route") == "human-decision"
+            and authority.get("contested_evidence_ids")):
+        # D148, `authority.lone_model_blocker: escalate`: a content stop (the
+        # classifier reads no "provider failure" marker here), owned by a person.
+        return CONTESTED_MODEL_BLOCKER_REASON
+    return ""
+
+
+#: The one sentence a person reads when the escalate dial routes a model-only
+#: block to them. No internal vocabulary (record ids, routes, states).
+CONTESTED_MODEL_BLOCKER_REASON = (
+    "the auditor raised a concern that no deterministic check reproduces; "
+    "it needs your judgment")
+
+
+def _authority_summary(authority: dict) -> dict:
+    """The structured part of the evidence record a script can route on."""
+    return {key: authority.get(key) for key in (
+        "policy_version", "route", "lone_model_blocker",
+        "blocking_evidence_ids", "contested_evidence_ids")}
 
 
 def _provider_stop_kind(outcome) -> str:
@@ -987,7 +1007,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
         retention=args.retention, report_bytes=report_path.read_bytes(),
         report_commit=report_commit, cycle_path=ledger.relative_to(cfg.root).as_posix(),
         audit_repo=cfg.audit_repo or "local", mode=args.mode,
-        integrity=outcome.integrity)
+        integrity=outcome.integrity, authority=outcome.authority)
     (ledger / "receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True),
                                            encoding="utf-8", newline="\n")
     # A1: sign the receipt additively (detached sidecar; the receipt bytes are
@@ -1022,10 +1042,14 @@ def cmd_audit(args: argparse.Namespace) -> int:
               "integrity": outcome.integrity, "receipt": str(ledger / "receipt.json"),
               "report": str(report_path),
               "invalid_reason": outcome.invalid_reason}
+    if outcome.authority:
+        result["authority"] = _authority_summary(outcome.authority)
     human = (f"{outcome.verdict}  (cycle {cycle['cycle_id']} round {cycle['round']}"
              f" -> {status})\n  report:  {report_path}\n  receipt: {ledger}/receipt.json")
     if outcome.invalid_reason:
         human += f"\n  audit rejected: {outcome.invalid_reason}"
+    elif outcome.verdict == "ESCALATE" and outcome.authority.get("rationale"):
+        human += f"\n  why: {outcome.authority['rationale'][0]}"
     _emit(result, args.json, human)
     # The cycle's status outranks the round's verdict: a BLOCKED round that
     # exhausted the budget has escalated, and a caller scripting the loop needs
@@ -1692,7 +1716,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         retention="sealed", report_bytes=outcome.report.encode(),
         report_commit=report_commit, cycle_path=str(rel),
         audit_repo=cfg.audit_repo or "local", mode="local",
-        integrity=outcome.integrity)
+        integrity=outcome.integrity, authority=outcome.authority)
     (ledger / "receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True),
                                            encoding="utf-8", newline="\n")
     if sign_receipt(cfg, receipt, ledger):
@@ -1736,7 +1760,10 @@ def cmd_run(args: argparse.Namespace) -> int:
         print("  Checks passed, but no model reviewed this (no API key), so it can")
         print("  never be PASS. Add a key (`crossaudit init --force`), then re-run.")
     else:
-        print(f"  Escalated: {outcome.invalid_reason or 'a human decision is needed'}")
+        rationale = outcome.authority.get("rationale") or ()
+        why = (outcome.invalid_reason or (rationale[0] if rationale else "")
+               or "a human decision is needed")
+        print(f"  Escalated: {why}")
         print(f"  Report: {rel}/report.md")
     if status == "ESCALATED":
         return EXIT_ESCALATED
