@@ -969,7 +969,8 @@ def cmd_audit(args: argparse.Namespace) -> int:
                         offline=args.offline,
                         allow_custom_endpoint=_allow_custom(args),
                         retention=args.retention,
-                        on_event=getattr(args, "on_step", None))
+                        on_event=getattr(args, "on_step", None),
+                        usage_context=_usage_context(args, cfg, cycle))
 
     # Ledger write, in the only order that can be honest: report first, then a
     # receipt that binds the report's commit.
@@ -1504,6 +1505,17 @@ def _done(msg: str) -> None:
     print(f"ok — {msg}")
 
 
+def _usage_context(args, cfg, cycle: dict) -> dict:
+    """Attribution for the auditor's completion: the caller's run/chat ids,
+    this cycle and round, and the project's price overrides."""
+    context = dict(getattr(args, "usage_context", None) or {})
+    context["cycle_id"] = str(cycle.get("cycle_id", "") or "")
+    context["round"] = int(cycle.get("round", 0) or 0)
+    if getattr(cfg, "prices", None):
+        context["prices"] = cfg.prices
+    return context
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     """The guided verb: audit the latest commit, narrate every step, decide
     nothing the commit itself cannot decide. `audit` remains the precise tool;
@@ -1671,7 +1683,8 @@ def cmd_run(args: argparse.Namespace) -> int:
                         task=task,
                         offline=offline,
                         allow_custom_endpoint=_allow_custom(args),
-                        retention="sealed")
+                        retention="sealed",
+                        usage_context=_usage_context(args, cfg, cycle))
     hard = outcome.dcl["total_hard_failures"]
     _done("clean" if hard == 0 else f"{hard} hard failure(s)")
     if not offline:

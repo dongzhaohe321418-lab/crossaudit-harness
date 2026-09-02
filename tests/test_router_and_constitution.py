@@ -286,7 +286,8 @@ def test_direct_auditor_chat_transmits_only_the_addressed_user_message(monkeypat
         sent.update(system=system, prompt=prompt)
         return Reply("I can clarify the audit process.")
 
-    monkeypatch.setattr(talk, "_auditor_complete", lambda _cfg: complete)
+    # The lane passes chat_id= for usage attribution; the fake ignores it.
+    monkeypatch.setattr(talk, "_auditor_complete", lambda _cfg, **_usage: complete)
     routing = router_mod.Routing(
         utterance="@Auditor explain your role", lane="auditor", confidence=1,
         reasoning="explicit", restated="explain your role",

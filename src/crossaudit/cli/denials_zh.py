@@ -271,6 +271,12 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "resilience.max_backoff_seconds 不能小于 initial_backoff_seconds"),
     ("daily token warning cannot exceed the hard limit", "每日 token 警告线不能超过硬上限"),
     ("monthly cost warning cannot exceed the hard limit", "每月费用警告线不能超过硬上限"),
+    ("prices must be a mapping", "prices 必须是映射"),
+    ("prices: model ids must be 1 to 160 characters", "prices：模型 ID 必须是 1 到 160 个字符"),
+    ("prices.{} must be a mapping of input, output, cache_write, cache_read",
+     "prices.{} 必须是包含 input、output、cache_write、cache_read 的映射"),
+    ("prices.{}.{} must be a non-negative number (USD per 1M tokens)",
+     "prices.{}.{} 必须是非负数（每 100 万 token 的美元价格）"),
     ("authority.lone_model_blocker must be 'block' (bounded revision, the default) "
      "or 'escalate' (a person decides at round one)",
      "authority.lone_model_blocker 必须是 'block'（受限修订，默认值）或 'escalate'"

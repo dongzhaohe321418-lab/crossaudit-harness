@@ -936,7 +936,7 @@ def say(cfg: Config, text: str, *, attachments=None,
             routing_mode="human_continuation", chat_id=chat_id)
     else:
         routing = router_mod.apply_safe_default(router_mod.route_addressed(
-            text, complete=talk_mod._auditor_complete(cfg),
+            text, complete=talk_mod._auditor_complete(cfg, role="router", chat_id=chat_id),
             context=talk_mod._context(cfg, chat_id)))
         routing.chat_id = chat_id
     if not routing.certain:
