@@ -35,13 +35,23 @@
 4. 打包：`PYTHON_BIN=/Users/ericdong/Documents/Crossaudit/crossaudit_v4/.venv/bin/python bash packaging/macos/build_dmg.sh`
 5. 浏览器实测控制台时，Claude in Chrome 有两个已连接的 Chrome 实例，选 "macbook"。
 
+## 第二轮（2026-09-03）
+
+| 切片 | 内容 | 状态 |
+|---|---|---|
+| 感知延迟 | 发送即返回（~3 ms），每阶段叙述，流式默认开启、Anthropic 流式，审计阶段逐项检查，8 秒静默心跳 | 已合，复核修复已合 |
+| 安装与预检 | 缺凭据前置设置卡（所有入口）、异厂商句子、向导默认单仓库、DMG 打开说明、卸载说明 | 已合，复核修复已合 |
+| 结果与决策 | 人话判定、观察句优先、详情折叠、耗时费用预估、每个升级分支有原因与动作 | 已合，复核修复已合 |
+| 预警与计费 | 归属到任务/循环/轮次/角色、80%/95% 预警、429 倒计时、顶栏胶囊、未计价可见与覆盖价、导出与汇总 | 已合，复核修复已合 |
+| 闭环复核 | 第二轮闭环审计在 e3b9388 上进行 | 见 `docs/findings/` 或 scratchpad 的 review-closure2.md |
+
 ## 下一步（按优先级）
 
-1. **收尾中的两项**：控制台第 3 轮体验修复（模态挡住语言开关、原始秒数、术语、审查卡按钮）在分支 `fusion/console`；中文化复核修复（所有命令的语言解析、Denial 子类覆盖、术语对齐、供应商失败句子）在 `fusion/i18n-denials`。合入后跑全量。
-2. **最终交付**：版本升 4.16.0、CHANGELOG、`scripts/release_gate.sh`、打 DMG 到 `dist/` 并复制到 `~/Documents/Crossaudit/builds/`。
+1. **第二轮闭环复核**若有未关项，派回修；否则重新打包 4.16.0 DMG，复制到 `~/Documents/Crossaudit/builds/`。
+2. **GitHub 就绪切片**：README 首屏与演示、与 Codex/Claude Code 类 harness 的对比表、CI 徽章、CONTRIBUTING、issue 模板；公证发布需要你的 Apple 开发者身份。
 3. **合回主线与发布**由你定：`git merge fusion/evidence-authority` 到 `v5-redesign`；推送/发布前先问。
 4. `docs/dcl-lifecycle-states` 分支仍需先 rebase 再看（会删 68 个文件），未动。
-5. 待定的产品问题：`lone_model_blocker` 的默认何时切到 `escalate`，等 finding-states 跑出确认率。
+5. 待定的产品问题：`lone_model_blocker` 的默认何时切到 `escalate`，等 finding-states 跑出确认率；`generator_streaming` 是否也该管审计端进度（延迟复核 D9）。
 
 ## 不可动摇的规矩(别让任何人改掉)
 

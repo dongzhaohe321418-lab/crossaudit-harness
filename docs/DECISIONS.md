@@ -6596,3 +6596,64 @@ suite (`tests/test_no_undefined_names.py`).
 information; strictness is a dial. Every refusal states what stopped, why,
 and what happens next, in both languages, and allows one free retry before
 it becomes a decision card.
+
+## D150 — The second round: the product the owner asked for, and what the reviews changed on the way
+
+After D149 the owner restated the goal — a dual-source audit harness as good
+as Codex, one that earns a place on GitHub — and set the product rules that
+every slice since has been held to: smooth use, no needless errors, clear
+information in both languages, nothing on the main surface a user does not
+need (no hashes, cycle ids, commit shas, provider:model strings, rule ids),
+and progress visible at every moment. Five slices were built to those rules,
+each with an independent review and a fix round, plus a second closure
+audit over every reviewed defect.
+
+**Perceived latency.** The POST that accepted a message used to block on a
+router model call, preflight and a git commit: 2 s before anything moved.
+It now returns in about 3 ms and the work happens in a worker that narrates
+every phase — received, routed, preparing, generating, auditing — with a
+server-side clock that speaks after 8 s of silence (D4: no page-side stall
+timer). Streaming is on by default and any adapter that declares it streams;
+Anthropic gained a streaming path; the auditor never streams draft text,
+only progress. The review found the lane-reply streaming was unreachable (a
+bound method cannot carry `on_chunk`), an orphan thread on a 409, and an
+internal exception painted verbatim; all fixed and pinned.
+
+**Setup and preflight.** A missing credential used to surface mid-run as a
+"provider failure" decision card with a terminal command in it. It is now a
+setup card before anything starts, on every entry point that can start a
+build (the review found two retry paths that bypassed it). The same-vendor
+rule speaks in two sentences instead of "I1 violated". The wizard defaults
+to a single local project. The DMG carries a first-open note for Gatekeeper.
+
+**Results and decisions.** Verdicts read Passed / Needs changes / Needs you;
+findings lead with the observation and keep the rule id in details; the
+record block is collapsed; the run card forecasts "usually 2–4 min · about
+$0.30" from the project's own history. Every ESCALATE branch now has a
+cause and a next action. The review found the lock cause written on the
+wrong cycle and pointing at the wrong decision, and that the primary CLI
+routes never stored the cause at all — the copy was reachable only by test
+injection. Both fixed by driving the real commands.
+
+**Token warning and billing, with AgentIsland as the reference.** What was
+adopted: thresholds that fire once and re-arm only when a genuinely new
+period begins, remaining-vs-used, a token or value counting mode, a cost
+ledger with weekly and monthly report cards. What was deliberately not
+adopted: reading other apps' session files or vendor OAuth usage endpoints.
+CrossAudit derives reset moments only from 429 responses it received itself.
+Usage lines now carry run, cycle, round, chat and role; the review found
+that nothing pinned this wiring — deleting the auditor's attribution passed
+the whole suite — and that every cycle's first generation was unattributed.
+An end-to-end test now drives a real round and asserts every line.
+
+**Three cross-cutting lessons.** A test that consults the developer's
+Keychain passes on one laptop and fails on another; the suite now sets
+placeholder credentials and the keyless tests delete them themselves. Two
+slices extending the same function signature merge cleanly and still break
+each other's test stubs; call sites use keywords and stubs accept extras.
+And the regex repair guard of D149 was reviewed again after its rework: a
+binary past the diff read cap was committed with only a caution, so binaries
+are now detected from numstat, independent of the cap.
+
+**Closes** D141's "±5%" row (`approximately` now means approximately, in the
+templates and the auditor prompt as well as drafted constitutions).
