@@ -146,7 +146,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .ui-icon,#hub-settings,#settings-open,#hub-theme,#theme-toggle,#sidebar-toggle,#back-projects,
 #current-project-pin,#inspect-toggle,#inspect-close,#palette-open,.pin-button,.project-pin,.nav-icon,
 .new-task>span:first-child,.hpc-host-intro-icon,.project-delete,.task-delete,.project-arrow,
-[data-preview].artifact-action,.artifact-action[download],.pill-glyph,.review-mark,.review-chevron,
+[data-preview].artifact-action,.artifact-action[download],.pill-glyph,
 .deliverable-icon,.group-chevron,.decision-glyph,.banner-glyph,.rail-search-icon,.attach-glyph,
 .send-glyph,.stop-glyph{font-size:0}
 .ui-icon:before,#hub-settings:before,#settings-open:before,#hub-theme:before,#theme-toggle:before,
@@ -154,7 +154,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 #inspect-close:before,#palette-open:before,.pin-button:before,.project-pin:before,.nav-icon:before,
 .new-task>span:first-child:before,.hpc-host-intro-icon:before,.project-delete:before,
 .task-delete:before,.project-arrow:before,[data-preview].artifact-action:before,
-.artifact-action[download]:before,.pill-glyph:before,.review-mark:before,.review-chevron:before,
+.artifact-action[download]:before,.pill-glyph:before,
 .deliverable-icon:before,.group-chevron:before,.decision-glyph:before,.banner-glyph:before,
 .rail-search-icon:before,.attach-glyph:before,.send-glyph:before,.stop-glyph:before,
 .top-project:after{content:"";display:block;width:17px;height:17px;background:currentColor;
@@ -188,8 +188,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .pill-revise .pill-glyph{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3'/%3E%3Cpath d='M5 4v4h4M19 20v-4h-4'/%3E%3C/svg%3E")}
 .pill-done .pill-glyph{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 13 4 4L19 7'/%3E%3C/svg%3E")}
 .pill-decide .pill-glyph,.decision-glyph,.banner-glyph{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 11V6a1.5 1.5 0 0 1 3 0v4V4.5a1.5 1.5 0 0 1 3 0V10V6a1.5 1.5 0 0 1 3 0v5l2.2-2.2a1.4 1.4 0 0 1 2 2L16 15.5c-1 3-2.5 5-6 5-4 0-6-3-6-7V8a1.5 1.5 0 0 1 3 0v3'/%3E%3C/svg%3E")}
-.review-mark{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 19 6v5c0 4.5-2.8 7.9-7 10-4.2-2.1-7-5.5-7-10V6l7-3Z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E")}
-.review-chevron,.group-chevron{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m8 10 4 4 4-4'/%3E%3C/svg%3E")}
+.group-chevron{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m8 10 4 4 4-4'/%3E%3C/svg%3E")}
 .deliverable-icon{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M8 6h6l4 4v10H8V6Z'/%3E%3Cpath d='M14 6v4h4M5 3h7'/%3E%3C/svg%3E")}
 .attach-glyph{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E")}
 .send-glyph{--ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19V5M6 11l6-6 6 6'/%3E%3C/svg%3E")}
@@ -633,44 +632,14 @@ details.draft-fold>.draft-body{margin-top:9px}
 .status.ESCALATED,.status.escalated{background:var(--escalated-bg);color:var(--escalated)}
 .status.running{background:var(--state-work-bg);color:var(--state-work)}
 
-/* Independent review card: invisible by default, expandable in full. */
-.review-card{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
-  box-shadow:var(--shadow-1);margin:var(--sp-2) 0 var(--sp-6);overflow:hidden}
-.review-summary{width:100%;border:0;background:transparent;text-align:left;padding:var(--sp-4);
-  display:block;color:inherit}
-.review-summary:hover{background:var(--hover)}
-.review-top{display:flex;align-items:center;gap:10px}
-.review-mark{width:22px;height:22px;border-radius:var(--r-xs);display:grid;place-items:center;
-  background:var(--role-a-bg);color:var(--role-a);flex:none}
-.review-mark:before{width:14px;height:14px}
-.review-top b{font-size:var(--fs-title);font-weight:600;flex:1;min-width:0}
-.review-chevron{color:var(--text-3);transition:transform var(--dur-fast) var(--ease-out)}
-.review-card.open .review-chevron{transform:rotate(180deg)}
-.review-checks{margin:var(--sp-3) 0 0;padding:0;list-style:none;display:grid;gap:5px}
-.review-checks li{display:flex;align-items:baseline;gap:8px;font-size:var(--fs-body);color:var(--text-2)}
-.review-checks li:before{content:"";width:12px;height:12px;flex:none;background:var(--pass);
-  align-self:center;
-  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 13 4 4L19 7'/%3E%3C/svg%3E") center/contain no-repeat;
-  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 13 4 4L19 7'/%3E%3C/svg%3E") center/contain no-repeat}
-.review-rounds{margin-top:var(--sp-3);font-size:var(--fs-caption);color:var(--text-3)}
-.review-rounds b{font-family:var(--font-label);font-weight:500;color:var(--text-2)}
-.review-detail{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--dur-base) var(--spring)}
-.review-card.open .review-detail{grid-template-rows:1fr}
-.review-detail-inner{min-height:0;overflow:hidden}
-.review-section{border-top:1px solid var(--line);padding:var(--sp-4)}
-.review-section-title{font-size:var(--fs-caption);font-weight:600;color:var(--text-3);margin-bottom:var(--sp-2)}
-.review-round-row{display:flex;align-items:baseline;gap:10px;padding:4px 0;font-size:var(--fs-body)}
-.review-round-row .round-n{font-family:var(--font-label);font-size:var(--fs-caption);color:var(--text-3);flex:none}
+/* How many rules the constitution ships, beside the checks it qualifies. */
+.check-rules{margin-top:var(--sp-3);font-size:var(--fs-caption);color:var(--text-3)}
+/* The record the settled cycle's outcome row folds shut (cycleRows). */
 .review-record{display:grid;gap:6px}
 .review-record-row{display:flex;align-items:center;gap:8px;font-size:var(--fs-label)}
 .review-record-row span:first-child{color:var(--text-2);min-width:88px}
 .review-record-row code{font-family:var(--font-mono);font-size:var(--fs-caption);color:var(--text);
   overflow-wrap:anywhere}
-.review-actions{border-top:1px solid var(--line);padding:var(--sp-2) var(--sp-3);display:flex;
-  justify-content:flex-end}
-.review-action{border:0;background:transparent;color:var(--text-2);font-size:var(--fs-label);
-  padding:6px 8px;border-radius:var(--r-xs)}
-.review-action:hover{background:var(--hover);color:var(--text)}
 .finding{margin-top:9px;border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;
   background:var(--surface)}
 .finding-head{display:flex;align-items:center;gap:7px;font-size:var(--fs-caption);color:var(--text-2)}
@@ -688,12 +657,6 @@ details.draft-fold>.draft-body{margin-top:9px}
 .finding-details .finding-tier{display:inline;margin:0}
 .finding-details .severity.suggestion{color:var(--text-2)}
 .finding-sep{opacity:.5}
-/* R3. The record (commit, cycle, models) sits behind a closed disclosure. */
-.review-details>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px}
-.review-details>summary::-webkit-details-marker{display:none}
-.review-details>summary::after{content:'';width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform var(--dur-base)}
-.review-details[open]>summary::after{transform:rotate(45deg)}
-.review-details .review-record{margin-top:var(--sp-2)}
 /* R4. One forecast line at task start and in the run card header. */
 .run-forecast,.turn-forecast{color:var(--text-3);font-size:var(--fs-caption)}
 .turn-forecast{margin-top:6px}
@@ -2520,7 +2483,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
 }
 @media(forced-colors:active){
   .topbar,.hub-bar,.sidebar,.inspector,.composer,.wizard,.palette,.project-table,.run-card,
-  .review-card,.decision-banner{border:1px solid CanvasText}
+  .decision-banner{border:1px solid CanvasText}
   .primary,.compose-button.send{forced-color-adjust:none;background:Highlight;color:HighlightText}
 }
 </style></head>
@@ -3509,7 +3472,6 @@ const ZH={
   "Describe a task in plain language. A generator will make the change, deterministic checks will run, and an independent model will audit every round before admission.":"用自然语言描述任务。生成者完成修改，系统运行确定性检查，并由独立模型在准入前审计每一轮。",
   "Working":"处理中",
   
-  "Needs your input":"需要你决定",
   
   "Stopped":"已停止",
   "View audit details":"查看审计详情",
@@ -3680,8 +3642,6 @@ const ZH={
   "Stop current task":"停止当前任务","Review":"查看","Attempted":"已尝试",
   "Blocked on":"阻塞在","Recommendation":"建议","Suggested":"建议选项",
   "The task this conversation asked for.":"此对话所要求完成的任务。",
-  "Independent review":"独立审查","Independent auditor approved the result":"独立审计者已批准该结果",
-  "No blocking findings":"没有阻断性问题","Recorded in the audit ledger":"已记录到审计账本",
   // SPEC-9 slice 1 — spoken, not seen. A screen reader hears these; nothing renders them.
   "A task is waiting for your decision.":"有一个任务正在等待你的决定。",
   "CrossAudit replied.":"CrossAudit 已回复。",
@@ -3769,7 +3729,7 @@ const ZH={
   ,"Current gate":"当前关卡","Stopped at":"停止于","Next gate":"下一关卡","Completed gate":"已完成关卡","Live activity":"实时活动","Run activity":"运行活动"
   ,"Live generator and auditor events appear here while a task runs. The gate states above are reconstructed from the Git ledger.":"任务运行时，生成者与审计者的实时事件会显示在这里。上方关卡状态由 Git 账本重建。"
   ,"Stop":"停止","Stopping…":"正在停止…","Ledger snapshot":"账本快照","Ledger-backed state":"账本支撑的状态","Controller":"控制器","Result":"结果","Round":"第","Audit gates reached":"已到达的审计关卡"
-  ,"Working":"进行中","Passed review":"通过复核","Needs changes":"需要修改","Admitted":"已准入","Needs your input":"需要你处理","Current step":"当前步骤","Next step":"下一步","Completed step":"已完成步骤","Compute":"算力","Tool":"工具","Process":"流程","Done":"完成","Active":"进行中","Waiting":"等待","Stopped":"已停止","Audit steps done":"已完成的审计步骤","The generator and auditor show what they are doing here while a task runs.":"任务运行时，生成者和审计者会在这里显示各自正在做什么。"
+  ,"Working":"进行中","Passed review":"已通过审查","Needs changes":"需要修改","Admitted":"已准入","Current step":"当前步骤","Next step":"下一步","Completed step":"已完成步骤","Compute":"算力","Tool":"工具","Process":"流程","Done":"完成","Active":"进行中","Waiting":"等待","Stopped":"已停止","Audit steps done":"已完成的审计步骤","The generator and auditor show what they are doing here while a task runs.":"任务运行时，生成者和审计者会在这里显示各自正在做什么。"
   ,"passed":"已通过","blocked":"已阻止","escalated":"已升级","consumed":"已准入","interrupted":"已中断","setting_up":"正在设置","setup_failed":"设置失败"
   ,"PASS":"通过","PASSED":"已通过","BLOCKED":"已阻止","ESCALATED":"已升级","CONSUMED":"已准入","DCL_ONLY":"仅确定性检查"
   ,"NOTHING_TO_AUDIT":"暂无可审计内容"
@@ -6335,7 +6295,7 @@ const EVENT_VERBS={
   auditor_progress:{en:'The auditor is still reading',zh:'审计者仍在阅读'},
   audit_passed:{en:'Passed review',zh:'已通过审查'},
   audit_blocked:{en:'Needs changes',zh:'需要修改'},
-  audit_escalated:{en:'Needs your decision',zh:'需要你的决定'},
+  audit_escalated:{en:'Needs your decision',zh:'需要你决定'},
   revision_requested:{en:'Asked for a revision',zh:'已请求修订'},
   revision_retry:{en:'Asked again',zh:'已再次请求'},
   revision_unchanged:{en:'The revision changed nothing',zh:'修订没有带来任何改动'},
@@ -6468,6 +6428,11 @@ function streamRows(d,ctx){
   const rows=[];
   for(const m of (c.messages||[])){const r=rowFromMessage(m,d);if(r)rows.push(r);}
   for(const s of (c.steps||[])){const r=rowFromStep(s,d);if(r)rows.push(r);}
+  //: The verdict of a settled cycle is a row like any other, and it has a
+  //: clock of its own (the report that decided it), so it sorts where it
+  //: happened rather than being appended under everything, which is how a
+  //: card for round 3 came to sit under the decision row for round 2.
+  for(const r of (c.cycles||[]))if(r)rows.push(r);
   // Chronological, and stable inside one second: a message and the step that
   // reports it share a timestamp often enough that a sort alone would shuffle
   // them differently on every frame.
@@ -6640,7 +6605,11 @@ function row(r,d){
   const body=rowDetailHtml(r.detail,d)
     +(r.rolled&&r.rolled.length?'<div class="srow-rolled">'
       +r.rolled.map(x=>row(x,d)).join('')+'</div>':'');
-  const fold=body?'<details class="srow-fold"'+(r.open?' open':'')+'><summary>'
+  //: A fold a person opened stays open across the next snapshot. `<details>`
+  //: is its own state and a re-render throws it away -- which is why the
+  //: review card carried an expansion set. The set survives the card.
+  const fold=body?'<details class="srow-fold"'+(r.key?' data-srow-key="'+esc(r.key)+'"':'')
+    +(r.open?' open':'')+'><summary>'
     +line+'</summary><div class="srow-body">'+body+'</div></details>':line;
   return '<div class="'+cls+'">'+fold+rowActionHtml(r.action)+'</div>';}
 // ------------------------------------------------------------ the status line
@@ -6679,8 +6648,12 @@ function statusLine(d){
   const zh=currentLocale==='zh';
   const draft=liveDraftFor(d);
   const parts=[phaseWords(phase)];
-  const count=phaseCount(phase,{words:draftCount(draft?draft.text:''),
-    files:liveFileCount(d)});
+  //: D10. The status line the design writes out is verb, round, elapsed,
+  //: cost. The number that belongs beside the verb is the one ACCUMULATING
+  //: as you watch: the words of the draft. The file count is neither. It is
+  //: a fourth figure that never moves, and the files it counts are already
+  //: chips on the row of the generator.
+  const count=phaseCount(phase,{words:draftCount(draft?draft.text:'')});
   if(count)parts.push(count);
   const round=statusRoundText(p,d);if(round)parts.push(round);
   const seconds=Math.max(0,Math.floor(Number(p.elapsed||0)));
@@ -6709,6 +6682,105 @@ function liveThinkingRow(d){
     +'<time class="event-time">'+(currentLocale==='zh'?'刚刚':'now')+'</time></summary>'
     +'<div class="event-detail">'+esc(thinking.text.slice(-160).replace(/\s+/g,' '))
     +'</div></details>';}
+// -------------------------------------------- a settled cycle is ROWS
+// docs/design/ACTIVITY_STREAM.md SSRounds. A cycle that has settled --
+// passed, admitted, needs changes -- used to be a CARD: its own heading, its
+// own verdict pill in its own vocabulary, its own round counter, and twenty
+// lines of sections stacked under the stream that had just said the same
+// thing. An ESCALATED cycle was already a row, so one surface read as two
+// designs, and in a chat carrying both, the card wrote Round 3 of 3 over
+// the row directly above it while claiming a verdict the row denied.
+//
+// It is the OUTCOME ROW of that round now: the verdict in plain words, the
+// round number ON the line, and everything the card stacked underneath --
+// the deterministic checks, the findings, the provenance of the report
+// and the technical record -- is the detail that opens IN PLACE. One
+// vocabulary for a verdict, one round counter, one shape, one renderer.
+//
+// The files the round produced are already rows: they are the file chips on
+// the say row of the generator, where the person who wants them looks.
+const CYCLE_VERDICTS={
+  PASSED:{en:'Passed review',zh:'已通过审查',tone:'passed'},
+  CONSUMED:{en:'Admitted',zh:'已准入',tone:'passed'},
+  BLOCKED:{en:'Needs changes',zh:'需要修改',tone:'blocked'}};
+//: The words the folded detail uses for itself, in both languages at the same
+//: commit (design rule 7).
+const CYCLE_WORDS={
+  checks:{en:'Automatic checks',zh:'自动检查'},
+  findings:{en:'What the auditor raised',zh:'审计者提出的问题'},
+  record:{en:'Details',zh:'详情'},
+  admit:{en:'Admit result',zh:'准入结果'}};
+function cycleWords(row){return currentLocale==='zh'?row.zh:row.en;}
+//: The settled cycle of this conversation, as ONE outcome row, or nothing.
+function cycleRows(d){
+  const cycles=chatCycles(d);if(!cycles.length)return [];
+  const cycle=cycles[cycles.length-1];
+  const status=String(cycle.status||'').toUpperCase();
+  const verdict=CYCLE_VERDICTS[status];
+  //: ESCALATED is deliberately absent: a stopped cycle is the decision row
+  //: `streamStops` builds, and a second row saying it would ask twice.
+  if(!verdict)return [];
+  //: R3, kept: a run CONTINUING this cycle is producing the verdict that
+  //: supersedes this one, and stating the old outcome while it is being
+  //: replaced is a false statement about what is current. A run on anything
+  //: else is different work, and this row stays true -- which is exactly when
+  //: a person watching a live draft over a settled cycle needs it.
+  const p=chatProgress(d);
+  if(p&&!p.finished&&String(p.continuation_cycle||'')===String(cycle.id||''))return [];
+  const reports=((d&&d.auditor_stream)||[]).filter(
+    m=>m.kind==='auditor'&&(m.chat_id||'history')===activeChatId);
+  const related=reports.filter(m=>m.sha&&cycle.sha
+    &&(String(cycle.sha).startsWith(String(m.sha))||String(m.sha).startsWith(String(cycle.sha))));
+  const rows=(related.length?related:reports.slice(-Number(cycle.round||1))).slice(-8);
+  const last=rows.length?rows[rows.length-1]:null;
+  const roundNo=Math.max(0,Math.floor(Number((last&&last.round)||cycle.round||0)));
+  const sub=[];
+  //: The console is never told which checks RAN, so nothing here counts them
+  //: passed -- the list carries its own real state. A project that configures
+  //: none gets no section at all, rather than one whose entire content is
+  //: "No checks configured" six lines under a count of four.
+  const checks=checkRows(d);
+  if(checks.length)sub.push(streamRow({shape:'do',actor:'system',kind:'check_finished',
+    line:cycleWords(CYCLE_WORDS.checks),round:roundNo,
+    detail:{kind:'html',html:'<p class="check-summary">'
+      +esc(t(checkSummary(checks,auditCount(d))))+'</p><div role="list" aria-label="'
+      +esc(cycleWords(CYCLE_WORDS.checks))+'">'+renderCheckRows(checks)+'</div>'
+      +'<div class="check-rules">'+esc(d.rules)+(d.rules===1?' rule':' rules')+'</div>'}}));
+  const findings=rows.reduce((all,m)=>all.concat(m.findings||[]),[]);
+  if(findings.length)sub.push(streamRow({shape:'do',actor:'auditor',kind:'auditor',
+    line:cycleWords(CYCLE_WORDS.findings),n:{value:findings.length,unit:'findings'},
+    round:roundNo,detail:{kind:'html',html:findings.map(findingCard).join('')}}));
+  //: The F1 provenance line: what was reviewed, and whether the copy on disk
+  //: still matches it. One row per DISTINCT note, because several rounds of
+  //: one cycle share the same edited file and repeating it would read as
+  //: several problems -- and outside the findings, where it would read as
+  //: something the auditor observed.
+  for(const note of [...new Set(rows.map(m=>m.report_note).filter(Boolean))])
+    sub.push(streamRow({shape:'note',actor:'system',line:t(note),round:roundNo}));
+  //: The technical record, folded shut inside the folded row: the models by
+  //: their friendly names, then the identifiers, which never reach a paint
+  //: nobody asked for (design rule 4).
+  const ruleIds=[...new Set(rows.reduce(
+    (all,m)=>all.concat((m.findings||[]).map(f=>f.rule).filter(Boolean)),[]))];
+  sub.push(streamRow({shape:'note',actor:'system',round:roundNo,
+    line:cycleWords(CYCLE_WORDS.record),
+    detail:{kind:'html',html:'<div class="review-record">'
+      +'<div class="review-record-row"><span>Generator</span><span>'+esc(friendlyModel(d.generator))+'</span></div>'
+      +'<div class="review-record-row"><span>Auditor</span><span>'+esc(friendlyModel(d.auditor))+'</span></div>'
+      +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
+      +'<div class="review-record-row"><span>Cycle</span><code>'+esc(cycle.id)+'</code></div>'
+      +(ruleIds.length?'<div class="review-record-row"><span>Rules</span><code>'+esc(ruleIds.join(', '))+'</code></div>':'')
+      +'</div>'}}));
+  //: One action, on the row, never a dialog -- and never "View audit details",
+  //: because the detail it used to navigate to opens here.
+  const action=status==='PASSED'?{label:cycleWords(CYCLE_WORDS.admit),
+    attrs:{'data-admit':String(cycle.id||''),'data-admit-cycle':String(cycle.id||'')}}:null;
+  return [streamRow({shape:'outcome',actor:'auditor',kind:'auditor',tone:verdict.tone,
+    line:cycleWords(verdict),n:roundNo?{value:roundNo,unit:'rounds'}:null,
+    t:Number((last&&last.t)||0),round:roundNo,key:String(cycle.id||''),
+    open:expandedReviews.has(String(cycle.id||'')),action:action,
+    detail:sub.length?{kind:'rows',rows:sub}:null})];}
+
 //: What the stream is built from for this conversation: the messages the
 //: client already de-duplicated, the steps of the run that is actually running
 //: (the steps of a finished run are its record, not its news), and the round
@@ -6721,6 +6793,7 @@ function streamContext(d,messages){
   const last=rounds.length?rounds[rounds.length-1]:null;
   const cycles=chatCycles(d),cycle=cycles.length?cycles[cycles.length-1]:null;
   return {messages:messages||[],steps:steps,stops:streamStops(d),
+    cycles:cycleRows(d),
     livePhase:live?(STATUS_PHASE_ROWS[runOrbPhase(p)]||''):'',
     round:Number((last&&last.round_no)||(cycle&&cycle.round)||0)};}
 
@@ -7144,14 +7217,6 @@ function runOrbPhase(p){
   if(s==='DRAFT'||s==='QUEUED')return 'preparing';
   if(s==='CANCELLING')return 'stopping';
   return '';}
-// How many files this round put in front of the auditor: the newest generator
-// commit in this conversation. The page already holds them (the file chips),
-// so the number costs no new request and is never invented.
-function liveFileCount(d){
-  const rows=((d&&d.generator_stream)||[]).filter(
-    r=>r.kind==='generator'&&(r.chat_id||'history')===activeChatId);
-  const newest=rows.length?rows[rows.length-1]:null;
-  return newest&&newest.files?newest.files.length:0;}
 // The phase of the optimistic turn, from the intake record the server keeps for
 // the message in flight (routing → preparing | answering).
 function intakeOrbPhase(intake){
@@ -7262,96 +7327,12 @@ function setStatePill(d){
 function decisionRowFor(d,cycleId,sha){const rows=(d&&d.escalations)||[];
   return rows.find(r=>r.cycle_id===cycleId)||rows.find(r=>sha&&r.sha&&(String(r.sha).startsWith(String(sha))||String(sha).startsWith(String(r.sha))))
     ||currentEscalations(d).slice(-1)[0]||null;}
-// pendingDecisionLine went with the escalated review card: a pending decision
-// is its own row in the stream now, carrying the decision itself, so a second
-// line about it under a card would be the same news twice.
-function reviewCard(d){
-  const cycles=chatCycles(d);if(!cycles.length)return '';
-  const cycle=cycles[cycles.length-1];
-  const status=String(cycle.status||'').toLowerCase();
-  if(!['passed','consumed','blocked','escalated'].includes(status))return '';
-  // R3. This card was suppressed for the whole duration of ANY run. The
-  // suppression predates F1 and F7 — the run card takes the stage — but F1
-  // attaches the report provenance to this card, so that line vanished
-  // exactly while the surface is busiest. A person watching a live draft over a
-  // completed cycle is precisely the person who needs to know what was reviewed
-  // and against what. The F1 property held except while streaming, which is
-  // except when it matters most.
-  //
-  // NARROWED, not removed. A run that is continuing THIS cycle is producing a
-  // verdict that supersedes the one on this card, and showing the old outcome
-  // while it is being replaced would be a false statement about what is
-  // current. A run on anything else is different work: this card stays a true
-  // statement about a settled cycle, it carries that cycle id in its Record,
-  // and the run card directly above it says what is live.
-  const p=chatProgress(d);
-  if(p&&!p.finished&&String(p.continuation_cycle||'')===String(cycle.id||''))return '';
-  const reports=d.auditor_stream.filter(m=>m.kind==='auditor'&&(m.chat_id||'history')===activeChatId);
-  const related=reports.filter(m=>m.sha&&cycle.sha&&(String(cycle.sha).startsWith(String(m.sha))||String(m.sha).startsWith(String(cycle.sha))));
-  const rows=(related.length?related:reports.slice(-Number(cycle.round||1))).slice(-8);
-  const passed=status==='passed'||status==='consumed';
-  const statusLabel = ({PASSED:'Passed review',CONSUMED:'Admitted',BLOCKED:'Needs changes',ESCALATED:'Needs your input'})[String(cycle.status||'').toUpperCase()] || cycle.status;
-  const open=expandedReviews.has(cycle.id);
-  const checks=checkRows(d);
-  const roundLines=(rows.length?rows.map(m=>{
-    const count=(m.findings||[]).length;
-    return '<div class="review-round-row"><span class="round-n">Round '+esc(m.round)+'/'+esc(d.max_rounds)
-      +'</span> · <span>'+(count?count+' finding'+(count===1?'':'s'):esc(verdictWord(m.verdict||'PASS')))
-      +'</span></div>';}):['<div class="review-round-row"><span class="round-n">Round '
-      +esc(cycle.round)+'/'+esc(d.max_rounds)+'</span></div>']).join('');
-  // "N deterministic checks passed" counted the CONFIGURED checks and called
-  // them passed. That is the same fabrication as the ticks below it: the console
-  // is not told which checks ran. The claim is removed rather than restated, and
-  // the check list in the detail carries its real state instead.
-  // A stopped cycle is a row in the stream now: a machine failure is a note
-  // with an inline retry, a judgment call is an outcome row that expands into
-  // the decision itself. A card announcing the same stop underneath would be
-  // the interface asking twice.
-  if(status==='escalated')return '';
-  const checkLines=passed
-    ?'<ul class="review-checks"><li>Independent auditor approved the result</li>'
-      +'<li>No blocking findings</li>'
-      +'<li>Recorded in the audit ledger</li></ul>'
-    :'';
-  const ruleIds=[...new Set(rows.flatMap(m=>(m.findings||[]).map(f=>f.rule).filter(Boolean)))];
-  const findingRows=rows.filter(m=>(m.findings||[]).length).map(m=>
-    '<div class="review-round-row"><span class="round-n">round '+esc(m.round)+'</span></div>'
-    +(m.findings||[]).map(findingCard).join('')).join('');
-  const detail='<div class="review-detail"><div class="review-detail-inner">'
-    +'<div class="review-section"><div class="review-section-title" id="review-checks-title-'+esc(cycle.id)+'">Automatic checks</div>'
-    +'<p class="check-summary">'+esc(checkSummary(checks,auditCount(d)))+'</p>'
-    +'<div role="list" aria-labelledby="review-checks-title-'+esc(cycle.id)+'">'+renderCheckRows(checks)+'</div>'
-    +'<div class="review-rounds">'+esc(d.rules)+(d.rules===1?' rule':' rules')+'</div></div>'
-    +(findingRows?'<div class="review-section"><div class="review-section-title">Findings</div>'+findingRows+'</div>':'')
-    // F1. The review card is the surface a person actually reads for the audit
-    // result, so the provenance of the bytes above belongs here and not only in
-    // the Audits view. One line per distinct note, because several rounds of one
-    // cycle share the same edited file and repeating it would read as several
-    // problems.
-    +([...new Set(rows.map(m=>m.report_note).filter(Boolean))]
-        .map(note=>'<p class="report-provenance">'+esc(note)+'</p>').join(''))
-    // R3. The record — who generated, who audited, which commit and cycle —
-    // sits behind a closed disclosure. Models by their friendly names; the
-    // identifiers never reach the first paint.
-    +'<details class="review-section review-details"><summary class="review-section-title">Details</summary><div class="review-record">'
-    +'<div class="review-record-row"><span>Generator</span><span>'+esc(friendlyModel(d.generator))+'</span></div>'
-    +'<div class="review-record-row"><span>Auditor</span><span>'+esc(friendlyModel(d.auditor))+'</span></div>'
-    +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
-    +'<div class="review-record-row"><span>Cycle</span><code>'+esc(cycle.id)+'</code></div>'
-    +(ruleIds.length?'<div class="review-record-row"><span>Rules</span><code>'+esc(ruleIds.join(', '))+'</code></div>':'')
-    +'</div></details></div></div>';
-  const actionRow=status==='passed'
-    ?'<button type="button" class="review-action" data-admit data-admit-cycle="'+esc(cycle.id)+'">Admit result</button>'
-    :'<button type="button" class="review-action" data-open-audits>View audit details</button>';
-  return '<section class="review-card'+(open?' open':'')+'" aria-label="Independent review">'
-    +'<button type="button" class="review-summary" data-review-toggle="'+esc(cycle.id)+'" aria-expanded="'+(open?'true':'false')+'">'
-    +'<div class="review-top"><span class="review-mark" aria-hidden="true"></span><b>Independent review</b>'
-    +'<span class="status '+esc(cycle.status)+'">'+esc(statusLabel)+'</span><span class="review-chevron" aria-hidden="true"></span></div>'
-    +checkLines
-    +'<div class="review-rounds">'+roundLines+'</div>'
-    +'</button>'+detail
-    +'<div class="review-actions">'+actionRow+'</div></section>';
-}
+// pendingDecisionLine and reviewCard both went into the stream. A pending
+// decision is its own row, carrying the decision itself; a SETTLED cycle is
+// the outcome row of its round (`cycleRows`), carrying the verdict in one
+// vocabulary and the checks, the findings, the provenance and the record as
+// the detail that opens in place. A card under the rows would be a second
+// design on one surface, saying the same verdict in different words.
 // The main surface carries words, never identifiers (D150 / North Star §12):
 // a raw payload (the goal record is JSON for the Plan tab) is not shown at
 // all, and a hash, sha, cycle id, provider:model route or rule id that an
@@ -8011,7 +7992,6 @@ function renderConversation(d){
     announceCondensation(d);
     const p = chatProgress(d);
     const approval = approvalCard(d);
-    const review = reviewCard(d);
     // Optimistic echo: keep the just-sent message + working indicator on screen
     // until the real state takes over (a live run appears, or the message is
     // echoed back in the stream), so the send feels instant.
@@ -8027,13 +8007,12 @@ function renderConversation(d){
         optimistic = optimisticTurn(optimisticSend.text, optimisticSend.queued, intakeFor(d), Boolean(reply)) + reply;}
     }
     // One protagonist per screen: the welcome empty state renders only when
-    // the timeline holds nothing at all, and the delivery band only when no
-    // review card already states the outcome of the same cycle.
+    // the timeline holds nothing at all.
     // ONE list. Every message and every run event is a row of the same
     // renderer; the live draft and the folded thinking are rows too; the
     // status line is the only thing that is not a row, and it is at the foot.
     const body = streamList(d,streamContext(d,messages)).map(r=>row(r,d)).join('')
-      + optimistic + liveDraftTurn(d) + liveThinkingRow(d) + approval + review
+      + optimistic + liveDraftTurn(d) + liveThinkingRow(d) + approval
       + admissionCard() + statusLine(d);
     html = body || welcome();
   }
@@ -8927,13 +8906,6 @@ function handleActionClick(ev){
     if(open)expandedGroups.add(key);else expandedGroups.delete(key);
     if(card){card.classList.toggle('open',open);groupToggle.setAttribute('aria-expanded',String(open));}
     return;}
-  const reviewToggle=ev.target.closest('[data-review-toggle]');
-  if(reviewToggle){const key=reviewToggle.getAttribute('data-review-toggle');
-    const card=reviewToggle.closest('.review-card');
-    const open=!expandedReviews.has(key);
-    if(open)expandedReviews.add(key);else expandedReviews.delete(key);
-    if(card){card.classList.toggle('open',open);reviewToggle.setAttribute('aria-expanded',String(open));}
-    return;}
   // The inline retry of a machine failure: one POST, no dialog, and the
   // composer is never touched. The reason it records is fixed English, because
   // the ledger is a record rather than a rendering.
@@ -9036,6 +9008,15 @@ function handleActionClick(ev){
 }
 document.getElementById('conversation').onclick=handleActionClick;
 document.getElementById('panel-dynamic').onclick=handleActionClick;
+// The disclosure of a row is native `<details>`, so nothing but the next
+// render can close it, and the next render is a poll away. `expandedReviews`
+// remembers which folds are open, by the key of the row, so a snapshot
+// never shuts a detail a person opened. It is the same set that
+// `[data-open-decisions]` reaches for when it can only point at the cycle.
+document.addEventListener('toggle',ev=>{
+  const el=ev&&ev.target;if(!el||!el.getAttribute)return;
+  const key=el.getAttribute('data-srow-key');if(!key)return;
+  if(el.open)expandedReviews.add(key);else expandedReviews.delete(key);},true);
 const deleteChatModal=document.getElementById('delete-chat-modal');
 const deleteChatForm=document.getElementById('delete-chat-form');
 function closeDeleteChat(){deleteChatModal.className='project-modal';deleteChatForm.reset();

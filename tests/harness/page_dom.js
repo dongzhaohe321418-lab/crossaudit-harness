@@ -75,7 +75,14 @@ globalThis.setTimeout=(f,ms)=>0;
 globalThis.clearTimeout=()=>{};
 globalThis.setInterval=()=>0;
 globalThis.clearInterval=()=>{};
-globalThis.fetch=()=>Promise.resolve({ok:true,status:200,json:()=>Promise.resolve({}),text:()=>Promise.resolve('')});
+// A request that is placed and never answers. The harness prints its result
+// synchronously, so a microtask queued by a click is never observed here in
+// any case — but a fetch that RESOLVED handed the boot an empty `{}` state,
+// which `render()` stored in `lastState` and choked on, so the first action
+// whose handler re-renders after its POST killed the whole node run with a
+// stack from a state no test wrote. Never answering is what a test that
+// asserts on the paint before the reply actually means.
+globalThis.fetch=()=>new Promise(()=>{});
 globalThis.EventSource=function(){this.close=()=>{};this.addEventListener=()=>{};};
 globalThis.WebSocket=function(){this.close=()=>{};this.addEventListener=()=>{};this.send=()=>{};};
 globalThis.alert=()=>{};globalThis.confirm=()=>true;globalThis.prompt=()=>null;

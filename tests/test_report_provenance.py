@@ -29,8 +29,38 @@ from pathlib import Path
 
 import pytest
 
+import shutil
+import sys
+
 from crossaudit.config import load
 from crossaudit.console import overview, streams
+
+HARNESS = Path(__file__).parent / "harness"
+sys.path.insert(0, str(HARNESS))
+import render_page  # noqa: E402  (the whole shipped page, under node)
+
+WORKTREE = Path(overview.__file__).parents[3]
+needs_node = pytest.mark.skipif(shutil.which("node") is None,
+                                reason="node is not installed")
+SETTLED_SHA = "c" * 40
+
+
+def _settled_state(note: str, *, progress: dict | None = None) -> dict:
+    """A settled, passing cycle whose report carries `note`."""
+    return {
+        "version": "4", "project": "lab/p", "title": "t", "folder": "f",
+        "tier": {"tier": "local"}, "max_rounds": 3, "rules": 4, "metrics": [],
+        "check_contracts": {}, "pipeline": [], "usage": {},
+        "generator": "anthropic:claude-opus-4-8",
+        "auditor": "openai_compat:gpt-5.6-terra",
+        "generator_stream": [], "escalations": [],
+        "chats": {"items": [{"id": "c1"}]}, "progress": progress,
+        "cycles": [{"id": "f" * 16, "sha": SETTLED_SHA, "status": "PASSED",
+                    "round": 1, "chat_id": "c1"}],
+        "auditor_stream": [{"kind": "auditor", "verdict": "PASS", "round": 1,
+                            "sha": SETTLED_SHA[:12], "t": 90, "chat_id": "c1",
+                            "findings": [], "report_note": note}],
+    }
 
 CONFIG = (
     "version: 1\nscience_repo: t/p\nconstitution: AUDIT_RULES.md\n"
@@ -307,10 +337,11 @@ def test_page_markup_places_the_provenance_note_outside_the_findings_list():
     """The payload carrying a sentence is not the same as a person seeing it.
 
     The auditor row is deliberately excluded from the conversation transcript,
-    so it reaches people through two surfaces: the review card (the primary one)
-    and the Audits view. Both render it, and neither renders it inside the
-    findings list — inside, it would read as something the auditor observed,
-    which is the exact confusion this fix exists to end.
+    so it reaches people through two surfaces: the settled cycle's outcome row
+    in the stream (the primary one, asserted by the rendered test below) and
+    the Audits view. Neither renders the note inside the findings list —
+    inside, it would read as something the auditor observed, which is the exact
+    confusion this fix exists to end.
 
     Driven in a real browser at 1440 and 390, light and dark, both locales:
     `_ui_findings/f1-report-source/evidence/render.json`.
@@ -333,10 +364,6 @@ def test_page_markup_places_the_provenance_note_outside_the_findings_list():
     assert turn.index("report-provenance") > turn.index("map(findingCard)"), (
         "the note is rendered inside the findings, where it reads as something "
         "the auditor observed")
-    # The review card, which is where a person meets the result first.
-    card = PAGE[PAGE.index("const roundLines="):]
-    card = card[:card.index("function approvalCard(d)")]
-    assert "report_note" in card and "report-provenance" in card
     # Both sentences are translated: neither is composed, so both are fixed
     # entries rather than patterns.
     for english, chinese in (
@@ -348,7 +375,29 @@ def test_page_markup_places_the_provenance_note_outside_the_findings_list():
         assert f'"{english}":"{chinese}"' in PAGE
 
 
-def test_the_review_card_survives_a_run_that_is_not_superseding_it():
+@needs_node
+def test_the_settled_outcome_row_carries_the_provenance_a_person_reads_first():
+    """The sentence is on the surface where the result is met, not only in a
+    payload. Rendered through the whole shipped page: it is inside the round's
+    outcome row, one keystroke away, and it is NOT among the findings.
+
+    Mutation: drop the `report_note` rows from `cycleRows` and the sentence
+    leaves the conversation entirely; move it into the findings detail and the
+    ordering assertion fails.
+    """
+    note = ("The copy of this report on disk differs from the audited one "
+            "shown here. Run crossaudit verify to check the record.")
+    out = render_page.render(WORKTREE, {"settled": _settled_state(note)})
+    html = out["settled"]["en"]["html"]
+    assert note in html, html
+    assert note not in out["settled"]["en"]["first_paint"], (
+        "the provenance belongs in the detail that opens, not on every screen")
+    zh = out["settled"]["zh"]["html"]
+    assert "磁盘上的这份报告与此处显示的已审计版本不同" in zh, zh
+
+
+@needs_node
+def test_the_settled_row_survives_a_run_that_is_not_superseding_it():
     """R3 — the F1/F7 interaction, driven instead of argued about.
 
     I reported this interaction as "named" and marked the combined screen
@@ -356,28 +405,39 @@ def test_the_review_card_survives_a_run_that_is_not_superseding_it():
     it failed: with a completed cycle AND an active stream, Chromium showed the
     live draft and no review card, so the provenance line went with it.
 
-    The cause predates both fixes — the card was suppressed for the duration of
-    ANY run, because the run card takes the stage. F1 attached the provenance to
-    that card and inherited the suppression, and F7 made the state reachable
-    enough to see. The property held except while streaming, which is except
-    when the surface is busiest and a person most needs to know what was
-    reviewed.
+    The cause predates both fixes — the surface was suppressed for the duration
+    of ANY run, because the run card took the stage. F1 attached the provenance
+    to it and inherited the suppression, and F7 made the state reachable enough
+    to see. The property held except while streaming, which is except when the
+    surface is busiest and a person most needs to know what was reviewed.
 
     NARROWED rather than removed, and both edges are pinned here because a
-    one-sided guard would be satisfied by deleting the line: a run CONTINUING
-    this cycle is producing a verdict that supersedes the card, and must still
-    hide it; a run on anything else must not.
+    one-sided guard would be satisfied by deleting the row: a run CONTINUING
+    this cycle is producing a verdict that supersedes it, and must still hide
+    it; a run on anything else must not.
 
-    Driven, both edges and both mutations, in `_ui_findings/f1f7-coexist/`.
+    Mutation: drop the `continuation_cycle` clause and the superseded verdict
+    stands under the draft that is replacing it; widen it to any live run and
+    the provenance disappears while a draft streams.
     """
-    from crossaudit.console.page import PAGE
+    note = "This report is not committed yet, so it cannot be verified yet."
 
-    card = PAGE[PAGE.index("function reviewCard(d){"):]
-    card = card[:card.index("\nfunction ")]
-    assert "String(p.continuation_cycle||'')===String(cycle.id||'')" in card, (
-        "the review card is suppressed for the whole of any run again, so the "
-        "report's provenance disappears exactly while a draft is streaming")
-    # ...and it is still suppressed for the case that would state a superseded
-    # outcome. Removing the guard entirely is the other way to get this wrong.
-    assert "if(p&&!p.finished&&" in card
-    assert "if(p&&!p.finished)return '';" not in card
+    def _run(continuation: str) -> dict:
+        return {"run_id": "r1", "chat_id": "c1", "state": "GENERATING",
+                "finished": False, "outcome": "", "elapsed": 12,
+                "task": "Write the review.", "steps": [], "queued": 0,
+                "started": 0, "updated": 0, "waiting_reason": None,
+                "continuation_cycle": continuation}
+
+    states = {
+        "other work": _settled_state(note, progress=_run("")),
+        "superseding": _settled_state(note, progress=_run("f" * 16)),
+    }
+    out = render_page.render(WORKTREE, states)
+    assert note in out["other work"]["en"]["html"], (
+        "a run on different work hid a settled cycle's verdict and its "
+        "provenance — exactly when a person needs to know what was reviewed")
+    assert "Passed review" in out["other work"]["en"]["first_paint"]
+    assert note not in out["superseding"]["en"]["html"], (
+        "the verdict this very run is replacing is still on the screen")
+    assert "Passed review" not in out["superseding"]["en"]["first_paint"]

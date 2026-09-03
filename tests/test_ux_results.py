@@ -146,78 +146,92 @@ def test_finding_words_reach_a_chinese_reader(tmp_path):
     assert all(CJK.search(rendered[w]) for w in words), rendered
 
 
-# ========================================================== R3 details on demand
-_CARD_PRELUDE = r"""
-globalThis.currentLocale='en';globalThis.activeChatId='history';
-globalThis.expandedReviews=new Set();globalThis.at=()=>'';
-globalThis.chatCycles=d=>d.cycles;globalThis.chatProgress=()=>null;
-globalThis.checkRows=()=>[];globalThis.checkSummary=()=>'';globalThis.auditCount=()=>0;
-globalThis.renderCheckRows=()=>'';globalThis.decisionRowFor=()=>null;
-globalThis.pendingDecisionLine=()=>'';globalThis.t=v=>v;
-"""
-_CARD_SIGS = _TURN_SIGS[:6] + ["function friendlyModel(value)", "function reviewCard(d)"]
+# ================================================ R3 details on demand
+# A settled cycle is no longer a card, so these are driven through the WHOLE
+# shipped page (tests/harness/render_page.py) and the real `renderConversation`
+# rather than through a sliced-out `reviewCard` with its callers stubbed. The
+# claim is the same one and it is now made about what a person actually sees.
+import render_page  # noqa: E402  (the whole-page harness)
 
 
-def _state(status: str, verdict: str, findings: list[dict]) -> dict:
+def _cycle_state(status: str, verdict: str, findings: list[dict],
+                 progress: dict | None = None) -> dict:
     sha = _sha("c")
     return {
-        "generator": "anthropic · anthropic:claude-opus-4-8 · high",
-        "auditor": "openai · openai_compat:gpt-5.6-terra",
-        "max_rounds": 3, "rules": 4,
+        "version": "4", "project": "lab/p", "title": "t", "folder": "f",
+        "tier": {"tier": "local"}, "max_rounds": 3, "rules": 4, "metrics": [],
+        "check_contracts": {}, "pipeline": [], "usage": {},
+        "generator": "anthropic:claude-opus-4-8",
+        "auditor": "openai_compat:gpt-5.6-terra",
+        "generator_stream": [], "escalations": [],
+        "chats": {"items": [{"id": "c1"}]}, "progress": progress,
         "cycles": [{"id": "f" * 16, "sha": sha, "status": status, "round": 1,
-                    "chat_id": "history"}],
-        "auditor_stream": [{"kind": "auditor", "verdict": verdict, "sha": sha[:12],
-                            "round": 1, "t": 0, "chat_id": "history",
-                            "findings": findings}],
+                    "chat_id": "c1"}],
+        "auditor_stream": [{"kind": "auditor", "verdict": verdict,
+                            "sha": sha[:12], "round": 1, "t": 90,
+                            "chat_id": "c1", "findings": findings}],
     }
+
+
+BLOCKER_FINDING = {"severity": "BLOCKER", "rule": "CA-TXT-001",
+                   "artifact": "work/a.md", "observation": "Wrong figure."}
 
 
 @needs_node
 def test_an_escalated_cycle_is_a_row_in_the_stream_not_a_review_card():
     """A5. A stopped cycle is a decision, and a decision happens in the stream:
     a machine failure is a note row with one inline action, a judgment call is
-    an outcome row that expands into the decision itself. A review card
+    an outcome row that expands into the decision itself. A second surface
     announcing the same stop underneath would be the interface asking twice.
 
-    Mutation: let reviewCard render the escalated branch again and this fails.
+    The old version of this test asserted only that `reviewCard` returned "" —
+    which is why it did not see the delivery band that had taken the card's
+    place. It renders the whole conversation now.
+
+    Mutation: give ESCALATED an entry in CYCLE_VERDICTS and the escalated cycle
+    grows a second row saying the same thing.
     """
-    assert _review_card(_state("ESCALATED", "ESCALATE", [])).strip() == ""
-
-
-def _review_card(state: dict) -> str:
-    from render_decision import eval_page
-    return eval_page(WORKTREE, _CARD_SIGS,
-                     f"console.log(reviewCard({json.dumps(state)}));", _CARD_PRELUDE)
+    state = _cycle_state("ESCALATED", "ESCALATE", [])
+    out = render_page.render(WORKTREE, {"escalated": state})
+    for locale in ("en", "zh"):
+        html = out["escalated"][locale]["html"]
+        assert "review-card" not in html, html
+        assert "srow-outcome" not in html, (
+            "an escalated cycle with no recorded decision must not paint a "
+            "verdict of its own: the decision row is built from the stop")
+        assert "Needs your input" not in html and "需要你处理" not in html
 
 
 @needs_node
 @pytest.mark.parametrize("status,verdict,findings", [
     ("PASSED", "PASS", []),
-    ("BLOCKED", "BLOCKED", [{"severity": "BLOCKER", "rule": "CA-TXT-001",
-                             "artifact": "work/a.md", "observation": "Wrong figure."}])])
-def test_the_review_card_first_paint_carries_no_identifier(status, verdict, findings):
-    """R3. The grep the owner asked for, on the rendered card: outside the
-    closed Details block there is no 12/40-hex, no provider:model string and
-    no raw verdict word; no finding opens with a rule id. Inside it, models by
-    their friendly names, then the commit and the cycle."""
-    html = _review_card(_state(status, verdict, findings))
-    assert html, "the card rendered nothing"
-    first_paint = _visible(_without_details(html))
-    assert HEX12.search(first_paint) is None, first_paint
-    assert PROVIDER_MODEL.search(first_paint) is None, first_paint
-    assert RAW_VERDICT.search(first_paint) is None, first_paint
-    assert RULE_ID.search(first_paint) is None, first_paint
-    details = re.search(r"<details\b([^>]*)>(.*?)</details>", html, flags=re.S)
-    assert details, "the record lives behind a disclosure"
-    assert " open" not in details.group(1), "collapsed by default"
-    inside = _visible(details.group(2))
-    assert inside.startswith("Details")
-    assert "Claude Opus 4.8" in inside and "GPT-5.6 Terra" in inside
-    assert PROVIDER_MODEL.search(inside) is None, "friendly names, not ids"
-    assert ("c" * 12) in inside and ("f" * 16) in inside
+    ("BLOCKED", "BLOCKED", [BLOCKER_FINDING])])
+def test_a_settled_cycles_row_carries_no_identifier_until_it_is_opened(
+        status, verdict, findings):
+    """R3, on the row that replaced the card: outside the folds there is no
+    12/40-hex, no provider:model string, no raw verdict word and no rule id.
+    Behind them, the models by their friendly names, then the commit and the
+    cycle.
+
+    Mutation: move the record out of its own `<details>` and the first paint
+    grows the commit; paint `cycle.status` instead of the verdict words and
+    RAW_VERDICT fires.
+    """
+    out = render_page.render(WORKTREE, {"settled": _cycle_state(status, verdict, findings)})
+    paint = out["settled"]["en"]["first_paint"]
+    html = out["settled"]["en"]["html"]
+    assert paint, "the cycle rendered nothing"
+    for pattern in (HEX12, PROVIDER_MODEL, RAW_VERDICT, RULE_ID):
+        assert pattern.search(paint) is None, (pattern.pattern, paint)
+    # ...and the record is there, one keystroke away, naming the models by the
+    # names a person recognises.
+    assert "Claude Opus" in html or "claude-opus" in html.lower(), html
+    assert _sha("c")[:12] in html, "the commit is in the record"
+    assert "f" * 16 in html, "the cycle id is in the record"
     if findings:
-        assert "Rules CA-TXT-001" in inside, "the rule id is on demand, in Details"
-    assert ">Record<" not in html
+        assert "Wrong figure." in html and "Wrong figure." not in paint
+        assert "CA-TXT-001" in html
+
 
 
 @needs_node
