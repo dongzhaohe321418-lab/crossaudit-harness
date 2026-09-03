@@ -653,7 +653,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     usage_context: dict = {"run_id": run_id, "chat_id": chat_id,
                            "cycle_id": continuation_cycle or "", "round": 0}
     complete = _generator_complete(cfg, allow_custom, generator_provider_event,
-                                   heartbeat, usage_context)
+                                   heartbeat, usage_context=usage_context)
 
     def budget_notice() -> None:
         """Raise any 80 % / 95 % budget alarm newly crossed, once per period."""

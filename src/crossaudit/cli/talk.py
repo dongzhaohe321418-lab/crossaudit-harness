@@ -244,7 +244,7 @@ def lane_chat(cfg: Config, routing, on_event=None) -> str:
     and mints no receipt — the reply is labeled as unaudited wherever it shows.
     """
     reply = _generator_chat_complete(
-        cfg, str(getattr(routing, "chat_id", "") or ""), on_event)(
+        cfg, chat_id=str(getattr(routing, "chat_id", "") or ""), on_event=on_event)(
         system=GENERATOR_CHAT_SYSTEM, prompt=routing.restated)
     answer = reply.text.strip()
     if not answer:
