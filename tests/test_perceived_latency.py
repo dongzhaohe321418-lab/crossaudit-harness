@@ -1114,6 +1114,12 @@ def _render_run_card(steps: list[dict]) -> str:
         _page_snippet(script, "const ACTOR_MARKS") + ";",
         _page_snippet(script, "function conciseDetail("),
         _page_snippet(script, "function activityRow("),
+        # Thinking-orbs slice: the newest live row's mark is the orb.
+        _page_snippet(script, "const ORB_STATES") + ";",
+        _page_snippet(script, "function orbStateFor("),
+        _page_snippet(script, "function orbMarkup("),
+        _page_snippet(script, "function orbWaitingStep("),
+        _page_snippet(script, "function runOrbPhase("),
         _page_snippet(script, "const CLOCK_KINDS") + ";",
         _page_snippet(script, "function collapseClockRows("),
         _page_snippet(script, "function runCard("),

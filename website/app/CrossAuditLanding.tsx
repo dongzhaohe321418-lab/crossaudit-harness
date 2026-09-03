@@ -24,7 +24,7 @@ type ReleaseInfo = {
 };
 
 const FALLBACK_RELEASE: ReleaseInfo = {
-  tag_name: "v4.15.0",
+  tag_name: "v4.16.0",
   html_url: RELEASES,
   assets: [],
 };
@@ -48,7 +48,7 @@ const copy = {
     titleB: "independently audited.",
     intro:
       "One model does the work. A model from a different provider inspects every committed result before it reaches you.",
-    heroMeta: ["macOS", "Apple Silicon", "Open source"],
+    heroMeta: ["macOS 13+", "Apple Silicon", "Open source"],
     heroCaps: "PDF / DOCX / MCP / Skills / HPC / GitHub / EN+中文",
     demo: {
       title: "CrossAudit · Paper review",
@@ -80,7 +80,7 @@ const copy = {
     trackANote: "No independent evidence.",
     trackBTitle: "CrossAudit",
     trackB: ["You describe the goal", "Generator commits work", "Deterministic checks", "Independent auditor"],
-    trackBLoop: "BLOCK returns for bounded revision",
+    trackBLoop: "BLOCKED returns for bounded, guarded revision",
     trackBEnd: "Verified delivery, with receipt",
     trackBNote: "Same-vendor pairs are refused outright.",
     auditTitle: "See the complete path from instruction to admission.",
@@ -95,9 +95,9 @@ const copy = {
       ["Generator works", "Generator", "The generator writes inside the selected workspace and can use scoped MCP tools, skills, or remote compute.", "Candidate files and tool events"],
       ["Git pins revision", "Git", "CrossAudit commits the candidate before review so the auditor always inspects a stable, addressable result.", "Immutable commit SHA"],
       ["Deterministic gate", "CrossAudit", "Machine checks verify completion, declared outputs, internal paths, and parseable artifact structure first.", "Deterministic check report"],
-      ["Independent audit", "Auditor", "A different provider reviews the committed files against the active constitution and returns a structured verdict.", "Verdict and structured findings"],
-      ["Controlled loop", "CrossAudit", "PASS advances. BLOCK returns bounded guidance. Provider failure or an exhausted budget requests a human decision.", "Durable run events and revision diff"],
-      ["Human admission", "You", "Only a passing revision can produce a one-time receipt. You decide whether that exact result may be admitted.", "Cryptographically bound receipt"],
+      ["Independent audit", "Auditor", "A different provider reviews the committed files against the active constitution and returns a structured verdict. Each finding carries its tier: verified by a deterministic check, or raised by the auditor model.", "Verdict and tiered findings"],
+      ["Controlled loop", "CrossAudit", "PASS advances. BLOCKED returns bounded guidance, and a repair guard screens each revision before it is committed: out-of-scope files are refused, defensive patterns are flagged to the auditor. Provider failure or an exhausted budget requests a human decision.", "Durable run events and screened revision diff"],
+      ["Human admission", "You", "Only a passing revision can produce a one-time receipt. It binds the evidence set, every finding with its tier and verification, and the route the run took. You decide whether that exact result may be admitted.", "Receipt binding the evidence set"],
     ],
     flowEvidence: [
       "TASK.md @ 56a6223",
@@ -127,16 +127,16 @@ const copy = {
     controller: "CrossAudit",
     promptTitle: "One prompt. The whole loop.",
     promptBody:
-      "You state the goal once. Focus, format, file handling, and revision rounds are decided inside the loop, and recorded.",
+      "You state the goal once. Focus, format, file handling, and revision rounds are decided inside the loop, and recorded. Progress is narrated from the first millisecond.",
     promptQuote:
       "Review this paper rigorously, focus on methodology and statistical claims, and deliver a PDF.",
     promptSteps: [
       ["Reads the intent", "Methodology and statistical claims become the review focus."],
       ["Picks the format", "A PDF deliverable is declared before work starts."],
       ["Uses the attachments", "The paper is read from the files you dropped in."],
-      ["Generates and commits", "Draft work lands in your workspace as pinned revisions."],
-      ["Audits and revises", "An independent provider blocks, the generator repairs, rounds stay bounded."],
-      ["Delivers one file", "You receive the PDF you asked for, with its evidence one click deeper."],
+      ["Generates and commits", "Output streams into the conversation as it is written, then lands in your workspace as pinned revisions."],
+      ["Audits and revises", "An independent provider blocks, the generator repairs under a repair guard, rounds stay bounded."],
+      ["Delivers one file", "Passed, Needs changes, or Needs you, in plain words. You receive the PDF you asked for, with its evidence one click deeper."],
     ],
     promptCore: "CrossAudit asks only when the decision is consequential.",
     workspaceTitle: "The real workspace.",
@@ -145,7 +145,7 @@ const copy = {
     shotSteps: [
       ["One conversation at the center", "Projects and pinned chats sit on the left rail. The run you are reading is the whole center column."],
       ["The composer carries the controls", "Files, roles, model choice, and reasoning effort travel with the message instead of a settings maze."],
-      ["Audit context on demand", "Findings, rounds, and evidence expand beside the same conversation when you ask for them."],
+      ["Audit context on demand", "Findings, rounds, and evidence expand beside the same conversation when you ask for them. Each finding says whether a check verified it or the auditor raised it."],
     ],
     workspaceAlt: "The CrossAudit workspace: project rail, conversation, and composer.",
     auditShotAlt: "The same conversation with independent audit context expanded.",
@@ -160,7 +160,9 @@ const copy = {
       ["Immutable review target", "Every audit runs against a pinned Git commit, never a moving directory."],
       ["Checks before judgement", "Deterministic verification of outputs and structure runs before any model opinion."],
       ["Bounded, fail-closed loops", "Revision rounds have a budget. Failure pauses and asks; it never approves."],
-      ["One-time receipt", "Admission binds verdict, constitution version, and commit. Change a byte and it no longer verifies."],
+      ["Evidence with its authority", "Every finding is recorded with its tier: verified by a deterministic check, or raised by the auditor model. A model-only blocker is unverified evidence, and a project dial decides whether it drives a revision or a human decision."],
+      ["Guarded repairs", "A revision after a BLOCKED audit is screened before commit. Files outside the audited scope are refused; catch-all handlers, deleted assertions, and skipped tests are flagged to the auditor."],
+      ["One-time receipt", "Admission binds verdict, constitution version, commit, and a digest over the evidence set. Change a byte and it no longer verifies."],
     ],
     capTitle: "Everything the agent needs. Nothing undisclosed.",
     capBody:
@@ -173,17 +175,19 @@ const copy = {
         ["Bilingual interface", "English and Chinese, one workspace"],
       ]],
       ["Integrations", [
-        ["Paired GitHub repos", "Working and audit history as plain Git"],
+        ["Local or paired Git", "One local repository by default; paired GitHub repos optional"],
         ["MCP servers", "Local stdio or streamable HTTP, allowlisted"],
         ["Reusable skills", "Approved procedures the generator can call"],
         ["HPC and Slurm", "Bounded jobs on your own clusters"],
       ]],
       ["Control", [
         ["Model switching", "Provider, model, and effort per role"],
-        ["Token usage", "Local-first, with labeled estimates"],
+        ["Token warnings and billing", "Budgets warn at 80% and 95%; cost per task; CSV and JSON export"],
+        ["Setup before failure", "A missing credential shows a setup card, not a mid-run error"],
         ["Project isolation", "Runs cannot reach outside their scope"],
       ]],
       ["Resilience", [
+        ["Live progress", "Every phase narrates; output streams from every capable provider"],
         ["Crash recovery", "Durable runs survive a dead worker"],
         ["Provider fallback", "Routed within cost caps you set"],
         ["Fail-closed budgets", "Hard limits stop work, never approve it"],
@@ -205,7 +209,9 @@ const copy = {
       ["Project data", "Local folders you choose"],
       ["Console", "Loopback only, token-gated"],
       ["Generator and auditor", "Separate providers, enforced"],
-      ["History", "Paired Git repositories"],
+      ["History", "Git ledger, local or paired"],
+      ["Findings", "Tier and verification bound in the receipt"],
+      ["Automatic repairs", "Screened before commit, out-of-scope refused"],
       ["External capabilities", "Explicit, scoped, revocable"],
       ["Destructive actions", "Typed human confirmation"],
     ],
@@ -213,7 +219,8 @@ const copy = {
     dlBody: "The installer and checksum come directly from the official GitHub release. Nothing is repackaged.",
     dlAltLabel: "Prefer to build it yourself?",
     dlClone: "git clone https://github.com/dongzhaohe321418-lab/crossaudit-harness",
-    dlCloneNote: "Then follow the README. The website you are reading lives in the same repository.",
+    dlCloneNote: "Then follow the README, or install the command line with pipx straight from the repository. The website you are reading lives in the same repository.",
+    requirements: "Requires an Apple Silicon Mac running macOS 13 or later.",
     latest: "Latest release",
     loading: "Checking the latest GitHub release",
     live: "Latest stable release confirmed by GitHub",
@@ -223,7 +230,7 @@ const copy = {
     notes: "Release notes",
     size: "Installer size",
     integrity:
-      "This community build is ad-hoc signed and not Apple-notarized. macOS may ask you to confirm its first launch.",
+      "This community build is ad-hoc signed and not Apple-notarized. macOS will ask you to right-click the app and choose Open the first time; this happens once.",
     footerLinks: ["GitHub", "Documentation", "Releases", "Security", "License"],
     footerNote: "Open source software for inspectable AI work.",
   },
@@ -235,7 +242,7 @@ const copy = {
     titleA: "Agent 自主工作，",
     titleB: "独立系统审计。",
     intro: "一个模型完成工作，另一家厂商的模型在交付前检查每个已提交的结果。",
-    heroMeta: ["macOS", "Apple Silicon", "开源"],
+    heroMeta: ["macOS 13+", "Apple Silicon", "开源"],
     heroCaps: "PDF / DOCX / MCP / Skills / HPC / GitHub / 中英双语",
     demo: {
       title: "CrossAudit · 论文评审",
@@ -267,7 +274,7 @@ const copy = {
     trackANote: "没有独立证据。",
     trackBTitle: "CrossAudit",
     trackB: ["你描述目标", "生成者提交工作", "确定性检查", "独立审计者"],
-    trackBLoop: "BLOCK 返回，有界修订",
+    trackBLoop: "BLOCKED 返回，有界且受守卫的修订",
     trackBEnd: "验证后交付，附凭证",
     trackBNote: "同厂配对会被直接拒绝。",
     auditTitle: "查看从指令到准入的完整路径。",
@@ -281,9 +288,9 @@ const copy = {
       ["生成者执行", "生成者", "生成者在所选工作区写入文件，并可使用限定范围的 MCP、Skills 或远程计算。", "候选文件与工具事件"],
       ["Git 固定修订", "Git", "CrossAudit 在审查前提交候选结果，确保审计者检查的是稳定、可定位的版本。", "不可变 Commit SHA"],
       ["确定性门禁", "CrossAudit", "先检查完成性、声明输出、内部路径和交付物结构是否可解析。", "确定性检查报告"],
-      ["独立审计", "审计者", "另一厂商根据当前宪法审查已提交文件，并返回结构化结论。", "结论与结构化发现"],
-      ["受控循环", "CrossAudit", "PASS 继续准入，BLOCK 返回限定修订指导，厂商故障或预算耗尽则请求人工决定。", "持久运行事件与修订差异"],
-      ["人工准入", "你", "只有通过的修订才能产生一次性凭证，由你决定是否准入这个精确结果。", "加密绑定的准入凭证"],
+      ["独立审计", "审计者", "另一厂商根据当前宪法审查已提交文件，并返回结构化结论。每条发现都带有层级：由确定性检查验证，或由审计模型提出。", "结论与分层发现"],
+      ["受控循环", "CrossAudit", "PASS 继续准入；BLOCKED 返回限定修订指导，修复守卫在提交前筛查每次修订：范围外文件被拒绝，防御性写法会标记给审计者。厂商故障或预算耗尽则请求人工决定。", "持久运行事件与经筛查的修订差异"],
+      ["人工准入", "你", "只有通过的修订才能产生一次性凭证。凭证绑定整个证据集：每条发现的层级与验证状态，以及本次运行走过的路径。由你决定是否准入这个精确结果。", "绑定证据集的凭证"],
     ],
     flowEvidence: [
       "TASK.md @ 56a6223",
@@ -312,15 +319,15 @@ const copy = {
     auditor: "审计者",
     controller: "CrossAudit",
     promptTitle: "一条指令，完整循环。",
-    promptBody: "目标只需说一次。重点、格式、文件处理与修订轮次都在循环内决定，并全部留下记录。",
+    promptBody: "目标只需说一次。重点、格式、文件处理与修订轮次都在循环内决定，并全部留下记录。从第一毫秒起，进度就在叙述。",
     promptQuote: "严格评审这篇论文，重点关注方法学与统计论断，并交付一份 PDF。",
     promptSteps: [
       ["读懂意图", "方法学与统计论断自动成为评审重点。"],
       ["选定格式", "PDF 交付物在开工前就被声明。"],
       ["使用附件", "论文直接从你拖入的文件中读取。"],
-      ["生成并提交", "草稿以固定修订的形式进入你的工作区。"],
-      ["审计与修订", "独立厂商阻塞，生成者修复，轮次始终有界。"],
-      ["交付一个文件", "你得到所要的那份 PDF，证据在下一层随时可查。"],
+      ["生成并提交", "输出边写边流入对话，然后以固定修订的形式进入你的工作区。"],
+      ["审计与修订", "独立厂商阻塞，生成者在修复守卫下修复，轮次始终有界。"],
+      ["交付一个文件", "结果用白话说明：已通过、需要修改、需要你。你得到所要的那份 PDF，证据在下一层随时可查。"],
     ],
     promptCore: "只有后果重大的决定，CrossAudit 才会问你。",
     workspaceTitle: "真实的工作区。",
@@ -328,7 +335,7 @@ const copy = {
     shotSteps: [
       ["对话在正中央", "项目与置顶对话在左栏，你正在读的这次运行就是整个中央列。"],
       ["控制随输入框走", "文件、角色、模型与推理强度跟着消息走，而不是藏进设置迷宫。"],
-      ["审计上下文按需展开", "发现、轮次与证据在同一对话旁展开，只在你需要时出现。"],
+      ["审计上下文按需展开", "发现、轮次与证据在同一对话旁展开，只在你需要时出现。每条发现都注明是检查验证的，还是审计者提出的。"],
     ],
     workspaceAlt: "CrossAudit 工作区：项目栏、对话与输入框。",
     auditShotAlt: "同一对话旁展开的独立审计上下文。",
@@ -343,7 +350,9 @@ const copy = {
       ["不可变的审查对象", "每次审计都针对固定的 Git 提交，而不是移动中的目录。"],
       ["先检查后判断", "输出与结构的确定性验证先于任何模型意见。"],
       ["有界且失败即关闭", "修订轮次有预算。失败会暂停并询问，绝不会变成批准。"],
-      ["一次性凭证", "准入把结论、宪法版本与提交绑定在一起。改动一个字节即无法通过校验。"],
+      ["证据带着来源", "每条发现都记录其层级：由确定性检查验证，或由审计模型提出。仅由模型提出的阻塞是未验证证据，由项目设置决定它触发修订还是交给人决定。"],
+      ["受守卫的修复", "BLOCKED 之后的修订在提交前经过筛查。审计范围外的文件被拒绝；兜底异常、删除的断言与跳过的测试会标记给审计者。"],
+      ["一次性凭证", "准入把结论、宪法版本、提交与整个证据集的摘要绑定在一起。改动一个字节即无法通过校验。"],
     ],
     capTitle: "Agent 需要的一切，全部公开声明。",
     capBody: "能力以项目为范围接入，并出现在运行记录里。深度只在工作需要时展开。",
@@ -355,17 +364,19 @@ const copy = {
         ["双语界面", "中英文同一个工作区"],
       ]],
       ["集成", [
-        ["成对 GitHub 仓库", "工作与审计历史都是普通 Git"],
+        ["本地或成对 Git", "默认一个本地仓库，可选成对 GitHub 仓库"],
         ["MCP 服务", "本地 stdio 或 HTTP，白名单制"],
         ["可复用 Skills", "生成者可调用的既定流程"],
         ["HPC 与 Slurm", "在你自己的集群上运行有界任务"],
       ]],
       ["控制", [
         ["模型切换", "按角色选择厂商、模型与强度"],
-        ["Token 用量", "本地优先，估算值明确标注"],
+        ["Token 预警与账单", "预算 80% 与 95% 各提醒一次；按任务计费；CSV 与 JSON 导出"],
+        ["先设置再运行", "缺少凭据时显示设置卡片，而不是中途报错"],
         ["项目隔离", "运行无法越出自身范围"],
       ]],
       ["韧性", [
+        ["实时进度", "每个阶段都有叙述；支持流式的厂商都逐字输出"],
         ["崩溃恢复", "持久运行不怕工作进程挂掉"],
         ["厂商回退", "在你设定的成本上限内路由"],
         ["失败即关闭", "硬限额只会停下，不会批准"],
@@ -386,7 +397,9 @@ const copy = {
       ["项目数据", "你选择的本地文件夹"],
       ["控制台", "仅本机回环，令牌门禁"],
       ["生成者与审计者", "强制分属不同厂商"],
-      ["历史记录", "成对的 Git 仓库"],
+      ["历史记录", "Git 账本，本地或成对仓库"],
+      ["发现", "层级与验证状态绑定在凭证中"],
+      ["自动修复", "提交前筛查，范围外一律拒绝"],
       ["外部能力", "显式、限定范围、可撤销"],
       ["破坏性操作", "需人工键入确认"],
     ],
@@ -394,7 +407,8 @@ const copy = {
     dlBody: "安装包与校验文件直接来自官方 GitHub Release，未经任何重新打包。",
     dlAltLabel: "想自己构建？",
     dlClone: "git clone https://github.com/dongzhaohe321418-lab/crossaudit-harness",
-    dlCloneNote: "然后按 README 操作。你正在看的这个网站也在同一个仓库里。",
+    dlCloneNote: "然后按 README 操作，或用 pipx 直接从仓库安装命令行。你正在看的这个网站也在同一个仓库里。",
+    requirements: "需要 Apple Silicon 芯片的 Mac，macOS 13 或更高版本。",
     latest: "最新版本",
     loading: "正在检查 GitHub 最新版本",
     live: "已通过 GitHub 确认最新稳定版本",
@@ -403,7 +417,7 @@ const copy = {
     checksum: "SHA-256 校验",
     notes: "版本说明",
     size: "安装包大小",
-    integrity: "此社区构建采用临时签名，尚未通过 Apple 公证。macOS 可能要求你确认首次启动。",
+    integrity: "此社区构建采用临时签名，尚未通过 Apple 公证。首次打开时 macOS 会要求你右键点击应用并选择「打开」；只需这样做一次。",
     footerLinks: ["GitHub", "文档", "Releases", "安全", "许可证"],
     footerNote: "为可检查的 AI 工作而构建的开源软件。",
   },
@@ -1102,6 +1116,7 @@ export function CrossAuditLanding() {
               <li>
                 <a href={release.html_url}>{t.notes}</a>
               </li>
+              <li>{t.requirements}</li>
             </ul>
             <p className="integrity-note">{t.integrity}</p>
           </div>

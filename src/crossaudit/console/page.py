@@ -17,6 +17,16 @@ exact project-relative path.
 """
 from __future__ import annotations
 
+from pathlib import Path as _Path
+
+#: The Thinking Orbs canvas engine (npm ``thinking-orbs`` 0.3.1, MIT; see
+#: THIRD_PARTY_NOTICES.md), vendored by scripts/vendor_thinking_orbs.py and
+#: served inline as a classic script ahead of the console's own: the console
+#: has no bundler and loads no remote code, so the file travels in the
+#: package and is pinned by tests/test_thinking_orbs_vendor.py.
+_ENGINE_JS = (_Path(__file__).with_name("vendor") / "thinking_orbs_engine.js").read_text(encoding="utf-8")
+_ENGINE_TAG = '<script id="thinking-orbs-engine">\n' + _ENGINE_JS + '</script>\n'
+
 PAGE = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -493,14 +503,13 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
   border:1px solid var(--line);border-radius:var(--r-xs);padding:1px 6px;
   overflow-wrap:anywhere;max-width:100%}
 .event-mark.runtime{background:var(--surface-2);color:var(--text-3)}
-/* The optimistic "working" indicator shown the instant a message is sent. */
-.thinking-dots{display:inline-flex;gap:5px;align-items:center;height:20px}
-.thinking-dots i{width:6px;height:6px;border-radius:50%;background:var(--text-3);
-  animation:think 1.15s ease-in-out infinite}
-.thinking-dots i:nth-child(2){animation-delay:.15s}
-.thinking-dots i:nth-child(3){animation-delay:.3s}
-@keyframes think{0%,70%,100%{opacity:.28;transform:translateY(0)}35%{opacity:1;transform:translateY(-4px)}}
-@media (prefers-reduced-motion:reduce){.thinking-dots i{animation:none;opacity:.55}}
+/* The thinking orb: one canvas where a state is in progress, nothing anywhere
+   else. It is the mark of the line it sits on — the optimistic turn's working
+   indicator at 64 px, the newest live activity row's mark at 20 px — and the
+   engine paints it (motion, theme and reduced-motion live in the wrapper). */
+.orb{display:block;flex:none}
+.turn-orb{width:64px;height:64px}
+.event-orb{width:20px;height:20px;margin:1px}
 .turn-sub{margin-top:7px;color:var(--text-2);font-size:var(--fs-label)}
 /* Phase narration under the working indicator: quiet, one line each, the
    latest a shade darker. No card, no mark — it is the indicator's caption. */
@@ -3140,7 +3149,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
   </aside>
 </div>
 
-<script>
+""" + _ENGINE_TAG + r"""<script>
 const T = new URLSearchParams(location.search).get('t') || '';
 const LOCALE_KEY='crossaudit-locale';
 const LOCALE_COOKIE='crossaudit_v4_locale';
@@ -6152,6 +6161,131 @@ const AUDITOR_LANES=new Set(['auditor','amendment','dispute','resolve','query'])
 // The last few phase lines of the message being handled: fixed sentences from
 // the server catalogue, already in both locales — never an id, never prose
 // the page composes about a process it cannot see.
+// ---- The thinking orb. The engine of thinking-orbs 0.3.1 (vendored, MIT — see
+// THIRD_PARTY_NOTICES.md) paints one frame of one state onto a canvas; this
+// is the behaviour of the React component without React. One canvas exists where
+// a state is actually in progress and nowhere else: it is the mark of the
+// line it sits on (the dots the optimistic turn used to show, the mark of the
+// newest live row), never something beside it. Theme follows data-theme /
+// .dark / .light on an ancestor, else prefers-color-scheme, live; the device
+// pixel ratio is capped at 2; one requestAnimationFrame loop per orb, stopped
+// while the canvas is off screen or the tab hidden; prefers-reduced-motion
+// paints exactly one still frame; setState() swaps the drawing on the very
+// next paint, so a phase change never shows a blank canvas.
+const ORB_LIVE=new Set();
+function orbMedia(query){return typeof matchMedia==='function'?matchMedia(query):null;}
+function orbHostDark(el){for(let e=el;e;e=e.parentElement){
+    const v=typeof e.getAttribute==='function'?e.getAttribute('data-theme'):null;
+    if(v==='dark')return true;if(v==='light')return false;
+    if(e.classList){if(e.classList.contains('dark'))return true;if(e.classList.contains('light'))return false;}}
+  return null;}
+function orbSystemDark(){const m=orbMedia('(prefers-color-scheme: dark)');return !m||Boolean(m.matches);}
+function orbReducedMotion(){const m=orbMedia('(prefers-reduced-motion: reduce)');return Boolean(m&&m.matches);}
+function orbDocumentHidden(){return typeof document!=='undefined'&&document.visibilityState==='hidden';}
+function crossauditOrb(canvas,options){
+  const engine=typeof window!=='undefined'?window.ThinkingOrbsEngine:null;
+  if(!canvas||!engine||typeof canvas.getContext!=='function')return null;
+  const ctx=canvas.getContext('2d');if(!ctx)return null;
+  const o=Object.assign({state:'working',size:64,speed:1,paused:false,theme:'auto',label:''},options||{});
+  const size=Number(o.size)===20?20:64;
+  const dpr=Math.min(2,(typeof devicePixelRatio==='number'&&devicePixelRatio>0?devicePixelRatio:1));
+  canvas.width=Math.round(size*dpr);canvas.height=Math.round(size*dpr);
+  if(canvas.style){canvas.style.width=size+'px';canvas.style.height=size+'px';}
+  // The label is the sentence the caller passes — the phase text a person can
+  // read — never the state word of the engine.
+  canvas.setAttribute('role','img');canvas.setAttribute('aria-label',String(o.label||''));
+  let state=engine.STATE_TO_MODE[o.state]?o.state:'working',speed=Number(o.speed)>0?Number(o.speed):1;
+  let paused=Boolean(o.paused),theme=o.theme==='dark'||o.theme==='light'?o.theme:'auto';
+  let preset=null,draw=null,dark=true,still=orbReducedMotion(),frame=0,running=false,visible=true,destroyed=false;
+  const clock=()=>(typeof performance!=='undefined'&&performance.now?performance.now():Date.now())/1000;
+  function resolve(){preset=engine.resolvePreset(state,size);draw=engine.MODE_DRAWS[preset.mode];}
+  function resolveDark(){const host=theme==='auto'?orbHostDark(canvas):null;
+    dark=theme==='dark'?true:theme==='light'?false:host===null?orbSystemDark():host;}
+  function paint(t){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,size,size);draw(ctx,size,t,dark,preset.opts);}
+  function at(){return still?0.6:clock()*preset.speed*speed;}
+  function tick(){if(!running)return;paint(at());frame=requestAnimationFrame(tick);}
+  function start(){if(running||destroyed||paused||still||!visible||orbDocumentHidden())return;running=true;frame=requestAnimationFrame(tick);}
+  function stop(){if(!running)return;running=false;cancelAnimationFrame(frame);frame=0;}
+  function sync(){if(paused||still||!visible||orbDocumentHidden())stop();else start();}
+  resolve();resolveDark();paint(at());
+  const io=typeof IntersectionObserver==='function'
+    ?new IntersectionObserver(entries=>{const e=entries[entries.length-1];visible=!e||e.isIntersecting!==false;sync();}):null;
+  if(io)io.observe(canvas);
+  const onVisibility=()=>sync();
+  document.addEventListener('visibilitychange',onVisibility);
+  const orb={canvas,
+    get state(){return state;},get running(){return running;},get still(){return still;},get dark(){return dark;},
+    setState(next){if(destroyed||next===state||!engine.STATE_TO_MODE[next])return;state=next;resolve();paint(at());},
+    setLabel(text){canvas.setAttribute('aria-label',String(text||''));},
+    pause(){paused=true;sync();},resume(){paused=false;sync();},
+    themeChanged(){if(destroyed)return;resolveDark();if(!running)paint(at());},
+    motionChanged(){if(destroyed)return;still=orbReducedMotion();if(still){stop();paint(at());}else sync();},
+    destroy(){if(destroyed)return;destroyed=true;stop();if(io)io.disconnect();
+      document.removeEventListener('visibilitychange',onVisibility);ORB_LIVE.delete(orb);}};
+  ORB_LIVE.add(orb);sync();return orb;}
+// One set of environment watchers for every orb on the page: the theme
+// attribute the console writes on <html>, the OS colour scheme, and the
+// motion preference.
+function watchOrbEnvironment(){
+  const scheme=orbMedia('(prefers-color-scheme: dark)'),motion=orbMedia('(prefers-reduced-motion: reduce)');
+  if(scheme&&scheme.addEventListener)scheme.addEventListener('change',()=>ORB_LIVE.forEach(o=>o.themeChanged()));
+  if(motion&&motion.addEventListener)motion.addEventListener('change',()=>ORB_LIVE.forEach(o=>o.motionChanged()));
+  if(typeof MutationObserver==='function'&&document.documentElement)
+    new MutationObserver(()=>ORB_LIVE.forEach(o=>o.themeChanged()))
+      .observe(document.documentElement,{attributes:true,attributeFilter:['class','data-theme']});}
+watchOrbEnvironment();
+// Phase → drawing. The phase words are the ones the runtime narrates
+// (pacing.RUN_PHASES, intake.PHASE_WORD); `thinking` is the generator
+// summarised reasoning arriving, `waiting` a provider retry or rate-limit
+// pause, `sending` the window before the server has said anything. The
+// 64 px turn orb stays on the calm `working` drawing until something is
+// being written; the 20 px run-card orb names the finer phases.
+const ORB_STATES={
+  64:{sending:'working',routing:'working',preparing:'working',answering:'composing',
+      generating:'composing',thinking:'weaving',auditing:'solving',waiting:'breathing'},
+  20:{routing:'searching',preparing:'connecting',answering:'composing',
+      generating:'composing',thinking:'weaving',auditing:'solving',waiting:'breathing'}};
+function orbStateFor(phase,size){return ORB_STATES[Number(size)===20?20:64][phase]||'working';}
+function orbMarkup(phase,size,label,cls){const px=Number(size)===20?20:64;
+  return '<canvas class="orb '+esc(cls||'')+'" data-orb="'+esc(orbStateFor(phase,px))+'" data-orb-size="'+px
+    +'" role="img" aria-label="'+esc(label)+'"></canvas>';}
+// A step narrated by the resilience layer that means the run is waiting on
+// the clock of the provider rather than on the model.
+function orbWaitingStep(step){return Boolean(step&&step.kind==='provider_recovery'
+  &&/^(Waiting to retry|Retrying) /.test(String(step.text||'')));}
+// The phase of the run card, from the run state the ledger reports. Nothing is in
+// progress while a person or a decision is being waited for, so those states
+// map to no orb at all.
+function runOrbPhase(p){
+  if(!p||p.finished)return '';
+  const last=p.steps&&p.steps.length?p.steps[p.steps.length-1]:null;
+  const s=String(p.state||'').toUpperCase();
+  if(s==='WAITING_FOR_PROVIDER'||orbWaitingStep(last))return 'waiting';
+  if(s==='GENERATING'||s==='REVISING')return 'generating';
+  if(s==='AUDITING')return 'auditing';
+  if(s==='DRAFT'||s==='QUEUED')return 'preparing';
+  if(s==='CANCELLING')return 'stopping';
+  return '';}
+// The phase of the optimistic turn, from the intake record the server keeps for
+// the message in flight (routing → preparing | answering).
+function intakeOrbPhase(intake){
+  if(!intake)return 'sending';
+  const steps=intake.steps||[];const last=steps.length?steps[steps.length-1]:null;
+  if(orbWaitingStep(last))return 'waiting';
+  const phase=String(intake.phase||'');
+  return phase==='answering'||phase==='preparing'||phase==='routing'?phase:'sending';}
+function intakeOrbLabel(intake){
+  const steps=(intake&&intake.steps)||[];const last=steps.length?steps[steps.length-1]:null;
+  if(last)return localeText(last.text_i18n,last.text);
+  return currentLocale==='zh'?'正在处理你的消息':'Handling your message';}
+// After a render: start the orbs the new markup asked for, release the ones
+// whose canvas the render threw away.
+function mountOrbs(root){
+  for(const orb of Array.from(ORB_LIVE))if(!orb.canvas.isConnected)orb.destroy();
+  const scope=root||document;
+  scope.querySelectorAll('canvas[data-orb]').forEach(c=>{if(c.__orb)return;
+    c.__orb=crossauditOrb(c,{state:c.getAttribute('data-orb'),size:Number(c.getAttribute('data-orb-size')),
+      label:c.getAttribute('aria-label')||''});});}
 function intakeLines(intake){
   const steps=((intake&&intake.steps)||[]).slice(-3);
   return steps.map((s,i)=>'<div class="intake-line'+(i===steps.length-1?' latest':'')+'">'
@@ -6174,8 +6308,8 @@ function optimisticTurn(text, queued, intake, replying){
     ?'<span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b>'
     :'<span class="role-mark generator" aria-hidden="true">G</span><b>Generator</b>';
   return you + '<article class="turn"><div class="turn-main">'
-    + '<div class="turn-meta">' + who + '</div><div class="turn-body"><span class="thinking-dots" aria-label="'
-    + (currentLocale==='zh'?'处理中':'Working') + '"><i></i><i></i><i></i></span>'
+    + '<div class="turn-meta">' + who + '</div><div class="turn-body">'
+    + orbMarkup(intakeOrbPhase(intake),64,intakeOrbLabel(intake),'turn-orb')
     + (intake?'<div class="intake">'+intakeLines(intake)+'</div>':'')
     + '<div class="turn-forecast">' + esc(forecastText(lastState)) + '</div>'
     + '</div></div></article>';
@@ -6355,14 +6489,17 @@ function conciseDetail(s){
 // itself, so it does not borrow the generator name or mark, and every row
 // localises from the wire fields (text_i18n) rather than showing English
 // under 中文.
-function activityRow(s){
+function activityRow(s, orbPhase){
   const system = s.kind === 'context_condensed';
   const mark = system ? '↻' : (ACTOR_MARKS[s.actor]||'·');
   const who = system ? t('Context reduced') : t(ACTOR_NAMES[s.actor]||s.actor);
   const line = (system || s.text_i18n) ? localeText(s.text_i18n, s.text) : s.text;
   const detail = system ? localeText(s.detail_i18n, s.detail) : conciseDetail(s);
+  // The newest row of a live run carries the orb as its mark: the phase in
+  // progress, labelled with the sentence beside it.
   return '<div class="audit-event">'
-  + '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>'
+  + (orbPhase ? orbMarkup(orbPhase, 20, line, 'event-orb')
+    : '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>')
   + '<div class="event-main"><div class="event-line"><b>' + esc(who)
   + '</b><span>' + esc(line) + '</span></div>'
   + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
@@ -6406,25 +6543,37 @@ function runCard(d){
   const focusLabel = focus.state === 'current' ? 'Current step' : focus.state === 'failed' ? 'Stopped at'
     : focus.state === 'pending' ? 'Next step' : 'Completed step';
   const stateNames = {done:'Done',failed:'Stopped',current:'Active',pending:'Waiting'};
-  const eventRows = p && p.steps ? collapseClockRows(p.steps).slice(-12).map(activityRow).join('') : '';
   // D150: what is arriving right now, as one line each — a word count for the
   // draft (the text itself lives in the unaudited draft article above) and
   // the tail of the summarised thinking. Neither is a step; neither persists.
   const draft = liveDraftFor(d), thinking = liveThinkingFor(d);
+  // One orb per card, on the newest live line: the thinking row while
+  // reasoning arrives, else the draft row while text arrives, else the
+  // newest event row in the phase of the run itself. Nothing once the run is over.
+  const orbPhase = p && !p.finished ? runOrbPhase(p) : '';
+  const rows = p && p.steps ? collapseClockRows(p.steps).slice(-12) : [];
+  const eventRows = rows.map((s, i) => activityRow(s,
+    orbPhase && !thinking && !draft && i === rows.length - 1 ? orbPhase : '')).join('');
   // Review D8 / D4: thinking is model text no auditor has read — further from
   // evidence than the draft, which already says so on its face. It is folded
   // away behind a summary that says what it is, opens only if the reader asks,
   // and is never written anywhere: the row disappears with the run.
+  const draftLabel = currentLocale==='zh'
+        ? '草稿：已写 ' + draftCount(draft ? draft.text : '') + ' 字'
+        : 'Draft: ' + draftCount(draft ? draft.text : '') + ' words so far';
   const liveRows = (thinking ? '<details class="audit-event live-thinking">'
-      + '<summary><span class="event-mark runtime">…</span><div class="event-main"><div class="event-line"><b>'
+      + '<summary>' + (orbPhase ? orbMarkup('thinking', 20,
+          currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited', 'event-orb')
+        : '<span class="event-mark runtime">…</span>')
+      + '<div class="event-main"><div class="event-line"><b>'
       + esc(currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited') + '</b></div></div>'
       + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></summary>'
       + '<div class="event-detail">' + esc(thinking.text.slice(-160).replace(/\s+/g,' ')) + '</div></details>' : '')
     + (draft ? '<div class="audit-event live-draft">'
-      + '<span class="event-mark generator">G</span><div class="event-main"><div class="event-line"><b>'
-      + esc(t('Generator')) + '</b><span>' + esc(currentLocale==='zh'
-        ? '草稿：已写 ' + draftCount(draft.text) + ' 字'
-        : 'Draft: ' + draftCount(draft.text) + ' words so far') + '</span></div></div>'
+      + (orbPhase && !thinking ? orbMarkup('generating', 20, draftLabel, 'event-orb')
+        : '<span class="event-mark generator">G</span>')
+      + '<div class="event-main"><div class="event-line"><b>'
+      + esc(t('Generator')) + '</b><span>' + esc(draftLabel) + '</span></div></div>'
       + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></div>' : '');
   const activityTitle = p && !p.finished ? 'Live activity' : 'Run activity';
   const activity = (eventRows + liveRows) || '<div class="activity-empty">The generator and auditor show what they are doing here while a task runs.</div>';
@@ -7137,6 +7286,7 @@ function renderConversation(d){
     html = body || welcome();
   }
   document.getElementById('conversation').innerHTML = html;
+  mountOrbs(document.getElementById('conversation'));
   if(followLive && !newTaskMode) thread.scrollTop = thread.scrollHeight;
   else thread.scrollTop = Math.min(previousTop,Math.max(0,thread.scrollHeight-thread.clientHeight));
 }

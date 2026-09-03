@@ -62,6 +62,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "crossaudit.scaffold" = ["templates/*"]
+"crossaudit.console" = ["vendor/*.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

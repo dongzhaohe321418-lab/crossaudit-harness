@@ -1,17 +1,109 @@
 # CrossAudit 4.16.0
 
 [![Version 4.16.0](https://img.shields.io/badge/version-4.16.0-6d5dfc)](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.16.0)
-[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-111111)](https://github.com/dongzhaohe321418-lab/crossaudit-harness#install)
+[![Latest release](https://img.shields.io/github/v/release/dongzhaohe321418-lab/crossaudit-harness?label=release&color=1f883d)](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/latest)
+[![CI](https://github.com/dongzhaohe321418-lab/crossaudit-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/dongzhaohe321418-lab/crossaudit-harness/actions/workflows/ci.yml)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B%20Apple%20Silicon-111111)](https://github.com/dongzhaohe321418-lab/crossaudit-harness#download-and-install)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab)](https://github.com/dongzhaohe321418-lab/crossaudit-harness#command-line-installation)
+[![MIT license](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
+
+CrossAudit is a local, dual-source audit harness for AI-generated work. One
+model, the generator, writes files into a Git repository. A model from a
+**different vendor**, the auditor, reviews the committed result after
+deterministic checks have run, and every task, round, finding, verdict, and
+receipt is recorded in Git. It is for anyone who ships what an agent produces
+(code, reports, research artefacts, data pipelines, contract reviews, financial
+models) and needs to show later what was checked, by whom, and with what
+authority. Two vendors, because a second prompt to the same model shares its
+training, its context, and its blind spots: the separation is enforced by the
+harness, not requested in a prompt.
 
 **Latest release: CrossAudit 4.16.0.** The source on `main` is authoritative
 until the matching DMG is attached to a GitHub release.
 
-CrossAudit is a local, cross-vendor AI work loop. One model creates files, a
-model from a different provider audits the committed result, and every task,
-revision, finding, verdict, and receipt is recorded in Git.
+## 60-second tour
 
-You describe the work once. CrossAudit runs the loop:
+1. **Install.** Download the DMG from the
+   [latest release](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/latest)
+   and drag CrossAudit to Applications. The build is ad-hoc signed, so macOS
+   asks you to right-click the app and choose **Open** the first time.
+   Command-line users: `pipx install "git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"`.
+2. **Connect two vendors, or none.** Settings takes an OpenAI sign-in or API
+   key and any second first-party provider; keys go to the macOS Keychain and
+   never reach the web view. Or press **Explore a local demo** on the first
+   screen: a seeded project that needs no credentials and labels itself a
+   sample on every surface.
+3. **Describe the deliverable once.** Progress narrates from the first
+   millisecond, generator output streams into the conversation, and a
+   missing credential shows a setup card before anything starts.
+4. **Checks, then the auditor.** Deterministic checks run over the committed
+   files first; the auditor model reads the same commit and returns findings,
+   each carrying its tier: verified by a check, or raised by the model.
+5. **Passed, Needs changes, or Needs you.** Passed binds a receipt over the
+   verdict, the rules, the commit, and the evidence set. Needs changes sends
+   the generator back for a bounded, guarded revision. Needs you asks one
+   question and waits.
+
+| The conversation | The same conversation with audit context open |
+| --- | --- |
+| ![The CrossAudit workspace: project rail, conversation, and composer](website/public/crossaudit-workspace-1600.png) | ![The same conversation with independent audit context expanded](website/public/crossaudit-audit-1600.png) |
+
+Both captures are the 4.16.0 console showing the credential-free local demo.
+
+## Why CrossAudit
+
+AI-generated work is easy to produce and difficult to trust. A second prompt in
+the same model is useful feedback, but it is not independent supervision. It
+shares the same provider, model family, context, and often the same blind spots.
+The table compares CrossAudit with a single-agent coding harness of the Codex
+or Claude Code kind, on the questions a reviewer asks afterwards.
+
+| Question | Single-agent harness | CrossAudit |
+| --- | --- | --- |
+| Who reviews the work? | The same model, in the same session, when you ask it to. | A model from a different vendor, on every round, reading only the committed files. Same-vendor pairs are refused. |
+| What is deterministic? | The tools the agent calls. The review itself is a model call. | Completion, declared-output, path, structure, schema, unit, convergence, and provenance checks run before any model opinion; the verdict ladder is code, and a failed check blocks whatever the model says. |
+| What is recorded? | A chat transcript and the working tree. | Every task, round, commit, check result, finding with its tier and state, verdict, and human decision, committed to Git; governed actions go to an append-only hash-chained ledger. |
+| What does a receipt prove? | There is no receipt; the commit is the record. | A PASS receipt binds the verdict, the rule version, the commit, and a digest over the evidence set. `crossaudit verify` re-derives every binding later, and a changed byte fails it. |
+| What happens on disagreement? | You re-prompt. | BLOCKED returns to the generator for a bounded number of rounds, each revision screened by a repair guard before commit. A model-only blocker is recorded as unverified, and a project dial decides whether it drives a revision or a human decision. An exhausted budget escalates; it never approves. |
+| Cost visibility | Per-session usage where the vendor shows it. | Local token metering per task, cycle, round, chat, and role; warnings at 80% and 95% of a budget; per-task cost on the run card; CSV and JSON export. |
+
+CrossAudit works best when the requested output can be saved as files and the
+acceptance criteria can be stated as rules.
+
+### What the separation means in practice
+
+- The generator and auditor must use different vendors.
+- The auditor reads committed files, not the generator's private reasoning.
+- Objective checks run before the model review.
+- A BLOCKED result goes back to the generator for a bounded number of rounds;
+  each revision is screened by a repair guard before it is committed.
+- A model-only blocker is recorded as unverified evidence; whether it drives
+  a revision or a human decision is a project dial, and the receipt says which.
+- Every round is committed, so the final result has a replayable history.
+- PASS creates a cryptographically bound receipt that can be verified later.
+- Ambiguous or unresolved cases escalate to a human instead of looping forever.
+
+## Download and install
+
+**macOS app (Apple Silicon, macOS 13 or later).** Download
+`CrossAudit-4.16.0-arm64.dmg` from the
+[latest release](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/latest)
+and drag CrossAudit to Applications. The DMG is ad-hoc signed and not
+Apple-notarized: the first time, right-click **CrossAudit.app**, choose
+**Open**, then **Open** again. This happens once. The full steps, the checksum,
+and how to remove every trace are under [Install](#install).
+
+**Command line (Python 3.10 or newer).**
+
+```bash
+pipx install "git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"
+crossaudit --version
+```
+
+Installing asks for nothing and contacts no provider; setup begins with
+`crossaudit init`.
+
+## How it works
 
 ```text
 your task
@@ -27,32 +119,37 @@ generator model --> committed files --> deterministic checks
                                      +--> fix      +--> receipt
 ```
 
+Inside the audit, evidence is kept in two tiers and the verdict is decided by
+code, then recorded with the evidence that produced it:
+
+```text
+untrusted proposal plane
+  generator artifact
+       |-- registered deterministic checks   (tier: deterministic, verified)
+       +-- cross-vendor semantic auditor      (tier: model, raised)
+                         |
+                         v
+trusted derivation plane
+  verdict ladder (code only)  ->  evidence authority (route, partition, digest)
+                         |
+          +--------------+--------------+----------------+
+          |              |              |                |
+        PASS          BLOCKED        ESCALATE         DCL_ONLY
+       receipt    bounded-revision  human-decision   obtain-audit
+```
+
+A deterministic finding is emitted by a registered check over committed bytes
+and is verified. A model finding is a reading of the same bytes by an auditor
+of a different vendor and is raised, not yet reproduced. The report's `Evidence`
+table shows both with their tier, the receipt binds a digest over the set, and
+`crossaudit verify` re-derives it. A revision after BLOCKED passes a repair
+guard before commit: a file outside the audited scope is refused, and a
+catch-all handler, a deleted assertion, or a skipped test on added code is
+flagged to the auditor for the next round. The complete design is in
+[docs/EVIDENCE_AUTHORITY.md](docs/EVIDENCE_AUTHORITY.md).
+
 The browser console shows this process live. It uses event-driven updates, so a
 new task, commit, finding, or verdict appears as soon as the state changes.
-
-## Why CrossAudit exists
-
-AI-generated work is easy to produce and difficult to trust. A second prompt in
-the same model is useful feedback, but it is not independent supervision. It
-shares the same provider, model family, context, and often the same blind spots.
-
-CrossAudit makes the separation explicit:
-
-- The generator and auditor must use different vendors.
-- The auditor reads committed files, not the generator's private reasoning.
-- Objective checks run before the model review.
-- A BLOCKED result goes back to the generator for a bounded number of rounds;
-  each revision is screened by a repair guard before it is committed.
-- A model-only blocker is recorded as unverified evidence; whether it drives
-  a revision or a human decision is a project dial, and the receipt says which.
-- Every round is committed, so the final result has a replayable history.
-- PASS creates a cryptographically bound receipt that can be verified later.
-- Ambiguous or unresolved cases escalate to a human instead of looping forever.
-
-CrossAudit works best when the requested output can be saved as files and the
-acceptance criteria can be stated as rules. Examples include code, reports,
-research artefacts, data pipelines, contract reviews, financial models, and
-structured content.
 
 ## What V4 includes
 
