@@ -175,6 +175,17 @@ def _render(cases: list[dict]) -> dict[str, str]:
         _extract_fn("function durationText(seconds)"),
         _extract_fn("function elapsedText(seconds)"),
         _extract_fn("function humaniseDetail(text)"),
+        # D150: the run card's activity rows moved into activityRow (with the
+        # actor tables and the identifier scrub beside it), and the card reads
+        # the live draft/thinking consumers, stubbed empty here. Mutation: put
+        # the rows back inline in runCard and activityRow stops being shipped
+        # code — this harness would then be extracting a dead function.
+        _extract_fn("const ACTOR_NAMES") + ";",
+        _extract_fn("const ACTOR_MARKS") + ";",
+        _extract_fn("function conciseDetail(s)"),
+        _extract_fn("function activityRow(s)"),
+        "const liveDraftFor = () => null; const liveThinkingFor = () => null;",
+        "const draftCount = () => 0;",
         f"const CASES = {json.dumps(cases, ensure_ascii=False)};",
         """
 const out = {};
