@@ -188,11 +188,18 @@ def _render(cases: list[dict]) -> dict[str, str]:
         _extract_fn("const ACTOR_NAMES") + ";",
         _extract_fn("const ACTOR_MARKS") + ";",
         _extract_fn("function conciseDetail(s)"),
-        _extract_fn("function activityRow(s, orbPhase)"),
-        # Thinking-orbs slice: the newest live row's mark is the orb.
+        _extract_fn("function activityRow(s)"),
+        # Thinking-orbs slice: the card's one orb marks the live phase line.
         _extract_fn("const ORB_STATES") + ";",
-        _extract_fn("function orbStateFor(phase,size)"),
-        _extract_fn("function orbMarkup(phase,size,label,cls)"),
+        _extract_fn("function orbStateFor(phase)"),
+        _extract_fn("function orbMarkup(phase,label,cls)"),
+        _extract_fn("const PHASE_WORDS") + ";",
+        _extract_fn("function elapsedWords(seconds)"),
+        _extract_fn("function phaseWords(phase)"),
+        _extract_fn("function phaseCount(phase,facts)"),
+        _extract_fn("function phaseLineText(phase,facts)"),
+        _extract_fn("function livePhaseLine(phase,facts,cls)"),
+        _extract_fn("function liveFileCount(d)"),
         _extract_fn("function orbWaitingStep(step)"),
         _extract_fn("function runOrbPhase(p)"),
         # Review D7: the card now collapses a run of clock rows to its newest

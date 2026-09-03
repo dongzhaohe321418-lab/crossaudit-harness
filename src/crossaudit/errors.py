@@ -222,6 +222,14 @@ CONTESTED_MODEL_BLOCKER_REASON = (
 ESCALATION_CAUSES = ("escalation_locked", "nothing_audited", "invalid_reply",
                      "bounds_exceeded", "auditor_concern", "auditor_escalated")
 
+#: A setup mistake, not an audit dispute: the commit the loop was pointed at
+#: changed only rules, configuration or ledger, so no audit ran, nothing was
+#: judged and nothing is contested. It is NOT an auditor-ladder cause (nothing
+#: reached the ladder), so it is named beside ESCALATION_CAUSES rather than in
+#: it, and it is recorded where the stop is (cli/main.py, cmd_run) through the
+#: same record_build_escalation(cause=) the escalation lock uses.
+NO_SCIENCE_COMMIT_CAUSE = "no_science_commit"
+
 
 def escalation_cause(*, integrity: str, verdict: str, model_verdict: str = "",
                      escalation_lock: bool = False,

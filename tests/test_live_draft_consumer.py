@@ -96,6 +96,11 @@ def test_the_draft_never_borrows_the_furniture_of_audited_text():
 
 
 def test_the_label_is_the_exact_copy_the_contract_names_in_both_locales():
-    assert "Generator live draft · not yet audited" in PAGE
-    assert ('"Generator live draft · not yet audited":'
-            '"生成者实时草稿 · 尚未审计"') in PAGE
+    """D149/S2: the draft is one summarising line, not a wall of text, so the
+    label carries the count and is BUILT rather than looked up in the ZH map.
+    Mutation: drop `draftCount` from `draftSummaryLine` and the count vanishes
+    from both sentences."""
+    assert "'Generator is drafting · '+n+(n===1?' word':' words')+' so far · not yet audited'" in PAGE
+    assert "'生成者正在撰写 · 已写 '+n+' 字 · 尚未审计'" in PAGE
+    # The old whole-text label is gone from the page and from the catalogue.
+    assert "Generator live draft · not yet audited" not in PAGE

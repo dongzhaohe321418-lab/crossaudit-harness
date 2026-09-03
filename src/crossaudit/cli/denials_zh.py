@@ -128,6 +128,21 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("committed TASK.md is not UTF-8", "已提交的 TASK.md 不是 UTF-8"),
     ("refusing to read through a symlink: {}", "拒绝通过符号链接读取：{}"),
     ("{} is not a git repository", "{} 不是 git 仓库"),
+    # D149: these three name the commit by subject. The sha-leading wordings
+    # they replace are kept below, because records written by an older build
+    # still carry them.
+    ("That commit ({}) only touches the ledger ({}/): this is an audit artefact, "
+     "not an increment. Audit the science commit instead, or move the ledger to "
+     "the audit repository (github-pair mode).",
+     "那个提交（{}）只改动了账本（{}/）：这是审计产物，不是一个增量。请改为审计科学提交，"
+     "或把账本移到审计仓库（github-pair 模式）。"),
+    ("That commit ({}) was already admitted; open a new increment",
+     "那个提交（{}）已经准入；请开启新的增量"),
+    ("That commit ({}) already has a recorded decision in this cycle ({}); a "
+     "decision already made is not replaced by re-running it. Commit a revision "
+     "to continue the cycle, or start a new increment to be judged afresh.",
+     "那个提交（{}）在本周期（{}）已有记录在案的决定；已作出的决定不会因重新运行而被替换。"
+     "请提交一次修订以继续本周期，或开启新的增量重新接受评判。"),
     ("{} only touches the ledger ({}/): this is an audit artefact, not an "
      "increment. Audit the science commit instead, or move the ledger to the "
      "audit repository (github-pair mode).",
@@ -152,6 +167,16 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      '请说明要改什么：crossaudit amend "from now on ..."'),
     ("{} is not a git repository; the loop audits commits",
      "{} 不是 git 仓库；循环审计的是提交"),
+    # The stop a person actually reads (cli/main.py). It names the commit by
+    # its SUBJECT and no longer leads with a sha: a 12-hex id in the first
+    # sentence of a decision card is internal vocabulary, and it moves to the
+    # card's collapsed details instead (D149).
+    ("Your last commit ({}) changed no science files — only rules, "
+     "configuration or ledger. Commit your experiment, then run again.",
+     "你的上一次提交（{}）没有改动任何科学文件——只有规则、配置或账本。请先提交你的实验，然后再运行。"),
+    # The sha-leading wording this stop had before. Kept because ledgers,
+    # receipts and state records written by an older build still carry it, and
+    # a stop a person can still open must not go back to English.
     ("{} ({}) changed no science files — only rules, configuration or ledger. "
      "Commit your experiment, then run again.",
      "{}（{}）没有改动任何科学文件——只有规则、配置或账本。请先提交你的实验，然后再运行。"),
