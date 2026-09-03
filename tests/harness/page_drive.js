@@ -38,7 +38,13 @@ globalThis.__textOf = function(html){
 globalThis.__firstPaint = function(html){
   const tokens = String(html).split(/(<[^>]+>)/);
   let out=[]; const stack=[]; let hidden=0;
-  let inSummary=0;
+  // A <summary> is painted by the <details> it belongs to, so it is on the
+  // screen when every details ABOVE its own is open — and a summary nested
+  // inside a closed fold is not on the screen at all. Counting summaries
+  // instead of resolving them against the stack showed the labels of folded
+  // sub-rows as if a person could read them without opening anything.
+  const summaries=[]; let shownSummaries=0;
+  const visible=()=>hidden===0||shownSummaries>0;
   for(const tk of tokens){
     if(tk.startsWith('<')){
       const close = tk.startsWith('</');
@@ -48,17 +54,22 @@ globalThis.__firstPaint = function(html){
         else if(!/\/>$/.test(tk)){ const open=/\sopen(\s|>|=)/.test(tk); stack.push({hid:!open}); if(!open) hidden++; }
         out.push(' ');continue;
       }
-      if(name==='summary'){ if(close){ inSummary--; } else { inSummary++; } out.push(' ');continue; }
+      if(name==='summary'){
+        if(close){ if(summaries.pop()) shownSummaries--; }
+        else { const own=stack.length?stack[stack.length-1]:null;
+               const shown=(hidden-((own&&own.hid)?1:0))===0;
+               summaries.push(shown); if(shown) shownSummaries++; }
+        out.push(' ');continue; }
       if(name==='canvas' && !close){
         const lab=(tk.match(/aria-label="([^"]*)"/)||[])[1];
-        if(hidden===0||inSummary>0) out.push(' [orb:'+(lab===undefined?'UNLABELLED':lab)+'] ');
+        if(visible()) out.push(' [orb:'+(lab===undefined?'UNLABELLED':lab)+'] ');
         continue;
       }
       if(/^(div|p|article|section|li|tr|h[1-6]|label|details|summary|button|textarea|br)$/.test(name||'')) out.push('\n');
       else out.push(' ');
       continue;
     }
-    if(hidden===0 || inSummary>0) out.push(tk);
+    if(visible()) out.push(tk);
   }
   let s=out.join('');
   s = s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');

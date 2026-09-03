@@ -161,12 +161,40 @@ def _all_states() -> dict:
     states = dict(_scenarios())
     for name in RETRYABLE + JUDGEMENT:
         states["stop:" + name] = _state(escalations=[_stop(name)])
-    states["settled pass"] = _state(
-        cycles=[{"id": "f" * 16, "sha": "c" * 40, "status": "PASSED",
-                 "round": 1, "chat_id": "c1"}],
-        auditor_stream=[{"kind": "auditor", "verdict": "PASS", "sha": "c" * 12,
-                         "round": 1, "t": 90, "chat_id": "c1", "findings": []}])
+    states["settled pass"] = _settled("PASSED", "PASS", [])
+    states["settled needs changes"] = _settled("BLOCKED", "BLOCKED", [_FINDING])
+    states["settled admitted"] = _settled("CONSUMED", "PASS", [])
+    #: One chat carrying both a settled cycle and an unresolved decision — the
+    #: shape the review called "actively confusing" while the settled half was
+    #: a card contradicting the row above it.
+    mixed = _settled("PASSED", "PASS", [])
+    mixed["escalations"] = [_stop("auditor_concern")]
+    states["settled and escalated"] = mixed
     return states
+
+
+_FINDING = {"severity": "BLOCKER", "rule": "CA-TXT-001", "artifact": "work/review.md",
+            "observation": "The cited speed-up is not in the paper."}
+
+
+def _settled(status: str, verdict: str, findings: list) -> dict:
+    """A finished cycle exactly as `/api/state` carries one: the generator's
+    message, the auditor's report, the cycle row and the project's checks."""
+    sha = "c" * 40
+    state = _state(
+        messages=[_YOU, {"kind": "generator", "t": 80, "chat_id": "c1", "round": 1,
+                         "sha": sha, "summary": "Drafted the review.",
+                         "files": ["work/review.md"]}],
+        cycles=[{"id": "f" * 16, "sha": sha, "status": status, "round": 1,
+                 "chat_id": "c1"}],
+        auditor_stream=[{"kind": "auditor", "verdict": verdict, "sha": sha[:12],
+                         "round": 1, "t": 90, "chat_id": "c1",
+                         "findings": findings}])
+    state["check_contracts"] = {
+        "schema": {"description": "the results file parses", "state": "passed"},
+        "units": {"description": "every quantity has a unit", "state": "passed"}}
+    state["metrics"] = [{"label": "Audits", "value": 1}]
+    return state
 
 
 def rendered() -> dict:
@@ -765,6 +793,202 @@ def test_no_identifier_reaches_a_first_paint():
             hit = forbidden.search(paint)
             assert hit is None, (name, locale, hit.group(0), paint)
 
+
+
+# =============================== 9. a settled cycle is rows, not a card
+@needs_node
+def test_a_settled_cycle_is_its_rounds_outcome_row_and_not_a_card():
+    """The last deviation from the design, closed.
+
+    A settled cycle used to render `<section class="review-card">` under the
+    stream: its own heading, its own verdict pill, its own round counter and
+    twenty lines of sections. An ESCALATED cycle was already a row, so one
+    surface read as two designs.
+
+    It is the round's outcome row now — the verdict in plain words, the round
+    number on the line, one action — and everything the card stacked is the
+    detail that opens in place.
+
+    Mutation: render a card again from `renderConversation` and the first two
+    assertions fail; drop `cycleRows` from `streamContext` and the verdict
+    leaves the conversation.
+    """
+    from crossaudit.console.page import PAGE
+
+    assert "function reviewCard" not in PAGE
+    assert "review-card" not in PAGE and "data-review-toggle" not in PAGE
+    for name, en, zh in (("settled pass", "Passed review", "已通过审查"),
+                         ("settled needs changes", "Needs changes", "需要修改"),
+                         ("settled admitted", "Admitted", "已准入")):
+        assert "review-card" not in _html(name), name
+        assert f"{en} · round 1" in _first(name), (name, _first(name))
+        assert f"{zh} · 第 1 轮" in _first(name, "zh"), (name, _first(name, "zh"))
+        assert "srow-outcome" in _html(name), name
+
+
+@needs_node
+def test_a_finished_round_is_one_line_and_everything_else_opens_in_place():
+    """"A finished round folds to one row and expands in place." What the card
+    stacked — the deterministic checks, the auditor's findings, the report's
+    provenance and the technical record — is behind that one row's fold, and
+    the files it produced are already the chips on the generator's own row.
+
+    Mutation: open the fold by default and the whole card is back, one shape
+    later; drop a sub-row and the thing it carried is unreachable.
+    """
+    paint = _first("settled needs changes")
+    html = _html("settled needs changes")
+    # ONE line for the round, plus the rows that were already there.
+    assert paint.count("Needs changes") == 1, paint
+    for hidden in ("Automatic checks", "What the auditor raised", "Details",
+                   "The cited speed-up is not in the paper.", "CA-TXT-001",
+                   "c" * 12, "f" * 16):
+        assert hidden in html, hidden
+        assert hidden not in paint, (hidden, paint)
+    # The files are rows already: the chips on the generator's say row, which
+    # is where a passing cycle's deliverable has always been.
+    assert "work/review.md" in _first("settled pass"), _first("settled pass")
+    # Nothing the card said twice survives.
+    for gone in ("Independent review", "Independent auditor approved the result",
+                 "No blocking findings", "Recorded in the audit ledger",
+                 "No checks configured", "View audit details"):
+        assert gone not in html, gone
+
+
+@needs_node
+def test_one_verdict_has_one_vocabulary_and_one_round_counter():
+    """D8. The stream row said `已通过审查` and the card said `通过复核` six lines
+    apart, about the same verdict; the card carried `第 2/3 轮` while the status
+    line carried `round 2 of 3`.
+
+    Mutation: put `"Passed review":"通过复核"` back in the catalogue and a
+    Chinese reader gets two phrases for one fact again.
+    """
+    zh = _html("settled pass", "zh")
+    assert "已通过审查" in zh and "通过复核" not in zh, zh
+    # Mechanically: every verdict word the page can paint has ONE Chinese, and
+    # it is the one the row says. The catalogue is the second speaker — it is
+    # what the locale observer reaches for when an English row is already on
+    # the screen — so it must agree with the row rather than merely be unused.
+    tables = _js(["EVENT_VERBS", "CYCLE_VERDICTS", "ZH"])
+    catalogue = tables["ZH"]
+    spoken = [tables["EVENT_VERBS"][k] for k in
+              ("audit_passed", "audit_blocked", "audit_escalated")]
+    spoken += list(tables["CYCLE_VERDICTS"].values())
+    for words in spoken:
+        assert catalogue.get(words["en"], words["zh"]) == words["zh"], (
+            f"{words['en']!r} is {words['zh']!r} on the row and "
+            f"{catalogue.get(words['en'])!r} in the catalogue: one verdict, "
+            "two vocabularies")
+    for name in _all_states():
+        for locale in ("en", "zh"):
+            html = _html(name, locale)
+            assert "通过复核" not in html, (name, locale)
+            # The card's own counter — `Round 1/3` beside the status line's
+            # `round 1 of 3` — has no second speaker any more.
+            assert "Round 1/3" not in html, (name, locale)
+            # `第 1/3 轮` / `round 1 of 3` belongs to the status line and to
+            # nothing else: the card's counter had no chronology to place it.
+            rest = re.sub(r'<div class="stream-status".*?</div>\s*$', "", html,
+                          flags=re.S)
+            assert "第 1/3 轮" not in rest and "round 1 of 3" not in rest, (
+                name, locale, rest)
+
+
+@needs_node
+def test_a_chat_holding_both_a_settled_cycle_and_a_decision_reads_in_order():
+    """The review rendered one chat carrying both and called it "actively
+    confusing": the card asserted `Passed review` and `Round 3/3` directly
+    under a row saying the auditor had raised a concern about round 2, with no
+    chronology to say which was current.
+
+    Both are rows of one list now: the settled verdict sorts at the time of the
+    report that decided it, and the unresolved decision — which is where the
+    conversation IS — stands last.
+
+    Mutation: append the settled cycle after the stops and the decision stops
+    being the last thing on the screen.
+    """
+    paint = _first("settled and escalated")
+    assert "Passed review · round 1" in paint, paint
+    assert "The auditor raised a concern" in paint, paint
+    assert paint.index("Passed review") < paint.index("The auditor raised a concern")
+    assert "review-card" not in _html("settled and escalated")
+
+
+@needs_node
+def test_the_status_line_does_not_carry_a_fourth_figure():
+    """D10. `审计者正在阅读 · 1 个文件 · 第 1/3 轮 · 38 秒 · ≈$0.04` — the file
+    count is a number the design's status line does not have, it never moves
+    while you watch it, and the files it counts are already chips on the
+    generator's row. The number that belongs beside the verb is the one that is
+    accumulating: the words of the draft.
+
+    Mutation: pass `files:` to phaseCount again and the fourth figure is back.
+    """
+    from crossaudit.console.page import PAGE
+
+    assert "liveFileCount" not in PAGE
+    states = {"auditing": _state(
+        messages=[_YOU, {"kind": "generator", "t": 80, "chat_id": "c1", "round": 1,
+                         "sha": "c" * 40, "summary": "Drafted.",
+                         "files": ["work/review.md", "work/notes.md"]}],
+        steps=_project(ROUND1), usage=_USAGE)}
+    out = render_page.render(WORKTREE, states)
+    en = out["auditing"]["en"]["first_paint"]
+    zh = out["auditing"]["zh"]["first_paint"]
+    assert "The auditor is reading · round 1 of 3" in en, en
+    assert "审计者正在阅读 · 第 1/3 轮" in zh, zh
+    assert "2 files" not in en and "2 个文件" not in zh
+    # ...and the accumulating number is still there where it accumulates.
+    drafting = render_page.render(
+        WORKTREE, {"drafting": _state(steps=_project(ROUND1[:2]),
+                                      run_state="GENERATING", usage=_USAGE)},
+        opts={"drafting": {"liveDraft": {"run": "r1", "text": "one two three four"}}})
+    assert "4 words so far" in drafting["drafting"]["en"]["first_paint"], drafting
+    assert "已写 4 字" in drafting["drafting"]["zh"]["first_paint"]
+
+
+@needs_node
+def test_rows_that_arrive_after_their_rounds_outcome_fold_into_it_in_order():
+    """F3. A provider retry narrated late, a budget threshold crossed while the
+    verdict was being written, a clock tick behind the outcome that ended the
+    round: a single-pass fold dropped every one of them on the floor, because
+    the round was already closed by the time they were read.
+
+    They belong to that round, so they fold into its outcome row — and in the
+    order they happened, not the order the fold noticed them.
+
+    Mutation: collect `held` in the same pass that emits, and the three late
+    rows vanish from the conversation entirely.
+    """
+    late = _state(steps=_project(ROUND1 + [
+        _step("audit_blocked", "auditor", 60, "BLOCKED"),
+        _step("budget_warning", "loop", 61, "Today's token budget is 80% used"),
+        _step("revision_unchanged", "generator", 62, "The revision changed nothing"),
+        _step("provider_recovery", "generator", 63,
+              "Retrying the generator's provider · attempt 1"),
+        _step("round_started", "loop", 70, "round 2 of 3", round_no=2),
+        _step("generation_completed", "generator", 80, "revised", round_no=2)]),
+        usage=_USAGE)
+    out = render_page.render(WORKTREE, {"late": late})
+    paint = out["late"]["en"]["first_paint"]
+    text = out["late"]["en"]["text"]
+    # Round 1 is one line, and round 2 is open above the status line.
+    assert "Needs changes · round 1" in paint, paint
+    assert "Today's token budget" not in paint, paint
+    # Every late row is inside that round's fold...
+    for late_line in ("Today's token budget is 80% used",
+                      "The revision changed nothing",
+                      "Retrying the generator's provider"):
+        assert late_line in text, (late_line, text)
+    # ...in the order they happened, behind the row that closed the round.
+    order = [text.index("wrote the review"),
+             text.index("Today's token budget is 80% used"),
+             text.index("The revision changed nothing"),
+             text.index("Retrying the generator's provider")]
+    assert order == sorted(order), (order, text)
+    assert text.index("Needs changes · round 1") < order[0], text
 
 # ================================================= the engine, unchanged
 GOOD_INCREMENT = {
