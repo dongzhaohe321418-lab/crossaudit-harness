@@ -265,14 +265,21 @@ def complete(cfg: Config, role_name: str, primary: Role, *, system: str,
     summary = "; ".join(
         f"{item['vendor']}:{item['model']} — {item['reason'].splitlines()[0]}"
         for item in failures[-4:])
-    # A provider's own reset moment survives the roll-up: when every route
-    # ended rate-limited, the parked run can say when the limit reopens.
+    # A provider's own reset moment survives the roll-up — but only when a rate
+    # limit is what actually stopped the run. A 429 on the primary followed by a
+    # 500 on the backup is a provider outage, and pointing the person at a quota
+    # window would have them wait for the wrong thing. The exhaustion counts as
+    # a rate limit when every route hit one, or when the last route — the one
+    # that ended the loop — did; the moment is then the latest window among the
+    # rate-limited routes, since none of them can succeed before that.
     extra: dict = {}
-    resets = [item["reset_at"] for item in failures if "reset_at" in item]
-    if resets:
-        extra["rate_limit_reset_at"] = max(resets)
-    if failures and all(item.get("category") == "rate_limit" for item in failures):
+    limited = [item for item in failures if item.get("category") == "rate_limit"]
+    if limited and (len(limited) == len(failures)
+                    or failures[-1].get("category") == "rate_limit"):
         extra["rate_limited"] = True
+        resets = [item["reset_at"] for item in limited if "reset_at" in item]
+        if resets:
+            extra["rate_limit_reset_at"] = max(resets)
     raise ProviderDenial(
         f"all configured {role_name} provider routes failed. {summary}",
         category="routes_exhausted", retryable=False,

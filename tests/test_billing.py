@@ -402,6 +402,52 @@ def test_exhausted_routes_and_the_parked_run_keep_the_reset_moment(cfg, monkeypa
     assert waiting["reset_at"] == NOW + 600 and waiting["rate_limited"] is True
 
 
+def test_a_mixed_exhaustion_is_a_provider_outage_not_a_quota_wall(cfg, monkeypatch):
+    """One route 429, the next 500. A reset moment exists — the limited route
+    named one — but a quota window is not what stopped the run, so nothing may
+    tell the person to wait it out. The flag decides, and it is withheld unless
+    every route was limited or the last one (the decisive failure) was."""
+    from crossaudit.config import Role
+    from crossaudit.errors import ProviderDenial
+    from crossaudit.providers import resilience
+
+    def denial(kind: str):
+        if kind == "rate_limit":
+            return ProviderDenial("provider returned HTTP 429", status=429,
+                                  category="rate_limit", retryable=False,
+                                  rate_limit_reset_at=NOW + 600)
+        return ProviderDenial("provider returned HTTP 500", status=500,
+                              category="provider", retryable=False)
+
+    def exhaust(order):
+        seen = iter(order)
+
+        def provider(**_kw):
+            raise denial(next(seen))
+
+        monkeypatch.setattr(resilience, "get_provider", lambda _name: provider)
+        monkeypatch.setitem(resilience.NEEDS_KEY, "limited", False)
+        monkeypatch.setitem(resilience.NEEDS_KEY, "backup", False)
+        role = Role("limited", "m", "openai", "K",
+                    fallbacks=(Role("backup", "m2", "anthropic", "K2"),))
+        with pytest.raises(ProviderDenial) as caught:
+            resilience.complete(replace(cfg, resilience=replace(cfg.resilience,
+                                                               max_attempts=1)),
+                                "generator", role, system="s", prompt="p")
+        return caught.value.detail
+
+    mixed = exhaust(["rate_limit", "provider"])
+    assert mixed["category"] == "routes_exhausted"
+    assert "rate_limited" not in mixed and "rate_limit_reset_at" not in mixed
+    # The reverse order ends ON the limit: that IS what stopped the run.
+    decisive = exhaust(["provider", "rate_limit"])
+    assert decisive["rate_limited"] is True
+    assert decisive["rate_limit_reset_at"] == NOW + 600
+    # And every route limited is a quota wall by any reading.
+    both = exhaust(["rate_limit", "rate_limit"])
+    assert both["rate_limited"] is True and both["rate_limit_reset_at"] == NOW + 600
+
+
 # ------------------------------------------------------------ page surface
 import shutil
 import subprocess
@@ -595,7 +641,16 @@ def test_the_parked_card_and_run_card_count_down_to_the_provider_reset():
         exactHour:resetSentence(1_800_000_000+2*3600),longWait:resetSentence(1_800_000_000+25*3600),
         passed:resetSentence(1_800_000_000-5),noMoment:resetSentence(0),
         blindLine:providerResetLine({...p,waiting_reason:{kind:'provider',rate_limited:true}}),
-        notLimited:providerResetLine({...p,waiting_reason:{kind:'provider',rate_limited:false}})};
+        notLimited:providerResetLine({...p,waiting_reason:{kind:'provider',rate_limited:false}}),
+        // A mixed 429+500 exhaustion: a reset moment IS present (the limited
+        // route named one) but the run was not stopped by a quota.
+        mixed:providerResetLine({...p,waiting_reason:{kind:'provider',reset_at:at}}),
+        mixedRun:runCostLine({progress:{...p,waiting_reason:{kind:'provider',reset_at:at}},
+                              usage:{attribution:{runs:{}}}})};
+      lastState={progress:{...p,waiting_reason:{kind:'provider',reset_at:at}},usage:{}};
+      document.getElementById('resolution-summary').textContent='Waiting.';
+      appendResolutionReset({},false,true);
+      results[locale].mixedCard=document.getElementById('resolution-summary').textContent;
       lastState={progress:p,usage:{budget:{blocked:true,blocked_by:['daily'],resets:{daily:'Resets at midnight',daily_zh:'明天 0:00 重置'}}}};
       document.getElementById('resolution-summary').textContent='Paused.';appendResolutionReset({},true,false);
       results[locale].budgetCard=document.getElementById('resolution-summary').textContent;
@@ -616,6 +671,14 @@ def test_the_parked_card_and_run_card_count_down_to_the_provider_reset():
     assert got["zh"]["noMoment"] == "已达供应商额度上限 · 稍后重置"
     assert got["en"]["blindLine"] == '<span class="run-reset">Provider limit reached · resets soon</span>'
     assert got["en"]["notLimited"] == ""
+    # A mixed exhaustion says nothing about quotas, in either language: waiting
+    # out a window that is not what stopped the run is the "needless error".
+    for locale in ("en", "zh"):
+        assert got[locale]["mixed"] == ""
+        assert got[locale]["mixedRun"] == ""
+        assert got[locale]["mixedCard"] == "Waiting."
+        assert "Provider limit reached" not in got[locale]["mixedRun"]
+        assert "已达供应商额度上限" not in got[locale]["mixedCard"]
     assert got["zh"]["line"].endswith(">已达供应商额度上限 · 2 小时 10 分钟后重置</span>")
     assert got["en"]["run"] == '<div class="run-cost">' + got["en"]["line"] + "</div>"
     assert (got["en"]["soon"], got["en"]["past"], got["en"]["minutes"]) == ("under a minute", "now", "10 min")
