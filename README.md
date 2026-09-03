@@ -1,8 +1,8 @@
 # CrossAudit 4.16.0
 
-[![Version 4.16.0](https://img.shields.io/badge/version-4.16.0-6d5dfc)](https://github.com/dongzhaohe321418-lab/crossaudit_v4/releases/tag/v4.16.0)
-[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-111111)](https://github.com/dongzhaohe321418-lab/crossaudit_v4#install)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab)](https://github.com/dongzhaohe321418-lab/crossaudit_v4#command-line-installation)
+[![Version 4.16.0](https://img.shields.io/badge/version-4.16.0-6d5dfc)](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.16.0)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-111111)](https://github.com/dongzhaohe321418-lab/crossaudit-harness#install)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab)](https://github.com/dongzhaohe321418-lab/crossaudit-harness#command-line-installation)
 
 **Latest release: CrossAudit 4.16.0.** The source on `main` is authoritative
 until the matching DMG is attached to a GitHub release.
@@ -163,7 +163,7 @@ official OpenAI Codex runtime.
 > signing, hardened runtime, notarization, and stapling.
 
 1. Download `CrossAudit-4.16.0-arm64.dmg` and its checksum from the
-   [V4.16.0 release](https://github.com/dongzhaohe321418-lab/crossaudit_v4/releases/tag/v4.16.0).
+   [V4.16.0 release](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.16.0).
 2. Optionally verify it in Terminal:
 
    ```bash
@@ -198,7 +198,7 @@ keeps CrossAudit and its Python dependencies isolated while making the
 `crossaudit` command available from any directory:
 
 ```bash
-pipx install "git+https://github.com/dongzhaohe321418-lab/crossaudit_v4@main"
+pipx install "git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"
 crossaudit --version
 ```
 
@@ -215,7 +215,7 @@ changes, or intentionally keeping the command inside one project:
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install "crossaudit @ git+https://github.com/dongzhaohe321418-lab/crossaudit_v4@main"
+python -m pip install "crossaudit @ git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"
 ```
 
 Installing the package does not ask for credentials, open a browser, create a
@@ -1330,8 +1330,8 @@ imply that a text-only model can understand every format.
 Clone the repository and install the development dependency:
 
 ```bash
-git clone https://github.com/dongzhaohe321418-lab/crossaudit_v4.git
-cd crossaudit_v4
+git clone https://github.com/dongzhaohe321418-lab/crossaudit-harness.git
+cd crossaudit-harness
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install ".[dev]"

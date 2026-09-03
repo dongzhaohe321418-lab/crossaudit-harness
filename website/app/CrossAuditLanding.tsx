@@ -4,10 +4,10 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const REPOSITORY = "https://github.com/dongzhaohe321418-lab/crossaudit_v4";
+const REPOSITORY = "https://github.com/dongzhaohe321418-lab/crossaudit-harness";
 const RELEASES = `${REPOSITORY}/releases/latest`;
 const RELEASE_API =
-  "https://api.github.com/repos/dongzhaohe321418-lab/crossaudit_v4/releases/latest";
+  "https://api.github.com/repos/dongzhaohe321418-lab/crossaudit-harness/releases/latest";
 
 type Language = "en" | "zh";
 
@@ -212,7 +212,7 @@ const copy = {
     dlTitle: "Download from the source.",
     dlBody: "The installer and checksum come directly from the official GitHub release. Nothing is repackaged.",
     dlAltLabel: "Prefer to build it yourself?",
-    dlClone: "git clone https://github.com/dongzhaohe321418-lab/crossaudit_v4",
+    dlClone: "git clone https://github.com/dongzhaohe321418-lab/crossaudit-harness",
     dlCloneNote: "Then follow the README. The website you are reading lives in the same repository.",
     latest: "Latest release",
     loading: "Checking the latest GitHub release",
@@ -393,7 +393,7 @@ const copy = {
     dlTitle: "直接从源头下载。",
     dlBody: "安装包与校验文件直接来自官方 GitHub Release，未经任何重新打包。",
     dlAltLabel: "想自己构建？",
-    dlClone: "git clone https://github.com/dongzhaohe321418-lab/crossaudit_v4",
+    dlClone: "git clone https://github.com/dongzhaohe321418-lab/crossaudit-harness",
     dlCloneNote: "然后按 README 操作。你正在看的这个网站也在同一个仓库里。",
     latest: "最新版本",
     loading: "正在检查 GitHub 最新版本",

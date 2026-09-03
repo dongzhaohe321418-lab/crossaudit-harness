@@ -31,10 +31,10 @@ from . import _selfid
 from .doctor_shared import constitution_state
 
 LATEST_RELEASE_API = (
-    "https://api.github.com/repos/dongzhaohe321418-lab/crossaudit_v4/releases/latest"
+    "https://api.github.com/repos/dongzhaohe321418-lab/crossaudit-harness/releases/latest"
 )
 LATEST_RELEASE_URL = (
-    "https://github.com/dongzhaohe321418-lab/crossaudit_v4/releases/latest"
+    "https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/latest"
 )
 MINIMUM_GIT = (2, 30, 0)  # ``git init -b`` is part of project creation.
 MINIMUM_OPENSSH = (8, 1, 0)  # accept-new and modern host-key algorithms.

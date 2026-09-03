@@ -1,7 +1,7 @@
 # CrossAudit V4 — native macOS app and cross-vendor supervised workspace.
 #
 # No PyPI account yet, so distribution is GitHub-direct:
-#   pip install "crossaudit @ git+https://github.com/dongzhaohe321418-lab/crossaudit_v4@main"
+#   pip install "crossaudit @ git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"
 #
 # Installing has no side effects: no network, no auth, no writes outside the
 # package. Everything interactive lives behind `crossaudit init` / `talk`.
@@ -51,7 +51,7 @@ dev = [
 crossaudit = "crossaudit.cli.main:main"
 
 [project.urls]
-Repository = "https://github.com/dongzhaohe321418-lab/crossaudit_v4"
+Repository = "https://github.com/dongzhaohe321418-lab/crossaudit-harness"
 Protocol = "https://github.com/dongzhaohe321418-lab/crossaudit"
 
 [tool.setuptools]
