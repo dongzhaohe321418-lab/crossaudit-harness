@@ -27,11 +27,11 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://crossaudit-v4.vercel.app"),
   title: "CrossAudit | Agentic work, independently audited.",
   description:
-    "An agentic workspace with cross-vendor supervision: one model does the work, a model from a different provider inspects every committed result before delivery.",
+    "An agentic workspace with cross-vendor supervision: one model does the work, a model from a different provider inspects every committed result before delivery, and every receipt records which findings a check verified.",
   openGraph: {
     title: "CrossAudit | Agentic work, independently audited.",
     description:
-      "One model does the work. A model from a different provider audits every committed result, and every delivery binds to verifiable evidence.",
+      "One model does the work. A model from a different provider audits every committed result, and every receipt binds the evidence set: each finding with its tier and whether a check verified it.",
     type: "website",
     images: [{ url: "/og.png", width: 1200, height: 630, alt: "CrossAudit independent AI audit loop" }],
   },
