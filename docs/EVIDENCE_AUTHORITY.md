@@ -122,6 +122,23 @@ run shows a `repair_caution` event:
   documents are never budgeted);
 - staged files the screen could not read because the diff passed its size cap.
 
+**A resumed cycle's first round is not screened.** The screen runs on a
+*revision* — the round that follows a BLOCKED audit *in the same run*
+(`repair_round`, `cli/build.py`, False until an audit blocks). When a human
+resumes a BLOCKED cycle instead, the continuation starts a new run, so its
+first round is a fresh generation as far as the screen is concerned: it is
+committed and audited with no part of this section applied — cautions and
+refusals alike — and without the previous audit's findings in the prompt.
+
+This is a deliberate miss, not an oversight. Screening a round the generator
+was never shown findings for would redden honest work, which is as much a
+defect as missing defective work (D121). The protections that do not depend on
+a revision are all still in place: the generator's `apply` denies a write
+outside `scope.dirs` before anything is staged, every check in the DCL runs,
+and the auditor reads the round like any other. A person who resumes has also
+read the findings this screen exists to surface. From the second round of the
+resumed run onward the screen behaves exactly as above.
+
 `repair.mode` is the dial: `caution` (default) is the behaviour above;
 `refuse` turns every caution into a refusal for projects that would rather
 stop than let the auditor weigh it. Prose is never pattern-screened: a report

@@ -1076,3 +1076,78 @@ def test_the_thinking_row_is_folded_shut_and_says_it_is_unaudited():
     # there is nothing to persist and nothing that could be reopened later.
     assert "localStorage" not in block
     assert re.search(r"details\.live-thinking>summary\{", page_mod.PAGE)
+
+
+def _render_run_card(steps: list[dict]) -> str:
+    """The SHIPPED ``runCard`` executed under node over a progress payload.
+
+    Everything runCard reaches for that is not part of the activity list is
+    stubbed; the activity path — activityRow, the actor tables, the identifier
+    scrub, and the clock collapse under test — is the real shipped source.
+    """
+    import subprocess as sp
+
+    from crossaudit.console import page as page_mod
+
+    script = page_mod.PAGE.split("<script>")[1].split("</script>")[0]
+    state = {"progress": {"steps": steps, "finished": False, "outcome": "",
+                          "task": "produce the experiment"},
+             "pipeline": [{"state": "done", "label": "Generate"}],
+             "cycles": [], "max_rounds": 3}
+    pieces = [
+        "let currentLocale='en';const ZH={};const zhValue=v=>ZH[v]||v;",
+        "const at=()=>'10:27';const artifactList=()=>'';",
+        "const auditStatus=()=>'passed';const chatProgress=d=>d.progress;",
+        "const chatCycles=()=>[];const statusOf=()=>'ready';",
+        "let handoffAt=0,handoffDirection='';const runCostLine=()=>'';",
+        "const forecastLine=()=>'';",
+        _page_snippet(script, "const MARK = ") + ";",
+        "const liveDraftFor=()=>null;const liveThinkingFor=()=>null;",
+        "const draftCount=()=>0;",
+        _page_snippet(script, "const esc = "),
+        _page_snippet(script, "const localeText = ") + ";",
+        _page_snippet(script, "const t = ") + ";",
+        _page_snippet(script, "function durationText("),
+        _page_snippet(script, "function elapsedText("),
+        _page_snippet(script, "function humaniseDetail("),
+        _page_snippet(script, "const ACTOR_NAMES") + ";",
+        _page_snippet(script, "const ACTOR_MARKS") + ";",
+        _page_snippet(script, "function conciseDetail("),
+        _page_snippet(script, "function activityRow("),
+        _page_snippet(script, "const CLOCK_KINDS") + ";",
+        _page_snippet(script, "function collapseClockRows("),
+        _page_snippet(script, "function runCard("),
+        "console.log(runCard(" + json.dumps(state, ensure_ascii=False) + "));",
+    ]
+    run = sp.run(["node", "-e", "\n".join(pieces)], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    return run.stdout
+
+
+@pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node is not installed")
+def test_the_shipped_run_card_collapses_the_clock_rows_it_renders():
+    """D7, the call site. Closure audit 2: the test above drives
+    ``collapseClockRows`` directly, so dropping the call from ``runCard`` — the
+    mutation its own docstring names — survived. This one renders the shipped
+    ``runCard`` over a progress payload holding two consecutive clock rows and
+    counts the rows that come out.
+
+    Mutation: change ``collapseClockRows(p.steps)`` back to ``p.steps`` in
+    runCard and two "Still auditing" rows are rendered instead of one.
+    """
+    import re
+
+    def step(kind: str, actor: str, text: str) -> dict:
+        return {"kind": kind, "actor": actor, "text": text, "detail": "",
+                "t": 1788000000, "round_no": 1, "round_limit": 3, "event_id": 3}
+
+    html = _render_run_card([
+        step("audit_started", "auditor", "reviewing the commit"),
+        step("still_working", "loop", "Still auditing \u00b7 8 s"),
+        step("still_working", "loop", "Still auditing \u00b7 16 s")])
+
+    assert len(re.findall(r"Still auditing", html)) == 1, html
+    assert "Still auditing · 16 s" in html, "the newest clock row, not the first"
+    assert "Still auditing · 8 s" not in html
+    # The substantive row is never what gets dropped.
+    assert "reviewing the commit" in html
