@@ -8,7 +8,7 @@ import subprocess
 import threading
 import time
 from dataclasses import replace
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 
 import pytest
 
@@ -22,6 +22,8 @@ from crossaudit.providers import openai_compat, resilience
 from crossaudit.providers.base import Reply, sha256_text
 from crossaudit.receipt import build as build_receipt
 from crossaudit.runtime import RunEvent, RunJournal, RunState
+
+from .loopback import NumericLoopbackHTTPServer
 
 
 TEXT = "First visible token · 中文 · final text"
@@ -91,7 +93,7 @@ class _Fixture:
                     time.sleep(0.003)
 
         self.payloads: list[dict] = []
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.server = NumericLoopbackHTTPServer(("127.0.0.1", 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
 
     @property

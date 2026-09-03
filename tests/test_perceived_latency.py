@@ -22,6 +22,7 @@ from crossaudit.cli import talk as talk_mod
 from crossaudit.console import intake as intake_mod
 
 from .node_eval import run_node
+from .loopback import NumericLoopbackHTTPServer
 
 
 
@@ -226,7 +227,7 @@ class _AnthropicFixture:
 
     def __init__(self) -> None:
         fixture = self
-        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        from http.server import BaseHTTPRequestHandler
 
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, _format, *_args):
@@ -282,7 +283,7 @@ class _AnthropicFixture:
                     time.sleep(0.003)
 
         self.payloads: list[dict] = []
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.server = NumericLoopbackHTTPServer(("127.0.0.1", 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
 
     @property

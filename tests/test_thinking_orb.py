@@ -13,7 +13,6 @@ from __future__ import annotations
 import json
 import re
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -21,6 +20,8 @@ import pytest
 
 from crossaudit.console.page import PAGE
 from crossaudit.console.progress import phase_i18n
+
+from .node_eval import run_node
 
 ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "tests" / "harness"
@@ -102,7 +103,7 @@ let currentLocale='en';
 
 
 def _run(program: str) -> dict:
-    out = subprocess.run(["node", "-e", program], text=True, capture_output=True)
+    out = run_node(program)
     assert out.returncode == 0, out.stderr
     return json.loads(out.stdout.strip().split("\n")[-1])
 

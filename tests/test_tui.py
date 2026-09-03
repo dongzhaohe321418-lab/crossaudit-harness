@@ -16,6 +16,8 @@ import pytest
 from crossaudit.cli import tui, wizard
 from crossaudit.errors import ConfigDenial
 
+from .loopback import SerialNumericLoopbackHTTPServer
+
 
 # ------------------------------------------------------------ key decoding
 @pytest.mark.parametrize("raw,expect", [
@@ -1127,7 +1129,6 @@ def test_a_real_400_reaches_the_caller_intact():
     """End to end through urllib, since the body is read from a stream that is
     easy to consume twice or not at all."""
     import http.server
-    import socketserver
     import threading
 
     from crossaudit.errors import ProviderDenial
@@ -1147,13 +1148,7 @@ def test_a_real_400_reaches_the_caller_intact():
         def log_message(self, *a):                            # keep pytest output clean
             pass
 
-    class NumericLoopbackHTTPServer(http.server.HTTPServer):
-        def server_bind(self):
-            socketserver.TCPServer.server_bind(self)
-            self.server_name = str(self.server_address[0])
-            self.server_port = int(self.server_address[1])
-
-    server = NumericLoopbackHTTPServer(("127.0.0.1", 0), Handler)
+    server = SerialNumericLoopbackHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
