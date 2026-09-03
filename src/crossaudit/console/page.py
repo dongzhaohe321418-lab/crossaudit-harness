@@ -6137,6 +6137,223 @@ function forecastText(d){const f=d&&d.usage&&d.usage.forecast;const zh=currentLo
   const cost=(f.usd&&f.usd.p50!=null)?(zh?' · 约 ':' · about ')+formatUsd(f.usd.p50):'';
   return time+cost;}
 function forecastLine(d){return '<span class="run-forecast">'+esc(forecastText(d))+'</span>';}
+// ============================================================== THE STREAM
+// docs/design/ACTIVITY_STREAM.md is the authority for everything below. The
+// loop emits roughly thirty event kinds; the conversation renders FIVE
+// shapes. This block is the row model: the shape table, the vocabulary, the
+// one number each row may carry, and the pure function that turns one state
+// snapshot into an ordered list of rows. Nothing here touches the DOM, the
+// clock or the network, so it runs under node exactly as it runs on the page.
+
+//: The five shapes. A row is one of these or it is not a row.
+const ROW_SHAPES={say:'say',do:'do',wait:'wait',outcome:'outcome',note:'note'};
+
+//: Every event kind the engine emits, and the ONE shape it renders as
+//: (design rule 6). tests/test_activity_stream.py enumerates the kinds FROM
+//: THE SOURCE — build.py's emit(), the auditor's and the intake's narrate(),
+//: the run journal's own inserts, streams.py's message kinds — and fails when
+//: one arrives with no shape here. The rule made mechanical, not remembered.
+const EVENT_SHAPES={
+  // ---- console/streams.py: what a person and the two models said.
+  you:'say',generator:'say',generator_chat:'say',auditor_chat:'say',
+  //: An auditor report IS a round's result, so it is the round's outcome row.
+  auditor:'outcome',
+  // ---- cli/build.py: the audit loop.
+  goal:'note',preparing:'wait',prompt_ready:'do',
+  generation_started:'wait',generation_chunk:'wait',thinking_chunk:'wait',
+  generation_completed:'do',generation_resumed:'note',generation_note:'note',
+  generation_refused:'note',round_started:'note',
+  audit_started:'wait',auditor_progress:'wait',
+  audit_passed:'outcome',audit_blocked:'outcome',audit_escalated:'outcome',
+  revision_requested:'do',revision_retry:'note',revision_unchanged:'note',
+  repair_caution:'note',repair_refused:'note',commit_refused:'note',
+  capability_requested:'note',capability_refused:'note',
+  document_rendering:'wait',document_refused:'note',
+  context_condensed:'note',budget_warning:'note',
+  provider_recovery:'wait',provider_unavailable:'note',
+  guidance_received:'say',loop_stopped:'outcome',
+  // ---- auditor/run.py, narrated through on_event.narrate.
+  auditor_reading:'wait',check_started:'wait',check_finished:'do',
+  //: The bounded repair attempt before an unreadable auditor reply becomes
+  //: anyone's problem: worth knowing, needs no action.
+  audit_repair_retry:'note',
+  // ---- console/intake.py: the message still in flight.
+  received:'wait',routed:'do',answering:'wait',answered:'do',
+  // ---- runtime/runs.py, runtime/commands.py, console/server.py.
+  run_started:'note',run_finished:'outcome',run_cancelled:'outcome',
+  run_stalled:'note',cancel_requested:'note',still_working:'wait',
+  guidance_queued:'say',interruption_dismissed:'note',
+  human_wait_reconciled:'note',attachments_received:'do',
+  //: RunEvent's own default kind, for a step nobody named.
+  activity:'do'};
+
+//: Kinds whose fact is carried by ANOTHER row rather than by one of their own.
+//: A round is a group, not a region, so its number lives on that round's
+//: outcome row; the streamed chunks are the number on the live drafting row;
+//: a run beginning is the stream beginning. Declared shapes all the same —
+//: rule 6 is about being declared, not about being drawn.
+const CARRIED_KINDS={round_started:1,generation_chunk:1,thinking_chunk:1,
+  run_started:1};
+
+//: The verb phrase of each kind — present while the thing is happening, past
+//: once it has happened, in the reader's language, never an internal constant.
+//: Both languages live here (design rule 7) rather than in the ZH catalogue,
+//: because a row line is BUILT: a count sits beside it. A wire row that
+//: carries its own localised sentence (text_i18n, from console/progress.py)
+//: prefers that sentence; this table is the vocabulary and the fallback.
+const EVENT_VERBS={
+  you:{en:'You',zh:'你'},
+  generator:{en:'Generator',zh:'生成者'},
+  generator_chat:{en:'Generator',zh:'生成者'},
+  auditor_chat:{en:'Auditor',zh:'审计者'},
+  auditor:{en:'Reviewed',zh:'已审查'},
+  goal:{en:'Recorded the task',zh:'已记录任务'},
+  preparing:{en:'Reading the workspace',zh:'正在读取工作区'},
+  prompt_ready:{en:'Prepared the request',zh:'已准备好请求'},
+  generation_started:{en:'Drafting',zh:'正在撰写'},
+  generation_chunk:{en:'Drafting',zh:'正在撰写'},
+  thinking_chunk:{en:'Thinking it through',zh:'正在思考'},
+  generation_completed:{en:'Drafted',zh:'已撰写'},
+  generation_resumed:{en:'Picked up where it stopped',zh:'已从中断处继续'},
+  generation_note:{en:'A note from the generator',zh:'生成者的说明'},
+  generation_refused:{en:'The generator produced nothing to audit',zh:'生成者没有产出可审计的内容'},
+  round_started:{en:'Round started',zh:'本轮开始'},
+  audit_started:{en:'The auditor is reading',zh:'审计者正在阅读'},
+  auditor_reading:{en:'The auditor is reading',zh:'审计者正在阅读'},
+  auditor_progress:{en:'The auditor is still reading',zh:'审计者仍在阅读'},
+  audit_passed:{en:'Passed review',zh:'已通过审查'},
+  audit_blocked:{en:'Needs changes',zh:'需要修改'},
+  audit_escalated:{en:'Needs your decision',zh:'需要你的决定'},
+  revision_requested:{en:'Asked for a revision',zh:'已请求修订'},
+  revision_retry:{en:'Asked again',zh:'已再次请求'},
+  revision_unchanged:{en:'The revision changed nothing',zh:'修订没有带来任何改动'},
+  repair_caution:{en:'A caution was passed to the auditor',zh:'已向审计者转达一条提醒'},
+  repair_refused:{en:'The revision was rolled back',zh:'该修订已回滚'},
+  commit_refused:{en:'The commit was refused',zh:'提交被拒绝'},
+  capability_requested:{en:'Asked to use a capability',zh:'请求使用一项能力'},
+  capability_refused:{en:'A capability was refused',zh:'一项能力被拒绝'},
+  document_rendering:{en:'Rendering the document',zh:'正在渲染文档'},
+  document_refused:{en:'The document could not be rendered',zh:'文档无法渲染'},
+  context_condensed:{en:'Context reduced',zh:'已精简上下文'},
+  budget_warning:{en:'Usage threshold reached',zh:'已达用量阈值'},
+  provider_recovery:{en:'Waiting for the provider',zh:'等待供应商'},
+  provider_unavailable:{en:'The provider did not answer',zh:'供应商无响应'},
+  guidance_received:{en:'Your guidance',zh:'你的补充说明'},
+  loop_stopped:{en:'Stopped',zh:'已停止'},
+  check_started:{en:'Running a check',zh:'正在运行检查'},
+  check_finished:{en:'Automatic checks passed',zh:'自动检查通过'},
+  audit_repair_retry:{en:'Asked the auditor to answer again',zh:'已请审计者重新作答'},
+  received:{en:'Working out who should handle this',zh:'正在判断由谁处理'},
+  routed:{en:'Chose who handles this',zh:'已确定由谁处理'},
+  answering:{en:'Writing a reply',zh:'正在撰写回复'},
+  answered:{en:'Replied',zh:'已回复'},
+  run_started:{en:'Started',zh:'已开始'},
+  run_finished:{en:'Finished',zh:'已完成'},
+  run_cancelled:{en:'Stopped at your request',zh:'已按你的要求停止'},
+  run_stalled:{en:'No sign of progress',zh:'长时间没有进展'},
+  cancel_requested:{en:'Stopping',zh:'正在停止'},
+  still_working:{en:'Still working',zh:'仍在进行'},
+  guidance_queued:{en:'Queued — read at the next round',zh:'已排队 · 下一轮读取'},
+  interruption_dismissed:{en:'Notice dismissed',zh:'提示已忽略'},
+  human_wait_reconciled:{en:'The pending decision was reconciled',zh:'待定的决定已对齐'},
+  attachments_received:{en:'Added files',zh:'已添加文件'},
+  activity:{en:'Working',zh:'正在进行'}};
+
+//: The ONE number a row may carry, and how it reads in each language. A row
+//: names at most one of these (design rule 5), and a zero never renders — a
+//: zero is the absence of a count, not a count (design rule 3).
+const ROW_UNITS={
+  words:{en:n=>n+(n===1?' word':' words'),zh:n=>n+' 字'},
+  files:{en:n=>n+(n===1?' file':' files'),zh:n=>n+' 个文件'},
+  checks:{en:n=>n+(n===1?' check':' checks'),zh:n=>n+' 项'},
+  findings:{en:n=>n+(n===1?' finding':' findings'),zh:n=>n+' 条发现'},
+  rounds:{en:n=>'round '+n,zh:n=>'第 '+n+' 轮'},
+  retries:{en:n=>'retried '+n+(n===1?' time':' times'),zh:n=>'已重试 '+n+' 次'},
+  seconds:{en:n=>elapsedWords(n),zh:n=>elapsedWords(n)},
+  times:{en:n=>'×'+n,zh:n=>'×'+n}};
+function rowNumber(n){
+  if(!n||!n.unit)return '';
+  const unit=ROW_UNITS[n.unit];if(!unit)return '';
+  const value=Math.max(0,Math.floor(Number(n.value||0)));if(!value)return '';
+  return currentLocale==='zh'?unit.zh(value):unit.en(value);}
+
+//: The declared shape of a kind, or '' — and '' means NOT RENDERED. A new
+//: event kind names its shape or the stream stays silent about it, which is
+//: the honest failure: a row nobody designed is worse than a row nobody sees,
+//: and the guard test turns the silence into a red build.
+function shapeOf(kind){
+  const shape=EVENT_SHAPES[String(kind||'')];
+  return shape&&ROW_SHAPES[shape]?shape:'';}
+//: The words for a kind, in the reader's language.
+function verbOf(kind){
+  const row=EVENT_VERBS[String(kind||'')];if(!row)return '';
+  return currentLocale==='zh'?row.zh:row.en;}
+//: The line a wire row already carries in both languages (console/progress.py
+//: localises the narrated phases). Absent for the kinds it does not cover, and
+//: then the verb table speaks instead — never English under 中文.
+function wireLine(s){
+  return s&&s.text_i18n?localeText(s.text_i18n,s.text):'';}
+
+//: One row. Shape, who it is about, the words, the one number, when, an
+//: optional detail that opens IN PLACE, an optional action, and the round it
+//: belongs to. `key` groups rows that merge; `phase` names the orb of a live
+//: one. An undeclared shape returns null rather than a row nobody designed.
+function streamRow(o){
+  const shape=String((o&&o.shape)||'');
+  if(!ROW_SHAPES[shape])return null;
+  return {shape:shape,actor:String((o&&o.actor)||'system'),
+    kind:String((o&&o.kind)||''),line:String((o&&o.line)||''),
+    n:(o&&o.n)||null,t:Number((o&&o.t)||0),detail:(o&&o.detail)||null,
+    action:(o&&o.action)||null,round:Number((o&&o.round)||0),
+    phase:String((o&&o.phase)||''),key:String((o&&o.key)||''),
+    tone:String((o&&o.tone)||''),open:Boolean(o&&o.open)};}
+
+//: Which side of the pair a step belongs to. The runtime reporting on itself
+//: never borrows the generator's name or mark.
+const STEP_ACTORS={generator:'generator',auditor:'auditor',input:'you',
+  user:'you',done:'system',loop:'system',controller:'system',watchdog:'system',
+  tool:'system',compute:'system'};
+function actorOfStep(s){
+  if(String((s&&s.kind)||'')==='context_condensed')return 'system';
+  return STEP_ACTORS[String((s&&s.actor)||'')]||'system';}
+
+//: One run-journal step becomes at most one row. A carried kind becomes none:
+//: its fact is on another row already.
+function rowFromStep(s,d){
+  const kind=String((s&&s.kind)||'');
+  const shape=shapeOf(kind);
+  if(!shape||CARRIED_KINDS[kind])return null;
+  const line=wireLine(s)||verbOf(kind);
+  if(!line)return null;
+  const detail=s.detail_i18n?localeText(s.detail_i18n,s.detail):conciseDetail(s);
+  return streamRow({shape:shape,actor:actorOfStep(s),kind:kind,line:line,
+    t:s.t,round:s.round_no,key:kind,
+    detail:detail?{kind:'text',text:detail}:null});}
+
+//: One conversation message becomes exactly one row: words from a person or
+//: an agent are a `say`, an auditor report is the round's `outcome`.
+function rowFromMessage(m,d){
+  const kind=String((m&&m.kind)||'generator');
+  const shape=shapeOf(kind);
+  if(!shape)return null;
+  return streamRow({shape:shape,kind:kind,t:m.t,round:m.round,
+    actor:kind==='you'?'you':(kind==='auditor'||kind==='auditor_chat')?'auditor':'generator',
+    line:verbOf(kind),detail:{kind:'message',message:m}});}
+
+//: THE STREAM. One snapshot in, one ordered list of rows out — pure, so the
+//: same call runs on the page and under node. `ctx` carries what only the
+//: client knows (the messages it already de-duplicated, the live draft) so
+//: this function never reaches for a global.
+function streamRows(d,ctx){
+  const c=ctx||{};
+  const rows=[];
+  for(const m of (c.messages||[])){const r=rowFromMessage(m,d);if(r)rows.push(r);}
+  for(const s of (c.steps||[])){const r=rowFromStep(s,d);if(r)rows.push(r);}
+  // Chronological, and stable inside one second: a message and the step that
+  // reports it share a timestamp often enough that a sort alone would shuffle
+  // them differently on every frame.
+  return rows.map((r,i)=>[r,i]).sort((a,b)=>(a[0].t-b[0].t)||(a[1]-b[1]))
+    .map(pair=>pair[0]);}
 function turn(m,d){
   if(m.kind === 'you'){
     const explicit=m.routing_mode==='explicit';const recipient=m.addressed_to||m.lane;
