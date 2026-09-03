@@ -6657,3 +6657,42 @@ are now detected from numstat, independent of the cap.
 
 **Closes** D141's "±5%" row (`approximately` now means approximately, in the
 templates and the auditor prompt as well as drafted constitutions).
+
+## D151 — Published: the repository, the release, the website, and what the first CI run taught
+
+The owner asked for a new repository, a downloadable release and a working
+website. Rulings taken: repository `dongzhaohe321418-lab/crossaudit-harness`,
+public, with the full history (the decision record and the review reports are
+the product's audit trail, not clutter); release v4.16.0 with the DMG and its
+checksum, ad-hoc signed and said so; the existing `crossaudit-v4.vercel.app`
+project is kept and pointed at the new repository.
+
+**The website is a claim about the product and was behind it.** Twenty
+statements were out of date — version, requirements, what the audit loop
+does, what a receipt binds, the install step — and the screenshots were of an
+older build. All were replaced against the 4.16.0 tree, the screenshots
+regenerated from the real console via a reproducible script. The README gained
+a hero, a factual comparison with single-agent harnesses, and an install block
+that says "right-click → Open" plainly.
+
+**Thinking Orbs.** The owner chose the `thinking-orbs` library (MIT) for the
+thinking animation. Its canvas engine is framework-agnostic, so it is vendored
+byte-identical with a pinned hash and a notice, wrapped in a few dozen lines
+of plain JavaScript, and replaces the thinking dots and the run card's phase
+mark — one element, never beside another, and gone the moment a phase ends.
+
+**The first CI run on the new repository failed everywhere, and every cause
+was a lesson.** The suite is designed for the source tree (the tree-identity
+guard insists on it) while the workflow tested an installed wheel; a keychain
+test exported a real provider key into the process and thirty later tests
+called OpenAI for real — invisible on a developer machine whose proxy answered
+401; Windows had never reached a single test because the network guard read
+`socket.sendmsg`, which does not exist there; Linux capped `node -e` at 128 KiB
+per argument; and five wall-clock races only appear on a loaded runner. The
+suite had never run to completion on CI before. Linux and macOS are green on
+3.10–3.13. Windows stays in the matrix as advisory: the number is visible
+(about 170 of 2600) and the five portability classes are written down in
+CONTRIBUTING, because a platform quietly dropped from CI is one nobody fixes.
+
+**Left to the owner:** Vercel login for the deploy (interactive), Apple
+notarization, and whether the Windows port is worth a slice.

@@ -4,8 +4,8 @@
 
 ## 一句话状态
 
-所有工作都已提交在本地分支 `fusion/evidence-authority` 上（`crossaudit_integ` 仓库）。
-`v5-redesign` 未动；融合分支合不合回主线由你定。
+所有工作都已发布：本地分支 `fusion/evidence-authority` 与 GitHub 仓库 `crossaudit-harness` 的 main 同步。
+`v5-redesign` 未动；要不要把融合线合回它由你定。
 
 - 决策记录：`docs/DECISIONS.md`，D39–D149 连续无缺口（有测试守着）
 - 融合方案与逐文件对比：`docs/findings/codex-fusion-dd725d3.md`（含三份分簇报告）
@@ -45,13 +45,20 @@
 | 预警与计费 | 归属到任务/循环/轮次/角色、80%/95% 预警、429 倒计时、顶栏胶囊、未计价可见与覆盖价、导出与汇总 | 已合，复核修复已合 |
 | 闭环复核 | 两轮闭环审计（e0e3b36、e3b9388），其后两处遗留已修 | `docs/findings/fusion-round2/review-closure*.md` |
 
+## 发布（2026-09-03）
+
+- 公开仓库：https://github.com/dongzhaohe321418-lab/crossaudit-harness （main = 融合线完整历史，CI 在 Linux/macOS 全绿，Windows 为咨询性）
+- Release：https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.16.0 （DMG + sha256；临时签名、未公证）
+- 官网源码在 `website/`，线上 `crossaudit-v4.vercel.app`；内容已按 4.16.0 更新，截图由 `website/scripts/shoot-console.mjs` 重新生成
+- Thinking Orbs（MIT）已内置：`src/crossaudit/console/vendor/thinking_orbs_engine.js`，`scripts/vendor_thinking_orbs.py` 重新生成
+
 ## 下一步（按优先级）
 
-1. **已完成**：4.16.0 DMG 已打包并复制到 `~/Documents/Crossaudit/builds/`；全量 2601 通过；所有复核报告归档在 `docs/findings/fusion-round2/`。
-2. **GitHub 就绪切片**：README 首屏与演示、与 Codex/Claude Code 类 harness 的对比表、CI 徽章、CONTRIBUTING、issue 模板；公证发布需要你的 Apple 开发者身份。
-3. **合回主线与发布**由你定：`git merge fusion/evidence-authority` 到 `v5-redesign`；推送/发布前先问。
+1. **官网部署**：需要你先 `cd website && npx --yes vercel@58.9.4 login`，然后 `npx vercel link`（选现有项目 crossaudit-v4）并 `npm run release:vercel`；或在 Vercel 控制台把 Git 集成改连到 crossaudit-harness。
+2. **公证**：`CROSSAUDIT_PUBLIC_RELEASE=1` + Developer ID + notarytool profile 重新打包，替换 Release 资产，官网与 README 去掉"右键打开"说明。
+3. **Windows 移植**（可选切片）：CONTRIBUTING.md "Windows" 一节列出的五类问题。
 4. `docs/dcl-lifecycle-states` 分支仍需先 rebase 再看（会删 68 个文件），未动。
-5. 待定的产品问题：`lone_model_blocker` 的默认何时切到 `escalate`，等 finding-states 跑出确认率；`generator_streaming` 是否也该管审计端进度（延迟复核 D9）。
+5. 待定的产品问题：`lone_model_blocker` 的默认何时切到 `escalate`；`generator_streaming` 是否也该管审计端进度。
 
 ## 不可动摇的规矩(别让任何人改掉)
 
