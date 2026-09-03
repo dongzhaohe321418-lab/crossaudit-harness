@@ -10,7 +10,7 @@
 - 决策记录：`docs/DECISIONS.md`，D39–D149 连续无缺口（有测试守着）
 - 融合方案与逐文件对比：`docs/findings/codex-fusion-dd725d3.md`（含三份分簇报告）
 - 设计文档：`docs/EVIDENCE_AUTHORITY.md`；DESIGN.md §7.1；README 两个档位说明
-- 上一个打好的安装包：`~/Documents/Crossaudit/builds/CrossAudit-4.15.0-arm64.dmg`；融合线的新包在 `dist/`（见"最终交付"）
+- 打好的安装包：`~/Documents/Crossaudit/builds/CrossAudit-4.16.0-arm64.dmg`（153M，sha256 前 16 位 `a9295ebedd5635d0`，来自 fusion/evidence-authority 的最终提交）；上一版 4.15.0 仍在同目录
 
 ## 融合线做了什么（2026-09-02）
 
@@ -43,11 +43,11 @@
 | 安装与预检 | 缺凭据前置设置卡（所有入口）、异厂商句子、向导默认单仓库、DMG 打开说明、卸载说明 | 已合，复核修复已合 |
 | 结果与决策 | 人话判定、观察句优先、详情折叠、耗时费用预估、每个升级分支有原因与动作 | 已合，复核修复已合 |
 | 预警与计费 | 归属到任务/循环/轮次/角色、80%/95% 预警、429 倒计时、顶栏胶囊、未计价可见与覆盖价、导出与汇总 | 已合，复核修复已合 |
-| 闭环复核 | 第二轮闭环审计在 e3b9388 上进行 | 见 `docs/findings/` 或 scratchpad 的 review-closure2.md |
+| 闭环复核 | 两轮闭环审计（e0e3b36、e3b9388），其后两处遗留已修 | `docs/findings/fusion-round2/review-closure*.md` |
 
 ## 下一步（按优先级）
 
-1. **第二轮闭环复核**若有未关项，派回修；否则重新打包 4.16.0 DMG，复制到 `~/Documents/Crossaudit/builds/`。
+1. **已完成**：4.16.0 DMG 已打包并复制到 `~/Documents/Crossaudit/builds/`；全量 2601 通过；所有复核报告归档在 `docs/findings/fusion-round2/`。
 2. **GitHub 就绪切片**：README 首屏与演示、与 Codex/Claude Code 类 harness 的对比表、CI 徽章、CONTRIBUTING、issue 模板；公证发布需要你的 Apple 开发者身份。
 3. **合回主线与发布**由你定：`git merge fusion/evidence-authority` 到 `v5-redesign`；推送/发布前先问。
 4. `docs/dcl-lifecycle-states` 分支仍需先 rebase 再看（会删 68 个文件），未动。
