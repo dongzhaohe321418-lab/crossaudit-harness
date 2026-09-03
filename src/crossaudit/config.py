@@ -429,15 +429,23 @@ def load(path: Path | None = None) -> Config:
 
 
 def heterogeneity(cfg: Config) -> tuple[bool, str]:
-    """I1 asserted from configuration. Unknown generator vendor cannot assert it."""
+    """I1 asserted from configuration. Unknown generator vendor cannot assert it.
+
+    The sentence returned is the one a person reads — in the CLI, the console's
+    project controls and the doctor — so it says what to do; the invariant's
+    name (I1) stays in the code, the ledger and the tests.
+    """
     if not cfg.generator_vendor:
-        return False, "generator vendor not declared: I1 cannot be asserted from config"
+        return False, ("the generator's provider is not declared, so independent "
+                       "review cannot be asserted; choose one in Project controls")
     generator_vendors = {cfg.generator_vendor.strip().lower(),
                          *(r.vendor.strip().lower() for r in cfg.generator_fallbacks)}
     auditor_vendors = {cfg.auditor.vendor.strip().lower(),
                        *(r.vendor.strip().lower() for r in cfg.auditor.fallbacks)}
     overlap = sorted(generator_vendors & auditor_vendors)
     if overlap:
-        return False, ("I1 violated: generator and auditor recovery pools overlap at "
-                       + ", ".join(overlap))
+        return False, ("The generator and the auditor must use different providers "
+                       "— independent review is the core of the protocol. Change one "
+                       "of them in Project controls. Their routes overlap at "
+                       + ", ".join(overlap) + ".")
     return True, f"{cfg.generator_vendor} -> {cfg.auditor.vendor}"

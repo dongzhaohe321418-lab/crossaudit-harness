@@ -357,6 +357,18 @@ def _staged_paths(cfg: Config) -> list[str]:
     return [p.decode("utf-8", "replace") for p in raw.split(b"\0") if p]
 
 
+def _staged_binaries(cfg: Config) -> list[str]:
+    """The staged paths git reports as binary (``--numstat -z``: ``-\t-``).
+
+    Independent of the patch-text cap: a binary beside a long document must
+    be refused even when the diff the screen reads was cut before it.
+    """
+    from ..repair_guard import parse_numstat
+
+    raw = git_bytes("diff", "--cached", "--numstat", "-z", cwd=cfg.root)
+    return [p for p, (_a, _r, binary) in parse_numstat(raw).items() if binary]
+
+
 def _stage_generated(cfg: Config, written: list[str] | AppliedFiles) -> list[str]:
     """Stage exactly the files returned by the generator, and nothing else.
 
@@ -966,6 +978,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     cfg.repair.max_changed_lines, mode=cfg.repair.mode).assess(
                     diff, scope_dirs=cfg.scope_dirs, staged_files=staged,
                     locally_rendered_files=locally_rendered,
+                    binary_files=_staged_binaries(cfg),
                     truncated=len(diff) >= _MAX_SCAN_BYTES)
                 if not assessment.allowed:
                     emit("repair_refused", "loop",
@@ -1215,6 +1228,61 @@ def preflight(cfg) -> None:
     het_ok, why = heterogeneity(cfg)
     if not het_ok:
         raise ConfigDenial(why)
+    credential_preflight(cfg)
+
+
+def missing_credentials(cfg) -> list[str]:
+    """The roles whose configured provider has no credential in reach.
+
+    Presence only, never the value: a credential counts when its key variable
+    is set (the app loads Keychain items into the environment at start and on
+    every Settings write) or when the app's own presence API says the vendor is
+    connected. Providers that need no key (the ChatGPT sign-in, the local demo)
+    and a human generator are never missing one.
+    """
+    import os as _os
+
+    from .. import app_keys
+    from ..providers.registry import NEEDS_KEY
+
+    def present(vendor: str, key_env: str, provider: str) -> bool:
+        if not NEEDS_KEY.get(provider, True):
+            return True
+        if _os.environ.get(key_env, "").strip():
+            return True
+        return bool(app_keys.status().get(vendor or "", {}).get("configured"))
+
+    missing: list[str] = []
+    generator_vendor = (cfg.generator_vendor or "").strip()
+    if generator_vendor and generator_vendor.lower() != "human":
+        provider = (_os.environ.get("CROSSAUDIT_GENERATOR_PROVIDER")
+                    or cfg.generator_provider or "")
+        if not present(generator_vendor, cfg.generator_key_env
+                       or "CROSSAUDIT_GENERATOR_KEY", provider):
+            missing.append("generator")
+    if not present(cfg.auditor.vendor, cfg.auditor.key_env, cfg.auditor.provider):
+        missing.append("auditor")
+    return missing
+
+
+def credential_preflight(cfg) -> None:
+    """Refuse to start a loop that would stop in round one for want of a key.
+
+    Before this, a missing key surfaced only after the run had started, as an
+    authentication failure inside the provider layer. The sentence names the
+    role, not the variable: which key is wanted is the doctor's job to say.
+    """
+    missing = missing_credentials(cfg)
+    if not missing:
+        return
+    if missing == ["generator"]:
+        raise ConfigDenial("connect a provider first: the generator has no credential "
+                           "(`crossaudit doctor` will ask for it)")
+    if missing == ["auditor"]:
+        raise ConfigDenial("connect a provider first: the auditor has no credential "
+                           "(`crossaudit doctor` will ask for it)")
+    raise ConfigDenial("connect a provider first: neither the generator nor the "
+                       "auditor has a credential (`crossaudit doctor` will ask for them)")
 
 
 def _missing_role_keys(cfg) -> list[str]:

@@ -173,6 +173,10 @@ def complete(cfg: Config, role_name: str, primary: Role, *, system: str,
 
     for index, role in available:
         route_id = _id(role_name, role)
+        # Failures this route carried into the call. A first attempt after one
+        # is the person's first retry, and it used to pass in silence: the
+        # narration began only at attempt 2 or on a fallback route.
+        carried = int(_circuit(cfg, route_id).get("failures", 0))
         if NEEDS_KEY.get(role.provider, True) and not os.environ.get(role.key_env, "").strip():
             reason = f"{role.vendor} credential ${role.key_env} is not configured"
             failures.append({**_route(role, fallback=index > 0), "reason": reason,
@@ -193,7 +197,7 @@ def complete(cfg: Config, role_name: str, primary: Role, *, system: str,
             if heartbeat is not None:
                 heartbeat()
             try:
-                if on_event and (attempt > 1 or index > 0):
+                if on_event and (attempt > 1 or index > 0 or carried > 0):
                     on_event(role_name, "provider recovery",
                              f"{role.vendor}:{role.model} · attempt {attempt}")
                 provider_args = {

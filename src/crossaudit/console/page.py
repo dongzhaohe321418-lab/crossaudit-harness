@@ -923,6 +923,11 @@ textarea::placeholder{color:var(--text-3)}
 .route{display:none;margin:7px 3px 0;padding:7px 9px;border-radius:var(--r-sm);background:var(--surface-2);
   color:var(--text-2);font-size:var(--fs-label);white-space:pre-wrap;word-break:break-word}
 .route.on{display:block}
+.route.setup{background:var(--escalated-bg,var(--surface-2))}
+.setup-card{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.setup-card b{flex:1 1 100%}
+.setup-card span{flex:1 1 auto;color:var(--text-2)}
+.setup-card-action{flex:0 0 auto}
 .route b{color:var(--text)}
 .route .ask{color:var(--escalated)}
 .drop-overlay{position:fixed;inset:0;z-index:var(--z-overlay);display:none;place-items:center;padding:26px;
@@ -2580,8 +2585,8 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
         </div></details></div>
     </div></section>
     <section class="form-section project-step" data-project-step="3" tabindex="-1" hidden><div class="step-heading"><span>Step 3 of 3</span><h3>Choose delivery and review</h3><p>GitHub pairing is optional. Review the local and model setup before creating anything.</p></div><div class="github-box">
-      <label class="toggle-line"><input type="checkbox" name="github" id="github-toggle" checked><span><b>Create and connect two repositories</b>
-        <small>The work repository holds deliverables. The audit repository holds rules, reports and the auditor secret.</small></span></label>
+      <label class="toggle-line"><input type="checkbox" name="github" id="github-toggle"><span><b>Create and connect two repositories</b>
+        <small>Recommended for shared or reviewed work; a single local project is fine to start.</small></span></label>
       <div class="connection" id="github-connection">Checking GitHub connection…</div>
       <div class="github-fields" id="github-fields"><div class="form-grid">
         <label class="field"><span>Work repository name</span><input name="science_repo" id="science-repo" maxlength="161" placeholder="owner/project"></label>
@@ -2866,6 +2871,9 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <div class="settings-jump"><button type="button" class="secondary" data-settings-open="usage">Open usage</button><button type="button" class="secondary" data-settings-open="runtime-budgets">Set budgets</button><small class="settings-empty" data-scope-note hidden></small></div>
     </section><section class="form-section settings-pane" data-settings-pane="security" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Security &amp; privacy</span><h3>Security and privacy</h3><p>How credentials are stored and where your data goes.</p></div>
       <p class="settings-hint">API keys are stored as write-only macOS Keychain items and are never shown again.</p>
+      <div class="form-title">Where CrossAudit keeps data</div>
+      <p class="settings-hint">Everything CrossAudit stores lives in three places; removing them removes every trace.</p>
+      <ul class="settings-hint" id="data-locations"><li><b>App and workspace</b> — <code>~/Library/Application Support/CrossAudit</code></li><li><b>Project state</b> — <code>.crossaudit/</code> inside each project folder (the audit ledger in <code>cycles/</code> is part of the repository)</li><li><b>API keys</b> — macOS Keychain items named <code>io.crossaudit.app.provider.&lt;vendor&gt;</code>; remove them under Providers</li></ul>
       <p class="settings-empty">Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.</p>
     </section><section class="form-section settings-pane" data-settings-pane="diagnostics" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Diagnostics</span><h3>Diagnostics</h3><p>Check this Mac's setup and versions, and repair problems.</p></div>
       <div class="settings-readiness"><div class="readiness-item">Git<span id="git-state">…</span></div>
@@ -3149,6 +3157,7 @@ const ZH={
   "SSH hosts and scheduler limits are configured inside the active project. Transfer limits use built-in defaults.":"SSH 主机与调度器限制在当前项目内部配置。传输限制使用内置默认值。",
   "MCP servers and generator skills are configured inside the active project.":"MCP 服务器与生成者技能在当前项目内部配置。",
   "API keys are stored as write-only macOS Keychain items and are never shown again.":"API 密钥以只写方式存入 macOS 钥匙串，且不会再次显示。",
+  "Where CrossAudit keeps data":"CrossAudit 的数据存放位置","Everything CrossAudit stores lives in three places; removing them removes every trace.":"CrossAudit 保存的所有内容只在三个位置；删除它们即可清除全部痕迹。","App and workspace":"应用与工作区","Project state":"项目状态","API keys":"API 密钥","inside each project folder (the audit ledger in":"位于每个项目文件夹内（","is part of the repository)":"中的审计账本属于仓库的一部分）","— macOS Keychain items named":"—— macOS 钥匙串条目，名为","; remove them under Providers":"；可在“供应商”中移除",
   "Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.":"供应商路由按项目设置。留存、脱敏与日志控制此处暂不可配置。",
   "Logs, support bundles, and per-subsystem reset aren't available here yet.":"日志、支持包与按子系统重置此处暂不可用。",
   "No developer settings, experiments, local endpoints, or debug logging are configurable here yet.":"暂无可配置的开发者设置、实验、本地端点或调试日志。",
@@ -3184,7 +3193,7 @@ const ZH={
   "Connection details":"连接详情","API region":"API 区域","The region must match the API key.":"区域必须与 API key 匹配。","Model":"模型",
   "Model available to your account":"你的账户可用的模型","Custom model ID":"自定义模型 ID","Exact provider model ID":"准确的供应商模型 ID",
   "Refresh from provider":"从供应商刷新","GitHub":"GitHub","Create and connect two repositories":"创建并连接两个仓库",
-  "The work repository holds deliverables. The audit repository holds rules, reports and the auditor secret.":"工作仓库存放交付物；审计仓库存放规则、报告和审计密钥。",
+  "Recommended for shared or reviewed work; a single local project is fine to start.":"适合共享或需要评审的工作；一开始只用一个本地项目也完全可以。",
   "Checking GitHub connection…":"正在检查 GitHub 连接…","Work repository name":"工作仓库名称","Audit repository name":"审计仓库名称",
   "Use accessible repositories if these names already exist":"若这些名称已存在，则使用可访问的仓库",
   "Off by default. Leave it off when you want two new repositories.":"默认关闭。需要创建两个新仓库时请保持关闭。",
@@ -3662,6 +3671,8 @@ const ZH={
   ,"resuming with tool result":"携工具结果继续","resuming with compute result":"携计算结果继续","requesting remote calculation":"正在请求远程计算","note":"备注","document export refused":"文档导出被拒绝"
   ,"the round could not be committed":"该轮次无法提交","rendering final document locally":"正在本地渲染最终文档","the round reproduced the previous one; nothing new to audit":"本轮与上一轮结果相同；没有新的内容可审计"
   ,"the loop cannot settle this itself":"循环无法自行解决此问题","this stop is waiting for a human":"此次停止正在等待人工处理"
+  ,"Connect a provider first":"请先连接供应商","The generator has no credential yet.":"生成者尚未连接凭据。","The auditor has no credential yet.":"审计者尚未连接凭据。"
+  ,"Neither the generator nor the auditor has a credential yet.":"生成者与审计者都尚未连接凭据。","Open Settings → Providers":"打开设置 → 供应商"
   ,"Task started.":"任务已开始。","The result will appear in this conversation.":"结果会显示在此对话中。","Needs clarification.":"需要澄清。","Refused.":"已拒绝。","Message delivered.":"消息已送达。","Sending your files…":"正在发送文件…"
   ,"Pinned":"已置顶","Recent":"最近","Upload failed":"上传失败","Uploaded":"已上传"
   ,"Stored in chunks without an app quota. Model inspection depends on file support and context.":"分块存储，应用不设配额。模型能否读取取决于文件支持与上下文。"
@@ -3756,36 +3767,43 @@ const ZH_PATTERNS=[
   [/^Resets on (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d+)$/,
    m=>(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(m[1])+1)+' 月 '+m[2]+' 日重置'],
   // D148 repair guard. Every reason is COMPOSED from a path, a count or a
-  // pattern name, so each is a pattern; the path is never translated. The
+  // construct name, so each is a pattern; the path is never translated. The
   // event detail joins several with "; " and the stop reason wraps the first
   // in a round number, so those two shapes delegate to the per-reason rows.
+  // Gate: tests/test_repair_guard_console_zh.py drives every sentence the
+  // guard and build.py can emit (enumerated from their source) through zhValue.
   [/^the automatic repair was refused in round (\d+) because (.+)$/,
    m=>'第 '+m[1]+' 轮的自动修复被拒绝，原因：'+zhValue(m[2])],
   // The pattern IS the boundary between two guard sentences, so a string
   // matches only when it really joins two (no recursion on one sentence), and
-  // the semicolon inside the scope sentence (only files inside them ...) is
-  // not a boundary.
-  [/; (?=\S+ (?:is outside the audited|is a binary file|adds an? |removes an? )|the code change touches|\d+ staged file|the revision changed nothing)/,
-   m=>m.input.split(/; (?=\S+ (?:is outside the audited|is a binary file|adds an? |removes an? )|the code change touches|\d+ staged file|the revision changed nothing)/).map(part=>zhValue(part)).join('；')],
-  [/^(.+) is outside the audited directories \((.*)\); only files inside them may change — if the fix needs another file, say so in `notes`$/,
-   m=>m[1]+' 不在已审计目录（'+m[2]+'）内；只有这些目录内的文件可以修改——如果修复确实需要其他文件，请在 `notes` 中说明'],
+  // the semicolon inside the scope sentence (if the fix needs ...) is not one.
+  [/; (?=\S+ (?:is outside the audited|is a binary file|adds |removes |changes |renames )|the code change touches|\d+ staged file|the revision changed nothing)/,
+   m=>m.input.split(/; (?=\S+ (?:is outside the audited|is a binary file|adds |removes |changes |renames )|the code change touches|\d+ staged file|the revision changed nothing)/).map(part=>zhValue(part)).join('；')],
+  [/^(.+) is outside the audited directories \((.*)\)\. Only files inside them may change; if the fix needs another file, say so in `notes`\.$/,
+   m=>m[1]+' 不在已审计目录（'+m[2]+'）内。只有这些目录内的文件可以修改；如果修复确实需要其他文件，请在 `notes` 中说明。'],
   [/^(.+) is a binary file written directly by the generator, which cannot be reviewed line by line$/,
    m=>m[1]+' 是生成者直接写入的二进制文件，无法逐行审查'],
   [/^the code change touches (\d+) lines, more than the (\d+)-line limit for an automatic repair$/,
    m=>'代码改动涉及 '+m[1]+' 行，超过了自动修复的 '+m[2]+' 行上限'],
-  [/^(\d+) staged file\(s\) lay beyond the review size limit and were not screened: (.+)$/,
-   m=>'有 '+m[1]+' 个已暂存文件超出审查大小上限而未被筛查：'+m[2]],
-  // The cautions the auditor weighs (repair_guard ADDED/MARKER/REMOVED_PATTERNS).
-  [/^(.+) adds a catch-all `except` that swallows every error$/,m=>m[1]+' 新增了会吞掉所有错误的 catch-all `except`'],
-  [/^(.+) adds a `suppress\(\.\.\.\)` block that hides errors$/,m=>m[1]+' 新增了会隐藏错误的 `suppress(...)` 块'],
-  [/^(.+) adds an error handler that does nothing$/,m=>m[1]+' 新增了一个什么也不做的错误处理'],
-  [/^(.+) adds an assertion that can no longer fail$/,m=>m[1]+' 新增了一个不再可能失败的断言'],
-  [/^(.+) adds a skipped or expected-to-fail test$/,m=>m[1]+' 新增了被跳过或预期失败的测试'],
-  [/^(.+) adds a shell step that ignores its own failure$/,m=>m[1]+' 新增了会忽略自身失败的 shell 步骤'],
-  [/^(.+) adds a marker that silences a checker \(`noqa`, `type: ignore`, `pragma: no cover`, \.\.\.\)$/,m=>m[1]+' 新增了会让检查器静默的标记（`noqa`、`type: ignore`、`pragma: no cover` 等）'],
-  [/^(.+) adds a warnings filter set to ignore$/,m=>m[1]+' 新增了设为忽略的警告过滤器'],
-  [/^(.+) removes an `assert` or `raise` without replacing it$/,m=>m[1]+' 删除了一个 `assert` 或 `raise` 而没有替代'],
-  [/^(.+) removes a test$/,m=>m[1]+' 删除了一个测试'],
+  [/^(\d+) staged file\(s\) were larger than the review can read and were not screened: (.+)$/,
+   m=>'有 '+m[1]+' 个已暂存文件超出审查可读取的大小而未被筛查：'+m[2]],
+  // "<path> adds|removes|changes|renames <construct>": the constructs are
+  // repair_guard's ADDED/MARKER/REMOVED tables and its re-raise sentence.
+  [/^(\S+) (adds|removes|changes|renames) (.+)$/,m=>{const zh={
+    'adds a catch-all `except` that swallows every error':'新增了会吞掉所有错误的 catch-all `except`',
+    'adds a catch-all `except` (its handler re-raises)':'新增了 catch-all `except`（其处理程序会重新抛出）',
+    'adds a `suppress(...)` block that hides errors':'新增了会隐藏错误的 `suppress(...)` 块',
+    'adds an error handler that does nothing':'新增了一个什么也不做的错误处理',
+    'adds an assertion that can no longer fail':'新增了一个不再可能失败的断言',
+    'adds a skipped or expected-to-fail test':'新增了被跳过或预期失败的测试',
+    'adds code under a branch that never runs (`if TYPE_CHECKING:` / `if False:`)':'在永远不会执行的分支下新增了代码（`if TYPE_CHECKING:` / `if False:`）',
+    'adds a shell or make step that ignores its own failure':'新增了会忽略自身失败的 shell 或 make 步骤',
+    'adds a marker that silences a checker (`noqa`, `type: ignore`, `pragma: no cover`, ...)':'新增了会让检查器静默的标记（`noqa`、`type: ignore`、`pragma: no cover` 等）',
+    'adds a warnings filter set to ignore':'新增了设为忽略的警告过滤器',
+    'removes an `assert` or `raise` without replacing it':'删除了一个 `assert` 或 `raise` 而没有替代',
+    'changes an `assert` or `raise`':'改动了一个 `assert` 或 `raise`',
+    'removes a test':'删除了一个测试','renames a test':'重命名了一个测试'}[m[2]+' '+m[3]];
+    return zh?m[1]+' '+zh:m[0];}],
   [/^provider failure left this task waiting for a person: ?(.*)$/,
    m=>'提供方失败，该任务正在等待人工处理：'+m[1]],
   [/^the selected PASS is not ready for admission: ?(.*)$/,
@@ -3797,7 +3815,7 @@ const ZH_PATTERNS=[
   // receipt, and it was the last string in the product anyone thought to
   // translate.
   [/^evidence ledger cannot be shown to the Auditor: ?(.*)$/,
-   m=>'证据账本无法出示给审计方：'+m[1]],
+   m=>'证据账本无法出示给审计者：'+m[1]],
   [/^Typing `crossaudit` runs (.+) \(version (.+)\)\. This app is (.+) at (.+)\.$/,
    m=>'在终端里输入 `crossaudit` 运行的是 '+m[1]+'（版本 '+m[2]+'）。本应用是 '+m[3]+'，位于 '+m[4]+'。'],
   [/^Typing `crossaudit` runs (.+)\. Its version could not be determined without running it, which CrossAudit does not do\. This app is (.+) at (.+)\.$/,
@@ -5492,7 +5510,7 @@ function restoreProjectDraft(row){
     syncCustomModel(role);};
   setRole('auditor',draft.auditor_connection,draft.auditor_endpoint,draft.auditor_model);
   setRole('generator',draft.generator_connection,draft.generator_endpoint,draft.generator_model);
-  document.getElementById('github-toggle').checked=draft.github!==false;
+  document.getElementById('github-toggle').checked=draft.github===true;
   document.getElementById('adopt-existing').checked=draft.adopt_existing===true;
   document.querySelector('[name="public"]').checked=draft.public===true;
   set('#science-repo',draft.science_repo||row.science);set('#audit-repo',draft.audit_repo||row.audit);
@@ -8047,6 +8065,12 @@ stopRun.onclick=async()=>{const progress=lastState&&chatProgress(lastState);if(!
     ?'<b>已请求停止。</b> 当前步骤结束后，任务会安全停止。'
     :'<b>Stop requested.</b> The task will stop safely at the next execution boundary.';}
   catch(e){route.className='route on error';route.textContent=e.message;stopRun.disabled=false;}};
+function setupCardMarkup(missing){
+  const both=missing.length>1,role=missing[0]||'generator';
+  const sentence=both?'Neither the generator nor the auditor has a credential yet.'
+    :role==='auditor'?'The auditor has no credential yet.':'The generator has no credential yet.';
+  return '<div class="setup-card"><b>Connect a provider first</b><span>'+sentence+'</span>'
+    +'<button type="button" class="primary setup-card-action" id="setup-open-providers">Open Settings → Providers</button></div>';}
 form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!rawText)return;
   const continuing=pendingContinuation.chat===activeChatId&&Boolean(pendingContinuation.cycle);
   const text=rawText;
@@ -8059,7 +8083,12 @@ form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!
   route.textContent=pendingFiles.length?'Sending your files…':'Starting…';
   try{const uploadBatch=pendingFiles.length?await uploadFiles(pendingFiles):null;
     const r=await api('/api/say',{text,chat_id:activeChatId,upload_batch:uploadBatch,attachment_consent:pendingFiles.length>0,
-      continuation_cycle:continuing?pendingContinuation.cycle:''});if(r.asked){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b class="ask">Needs clarification.</b> '
+      continuation_cycle:continuing?pendingContinuation.cycle:''});if(r.setup==='credentials'){optimisticSend=null;if(lastState)render(lastState);
+    // A setup step, not an audit event: nothing started, the message stays in
+    // the composer, and the one action is the place that fixes it.
+    route.className='route on setup';route.innerHTML=setupCardMarkup(r.missing||[]);
+    document.getElementById('setup-open-providers').onclick=()=>openSettings('providers');}
+    else if(r.asked){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b class="ask">Needs clarification.</b> '
     + esc(r.clarify);}else{activeChatId=r.chat_id||activeChatId;if(optimisticSend)optimisticSend.chat=activeChatId||'';
     // chat is synchronous: the echo + reply land in the next snapshot, so the
     // optimistic bubble stays until the real turns take over (echo-detection).
