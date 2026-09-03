@@ -20,7 +20,8 @@ import pytest
 from crossaudit import router as router_mod
 from crossaudit.cli import talk as talk_mod
 from crossaudit.console import intake as intake_mod
-from crossaudit.console import server as server_mod
+
+from .node_eval import run_node
 
 
 
@@ -1085,7 +1086,6 @@ def _render_run_card(steps: list[dict]) -> str:
     stubbed; the activity path — activityRow, the actor tables, the identifier
     scrub, and the clock collapse under test — is the real shipped source.
     """
-    import subprocess as sp
 
     from crossaudit.console import page as page_mod
 
@@ -1119,7 +1119,7 @@ def _render_run_card(steps: list[dict]) -> str:
         _page_snippet(script, "function runCard("),
         "console.log(runCard(" + json.dumps(state, ensure_ascii=False) + "));",
     ]
-    run = sp.run(["node", "-e", "\n".join(pieces)], capture_output=True, text=True)
+    run = run_node("\n".join(pieces))
     assert run.returncode == 0, run.stderr
     return run.stdout
 

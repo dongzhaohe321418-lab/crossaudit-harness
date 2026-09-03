@@ -25,9 +25,10 @@ from __future__ import annotations
 
 import re
 import shutil
-import subprocess
 
 from crossaudit.console.page import PAGE
+
+from .node_eval import run_node
 
 
 # ------------------------------------------------------- the two-step wizard
@@ -208,7 +209,7 @@ A(settingsSearchScore(appearance,'APPEARANCE') === settingsSearchScore(appearanc
 A(settingsSearchScore(appearance,'') === 0, 'empty query scores nothing');
 console.log('ok');
 """
-    result = subprocess.run([node, "-e", harness], text=True, capture_output=True)
+    result = run_node(harness, node)
     assert result.returncode == 0, result.stderr
     assert "ok" in result.stdout
 
@@ -376,7 +377,7 @@ FIELDS = {command: '/usr/local/bin/mcp', args: ''};
 A(approveSent('http', false) === false, 'http transport must never send approve=true');
 console.log('ok');
 """
-    result = subprocess.run([node, "-e", harness], text=True, capture_output=True)
+    result = run_node(harness, node)
     assert result.returncode == 0, result.stderr
     assert "ok" in result.stdout
 
@@ -543,6 +544,6 @@ A(JSON.stringify(mcpLiveTuple().args) === JSON.stringify(['  padded  ']),
 A(mcpApprovalGranted() === true, 'S1: a whitespace argument row must stay saveable');
 console.log('ok');
 """
-    result = subprocess.run([node, "-e", harness], text=True, capture_output=True)
+    result = run_node(harness, node)
     assert result.returncode == 0, result.stderr
     assert "ok" in result.stdout

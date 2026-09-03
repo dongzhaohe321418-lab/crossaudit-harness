@@ -42,11 +42,12 @@ Ledger D10: the guard is demonstrated to fail against the previous
 implementation — the real one, taken from the previous commit, not a caricature.
 """
 import shutil
-import subprocess
 
 import pytest
 
 from crossaudit.console.page import PAGE
+
+from .node_eval import run_node
 
 # The two live-region doors as they ship today. Pinned so that a rewrite of them
 # fails this file loudly rather than leaving it guarding a shape that is gone.
@@ -274,8 +275,7 @@ def _needs_node():
 
 
 def _run(js):
-    return subprocess.run([shutil.which("node"), "-e", js], text=True,
-                          capture_output=True)
+    return run_node(js)
 
 
 def test_the_stub_records_a_value_the_region_held_and_not_only_its_last():

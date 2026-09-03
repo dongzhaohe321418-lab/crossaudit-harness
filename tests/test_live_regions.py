@@ -22,11 +22,12 @@ mutation of the thing it guards, and the mutations are recorded.
 """
 import re
 import shutil
-import subprocess
 
 import pytest
 
 from crossaudit.console.page import PAGE
+
+from .node_eval import run_node
 
 LIVE_ATTR = re.compile(r'role="(?:alert|status|log)"|aria-live="[a-z]+"')
 # The same thing said in JS rather than in markup. A rule that only reads
@@ -277,8 +278,7 @@ def _sources():
 
 
 def _run(js):
-    return subprocess.run([shutil.which("node"), "-e", js],
-                          text=True, capture_output=True)
+    return run_node(js)
 
 
 def _needs_node():

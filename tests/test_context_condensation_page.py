@@ -48,12 +48,13 @@ from __future__ import annotations
 import json
 import re
 import shutil
-import subprocess
 from html.parser import HTMLParser
 
 import pytest
 
 from crossaudit.console.page import PAGE
+
+from .node_eval import run_node
 
 # ------------------------------------------------------------------ payloads
 # Wire-shaped rows, exactly as console/streams.py and console/progress.py emit
@@ -205,7 +206,7 @@ for (const c of CASES) {
 console.log(JSON.stringify(out));
 """,
     ])
-    result = subprocess.run([node, "-e", program], text=True, capture_output=True)
+    result = run_node(program, node)
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -349,7 +350,7 @@ seen.localizeCalls = localizeCalls;
 console.log(JSON.stringify(seen));
 """,
     ])
-    result = subprocess.run([node, "-e", program], text=True, capture_output=True)
+    result = run_node(program, node)
     assert result.returncode == 0, result.stderr
     seen = json.loads(result.stdout)
 

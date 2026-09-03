@@ -20,13 +20,13 @@ modal that announces itself than in one that does not.
 
 Every guard here is demonstrated to fail against a recorded mutation (D10).
 """
-import re
 import shutil
-import subprocess
 
 import pytest
 
 from crossaudit.console.page import PAGE
+
+from .node_eval import run_node
 
 
 def test_it_is_a_dialog_and_it_says_what_the_decision_is_about():
@@ -152,8 +152,7 @@ def _sources():
 
 
 def _run(js):
-    return subprocess.run([shutil.which("node"), "-e", js], text=True,
-                          capture_output=True)
+    return run_node(js)
 
 
 def _needs_node():
