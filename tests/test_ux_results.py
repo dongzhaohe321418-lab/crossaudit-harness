@@ -12,11 +12,15 @@ are tested as such.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import shutil
+import sqlite3
 import sys
+import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -27,6 +31,7 @@ from crossaudit.controller import StateStore
 from crossaudit.errors import (ESCALATION_CAUSES, escalation_cause,
                                escalation_remediations)
 
+from .conftest import GOOD_RESULTS, PASS_REPLY, git, record_reply, write_increment
 from .test_overview import BLOCKER, ADVISORY, add_audit, cfg  # noqa: F401
 
 HARNESS = Path(__file__).parent / "harness"
@@ -64,7 +69,7 @@ globalThis.localeText=(b,base)=>base;globalThis.t=v=>v;
 """
 _TURN_SIGS = ["const VERDICT_WORDS={", "function verdictWord(v)",
               "function severityWord(sev)", "function tierWord(f)",
-              "function findingCard(f)", "function turn(m,d)"]
+              "function ruleTitle(rule)", "function findingCard(f)", "function turn(m,d)"]
 
 
 def _auditor_turn(verdict: str, findings: list[dict] | None = None) -> str:
@@ -117,13 +122,13 @@ def test_a_finding_leads_with_the_observation_and_demotes_the_rule_id():
     cards = re.findall(r'<div class="finding">(.*?)</div></div>', html, flags=re.S)
     assert len(cards) == 2
     for card in cards:
-        first, details = card.split('<div class="finding-details">')
+        first, details = card.split('<div class="finding-details"')
         assert first.startswith('<p class="finding-observation">')
-        assert RULE_ID.search(_visible(first)) is None, first
-        assert '<span class="finding-rule" title="rule id">' in details
+        assert RULE_ID.search(_visible(card)) is None, "the rule id is not on the first paint"
+        assert re.match(r' title="Rule id: CA-[A-Z]+-\d+">', details), "on demand: the tooltip"
     blocker, advisory = (_visible(c) for c in cards)
     assert blocker.startswith("The summary states 0.052")
-    assert "must fix" in blocker and "raised by the auditor" in blocker
+    assert "must fix" in blocker and "raised by the auditor, not yet reproduced" in blocker
     assert "BLOCKER" not in blocker and "ADVISORY" not in advisory
     assert "suggestion" in advisory and "verified by a check" in advisory
     # The tier sentence sits on the details line, not in a row of its own.
@@ -133,8 +138,9 @@ def test_a_finding_leads_with_the_observation_and_demotes_the_rule_id():
 @needs_node
 def test_finding_words_reach_a_chinese_reader(tmp_path):
     from .test_console_translation_boundary import _translate
-    words = ["must fix", "suggestion", "verified by a check",
-             "raised by the auditor", "raised by the auditor, verified", "Details"]
+    words = ["must fix", "suggestion", "verified by a check", "Rule id: CA-TXT-001",
+             "raised by the auditor, not yet reproduced", "raised by the auditor, verified",
+             "Details", "Rules"]
     rendered = _translate(words, tmp_path)
     assert rendered["must fix"] == "必须修改" and rendered["suggestion"] == "建议"
     assert all(CJK.search(rendered[w]) for w in words), rendered
@@ -149,8 +155,7 @@ globalThis.checkRows=()=>[];globalThis.checkSummary=()=>'';globalThis.auditCount
 globalThis.renderCheckRows=()=>'';globalThis.decisionRowFor=()=>null;
 globalThis.pendingDecisionLine=()=>'';globalThis.t=v=>v;
 """
-_CARD_SIGS = _TURN_SIGS[:5] + ["const MODEL_FAMILY={", "function friendlyModel(value)",
-                               "function reviewCard(d)"]
+_CARD_SIGS = _TURN_SIGS[:6] + ["function friendlyModel(value)", "function reviewCard(d)"]
 
 
 def _state(status: str, verdict: str, findings: list[dict]) -> dict:
@@ -190,8 +195,7 @@ def test_the_review_card_first_paint_carries_no_identifier(status, verdict, find
     assert HEX12.search(first_paint) is None, first_paint
     assert PROVIDER_MODEL.search(first_paint) is None, first_paint
     assert RAW_VERDICT.search(first_paint) is None, first_paint
-    for card in re.findall(r'<div class="finding">(.*?)<div class="finding-details">', html, flags=re.S):
-        assert RULE_ID.search(_visible(card)) is None
+    assert RULE_ID.search(first_paint) is None, first_paint
     details = re.search(r"<details\b([^>]*)>(.*?)</details>", html, flags=re.S)
     assert details, "the record lives behind a disclosure"
     assert " open" not in details.group(1), "collapsed by default"
@@ -200,23 +204,34 @@ def test_the_review_card_first_paint_carries_no_identifier(status, verdict, find
     assert "Claude Opus 4.8" in inside and "GPT-5.6 Terra" in inside
     assert PROVIDER_MODEL.search(inside) is None, "friendly names, not ids"
     assert ("c" * 12) in inside and ("f" * 16) in inside
+    if findings:
+        assert "Rules CA-TXT-001" in inside, "the rule id is on demand, in Details"
     assert ">Record<" not in html
 
 
 @needs_node
 def test_friendly_model_names_are_derived_from_the_id():
     from render_decision import eval_page
+    """Known catalogue shapes get their name; every other id renders bare
+    (provider prefix dropped, nothing invented) so an operator who typed it
+    can still find it. Mutation M12 from the review is now the spec."""
     cases = {
         "anthropic · anthropic:claude-opus-4-8 · high": "Claude Opus 4.8",
         "openai · openai_compat:gpt-5.6-terra": "GPT-5.6 Terra",
         "anthropic:claude-haiku-4-5-20251001": "Claude Haiku 4.5",
+        "anthropic:claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
         "google:gemini-3.5-pro": "Gemini 3.5 Pro",
         "deepseek:deepseek-v4-pro": "DeepSeek V4 Pro",
         "anthropic:claude-sonnet-4-6": "Claude Sonnet 4.6",
         "human": "Human", "": "",
-        "custom · openai_compat:my-local-model": "My Local Model",
+        "custom · openai_compat:my-local-model": "my-local-model",
+        "openai_compat:gpt-oss-120b": "gpt-oss-120b",
+        "openai_compat:Qwen/Qwen3-235B-A22B": "Qwen/Qwen3-235B-A22B",
+        "zhipu:glm-4.6": "glm-4.6",
+        "openai:gpt-4o": "gpt-4o",
+        "openai_compat:abc_xyz-99": "abc_xyz-99",
     }
-    out = eval_page(WORKTREE, ["const MODEL_FAMILY={", "function friendlyModel(value)"],
+    out = eval_page(WORKTREE, ["function friendlyModel(value)"],
                     "console.log(JSON.stringify(Object.fromEntries("
                     + json.dumps(list(cases)) + ".map(v=>[v,friendlyModel(v)]))));")
     assert json.loads(out) == cases
@@ -319,16 +334,23 @@ def test_the_forecast_line_reads_in_both_languages():
 const three={usage:{forecast:{runs:3,seconds:{p25:110,p50:180,p75:250},usd:{p50:0.3}}}};
 const one={usage:{forecast:{runs:1,seconds:{p25:180,p50:180,p75:180},usd:{p50:0.3}}}};
 const unpriced={usage:{forecast:{runs:4,seconds:{p25:60,p50:100,p75:140},usd:null}}};
+const brief={usage:{forecast:{runs:3,seconds:{p25:10,p50:12,p75:14},usd:{p50:0.01}}}};
+const twenty={usage:{forecast:{runs:1,seconds:{p25:20,p50:20,p75:20},usd:null}}};
 const out={};
 for(const locale of ['en','zh']){globalThis.currentLocale=locale;
-  out[locale]=[forecastText(three),forecastText(one),forecastText(unpriced),forecastText({}),forecastText(null)];}
+  out[locale]=[forecastText(three),forecastText(one),forecastText(unpriced),forecastText({}),forecastText(null),
+    forecastText(brief),forecastText(twenty)];}
 console.log(JSON.stringify(out));"""
     out = json.loads(eval_page(WORKTREE, sigs, body, "globalThis.currentLocale='en';"))
     assert out["en"] == ["Usually 2–4 min · about $0.30", "Usually about 3 min · about $0.30",
                          "Usually 1–2 min", "First run here — no estimate yet",
-                         "First run here — no estimate yet"]
+                         "First run here — no estimate yet",
+                         # Sub-minute runs floor to words, never "0 min" or a
+                         # rounded "1 min" (review mutation M11).
+                         "Usually under a minute · about $0.01", "Usually under a minute"]
     assert out["zh"] == ["通常 2–4 分钟 · 约 $0.30", "通常约 3 分钟 · 约 $0.30",
-                         "通常 1–2 分钟", "首次运行，暂无预估", "首次运行，暂无预估"]
+                         "通常 1–2 分钟", "首次运行，暂无预估", "首次运行，暂无预估",
+                         "通常不到 1 分钟 · 约 $0.01", "通常不到 1 分钟"]
 
 
 def test_the_forecast_line_is_one_line_in_the_two_existing_places():
@@ -380,11 +402,24 @@ def _escalate(cfg, char: str, cause: str = "", integrity: str = "",
     return c["cycle_id"]
 
 
+def _lock(cfg, char: str, holder: str) -> str:
+    """The refused commit's own decision object, the way _record_lock writes it."""
+    store = StateStore(cfg.root / cfg.state_dir / "state.json")
+    return store.record_build_escalation(
+        cfg.science_repo, _sha(char), "", 1, task="Fix it", kind="audit",
+        cause="escalation_locked", locked_by=holder)["cycle_id"]
+
+
 @pytest.mark.parametrize("cause", ["nothing_audited", "invalid_reply", "bounds_exceeded",
                                    "auditor_escalated", "escalation_locked"])
 def test_the_stored_cause_reaches_the_dashboard_with_a_why_and_a_next_step(cfg, cause):
-    _escalate(cfg, "a", cause=cause)
-    row = overview.escalations(cfg)[0]
+    if cause == "escalation_locked":
+        holder = _escalate(cfg, "h", cause="auditor_escalated")
+        _lock(cfg, "a", holder)
+        row = next(r for r in overview.escalations(cfg) if r["sha"] == _sha("a"))
+    else:
+        _escalate(cfg, "a", cause=cause)
+        row = overview.escalations(cfg)[0]
     assert row["cause"] == cause and row["kind"] == "audit"
     assert row["why"] == overview.CAUSE_WHY[cause]
     assert row["requested"] == overview.CAUSE_REQUESTED[cause]
@@ -409,12 +444,94 @@ def test_the_auditors_own_escalation_keeps_its_stated_reason(cfg):
     assert row["issues"][0]["rule"] == "CA-TXT-001"
 
 
-def test_a_locked_cycle_points_at_the_earlier_decision(cfg):
-    earlier = _escalate(cfg, "a", cause="auditor_escalated")
-    locked = _escalate(cfg, "b", cause="escalation_locked")
+def test_a_locked_cycle_points_at_its_holder_not_the_oldest_decision(cfg):
+    """Review defects 1/2: three cycles — A (unrelated, oldest), B (unrelated),
+    C refused because B is pending. C's earlier decision is B, never A, and
+    never C itself. A lock whose holder is no longer waiting is not told as
+    a lock at all."""
+    a = _escalate(cfg, "a", cause="auditor_escalated")
+    b = _escalate(cfg, "b", cause="auditor_escalated")
+    c = _lock(cfg, "c", b)
     rows = {r["cycle_id"]: r for r in overview.escalations(cfg)}
-    assert rows[locked]["earlier_cycle_id"] == earlier
-    assert "earlier_cycle_id" not in rows[earlier]
+    assert rows[c]["cause"] == "escalation_locked"
+    assert rows[c]["earlier_cycle_id"] == b and rows[c]["earlier_cycle_id"] != a
+    assert "earlier_cycle_id" not in rows[a] and "earlier_cycle_id" not in rows[b]
+    # settle B: C no longer claims a lock it cannot name
+    StateStore(cfg.root / cfg.state_dir / "state.json").resolve_escalation(b, "close", "done")
+    rows = {r["cycle_id"]: r for r in overview.escalations(cfg)}
+    assert rows[c]["cause"] == "" and "earlier_cycle_id" not in rows[c]
+    assert rows[c]["requested"].startswith("Review why the loop stopped")
+
+
+def _run(sha: str, science: Path) -> int:
+    from crossaudit.cli.main import cmd_run
+    return cmd_run(SimpleNamespace(sha=sha, json=False, allow_custom_endpoint=False,
+                                   continue_cycle=None, offline=False, science=None))
+
+
+def _audit(sha: str) -> int:
+    from crossaudit.cli.main import cmd_audit
+    return cmd_audit(argparse.Namespace(
+        sha=sha, scope=None, json=False, retention=None, allow_custom_endpoint=False,
+        on_step=None, continue_cycle=None, offline=False, write_ledger=True, mode=None))
+
+
+ESCALATE_REPLY = {"verdict": "ESCALATE", "sections_applied": ["CA-DATA-001"],
+                  "findings": []}
+
+
+def test_the_real_commands_record_the_lock_on_the_refused_commit(
+        science, transcripts, monkeypatch, capsys):
+    """Review defect 3, driven through cmd_run and cmd_audit — no cause is
+    injected. The reviewer's scenario: A and B escalate on unrelated
+    lineages; C (child of B) is refused by cmd_run, D (child of C) by
+    cmd_audit. Both refused commits get their own decision object whose
+    holder is B; A and B are untouched; nothing points at itself."""
+    from crossaudit.config import load
+    from crossaudit.errors import EXIT_ESCALATED
+
+    cfg = load(science / "crossaudit.yml")   # the science repo, not test_overview's
+    monkeypatch.chdir(science)
+    base = git("rev-parse", "HEAD", cwd=science)
+    sha_a = write_increment(science, GOOD_RESULTS, "A.", "a")
+    record_reply(transcripts, cfg, sha_a, ESCALATE_REPLY)
+    assert _run(sha_a, science) == EXIT_ESCALATED
+    git("checkout", "-q", "-b", "other", base, cwd=science)
+    sha_b = write_increment(science, GOOD_RESULTS, "B.", "b")
+    record_reply(transcripts, cfg, sha_b, ESCALATE_REPLY)
+    assert _run(sha_b, science) == EXIT_ESCALATED
+    from crossaudit.controller.state import cycle_id_for
+    store = StateStore(cfg.root / cfg.state_dir / "state.json")
+    a, b = cycle_id_for(cfg.science_repo, sha_a), cycle_id_for(cfg.science_repo, sha_b)
+    assert {store.cycle(a)["escalation_cause"], store.cycle(b)["escalation_cause"]} == {
+        "auditor_escalated"}
+
+    # C is committed directly on B's commit (the ledger commits cmd_run made
+    # sit on the branch tip, and the lock reads the direct parent).
+    git("checkout", "-q", "-b", "on-b", sha_b, cwd=science)
+    sha_c = write_increment(science, GOOD_RESULTS, "C.", "c")
+    assert _run(sha_c, science) == EXIT_ESCALATED
+    out = capsys.readouterr().out
+    assert f"crossaudit resolve {b}" in out
+    sha_d = write_increment(science, GOOD_RESULTS, "D.", "d")
+    record_reply(transcripts, cfg, sha_d, PASS_REPLY)
+    assert _audit(sha_d) == EXIT_ESCALATED
+
+    rows = {r["sha"]: r for r in overview.escalations(cfg)}
+    assert rows[sha_c]["cause"] == "escalation_locked"
+    assert rows[sha_c]["earlier_cycle_id"] == b
+    assert rows[sha_d]["cause"] == "escalation_locked"
+    assert rows[sha_d]["earlier_cycle_id"] == b, "a chain of refused commits names the real holder"
+    for row in rows.values():
+        assert row.get("earlier_cycle_id") != row["cycle_id"]
+    # the holders' own records are untouched
+    assert store.cycle(b)["escalation_cause"] == "auditor_escalated"
+    assert store.cycle(a)["escalation_cause"] == "auditor_escalated"
+    assert "locked_by" not in store.cycle(b)
+    # re-running the holder's own commit writes nothing new and names itself
+    assert _run(sha_b, science) == EXIT_ESCALATED
+    assert f"crossaudit resolve {b}" in capsys.readouterr().out
+    assert len(overview.escalations(cfg)) == 4
 
 
 @needs_node
@@ -431,13 +548,15 @@ def test_the_decision_center_names_every_cause_in_both_languages(cfg):
     ids["invalid"] = _escalate(cfg, "b", cause="invalid_reply")
     ids["bounds"] = _escalate(cfg, "c", cause="bounds_exceeded")
     ids["auditor"] = _escalate(cfg, "d", cause="auditor_escalated", findings=BLOCKER)
-    ids["locked"] = _escalate(cfg, "e", cause="escalation_locked")
+    ids["silent"] = _escalate(cfg, "f", cause="auditor_escalated")
+    ids["locked"] = _lock(cfg, "e", ids["nothing"])
     rows = {r["cycle_id"]: r for r in overview.escalations(cfg)}
     out = render(WORKTREE, {name: rows[cid] for name, cid in ids.items()})
 
     flags = {name: out[name]["en"]["resolution-flag"] for name in out}
     assert flags == {"nothing": "Nothing to review yet", "invalid": "Auditor reply unreadable",
                      "bounds": "Task too large for one audit", "auditor": "The auditor asked for you",
+                     "silent": "The auditor asked for you",
                      "locked": "Waiting on an earlier decision"}
     en = {name: out[name]["en"] for name in out}
     assert en["nothing"]["resolution-title"] == "The task produced no work in the audited folder"
@@ -447,6 +566,15 @@ def test_the_decision_center_names_every_cause_in_both_languages(cfg):
     assert en["bounds"]["resolution-request"].startswith("Narrow the scope or split the task")
     assert en["auditor"]["resolution-limit-title"] == "What the auditor said"
     assert en["auditor"]["resolution-limit-copy"].startswith("The summary states 0.052")
+    # Review defect 11: no words from the auditor -> our sentence under OUR title.
+    assert en["silent"]["resolution-limit-title"] == "What happened"
+    assert en["silent"]["resolution-limit-copy"] == overview.CAUSE_WHY["auditor_escalated"]
+    # Review defect 5: "What happened" never restates the title.
+    for name in out:
+        title, what = en[name]["resolution-title"], en[name]["resolution-limit-copy"]
+        fold = lambda t: re.sub(r"[^a-z]", "", t.lower())
+        assert fold(what) != fold(title) and not fold(what).startswith(fold(title)), (name, title, what)
+        assert fold(what) not in fold(en[name]["resolution-summary"]), name
     assert en["locked"]["resolution-title"] == "This task is already waiting for your earlier decision"
     for name in out:
         assert "Automatic loop paused" not in en[name]["resolution-flag"]
@@ -480,6 +608,8 @@ def test_the_decision_center_names_every_cause_in_both_languages(cfg):
     assert out["bounds"]["extra"]["en"]["settings_text"] == "Review provider connection"
     assert out["bounds"]["extra"]["en"]["settings_hidden"] is True
     assert out["bounds"]["extra"]["en"]["settings_earlier"] == ""
+    assert RULE_ID.search(out["auditor"]["en"]["resolution-issues"]) is None, (
+        "the rule id is not on the Decision Center's first paint either")
 
 
 @needs_node
@@ -499,7 +629,7 @@ def test_attempt_rows_and_issues_use_plain_words(cfg):
     assert issues.startswith("The summary states 0.052")
     assert "must fix" in issues and "suggestion" in issues
     assert "BLOCKER" not in issues and "ADVISORY" not in issues
-    assert issues.index("CA-TXT-001") > issues.index("must fix")
+    assert RULE_ID.search(issues) is None
     # The attempts row is HTML the harness does not strip; read it from the page.
     assert "esc(verdictWord(item.verdict))" in PAGE
     assert "esc(item.verdict)" not in PAGE
@@ -517,9 +647,78 @@ def test_every_new_string_reaches_a_chinese_reader(tmp_path):
     values = {v for copy in table.values() for v in copy.values() if v}
     values |= set(overview.CAUSE_WHY.values()) | set(overview.CAUSE_REQUESTED.values())
     values |= {"Passed", "Needs changes", "Needs you", "Checks only", "must fix",
-               "suggestion", "Details", "Open the earlier decision",
+               "suggestion", "Details", "Rules", "Open the earlier decision",
                "First run here — no estimate yet", "3 issues", "1 issue",
-               "Usually 2–4 min · about $0.30", "Usually about 3 min"}
+               "Usually 2–4 min · about $0.30", "Usually about 3 min",
+               "Usually under a minute · about $0.01", "Rule id: CA-REP-001"}
     rendered = _translate(sorted(values), tmp_path)
     untranslated = sorted(v for v in values if not CJK.search(rendered[v]))
     assert untranslated == [], untranslated
+
+
+def _big_project(cfg, runs: int, lines: int) -> None:
+    """A ledger of `lines` events and a journal of `runs` completed runs."""
+    from crossaudit.runtime.runs import RunJournal, journal_path
+    RunJournal(journal_path(cfg))
+    db = sqlite3.connect(journal_path(cfg))
+    db.executemany(
+        "INSERT INTO runs(run_id,task,chat_id,continuation_cycle,state,outcome,"
+        "error,owner_pid,started,updated,finished) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        [(f"r{i}", "t", "history", "", "PASSED", "", "", 1,
+          1000.0 + 300 * i, 1000.0 + 300 * i, 1000.0 + 300 * i + 120) for i in range(runs)])
+    db.commit(); db.close()
+    ledger = cfg.root / cfg.state_dir / usage.LEDGER_NAME
+    ledger.parent.mkdir(parents=True, exist_ok=True)
+    with ledger.open("w") as out:
+        for i in range(lines):
+            run = i % runs
+            out.write(json.dumps({"t": int((1000 + 300 * run + 10) * 1000), "role": "generator",
+                                  "phase": "completion", "input": 10, "output": 5,
+                                  "cache_write": 0, "cache_read": 0, "total": 15,
+                                  "method": "reported", "api_value_usd": 0.001,
+                                  "billing_kind": "api_value"}) + "\n")
+
+
+def test_the_forecast_is_cached_and_the_join_is_not_quadratic(cfg):
+    """Review defect 7. 1000 runs x 50000 ledger lines: after the first
+    computation the snapshot's cached path is a lookup (< 50 ms), and even the
+    uncached join is bisected, not runs x events."""
+    usage._SUMMARY_CACHE.clear(); usage._FORECAST_CACHE.clear()
+    _big_project(cfg, 1000, 50000)
+    first = usage.summary(cfg)["forecast"]
+    assert first["runs"] == 1000 and first["seconds"]["p50"] == 120.0
+    assert first["usd"]["p50"] == pytest.approx(0.05)
+    usage.summary(cfg)   # the journal's first read-only open may settle its WAL
+    started = time.perf_counter()
+    again = usage.summary(cfg)["forecast"]
+    cached_ms = (time.perf_counter() - started) * 1000
+    assert again == first
+    assert cached_ms < 50, f"cached snapshot path took {cached_ms:.1f} ms"
+    # the forecast's own cache, keyed on the ledger stat and the run rows
+    path = cfg.root / cfg.state_dir / usage.LEDGER_NAME
+    stat = path.stat()
+    events, _ = usage.read_events(path)
+    started = time.perf_counter()
+    usage.project_forecast(cfg, path, (stat.st_mtime_ns, stat.st_size), events)
+    hit_ms = (time.perf_counter() - started) * 1000
+    assert hit_ms < 50, f"forecast cache hit took {hit_ms:.1f} ms"
+    runs = usage._journal_runs(cfg)
+    for run in runs:
+        run["run_id"] = ""            # legacy rows: the window join, not the run id
+    started = time.perf_counter()
+    rows = usage.forecast_rows(events, runs)
+    join_ms = (time.perf_counter() - started) * 1000
+    assert len(rows) == 1000 and rows[0]["usd"] == pytest.approx(0.05)
+    assert join_ms < 1000, f"the window join took {join_ms:.0f} ms (was quadratic)"
+
+
+def test_a_non_utf8_byte_in_the_ledger_does_not_take_the_snapshot_down(cfg):
+    """Review defect 10."""
+    ledger = cfg.root / cfg.state_dir / usage.LEDGER_NAME
+    ledger.parent.mkdir(parents=True, exist_ok=True)
+    good = json.dumps({"t": 1, "api_value_usd": 0.1, "total": 3, "method": "reported"})
+    ledger.write_bytes((good + "\n").encode() + b'{"t": 2, "x": "\xff\xfe"}\n' + b"\xff{\n")
+    usage._SUMMARY_CACHE.clear()
+    got = usage.summary(cfg)
+    assert got["all"]["calls"] >= 1 and got["malformed_lines"] == 1
+    assert got["forecast"]["runs"] == 0

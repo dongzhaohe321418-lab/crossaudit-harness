@@ -7,6 +7,7 @@ when an OpenAI-compatible endpoint omits usage.
 """
 from __future__ import annotations
 
+import bisect
 import json
 import math
 import os
@@ -500,8 +501,7 @@ def summary(cfg, *, now: datetime | None = None) -> dict:
         unpriced_models=unpriced_models(events, now=now))
     # R4. What the next task will probably take, from this project's own
     # completed runs. Pure over rows the journal and this ledger already hold.
-    result["forecast"] = run_forecast(
-        forecast_rows(events, _journal_runs(cfg) if journal != (0, 0) else []))
+    result["forecast"] = project_forecast(cfg, path, signature[:2], events)
     with _CACHE_LOCK:
         _SUMMARY_CACHE[cache_key] = (signature, result)
     return result
@@ -537,7 +537,10 @@ def read_events(path: Path) -> tuple[list[dict], int]:
     events: list[dict] = []
     malformed = 0
     try:
-        with Path(path).open(encoding="utf-8") as source:
+        # A stray non-UTF-8 byte must not take the whole snapshot down: the
+        # line is decoded with replacement and then judged as JSON like any
+        # other (a damaged line counts as malformed, the rest still read).
+        with Path(path).open(encoding="utf-8", errors="replace") as source:
             for line in source:
                 if not line.strip():
                     continue
@@ -970,6 +973,29 @@ def _journal_runs(cfg) -> list[dict]:
             if str(state) in FORECAST_STATES and finished and started]
 
 
+_FORECAST_CACHE: dict[str, tuple[tuple, dict]] = {}
+
+
+def project_forecast(cfg, ledger_path: Path, ledger_signature: tuple,
+                     events: list[dict]) -> dict:
+    """The forecast for one project, cached on (ledger mtime, ledger size,
+    the completed runs' identities). A snapshot that changed nothing costs a
+    dictionary lookup; one that appended a ledger line or finished a run
+    recomputes over rows already parsed, with the window join bisected."""
+    runs = _journal_runs(cfg)
+    key = (tuple(ledger_signature[:2]),
+           tuple((r["run_id"], r["started"], r["finished"]) for r in runs))
+    cache_key = str(ledger_path)
+    with _CACHE_LOCK:
+        cached = _FORECAST_CACHE.get(cache_key)
+        if cached and cached[0] == key:
+            return cached[1]
+    result = run_forecast(forecast_rows(events, runs))
+    with _CACHE_LOCK:
+        _FORECAST_CACHE[cache_key] = (key, result)
+    return result
+
+
 def forecast_rows(events: list[dict], runs: list[dict]) -> list[dict]:
     """One ``{"seconds", "usd"}`` row per completed run.
 
@@ -982,6 +1008,19 @@ def forecast_rows(events: list[dict], runs: list[dict]) -> list[dict]:
     """
     out = []
     by_run = aggregate_by(events, "run_id")
+    # The window join, prepared once: events sorted by time so each run's
+    # window is a bisect, never a scan of the whole ledger per run.
+    timeline: list[tuple[int, float]] = []
+    for event in events:
+        try:
+            when = int(event.get("t", 0) or 0)
+        except (TypeError, ValueError):
+            continue
+        value = event.get("api_value_usd")
+        timeline.append((when, float(value) if isinstance(value, (int, float))
+                         and math.isfinite(value) else math.nan))
+    timeline.sort(key=lambda item: item[0])
+    stamps = [when for when, _value in timeline]
     for run in runs:
         try:
             start = float(run["started"]) * 1000
@@ -997,16 +1036,11 @@ def forecast_rows(events: list[dict], runs: list[dict]) -> list[dict]:
                 usd = float(bucket["api_value_usd"])
             out.append({"seconds": (end - start) / 1000, "usd": usd})
             continue
-        for event in events:
-            try:
-                when = int(event.get("t", 0) or 0)
-            except (TypeError, ValueError):
-                continue
-            if not (start <= when <= end):
-                continue
-            value = event.get("api_value_usd")
-            if isinstance(value, (int, float)) and math.isfinite(value):
-                usd = (usd or 0.0) + float(value)
+        lo = bisect.bisect_left(stamps, int(start))
+        hi = bisect.bisect_right(stamps, int(end))
+        for _when, value in timeline[lo:hi]:
+            if not math.isnan(value):
+                usd = (usd or 0.0) + value
         out.append({"seconds": (end - start) / 1000, "usd": usd})
     return out
 

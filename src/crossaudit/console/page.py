@@ -3725,36 +3725,36 @@ const ZH={
   // Details record, the forecast line and one copy set per ESCALATE cause.
   ,"Needs you":"需要你","Checks only":"仅自动检查"
   ,"must fix":"必须修改","suggestion":"建议"
-  ,"verified by a check":"已由检查验证","raised by the auditor":"由审计者提出","raised by the auditor, verified":"由审计者提出，已验证"
+  ,"verified by a check":"已由检查验证","raised by the auditor, not yet reproduced":"由审计者提出，尚未复现","raised by the auditor, verified":"由审计者提出，已验证"
   ,"Details":"详情","Human":"人工"
-  ,"First run here — no estimate yet":"首次运行，暂无预估"
+  ,"First run here — no estimate yet":"首次运行，暂无预估","Usually under a minute":"通常不到 1 分钟","Rules":"规则"
   ,"Nothing to review yet":"尚无可审内容","The task produced no work in the audited folder":"任务未在受审文件夹中产生任何工作"
   ,"There is nothing to review yet: the generator produced no files inside the folder the auditor checks, so no audit could run and nothing was admitted.":"目前没有可审查的内容：生成者没有在审计者检查的文件夹中产生任何文件，因此无法进行审计，也没有准入任何结果。"
   ,"Tell the generator what to create inside the audited folder and run one more round, or stop this task.":"告诉生成者应在受审文件夹中创建什么，然后再运行一轮；或停止此任务。"
   ,"Say which files should be created inside the audited folder, then unlock one additional audited round.":"说明应在受审文件夹中创建哪些文件，然后解锁额外一轮受审计执行。"
   ,"Create the deliverable inside the audited folder; nothing was produced there.":"请在受审文件夹中创建交付物；此前那里没有产生任何内容。"
   ,"No audit findings were created because there was no work in the audited folder to review.":"由于受审文件夹中没有可审查的工作，未产生任何审计发现。"
-  ,"the task produced no work in the audited folder, so there was nothing to review":"任务未在受审文件夹中产生任何工作，因此没有可审查的内容"
+  ,"The generator finished without writing any file under the audited folder, so the auditor had no files to check; the folder is unchanged.":"生成者完成时没有在受审文件夹下写入任何文件，审计者因此没有可检查的文件；该文件夹未改动。"
   ,"Auditor reply unreadable":"审计者回复无法读取","The auditor’s reply could not be read":"审计者的回复无法读取"
   ,"The auditor answered, but its reply was not in the required form, so no verdict could be recorded. The files are unchanged and nothing was admitted.":"审计者作出了回复，但其格式不符合要求，因此无法记录裁定。文件未改动，也没有准入任何结果。"
   ,"Run the audit again on the same work, switch the auditor model, or stop this task.":"对同一份工作再次运行审计、更换审计者模型，或停止此任务。"
   ,"Run the audit again":"再次运行审计","Unlock one more round with the work unchanged so the auditor can answer again.":"在工作不变的情况下解锁一轮，让审计者再次作答。"
   ,"Run the audit again on the same work; the previous auditor reply could not be read.":"请对同一份工作再次运行审计；上一次审计者的回复无法读取。"
   ,"No audit findings were recorded because the auditor’s reply could not be read.":"由于审计者的回复无法读取，未记录任何审计发现。"
-  ,"the auditor's reply could not be read":"审计者的回复无法读取"
+  ,"The reply was checked against the required format and rejected; CrossAudit never guesses a verdict from a reply it cannot parse, so the round was handed to you.":"该回复经过格式校验后被拒绝；CrossAudit 不会从无法解析的回复中猜测裁定，因此本轮交由你处理。"
   ,"Task too large for one audit":"任务过大，无法一次审计","The task is too large for one audit":"该任务过大，无法在一次审计中完成"
   ,"The work exceeds what one audit can read at once, so the auditor stopped rather than judge part of it. Nothing was admitted.":"工作量超出了一次审计能够读取的范围，审计者因此停止，而不是只评判其中一部分。没有准入任何结果。"
   ,"Narrow the scope or split the task into smaller pieces and run one more round, or stop this task.":"缩小范围或将任务拆分为更小的部分，然后再运行一轮；或停止此任务。"
   ,"Name the smaller piece the next round should cover, then unlock one additional audited round.":"指明下一轮应覆盖的较小部分，然后解锁额外一轮受审计执行。"
   ,"No audit findings were recorded because the work was too large to audit in one pass.":"由于工作量过大，无法一次审计完成，未记录任何审计发现。"
-  ,"the task is too large for one audit":"该任务过大，无法一次审计"
+  ,"The audited files exceed what one audit prompt can hold; the auditor was not shown a partial set, and nothing was judged.":"受审文件超出了单次审计提示能容纳的范围；审计者没有被展示部分文件，也没有作出任何判断。"
   ,"The auditor asked for you":"审计者请你介入","The auditor asked for your judgment":"审计者请你作出判断"
   ,"The auditor could not settle this round on its own and handed it to you. Its stated reason is below. Nothing was admitted.":"审计者无法独自裁定本轮，已交由你处理。其陈述的原因见下方。没有准入任何结果。"
   ,"What the auditor said":"审计者的说明"
   ,"Read the auditor’s reason, then tell the generator how to address it or stop this task.":"阅读审计者的原因，然后告诉生成者如何处理；或停止此任务。"
   ,"Tell the generator how to address the auditor’s reason, then unlock one additional audited round.":"告诉生成者如何处理审计者的原因，然后解锁额外一轮受审计执行。"
   ,"The auditor recorded no structured findings. Its stated reason is above.":"审计者未记录结构化问题。其陈述的原因见上方。"
-  ,"the auditor asked for your judgment":"审计者请你作出判断"
+  ,"The auditor returned no findings and no reason; only its request for a human decision was recorded.":"审计者没有返回任何发现或原因；仅记录了其请人工决定的请求。"
   ,"Read the auditor's reason, then tell the generator how to address it or stop this task.":"阅读审计者的原因，然后告诉生成者如何处理；或停止此任务。"
   ,"Waiting on an earlier decision":"等待更早的决定","This task is already waiting for your earlier decision":"此任务仍在等待你更早的决定"
   ,"An earlier round of this task is still waiting for you. No new round can run until that decision is made.":"此任务更早的一轮仍在等待你。在作出该决定前，无法运行新的一轮。"
@@ -3762,7 +3762,7 @@ const ZH={
   ,"Settle the earlier decision":"先处理更早的决定","Open the earlier decision first. Guidance recorded here applies once it is settled.":"请先打开更早的决定。此处记录的指引将在其处理完毕后生效。"
   ,"No new findings were recorded because the earlier decision is still open.":"由于更早的决定仍未处理，未记录新的发现。"
   ,"Open the earlier decision":"打开更早的决定"
-  ,"this task is already waiting for your earlier decision":"此任务仍在等待你更早的决定"
+  ,"A newer commit was made while an earlier round was still waiting for you; the new commit was not audited, so the pending decision cannot be overtaken.":"在更早的一轮仍在等待你时，产生了新的提交；新提交未被审计，因此待定的决定不会被绕过。"
 };
 const ZH_PATTERNS=[
   // Billing slice: threshold alarms carry their percentage and the monthly
@@ -3912,6 +3912,8 @@ const ZH_PATTERNS=[
   ,[/^(\d+) issues?$/i,m=>m[1]+' 个问题']
   ,[/^Usually (\d+)–(\d+) min( · about \$[\d.]+)?$/,m=>'通常 '+m[1]+'–'+m[2]+' 分钟'+(m[3]?' · 约 '+m[3].slice(9):'')]
   ,[/^Usually about (\d+) min( · about \$[\d.]+)?$/,m=>'通常约 '+m[1]+' 分钟'+(m[2]?' · 约 '+m[2].slice(9):'')]
+  ,[/^Usually under a minute( · about \$[\d.]+)?$/,m=>'通常不到 1 分钟'+(m[1]?' · 约 '+m[1].slice(9):'')]
+  ,[/^Rule id: (.+)$/,m=>'规则编号：'+m[1]]
   ,[/^(\d+) deterministic checks? passed$/i,m=>m[1]+' 项确定性检查已通过']
   ,[/^(\d+) files$/i,m=>m[1]+' 个文件']
   ,[/^Waiting for the provider · heartbeat (.+)$/,m=>'等待供应商 · 心跳 '+zhValue(m[1])]
@@ -4928,7 +4930,7 @@ function openResolution(value,action='',sha=''){
     ?'CrossAudit used all '+used+' of '+maximum+' automatic rounds without a passing result. Nothing will continue or be admitted until you decide.'
     :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
   appendResolutionReset(row,budget,provider);   // billing: "Resets at midnight" / "resets in 2 h 10 min"
-  document.getElementById('resolution-limit-title').textContent=copy?copy.limitTitle:budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
+  document.getElementById('resolution-limit-title').textContent=copy?((row.cause==='auditor_escalated'&&!(row.issues||[]).length)?'What happened':copy.limitTitle):budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
     ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
   // A refused repair leads with the sentence the repair guard wrote (it names
   // the file and the pattern) rather than the round-numbered wrapper around it.
@@ -4949,10 +4951,10 @@ function openResolution(value,action='',sha=''){
   // R2. Each issue leads with the observation; severity as a consequence,
   // the place and the rule id on one muted details line under it.
   document.getElementById('resolution-issues').innerHTML=issues.length?issues.map((issue,index)=>
-    '<article class="decision-issue"><p class="finding-observation">'+esc(issue.observation||'No explanation was recorded.')+'</p>'
+    '<article class="decision-issue"'+ruleTitle(issue.rule)+'><p class="finding-observation">'+esc(issue.observation||'No explanation was recorded.')+'</p>'
     +'<div class="finding-details"><span class="severity '+(severityWord(issue.severity||'BLOCKER')==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(issue.severity||'BLOCKER'))+'</span>'
     +(issue.artifact?'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-where">'+esc(issue.artifact)+'</span>':'')
-    +'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-rule" title="rule id">'+esc(issue.rule||'Issue '+(index+1))+'</span></div></article>').join('')
+    +'</div></article>').join('')
     :'<div class="decision-empty">'+(copy?copy.empty:budget
       ?'No audit findings were created because the task paused at a usage limit before producing a reviewable result.'
       :provider
@@ -6006,38 +6008,36 @@ function severityWord(sev){return String(sev||'').toUpperCase()==='BLOCKER'?'mus
 // details line; a receipt without the record renders nothing here, and no
 // route or state word is ever on screen.
 function tierWord(f){if(!f||!f.tier)return '';
-  return f.tier==='deterministic'?'verified by a check':f.verified?'raised by the auditor, verified':'raised by the auditor';}
-// R2. A finding leads with what was observed. Severity, place, evidence tier
-// and the rule id share ONE muted details line under it; the id never opens
-// the first line, and it carries its own title for the person who wants it.
+  return f.tier==='deterministic'?'verified by a check':f.verified?'raised by the auditor, verified':'raised by the auditor, not yet reproduced';}
+// R2. A finding leads with what was observed. Severity, place and evidence
+// tier share ONE muted details line under it. The rule id is NOT on the first
+// paint: it is the tooltip of the details line (and, on the review card, a row of
+// the collapsed Details block) — on demand only, as the owner directed.
+function ruleTitle(rule){return rule?' title="'+esc('Rule id: '+rule)+'"':'';}
 function findingCard(f){
   const parts=['<span class="severity '+(severityWord(f.severity)==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(f.severity))+'</span>'];
   if(f.artifact)parts.push('<span class="finding-where">'+esc(f.artifact)+'</span>');
   if(tierWord(f))parts.push('<span class="finding-tier'+(f.verified?' verified':'')+'">'+esc(tierWord(f))+'</span>');
-  if(f.rule)parts.push('<span class="finding-rule" title="rule id">'+esc(f.rule)+'</span>');
   return '<div class="finding"><p class="finding-observation">'+esc(f.observation||'No explanation was recorded.')+'</p>'
-    +'<div class="finding-details">'+parts.join('<span class="finding-sep" aria-hidden="true">·</span>')+'</div></div>';}
+    +'<div class="finding-details"'+ruleTitle(f.rule)+'>'+parts.join('<span class="finding-sep" aria-hidden="true">·</span>')+'</div></div>';}
 // R3. "anthropic · anthropic:claude-opus-4-8 · high" → "Claude Opus 4.8". The
-// model specs carry ids and a capability note, not display names, so the name
-// is derived from the id: family words are capitalised, version digits are
-// joined with dots (GPT keeps its hyphen), a trailing release date is dropped.
-// The raw id stays in the inspector.
-const MODEL_FAMILY={gpt:'GPT',o1:'o1',o3:'o3',o4:'o4',deepseek:'DeepSeek',glm:'GLM',qwen:'Qwen',
-  kimi:'Kimi',minimax:'MiniMax',claude:'Claude',gemini:'Gemini',llama:'Llama',mistral:'Mistral',grok:'Grok'};
+// model specs carry ids and a capability note, not display names, so a name
+// is given only to the id shapes the catalogue ships (Claude, GPT, Gemini,
+// DeepSeek). Any other id renders BARE, without the provider prefix — an
+// operator who typed it must be able to find it — never an invented name.
 function friendlyModel(value){const raw=String(value||'').trim();if(!raw)return '';
   if(raw.toLowerCase()==='human')return 'Human';
   const segs=raw.split(' · ');const seg=segs.find(x=>x.includes(':'))||segs[0]||raw;
   const id=(seg.split(':').pop()||seg).trim();if(!id)return raw;
-  const tokens=id.split(/[-_/]+/).filter(Boolean);const words=[];
-  for(let i=0;i<tokens.length;i++){const tk=tokens[i];
-    if(/^\d{8}$/.test(tk)&&i===tokens.length-1)continue;
-    if(/^\d+(\.\d+)?$/.test(tk)){const last=words[words.length-1]||'';
-      if(last==='GPT')words[words.length-1]=last+'-'+tk;
-      else if(/^\d+(\.\d+)*$/.test(last)||/-\d+(\.\d+)*$/.test(last))words[words.length-1]=last+'.'+tk;
-      else words.push(tk);continue;}
-    if(/^v\d+$/i.test(tk)){words.push('V'+tk.slice(1));continue;}
-    words.push(MODEL_FAMILY[tk.toLowerCase()]||(tk.charAt(0).toUpperCase()+tk.slice(1)));}
-  return words.join(' ')||id;}
+  const cap=w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase();
+  const names=[
+    [/^claude-(opus|sonnet|haiku)-(\d+)-(\d+)(?:-\d{8})?$/i,m=>'Claude '+cap(m[1])+' '+m[2]+'.'+m[3]],
+    [/^claude-(\d+)-(\d+)-(opus|sonnet|haiku)(?:-\d{8})?$/i,m=>'Claude '+m[1]+'.'+m[2]+' '+cap(m[3])],
+    [/^gpt-(\d+(?:\.\d+)?)-(sol|terra|luna)$/i,m=>'GPT-'+m[1]+' '+cap(m[2])],
+    [/^gemini-(\d+(?:\.\d+)?)-(pro|flash)$/i,m=>'Gemini '+m[1]+' '+cap(m[2])],
+    [/^deepseek-v(\d+)-(pro|flash)$/i,m=>'DeepSeek V'+m[1]+' '+cap(m[2])]];
+  for(const [pattern,name] of names){const m=id.match(pattern);if(m)return name(m);}
+  return id;}
 // R4. What this task will probably take, from the completed runs of this
 // project (usage.run_forecast): the middle half of wall times when three or more
 // runs exist, the median alone below that, and the median API value. One
@@ -6047,8 +6047,11 @@ function forecastText(d){const f=d&&d.usage&&d.usage.forecast;const zh=currentLo
   const mins=x=>Math.max(1,Math.round(Number(x)/60));
   const lo=mins(f.seconds.p25),hi=mins(f.seconds.p75),mid=mins(f.seconds.p50);
   const ranged=f.runs>=3&&lo!==hi;
-  const time=zh?(ranged?'通常 '+lo+'–'+hi+' 分钟':'通常约 '+mid+' 分钟')
-    :(ranged?'Usually '+lo+'–'+hi+' min':'Usually about '+mid+' min');
+  // Sub-minute runs floor to "under a minute" rather than a rounded "1 min"
+  // (or a "0 min" that reads as nothing at all).
+  const brief=(ranged?Number(f.seconds.p75):Number(f.seconds.p50))<60;
+  const time=zh?(brief?'通常不到 1 分钟':ranged?'通常 '+lo+'–'+hi+' 分钟':'通常约 '+mid+' 分钟')
+    :(brief?'Usually under a minute':ranged?'Usually '+lo+'–'+hi+' min':'Usually about '+mid+' min');
   const cost=(f.usd&&f.usd.p50!=null)?(zh?' · 约 ':' · about ')+formatUsd(f.usd.p50):'';
   return time+cost;}
 function forecastLine(d){return '<span class="run-forecast">'+esc(forecastText(d))+'</span>';}
@@ -6267,6 +6270,7 @@ function reviewCard(d){
       +'<li>No blocking findings</li>'
       +'<li>Recorded in the audit ledger</li></ul>'
     :'';
+  const ruleIds=[...new Set(rows.flatMap(m=>(m.findings||[]).map(f=>f.rule).filter(Boolean)))];
   const findingRows=rows.filter(m=>(m.findings||[]).length).map(m=>
     '<div class="review-round-row"><span class="round-n">round '+esc(m.round)+'</span></div>'
     +(m.findings||[]).map(findingCard).join('')).join('');
@@ -6291,6 +6295,7 @@ function reviewCard(d){
     +'<div class="review-record-row"><span>Auditor</span><span>'+esc(friendlyModel(d.auditor))+'</span></div>'
     +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
     +'<div class="review-record-row"><span>Cycle</span><code>'+esc(cycle.id)+'</code></div>'
+    +(ruleIds.length?'<div class="review-record-row"><span>Rules</span><code>'+esc(ruleIds.join(', '))+'</code></div>':'')
     +'</div></details></div></div>';
   const actionRow=status==='passed'
     ?'<button type="button" class="review-action" data-admit data-admit-cycle="'+esc(cycle.id)+'">Admit result</button>'

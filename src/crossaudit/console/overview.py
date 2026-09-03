@@ -203,14 +203,25 @@ _INTEGRITY_CAUSES = {"NOTHING_AUDITED": "nothing_audited",
 
 #: What happened, per structured cause: the sentence the Decision Center's
 #: detail line carries. Fixed English; the page holds the Chinese.
+#: Each says something the title does not (what was checked, what was left
+#: untouched); a section a person reads as new information must carry some.
 CAUSE_WHY = {
-    "nothing_audited": ("the task produced no work in the audited folder, so "
-                        "there was nothing to review"),
-    "invalid_reply": "the auditor's reply could not be read",
-    "bounds_exceeded": "the task is too large for one audit",
-    "auditor_escalated": "the auditor asked for your judgment",
-    "escalation_locked": ("this task is already waiting for your earlier "
-                          "decision"),
+    "nothing_audited": ("The generator finished without writing any file under "
+                        "the audited folder, so the auditor had no files to "
+                        "check; the folder is unchanged."),
+    "invalid_reply": ("The reply was checked against the required format and "
+                      "rejected; CrossAudit never guesses a verdict from a reply "
+                      "it cannot parse, so the round was handed to you."),
+    "bounds_exceeded": ("The audited files exceed what one audit prompt can "
+                        "hold; the auditor was not shown a partial set, and "
+                        "nothing was judged."),
+    # Used only when the auditor left no words of its own (no findings).
+    "auditor_escalated": ("The auditor returned no findings and no reason; only "
+                          "its request for a human decision was recorded."),
+    "escalation_locked": ("A newer commit was made while an earlier round was "
+                          "still waiting for you; the new commit was not "
+                          "audited, so the pending decision cannot be "
+                          "overtaken."),
 }
 
 #: What to do next, per structured cause. Names only what the dialog offers.
@@ -496,19 +507,6 @@ def _is_auditor_concern(stop_reason: str, latest: Cycle | None) -> bool:
     return stop_reason.strip() == CONTESTED_MODEL_BLOCKER_REASON
 
 
-def _earliest_other_open(state: dict, cid: str) -> str:
-    """The other ESCALATED cycle a locked one is waiting on: the one the
-    controller history opened first (state.json is written key-sorted, so the
-    dict order says nothing about time)."""
-    first_seen: dict[str, int] = {}
-    for index, row in enumerate(state.get("history", [])):
-        first_seen.setdefault(str(row.get("cycle", "")), index)
-    others = [other for other, row in state.get("cycles", {}).items()
-              if other != cid and row.get("status") == "ESCALATED"]
-    others.sort(key=lambda other: (first_seen.get(other, len(first_seen)), other))
-    return others[0] if others else ""
-
-
 def escalations(cfg: Config) -> list[dict]:
     """What is waiting on a person, with enough evidence to make a decision.
 
@@ -552,6 +550,19 @@ def escalations(cfg: Config) -> list[dict]:
             # A record written before the cause was stored: the receipt's
             # integrity field names the ladder branch on its own.
             cause = _INTEGRITY_CAUSES.get(latest.integrity, "")
+        # R5. The lock names the decision that holds it (the store's own
+        # ``locked_by``, written on the REFUSED commit's cycle). A lock whose
+        # holder can no longer be named — settled, or never recorded — is not
+        # told as a lock: the row falls back to its own cause rather than
+        # sending a person to a decision that does not exist.
+        holder = ""
+        if cause == "escalation_locked":
+            holder = str(s.get("locked_by", "") or "")
+            held = state.get("cycles", {}).get(holder) if holder != cid else None
+            if not (held and held.get("status") == "ESCALATED"):
+                holder = ""
+                cause = (_INTEGRITY_CAUSES.get(latest.integrity, "")
+                         if latest is not None else "")
         why = stop_reason
         if cause in CAUSE_WHY:
             # R5. A fixed sentence per branch; the auditor's own escalation
@@ -620,9 +631,7 @@ def escalations(cfg: Config) -> list[dict]:
                     "cause": cause,
                     # R5. The decision a locked cycle is waiting on: the other
                     # open escalation, oldest first, so the page can open it.
-                    **({"earlier_cycle_id": earlier}
-                       if cause == "escalation_locked"
-                       and (earlier := _earliest_other_open(state, cid)) else {}),
+                    **({"earlier_cycle_id": holder} if holder else {}),
                     "remediations": escalation_remediations(kind),
                     "task": str(s.get("task", ""))[:12000],
                     "attempts": [{"round": c.round, "verdict": c.verdict,
