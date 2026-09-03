@@ -211,7 +211,7 @@ DMGNOTE
 cat > "$DMG_ROOT/如何打开 · How to open.txt" <<'OPENNOTE'
 How to open CrossAudit
 
-macOS may say the app can't be verified. Right-click CrossAudit.app → Open
+macOS may say the app can't be verified — right-click CrossAudit.app → Open
 → Open. This happens once.
 
 如何打开 CrossAudit
