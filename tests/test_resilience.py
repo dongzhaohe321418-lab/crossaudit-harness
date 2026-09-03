@@ -50,7 +50,8 @@ def test_retry_after_then_fallback_is_one_provider_turn(cfg, monkeypatch):
     assert calls == ["primary", "primary", "backup"]
     assert waits == [2]
     assert resilience.route_from_reply(reply, primary)["fallback"] is True
-    assert any(row[1] == "waiting to retry" for row in events)
+    assert any(row[1].startswith("Waiting to retry the generator's provider · ")
+               for row in events)
     assert "secret-a" not in (cfg.root / cfg.state_dir /
                               resilience.STATE_NAME).read_text()
 

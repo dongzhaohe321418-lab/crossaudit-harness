@@ -892,7 +892,7 @@ def start_build(cfg: Config, task: str, *, before_start=None,
             if not is_ancestor(cfg.root, prior["active_sha"], "HEAD"):
                 raise ConfigDenial(
                     "the project no longer descends from the cycle being revised")
-        preflight(cfg)
+        preflight(cfg, "console")
         resolved = resolve_task(cfg, task.split())
         staged = stage_attachments(cfg, attachments or [])
         if before_start is not None:
@@ -2044,6 +2044,15 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                     reason = str(payload.get("reason", ""))
                     retrying_provider = action == "retry_provider"
                     if retrying_provider:
+                        # A retry that cannot start for want of a credential
+                        # is a setup step, not a provider failure: the card,
+                        # before the cycle is reopened and before anything is
+                        # written to the ledger.
+                        blocked = setup_needed(current)
+                        if blocked is not None:
+                            self._send(json.dumps(blocked).encode(),
+                                       "application/json")
+                            return
                         prior = store.cycle(cycle_id)
                         prior_kind = (str(prior.get("escalation_kind") or "")
                                       or classify_escalation_kind(
@@ -2099,6 +2108,11 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                         raise ConfigDenial("there is no interrupted task to recover")
                     action = str(payload.get("action", ""))
                     if action == "retry":
+                        blocked = setup_needed(current)
+                        if blocked is not None:
+                            self._send(json.dumps(blocked).encode(),
+                                       "application/json")
+                            return
                         result = start_build(
                             current, str(interrupted.get("task", "")),
                             chat_id=str(interrupted.get("chat_id", "")),

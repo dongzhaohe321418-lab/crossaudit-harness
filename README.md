@@ -151,7 +151,7 @@ official OpenAI Codex runtime.
 
 ### macOS application
 
-> **First open.** macOS may say the app can't be verified. Right-click
+> **First open.** macOS may say the app can't be verified — right-click
 > **CrossAudit.app** → **Open** → **Open**. This happens once.
 >
 > This community build is ad-hoc signed but not Apple-notarized because the

@@ -1202,6 +1202,16 @@ def _price_payload(rows: object) -> dict:
                 raise ConfigDenial(
                     "price override rates must be non-negative numbers (USD per 1M tokens)")
             rates[key] = value
+        trust = row.get("trust_origin", False)
+        if trust in (None, "", 0, "0", "false", "False"):
+            trust = False
+        if trust in (1, "1", "true", "True", "on"):
+            trust = True
+        if not isinstance(trust, bool):
+            raise ConfigDenial(
+                "price override trust_origin must be true or false")
+        if trust:
+            rates["trust_origin"] = True
         out[model] = rates
     return out
 
@@ -1412,7 +1422,7 @@ def update_runtime(current: Config, payload: dict) -> dict:
             temp.write_text(revised, encoding="utf-8", newline="")
             temp.replace(current.path)
             updated = load(current.path)
-            ok, why = heterogeneity(updated)
+            ok, why = heterogeneity(updated, "console")
             if not ok:
                 raise ConfigDenial(why)
             commit_message = (f"config: {choices['generator'][0] or 'human'} -> "

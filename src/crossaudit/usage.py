@@ -7,6 +7,7 @@ when an OpenAI-compatible endpoint omits usage.
 """
 from __future__ import annotations
 
+import bisect
 import json
 import math
 import os
@@ -75,7 +76,8 @@ def _nonnegative(value: Any) -> int:
         return 0
 
 
-def _rates(vendor: str, model: str, overrides: dict | None = None) -> Rates | None:
+def _rates(vendor: str, model: str, overrides: dict | None = None, *,
+           official: bool = True) -> Rates | None:
     """The model's price: a per-project override first, else its capability card.
 
     Price is part of a model's capability record, not a table kept in parallel
@@ -85,18 +87,30 @@ def _rates(vendor: str, model: str, overrides: dict | None = None) -> Rates | No
     snapshot and the event is stamped ``user_priced`` so the origin of every
     dollar figure stays legible.
     """
-    override = price_override(overrides, model)
+    override = price_override(overrides, model, official=official)
     if override is not None:
         return override
-    return capability_card(vendor, model).price
+    return capability_card(vendor, model).price if official else None
 
 
-def price_override(overrides: dict | None, model: str) -> Rates | None:
-    """The user's declared rates for ``model``, or None when there are none."""
+def price_override(overrides: dict | None, model: str, *,
+                   official: bool = True) -> Rates | None:
+    """The user's declared rates for ``model``, or None when there are none.
+
+    ``official`` is whether the call went to a vendor endpoint CrossAudit can
+    reason about. A relay's real billing is invisible from here, so an override
+    does NOT price a proxy origin by default: without that rule a monthly cost
+    *limit* — which fails closed the moment anything is unpriced — would reopen
+    on a user-typed guess about a route nobody can see. A project that knows
+    what its relay charges says so per model with ``trust_origin: true``; the
+    call is then priced and still stamped ``user_priced``.
+    """
     if not isinstance(overrides, dict):
         return None
     row = overrides.get(model)
     if not isinstance(row, dict):
+        return None
+    if not official and not bool(row.get("trust_origin")):
         return None
     try:
         return Rates(input=float(row.get("input", 0) or 0),
@@ -211,11 +225,12 @@ def record_reply(*, root: Path, state_dir: str, role: str, phase: str,
                              response=reply.text)
     ctx = dict(context) if isinstance(context, dict) else {}
     prices = ctx.pop("prices", None)
-    override = price_override(prices, model)
+    official = _is_official(provider, base_url)
+    override = price_override(prices, model, official=official)
     subscription = provider == "openai_codex"
     if override is not None:
         rates, billing_kind = override, "user_priced"
-    elif _is_official(provider, base_url):
+    elif official:
         rates = _rates(vendor, model)
         billing_kind = ("subscription_api_value" if subscription and rates
                         else "api_value" if rates else "unpriced")
@@ -278,6 +293,79 @@ def record_reply(*, root: Path, state_dir: str, role: str, phase: str,
             # to turn a successful provider completion into a failed task.
             continue
     return event
+
+
+def attribute_round(root: Path, state_dir: str, *, run_id: str, round_no: int,
+                    cycle_id: str) -> int:
+    """Stamp ``cycle_id`` onto this round's lines that were written without one.
+
+    A cycle is minted by the audit, and the audit judges a generation that has
+    already happened — so the first generator call of every cycle is recorded
+    before the cycle it belongs to exists. Without this backfill ``per_cycle``
+    under-counts every cycle by exactly that call, while ``per_run`` is right;
+    a single-cycle run would disagree with itself. Returns how many lines were
+    stamped. The rewrite happens in place under the ledger's own lock, so a
+    concurrent appender (which opens the path fresh and appends under the same
+    lock) can neither lose a line nor read a half-written one.
+    """
+    run_id, cycle_id = str(run_id or ""), str(cycle_id or "")
+    round_no = _nonnegative(round_no)
+    if not (run_id and cycle_id and round_no):
+        return 0
+    path = Path(root) / state_dir / LEDGER_NAME
+    changed = 0
+    with _WRITE_LOCK:
+        try:
+            fd = os.open(path, os.O_RDWR)
+        except OSError:
+            return 0
+        locked = False
+        try:
+            locked = _lock_file(fd)
+            with os.fdopen(os.dup(fd), "r", encoding="utf-8") as handle:
+                os.lseek(fd, 0, os.SEEK_SET)
+                lines = handle.read().splitlines()
+            out = []
+            for line in lines:
+                try:
+                    event = json.loads(line)
+                except ValueError:
+                    out.append(line)
+                    continue
+                if (isinstance(event, dict) and not event.get("cycle_id")
+                        and event.get("run_id") == run_id
+                        and _nonnegative(event.get("round")) == round_no):
+                    event["cycle_id"] = cycle_id[:64]
+                    line = json.dumps(event, sort_keys=True, separators=(",", ":"))
+                    changed += 1
+                out.append(line)
+            if changed:
+                body = ("\n".join(out) + "\n").encode("utf-8")
+                os.lseek(fd, 0, os.SEEK_SET)
+                pending = memoryview(body)
+                while pending:
+                    written = os.write(fd, pending)
+                    if written <= 0:
+                        raise OSError("usage ledger rewrite made no progress")
+                    pending = pending[written:]
+                os.ftruncate(fd, len(body))
+                os.fsync(fd)
+        except (OSError, ValueError):
+            return 0
+        finally:
+            if locked:
+                _unlock_file(fd)
+            os.close(fd)
+    if changed:
+        with _CACHE_LOCK:
+            _SUMMARY_CACHE.pop(str(path), None)
+            listeners = tuple(_LISTENERS)
+        for listener in listeners:
+            try:
+                listener()
+            except Exception:
+                continue
+    return changed
 
 
 def record_completion(**kwargs) -> dict | None:
@@ -500,8 +588,7 @@ def summary(cfg, *, now: datetime | None = None) -> dict:
         unpriced_models=unpriced_models(events, now=now))
     # R4. What the next task will probably take, from this project's own
     # completed runs. Pure over rows the journal and this ledger already hold.
-    result["forecast"] = run_forecast(
-        forecast_rows(events, _journal_runs(cfg) if journal != (0, 0) else []))
+    result["forecast"] = project_forecast(cfg, path, signature[:2], events)
     with _CACHE_LOCK:
         _SUMMARY_CACHE[cache_key] = (signature, result)
     return result
@@ -537,7 +624,10 @@ def read_events(path: Path) -> tuple[list[dict], int]:
     events: list[dict] = []
     malformed = 0
     try:
-        with Path(path).open(encoding="utf-8") as source:
+        # A stray non-UTF-8 byte must not take the whole snapshot down: the
+        # line is decoded with replacement and then judged as JSON like any
+        # other (a damaged line counts as malformed, the rest still read).
+        with Path(path).open(encoding="utf-8", errors="replace") as source:
             for line in source:
                 if not line.strip():
                     continue
@@ -868,7 +958,7 @@ def export_csv(rows: list[dict]) -> str:
 # ------------------------------------------------------------ roll-up
 def project_rollup(cfg, *, now: datetime | None = None) -> dict:
     """One project's line in the workspace table: today / month / budget state."""
-    result = summary(cfg)
+    result = summary(cfg, now=now)
     budget = result.get("budget", {})
     return {
         "name": Path(cfg.root).name,
@@ -904,27 +994,6 @@ def workspace_rollup(configs, *, now: datetime | None = None) -> dict:
     }
     return {"projects": rows, "total": total, "price_snapshot": PRICE_SNAPSHOT,
             "local_only": True}
-
-
-def monthly_report(result: dict, *, passed_audits: int | None = None) -> dict:
-    """The month's report card as plain rows: top models, role share, audits."""
-    month = result.get("month", {})
-    models = sorted(result.get("models", []), key=lambda r: -r["tokens"])[:5]
-    roles = {row["role"]: row for row in result.get("roles", [])}
-    total_tokens = max(1, int(month.get("tokens", 0)))
-    share = {role: round(int(roles[role]["tokens"]) * 100 / total_tokens)
-             for role in roles}
-    return {
-        "top_models": [{"model": r["model"], "role": r["role"], "tokens": r["tokens"],
-                        "api_value_usd": r["api_value_usd"],
-                        "unpriced_calls": r.get("unpriced_calls", 0)} for r in models],
-        "role_share": share,
-        "calls": int(month.get("calls", 0)),
-        "tokens": int(month.get("tokens", 0)),
-        "api_value_usd": float(month.get("api_value_usd", 0.0)),
-        "unpriced_calls": int(month.get("unpriced_calls", 0)),
-        "passed_audits": passed_audits,
-    }
 
 
 # ------------------------------------------------------------------ forecast
@@ -970,6 +1039,29 @@ def _journal_runs(cfg) -> list[dict]:
             if str(state) in FORECAST_STATES and finished and started]
 
 
+_FORECAST_CACHE: dict[str, tuple[tuple, dict]] = {}
+
+
+def project_forecast(cfg, ledger_path: Path, ledger_signature: tuple,
+                     events: list[dict]) -> dict:
+    """The forecast for one project, cached on (ledger mtime, ledger size,
+    the completed runs' identities). A snapshot that changed nothing costs a
+    dictionary lookup; one that appended a ledger line or finished a run
+    recomputes over rows already parsed, with the window join bisected."""
+    runs = _journal_runs(cfg)
+    key = (tuple(ledger_signature[:2]),
+           tuple((r["run_id"], r["started"], r["finished"]) for r in runs))
+    cache_key = str(ledger_path)
+    with _CACHE_LOCK:
+        cached = _FORECAST_CACHE.get(cache_key)
+        if cached and cached[0] == key:
+            return cached[1]
+    result = run_forecast(forecast_rows(events, runs))
+    with _CACHE_LOCK:
+        _FORECAST_CACHE[cache_key] = (key, result)
+    return result
+
+
 def forecast_rows(events: list[dict], runs: list[dict]) -> list[dict]:
     """One ``{"seconds", "usd"}`` row per completed run.
 
@@ -982,6 +1074,19 @@ def forecast_rows(events: list[dict], runs: list[dict]) -> list[dict]:
     """
     out = []
     by_run = aggregate_by(events, "run_id")
+    # The window join, prepared once: events sorted by time so each run's
+    # window is a bisect, never a scan of the whole ledger per run.
+    timeline: list[tuple[int, float]] = []
+    for event in events:
+        try:
+            when = int(event.get("t", 0) or 0)
+        except (TypeError, ValueError):
+            continue
+        value = event.get("api_value_usd")
+        timeline.append((when, float(value) if isinstance(value, (int, float))
+                         and math.isfinite(value) else math.nan))
+    timeline.sort(key=lambda item: item[0])
+    stamps = [when for when, _value in timeline]
     for run in runs:
         try:
             start = float(run["started"]) * 1000
@@ -997,16 +1102,11 @@ def forecast_rows(events: list[dict], runs: list[dict]) -> list[dict]:
                 usd = float(bucket["api_value_usd"])
             out.append({"seconds": (end - start) / 1000, "usd": usd})
             continue
-        for event in events:
-            try:
-                when = int(event.get("t", 0) or 0)
-            except (TypeError, ValueError):
-                continue
-            if not (start <= when <= end):
-                continue
-            value = event.get("api_value_usd")
-            if isinstance(value, (int, float)) and math.isfinite(value):
-                usd = (usd or 0.0) + float(value)
+        lo = bisect.bisect_left(stamps, int(start))
+        hi = bisect.bisect_right(stamps, int(end))
+        for _when, value in timeline[lo:hi]:
+            if not math.isnan(value):
+                usd = (usd or 0.0) + value
         out.append({"seconds": (end - start) / 1000, "usd": usd})
     return out
 

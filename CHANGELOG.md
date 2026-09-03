@@ -29,6 +29,25 @@ stops asking the generator to hide findings behind defensive code.
 - Decision Center copy for the two new stop causes; per-finding "verified by a
   check / raised by the auditor" in the review detail; composer, search and
   provider controls have accessible names.
+- **Progress from the first millisecond.** Sending a message returns at once;
+  routing, preparation, generation, checks and the audit each narrate a line,
+  generator output streams into the turn for every provider that can stream
+  (Anthropic included), and a server-side clock speaks whenever a phase is
+  silent for 8 s. Chat and query replies stream too.
+- **Setup before failure.** A missing provider credential shows a setup card
+  with one button to Settings, on every path that can start a task; the
+  same-vendor rule is stated in plain words; new projects default to a single
+  local repository; the DMG carries a first-open note.
+- **Plain results.** Passed / Needs changes / Needs you instead of verdict
+  codes; findings lead with what was observed; identifiers live in a collapsed
+  details block; the run card forecasts duration and cost from the project's
+  history; every escalation names its cause and its next action.
+- **Token warnings and billing.** Usage is attributed to task, cycle, round,
+  chat and role; 80% and 95% of a budget warn once per period and re-arm at
+  rollover; a provider's 429 shows a reset countdown; a header pill shows
+  today and this month; per-task cost on the run card; unpriced models are
+  visible and can be priced per project; CSV/JSON export and a workspace
+  roll-up.
 
 ### Fixed
 - `verify --admit` on an invalid signature raised NameError instead of

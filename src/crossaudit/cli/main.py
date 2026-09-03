@@ -901,6 +901,57 @@ def _escalation_cause(outcome, cycle: dict) -> str:
         contested=bool(authority.get("contested_evidence_ids")))
 
 
+def _lock_holder(store: StateStore, cycle: dict) -> str:
+    """The cycle whose pending decision holds the lock on ``cycle``.
+
+    open_or_advance names the cycle it refused on behalf of; when that one is
+    itself a refused commit (a chain of commits on top of one escalation),
+    follow ``locked_by`` to the decision that is really pending. Bounded, and
+    stops at any link that is no longer waiting."""
+    holder = str(cycle.get("cycle_id", "") or "")
+    for _ in range(8):
+        row = store.cycle(holder) or {}
+        nxt = str(row.get("locked_by", "") or "")
+        target = store.cycle(nxt) if nxt else None
+        if not target or target.get("status") != "ESCALATED" or nxt == holder:
+            break
+        holder = nxt
+    return holder
+
+
+def _record_lock(store: StateStore, cfg: Config, cycle: dict, sha: str) -> str:
+    """Record that ``sha`` was refused because an earlier decision is pending.
+
+    The refused commit gets its own durable decision object (cause
+    ``escalation_locked``, ``locked_by`` = the holder) so the console can say
+    what happened and open the decision that blocks it. The holder's own
+    record is never touched. When ``sha`` IS the holder's commit there is no
+    new cycle: the pending decision is that cycle's own, and nothing is
+    written. Returns the cycle status a caller would otherwise get from
+    record_verdict."""
+    if str(cycle.get("active_sha", "") or "") != sha:
+        store.record_build_escalation(
+            cfg.science_repo, sha, "", 1, task=_committed_task(cfg, sha),
+            kind="audit", cause="escalation_locked",
+            locked_by=_lock_holder(store, cycle))
+    return "ESCALATED"
+
+
+def _record_round(store: StateStore, cfg: Config, cycle: dict, sha: str, outcome,
+                  receipt_hash: str, const_commit: str) -> str:
+    """The cycle-side record of one audited round: the verdict with its
+    structured cause, or — under the escalation lock — the refused commit's
+    own decision object (see _record_lock)."""
+    if cycle.get("blocked_by_escalation"):
+        return _record_lock(store, cfg, cycle, sha)
+    return store.record_verdict(cycle["cycle_id"], sha, outcome.verdict,
+                                receipt_hash, cfg.max_rounds,
+                                escalation_reason=_provider_stop_reason(outcome),
+                                escalation_kind=_provider_stop_kind(outcome),
+                                constitution_commit=const_commit,
+                                escalation_cause=_escalation_cause(outcome, cycle))
+
+
 def _provider_stop_kind(outcome) -> str:
     """The structured escalation kind for a round's stop.
 
@@ -1052,12 +1103,8 @@ def cmd_audit(args: argparse.Namespace) -> int:
         git("commit", "-q", "-m",
             f"audit receipt {sha[:12]} r{cycle['round']} ({outcome.verdict})", cwd=cfg.root)
 
-    status = store.record_verdict(cycle["cycle_id"], sha, outcome.verdict,
-                                  receipt_digest(receipt), cfg.max_rounds,
-                                  escalation_reason=_provider_stop_reason(outcome),
-                                  escalation_kind=_provider_stop_kind(outcome),
-                                  constitution_commit=const_commit,
-                                  escalation_cause=_escalation_cause(outcome, cycle))
+    status = _record_round(store, cfg, cycle, sha, outcome, receipt_digest(receipt),
+                           const_commit)
     result = {"verdict": outcome.verdict, "cycle_status": status,
               "cycle_id": cycle["cycle_id"], "round": cycle["round"],
               "integrity": outcome.integrity, "receipt": str(ledger / "receipt.json"),
@@ -1659,10 +1706,16 @@ def cmd_run(args: argparse.Namespace) -> int:
         print("  This commit was already audited, passed, and admitted. Nothing to do.")
         return EXIT_OK
     if cycle.get("blocked_by_escalation"):
+        # The refused commit gets a durable decision object of its own (cause
+        # escalation_locked, pointing at the holder) so the console shows
+        # what happened and which decision to open, instead of an English
+        # line on a terminal nobody is reading.
+        _record_lock(store, cfg, cycle, sha)
+        holder = _lock_holder(store, cycle)
         print("  An earlier round ESCALATED: a human decision is pending, and new "
               "commits cannot route around it.")
         print(f"  You are the human here. Rule on it:  crossaudit resolve "
-              f"{cycle['cycle_id']} --reopen --because '<why>'")
+              f"{holder} --reopen --because '<why>'")
         return EXIT_ESCALATED
     if not cycle.get("awaiting_verdict") and cycle["active_sha"] == sha:
         print(f"  Already audited (round {cycle['round']}, status {cycle['status']}).")
@@ -1770,12 +1823,8 @@ def cmd_run(args: argparse.Namespace) -> int:
     git("add", "--", str(rel / "receipt.json"), cwd=cfg.root)
     git("commit", "-q", "-m",
         f"audit receipt {sha[:12]} r{cycle['round']} ({outcome.verdict})", cwd=cfg.root)
-    status = store.record_verdict(cycle["cycle_id"], sha, outcome.verdict,
-                                  receipt_digest(receipt), cfg.max_rounds,
-                                  escalation_reason=_provider_stop_reason(outcome),
-                                  escalation_kind=_provider_stop_kind(outcome),
-                                  constitution_commit=const_commit,
-                                  escalation_cause=_escalation_cause(outcome, cycle))
+    status = _record_round(store, cfg, cycle, sha, outcome, receipt_digest(receipt),
+                           const_commit)
     _done("report + receipt committed")
 
     print()
