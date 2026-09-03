@@ -215,6 +215,42 @@ CONTESTED_MODEL_BLOCKER_REASON = (
     "it needs your judgment")
 
 
+#: The structured causes an auditor-side ESCALATE can carry, one per branch
+#: of the verdict ladder (auditor/run.py): the escalation lock, an unstarted
+#: scope, an unreadable reply, prompt bounds exceeded, the auditor's own
+#: ESCALATE. The dial's contested blocker keeps its earlier name.
+ESCALATION_CAUSES = ("escalation_locked", "nothing_audited", "invalid_reply",
+                     "bounds_exceeded", "auditor_concern", "auditor_escalated")
+
+
+def escalation_cause(*, integrity: str, verdict: str, model_verdict: str = "",
+                     escalation_lock: bool = False,
+                     contested: bool = False) -> str:
+    """The cause a person is told for an ESCALATE round, from the ladder's
+    own inputs — never from prose.
+
+    Mirrors the order of auditor/run.py: the lock decides before the scope,
+    the scope before the reply, the reply before the bounds, and only then
+    the model's opinion. A verdict that is not ESCALATE has no cause here;
+    a content stop the build loop records names its own (build.py).
+    """
+    if verdict != "ESCALATE":
+        return ""
+    if escalation_lock:
+        return "escalation_locked"
+    if integrity == "NOTHING_AUDITED":
+        return "nothing_audited"
+    if integrity == "INVALID_REPLY":
+        return "invalid_reply"
+    if integrity == "BOUNDS_EXCEEDED":
+        return "bounds_exceeded"
+    if contested:
+        return "auditor_concern"
+    if model_verdict == "ESCALATE":
+        return "auditor_escalated"
+    return ""
+
+
 def classify_escalation_kind(reason: str) -> str:
     """Infer an escalation's kind from its prose reason — the legacy shim.
 

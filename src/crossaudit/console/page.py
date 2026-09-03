@@ -535,6 +535,22 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .finding p{margin:5px 0 0;line-height:1.5;font-size:var(--fs-body)}
 .finding-tier{display:block;margin-top:6px;font-size:var(--fs-caption);color:var(--text-3)}
 .finding-tier.verified{color:var(--text-2)}
+/* R2. A finding leads with the observation; severity, place, evidence tier and
+   rule id share one muted details line under it. */
+.finding-observation{margin:0 0 4px}
+.finding-details{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:var(--fs-caption);color:var(--text-3)}
+.finding-details .finding-tier{display:inline;margin:0}
+.finding-details .severity.suggestion{color:var(--text-2)}
+.finding-sep{opacity:.5}
+/* R3. The record (commit, cycle, models) sits behind a closed disclosure. */
+.review-details>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px}
+.review-details>summary::-webkit-details-marker{display:none}
+.review-details>summary::after{content:'';width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform var(--dur-base)}
+.review-details[open]>summary::after{transform:rotate(45deg)}
+.review-details .review-record{margin-top:var(--sp-2)}
+/* R4. One forecast line at task start and in the run card header. */
+.run-forecast,.turn-forecast{color:var(--text-3);font-size:var(--fs-caption)}
+.turn-forecast{margin-top:6px}
 /* .dt — a reusable clean data table (Claude-Code-style: muted header, hairline
    rows, hover, generous rows). Used for Skills, Connectors/MCP, and other lists. */
 .dt{width:100%;border-collapse:collapse;margin-top:6px;font-size:var(--fs-body)}
@@ -874,6 +890,11 @@ textarea::placeholder{color:var(--text-3)}
 .route{display:none;margin:7px 3px 0;padding:7px 9px;border-radius:var(--r-sm);background:var(--surface-2);
   color:var(--text-2);font-size:var(--fs-label);white-space:pre-wrap;word-break:break-word}
 .route.on{display:block}
+.route.setup{background:var(--escalated-bg,var(--surface-2))}
+.setup-card{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.setup-card b{flex:1 1 100%}
+.setup-card span{flex:1 1 auto;color:var(--text-2)}
+.setup-card-action{flex:0 0 auto}
 .route b{color:var(--text)}
 .route .ask{color:var(--escalated)}
 .drop-overlay{position:fixed;inset:0;z-index:var(--z-overlay);display:none;place-items:center;padding:26px;
@@ -2531,8 +2552,8 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
         </div></details></div>
     </div></section>
     <section class="form-section project-step" data-project-step="3" tabindex="-1" hidden><div class="step-heading"><span>Step 3 of 3</span><h3>Choose delivery and review</h3><p>GitHub pairing is optional. Review the local and model setup before creating anything.</p></div><div class="github-box">
-      <label class="toggle-line"><input type="checkbox" name="github" id="github-toggle" checked><span><b>Create and connect two repositories</b>
-        <small>The work repository holds deliverables. The audit repository holds rules, reports and the auditor secret.</small></span></label>
+      <label class="toggle-line"><input type="checkbox" name="github" id="github-toggle"><span><b>Create and connect two repositories</b>
+        <small>Recommended for shared or reviewed work; a single local project is fine to start.</small></span></label>
       <div class="connection" id="github-connection">Checking GitHub connection…</div>
       <div class="github-fields" id="github-fields"><div class="form-grid">
         <label class="field"><span>Work repository name</span><input name="science_repo" id="science-repo" maxlength="161" placeholder="owner/project"></label>
@@ -2808,6 +2829,9 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <div class="settings-jump"><button type="button" class="secondary" data-settings-open="usage">Open usage</button><button type="button" class="secondary" data-settings-open="runtime-budgets">Set budgets</button><small class="settings-empty" data-scope-note hidden></small></div>
     </section><section class="form-section settings-pane" data-settings-pane="security" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Security &amp; privacy</span><h3>Security and privacy</h3><p>How credentials are stored and where your data goes.</p></div>
       <p class="settings-hint">API keys are stored as write-only macOS Keychain items and are never shown again.</p>
+      <div class="form-title">Where CrossAudit keeps data</div>
+      <p class="settings-hint">Everything CrossAudit stores lives in three places; removing them removes every trace.</p>
+      <ul class="settings-hint" id="data-locations"><li><b>App and workspace</b> — <code>~/Library/Application Support/CrossAudit</code></li><li><b>Project state</b> — <code>.crossaudit/</code> inside each project folder (the audit ledger in <code>cycles/</code> is part of the repository)</li><li><b>API keys</b> — macOS Keychain items named <code>io.crossaudit.app.provider.&lt;vendor&gt;</code>; remove them under Providers</li></ul>
       <p class="settings-empty">Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.</p>
     </section><section class="form-section settings-pane" data-settings-pane="diagnostics" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Diagnostics</span><h3>Diagnostics</h3><p>Check this Mac's setup and versions, and repair problems.</p></div>
       <div class="settings-readiness"><div class="readiness-item">Git<span id="git-state">…</span></div>
@@ -3087,6 +3111,7 @@ const ZH={
   "MCP servers and generator skills are configured inside the active project.":"MCP 服务器与生成者技能在当前项目内部配置。",
   "Usage and budgets are tracked per project. Export isn't available here yet.":"用量与预算按项目跟踪。此处暂不支持导出。",
   "API keys are stored as write-only macOS Keychain items and are never shown again.":"API 密钥以只写方式存入 macOS 钥匙串，且不会再次显示。",
+  "Where CrossAudit keeps data":"CrossAudit 的数据存放位置","Everything CrossAudit stores lives in three places; removing them removes every trace.":"CrossAudit 保存的所有内容只在三个位置；删除它们即可清除全部痕迹。","App and workspace":"应用与工作区","Project state":"项目状态","API keys":"API 密钥","inside each project folder (the audit ledger in":"位于每个项目文件夹内（","is part of the repository)":"中的审计账本属于仓库的一部分）","— macOS Keychain items named":"—— macOS 钥匙串条目，名为","; remove them under Providers":"；可在“供应商”中移除",
   "Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.":"供应商路由按项目设置。留存、脱敏与日志控制此处暂不可配置。",
   "Logs, support bundles, and per-subsystem reset aren't available here yet.":"日志、支持包与按子系统重置此处暂不可用。",
   "No developer settings, experiments, local endpoints, or debug logging are configurable here yet.":"暂无可配置的开发者设置、实验、本地端点或调试日志。",
@@ -3122,7 +3147,7 @@ const ZH={
   "Connection details":"连接详情","API region":"API 区域","The region must match the API key.":"区域必须与 API key 匹配。","Model":"模型",
   "Model available to your account":"你的账户可用的模型","Custom model ID":"自定义模型 ID","Exact provider model ID":"准确的供应商模型 ID",
   "Refresh from provider":"从供应商刷新","GitHub":"GitHub","Create and connect two repositories":"创建并连接两个仓库",
-  "The work repository holds deliverables. The audit repository holds rules, reports and the auditor secret.":"工作仓库存放交付物；审计仓库存放规则、报告和审计密钥。",
+  "Recommended for shared or reviewed work; a single local project is fine to start.":"适合共享或需要评审的工作；一开始只用一个本地项目也完全可以。",
   "Checking GitHub connection…":"正在检查 GitHub 连接…","Work repository name":"工作仓库名称","Audit repository name":"审计仓库名称",
   "Use accessible repositories if these names already exist":"若这些名称已存在，则使用可访问的仓库",
   "Off by default. Leave it off when you want two new repositories.":"默认关闭。需要创建两个新仓库时请保持关闭。",
@@ -3590,6 +3615,8 @@ const ZH={
   ,"the round could not be committed":"该轮次无法提交","rendering final document locally":"正在本地渲染最终文档","the round reproduced the previous one; nothing new to audit":"本轮与上一轮结果相同；没有新的内容可审计"
   ,"the loop cannot settle this itself":"循环无法自行解决此问题","this stop is waiting for a human":"此次停止正在等待人工处理"
   ,"Thinking":"思考中","Generator live reply · not audited":"生成者实时回复 · 未经审计","Auditor live reply · direct reply":"审计者实时回复 · 直接回复"
+  ,"Connect a provider first":"请先连接供应商","The generator has no credential yet.":"生成者尚未连接凭据。","The auditor has no credential yet.":"审计者尚未连接凭据。"
+  ,"Neither the generator nor the auditor has a credential yet.":"生成者与审计者都尚未连接凭据。","Open Settings → Providers":"打开设置 → 供应商"
   ,"Task started.":"任务已开始。","The result will appear in this conversation.":"结果会显示在此对话中。","Needs clarification.":"需要澄清。","Refused.":"已拒绝。","Message delivered.":"消息已送达。","Sending your files…":"正在发送文件…"
   ,"Pinned":"已置顶","Recent":"最近","Upload failed":"上传失败","Uploaded":"已上传"
   ,"Stored in chunks without an app quota. Model inspection depends on file support and context.":"分块存储，应用不设配额。模型能否读取取决于文件支持与上下文。"
@@ -3632,39 +3659,88 @@ const ZH={
   ,"Every commit needs an author; without a name and email CrossAudit cannot record audit history.":"每个提交都需要作者；没有姓名和邮箱，CrossAudit 无法记录审计历史。","Another CrossAudit is earlier on your PATH, so typing `crossaudit` in a terminal runs that one instead of this app.":"你的 PATH 中有另一个更靠前的 CrossAudit，因此在终端里输入 `crossaudit` 运行的是那一个，而不是这个应用。"
   ,"This file defines the project's roles, routes, and rules; the project cannot run without it.":"此文件定义项目的角色、路由和规则；缺少它项目无法运行。"
   ,"These are the rules the auditor judges against; an audit cannot run without them.":"这些是审计者据以判定的规则；缺少它们无法进行审计。"
+  // R1–R5 (results & decisions). Plain verdict words, finding details, the
+  // Details record, the forecast line and one copy set per ESCALATE cause.
+  ,"Needs you":"需要你","Checks only":"仅自动检查"
+  ,"must fix":"必须修改","suggestion":"建议"
+  ,"verified by a check":"已由检查验证","raised by the auditor":"由审计者提出","raised by the auditor, verified":"由审计者提出，已验证"
+  ,"Details":"详情","Human":"人工"
+  ,"First run here — no estimate yet":"首次运行，暂无预估"
+  ,"Nothing to review yet":"尚无可审内容","The task produced no work in the audited folder":"任务未在受审文件夹中产生任何工作"
+  ,"There is nothing to review yet: the generator produced no files inside the folder the auditor checks, so no audit could run and nothing was admitted.":"目前没有可审查的内容：生成者没有在审计者检查的文件夹中产生任何文件，因此无法进行审计，也没有准入任何结果。"
+  ,"Tell the generator what to create inside the audited folder and run one more round, or stop this task.":"告诉生成者应在受审文件夹中创建什么，然后再运行一轮；或停止此任务。"
+  ,"Say which files should be created inside the audited folder, then unlock one additional audited round.":"说明应在受审文件夹中创建哪些文件，然后解锁额外一轮受审计执行。"
+  ,"Create the deliverable inside the audited folder; nothing was produced there.":"请在受审文件夹中创建交付物；此前那里没有产生任何内容。"
+  ,"No audit findings were created because there was no work in the audited folder to review.":"由于受审文件夹中没有可审查的工作，未产生任何审计发现。"
+  ,"the task produced no work in the audited folder, so there was nothing to review":"任务未在受审文件夹中产生任何工作，因此没有可审查的内容"
+  ,"Auditor reply unreadable":"审计者回复无法读取","The auditor’s reply could not be read":"审计者的回复无法读取"
+  ,"The auditor answered, but its reply was not in the required form, so no verdict could be recorded. The files are unchanged and nothing was admitted.":"审计者作出了回复，但其格式不符合要求，因此无法记录裁定。文件未改动，也没有准入任何结果。"
+  ,"Run the audit again on the same work, switch the auditor model, or stop this task.":"对同一份工作再次运行审计、更换审计者模型，或停止此任务。"
+  ,"Run the audit again":"再次运行审计","Unlock one more round with the work unchanged so the auditor can answer again.":"在工作不变的情况下解锁一轮，让审计者再次作答。"
+  ,"Run the audit again on the same work; the previous auditor reply could not be read.":"请对同一份工作再次运行审计；上一次审计者的回复无法读取。"
+  ,"No audit findings were recorded because the auditor’s reply could not be read.":"由于审计者的回复无法读取，未记录任何审计发现。"
+  ,"the auditor's reply could not be read":"审计者的回复无法读取"
+  ,"Task too large for one audit":"任务过大，无法一次审计","The task is too large for one audit":"该任务过大，无法在一次审计中完成"
+  ,"The work exceeds what one audit can read at once, so the auditor stopped rather than judge part of it. Nothing was admitted.":"工作量超出了一次审计能够读取的范围，审计者因此停止，而不是只评判其中一部分。没有准入任何结果。"
+  ,"Narrow the scope or split the task into smaller pieces and run one more round, or stop this task.":"缩小范围或将任务拆分为更小的部分，然后再运行一轮；或停止此任务。"
+  ,"Name the smaller piece the next round should cover, then unlock one additional audited round.":"指明下一轮应覆盖的较小部分，然后解锁额外一轮受审计执行。"
+  ,"No audit findings were recorded because the work was too large to audit in one pass.":"由于工作量过大，无法一次审计完成，未记录任何审计发现。"
+  ,"the task is too large for one audit":"该任务过大，无法一次审计"
+  ,"The auditor asked for you":"审计者请你介入","The auditor asked for your judgment":"审计者请你作出判断"
+  ,"The auditor could not settle this round on its own and handed it to you. Its stated reason is below. Nothing was admitted.":"审计者无法独自裁定本轮，已交由你处理。其陈述的原因见下方。没有准入任何结果。"
+  ,"What the auditor said":"审计者的说明"
+  ,"Read the auditor’s reason, then tell the generator how to address it or stop this task.":"阅读审计者的原因，然后告诉生成者如何处理；或停止此任务。"
+  ,"Tell the generator how to address the auditor’s reason, then unlock one additional audited round.":"告诉生成者如何处理审计者的原因，然后解锁额外一轮受审计执行。"
+  ,"The auditor recorded no structured findings. Its stated reason is above.":"审计者未记录结构化问题。其陈述的原因见上方。"
+  ,"the auditor asked for your judgment":"审计者请你作出判断"
+  ,"Read the auditor's reason, then tell the generator how to address it or stop this task.":"阅读审计者的原因，然后告诉生成者如何处理；或停止此任务。"
+  ,"Waiting on an earlier decision":"等待更早的决定","This task is already waiting for your earlier decision":"此任务仍在等待你更早的决定"
+  ,"An earlier round of this task is still waiting for you. No new round can run until that decision is made.":"此任务更早的一轮仍在等待你。在作出该决定前，无法运行新的一轮。"
+  ,"Open the earlier decision and settle it; this task continues from there.":"打开更早的决定并作出处理；此任务将从那里继续。"
+  ,"Settle the earlier decision":"先处理更早的决定","Open the earlier decision first. Guidance recorded here applies once it is settled.":"请先打开更早的决定。此处记录的指引将在其处理完毕后生效。"
+  ,"No new findings were recorded because the earlier decision is still open.":"由于更早的决定仍未处理，未记录新的发现。"
+  ,"Open the earlier decision":"打开更早的决定"
+  ,"this task is already waiting for your earlier decision":"此任务仍在等待你更早的决定"
 };
 const ZH_PATTERNS=[
   // D148 repair guard. Every reason is COMPOSED from a path, a count or a
-  // pattern name, so each is a pattern; the path is never translated. The
+  // construct name, so each is a pattern; the path is never translated. The
   // event detail joins several with "; " and the stop reason wraps the first
   // in a round number, so those two shapes delegate to the per-reason rows.
+  // Gate: tests/test_repair_guard_console_zh.py drives every sentence the
+  // guard and build.py can emit (enumerated from their source) through zhValue.
   [/^the automatic repair was refused in round (\d+) because (.+)$/,
    m=>'第 '+m[1]+' 轮的自动修复被拒绝，原因：'+zhValue(m[2])],
   // The pattern IS the boundary between two guard sentences, so a string
   // matches only when it really joins two (no recursion on one sentence), and
-  // the semicolon inside the scope sentence (only files inside them ...) is
-  // not a boundary.
-  [/; (?=\S+ (?:is outside the audited|is a binary file|adds an? |removes an? )|the code change touches|\d+ staged file|the revision changed nothing)/,
-   m=>m.input.split(/; (?=\S+ (?:is outside the audited|is a binary file|adds an? |removes an? )|the code change touches|\d+ staged file|the revision changed nothing)/).map(part=>zhValue(part)).join('；')],
-  [/^(.+) is outside the audited directories \((.*)\); only files inside them may change — if the fix needs another file, say so in `notes`$/,
-   m=>m[1]+' 不在已审计目录（'+m[2]+'）内；只有这些目录内的文件可以修改——如果修复确实需要其他文件，请在 `notes` 中说明'],
+  // the semicolon inside the scope sentence (if the fix needs ...) is not one.
+  [/; (?=\S+ (?:is outside the audited|is a binary file|adds |removes |changes |renames )|the code change touches|\d+ staged file|the revision changed nothing)/,
+   m=>m.input.split(/; (?=\S+ (?:is outside the audited|is a binary file|adds |removes |changes |renames )|the code change touches|\d+ staged file|the revision changed nothing)/).map(part=>zhValue(part)).join('；')],
+  [/^(.+) is outside the audited directories \((.*)\)\. Only files inside them may change; if the fix needs another file, say so in `notes`\.$/,
+   m=>m[1]+' 不在已审计目录（'+m[2]+'）内。只有这些目录内的文件可以修改；如果修复确实需要其他文件，请在 `notes` 中说明。'],
   [/^(.+) is a binary file written directly by the generator, which cannot be reviewed line by line$/,
    m=>m[1]+' 是生成者直接写入的二进制文件，无法逐行审查'],
   [/^the code change touches (\d+) lines, more than the (\d+)-line limit for an automatic repair$/,
    m=>'代码改动涉及 '+m[1]+' 行，超过了自动修复的 '+m[2]+' 行上限'],
-  [/^(\d+) staged file\(s\) lay beyond the review size limit and were not screened: (.+)$/,
-   m=>'有 '+m[1]+' 个已暂存文件超出审查大小上限而未被筛查：'+m[2]],
-  // The cautions the auditor weighs (repair_guard ADDED/MARKER/REMOVED_PATTERNS).
-  [/^(.+) adds a catch-all `except` that swallows every error$/,m=>m[1]+' 新增了会吞掉所有错误的 catch-all `except`'],
-  [/^(.+) adds a `suppress\(\.\.\.\)` block that hides errors$/,m=>m[1]+' 新增了会隐藏错误的 `suppress(...)` 块'],
-  [/^(.+) adds an error handler that does nothing$/,m=>m[1]+' 新增了一个什么也不做的错误处理'],
-  [/^(.+) adds an assertion that can no longer fail$/,m=>m[1]+' 新增了一个不再可能失败的断言'],
-  [/^(.+) adds a skipped or expected-to-fail test$/,m=>m[1]+' 新增了被跳过或预期失败的测试'],
-  [/^(.+) adds a shell step that ignores its own failure$/,m=>m[1]+' 新增了会忽略自身失败的 shell 步骤'],
-  [/^(.+) adds a marker that silences a checker \(`noqa`, `type: ignore`, `pragma: no cover`, \.\.\.\)$/,m=>m[1]+' 新增了会让检查器静默的标记（`noqa`、`type: ignore`、`pragma: no cover` 等）'],
-  [/^(.+) adds a warnings filter set to ignore$/,m=>m[1]+' 新增了设为忽略的警告过滤器'],
-  [/^(.+) removes an `assert` or `raise` without replacing it$/,m=>m[1]+' 删除了一个 `assert` 或 `raise` 而没有替代'],
-  [/^(.+) removes a test$/,m=>m[1]+' 删除了一个测试'],
+  [/^(\d+) staged file\(s\) were larger than the review can read and were not screened: (.+)$/,
+   m=>'有 '+m[1]+' 个已暂存文件超出审查可读取的大小而未被筛查：'+m[2]],
+  // "<path> adds|removes|changes|renames <construct>": the constructs are
+  // repair_guard's ADDED/MARKER/REMOVED tables and its re-raise sentence.
+  [/^(\S+) (adds|removes|changes|renames) (.+)$/,m=>{const zh={
+    'adds a catch-all `except` that swallows every error':'新增了会吞掉所有错误的 catch-all `except`',
+    'adds a catch-all `except` (its handler re-raises)':'新增了 catch-all `except`（其处理程序会重新抛出）',
+    'adds a `suppress(...)` block that hides errors':'新增了会隐藏错误的 `suppress(...)` 块',
+    'adds an error handler that does nothing':'新增了一个什么也不做的错误处理',
+    'adds an assertion that can no longer fail':'新增了一个不再可能失败的断言',
+    'adds a skipped or expected-to-fail test':'新增了被跳过或预期失败的测试',
+    'adds code under a branch that never runs (`if TYPE_CHECKING:` / `if False:`)':'在永远不会执行的分支下新增了代码（`if TYPE_CHECKING:` / `if False:`）',
+    'adds a shell or make step that ignores its own failure':'新增了会忽略自身失败的 shell 或 make 步骤',
+    'adds a marker that silences a checker (`noqa`, `type: ignore`, `pragma: no cover`, ...)':'新增了会让检查器静默的标记（`noqa`、`type: ignore`、`pragma: no cover` 等）',
+    'adds a warnings filter set to ignore':'新增了设为忽略的警告过滤器',
+    'removes an `assert` or `raise` without replacing it':'删除了一个 `assert` 或 `raise` 而没有替代',
+    'changes an `assert` or `raise`':'改动了一个 `assert` 或 `raise`',
+    'removes a test':'删除了一个测试','renames a test':'重命名了一个测试'}[m[2]+' '+m[3]];
+    return zh?m[1]+' '+zh:m[0];}],
   [/^provider failure left this task waiting for a person: ?(.*)$/,
    m=>'提供方失败，该任务正在等待人工处理：'+m[1]],
   [/^the selected PASS is not ready for admission: ?(.*)$/,
@@ -3676,7 +3752,7 @@ const ZH_PATTERNS=[
   // receipt, and it was the last string in the product anyone thought to
   // translate.
   [/^evidence ledger cannot be shown to the Auditor: ?(.*)$/,
-   m=>'证据账本无法出示给审计方：'+m[1]],
+   m=>'证据账本无法出示给审计者：'+m[1]],
   [/^Typing `crossaudit` runs (.+) \(version (.+)\)\. This app is (.+) at (.+)\.$/,
    m=>'在终端里输入 `crossaudit` 运行的是 '+m[1]+'（版本 '+m[2]+'）。本应用是 '+m[3]+'，位于 '+m[4]+'。'],
   [/^Typing `crossaudit` runs (.+)\. Its version could not be determined without running it, which CrossAudit does not do\. This app is (.+) at (.+)\.$/,
@@ -3764,6 +3840,9 @@ const ZH_PATTERNS=[
   ,[/^(\d+) tasks? needs? your decision$/i,m=>m[1]+' 个任务需要你决定']
   ,[/^round (\d+)\/(\d+)$/i,m=>'第 '+m[1]+'/'+m[2]+' 轮']
   ,[/^(\d+) findings?$/i,m=>m[1]+' 项发现']
+  ,[/^(\d+) issues?$/i,m=>m[1]+' 个问题']
+  ,[/^Usually (\d+)–(\d+) min( · about \$[\d.]+)?$/,m=>'通常 '+m[1]+'–'+m[2]+' 分钟'+(m[3]?' · 约 '+m[3].slice(9):'')]
+  ,[/^Usually about (\d+) min( · about \$[\d.]+)?$/,m=>'通常约 '+m[1]+' 分钟'+(m[2]?' · 约 '+m[2].slice(9):'')]
   ,[/^(\d+) deterministic checks? passed$/i,m=>m[1]+' 项确定性检查已通过']
   ,[/^(\d+) files$/i,m=>m[1]+' 个文件']
   ,[/^Waiting for the provider · heartbeat (.+)$/,m=>'等待供应商 · 心跳 '+zhValue(m[1])]
@@ -4683,6 +4762,49 @@ const REMEDIATION={
   stop:{label:'Stop this task'},
   revise:{label:'Revise and continue'}};
 function hasRemediation(row,action){return ((row&&row.remediations)||[]).indexOf(action)>=0;}
+// R5. Every ESCALATE branch of the auditor ladder tells the person what
+// happened, why, and what to do next — through the existing slots, keyed on
+// the structured cause (errors.escalation_cause). `hint` prefills the
+// guidance box where the next step is obvious; `empty` is the findings slot
+// when no finding was recorded. An unknown cause keeps the generic copy.
+const CAUSE_COPY={
+  nothing_audited:{flag:'Nothing to review yet',title:'The task produced no work in the audited folder',
+    summary:'There is nothing to review yet: the generator produced no files inside the folder the auditor checks, so no audit could run and nothing was admitted.',
+    limitTitle:'What happened',
+    request:'Tell the generator what to create inside the audited folder and run one more round, or stop this task.',
+    reopenTitle:'Revise and continue',
+    reopenCopy:'Say which files should be created inside the audited folder, then unlock one additional audited round.',
+    hint:'Create the deliverable inside the audited folder; nothing was produced there.',
+    empty:'No audit findings were created because there was no work in the audited folder to review.'},
+  invalid_reply:{flag:'Auditor reply unreadable',title:'The auditor\u2019s reply could not be read',
+    summary:'The auditor answered, but its reply was not in the required form, so no verdict could be recorded. The files are unchanged and nothing was admitted.',
+    limitTitle:'What happened',
+    request:'Run the audit again on the same work, switch the auditor model, or stop this task.',
+    reopenTitle:'Run the audit again',
+    reopenCopy:'Unlock one more round with the work unchanged so the auditor can answer again.',
+    hint:'Run the audit again on the same work; the previous auditor reply could not be read.',
+    empty:'No audit findings were recorded because the auditor\u2019s reply could not be read.'},
+  bounds_exceeded:{flag:'Task too large for one audit',title:'The task is too large for one audit',
+    summary:'The work exceeds what one audit can read at once, so the auditor stopped rather than judge part of it. Nothing was admitted.',
+    limitTitle:'What happened',
+    request:'Narrow the scope or split the task into smaller pieces and run one more round, or stop this task.',
+    reopenTitle:'Revise and continue',
+    reopenCopy:'Name the smaller piece the next round should cover, then unlock one additional audited round.',
+    hint:'',empty:'No audit findings were recorded because the work was too large to audit in one pass.'},
+  auditor_escalated:{flag:'The auditor asked for you',title:'The auditor asked for your judgment',
+    summary:'The auditor could not settle this round on its own and handed it to you. Its stated reason is below. Nothing was admitted.',
+    limitTitle:'What the auditor said',
+    request:'Read the auditor\u2019s reason, then tell the generator how to address it or stop this task.',
+    reopenTitle:'Revise and continue',
+    reopenCopy:'Tell the generator how to address the auditor\u2019s reason, then unlock one additional audited round.',
+    hint:'',empty:'The auditor recorded no structured findings. Its stated reason is above.'},
+  escalation_locked:{flag:'Waiting on an earlier decision',title:'This task is already waiting for your earlier decision',
+    summary:'An earlier round of this task is still waiting for you. No new round can run until that decision is made.',
+    limitTitle:'What happened',
+    request:'Open the earlier decision and settle it; this task continues from there.',
+    reopenTitle:'Settle the earlier decision',
+    reopenCopy:'Open the earlier decision first. Guidance recorded here applies once it is settled.',
+    hint:'',empty:'No new findings were recorded because the earlier decision is still open.'}};
 function openResolution(value,action='',sha=''){
   let row=typeof value==='object'&&value?value:null;
   if(!row&&lastState)row=(lastState.escalations||[]).find(item=>item.cycle_id===value);
@@ -4690,8 +4812,11 @@ function openResolution(value,action='',sha=''){
     limit_reached:false,why:'The automatic audit loop stopped.',issues:[],attempts:[],
     requested:'Review why the loop stopped, then decide whether to revise or stop.'};
   activeResolution=row;promptedEscalations.add(row.cycle_id);
+  const copy=CAUSE_COPY[String(row.cause||'')]||null;
   document.getElementById('resolution-cycle').value=row.cycle_id||'';
-  document.getElementById('resolution-reason').value='';
+  // R5. The guidance box opens prefilled where the next step is obvious
+  // (nothing produced, unreadable reply); the person can still change it.
+  document.getElementById('resolution-reason').value=copy&&copy.hint?t(copy.hint):'';
   const used=Number(row.round||0),maximum=Number(row.max_rounds||(lastState&&lastState.max_rounds)||0);
   // A budget (usage-guardrail) pause is a provider-family stop — no audit ran,
   // nothing was admitted — but its remedy is to raise or clear the local limit,
@@ -4711,9 +4836,9 @@ function openResolution(value,action='',sha=''){
   // dial handing a model-only blocker to a person. Same slots, no new elements.
   const repairRefused=row.cause==='repair_refused';
   const auditorConcern=row.cause==='auditor_concern';
-  document.getElementById('resolution-flag').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':repairRefused?'Automatic repair refused':auditorConcern?'The auditor raised a concern':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
-  document.getElementById('resolution-title').textContent=budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':repairRefused?'The revision reached outside the audited files':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
-  document.getElementById('resolution-summary').textContent=budget
+  document.getElementById('resolution-flag').textContent=copy?copy.flag:budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':repairRefused?'Automatic repair refused':auditorConcern?'The auditor raised a concern':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
+  document.getElementById('resolution-title').textContent=copy?copy.title:budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':repairRefused?'The revision reached outside the audited files':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
+  document.getElementById('resolution-summary').textContent=copy?copy.summary:budget
     ?'CrossAudit stopped before spending past your usage limit. No result was admitted and the original task is ready once you raise or clear the limit.'
     :provider
     ?'CrossAudit stopped before an audit began. No result was admitted and the original task is ready to retry.'
@@ -4730,7 +4855,7 @@ function openResolution(value,action='',sha=''){
     :row.limit_reached
     ?'CrossAudit used all '+used+' of '+maximum+' automatic rounds without a passing result. Nothing will continue or be admitted until you decide.'
     :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
-  document.getElementById('resolution-limit-title').textContent=budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
+  document.getElementById('resolution-limit-title').textContent=copy?copy.limitTitle:budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
     ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
   // A refused repair leads with the sentence the repair guard wrote (it names
   // the file and the pattern) rather than the round-numbered wrapper around it.
@@ -4741,32 +4866,36 @@ function openResolution(value,action='',sha=''){
   const attemptRows=row.attempts||[];
   document.getElementById('resolution-attempts').innerHTML=attemptRows.map(item=>{
     const word=String(item.verdict||'').toLowerCase();
+    // R1. The verdict word a person reads; the raw word stays as the class.
     return '<div class="decision-attempt"><span class="round-n">round '+esc(item.round)+'</span><span>'
       +esc(item.findings)+' issue'+(item.findings===1?'':'s')+'</span><span class="verdict-word '+esc(word)
-      +'">'+esc(item.verdict)+'</span></div>';}).join('');
+      +'">'+esc(verdictWord(item.verdict))+'</span></div>';}).join('');
   document.getElementById('resolution-goal').textContent=(lastState?titleOf(lastState):'')||'The task this conversation asked for.';
   const issues=row.issues||[];
   document.getElementById('resolution-issue-count').textContent=String(issues.length);
+  // R2. Each issue leads with the observation; severity as a consequence,
+  // the place and the rule id on one muted details line under it.
   document.getElementById('resolution-issues').innerHTML=issues.length?issues.map((issue,index)=>
-    '<article class="decision-issue"><div class="decision-issue-head"><span>'+esc(issue.severity||'BLOCKER')+'</span><span class="finding-rule" title="rule id">'
-    +esc(issue.rule||'Issue '+(index+1))+'</span></div><p>'+esc(issue.observation||'No explanation was recorded.')+'</p>'
-    +(issue.artifact?'<small>Affects '+esc(issue.artifact)+'</small>':'')+'</article>').join('')
-    :'<div class="decision-empty">'+(budget
+    '<article class="decision-issue"><p class="finding-observation">'+esc(issue.observation||'No explanation was recorded.')+'</p>'
+    +'<div class="finding-details"><span class="severity '+(severityWord(issue.severity||'BLOCKER')==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(issue.severity||'BLOCKER'))+'</span>'
+    +(issue.artifact?'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-where">'+esc(issue.artifact)+'</span>':'')
+    +'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-rule" title="rule id">'+esc(issue.rule||'Issue '+(index+1))+'</span></div></article>').join('')
+    :'<div class="decision-empty">'+(copy?copy.empty:budget
       ?'No audit findings were created because the task paused at a usage limit before producing a reviewable result.'
       :provider
       ?'No audit findings were created because the Generator stopped before producing a reviewable result.'
       :formatCause
       ?'No audit ran because the generator never produced readable work. What usually helps: rewrite the task as one concrete instruction, or switch the generator model in Settings, then run one more round.'
       :'No structured findings were recorded. Review the stop reason above before continuing.')+'</div>';
-  document.getElementById('resolution-request').textContent=budget
+  document.getElementById('resolution-request').textContent=copy?copy.request:budget
     ?'Raise or clear the usage limit and rerun the original task, or stop this task.'
     :provider
     ?'Retry the same task now, review the model connection first, or stop this task.'
     :formatCause
     ?'Rewrite the task as one concrete instruction and run one more round, switch the generator model, or stop this task.'
     :(row.requested||'Choose whether to revise and continue, or stop this task.');
-  document.getElementById('resolution-reopen-title').textContent=budget?'Raise the limit & retry':provider?'Retry provider':'Revise and continue';
-  document.getElementById('resolution-reopen-copy').textContent=budget
+  document.getElementById('resolution-reopen-title').textContent=copy?copy.reopenTitle:budget?'Raise the limit & retry':provider?'Retry provider':'Revise and continue';
+  document.getElementById('resolution-reopen-copy').textContent=copy?copy.reopenCopy:budget
     ?'Adjust the usage limit in Project controls, then rerun the original task.'
     :provider
     ?'Use the current connection and rerun the original task.'
@@ -4780,7 +4909,14 @@ function openResolution(value,action='',sha=''){
   // model change, when the stop is a guardrail pause.
   document.getElementById('resolution-open-runtime').textContent=budget?'Adjust usage limits':'Change model or fallback';
   document.getElementById('resolution-open-runtime').hidden=!(hasRemediation(row,'select_model')||hasRemediation(row,'open_billing'));
-  document.getElementById('resolution-open-settings').hidden=!hasRemediation(row,'validate_credential');
+  // R5. The one real action of a locked cycle is the EARLIER decision; the
+  // secondary button carries it (relabelled, with the cycle to open) so no new
+  // control is added. Cleared for every other row so the label stays honest.
+  const settingsButton=document.getElementById('resolution-open-settings');
+  const earlier=row.cause==='escalation_locked'?String(row.earlier_cycle_id||''):'';
+  settingsButton.setAttribute('data-earlier-cycle',earlier);
+  settingsButton.textContent=earlier?'Open the earlier decision':'Review provider connection';
+  settingsButton.hidden=!hasRemediation(row,'validate_credential')&&!earlier;
   resolutionChoice(action||'reopen');
   document.getElementById('resolution-error').className='wizard-error';
   resolutionModal.classList.add('on');document.body.classList.add('deciding');
@@ -4816,7 +4952,9 @@ resolutionForm.querySelectorAll('input[name="resolution-choice"]').forEach(input
 document.getElementById('close-resolution').onclick=closeResolution;
 document.getElementById('cancel-resolution').onclick=closeResolution;
 document.getElementById('resolution-open-runtime').onclick=()=>{closeResolution();openRuntime();};
-document.getElementById('resolution-open-settings').onclick=()=>{closeResolution();openSettings('providers');};
+document.getElementById('resolution-open-settings').onclick=()=>{
+  const earlier=document.getElementById('resolution-open-settings').getAttribute('data-earlier-cycle')||'';
+  closeResolution();if(earlier)openResolution(earlier);else openSettings('providers');};
 resolutionForm.onsubmit=async ev=>{ev.preventDefault();const button=document.getElementById('submit-resolution');
   const cycleId=document.getElementById('resolution-cycle').value;
   const action=document.getElementById('resolution-action').value,reason=document.getElementById('resolution-reason').value.trim();
@@ -5312,7 +5450,7 @@ function restoreProjectDraft(row){
     syncCustomModel(role);};
   setRole('auditor',draft.auditor_connection,draft.auditor_endpoint,draft.auditor_model);
   setRole('generator',draft.generator_connection,draft.generator_endpoint,draft.generator_model);
-  document.getElementById('github-toggle').checked=draft.github!==false;
+  document.getElementById('github-toggle').checked=draft.github===true;
   document.getElementById('adopt-existing').checked=draft.adopt_existing===true;
   document.querySelector('[name="public"]').checked=draft.public===true;
   set('#science-repo',draft.science_repo||row.science);set('#audit-repo',draft.audit_repo||row.audit);
@@ -5781,16 +5919,66 @@ function artifactList(items,status,sha){
     +'<button type="button" class="output-more" data-open-artifacts>Open Files panel</button>'
     +'</div></div></div></section>';
 }
+// R1. The verdict a person reads. The raw vocabulary (PASS / BLOCKED /
+// ESCALATE / DCL_ONLY) stays in --json, receipts, reports and the inspector;
+// the main surface says what it means. An unknown word passes through.
+const VERDICT_WORDS={PASS:'Passed',PASSED:'Passed',CONSUMED:'Admitted',BLOCKED:'Needs changes',
+  ESCALATE:'Needs you',ESCALATED:'Needs you',DCL_ONLY:'Checks only'};
+function verdictWord(v){const key=String(v||'').toUpperCase();return VERDICT_WORDS[key]||String(v||'');}
+// R2. Severity as a consequence ("must fix") rather than a classification.
+function severityWord(sev){return String(sev||'').toUpperCase()==='BLOCKER'?'must fix':'suggestion';}
 // D148. What a finding rests on, from the evidence record in the receipt: a
 // deterministic check verified it, or the auditor raised it and nothing has
-// reproduced it yet. Shown only where findings are already listed; a receipt
-// without the record renders nothing here, and no route or state word is ever
-// on screen.
-function findingTier(f){
-  if(!f||!f.tier)return '';
-  const text=f.tier==='deterministic'?'Verified by a deterministic check'
-    :f.verified?'Raised by the auditor and verified':'Raised by the auditor, not yet reproduced';
-  return '<small class="finding-tier'+(f.verified?' verified':'')+'">'+esc(text)+'</small>';}
+// reproduced it yet. Shown only where findings are already listed, on the
+// details line; a receipt without the record renders nothing here, and no
+// route or state word is ever on screen.
+function tierWord(f){if(!f||!f.tier)return '';
+  return f.tier==='deterministic'?'verified by a check':f.verified?'raised by the auditor, verified':'raised by the auditor';}
+// R2. A finding leads with what was observed. Severity, place, evidence tier
+// and the rule id share ONE muted details line under it; the id never opens
+// the first line, and it carries its own title for the person who wants it.
+function findingCard(f){
+  const parts=['<span class="severity '+(severityWord(f.severity)==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(f.severity))+'</span>'];
+  if(f.artifact)parts.push('<span class="finding-where">'+esc(f.artifact)+'</span>');
+  if(tierWord(f))parts.push('<span class="finding-tier'+(f.verified?' verified':'')+'">'+esc(tierWord(f))+'</span>');
+  if(f.rule)parts.push('<span class="finding-rule" title="rule id">'+esc(f.rule)+'</span>');
+  return '<div class="finding"><p class="finding-observation">'+esc(f.observation||'No explanation was recorded.')+'</p>'
+    +'<div class="finding-details">'+parts.join('<span class="finding-sep" aria-hidden="true">·</span>')+'</div></div>';}
+// R3. "anthropic · anthropic:claude-opus-4-8 · high" → "Claude Opus 4.8". The
+// model specs carry ids and a capability note, not display names, so the name
+// is derived from the id: family words are capitalised, version digits are
+// joined with dots (GPT keeps its hyphen), a trailing release date is dropped.
+// The raw id stays in the inspector.
+const MODEL_FAMILY={gpt:'GPT',o1:'o1',o3:'o3',o4:'o4',deepseek:'DeepSeek',glm:'GLM',qwen:'Qwen',
+  kimi:'Kimi',minimax:'MiniMax',claude:'Claude',gemini:'Gemini',llama:'Llama',mistral:'Mistral',grok:'Grok'};
+function friendlyModel(value){const raw=String(value||'').trim();if(!raw)return '';
+  if(raw.toLowerCase()==='human')return 'Human';
+  const segs=raw.split(' · ');const seg=segs.find(x=>x.includes(':'))||segs[0]||raw;
+  const id=(seg.split(':').pop()||seg).trim();if(!id)return raw;
+  const tokens=id.split(/[-_/]+/).filter(Boolean);const words=[];
+  for(let i=0;i<tokens.length;i++){const tk=tokens[i];
+    if(/^\d{8}$/.test(tk)&&i===tokens.length-1)continue;
+    if(/^\d+(\.\d+)?$/.test(tk)){const last=words[words.length-1]||'';
+      if(last==='GPT')words[words.length-1]=last+'-'+tk;
+      else if(/^\d+(\.\d+)*$/.test(last)||/-\d+(\.\d+)*$/.test(last))words[words.length-1]=last+'.'+tk;
+      else words.push(tk);continue;}
+    if(/^v\d+$/i.test(tk)){words.push('V'+tk.slice(1));continue;}
+    words.push(MODEL_FAMILY[tk.toLowerCase()]||(tk.charAt(0).toUpperCase()+tk.slice(1)));}
+  return words.join(' ')||id;}
+// R4. What this task will probably take, from the completed runs of this
+// project (usage.run_forecast): the middle half of wall times when three or more
+// runs exist, the median alone below that, and the median API value. One
+// line; no new element. Localised here because the numbers are composed.
+function forecastText(d){const f=d&&d.usage&&d.usage.forecast;const zh=currentLocale==='zh';
+  if(!f||!f.runs||!f.seconds)return zh?'首次运行，暂无预估':'First run here — no estimate yet';
+  const mins=x=>Math.max(1,Math.round(Number(x)/60));
+  const lo=mins(f.seconds.p25),hi=mins(f.seconds.p75),mid=mins(f.seconds.p50);
+  const ranged=f.runs>=3&&lo!==hi;
+  const time=zh?(ranged?'通常 '+lo+'–'+hi+' 分钟':'通常约 '+mid+' 分钟')
+    :(ranged?'Usually '+lo+'–'+hi+' min':'Usually about '+mid+' min');
+  const cost=(f.usd&&f.usd.p50!=null)?(zh?' · 约 ':' · about ')+formatUsd(f.usd.p50):'';
+  return time+cost;}
+function forecastLine(d){return '<span class="run-forecast">'+esc(forecastText(d))+'</span>';}
 function turn(m,d){
   if(m.kind === 'you'){
     const explicit=m.routing_mode==='explicit';const recipient=m.addressed_to||m.lane;
@@ -5807,13 +5995,10 @@ function turn(m,d){
     +'<div class="turn-meta"><span class="role-mark generator" aria-hidden="true">G</span><b>Generator</b><span>conversational reply · not audited</span>'
     +'<span class="turn-time">'+at(m.t)+'</span></div><div class="turn-body">'+esc(m.response)+'</div></div></article>';
   if(m.kind === 'auditor'){
-    const fs = (m.findings||[]).map(f => '<div class="finding"><div class="finding-head">'
-      + '<span class="severity">' + esc(f.severity) + '</span><span>' + esc(f.rule) + '</span>'
-      + '<span class="spacer"></span><span>' + esc(f.artifact) + '</span></div><p>'
-      + esc(f.observation) + '</p>' + findingTier(f) + '</div>').join('');
+    const fs = (m.findings||[]).map(findingCard).join('');
     return '<article class="turn audit"><div class="turn-main">'
       + '<div class="turn-meta"><span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b><span class="status ' + esc(m.verdict) + '">'
-      + esc(m.verdict) + '</span><span class="turn-time">' + at(m.t) + '</span></div>'
+      + esc(verdictWord(m.verdict)) + '</span><span class="turn-time">' + at(m.t) + '</span></div>'
       + (fs || '<div class="turn-body">'+(m.verdict==='PASS'?'No findings. The audited increment passed.':'No structured findings were recorded.')+'</div>')
       // F1. What is shown above is the AUDITED report, read from the commit the
       // receipt cites. When the copy on disk says something else the person is
@@ -5890,6 +6075,7 @@ function optimisticTurn(text, queued, intake, replying){
     + '<div class="turn-meta">' + who + '</div><div class="turn-body"><span class="thinking-dots" aria-label="'
     + (currentLocale==='zh'?'处理中':'Working') + '"><i></i><i></i><i></i></span>'
     + (intake?'<div class="intake">'+intakeLines(intake)+'</div>':'')
+    + '<div class="turn-forecast">' + esc(forecastText(lastState)) + '</div>'
     + '</div></div></article>';
 }
 function modelTag(value){const raw=String(value||'');if(!raw)return '';
@@ -5994,7 +6180,7 @@ function reviewCard(d){
   const roundLines=(rows.length?rows.map(m=>{
     const count=(m.findings||[]).length;
     return '<div class="review-round-row"><span class="round-n">Round '+esc(m.round)+'/'+esc(d.max_rounds)
-      +'</span> · <span>'+(count?count+' finding'+(count===1?'':'s'):esc(m.verdict||'PASS'))
+      +'</span> · <span>'+(count?count+' finding'+(count===1?'':'s'):esc(verdictWord(m.verdict||'PASS')))
       +'</span></div>';}):['<div class="review-round-row"><span class="round-n">Round '
       +esc(cycle.round)+'/'+esc(d.max_rounds)+'</span></div>']).join('');
   // "N deterministic checks passed" counted the CONFIGURED checks and called
@@ -6010,10 +6196,7 @@ function reviewCard(d){
     :'';
   const findingRows=rows.filter(m=>(m.findings||[]).length).map(m=>
     '<div class="review-round-row"><span class="round-n">round '+esc(m.round)+'</span></div>'
-    +(m.findings||[]).map(f=>'<div class="finding"><div class="finding-head">'
-      +'<span class="severity">'+esc(f.severity)+'</span><span class="finding-where">'+esc(f.artifact)+'</span>'
-      +'<span class="spacer"></span><span class="finding-rule" title="rule id">'+esc(f.rule)+'</span></div><p>'
-      +esc(f.observation)+'</p>'+findingTier(f)+'</div>').join('')).join('');
+    +(m.findings||[]).map(findingCard).join('')).join('');
   const detail='<div class="review-detail"><div class="review-detail-inner">'
     +'<div class="review-section"><div class="review-section-title" id="review-checks-title-'+esc(cycle.id)+'">Automatic checks</div>'
     +'<p class="check-summary">'+esc(checkSummary(checks,auditCount(d)))+'</p>'
@@ -6027,12 +6210,15 @@ function reviewCard(d){
     // problems.
     +([...new Set(rows.map(m=>m.report_note).filter(Boolean))]
         .map(note=>'<p class="report-provenance">'+esc(note)+'</p>').join(''))
-    +'<div class="review-section"><div class="review-section-title">Record</div><div class="review-record">'
+    // R3. The record — who generated, who audited, which commit and cycle —
+    // sits behind a closed disclosure. Models by their friendly names; the
+    // identifiers never reach the first paint.
+    +'<details class="review-section review-details"><summary class="review-section-title">Details</summary><div class="review-record">'
+    +'<div class="review-record-row"><span>Generator</span><span>'+esc(friendlyModel(d.generator))+'</span></div>'
+    +'<div class="review-record-row"><span>Auditor</span><span>'+esc(friendlyModel(d.auditor))+'</span></div>'
     +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
     +'<div class="review-record-row"><span>Cycle</span><code>'+esc(cycle.id)+'</code></div>'
-    +'<div class="review-record-row"><span>Generator</span><code>'+esc(d.generator)+'</code></div>'
-    +'<div class="review-record-row"><span>Auditor</span><code>'+esc(d.auditor)+'</code></div>'
-    +'</div></div></div></div>';
+    +'</div></details></div></div>';
   const actionRow=status==='passed'
     ?'<button type="button" class="review-action" data-admit data-admit-cycle="'+esc(cycle.id)+'">Admit result</button>'
     :status==='escalated'
@@ -6132,7 +6318,8 @@ function runCard(d){
     + '<span>Round <strong>' + esc(round) + '</strong> of ' + esc(roundLimit) + '</span>'
     + '<span><strong>' + reached + '</strong> of ' + pipeline.length + ' steps done</span>'
     + '<span>' + (p ? elapsedText(p.elapsed) : 'Ledger snapshot') + '</span>'
-    + (p&&p.queued&&!p.finished?'<span><strong>'+esc(p.queued)+'</strong> queued</span>':'') + '</div>'
+    + (p&&p.queued&&!p.finished?'<span><strong>'+esc(p.queued)+'</strong> queued</span>':'')
+    + (live ? forecastLine(d) : '') + '</div>'
     + '<div class="run-handoff" aria-hidden="true"><i></i></div>'
     + '<div class="run-meter" role="progressbar" aria-label="Audit steps done" aria-valuemin="0" '
     + 'aria-valuemax="100" aria-valuenow="' + meter + '"><i style="width:' + meter + '%"></i></div></div>'
@@ -7840,6 +8027,12 @@ stopRun.onclick=async()=>{const progress=lastState&&chatProgress(lastState);if(!
     ?'<b>已请求停止。</b> 当前步骤结束后，任务会安全停止。'
     :'<b>Stop requested.</b> The task will stop safely at the next execution boundary.';}
   catch(e){route.className='route on error';route.textContent=e.message;stopRun.disabled=false;}};
+function setupCardMarkup(missing){
+  const both=missing.length>1,role=missing[0]||'generator';
+  const sentence=both?'Neither the generator nor the auditor has a credential yet.'
+    :role==='auditor'?'The auditor has no credential yet.':'The generator has no credential yet.';
+  return '<div class="setup-card"><b>Connect a provider first</b><span>'+sentence+'</span>'
+    +'<button type="button" class="primary setup-card-action" id="setup-open-providers">Open Settings → Providers</button></div>';}
 form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!rawText)return;
   const continuing=pendingContinuation.chat===activeChatId&&Boolean(pendingContinuation.cycle);
   const text=rawText;
@@ -7853,14 +8046,21 @@ form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!
   try{const uploadBatch=pendingFiles.length?await uploadFiles(pendingFiles):null;
     const r=await api('/api/say',{text,chat_id:activeChatId,upload_batch:uploadBatch,attachment_consent:pendingFiles.length>0,
       continuation_cycle:continuing?pendingContinuation.cycle:''});
-    if(r.accepted){
+    if(r.setup==='credentials'){optimisticSend=null;if(lastState)render(lastState);
+    // A setup step, not an audit event: nothing started, the message stays in
+    // the composer, and the one action is the place that fixes it.
+    route.className='route on setup';route.innerHTML=setupCardMarkup(r.missing||[]);
+    document.getElementById('setup-open-providers').onclick=()=>openSettings('providers');}
+    else if(r.asked){optimisticSend=null;if(lastState)render(lastState);
+    route.innerHTML='<b class="ask">Needs clarification.</b> '+esc(r.clarify);}
+    else if(r.accepted){
       // Accepted, not answered: the server is routing it now and narrates each
       // phase into the state. The composer stays held until that settles —
       // exactly as long as it used to be held by the response itself.
       pendingIntake=r.intake;activeChatId=r.chat_id||activeChatId;if(optimisticSend)optimisticSend.chat=activeChatId||'';
       route.textContent=currentLocale==='zh'?'处理中…':'Working…';
       if(lastState)render(lastState);return;}
-    applySayResult(r);if(r.asked&&lastState)render(lastState);}
+    else applySayResult(r);}
   catch(e){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b>Refused.</b> '+esc(e.message);}
   releaseComposer();};
 api('/api/state').then(render).catch(e=>{document.getElementById('thread-title').textContent='Disconnected: '+e.message;});

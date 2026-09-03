@@ -934,6 +934,27 @@ class _NoWatch:
     provider_event = None
 
 
+def setup_needed(cfg: Config) -> dict | None:
+    """The setup card the app shows instead of starting anything.
+
+    In the desktop app a role without a credential is a setup step still to
+    do, not an audit event: routing itself would ask the auditor, and a build
+    would stop in round one. So the check runs before either, presence only
+    (never a value), and answers with which role is unconnected and the one
+    place to fix it. Outside the app the same check is `preflight()`'s, and
+    surfaces as a refusal sentence — there is no Settings → Providers to open.
+    """
+    if os.environ.get("CROSSAUDIT_APP_MODE") != "1":
+        return None
+    from ..cli.build import missing_credentials
+
+    missing = missing_credentials(cfg)
+    if not missing:
+        return None
+    return {"setup": "credentials", "missing": missing,
+            "action": "providers", "asked": False, "lane": "setup"}
+
+
 def say(cfg: Config, text: str, *, attachments=None,
         attachment_consent: bool = False,
         chat_id: str = "", continuation_cycle: str = "",
@@ -954,6 +975,9 @@ def say(cfg: Config, text: str, *, attachments=None,
     from ..appservice import talk as talk_mod
 
     watch = watch if watch is not None else _NoWatch()
+    blocked = setup_needed(cfg)
+    if blocked is not None:
+        return blocked
     prepared = list(attachments or [])
     if prepared and not attachment_consent:
         raise TransferError(
@@ -1086,7 +1110,8 @@ def accept_say(cfg: Config, text: str, *, attachments=None,
     """Accept one sentence and return before anything slow happens (D150).
 
     Validation that needs no provider — consent for attachments, one message
-    at a time — is answered here as it always was (a 4xx). Everything else
+    at a time, a role with no credential yet — is answered here as it always
+    was (a 4xx, or the app's setup card). Everything else
     (the router's model call, the context read, preflight, staging, the routing
     commit, the lane itself) runs in a worker thread narrating into the intake,
     and the result ``say()`` returns lands on the intake record for the page to
@@ -1100,6 +1125,13 @@ def accept_say(cfg: Config, text: str, *, attachments=None,
                          "transmission to the configured generator "
                          f"({cfg.generator_vendor or 'unknown vendor'})",
                 "status": 400}
+    # A missing credential is presence-only and local: no provider is called to
+    # learn it, so it stays on the fast path and answers the POST directly.
+    # Behind the worker it would arrive as an intake result, and the app would
+    # show a thread and a working indicator for a message it never sent.
+    blocked = setup_needed(cfg)
+    if blocked is not None:
+        return blocked
     try:
         record = INTAKE.begin(chat_id, text)
     except RuntimeError as exc:
@@ -2025,6 +2057,12 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                 return
             if not text:
                 self._deny(400, "say something")
+                return
+            # Before the chat is touched: a message the app could not send
+            # leaves no thread behind, and stays in the composer to be resent.
+            blocked = setup_needed(self._config())
+            if blocked is not None:
+                self._send(json.dumps(blocked).encode(), "application/json")
                 return
             try:
                 chat = chats.touch(self._config(),

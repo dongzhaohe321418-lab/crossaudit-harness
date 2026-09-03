@@ -318,6 +318,10 @@ def test_page_markup_places_the_provenance_note_outside_the_findings_list():
     MARKUP ONLY. Asserts strings in ``page.py``; renders nothing and cannot
     fail if the page never reaches a person — proved under D106 by serving an
     empty document, which left it green.
+
+    Mutation (results & decisions slice R2): the findings list is rendered by
+    the shared `findingCard`, so that call — not the literal class — is the
+    marker the note must follow.
     """
     from crossaudit.console.page import PAGE
 
@@ -326,7 +330,7 @@ def test_page_markup_places_the_provenance_note_outside_the_findings_list():
     turn = PAGE[PAGE.index("if(m.kind === 'auditor'){"):]
     turn = turn[:turn.index("if(m.kind === 'context_condensed')")]
     assert "m.report_note" in turn
-    assert turn.index("report-provenance") > turn.index('class="finding"'), (
+    assert turn.index("report-provenance") > turn.index("map(findingCard)"), (
         "the note is rendered inside the findings, where it reads as something "
         "the auditor observed")
     # The review card, which is where a person meets the result first.

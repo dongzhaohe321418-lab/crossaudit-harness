@@ -607,3 +607,52 @@ def test_a_real_staged_diff_with_cjk_space_and_quote_names(tmp_path):
     # And the quoted (quotepath=true) spelling of the same diff still parses.
     quoted = _git("-c", "core.quotepath=true", "diff", "--cached", "--binary", "--no-ext-diff", cwd=repo)
     assert set(parse_unified_diff(quoted)) == set(staged)
+
+
+# ==================================================== closure audit D #6
+
+def test_numstat_names_binaries_independently_of_the_diff_text(tmp_path):
+    """`git diff --cached --numstat -z` is the binary screen's source.
+    Mutation: treat `-\\t-` as text -> no binary is reported."""
+    from crossaudit.repair_guard import parse_numstat
+
+    repo = tmp_path / "repo"
+    (repo / "experiments").mkdir(parents=True)
+    _git("init", "-q", "-b", "main", cwd=repo)
+    _git("config", "user.email", "t@example.invalid", cwd=repo)
+    _git("config", "user.name", "T", cwd=repo)
+    (repo / "a.md").write_text("x\n")
+    _git("add", "-A", cwd=repo)
+    _git("commit", "-q", "-m", "base", cwd=repo)
+    (repo / "experiments/图 2.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00new")
+    (repo / "experiments/fig 1.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00new")
+    (repo / "experiments/报告.md").write_text("one\ntwo\n")
+    _git("add", "-A", cwd=repo)
+    raw = subprocess.run(["git", "diff", "--cached", "--numstat", "-z"], cwd=str(repo),
+                         capture_output=True, check=True).stdout
+    stat = parse_numstat(raw)
+    assert stat["experiments/图 2.png"] == (None, None, True)
+    assert stat["experiments/fig 1.png"] == (None, None, True)
+    assert stat["experiments/报告.md"] == (2, 0, False)
+    # The rename form (added\tremoved\t\0old\0new\0) keeps the post-image path.
+    assert parse_numstat(b"-\t-\t\0old.png\0new dir/new.png\0") == {
+        "new dir/new.png": (None, None, True)}
+
+
+def test_a_reported_binary_is_refused_even_when_the_diff_was_cut_before_it():
+    """Closure D #6. Mutation: derive untrusted_binary from the diff text only
+    -> a binary past the cap is committed with a caution."""
+    big = diff("docs/A_big.md", ["x" * 600_000]) + (
+        "diff --git a/docs/fig 1.png b/docs/fig 1.png\nindex 1..2 100644\n"
+        "Binary files a/docs/fig 1.png and b/docs/fig 1.png differ\n")
+    cut = big[:512 * 1024]
+    assert "fig 1.png" not in cut
+    staged = ["docs/A_big.md", "docs/fig 1.png"]
+    r = G.assess(cut, scope_dirs=["docs"], staged_files=staged,
+                 binary_files=["docs/fig 1.png"], truncated=True)
+    assert not r.allowed and r.binary_files == ("docs/fig 1.png",)
+    assert r.unscreened_files == ()                  # it was screened: refused
+    ok = G.assess(cut, scope_dirs=["docs"], staged_files=staged,
+                  binary_files=["docs/fig 1.png"],
+                  locally_rendered_files={"docs/fig 1.png"}, truncated=True)
+    assert ok.allowed and ok.binary_files == ()
