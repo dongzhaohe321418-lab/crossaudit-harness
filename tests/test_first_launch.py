@@ -457,7 +457,9 @@ def test_role_selection_rejects_a_same_vendor_pair(tmp_path: Path):
     # overlaps) second, and the invariant's name (I1) nowhere in it.
     assert denied is False
     assert reason.startswith("The generator and the auditor must use different providers")
-    assert "Project controls" in reason and "overlap at openai" in reason
+    assert "crossaudit.yml" in reason and "overlap at openai" in reason
+    assert "Project controls" not in reason, "the CLI has no such screen"
+    assert reason.count(". ") <= 1, "two sentences at most"
     assert "I1" not in reason
 
 

@@ -1193,11 +1193,19 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the generator's provider is not declared, so independent review cannot be "
      "asserted; choose one in Project controls",
      "未声明生成者的供应商，因此无法断言独立审查；请在项目控制里选择一个"),
+    ("the generator's provider is not declared, so independent review cannot be "
+     "asserted; choose one in crossaudit.yml",
+     "未声明生成者的供应商，因此无法断言独立审查；请在 crossaudit.yml 里选择一个"),
     ("The generator and the auditor must use different providers — independent review "
-     "is the core of the protocol. Change one of them in Project controls. Their routes "
-     "overlap at {}.",
-     "生成者与审计者必须使用不同的供应商——独立审查是协议的核心。请在项目控制里更改其中一个。"
-     "两者的路由在 {} 处重叠。"),
+     "is the core of the protocol. Change one in Project controls; their routes overlap "
+     "at {}.",
+     "生成者与审计者必须使用不同的供应商——独立审查是协议的核心。"
+     "请在项目控制里更改其中一个；两者的路由在 {} 处重叠。"),
+    ("The generator and the auditor must use different providers — independent review "
+     "is the core of the protocol. Change one in crossaudit.yml; their routes overlap "
+     "at {}.",
+     "生成者与审计者必须使用不同的供应商——独立审查是协议的核心。"
+     "请在 crossaudit.yml 里更改其中一个；两者的路由在 {} 处重叠。"),
     # ------------------------------------------ connections.py (variable)
     ("that provider login method is not supported", "不支持该供应商的登录方式"),
     ("Official ChatGPT subscription sign-in is available through the bundled Codex "

@@ -431,24 +431,38 @@ def load(path: Path | None = None) -> Config:
     )
 
 
-def heterogeneity(cfg: Config) -> tuple[bool, str]:
+#: Where a person changes a role's provider, by surface: the CLI edits the
+#: file, the console has Project controls. A sentence that names a screen the
+#: reader does not have is a sentence they cannot act on.
+HETEROGENEITY_PLACE = {"cli": "crossaudit.yml", "console": "Project controls"}
+
+
+def heterogeneity(cfg: Config, surface: str = "cli") -> tuple[bool, str]:
     """I1 asserted from configuration. Unknown generator vendor cannot assert it.
 
     The sentence returned is the one a person reads — in the CLI, the console's
-    project controls and the doctor — so it says what to do; the invariant's
-    name (I1) stays in the code, the ledger and the tests.
+    project controls and the doctor — so it says what to do, on the surface
+    that will print it; the invariant's name (I1) stays in the code, the
+    ledger and the tests.
     """
     if not cfg.generator_vendor:
+        if surface == "console":
+            return False, ("the generator's provider is not declared, so independent "
+                           "review cannot be asserted; choose one in Project controls")
         return False, ("the generator's provider is not declared, so independent "
-                       "review cannot be asserted; choose one in Project controls")
+                       "review cannot be asserted; choose one in crossaudit.yml")
     generator_vendors = {cfg.generator_vendor.strip().lower(),
                          *(r.vendor.strip().lower() for r in cfg.generator_fallbacks)}
     auditor_vendors = {cfg.auditor.vendor.strip().lower(),
                        *(r.vendor.strip().lower() for r in cfg.auditor.fallbacks)}
     overlap = sorted(generator_vendors & auditor_vendors)
     if overlap:
+        where = ", ".join(overlap)
+        if surface == "console":
+            return False, ("The generator and the auditor must use different providers "
+                           "— independent review is the core of the protocol. Change one "
+                           f"in Project controls; their routes overlap at {where}.")
         return False, ("The generator and the auditor must use different providers "
                        "— independent review is the core of the protocol. Change one "
-                       "of them in Project controls. Their routes overlap at "
-                       + ", ".join(overlap) + ".")
+                       f"in crossaudit.yml; their routes overlap at {where}.")
     return True, f"{cfg.generator_vendor} -> {cfg.auditor.vendor}"

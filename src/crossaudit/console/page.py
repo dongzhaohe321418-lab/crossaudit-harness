@@ -928,11 +928,13 @@ textarea::placeholder{color:var(--text-3)}
 .route{display:none;margin:7px 3px 0;padding:7px 9px;border-radius:var(--r-sm);background:var(--surface-2);
   color:var(--text-2);font-size:var(--fs-label);white-space:pre-wrap;word-break:break-word}
 .route.on{display:block}
-.route.setup{background:var(--escalated-bg,var(--surface-2))}
+.route.setup{background:var(--accent-bg);border:1px solid var(--line)}
 .setup-card{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
 .setup-card b{flex:1 1 100%}
 .setup-card span{flex:1 1 auto;color:var(--text-2)}
 .setup-card-action{flex:0 0 auto}
+#data-locations{padding-left:18px}
+#data-locations .data-where:before{content:" — "}
 .route b{color:var(--text)}
 .route .ask{color:var(--escalated)}
 .drop-overlay{position:fixed;inset:0;z-index:var(--z-overlay);display:none;place-items:center;padding:26px;
@@ -2878,7 +2880,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <p class="settings-hint">API keys are stored as write-only macOS Keychain items and are never shown again.</p>
       <div class="form-title">Where CrossAudit keeps data</div>
       <p class="settings-hint">Everything CrossAudit stores lives in three places; removing them removes every trace.</p>
-      <ul class="settings-hint" id="data-locations"><li><b>App and workspace</b> — <code>~/Library/Application Support/CrossAudit</code></li><li><b>Project state</b> — <code>.crossaudit/</code> inside each project folder (the audit ledger in <code>cycles/</code> is part of the repository)</li><li><b>API keys</b> — macOS Keychain items named <code>io.crossaudit.app.provider.&lt;vendor&gt;</code>; remove them under Providers</li></ul>
+      <ul class="settings-hint" id="data-locations"><li><b>App and workspace</b><span class="data-where">~/Library/Application Support/CrossAudit</span></li><li><b>Project state</b><span class="data-where">.crossaudit/ inside each project folder (the audit ledger in cycles/ is part of the repository)</span></li><li><b>API keys</b><span class="data-where">macOS Keychain items named io.crossaudit.app.provider.&lt;vendor&gt;; remove them under Providers</span></li></ul>
       <p class="settings-empty">Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.</p>
     </section><section class="form-section settings-pane" data-settings-pane="diagnostics" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Diagnostics</span><h3>Diagnostics</h3><p>Check this Mac's setup and versions, and repair problems.</p></div>
       <div class="settings-readiness"><div class="readiness-item">Git<span id="git-state">…</span></div>
@@ -3162,7 +3164,7 @@ const ZH={
   "SSH hosts and scheduler limits are configured inside the active project. Transfer limits use built-in defaults.":"SSH 主机与调度器限制在当前项目内部配置。传输限制使用内置默认值。",
   "MCP servers and generator skills are configured inside the active project.":"MCP 服务器与生成者技能在当前项目内部配置。",
   "API keys are stored as write-only macOS Keychain items and are never shown again.":"API 密钥以只写方式存入 macOS 钥匙串，且不会再次显示。",
-  "Where CrossAudit keeps data":"CrossAudit 的数据存放位置","Everything CrossAudit stores lives in three places; removing them removes every trace.":"CrossAudit 保存的所有内容只在三个位置；删除它们即可清除全部痕迹。","App and workspace":"应用与工作区","Project state":"项目状态","API keys":"API 密钥","inside each project folder (the audit ledger in":"位于每个项目文件夹内（","is part of the repository)":"中的审计账本属于仓库的一部分）","— macOS Keychain items named":"—— macOS 钥匙串条目，名为","; remove them under Providers":"；可在“供应商”中移除",
+  "Where CrossAudit keeps data":"CrossAudit 的数据存放位置","Everything CrossAudit stores lives in three places; removing them removes every trace.":"CrossAudit 保存的所有内容只在三个位置；删除它们即可清除全部痕迹。","App and workspace":"应用与工作区","Project state":"项目状态","API keys":"API 密钥",".crossaudit/ inside each project folder (the audit ledger in cycles/ is part of the repository)":"每个项目文件夹内的 .crossaudit/（cycles/ 中的审计账本属于仓库的一部分）","macOS Keychain items named io.crossaudit.app.provider.<vendor>; remove them under Providers":"macOS 钥匙串条目，名为 io.crossaudit.app.provider.<vendor>；可在“供应商”中移除",
   "Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.":"供应商路由按项目设置。留存、脱敏与日志控制此处暂不可配置。",
   "Logs, support bundles, and per-subsystem reset aren't available here yet.":"日志、支持包与按子系统重置此处暂不可用。",
   "No developer settings, experiments, local endpoints, or debug logging are configurable here yet.":"暂无可配置的开发者设置、实验、本地端点或调试日志。",
@@ -3677,8 +3679,8 @@ const ZH={
   ,"the round could not be committed":"该轮次无法提交","rendering final document locally":"正在本地渲染最终文档","the round reproduced the previous one; nothing new to audit":"本轮与上一轮结果相同；没有新的内容可审计"
   ,"the loop cannot settle this itself":"循环无法自行解决此问题","this stop is waiting for a human":"此次停止正在等待人工处理"
   ,"Thinking":"思考中","Generator live reply · not audited":"生成者实时回复 · 未经审计","Auditor live reply · direct reply":"审计者实时回复 · 直接回复"
-  ,"Connect a provider first":"请先连接供应商","The generator has no credential yet.":"生成者尚未连接凭据。","The auditor has no credential yet.":"审计者尚未连接凭据。"
-  ,"Neither the generator nor the auditor has a credential yet.":"生成者与审计者都尚未连接凭据。","Open Settings → Providers":"打开设置 → 供应商"
+  ,"Connect a provider first":"请先连接供应商","The generator has no credential yet.":"生成者还没有配置凭据。","The auditor has no credential yet.":"审计者还没有配置凭据。"
+  ,"Neither the generator nor the auditor has a credential yet.":"生成者与审计者都还没有配置凭据。","Open Settings → Providers":"打开设置 → 供应商"
   ,"Task started.":"任务已开始。","The result will appear in this conversation.":"结果会显示在此对话中。","Needs clarification.":"需要澄清。","Refused.":"已拒绝。","Message delivered.":"消息已送达。","Sending your files…":"正在发送文件…"
   ,"Pinned":"已置顶","Recent":"最近","Upload failed":"上传失败","Uploaded":"已上传"
   ,"Stored in chunks without an app quota. Model inspection depends on file support and context.":"分块存储，应用不设配额。模型能否读取取决于文件支持与上下文。"
@@ -3994,6 +3996,14 @@ const ZH_PATTERNS=[
   ,[/^All (\d+) checks? passed on the latest round\.$/,m=>'最近一轮的 '+m[1]+' 项检查全部通过。']
   ,[/^(\d+) of (\d+) checks? did not pass on the latest round\.$/,m=>'最近一轮中有 '+m[1]+' 项检查未通过。']
   ,[/^(\d+) of (\d+) checks? (?:has|have) not run on the latest round\.$/,m=>'最近一轮中有 '+m[1]+' 项检查尚未运行。']
+  // Provider recovery narration (providers/resilience.py emitters). The
+  // run card reads the served text_i18n; these serve the walker-driven
+  // surfaces. Gate: tests/test_setup_preflight.py drives every emitter.
+  ,[/^Retrying the (generator|auditor)\x27s provider · attempt (\d+)$/,m=>'正在重试'+({generator:'生成者',auditor:'审计者'})[m[1]]+'的供应商 · 第 '+m[2]+' 次']
+  ,[/^Waiting to retry the (generator|auditor)\x27s provider · ([\d.]+) s$/,m=>'等待重试'+({generator:'生成者',auditor:'审计者'})[m[1]]+'的供应商 · '+m[2]+' 秒']
+  ,[/^Connected to the (generator|auditor)\x27s backup provider$/,m=>'已连接'+({generator:'生成者',auditor:'审计者'})[m[1]]+'的备用供应商']
+  ,[/^The (generator|auditor)\x27s backup provider is unavailable$/,m=>({generator:'生成者',auditor:'审计者'})[m[1]]+'的备用供应商不可用']
+  ,[/^The (generator|auditor)\x27s provider has no credential$/,m=>({generator:'生成者',auditor:'审计者'})[m[1]]+'的供应商没有凭据']
   ,[/^(\d+) checks? passed, (\d+) had nothing to check\.$/,m=>m[1]+' 项检查通过，'+m[2]+' 项没有可检查的内容。']
   ,[/^(.+): (passed|did not pass|not run yet|nothing to check)$/,m=>m[1]+'：'
     +({passed:'已通过','did not pass':'未通过','not run yet':'尚未运行','nothing to check':'没有可检查的内容'})[m[2]]]
@@ -5037,9 +5047,10 @@ resolutionForm.onsubmit=async ev=>{ev.preventDefault();const button=document.get
   if(!action){showInlineError('resolution-error','Choose whether to revise and continue, or stop this task.');return;}
   if(!reason&&!(provider&&action==='reopen')){showInlineError('resolution-error','Add concrete guidance or a reason so the decision is auditable.');return;}
   button.disabled=true;document.getElementById('resolution-error').className='wizard-error';
-  try{await api('/api/escalation',{cycle_id:cycleId,action:provider&&action==='reopen'?'retry_provider':action,reason});
+  try{const r=await api('/api/escalation',{cycle_id:cycleId,action:provider&&action==='reopen'?'retry_provider':action,reason});
     closeResolution();route.className='route on';
-    if(provider&&action==='reopen'){
+    if(r&&r.setup==='credentials'){showSetupCard(r.missing||[]);}
+    else if(provider&&action==='reopen'){
       pendingContinuation={cycle:'',chat:''};
       route.innerHTML='<b>Provider retry started.</b> The original task is running again; live progress will appear here.';
     }else if(action==='reopen'){
@@ -7316,7 +7327,9 @@ function render(d){
 }
 document.getElementById('interrupted').onclick=async ev=>{const button=ev.target.closest('[data-interrupted]');if(!button)return;
   button.disabled=true;const action=button.getAttribute('data-interrupted');
-  try{await api('/api/interrupted',{action});route.className='route on';route.innerHTML=currentLocale==='zh'
+  try{const r=await api('/api/interrupted',{action});route.className='route on';
+    if(r&&r.setup==='credentials'){showSetupCard(r.missing||[]);button.disabled=false;return;}
+    route.innerHTML=currentLocale==='zh'
     ?(action==='retry'?'<b>任务已重启</b> — 正从最近的持久 Git 提交继续。':'<b>提示已忽略</b> — 文件和已提交证据均已保留。')
     :(action==='retry'?'<b>Task restarted.</b> Continuing from the last durable Git commit.':'<b>Notice dismissed.</b> Files and committed evidence were preserved.');}
   catch(e){route.className='route on error';route.textContent=e.message;button.disabled=false;}};
@@ -8236,6 +8249,8 @@ stopRun.onclick=async()=>{const progress=lastState&&chatProgress(lastState);if(!
     ?'<b>已请求停止。</b> 当前步骤结束后，任务会安全停止。'
     :'<b>Stop requested.</b> The task will stop safely at the next execution boundary.';}
   catch(e){route.className='route on error';route.textContent=e.message;stopRun.disabled=false;}};
+function showSetupCard(missing){route.className='route on setup';route.innerHTML=setupCardMarkup(missing);
+  document.getElementById('setup-open-providers').onclick=()=>openSettings('providers');}
 function setupCardMarkup(missing){
   const both=missing.length>1,role=missing[0]||'generator';
   const sentence=both?'Neither the generator nor the auditor has a credential yet.'
@@ -8258,8 +8273,7 @@ form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!
     if(r.setup==='credentials'){optimisticSend=null;if(lastState)render(lastState);
     // A setup step, not an audit event: nothing started, the message stays in
     // the composer, and the one action is the place that fixes it.
-    route.className='route on setup';route.innerHTML=setupCardMarkup(r.missing||[]);
-    document.getElementById('setup-open-providers').onclick=()=>openSettings('providers');}
+    showSetupCard(r.missing||[]);}
     else if(r.asked){optimisticSend=null;if(lastState)render(lastState);
     route.innerHTML='<b class="ask">Needs clarification.</b> '+esc(r.clarify);}
     else if(r.accepted){

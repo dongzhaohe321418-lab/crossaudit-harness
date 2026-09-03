@@ -73,6 +73,9 @@ PHASE_KINDS = frozenset({
     "received", "routed", "answering", "preparing", "prompt_ready",
     "still_working", "auditor_reading", "auditor_progress",
     "check_started", "check_finished", "answered",
+    # The resilience layer's narration (providers/resilience.py emitters):
+    # composed sentences, so each is a pattern below, never a fixed entry.
+    "provider_recovery",
 })
 
 PHASE_TEXT_ZH = {
@@ -122,7 +125,25 @@ def _zh_check(word: str) -> str:
     return CHECK_WORDS_ZH.get(word, word)
 
 
+#: The role words the resilience narration composes with.
+ROLE_WORDS_ZH = {"generator": "生成者", "auditor": "审计者"}
+
+
+def _zh_role(word: str) -> str:
+    return ROLE_WORDS_ZH.get(word, word)
+
+
 PHASE_PATTERNS_ZH = (
+    (re.compile(r"Retrying the (\w+)'s provider · attempt (\d+)"),
+     lambda m: f"正在重试{_zh_role(m.group(1))}的供应商 · 第 {m.group(2)} 次"),
+    (re.compile(r"Waiting to retry the (\w+)'s provider · ([\d.]+) s"),
+     lambda m: f"等待重试{_zh_role(m.group(1))}的供应商 · {m.group(2)} 秒"),
+    (re.compile(r"Connected to the (\w+)'s backup provider"),
+     lambda m: f"已连接{_zh_role(m.group(1))}的备用供应商"),
+    (re.compile(r"The (\w+)'s backup provider is unavailable"),
+     lambda m: f"{_zh_role(m.group(1))}的备用供应商不可用"),
+    (re.compile(r"The (\w+)'s provider has no credential"),
+     lambda m: f"{_zh_role(m.group(1))}的供应商没有凭据"),
     (re.compile(r"Still (routing|preparing|generating|auditing|replying|reviewing) · (\d+) s"),
      lambda m: f"{STILL_WORKING_ZH[m.group(1)]} · {m.group(2)} 秒"),
     (re.compile(r"Reading the workspace · (\d+) files?"),
@@ -154,6 +175,9 @@ def phase_i18n(text: str) -> dict[str, str]:
 #: attempt is the fact a person needs; the route identity is for the Models
 #: panel, not the run card (D150: no provider:model strings on the surface).
 _ROUTE_DETAIL = re.compile(r"^\S+:\S+ · (.+)$")
+#: A detail that is only the route (``vendor:model``): the sentence beside it
+#: already says what happened, so the surface shows nothing here.
+_ROUTE_ONLY = re.compile(r"^\S+:\S+$")
 
 
 #: Details older events compose with an identifier in them. The projection
@@ -171,6 +195,8 @@ def concise_detail(kind: str, detail: str) -> str:
     match = _ROUTE_DETAIL.match(detail)
     if match:
         detail = match.group(1)
+    elif kind == "provider_recovery" and _ROUTE_ONLY.match(detail):
+        return ""
     return _CYCLE_REF.sub("this cycle", detail)
 
 

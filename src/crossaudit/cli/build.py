@@ -1280,15 +1280,19 @@ def resolve_task(cfg, words: list[str]) -> str:
     return task
 
 
-def preflight(cfg) -> None:
-    """What must hold before either caller starts a loop."""
+def preflight(cfg, surface: str = "cli") -> None:
+    """What must hold before either caller starts a loop.
+
+    ``surface`` names who will print a refusal: the console passes "console"
+    so the same-vendor sentence points at Project controls, not at a file.
+    """
     if not is_repo(cfg.root):
         raise ConfigDenial(f"{cfg.root} is not a git repository; the ledger is git")
     if not cfg.scope_dirs:
         raise ConfigDenial(
             "scope.dirs is not set: the generator must be told where it may write, "
             "or it could rewrite the rules it is judged by")
-    het_ok, why = heterogeneity(cfg)
+    het_ok, why = heterogeneity(cfg, surface)
     if not het_ok:
         raise ConfigDenial(why)
     credential_preflight(cfg)
@@ -1318,8 +1322,14 @@ def missing_credentials(cfg) -> list[str]:
     missing: list[str] = []
     generator_vendor = (cfg.generator_vendor or "").strip()
     if generator_vendor and generator_vendor.lower() != "human":
-        provider = (_os.environ.get("CROSSAUDIT_GENERATOR_PROVIDER")
-                    or cfg.generator_provider or "")
+        configured = cfg.generator_provider or ""
+        # A developer's exported CROSSAUDIT_GENERATOR_PROVIDER must not make
+        # the credential-free demo (provider: replay) demand a key: a
+        # keyless configured provider wins over the override.
+        if configured and not NEEDS_KEY.get(configured, True):
+            provider = configured
+        else:
+            provider = _os.environ.get("CROSSAUDIT_GENERATOR_PROVIDER") or configured
         if not present(generator_vendor, cfg.generator_key_env
                        or "CROSSAUDIT_GENERATOR_KEY", provider):
             missing.append("generator")
