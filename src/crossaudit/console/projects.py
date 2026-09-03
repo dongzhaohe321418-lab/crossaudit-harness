@@ -1422,7 +1422,7 @@ def update_runtime(current: Config, payload: dict) -> dict:
             temp.write_text(revised, encoding="utf-8", newline="")
             temp.replace(current.path)
             updated = load(current.path)
-            ok, why = heterogeneity(updated)
+            ok, why = heterogeneity(updated, "console")
             if not ok:
                 raise ConfigDenial(why)
             commit_message = (f"config: {choices['generator'][0] or 'human'} -> "

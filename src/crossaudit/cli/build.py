@@ -757,17 +757,21 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                 emit("guidance_received", "input",
                      f"reading {len(fresh_guidance)} owner message(s)",
                      joined[:2000], state=RunState.GENERATING)
-        emit("generation_started", "generator", "writing",
-             state=RunState.GENERATING)
         # D150: the workspace read is the longest silent stretch before the
         # first token, so it is announced before it starts (the count is a
         # cheap walk; the read is the cost) and the prompt hand-off after it.
+        # The order is the order things happen in: the reader learns the
+        # workspace is being read, then that the generator was asked, then
+        # that it is writing. Announcing "writing" first said the wrong thing
+        # first and buried the explanation for the pause underneath it.
         emit("preparing", "generator",
              f"Reading the workspace · {_workspace_file_count(cfg)} files",
              state=RunState.GENERATING)
         current = _current_work(cfg, task, findings, context_report)
         in_force = skills_mod.select(house, list(current) or cfg.scope_dirs)
         emit("prompt_ready", "generator", "Asking the generator to write",
+             state=RunState.GENERATING)
+        emit("generation_started", "generator", "writing",
              state=RunState.GENERATING)
         try:
             while True:
@@ -1298,15 +1302,19 @@ def resolve_task(cfg, words: list[str]) -> str:
     return task
 
 
-def preflight(cfg) -> None:
-    """What must hold before either caller starts a loop."""
+def preflight(cfg, surface: str = "cli") -> None:
+    """What must hold before either caller starts a loop.
+
+    ``surface`` names who will print a refusal: the console passes "console"
+    so the same-vendor sentence points at Project controls, not at a file.
+    """
     if not is_repo(cfg.root):
         raise ConfigDenial(f"{cfg.root} is not a git repository; the ledger is git")
     if not cfg.scope_dirs:
         raise ConfigDenial(
             "scope.dirs is not set: the generator must be told where it may write, "
             "or it could rewrite the rules it is judged by")
-    het_ok, why = heterogeneity(cfg)
+    het_ok, why = heterogeneity(cfg, surface)
     if not het_ok:
         raise ConfigDenial(why)
     credential_preflight(cfg)
@@ -1336,8 +1344,14 @@ def missing_credentials(cfg) -> list[str]:
     missing: list[str] = []
     generator_vendor = (cfg.generator_vendor or "").strip()
     if generator_vendor and generator_vendor.lower() != "human":
-        provider = (_os.environ.get("CROSSAUDIT_GENERATOR_PROVIDER")
-                    or cfg.generator_provider or "")
+        configured = cfg.generator_provider or ""
+        # A developer's exported CROSSAUDIT_GENERATOR_PROVIDER must not make
+        # the credential-free demo (provider: replay) demand a key: a
+        # keyless configured provider wins over the override.
+        if configured and not NEEDS_KEY.get(configured, True):
+            provider = configured
+        else:
+            provider = _os.environ.get("CROSSAUDIT_GENERATOR_PROVIDER") or configured
         if not present(generator_vendor, cfg.generator_key_env
                        or "CROSSAUDIT_GENERATOR_KEY", provider):
             missing.append("generator")

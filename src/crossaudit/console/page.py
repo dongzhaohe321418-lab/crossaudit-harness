@@ -838,6 +838,13 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .audit-event{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:9px;align-items:start;
   padding:6px 5px;border-radius:var(--r-xs)}
 .audit-event:hover{background:var(--hover)}
+/* The folded thinking row: the grid lives on the summary, so the closed row
+   sits on the same rhythm as every other activity line. */
+details.audit-event{display:block}
+details.live-thinking>summary{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:9px;
+  align-items:start;cursor:pointer;list-style:none}
+details.live-thinking>summary::-webkit-details-marker{display:none}
+details.live-thinking>.event-detail{padding:2px 5px 4px 38px}
 .event-mark{width:22px;height:22px;border-radius:var(--r-xs);display:grid;place-items:center;
   background:var(--surface-2);color:var(--text-2);font-size:8.5px;font-weight:600}
 .event-mark.generator{background:var(--role-g-bg);color:var(--role-g)}
@@ -930,11 +937,13 @@ textarea::placeholder{color:var(--text-3)}
 .route{display:none;margin:7px 3px 0;padding:7px 9px;border-radius:var(--r-sm);background:var(--surface-2);
   color:var(--text-2);font-size:var(--fs-label);white-space:pre-wrap;word-break:break-word}
 .route.on{display:block}
-.route.setup{background:var(--escalated-bg,var(--surface-2))}
+.route.setup{background:var(--accent-bg);border:1px solid var(--line)}
 .setup-card{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
 .setup-card b{flex:1 1 100%}
 .setup-card span{flex:1 1 auto;color:var(--text-2)}
 .setup-card-action{flex:0 0 auto}
+#data-locations{padding-left:18px}
+#data-locations .data-where:before{content:" — "}
 .route b{color:var(--text)}
 .route .ask{color:var(--escalated)}
 .drop-overlay{position:fixed;inset:0;z-index:var(--z-overlay);display:none;place-items:center;padding:26px;
@@ -2881,7 +2890,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
       <p class="settings-hint">API keys are stored as write-only macOS Keychain items and are never shown again.</p>
       <div class="form-title">Where CrossAudit keeps data</div>
       <p class="settings-hint">Everything CrossAudit stores lives in three places; removing them removes every trace.</p>
-      <ul class="settings-hint" id="data-locations"><li><b>App and workspace</b> — <code>~/Library/Application Support/CrossAudit</code></li><li><b>Project state</b> — <code>.crossaudit/</code> inside each project folder (the audit ledger in <code>cycles/</code> is part of the repository)</li><li><b>API keys</b> — macOS Keychain items named <code>io.crossaudit.app.provider.&lt;vendor&gt;</code>; remove them under Providers</li></ul>
+      <ul class="settings-hint" id="data-locations"><li><b>App and workspace</b><span class="data-where">~/Library/Application Support/CrossAudit</span></li><li><b>Project state</b><span class="data-where">.crossaudit/ inside each project folder (the audit ledger in cycles/ is part of the repository)</span></li><li><b>API keys</b><span class="data-where">macOS Keychain items named io.crossaudit.app.provider.&lt;vendor&gt;; remove them under Providers</span></li></ul>
       <p class="settings-empty">Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.</p>
     </section><section class="form-section settings-pane" data-settings-pane="diagnostics" tabindex="-1" hidden><div class="step-heading settings-heading"><span>Diagnostics</span><h3>Diagnostics</h3><p>Check this Mac's setup and versions, and repair problems.</p></div>
       <div class="settings-readiness"><div class="readiness-item">Git<span id="git-state">…</span></div>
@@ -3165,7 +3174,7 @@ const ZH={
   "SSH hosts and scheduler limits are configured inside the active project. Transfer limits use built-in defaults.":"SSH 主机与调度器限制在当前项目内部配置。传输限制使用内置默认值。",
   "MCP servers and generator skills are configured inside the active project.":"MCP 服务器与生成者技能在当前项目内部配置。",
   "API keys are stored as write-only macOS Keychain items and are never shown again.":"API 密钥以只写方式存入 macOS 钥匙串，且不会再次显示。",
-  "Where CrossAudit keeps data":"CrossAudit 的数据存放位置","Everything CrossAudit stores lives in three places; removing them removes every trace.":"CrossAudit 保存的所有内容只在三个位置；删除它们即可清除全部痕迹。","App and workspace":"应用与工作区","Project state":"项目状态","API keys":"API 密钥","inside each project folder (the audit ledger in":"位于每个项目文件夹内（","is part of the repository)":"中的审计账本属于仓库的一部分）","— macOS Keychain items named":"—— macOS 钥匙串条目，名为","; remove them under Providers":"；可在“供应商”中移除",
+  "Where CrossAudit keeps data":"CrossAudit 的数据存放位置","Everything CrossAudit stores lives in three places; removing them removes every trace.":"CrossAudit 保存的所有内容只在三个位置；删除它们即可清除全部痕迹。","App and workspace":"应用与工作区","Project state":"项目状态","API keys":"API 密钥",".crossaudit/ inside each project folder (the audit ledger in cycles/ is part of the repository)":"每个项目文件夹内的 .crossaudit/（cycles/ 中的审计账本属于仓库的一部分）","macOS Keychain items named io.crossaudit.app.provider.<vendor>; remove them under Providers":"macOS 钥匙串条目，名为 io.crossaudit.app.provider.<vendor>；可在“供应商”中移除",
   "Provider routing is set per project. Retention, redaction, and log controls aren't configurable here yet.":"供应商路由按项目设置。留存、脱敏与日志控制此处暂不可配置。",
   "Logs, support bundles, and per-subsystem reset aren't available here yet.":"日志、支持包与按子系统重置此处暂不可用。",
   "No developer settings, experiments, local endpoints, or debug logging are configurable here yet.":"暂无可配置的开发者设置、实验、本地端点或调试日志。",
@@ -3682,8 +3691,11 @@ const ZH={
   ,"the round could not be committed":"该轮次无法提交","rendering final document locally":"正在本地渲染最终文档","the round reproduced the previous one; nothing new to audit":"本轮与上一轮结果相同；没有新的内容可审计"
   ,"the loop cannot settle this itself":"循环无法自行解决此问题","this stop is waiting for a human":"此次停止正在等待人工处理"
   ,"Thinking":"思考中","Generator live reply · not audited":"生成者实时回复 · 未经审计","Auditor live reply · direct reply":"审计者实时回复 · 直接回复"
-  ,"Connect a provider first":"请先连接供应商","The generator has no credential yet.":"生成者尚未连接凭据。","The auditor has no credential yet.":"审计者尚未连接凭据。"
-  ,"Neither the generator nor the auditor has a credential yet.":"生成者与审计者都尚未连接凭据。","Open Settings → Providers":"打开设置 → 供应商"
+  ,"Thinking · not audited":"思考中 · 未经审计"
+  ,"the previous message is still being handled":"上一条消息仍在处理中"
+  ,"Something went wrong handling that message. Nothing was started.":"处理这条消息时出错，没有启动任何任务。"
+  ,"Connect a provider first":"请先连接供应商","The generator has no credential yet.":"生成者还没有配置凭据。","The auditor has no credential yet.":"审计者还没有配置凭据。"
+  ,"Neither the generator nor the auditor has a credential yet.":"生成者与审计者都还没有配置凭据。","Open Settings → Providers":"打开设置 → 供应商"
   ,"Task started.":"任务已开始。","The result will appear in this conversation.":"结果会显示在此对话中。","Needs clarification.":"需要澄清。","Refused.":"已拒绝。","Message delivered.":"消息已送达。","Sending your files…":"正在发送文件…"
   ,"Pinned":"已置顶","Recent":"最近","Upload failed":"上传失败","Uploaded":"已上传"
   ,"Stored in chunks without an app quota. Model inspection depends on file support and context.":"分块存储，应用不设配额。模型能否读取取决于文件支持与上下文。"
@@ -3730,36 +3742,36 @@ const ZH={
   // Details record, the forecast line and one copy set per ESCALATE cause.
   ,"Needs you":"需要你","Checks only":"仅自动检查"
   ,"must fix":"必须修改","suggestion":"建议"
-  ,"verified by a check":"已由检查验证","raised by the auditor":"由审计者提出","raised by the auditor, verified":"由审计者提出，已验证"
+  ,"verified by a check":"已由检查验证","raised by the auditor, not yet reproduced":"由审计者提出，尚未复现","raised by the auditor, verified":"由审计者提出，已验证"
   ,"Details":"详情","Human":"人工"
-  ,"First run here — no estimate yet":"首次运行，暂无预估"
+  ,"First run here — no estimate yet":"首次运行，暂无预估","Usually under a minute":"通常不到 1 分钟","Rules":"规则"
   ,"Nothing to review yet":"尚无可审内容","The task produced no work in the audited folder":"任务未在受审文件夹中产生任何工作"
   ,"There is nothing to review yet: the generator produced no files inside the folder the auditor checks, so no audit could run and nothing was admitted.":"目前没有可审查的内容：生成者没有在审计者检查的文件夹中产生任何文件，因此无法进行审计，也没有准入任何结果。"
   ,"Tell the generator what to create inside the audited folder and run one more round, or stop this task.":"告诉生成者应在受审文件夹中创建什么，然后再运行一轮；或停止此任务。"
   ,"Say which files should be created inside the audited folder, then unlock one additional audited round.":"说明应在受审文件夹中创建哪些文件，然后解锁额外一轮受审计执行。"
   ,"Create the deliverable inside the audited folder; nothing was produced there.":"请在受审文件夹中创建交付物；此前那里没有产生任何内容。"
   ,"No audit findings were created because there was no work in the audited folder to review.":"由于受审文件夹中没有可审查的工作，未产生任何审计发现。"
-  ,"the task produced no work in the audited folder, so there was nothing to review":"任务未在受审文件夹中产生任何工作，因此没有可审查的内容"
+  ,"The generator finished without writing any file under the audited folder, so the auditor had no files to check; the folder is unchanged.":"生成者完成时没有在受审文件夹下写入任何文件，审计者因此没有可检查的文件；该文件夹未改动。"
   ,"Auditor reply unreadable":"审计者回复无法读取","The auditor’s reply could not be read":"审计者的回复无法读取"
   ,"The auditor answered, but its reply was not in the required form, so no verdict could be recorded. The files are unchanged and nothing was admitted.":"审计者作出了回复，但其格式不符合要求，因此无法记录裁定。文件未改动，也没有准入任何结果。"
   ,"Run the audit again on the same work, switch the auditor model, or stop this task.":"对同一份工作再次运行审计、更换审计者模型，或停止此任务。"
   ,"Run the audit again":"再次运行审计","Unlock one more round with the work unchanged so the auditor can answer again.":"在工作不变的情况下解锁一轮，让审计者再次作答。"
   ,"Run the audit again on the same work; the previous auditor reply could not be read.":"请对同一份工作再次运行审计；上一次审计者的回复无法读取。"
   ,"No audit findings were recorded because the auditor’s reply could not be read.":"由于审计者的回复无法读取，未记录任何审计发现。"
-  ,"the auditor's reply could not be read":"审计者的回复无法读取"
+  ,"The reply was checked against the required format and rejected; CrossAudit never guesses a verdict from a reply it cannot parse, so the round was handed to you.":"该回复经过格式校验后被拒绝；CrossAudit 不会从无法解析的回复中猜测裁定，因此本轮交由你处理。"
   ,"Task too large for one audit":"任务过大，无法一次审计","The task is too large for one audit":"该任务过大，无法在一次审计中完成"
   ,"The work exceeds what one audit can read at once, so the auditor stopped rather than judge part of it. Nothing was admitted.":"工作量超出了一次审计能够读取的范围，审计者因此停止，而不是只评判其中一部分。没有准入任何结果。"
   ,"Narrow the scope or split the task into smaller pieces and run one more round, or stop this task.":"缩小范围或将任务拆分为更小的部分，然后再运行一轮；或停止此任务。"
   ,"Name the smaller piece the next round should cover, then unlock one additional audited round.":"指明下一轮应覆盖的较小部分，然后解锁额外一轮受审计执行。"
   ,"No audit findings were recorded because the work was too large to audit in one pass.":"由于工作量过大，无法一次审计完成，未记录任何审计发现。"
-  ,"the task is too large for one audit":"该任务过大，无法一次审计"
+  ,"The audited files exceed what one audit prompt can hold; the auditor was not shown a partial set, and nothing was judged.":"受审文件超出了单次审计提示能容纳的范围；审计者没有被展示部分文件，也没有作出任何判断。"
   ,"The auditor asked for you":"审计者请你介入","The auditor asked for your judgment":"审计者请你作出判断"
   ,"The auditor could not settle this round on its own and handed it to you. Its stated reason is below. Nothing was admitted.":"审计者无法独自裁定本轮，已交由你处理。其陈述的原因见下方。没有准入任何结果。"
   ,"What the auditor said":"审计者的说明"
   ,"Read the auditor’s reason, then tell the generator how to address it or stop this task.":"阅读审计者的原因，然后告诉生成者如何处理；或停止此任务。"
   ,"Tell the generator how to address the auditor’s reason, then unlock one additional audited round.":"告诉生成者如何处理审计者的原因，然后解锁额外一轮受审计执行。"
   ,"The auditor recorded no structured findings. Its stated reason is above.":"审计者未记录结构化问题。其陈述的原因见上方。"
-  ,"the auditor asked for your judgment":"审计者请你作出判断"
+  ,"The auditor returned no findings and no reason; only its request for a human decision was recorded.":"审计者没有返回任何发现或原因；仅记录了其请人工决定的请求。"
   ,"Read the auditor's reason, then tell the generator how to address it or stop this task.":"阅读审计者的原因，然后告诉生成者如何处理；或停止此任务。"
   ,"Waiting on an earlier decision":"等待更早的决定","This task is already waiting for your earlier decision":"此任务仍在等待你更早的决定"
   ,"An earlier round of this task is still waiting for you. No new round can run until that decision is made.":"此任务更早的一轮仍在等待你。在作出该决定前，无法运行新的一轮。"
@@ -3767,7 +3779,7 @@ const ZH={
   ,"Settle the earlier decision":"先处理更早的决定","Open the earlier decision first. Guidance recorded here applies once it is settled.":"请先打开更早的决定。此处记录的指引将在其处理完毕后生效。"
   ,"No new findings were recorded because the earlier decision is still open.":"由于更早的决定仍未处理，未记录新的发现。"
   ,"Open the earlier decision":"打开更早的决定"
-  ,"this task is already waiting for your earlier decision":"此任务仍在等待你更早的决定"
+  ,"A newer commit was made while an earlier round was still waiting for you; the new commit was not audited, so the pending decision cannot be overtaken.":"在更早的一轮仍在等待你时，产生了新的提交；新提交未被审计，因此待定的决定不会被绕过。"
 };
 const ZH_PATTERNS=[
   // Billing slice: threshold alarms carry their percentage and the monthly
@@ -3917,6 +3929,8 @@ const ZH_PATTERNS=[
   ,[/^(\d+) issues?$/i,m=>m[1]+' 个问题']
   ,[/^Usually (\d+)–(\d+) min( · about \$[\d.]+)?$/,m=>'通常 '+m[1]+'–'+m[2]+' 分钟'+(m[3]?' · 约 '+m[3].slice(9):'')]
   ,[/^Usually about (\d+) min( · about \$[\d.]+)?$/,m=>'通常约 '+m[1]+' 分钟'+(m[2]?' · 约 '+m[2].slice(9):'')]
+  ,[/^Usually under a minute( · about \$[\d.]+)?$/,m=>'通常不到 1 分钟'+(m[1]?' · 约 '+m[1].slice(9):'')]
+  ,[/^Rule id: (.+)$/,m=>'规则编号：'+m[1]]
   ,[/^(\d+) deterministic checks? passed$/i,m=>m[1]+' 项确定性检查已通过']
   ,[/^(\d+) files$/i,m=>m[1]+' 个文件']
   ,[/^Waiting for the provider · heartbeat (.+)$/,m=>'等待供应商 · 心跳 '+zhValue(m[1])]
@@ -3997,6 +4011,14 @@ const ZH_PATTERNS=[
   ,[/^All (\d+) checks? passed on the latest round\.$/,m=>'最近一轮的 '+m[1]+' 项检查全部通过。']
   ,[/^(\d+) of (\d+) checks? did not pass on the latest round\.$/,m=>'最近一轮中有 '+m[1]+' 项检查未通过。']
   ,[/^(\d+) of (\d+) checks? (?:has|have) not run on the latest round\.$/,m=>'最近一轮中有 '+m[1]+' 项检查尚未运行。']
+  // Provider recovery narration (providers/resilience.py emitters). The
+  // run card reads the served text_i18n; these serve the walker-driven
+  // surfaces. Gate: tests/test_setup_preflight.py drives every emitter.
+  ,[/^Retrying the (generator|auditor)\x27s provider · attempt (\d+)$/,m=>'正在重试'+({generator:'生成者',auditor:'审计者'})[m[1]]+'的供应商 · 第 '+m[2]+' 次']
+  ,[/^Waiting to retry the (generator|auditor)\x27s provider · ([\d.]+) s$/,m=>'等待重试'+({generator:'生成者',auditor:'审计者'})[m[1]]+'的供应商 · '+m[2]+' 秒']
+  ,[/^Connected to the (generator|auditor)\x27s backup provider$/,m=>'已连接'+({generator:'生成者',auditor:'审计者'})[m[1]]+'的备用供应商']
+  ,[/^The (generator|auditor)\x27s backup provider is unavailable$/,m=>({generator:'生成者',auditor:'审计者'})[m[1]]+'的备用供应商不可用']
+  ,[/^The (generator|auditor)\x27s provider has no credential$/,m=>({generator:'生成者',auditor:'审计者'})[m[1]]+'的供应商没有凭据']
   ,[/^(\d+) checks? passed, (\d+) had nothing to check\.$/,m=>m[1]+' 项检查通过，'+m[2]+' 项没有可检查的内容。']
   ,[/^(.+): (passed|did not pass|not run yet|nothing to check)$/,m=>m[1]+'：'
     +({passed:'已通过','did not pass':'未通过','not run yet':'尚未运行','nothing to check':'没有可检查的内容'})[m[2]]]
@@ -4933,7 +4955,7 @@ function openResolution(value,action='',sha=''){
     ?'CrossAudit used all '+used+' of '+maximum+' automatic rounds without a passing result. Nothing will continue or be admitted until you decide.'
     :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
   appendResolutionReset(row,budget,provider);   // billing: "Resets at midnight" / "resets in 2 h 10 min"
-  document.getElementById('resolution-limit-title').textContent=copy?copy.limitTitle:budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
+  document.getElementById('resolution-limit-title').textContent=copy?((row.cause==='auditor_escalated'&&!(row.issues||[]).length)?'What happened':copy.limitTitle):budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
     ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
   // A refused repair leads with the sentence the repair guard wrote (it names
   // the file and the pattern) rather than the round-numbered wrapper around it.
@@ -4954,10 +4976,10 @@ function openResolution(value,action='',sha=''){
   // R2. Each issue leads with the observation; severity as a consequence,
   // the place and the rule id on one muted details line under it.
   document.getElementById('resolution-issues').innerHTML=issues.length?issues.map((issue,index)=>
-    '<article class="decision-issue"><p class="finding-observation">'+esc(issue.observation||'No explanation was recorded.')+'</p>'
+    '<article class="decision-issue"'+ruleTitle(issue.rule)+'><p class="finding-observation">'+esc(issue.observation||'No explanation was recorded.')+'</p>'
     +'<div class="finding-details"><span class="severity '+(severityWord(issue.severity||'BLOCKER')==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(issue.severity||'BLOCKER'))+'</span>'
     +(issue.artifact?'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-where">'+esc(issue.artifact)+'</span>':'')
-    +'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-rule" title="rule id">'+esc(issue.rule||'Issue '+(index+1))+'</span></div></article>').join('')
+    +'</div></article>').join('')
     :'<div class="decision-empty">'+(copy?copy.empty:budget
       ?'No audit findings were created because the task paused at a usage limit before producing a reviewable result.'
       :provider
@@ -5040,9 +5062,10 @@ resolutionForm.onsubmit=async ev=>{ev.preventDefault();const button=document.get
   if(!action){showInlineError('resolution-error','Choose whether to revise and continue, or stop this task.');return;}
   if(!reason&&!(provider&&action==='reopen')){showInlineError('resolution-error','Add concrete guidance or a reason so the decision is auditable.');return;}
   button.disabled=true;document.getElementById('resolution-error').className='wizard-error';
-  try{await api('/api/escalation',{cycle_id:cycleId,action:provider&&action==='reopen'?'retry_provider':action,reason});
+  try{const r=await api('/api/escalation',{cycle_id:cycleId,action:provider&&action==='reopen'?'retry_provider':action,reason});
     closeResolution();route.className='route on';
-    if(provider&&action==='reopen'){
+    if(r&&r.setup==='credentials'){showSetupCard(r.missing||[]);}
+    else if(provider&&action==='reopen'){
       pendingContinuation={cycle:'',chat:''};
       route.innerHTML='<b>Provider retry started.</b> The original task is running again; live progress will appear here.';
     }else if(action==='reopen'){
@@ -6011,38 +6034,36 @@ function severityWord(sev){return String(sev||'').toUpperCase()==='BLOCKER'?'mus
 // details line; a receipt without the record renders nothing here, and no
 // route or state word is ever on screen.
 function tierWord(f){if(!f||!f.tier)return '';
-  return f.tier==='deterministic'?'verified by a check':f.verified?'raised by the auditor, verified':'raised by the auditor';}
-// R2. A finding leads with what was observed. Severity, place, evidence tier
-// and the rule id share ONE muted details line under it; the id never opens
-// the first line, and it carries its own title for the person who wants it.
+  return f.tier==='deterministic'?'verified by a check':f.verified?'raised by the auditor, verified':'raised by the auditor, not yet reproduced';}
+// R2. A finding leads with what was observed. Severity, place and evidence
+// tier share ONE muted details line under it. The rule id is NOT on the first
+// paint: it is the tooltip of the details line (and, on the review card, a row of
+// the collapsed Details block) — on demand only, as the owner directed.
+function ruleTitle(rule){return rule?' title="'+esc('Rule id: '+rule)+'"':'';}
 function findingCard(f){
   const parts=['<span class="severity '+(severityWord(f.severity)==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(f.severity))+'</span>'];
   if(f.artifact)parts.push('<span class="finding-where">'+esc(f.artifact)+'</span>');
   if(tierWord(f))parts.push('<span class="finding-tier'+(f.verified?' verified':'')+'">'+esc(tierWord(f))+'</span>');
-  if(f.rule)parts.push('<span class="finding-rule" title="rule id">'+esc(f.rule)+'</span>');
   return '<div class="finding"><p class="finding-observation">'+esc(f.observation||'No explanation was recorded.')+'</p>'
-    +'<div class="finding-details">'+parts.join('<span class="finding-sep" aria-hidden="true">·</span>')+'</div></div>';}
+    +'<div class="finding-details"'+ruleTitle(f.rule)+'>'+parts.join('<span class="finding-sep" aria-hidden="true">·</span>')+'</div></div>';}
 // R3. "anthropic · anthropic:claude-opus-4-8 · high" → "Claude Opus 4.8". The
-// model specs carry ids and a capability note, not display names, so the name
-// is derived from the id: family words are capitalised, version digits are
-// joined with dots (GPT keeps its hyphen), a trailing release date is dropped.
-// The raw id stays in the inspector.
-const MODEL_FAMILY={gpt:'GPT',o1:'o1',o3:'o3',o4:'o4',deepseek:'DeepSeek',glm:'GLM',qwen:'Qwen',
-  kimi:'Kimi',minimax:'MiniMax',claude:'Claude',gemini:'Gemini',llama:'Llama',mistral:'Mistral',grok:'Grok'};
+// model specs carry ids and a capability note, not display names, so a name
+// is given only to the id shapes the catalogue ships (Claude, GPT, Gemini,
+// DeepSeek). Any other id renders BARE, without the provider prefix — an
+// operator who typed it must be able to find it — never an invented name.
 function friendlyModel(value){const raw=String(value||'').trim();if(!raw)return '';
   if(raw.toLowerCase()==='human')return 'Human';
   const segs=raw.split(' · ');const seg=segs.find(x=>x.includes(':'))||segs[0]||raw;
   const id=(seg.split(':').pop()||seg).trim();if(!id)return raw;
-  const tokens=id.split(/[-_/]+/).filter(Boolean);const words=[];
-  for(let i=0;i<tokens.length;i++){const tk=tokens[i];
-    if(/^\d{8}$/.test(tk)&&i===tokens.length-1)continue;
-    if(/^\d+(\.\d+)?$/.test(tk)){const last=words[words.length-1]||'';
-      if(last==='GPT')words[words.length-1]=last+'-'+tk;
-      else if(/^\d+(\.\d+)*$/.test(last)||/-\d+(\.\d+)*$/.test(last))words[words.length-1]=last+'.'+tk;
-      else words.push(tk);continue;}
-    if(/^v\d+$/i.test(tk)){words.push('V'+tk.slice(1));continue;}
-    words.push(MODEL_FAMILY[tk.toLowerCase()]||(tk.charAt(0).toUpperCase()+tk.slice(1)));}
-  return words.join(' ')||id;}
+  const cap=w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase();
+  const names=[
+    [/^claude-(opus|sonnet|haiku)-(\d+)-(\d+)(?:-\d{8})?$/i,m=>'Claude '+cap(m[1])+' '+m[2]+'.'+m[3]],
+    [/^claude-(\d+)-(\d+)-(opus|sonnet|haiku)(?:-\d{8})?$/i,m=>'Claude '+m[1]+'.'+m[2]+' '+cap(m[3])],
+    [/^gpt-(\d+(?:\.\d+)?)-(sol|terra|luna)$/i,m=>'GPT-'+m[1]+' '+cap(m[2])],
+    [/^gemini-(\d+(?:\.\d+)?)-(pro|flash)$/i,m=>'Gemini '+m[1]+' '+cap(m[2])],
+    [/^deepseek-v(\d+)-(pro|flash)$/i,m=>'DeepSeek V'+m[1]+' '+cap(m[2])]];
+  for(const [pattern,name] of names){const m=id.match(pattern);if(m)return name(m);}
+  return id;}
 // R4. What this task will probably take, from the completed runs of this
 // project (usage.run_forecast): the middle half of wall times when three or more
 // runs exist, the median alone below that, and the median API value. One
@@ -6052,8 +6073,11 @@ function forecastText(d){const f=d&&d.usage&&d.usage.forecast;const zh=currentLo
   const mins=x=>Math.max(1,Math.round(Number(x)/60));
   const lo=mins(f.seconds.p25),hi=mins(f.seconds.p75),mid=mins(f.seconds.p50);
   const ranged=f.runs>=3&&lo!==hi;
-  const time=zh?(ranged?'通常 '+lo+'–'+hi+' 分钟':'通常约 '+mid+' 分钟')
-    :(ranged?'Usually '+lo+'–'+hi+' min':'Usually about '+mid+' min');
+  // Sub-minute runs floor to "under a minute" rather than a rounded "1 min"
+  // (or a "0 min" that reads as nothing at all).
+  const brief=(ranged?Number(f.seconds.p75):Number(f.seconds.p50))<60;
+  const time=zh?(brief?'通常不到 1 分钟':ranged?'通常 '+lo+'–'+hi+' 分钟':'通常约 '+mid+' 分钟')
+    :(brief?'Usually under a minute':ranged?'Usually '+lo+'–'+hi+' min':'Usually about '+mid+' min');
   const cost=(f.usd&&f.usd.p50!=null)?(zh?' · 约 ':' · about ')+formatUsd(f.usd.p50):'';
   return time+cost;}
 function forecastLine(d){return '<span class="run-forecast">'+esc(forecastText(d))+'</span>';}
@@ -6272,6 +6296,7 @@ function reviewCard(d){
       +'<li>No blocking findings</li>'
       +'<li>Recorded in the audit ledger</li></ul>'
     :'';
+  const ruleIds=[...new Set(rows.flatMap(m=>(m.findings||[]).map(f=>f.rule).filter(Boolean)))];
   const findingRows=rows.filter(m=>(m.findings||[]).length).map(m=>
     '<div class="review-round-row"><span class="round-n">round '+esc(m.round)+'</span></div>'
     +(m.findings||[]).map(findingCard).join('')).join('');
@@ -6296,6 +6321,7 @@ function reviewCard(d){
     +'<div class="review-record-row"><span>Auditor</span><span>'+esc(friendlyModel(d.auditor))+'</span></div>'
     +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
     +'<div class="review-record-row"><span>Cycle</span><code>'+esc(cycle.id)+'</code></div>'
+    +(ruleIds.length?'<div class="review-record-row"><span>Rules</span><code>'+esc(ruleIds.join(', '))+'</code></div>':'')
     +'</div></details></div></div>';
   const actionRow=status==='passed'
     ?'<button type="button" class="review-action" data-admit data-admit-cycle="'+esc(cycle.id)+'">Admit result</button>'
@@ -6341,6 +6367,20 @@ function activityRow(s){
   + '</b><span>' + esc(line) + '</span></div>'
   + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
   + '<time class="event-time">' + at(s.t) + '</time></div>';}
+// Review D7: the cure for silence must not eat the narration it protects.
+// The clock speaks every 8 s of silence, and the auditor clock every 10 s
+// of streaming, so a two-minute audit produced fifteen rows and pushed all
+// twelve substantive steps off the card. A run of consecutive clock rows is
+// one fact — how long this phase has been going — so only its newest survives,
+// in place. Rows of any other kind are never dropped.
+const CLOCK_KINDS = new Set(['still_working','auditor_progress']);
+function collapseClockRows(steps){
+  const out=[];
+  for(const step of steps||[]){
+    const prev=out.length?out[out.length-1]:null;
+    if(prev&&CLOCK_KINDS.has(step.kind)&&CLOCK_KINDS.has(prev.kind)){out[out.length-1]=step;continue;}
+    out.push(step);}
+  return out;}
 function runCard(d){
   const p = chatProgress(d),cycles=chatCycles(d);
   const latestCycle=cycles.length?cycles[cycles.length-1]:null;
@@ -6366,15 +6406,20 @@ function runCard(d){
   const focusLabel = focus.state === 'current' ? 'Current step' : focus.state === 'failed' ? 'Stopped at'
     : focus.state === 'pending' ? 'Next step' : 'Completed step';
   const stateNames = {done:'Done',failed:'Stopped',current:'Active',pending:'Waiting'};
-  const eventRows = p && p.steps ? p.steps.slice(-12).map(activityRow).join('') : '';
+  const eventRows = p && p.steps ? collapseClockRows(p.steps).slice(-12).map(activityRow).join('') : '';
   // D150: what is arriving right now, as one line each — a word count for the
   // draft (the text itself lives in the unaudited draft article above) and
   // the tail of the summarised thinking. Neither is a step; neither persists.
   const draft = liveDraftFor(d), thinking = liveThinkingFor(d);
-  const liveRows = (thinking ? '<div class="audit-event live-thinking">'
-      + '<span class="event-mark runtime">…</span><div class="event-main"><div class="event-line"><b>'
-      + esc(currentLocale==='zh'?'思考中':'Thinking') + '</b><span>' + esc(thinking.text.slice(-160).replace(/\s+/g,' ')) + '</span></div></div>'
-      + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></div>' : '')
+  // Review D8 / D4: thinking is model text no auditor has read — further from
+  // evidence than the draft, which already says so on its face. It is folded
+  // away behind a summary that says what it is, opens only if the reader asks,
+  // and is never written anywhere: the row disappears with the run.
+  const liveRows = (thinking ? '<details class="audit-event live-thinking">'
+      + '<summary><span class="event-mark runtime">…</span><div class="event-main"><div class="event-line"><b>'
+      + esc(currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited') + '</b></div></div>'
+      + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></summary>'
+      + '<div class="event-detail">' + esc(thinking.text.slice(-160).replace(/\s+/g,' ')) + '</div></details>' : '')
     + (draft ? '<div class="audit-event live-draft">'
       + '<span class="event-mark generator">G</span><div class="event-main"><div class="event-line"><b>'
       + esc(t('Generator')) + '</b><span>' + esc(currentLocale==='zh'
@@ -7337,7 +7382,9 @@ function render(d){
 }
 document.getElementById('interrupted').onclick=async ev=>{const button=ev.target.closest('[data-interrupted]');if(!button)return;
   button.disabled=true;const action=button.getAttribute('data-interrupted');
-  try{await api('/api/interrupted',{action});route.className='route on';route.innerHTML=currentLocale==='zh'
+  try{const r=await api('/api/interrupted',{action});route.className='route on';
+    if(r&&r.setup==='credentials'){showSetupCard(r.missing||[]);button.disabled=false;return;}
+    route.innerHTML=currentLocale==='zh'
     ?(action==='retry'?'<b>任务已重启</b> — 正从最近的持久 Git 提交继续。':'<b>提示已忽略</b> — 文件和已提交证据均已保留。')
     :(action==='retry'?'<b>Task restarted.</b> Continuing from the last durable Git commit.':'<b>Notice dismissed.</b> Files and committed evidence were preserved.');}
   catch(e){route.className='route on error';route.textContent=e.message;button.disabled=false;}};
@@ -8257,6 +8304,8 @@ stopRun.onclick=async()=>{const progress=lastState&&chatProgress(lastState);if(!
     ?'<b>已请求停止。</b> 当前步骤结束后，任务会安全停止。'
     :'<b>Stop requested.</b> The task will stop safely at the next execution boundary.';}
   catch(e){route.className='route on error';route.textContent=e.message;stopRun.disabled=false;}};
+function showSetupCard(missing){route.className='route on setup';route.innerHTML=setupCardMarkup(missing);
+  document.getElementById('setup-open-providers').onclick=()=>openSettings('providers');}
 function setupCardMarkup(missing){
   const both=missing.length>1,role=missing[0]||'generator';
   const sentence=both?'Neither the generator nor the auditor has a credential yet.'
@@ -8279,8 +8328,7 @@ form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!
     if(r.setup==='credentials'){optimisticSend=null;if(lastState)render(lastState);
     // A setup step, not an audit event: nothing started, the message stays in
     // the composer, and the one action is the place that fixes it.
-    route.className='route on setup';route.innerHTML=setupCardMarkup(r.missing||[]);
-    document.getElementById('setup-open-providers').onclick=()=>openSettings('providers');}
+    showSetupCard(r.missing||[]);}
     else if(r.asked){optimisticSend=null;if(lastState)render(lastState);
     route.innerHTML='<b class="ask">Needs clarification.</b> '+esc(r.clarify);}
     else if(r.accepted){

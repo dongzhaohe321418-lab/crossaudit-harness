@@ -183,7 +183,10 @@ def complete(cfg: Config, role_name: str, primary: Role, *, system: str,
                              "category": "authentication"})
             _record(cfg, route_id, success=False, reason=reason)
             if on_event:
-                on_event(role_name, "fallback unavailable", reason)
+                on_event(role_name, (f"The {role_name}'s backup provider is unavailable"
+                                     if index > 0 else
+                                     f"The {role_name}'s provider has no credential"),
+                         reason)
             continue
         fn = get_provider(role.provider)
         for attempt in range(1, cfg.resilience.max_attempts + 1):
@@ -197,9 +200,13 @@ def complete(cfg: Config, role_name: str, primary: Role, *, system: str,
             if heartbeat is not None:
                 heartbeat()
             try:
+                # Narrated in words: the sentence is what the run card shows,
+                # the route identity rides in the detail for the journal and
+                # the Models panel (no provider:model on the first paint).
                 if on_event and (attempt > 1 or index > 0 or carried > 0):
-                    on_event(role_name, "provider recovery",
-                             f"{role.vendor}:{role.model} · attempt {attempt}")
+                    on_event(role_name,
+                             f"Retrying the {role_name}'s provider · attempt {attempt}",
+                             f"{role.vendor}:{role.model}")
                 provider_args = {
                     "model": role.model, "system": system, "prompt": prompt,
                     "key_env": role.key_env, "base_url": role.base_url,
@@ -223,8 +230,8 @@ def complete(cfg: Config, role_name: str, primary: Role, *, system: str,
                 if isinstance(reply.raw, dict):
                     reply.raw["_crossaudit_route"] = _route(role, fallback=index > 0)
                 if on_event and index > 0:
-                    on_event(role_name, "fallback connected",
-                             f"using {role.vendor}:{role.model}")
+                    on_event(role_name, f"Connected to the {role_name}'s backup provider",
+                             f"{role.vendor}:{role.model}")
                 return reply
             except ProviderDenial as exc:
                 last = exc
@@ -248,8 +255,9 @@ def complete(cfg: Config, role_name: str, primary: Role, *, system: str,
                                 cfg.resilience.max_backoff_seconds)
                 delay *= random.uniform(0.9, 1.1)
                 if on_event:
-                    on_event(role_name, "waiting to retry",
-                             f"{role.vendor}:{role.model} · {delay:.1f}s")
+                    on_event(role_name,
+                             f"Waiting to retry the {role_name}'s provider · {delay:.1f} s",
+                             f"{role.vendor}:{role.model}")
                 if delay > 0:
                     _sleep(delay)
 

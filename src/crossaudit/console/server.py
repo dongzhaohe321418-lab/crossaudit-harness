@@ -47,6 +47,7 @@ import sqlite3
 import subprocess
 import threading
 import time
+import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from socketserver import TCPServer
@@ -498,7 +499,12 @@ def _intake_sse_frame(event: dict) -> bytes:
     """
     payload = json.dumps(event, sort_keys=True, separators=(",", ":"),
                          ensure_ascii=False)
-    return f"event: intake_chunk\ndata: {payload}\n\n".encode()
+    # A namespaced id, not a bare number: the numeric Last-Event-ID space
+    # belongs to the run journal's generation chunks. Without an id at all a
+    # reconnect replayed the lane reply from seq 0, and the consumer's gap
+    # rule — correctly — discarded everything the reader could already see.
+    return (f"event: intake_chunk\nid: intake:{event['intake_id']}:"
+            f"{int(event['event_id'])}\ndata: {payload}\n\n").encode()
 
 
 def _same_progress_fact(left: dict | None, right: dict | None) -> bool:
@@ -886,7 +892,7 @@ def start_build(cfg: Config, task: str, *, before_start=None,
             if not is_ancestor(cfg.root, prior["active_sha"], "HEAD"):
                 raise ConfigDenial(
                     "the project no longer descends from the cycle being revised")
-        preflight(cfg)
+        preflight(cfg, "console")
         resolved = resolve_task(cfg, task.split())
         staged = stage_attachments(cfg, attachments or [])
         if before_start is not None:
@@ -919,6 +925,12 @@ def start_build(cfg: Config, task: str, *, before_start=None,
                             for item in staged]}
 
 
+#: The one sentence an unexpected failure shows. Its Chinese form is in the
+#: page catalogue; the exception itself is logged, never rendered.
+UNEXPECTED_FAILURE = ("Something went wrong handling that message. "
+                      "Nothing was started.")
+
+
 class _NoWatch:
     """The silent watcher: ``say()`` narrates into nothing unless asked to."""
 
@@ -932,6 +944,11 @@ class _NoWatch:
         pass
 
     provider_event = None
+
+    def lane_narration(self):
+        """No narration and, deliberately, no ``on_chunk``: a caller outside
+        the console gets the whole reply at the end, as it always did."""
+        return None
 
 
 def setup_needed(cfg: Config) -> dict | None:
@@ -1071,12 +1088,12 @@ def say(cfg: Config, text: str, *, attachments=None,
     # The lane's provider narrates recovery and, when it streams, its reply
     # through the watcher; the generator lane narrates through the run journal
     # instead, once the run exists.
-    provider_event = getattr(watch, "provider_event", None)
+    narration = watch.lane_narration()
     lanes = {
         "amendment": lambda: talk_mod.lane_amendment(cfg, routing, assume_yes=True),
         "auditor": lambda: talk_mod.lane_auditor(cfg, routing,
-                                                 on_event=provider_event),
-        "chat": lambda: talk_mod.lane_chat(cfg, routing, on_event=provider_event),
+                                                 on_event=narration),
+        "chat": lambda: talk_mod.lane_chat(cfg, routing, on_event=narration),
         "query": lambda: talk_mod.lane_query(cfg, routing),
         "generator": generator_lane,
         "dispute": lambda: talk_mod.lane_dispute(cfg, routing),
@@ -1104,6 +1121,32 @@ def say(cfg: Config, text: str, *, attachments=None,
     return result
 
 
+def say_refusal(cfg: Config, attachments=None,
+                attachment_consent: bool = False) -> dict | None:
+    """Every reason to refuse a message that costs no provider call.
+
+    Consent for attachments, a role with no credential yet, and a message
+    already in flight: all three are decided from local state alone, so they
+    can be answered on the request thread. The handler asks *before* touching
+    the chat, because a message the console would not send must leave no
+    thread behind — the rule the setup card already followed and the busy
+    refusal did not, which is how a rejected second message still created an
+    empty conversation.
+    """
+    if list(attachments or []) and not attachment_consent:
+        return {"error": "attachment contents require explicit consent for "
+                         "transmission to the configured generator "
+                         f"({cfg.generator_vendor or 'unknown vendor'})",
+                "status": 400}
+    blocked = setup_needed(cfg)
+    if blocked is not None:
+        return blocked
+    if INTAKE.active:
+        return {"error": "the previous message is still being handled",
+                "status": 409}
+    return None
+
+
 def accept_say(cfg: Config, text: str, *, attachments=None,
                attachment_consent: bool = False, chat_id: str = "",
                continuation_cycle: str = "") -> dict:
@@ -1120,21 +1163,12 @@ def accept_say(cfg: Config, text: str, *, attachments=None,
     nothing new can reach the page as a traceback.
     """
     prepared = list(attachments or [])
-    if prepared and not attachment_consent:
-        return {"error": "attachment contents require explicit consent for "
-                         "transmission to the configured generator "
-                         f"({cfg.generator_vendor or 'unknown vendor'})",
-                "status": 400}
-    # A missing credential is presence-only and local: no provider is called to
-    # learn it, so it stays on the fast path and answers the POST directly.
-    # Behind the worker it would arrive as an intake result, and the app would
-    # show a thread and a working indicator for a message it never sent.
-    blocked = setup_needed(cfg)
-    if blocked is not None:
-        return blocked
+    refused = say_refusal(cfg, prepared, attachment_consent)
+    if refused is not None:
+        return refused
     try:
         record = INTAKE.begin(chat_id, text)
-    except RuntimeError as exc:
+    except RuntimeError as exc:  # lost a race with another POST
         return {"error": str(exc), "status": 409}
     intake_id = record.id
     continuation_args = ({"continuation_cycle": continuation_cycle}
@@ -1152,8 +1186,14 @@ def accept_say(cfg: Config, text: str, *, attachments=None,
             INTAKE.fail(exc.status, exc.reason)
         except Denial as exc:
             INTAKE.fail(400, exc.reason)
-        except Exception as exc:  # noqa: BLE001 -- the page gets a sentence, never a trace
-            INTAKE.fail(500, f"{type(exc).__name__}: {exc}"[:400])
+        except Exception:  # noqa: BLE001 -- the page gets a sentence, never a trace
+            # Not the exception's own words: a class name and whatever paths or
+            # values the message carries are neither translatable nor anything
+            # the reader can act on, and before D150 no such text could reach
+            # the page at all (the request failed instead). The detail is worth
+            # keeping, so it goes to the server's log, where the operator is.
+            traceback.print_exc()
+            INTAKE.fail(500, UNEXPECTED_FAILURE)
         finally:
             # Routing, amendments, disputes and resolutions change files other
             # than the in-memory progress tracker. Publish those immediately too.
@@ -1484,12 +1524,24 @@ def make_handler(cfg: Config, token: str, touch) -> type:
             last_progress_refresh = 0.0
             snapshot_cache: dict = {}
             stream_journal = RunJournal(journal_path(cfg))
-            try:
-                generation_cursor = max(
-                    0, int(self.headers.get("Last-Event-ID", "0") or 0))
-            except (TypeError, ValueError):
-                generation_cursor = 0
+            # One id space, two producers. A lane reply and a generator run
+            # never stream at once (the intake holds one message, and the
+            # generator lane narrates through the journal instead), so the
+            # prefix says which stream the reader was reading.
+            resume = str(self.headers.get("Last-Event-ID", "") or "")
+            generation_cursor = 0
             intake_seen, intake_cursor = "", -1
+            if resume.startswith("intake:"):
+                ident, _, seq = resume[len("intake:"):].rpartition(":")
+                try:
+                    intake_seen, intake_cursor = ident, int(seq)
+                except (TypeError, ValueError):
+                    intake_seen, intake_cursor = "", -1
+            else:
+                try:
+                    generation_cursor = max(0, int(resume or 0))
+                except (TypeError, ValueError):
+                    generation_cursor = 0
             self.server.stream_opened()
             try:
                 while not self.server.stop_event.is_set():
@@ -1992,6 +2044,15 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                     reason = str(payload.get("reason", ""))
                     retrying_provider = action == "retry_provider"
                     if retrying_provider:
+                        # A retry that cannot start for want of a credential
+                        # is a setup step, not a provider failure: the card,
+                        # before the cycle is reopened and before anything is
+                        # written to the ledger.
+                        blocked = setup_needed(current)
+                        if blocked is not None:
+                            self._send(json.dumps(blocked).encode(),
+                                       "application/json")
+                            return
                         prior = store.cycle(cycle_id)
                         prior_kind = (str(prior.get("escalation_kind") or "")
                                       or classify_escalation_kind(
@@ -2047,6 +2108,11 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                         raise ConfigDenial("there is no interrupted task to recover")
                     action = str(payload.get("action", ""))
                     if action == "retry":
+                        blocked = setup_needed(current)
+                        if blocked is not None:
+                            self._send(json.dumps(blocked).encode(),
+                                       "application/json")
+                            return
                         result = start_build(
                             current, str(interrupted.get("task", "")),
                             chat_id=str(interrupted.get("chat_id", "")),
@@ -2098,9 +2164,14 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                 return
             # Before the chat is touched: a message the app could not send
             # leaves no thread behind, and stays in the composer to be resent.
-            blocked = setup_needed(self._config())
-            if blocked is not None:
-                self._send(json.dumps(blocked).encode(), "application/json")
+            refused = say_refusal(
+                self._config(), attachments,
+                payload.get("attachment_consent") is True)
+            if refused is not None:
+                if "error" in refused:
+                    self._deny(refused["status"], refused["error"])
+                else:
+                    self._send(json.dumps(refused).encode(), "application/json")
                 return
             try:
                 chat = chats.touch(self._config(),

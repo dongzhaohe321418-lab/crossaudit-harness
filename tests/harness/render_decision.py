@@ -86,6 +86,7 @@ def render(worktree: pathlib.Path, rows: dict) -> dict:
              _extract(script, "const VERDICT_WORDS={"),
              _extract(script, "function verdictWord(v)"),
              _extract(script, "function severityWord(sev)"),
+             _extract(script, "function ruleTitle(rule)"),
              _extract(script, "function openResolution(value,action='',sha='')"),
              _extract(script, "function decisionSentence()"),
              _extract(script, "function setDecidingInert(on)"),

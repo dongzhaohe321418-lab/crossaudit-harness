@@ -261,7 +261,8 @@ def test_the_page_names_the_tier_in_a_sentence_and_never_a_route():
     assert "findingTier" not in PAGE, "the separate tier row is gone; one details line"
     assert PAGE.count("findingCard") == 3  # the definition and the two lists
     assert "'verified by a check'" in PAGE
-    assert "'raised by the auditor'" in PAGE
+    assert "'raised by the auditor, not yet reproduced'" in PAGE, (
+        "a model-only claim must say it is not yet reproduced, not merely lack a word")
     assert ROUTE_NAME.search(PAGE) is None
     # The run card's loop steps are untouched: no tier or route on the main surface.
     loop = PAGE[PAGE.index("function runCard(d){"):PAGE.index("function approvalCard(d){")]
