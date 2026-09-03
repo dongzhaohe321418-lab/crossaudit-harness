@@ -83,10 +83,19 @@ for(const [name,row] of Object.entries(ROWS)){
     // Kept OUTSIDE the slot maps (which older tests sweep as text).
     out[name].extra=out[name].extra||{};
     const sb=els['resolution-open-settings'];
+    const sec=els['resolution-issues-section'],badge=els['resolution-issue-count'],
+      details=els['resolution-details'];
     out[name].extra[locale]={reason_value:els['resolution-reason']?els['resolution-reason'].value:'',
       settings_text:sb?(locale==='zh'?zhValue(sb.textContent):sb.textContent):'',
       settings_hidden:sb?Boolean(sb.hidden):true,
-      settings_earlier:sb?(sb.getAttribute('data-earlier-cycle')||''):''};}}
+      settings_earlier:sb?(sb.getAttribute('data-earlier-cycle')||''):'',
+      // S4: whether the blocking-issues section and its count badge are on
+      // the screen at all. S3/S4: the technical details block, which is where
+      // the commit sha now lives, closed.
+      issues_hidden:sec?Boolean(sec.hidden):true,
+      count_text:badge?String(badge.textContent||''):'',
+      count_hidden:badge?Boolean(badge.hidden):true,
+      details_text:details?String(details.textContent||''):''};}}
 console.log(JSON.stringify(out));
 """
 

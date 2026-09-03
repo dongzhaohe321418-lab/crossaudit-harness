@@ -237,3 +237,65 @@ def test_no_user_facing_stop_leads_with_a_commit_sha():
         # Each has its Chinese, or a Chinese reader gets the marked English.
         assert kept.split(" ({subject!r})")[0] in (
             WORKTREE / "src/crossaudit/cli/denials_zh.py").read_text(encoding="utf-8")
+
+
+# ======================================================= the decision card
+def _generic_row(science: Path) -> dict:
+    """An escalation with no structured cause and no findings — the shape any
+    record written before a cause existed still takes."""
+    from crossaudit.config import load
+
+    cfg = load(science / "crossaudit.yml")
+    StateStore(cfg.root / cfg.state_dir / "state.json").record_build_escalation(
+        cfg.science_repo, "c" * 40, "the automatic audit loop stopped", 1,
+        task="Write it", kind="audit")
+    return {"generic": [r for r in overview.escalations(cfg) if r["sha"] == "c" * 40][0]}
+
+
+@needs_node
+def test_a_card_with_no_findings_renders_no_section_and_no_zero_badge(science):
+    """S4. A heading, a zero badge and a line that only points back at the
+    text above it are three pieces of furniture, not information.
+
+    Mutation: restore the generic `No structured findings were recorded.
+    Review the stop reason above before continuing.` empty copy and the
+    section comes back.
+    """
+    from render_decision import render
+
+    out = render(WORKTREE, _generic_row(science))["generic"]
+    for locale in ("en", "zh"):
+        extra = out["extra"][locale]
+        assert extra["issues_hidden"] is True, locale
+        assert extra["count_hidden"] is True and extra["count_text"] == ""
+        assert out[locale]["resolution-issues"] == ""
+    assert "No structured findings were recorded. Review the stop reason" not in PAGE
+
+
+@needs_node
+def test_the_commit_sha_is_only_in_the_closed_details_block(science):
+    """S3/D149: the identifier stays reachable and leaves the first paint.
+
+    Mutation: put `row.short_sha` back into any visible slot and the sweep
+    below finds it.
+    """
+    from render_decision import render
+
+    out = render(WORKTREE, _generic_row(science))["generic"]
+    for locale in ("en", "zh"):
+        assert HEX.search(out["extra"][locale]["details_text"]), "one click away"
+    assert "Technical details" in PAGE and '"Technical details":"技术细节"' in PAGE
+
+
+@needs_node
+def test_no_identifier_reaches_the_first_paint_of_a_decision_card(science):
+    """D149, swept over every visible slot of the card, EN and ZH."""
+    from render_decision import render
+
+    card = render(WORKTREE, _generic_row(science))["generic"]
+    for locale in ("en", "zh"):
+        for slot, text in card[locale].items():
+            assert HEX.search(text) is None, (locale, slot, text)
+            assert RULE_ID.search(text) is None, (locale, slot)
+            assert PROVIDER_MODEL.search(text) is None, (locale, slot)
+            assert RAW_VERDICT.search(text) is None, (locale, slot)

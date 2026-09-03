@@ -1140,6 +1140,12 @@ body.deciding .composer-wrap{display:none}
 .decision-issue p{margin:5px 0 0;font-size:var(--fs-body);line-height:1.5;color:var(--text)}
 .decision-issue small{display:block;margin-top:5px;color:var(--text-3);font-size:var(--fs-caption);
   font-family:var(--font-mono);overflow-wrap:anywhere}
+/* The identifiers a person only wants when they are checking the record:
+   folded away, never on the first paint (D149). */
+details.decision-details{margin-top:9px}
+details.decision-details>summary{cursor:pointer;color:var(--text-3);font-size:var(--fs-caption)}
+.decision-detail{margin-top:5px;color:var(--text-3);font-size:var(--fs-caption);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .decision-empty{border:1px solid var(--line);border-radius:var(--r-md);padding:11px;color:var(--text-2);
   font-size:var(--fs-label);line-height:1.5;background:var(--surface-2)}
 .decision-request{color:var(--text-2);font-size:var(--fs-body);line-height:1.5;margin:0 0 10px}
@@ -2823,9 +2829,11 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
     <section class="decision-block"><div class="decision-label">Attempted</div>
       <div class="decision-limit"><span class="decision-limit-mark" aria-hidden="true">!</span><div><b id="resolution-limit-title">Automatic audit limit reached</b>
         <p id="resolution-limit-copy">The configured rounds were used without a passing result.</p></div></div>
-      <div class="decision-attempts" id="resolution-attempts"></div></section>
-    <section class="decision-block"><div class="decision-label">Blocked on</div>
-      <div class="decision-title-row">What is still blocking the result <span class="decision-count" id="resolution-issue-count">0</span></div>
+      <div class="decision-attempts" id="resolution-attempts"></div>
+      <details class="decision-details"><summary>Technical details</summary>
+        <p class="decision-detail" id="resolution-details"></p></details></section>
+    <section class="decision-block" id="resolution-issues-section"><div class="decision-label">Blocked on</div>
+      <div class="decision-title-row">What is still blocking the result <span class="decision-count" id="resolution-issue-count" hidden></span></div>
       <div class="decision-issues" id="resolution-issues"></div></section>
     <section class="decision-block"><div class="decision-label">Recommendation</div>
       <p class="decision-request" id="resolution-request">Choose whether to provide concrete correction guidance for one more round or stop this task.</p>
@@ -3282,7 +3290,6 @@ const ZH={
   "Correction guidance for the next round":"下一轮的修正指导","Describe exactly what should change before the next audit.":"具体说明下一次审计前应修改什么。",
   "Record guidance & unlock round":"记录指导并解锁一轮","Reason for stopping":"停止原因","Explain why this task should stop without admitting its current output.":"说明为什么应停止任务且不准入当前输出。",
   "Stop without admission":"停止且不准入","The automatic loop could not continue safely":"自动循环无法安全继续",
-  "No structured findings were recorded. Review the stop reason above before continuing.":"未记录结构化问题。继续前请检查上方的停止原因。",
   "Choose whether to revise and continue, or stop this task.":"请选择修订并继续，或停止此任务。","Review issues & decide":"查看问题并决定",
   "Generator connection stopped":"生成者连接已停止","The task is waiting for a working Generator connection":"任务正在等待可用的生成者连接",
   "CrossAudit stopped before an audit began. No result was admitted and the original task is ready to retry.":"CrossAudit 在审计开始前已安全暂停。没有结果被准入，原任务可直接重试。",
@@ -3697,6 +3704,13 @@ const ZH={
   ,"Allow once":"仅允许一次","Allow this run":"允许本次运行","Allow this project":"允许此项目","Deny":"拒绝","Approval needed":"需要你批准","Paths":"路径","Host":"主机","Est. cost":"预计成本"
   ,"no change — reads only":"无更改——仅读取","reversible — a recovery point is saved before the edit":"可恢复——编辑前会先保存恢复点","runs a local command; effects are not automatically undone":"运行本地命令；效果不会自动撤销"
   ,"reaches the network; may have off-machine effects":"会访问网络；可能产生机外影响","high-impact — not easily reversible":"高影响——不易恢复","destructive / forbidden":"破坏性 / 禁止"
+  ,"Technical details":"技术细节"
+  ,"Nothing to audit yet":"没有可审计的改动"
+  ,"That commit had no experiment in it":"这次提交里没有实验文件"
+  ,"Your last commit changed only rules, configuration or the ledger — no file the auditor watches. Nothing was audited, nothing was admitted, and nothing is in dispute.":"你的上一次提交只改动了规则、配置或账本——没有任何审计者关注的文件。没有审计任何内容，没有准入任何内容，也没有任何争议。"
+  ,"Commit your experiment, then run again.":"把你的实验文件提交后再运行一次。"
+  ,"I have committed it — try again":"我已提交，重试"
+  ,"Commit the files your experiment produced, then unlock one more audited round.":"提交你的实验产出的文件，然后再解锁一轮受审轮次。"
   ,"Admission result":"准入结果","Admission explanation":"准入说明","local":"本地","remote":"远程","paired":"配对","enforced":"强制"
   ,"self-review; the history is yours to rewrite":"自我审查；历史可由你随意改写","history out of unilateral control":"历史不受单方控制","privilege separation between the two agents":"两个智能体之间的权限隔离"
   ,"the verdict is published and checkable, but nothing is refused":"判定已发布且可核查，但不会拒绝任何内容","a failed audit refuses the merge":"审计未通过将拒绝合并"
@@ -4892,16 +4906,14 @@ const CAUSE_COPY={
     request:'Tell the generator what to create inside the audited folder and run one more round, or stop this task.',
     reopenTitle:'Revise and continue',
     reopenCopy:'Say which files should be created inside the audited folder, then unlock one additional audited round.',
-    hint:'Create the deliverable inside the audited folder; nothing was produced there.',
-    empty:'No audit findings were created because there was no work in the audited folder to review.'},
+    hint:'Create the deliverable inside the audited folder; nothing was produced there.'},
   invalid_reply:{flag:'Auditor reply unreadable',title:'The auditor\u2019s reply could not be read',
     summary:'The auditor answered, but its reply was not in the required form, so no verdict could be recorded. The files are unchanged and nothing was admitted.',
     limitTitle:'What happened',
     request:'Run the audit again on the same work, switch the auditor model, or stop this task.',
     reopenTitle:'Run the audit again',
     reopenCopy:'Unlock one more round with the work unchanged so the auditor can answer again.',
-    hint:'Run the audit again on the same work; the previous auditor reply could not be read.',
-    empty:'No audit findings were recorded because the auditor\u2019s reply could not be read.'},
+    hint:'Run the audit again on the same work; the previous auditor reply could not be read.'},
   bounds_exceeded:{flag:'Task too large for one audit',title:'The task is too large for one audit',
     summary:'The work exceeds what one audit can read at once, so the auditor stopped rather than judge part of it. Nothing was admitted.',
     limitTitle:'What happened',
@@ -4915,14 +4927,14 @@ const CAUSE_COPY={
     request:'Read the auditor\u2019s reason, then tell the generator how to address it or stop this task.',
     reopenTitle:'Revise and continue',
     reopenCopy:'Tell the generator how to address the auditor\u2019s reason, then unlock one additional audited round.',
-    hint:'',empty:'The auditor recorded no structured findings. Its stated reason is above.'},
+    hint:''},
   escalation_locked:{flag:'Waiting on an earlier decision',title:'This task is already waiting for your earlier decision',
     summary:'An earlier round of this task is still waiting for you. No new round can run until that decision is made.',
     limitTitle:'What happened',
     request:'Open the earlier decision and settle it; this task continues from there.',
     reopenTitle:'Settle the earlier decision',
     reopenCopy:'Open the earlier decision first. Guidance recorded here applies once it is settled.',
-    hint:'',empty:'No new findings were recorded because the earlier decision is still open.'}};
+    hint:''}};
 function openResolution(value,action='',sha=''){
   let row=typeof value==='object'&&value?value:null;
   if(!row&&lastState)row=(lastState.escalations||[]).find(item=>item.cycle_id===value);
@@ -4990,8 +5002,20 @@ function openResolution(value,action='',sha=''){
       +esc(item.findings)+' issue'+(item.findings===1?'':'s')+'</span><span class="verdict-word '+esc(word)
       +'">'+esc(verdictWord(item.verdict))+'</span></div>';}).join('');
   document.getElementById('resolution-goal').textContent=(lastState?titleOf(lastState):'')||'The task this conversation asked for.';
+  // D149. The identifiers stay reachable but leave the first paint: the
+  // commit this decision is about is named by its subject in the stop reason
+  // above, and its sha lives here, behind a closed disclosure.
+  document.getElementById('resolution-details').textContent=
+    (currentLocale==='zh'?'提交 ':'Commit ')+String(row.short_sha||row.sha||'');
   const issues=row.issues||[];
-  document.getElementById('resolution-issue-count').textContent=String(issues.length);
+  // S4. Never a count badge of 0 — a zero is not a count, it is the absence
+  // of one, and a badge saying so is furniture.
+  const countBadge=document.getElementById('resolution-issue-count');
+  countBadge.textContent=issues.length?String(issues.length):'';
+  countBadge.hidden=!issues.length;
+  const emptyCopy=issues.length?'':(copy?(copy.empty||''):formatCause
+    ?'No audit ran because the generator never produced readable work. What usually helps: rewrite the task as one concrete instruction, or switch the generator model in Settings, then run one more round.'
+    :'');
   // R2. Each issue leads with the observation; severity as a consequence,
   // the place and the rule id on one muted details line under it.
   document.getElementById('resolution-issues').innerHTML=issues.length?issues.map((issue,index)=>
@@ -4999,13 +5023,14 @@ function openResolution(value,action='',sha=''){
     +'<div class="finding-details"><span class="severity '+(severityWord(issue.severity||'BLOCKER')==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(issue.severity||'BLOCKER'))+'</span>'
     +(issue.artifact?'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-where">'+esc(issue.artifact)+'</span>':'')
     +'</div></article>').join('')
-    :'<div class="decision-empty">'+(copy?copy.empty:budget
-      ?'No audit findings were created because the task paused at a usage limit before producing a reviewable result.'
-      :provider
-      ?'No audit findings were created because the Generator stopped before producing a reviewable result.'
-      :formatCause
-      ?'No audit ran because the generator never produced readable work. What usually helps: rewrite the task as one concrete instruction, or switch the generator model in Settings, then run one more round.'
-      :'No structured findings were recorded. Review the stop reason above before continuing.')+'</div>';
+    :(emptyCopy?'<div class="decision-empty">'+emptyCopy+'</div>':'');
+  // S4. The section is rendered only when it carries something a person has
+  // not already read: findings, or empty copy that explains the ABSENCE with
+  // a fact the stop reason does not carry — what too large to audit in one
+  // pass means, or what usually helps after an unreadable generator reply.
+  // The rest pointed back at the stop reason above, under a heading and a
+  // zero badge: a section pointing at the section before it.
+  document.getElementById('resolution-issues-section').hidden=!(issues.length||emptyCopy);
   document.getElementById('resolution-request').textContent=copy?copy.request:budget
     ?'Raise or clear the usage limit and rerun the original task, or stop this task.'
     :provider
