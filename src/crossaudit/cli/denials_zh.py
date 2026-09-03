@@ -282,8 +282,11 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("monthly cost warning cannot exceed the hard limit", "每月费用警告线不能超过硬上限"),
     ("prices must be a mapping", "prices 必须是映射"),
     ("prices: model ids must be 1 to 160 characters", "prices：模型 ID 必须是 1 到 160 个字符"),
-    ("prices.{} must be a mapping of input, output, cache_write, cache_read",
-     "prices.{} 必须是包含 input、output、cache_write、cache_read 的映射"),
+    ("prices.{} must be a mapping of input, output, cache_write, cache_read, trust_origin",
+     "prices.{} 必须是包含 input、output、cache_write、cache_read、trust_origin 的映射"),
+    ("prices.{}.trust_origin must be true or false (it declares that this project "
+     "knows what a non-vendor endpoint charges)",
+     "prices.{}.trust_origin 必须是 true 或 false（用于声明本项目了解非供应商端点的收费）"),
     ("prices.{}.{} must be a non-negative number (USD per 1M tokens)",
      "prices.{}.{} 必须是非负数（每 100 万 token 的美元价格）"),
     ("authority.lone_model_blocker must be 'block' (bounded revision, the default) "
@@ -1175,6 +1178,8 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "价格覆盖的模型 ID 含有不支持的字符"),
     ("price override rates must be non-negative numbers (USD per 1M tokens)",
      "价格覆盖的费率必须是非负数（每 100 万 token 的美元价格）"),
+    ("price override trust_origin must be true or false",
+     "价格覆盖的 trust_origin 必须是 true 或 false"),
     ("daily token warning must be a positive number", "每日 token 警告线必须是正数"),
     ("daily token limit must be a positive number", "每日 token 上限必须是正数"),
     ("monthly cost warning usd must be a positive number", "每月费用警告线（美元）必须是正数"),

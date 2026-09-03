@@ -265,10 +265,12 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .unpriced-note{display:flex;align-items:flex-start;gap:9px;margin-top:10px;padding:10px 11px;
   border:1px solid var(--line);border-left:3px solid var(--state-revise);border-radius:var(--r-md);
   background:var(--surface-2);color:var(--text-2);font-size:var(--fs-caption);line-height:1.5}
-.price-head,.price-row{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(4,minmax(0,1fr)) 28px;gap:7px;align-items:center}
+.price-head,.price-row{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(4,minmax(0,1fr)) minmax(0,1.1fr) 28px;gap:7px;align-items:center}
 .price-head{margin-top:10px;color:var(--text-3);font-size:var(--fs-caption)}
 .price-rows{display:grid;gap:8px;margin-top:6px}
 .price-row input{min-height:34px;padding:6px 8px;font-size:var(--fs-caption);min-width:0}
+.price-trust{display:flex;align-items:center;gap:6px;color:var(--text-2);font-size:var(--fs-caption);line-height:1.2}
+.price-trust input{min-height:0;width:14px;height:14px;flex:none;padding:0}
 .settings-usage-rollup{margin-top:14px}
 
 /* Decision banner: protocol state is never hidden or transient. */
@@ -2759,7 +2761,8 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
         <div class="unpriced-note" id="runtime-unpriced" hidden><span aria-hidden="true">!</span><div id="runtime-unpriced-text"></div></div>
         <div class="form-title" style="margin-top:16px">Model prices</div>
         <small class="field-help">USD per 1M tokens for models the price snapshot does not carry. Used for this project's estimates only.</small>
-        <div class="price-head" aria-hidden="true"><span>Model</span><span>Input</span><span>Output</span><span>Cache write</span><span>Cache read</span><span></span></div>
+        <small class="field-help">A price applies to calls that went to the vendor itself. Tick "trust this endpoint" to price a relay or gateway too — CrossAudit cannot see what such a route really bills, so a monthly cost limit would then rest on your figure.</small>
+        <div class="price-head" aria-hidden="true"><span>Model</span><span>Input</span><span>Output</span><span>Cache write</span><span>Cache read</span><span>Trust this endpoint</span><span></span></div>
         <div class="price-rows" id="runtime-prices"></div>
         <div class="model-actions"><button type="button" class="secondary" data-add-price>＋ Add price</button></div>
       </section>
@@ -3457,6 +3460,8 @@ const ZH={
   "Generator share":"生成者占比","Auditor share":"审计者占比","Passed audits":"通过的审计","Unpriced calls":"未计价调用","Calls":"调用次数",
   "Model prices":"模型价格","＋ Add price":"＋ 添加价格","Input":"输入","Output":"输出","Cache write":"缓存写入","Cache read":"缓存读取","Model ID":"模型 ID",
   "USD per 1M tokens for models the price snapshot does not carry. Used for this project's estimates only.":"价格快照未收录的模型按每 100 万 token 的美元价格计费。仅用于本项目的估算。",
+  "A price applies to calls that went to the vendor itself. Tick \u0022trust this endpoint\u0022 to price a relay or gateway too — CrossAudit cannot see what such a route really bills, so a monthly cost limit would then rest on your figure.":"价格仅适用于直接发往供应商的调用。勾选“信任此端点”后，中转或网关的调用也会计价——CrossAudit 无法看到这类线路的真实账单，届时每月费用上限将以你填写的数字为准。",
+  "Trust this endpoint":"信任此端点","trust this endpoint":"信任此端点",
   "No overrides. Models missing from the price snapshot stay unpriced.":"没有覆盖价格。价格快照中缺失的模型保持未计价。",
   "Usage and budgets are tracked per project, from each project's own local ledger. Nothing is sent anywhere.":"用量与预算按项目跟踪，来自每个项目自己的本地账本。不会发送到任何地方。",
   "Export period":"导出范围","Export CSV":"导出 CSV","Export JSON":"导出 JSON","Everything":"全部",
@@ -6618,7 +6623,13 @@ function usageMode(){try{return localStorage.getItem(USAGE_MODE_KEY)==='tokens'?
 function setUsageMode(mode){try{localStorage.setItem(USAGE_MODE_KEY,mode==='tokens'?'tokens':'value');}catch(e){}if(lastState)render(lastState);}
 function shortUsd(value){const n=Number(value||0);if(!isFinite(n)||n<=0)return '$0.00';
   if(n>=1000)return '$'+Math.round(n).toLocaleString();if(n>=100)return '$'+n.toFixed(0);return '$'+n.toFixed(2);}
-function usageFigure(bucket){const b=bucket||{};return usageMode()==='tokens'?formatTokens(b.tokens):shortUsd(b.api_value_usd);}
+function usageFigure(bucket){const b=bucket||{};
+  if(usageMode()==='tokens')return formatTokens(b.tokens);
+  // The always-visible element must not be the one place a person is told a
+  // wrong number: a window whose calls all lack a price says so, rather than
+  // showing the $0.00 the Usage view then contradicts.
+  if(Number(b.unpriced_calls||0)&&!Number(b.api_value_usd||0))return currentLocale==='zh'?'未计价':'unpriced';
+  return shortUsd(b.api_value_usd);}
 function budgetState(g){g=g||{};if(g.state==='blocked')return 'blocked';if(g.state==='warning'||(g.fired||[]).length)return 'warning';return 'ok';}
 function renderUsagePill(d){const pill=document.getElementById('usage-pill');if(!pill)return;
   const u=(d&&d.usage)||{};if(!Number((u.all||{}).calls||0)){pill.hidden=true;return;}
@@ -6652,10 +6663,18 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-usage-mo
 function countdownText(resetAt){const s=Math.floor(Number(resetAt)-Date.now()/1000),zh=currentLocale==='zh';
   if(s<=0)return zh?'现在':'now';if(s<60)return zh?'不到 1 分钟':'under a minute';
   const h=Math.floor(s/3600),m=Math.floor(s%3600/60);
-  if(zh)return (h?h+' 小时 ':'')+(m||!h?m+' 分钟':'').trim();return ((h?h+' h ':'')+(m||!h?m+' min':'')).trim();}
-function resetSentence(resetAt){const zh=currentLocale==='zh';
-  return zh?'已达供应商额度上限 · '+countdownText(resetAt)+'后重置':'Provider limit reached · resets in '+countdownText(resetAt);}
-function providerResetLine(p){const w=p&&p.waiting_reason;if(!w||!w.reset_at||p.state!=='PROVIDER_UNAVAILABLE')return '';
+  if(zh)return ((h?h+' 小时 ':'')+(m||!h?m+' 分钟':'')).trim();return ((h?h+' h ':'')+(m||!h?m+' min':'')).trim();}
+function resetSentence(resetAt){const zh=currentLocale==='zh',lead=zh?'已达供应商额度上限 · ':'Provider limit reached · ';
+  // Three shapes, because "resets in now" is not English and "现在后重置" is not
+  // Chinese: a moment still ahead counts down, a moment already passed says so
+  // in the present tense, and a vendor that named no usable moment gets a word
+  // rather than an invented number.
+  const at=Number(resetAt);
+  if(!isFinite(at)||at<=0)return lead+(zh?'稍后重置':'resets soon');
+  if(at-Date.now()/1000<=0)return lead+(zh?'现在重置':'resets now');
+  return zh?lead+countdownText(at)+'后重置':lead+'resets in '+countdownText(at);}
+function providerResetLine(p){const w=p&&p.waiting_reason;if(!w||p.state!=='PROVIDER_UNAVAILABLE')return '';
+  if(!w.reset_at)return w.rate_limited?'<span class="run-reset">'+esc(resetSentence(0))+'</span>':'';
   return '<span class="run-reset" data-reset-at="'+esc(w.reset_at)+'">'+esc(resetSentence(w.reset_at))+'</span>';}
 setInterval(()=>{document.querySelectorAll('[data-reset-at]').forEach(el=>{el.textContent=resetSentence(Number(el.getAttribute('data-reset-at')));});},30000);
 function resetWords(g){g=g||{};const zh=currentLocale==='zh',r=g.resets||{};
@@ -6688,7 +6707,12 @@ function unpricedSentences(g){g=g||{};return (g.unpriced_models||[]).map(row=>{c
   return currentLocale==='zh'?'本月有 '+row.calls+' 次调用无法计价（模型 '+row.model+' 在 '+snap+' 的价格快照中没有价格）'
     :row.calls+' call'+(row.calls===1?'':'s')+' this month could not be priced (model '+row.model+' has no price in the snapshot of '+snap+')';});}
 function monthlyReport(d){const u=(d&&d.usage)||{},month=u.month||{};const zh=currentLocale==='zh';
-  const cycleList=Object.values(d.cycles||{});const passed=cycleList.filter(c=>['passed','consumed'].includes(String(c.status||'').toLowerCase())).length;
+  // Every other row in this table is month-scoped, so this one is too: a cycle
+  // counts when the month it last moved in is the month being reported.
+  const now=new Date(),cycleList=Object.values(d.cycles||{});
+  const thisMonth=c=>{const at=Number(c&&c.updated_at||0);if(!at)return false;const when=new Date(at*1000);
+    return when.getFullYear()===now.getFullYear()&&when.getMonth()===now.getMonth();};
+  const passed=cycleList.filter(c=>thisMonth(c)&&['passed','consumed'].includes(String(c.status||'').toLowerCase())).length;
   const total=Math.max(1,Number(month.tokens||0));const roles={};(u.roles||[]).forEach(r=>{roles[r.role]=Math.round(Number(r.tokens||0)*100/total);});
   const top=(u.models||[]).slice().sort((a,b)=>Number(b.tokens||0)-Number(a.tokens||0)).slice(0,5);
   const row=(label,value)=>'<tr><th>'+label+'</th><td>'+esc(value)+'</td></tr>';
@@ -6702,12 +6726,14 @@ function renderPriceRows(rows){const host=document.getElementById('runtime-price
   const labels={input:'Input',output:'Output',cache_write:'Cache write',cache_read:'Cache read'};
   host.innerHTML=(rows||[]).map(row=>'<div class="price-row" data-price-row><input data-price-model maxlength="120" value="'+esc(row.model||'')+'" aria-label="Model ID" placeholder="Exact model ID">'
     +Object.keys(labels).map(k=>'<input data-price-'+k+' type="number" min="0" step="0.01" value="'+esc(row[k]===undefined||row[k]===null?'':row[k])+'" aria-label="'+esc(t(labels[k]))+'" placeholder="0">').join('')
+    +'<label class="price-trust"><input type="checkbox" data-price-trust'+(row.trust_origin?' checked':'')+' aria-label="'+esc(t('Trust this endpoint'))+'"><span>'+esc(t('Trust this endpoint'))+'</span></label>'
     +'<button type="button" class="fallback-remove" data-remove-price title="Remove">×</button></div>').join('')
     ||'<div class="fallback-empty">No overrides. Models missing from the price snapshot stay unpriced.</div>';}
 function priceRows(){return [...document.querySelectorAll('[data-price-row]')].map(row=>({model:row.querySelector('[data-price-model]').value.trim(),
   input:row.querySelector('[data-price-input]').value,output:row.querySelector('[data-price-output]').value,
-  cache_write:row.querySelector('[data-price-cache_write]').value,cache_read:row.querySelector('[data-price-cache_read]').value}));}
-document.querySelectorAll('[data-add-price]').forEach(button=>button.onclick=()=>{const rows=priceRows();rows.push({model:'',input:'',output:'',cache_write:'',cache_read:''});renderPriceRows(rows);
+  cache_write:row.querySelector('[data-price-cache_write]').value,cache_read:row.querySelector('[data-price-cache_read]').value,
+  trust_origin:Boolean(row.querySelector('[data-price-trust]')&&row.querySelector('[data-price-trust]').checked)}));}
+document.querySelectorAll('[data-add-price]').forEach(button=>button.onclick=()=>{const rows=priceRows();rows.push({model:'',input:'',output:'',cache_write:'',cache_read:'',trust_origin:false});renderPriceRows(rows);
   const last=document.querySelector('[data-price-row]:last-child [data-price-model]');if(last)last.focus();});
 runtimeModal.addEventListener('click',ev=>{const button=ev.target.closest('[data-remove-price]');if(!button)return;button.closest('[data-price-row]').remove();if(!priceRows().length)renderPriceRows([]);});
 function renderRuntimeBudgetNotes(guard){const note=document.getElementById('runtime-unpriced'),text=document.getElementById('runtime-unpriced-text');if(!note)return;

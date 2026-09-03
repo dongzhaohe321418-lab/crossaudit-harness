@@ -1202,6 +1202,16 @@ def _price_payload(rows: object) -> dict:
                 raise ConfigDenial(
                     "price override rates must be non-negative numbers (USD per 1M tokens)")
             rates[key] = value
+        trust = row.get("trust_origin", False)
+        if trust in (None, "", 0, "0", "false", "False"):
+            trust = False
+        if trust in (1, "1", "true", "True", "on"):
+            trust = True
+        if not isinstance(trust, bool):
+            raise ConfigDenial(
+                "price override trust_origin must be true or false")
+        if trust:
+            rates["trust_origin"] = True
         out[model] = rates
     return out
 

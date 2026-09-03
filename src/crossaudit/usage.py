@@ -75,7 +75,8 @@ def _nonnegative(value: Any) -> int:
         return 0
 
 
-def _rates(vendor: str, model: str, overrides: dict | None = None) -> Rates | None:
+def _rates(vendor: str, model: str, overrides: dict | None = None, *,
+           official: bool = True) -> Rates | None:
     """The model's price: a per-project override first, else its capability card.
 
     Price is part of a model's capability record, not a table kept in parallel
@@ -85,18 +86,30 @@ def _rates(vendor: str, model: str, overrides: dict | None = None) -> Rates | No
     snapshot and the event is stamped ``user_priced`` so the origin of every
     dollar figure stays legible.
     """
-    override = price_override(overrides, model)
+    override = price_override(overrides, model, official=official)
     if override is not None:
         return override
-    return capability_card(vendor, model).price
+    return capability_card(vendor, model).price if official else None
 
 
-def price_override(overrides: dict | None, model: str) -> Rates | None:
-    """The user's declared rates for ``model``, or None when there are none."""
+def price_override(overrides: dict | None, model: str, *,
+                   official: bool = True) -> Rates | None:
+    """The user's declared rates for ``model``, or None when there are none.
+
+    ``official`` is whether the call went to a vendor endpoint CrossAudit can
+    reason about. A relay's real billing is invisible from here, so an override
+    does NOT price a proxy origin by default: without that rule a monthly cost
+    *limit* — which fails closed the moment anything is unpriced — would reopen
+    on a user-typed guess about a route nobody can see. A project that knows
+    what its relay charges says so per model with ``trust_origin: true``; the
+    call is then priced and still stamped ``user_priced``.
+    """
     if not isinstance(overrides, dict):
         return None
     row = overrides.get(model)
     if not isinstance(row, dict):
+        return None
+    if not official and not bool(row.get("trust_origin")):
         return None
     try:
         return Rates(input=float(row.get("input", 0) or 0),
@@ -211,11 +224,12 @@ def record_reply(*, root: Path, state_dir: str, role: str, phase: str,
                              response=reply.text)
     ctx = dict(context) if isinstance(context, dict) else {}
     prices = ctx.pop("prices", None)
-    override = price_override(prices, model)
+    official = _is_official(provider, base_url)
+    override = price_override(prices, model, official=official)
     subscription = provider == "openai_codex"
     if override is not None:
         rates, billing_kind = override, "user_priced"
-    elif _is_official(provider, base_url):
+    elif official:
         rates = _rates(vendor, model)
         billing_kind = ("subscription_api_value" if subscription and rates
                         else "api_value" if rates else "unpriced")
@@ -278,6 +292,79 @@ def record_reply(*, root: Path, state_dir: str, role: str, phase: str,
             # to turn a successful provider completion into a failed task.
             continue
     return event
+
+
+def attribute_round(root: Path, state_dir: str, *, run_id: str, round_no: int,
+                    cycle_id: str) -> int:
+    """Stamp ``cycle_id`` onto this round's lines that were written without one.
+
+    A cycle is minted by the audit, and the audit judges a generation that has
+    already happened — so the first generator call of every cycle is recorded
+    before the cycle it belongs to exists. Without this backfill ``per_cycle``
+    under-counts every cycle by exactly that call, while ``per_run`` is right;
+    a single-cycle run would disagree with itself. Returns how many lines were
+    stamped. The rewrite happens in place under the ledger's own lock, so a
+    concurrent appender (which opens the path fresh and appends under the same
+    lock) can neither lose a line nor read a half-written one.
+    """
+    run_id, cycle_id = str(run_id or ""), str(cycle_id or "")
+    round_no = _nonnegative(round_no)
+    if not (run_id and cycle_id and round_no):
+        return 0
+    path = Path(root) / state_dir / LEDGER_NAME
+    changed = 0
+    with _WRITE_LOCK:
+        try:
+            fd = os.open(path, os.O_RDWR)
+        except OSError:
+            return 0
+        locked = False
+        try:
+            locked = _lock_file(fd)
+            with os.fdopen(os.dup(fd), "r", encoding="utf-8") as handle:
+                os.lseek(fd, 0, os.SEEK_SET)
+                lines = handle.read().splitlines()
+            out = []
+            for line in lines:
+                try:
+                    event = json.loads(line)
+                except ValueError:
+                    out.append(line)
+                    continue
+                if (isinstance(event, dict) and not event.get("cycle_id")
+                        and event.get("run_id") == run_id
+                        and _nonnegative(event.get("round")) == round_no):
+                    event["cycle_id"] = cycle_id[:64]
+                    line = json.dumps(event, sort_keys=True, separators=(",", ":"))
+                    changed += 1
+                out.append(line)
+            if changed:
+                body = ("\n".join(out) + "\n").encode("utf-8")
+                os.lseek(fd, 0, os.SEEK_SET)
+                pending = memoryview(body)
+                while pending:
+                    written = os.write(fd, pending)
+                    if written <= 0:
+                        raise OSError("usage ledger rewrite made no progress")
+                    pending = pending[written:]
+                os.ftruncate(fd, len(body))
+                os.fsync(fd)
+        except (OSError, ValueError):
+            return 0
+        finally:
+            if locked:
+                _unlock_file(fd)
+            os.close(fd)
+    if changed:
+        with _CACHE_LOCK:
+            _SUMMARY_CACHE.pop(str(path), None)
+            listeners = tuple(_LISTENERS)
+        for listener in listeners:
+            try:
+                listener()
+            except Exception:
+                continue
+    return changed
 
 
 def record_completion(**kwargs) -> dict | None:
@@ -868,7 +955,7 @@ def export_csv(rows: list[dict]) -> str:
 # ------------------------------------------------------------ roll-up
 def project_rollup(cfg, *, now: datetime | None = None) -> dict:
     """One project's line in the workspace table: today / month / budget state."""
-    result = summary(cfg)
+    result = summary(cfg, now=now)
     budget = result.get("budget", {})
     return {
         "name": Path(cfg.root).name,
@@ -904,27 +991,6 @@ def workspace_rollup(configs, *, now: datetime | None = None) -> dict:
     }
     return {"projects": rows, "total": total, "price_snapshot": PRICE_SNAPSHOT,
             "local_only": True}
-
-
-def monthly_report(result: dict, *, passed_audits: int | None = None) -> dict:
-    """The month's report card as plain rows: top models, role share, audits."""
-    month = result.get("month", {})
-    models = sorted(result.get("models", []), key=lambda r: -r["tokens"])[:5]
-    roles = {row["role"]: row for row in result.get("roles", [])}
-    total_tokens = max(1, int(month.get("tokens", 0)))
-    share = {role: round(int(roles[role]["tokens"]) * 100 / total_tokens)
-             for role in roles}
-    return {
-        "top_models": [{"model": r["model"], "role": r["role"], "tokens": r["tokens"],
-                        "api_value_usd": r["api_value_usd"],
-                        "unpriced_calls": r.get("unpriced_calls", 0)} for r in models],
-        "role_share": share,
-        "calls": int(month.get("calls", 0)),
-        "tokens": int(month.get("tokens", 0)),
-        "api_value_usd": float(month.get("api_value_usd", 0.0)),
-        "unpriced_calls": int(month.get("unpriced_calls", 0)),
-        "passed_audits": passed_audits,
-    }
 
 
 # ------------------------------------------------------------------ forecast
