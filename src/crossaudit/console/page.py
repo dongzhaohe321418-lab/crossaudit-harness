@@ -504,12 +504,16 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
   overflow-wrap:anywhere;max-width:100%}
 .event-mark.runtime{background:var(--surface-2);color:var(--text-3)}
 /* The thinking orb: one canvas where a state is in progress, nothing anywhere
-   else. It is the mark of the line it sits on — the optimistic turn's working
-   indicator at 64 px, the newest live activity row's mark at 20 px — and the
-   engine paints it (motion, theme and reduced-motion live in the wrapper). */
+   else. D149: it is never the event itself — it is a 20 px mark at the start
+   of a live line that says, in words, what is happening and what number that
+   phase has produced. The engine paints it (motion, theme and reduced-motion
+   live in the wrapper). */
 .orb{display:block;flex:none}
-.turn-orb{width:64px;height:64px}
 .event-orb{width:20px;height:20px;margin:1px}
+/* The live phase line: orb, phase in words, its number, its elapsed. */
+.live-phase{display:flex;align-items:center;gap:8px;color:var(--text-2);
+  font-size:var(--fs-label);padding:4px 0}
+.live-phase-text{overflow-wrap:anywhere}
 .turn-sub{margin-top:7px;color:var(--text-2);font-size:var(--fs-label)}
 /* Phase narration under the working indicator: quiet, one line each, the
    latest a shade darker. No card, no mark — it is the indicator's caption. */
@@ -6237,18 +6241,77 @@ watchOrbEnvironment();
 // Phase → drawing. The phase words are the ones the runtime narrates
 // (pacing.RUN_PHASES, intake.PHASE_WORD); `thinking` is the generator
 // summarised reasoning arriving, `waiting` a provider retry or rate-limit
-// pause, `sending` the window before the server has said anything. The
-// 64 px turn orb stays on the calm `working` drawing until something is
-// being written; the 20 px run-card orb names the finer phases.
-const ORB_STATES={
-  64:{sending:'working',routing:'working',preparing:'working',answering:'composing',
-      generating:'composing',thinking:'weaving',auditing:'solving',waiting:'breathing'},
-  20:{routing:'searching',preparing:'connecting',answering:'composing',
-      generating:'composing',thinking:'weaving',auditing:'solving',waiting:'breathing'}};
-function orbStateFor(phase,size){return ORB_STATES[Number(size)===20?20:64][phase]||'working';}
-function orbMarkup(phase,size,label,cls){const px=Number(size)===20?20:64;
-  return '<canvas class="orb '+esc(cls||'')+'" data-orb="'+esc(orbStateFor(phase,px))+'" data-orb-size="'+px
-    +'" role="img" aria-label="'+esc(label)+'"></canvas>';}
+// pause, `sending` the window before the server has said anything.
+// D149: ONE size. The 64 px standalone orb is gone — an animation with no
+// words beside it carried no information — so the per-phase state map now
+// serves a single 20 px mark that always sits at the start of a line that
+// says what is happening.
+const ORB_STATES={sending:'searching',routing:'searching',preparing:'connecting',
+  answering:'composing',generating:'composing',thinking:'weaving',
+  auditing:'solving',waiting:'breathing',stopping:'breathing'};
+function orbStateFor(phase){return ORB_STATES[phase]||'working';}
+function orbMarkup(phase,label,cls){
+  return '<canvas class="orb '+esc(cls||'')+'" data-orb="'+esc(orbStateFor(phase))
+    +'" data-orb-size="20" role="img" aria-label="'+esc(label)+'"></canvas>';}
+// ---- D149. The live line: never an animation alone.
+//: Elapsed is only shown once a phase has run long enough for the number to
+//: mean something; under that it is noise that changes every second.
+const PHASE_ELAPSED_S=5;
+// Elapsed in words, in the language of the reader: 38 秒 or 38s, 1 分 12 秒 or
+// 1m 12s. Deliberately not elapsedText(), which appends the word elapsed for
+// the run meta row and reads wrong inside a sentence.
+function elapsedWords(seconds){
+  const s=Math.max(0,Math.floor(Number(seconds)||0)),zh=currentLocale==='zh';
+  if(s<60)return zh?s+' 秒':s+'s';
+  const m=Math.floor(s/60),rest=s%60;
+  return zh?(rest?m+' 分 '+rest+' 秒':m+' 分'):(rest?m+'m '+rest+'s':m+'m');}
+// The phase, in the words a person would use for it. Both languages live
+// here rather than in the ZH catalogue because these lines are BUILT (a
+// count sits inside them), and a translated whole sentence would have to be
+// re-templated per count.
+const PHASE_WORDS={
+  sending:{en:'Working out who should handle this',zh:'正在判断由谁处理'},
+  routing:{en:'Working out who should handle this',zh:'正在判断由谁处理'},
+  preparing:{en:'Reading the workspace',zh:'正在读取工作区'},
+  answering:{en:'Writing a reply',zh:'正在撰写回复'},
+  generating:{en:'Drafting',zh:'正在撰写'},
+  thinking:{en:'Thinking it through',zh:'正在思考'},
+  auditing:{en:'The auditor is reading',zh:'审计者正在阅读'},
+  waiting:{en:'Waiting for the provider',zh:'等待供应商'},
+  stopping:{en:'Stopping',zh:'正在停止'}};
+function phaseWords(phase){const row=PHASE_WORDS[phase]||PHASE_WORDS.routing;
+  return currentLocale==='zh'?row.zh:row.en;}
+// The number THIS phase produces: words for a phase that writes, files for a
+// phase that reads. A phase with no number to show says nothing here, and the
+// line is then phase + elapsed.
+function phaseCount(phase,facts){
+  const zh=currentLocale==='zh',f=facts||{};
+  if(phase==='generating'||phase==='answering'||phase==='thinking'){
+    const n=Math.max(0,Math.floor(Number(f.words||0)));if(!n)return '';
+    return zh?'已写 '+n+' 字':n+(n===1?' word':' words')+' so far';}
+  if(phase==='preparing'||phase==='auditing'){
+    const n=Math.max(0,Math.floor(Number(f.files||0)));if(!n)return '';
+    return zh?n+' 个文件':n+(n===1?' file':' files');}
+  return '';}
+function phaseLineText(phase,facts){
+  const zh=currentLocale==='zh',f=facts||{};
+  const seconds=Math.max(0,Math.floor(Number(f.seconds||0)));
+  const parts=[phaseWords(phase)];
+  if(phase==='waiting'){
+    // The wait IS the number this phase has, so it is not repeated as a tail.
+    if(seconds>=PHASE_ELAPSED_S)parts.push(zh?'已等 '+elapsedWords(seconds):elapsedWords(seconds));
+    return parts.join(' · ');}
+  const count=phaseCount(phase,f);
+  if(count)parts.push(count);
+  if(seconds>=PHASE_ELAPSED_S)parts.push(elapsedWords(seconds));
+  return parts.join(' · ');}
+// One compact live line, everywhere a phase is in progress. The orb is its
+// mark; the sentence beside it is what the orb is labelled with, so what is
+// heard and what is read are the same words.
+function livePhaseLine(phase,facts,cls){
+  const text=phaseLineText(phase,facts);
+  return '<div class="live-phase '+esc(cls||'')+'">'+orbMarkup(phase,text,'event-orb')
+    +'<span class="live-phase-text">'+esc(text)+'</span></div>';}
 // A step narrated by the resilience layer that means the run is waiting on
 // the clock of the provider rather than on the model.
 function orbWaitingStep(step){return Boolean(step&&step.kind==='provider_recovery'
@@ -6266,6 +6329,14 @@ function runOrbPhase(p){
   if(s==='DRAFT'||s==='QUEUED')return 'preparing';
   if(s==='CANCELLING')return 'stopping';
   return '';}
+// How many files this round put in front of the auditor: the newest generator
+// commit in this conversation. The page already holds them (the file chips),
+// so the number costs no new request and is never invented.
+function liveFileCount(d){
+  const rows=((d&&d.generator_stream)||[]).filter(
+    r=>r.kind==='generator'&&(r.chat_id||'history')===activeChatId);
+  const newest=rows.length?rows[rows.length-1]:null;
+  return newest&&newest.files?newest.files.length:0;}
 // The phase of the optimistic turn, from the intake record the server keeps for
 // the message in flight (routing → preparing | answering).
 function intakeOrbPhase(intake){
@@ -6274,10 +6345,6 @@ function intakeOrbPhase(intake){
   if(orbWaitingStep(last))return 'waiting';
   const phase=String(intake.phase||'');
   return phase==='answering'||phase==='preparing'||phase==='routing'?phase:'sending';}
-function intakeOrbLabel(intake){
-  const steps=(intake&&intake.steps)||[];const last=steps.length?steps[steps.length-1]:null;
-  if(last)return localeText(last.text_i18n,last.text);
-  return currentLocale==='zh'?'正在处理你的消息':'Handling your message';}
 // After a render: start the orbs the new markup asked for, release the ones
 // whose canvas the render threw away.
 function mountOrbs(root){
@@ -6309,7 +6376,10 @@ function optimisticTurn(text, queued, intake, replying){
     :'<span class="role-mark generator" aria-hidden="true">G</span><b>Generator</b>';
   return you + '<article class="turn"><div class="turn-main">'
     + '<div class="turn-meta">' + who + '</div><div class="turn-body">'
-    + orbMarkup(intakeOrbPhase(intake),64,intakeOrbLabel(intake),'turn-orb')
+    // D149. One compact line — the phase in words, its number, its elapsed —
+    // with the orb as its 20 px mark. Never the animation on its own.
+    + livePhaseLine(intakeOrbPhase(intake),
+        {seconds:intake?intake.elapsed:0},'turn-phase')
     + (intake?'<div class="intake">'+intakeLines(intake)+'</div>':'')
     + '<div class="turn-forecast">' + esc(forecastText(lastState)) + '</div>'
     + '</div></div></article>';
@@ -6489,17 +6559,17 @@ function conciseDetail(s){
 // itself, so it does not borrow the generator name or mark, and every row
 // localises from the wire fields (text_i18n) rather than showing English
 // under 中文.
-function activityRow(s, orbPhase){
+function activityRow(s){
   const system = s.kind === 'context_condensed';
   const mark = system ? '↻' : (ACTOR_MARKS[s.actor]||'·');
   const who = system ? t('Context reduced') : t(ACTOR_NAMES[s.actor]||s.actor);
   const line = (system || s.text_i18n) ? localeText(s.text_i18n, s.text) : s.text;
   const detail = system ? localeText(s.detail_i18n, s.detail) : conciseDetail(s);
-  // The newest row of a live run carries the orb as its mark: the phase in
-  // progress, labelled with the sentence beside it.
+  // D149. Every row keeps its own actor mark. What is happening RIGHT NOW is
+  // said once, in the live phase line below the rows, rather than by animating
+  // the newest thing that has already happened.
   return '<div class="audit-event">'
-  + (orbPhase ? orbMarkup(orbPhase, 20, line, 'event-orb')
-    : '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>')
+  + '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>'
   + '<div class="event-main"><div class="event-line"><b>' + esc(who)
   + '</b><span>' + esc(line) + '</span></div>'
   + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
@@ -6547,34 +6617,27 @@ function runCard(d){
   // draft (the text itself lives in the unaudited draft article above) and
   // the tail of the summarised thinking. Neither is a step; neither persists.
   const draft = liveDraftFor(d), thinking = liveThinkingFor(d);
-  // One orb per card, on the newest live line: the thinking row while
-  // reasoning arrives, else the draft row while text arrives, else the
-  // newest event row in the phase of the run itself. Nothing once the run is over.
+  // D149. ONE orb per card, and it sits on the live phase line — the phase in
+  // words, the number that phase produces, and how long it has been going.
+  // Nothing once the run is over.
   const orbPhase = p && !p.finished ? runOrbPhase(p) : '';
   const rows = p && p.steps ? collapseClockRows(p.steps).slice(-12) : [];
-  const eventRows = rows.map((s, i) => activityRow(s,
-    orbPhase && !thinking && !draft && i === rows.length - 1 ? orbPhase : '')).join('');
+  const eventRows = rows.map(s => activityRow(s)).join('');
   // Review D8 / D4: thinking is model text no auditor has read — further from
   // evidence than the draft, which already says so on its face. It is folded
   // away behind a summary that says what it is, opens only if the reader asks,
   // and is never written anywhere: the row disappears with the run.
-  const draftLabel = currentLocale==='zh'
-        ? '草稿：已写 ' + draftCount(draft ? draft.text : '') + ' 字'
-        : 'Draft: ' + draftCount(draft ? draft.text : '') + ' words so far';
   const liveRows = (thinking ? '<details class="audit-event live-thinking">'
-      + '<summary>' + (orbPhase ? orbMarkup('thinking', 20,
-          currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited', 'event-orb')
-        : '<span class="event-mark runtime">…</span>')
+      + '<summary>' + '<span class="event-mark runtime">…</span>'
       + '<div class="event-main"><div class="event-line"><b>'
       + esc(currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited') + '</b></div></div>'
       + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></summary>'
       + '<div class="event-detail">' + esc(thinking.text.slice(-160).replace(/\s+/g,' ')) + '</div></details>' : '')
-    + (draft ? '<div class="audit-event live-draft">'
-      + (orbPhase && !thinking ? orbMarkup('generating', 20, draftLabel, 'event-orb')
-        : '<span class="event-mark generator">G</span>')
-      + '<div class="event-main"><div class="event-line"><b>'
-      + esc(t('Generator')) + '</b><span>' + esc(draftLabel) + '</span></div></div>'
-      + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></div>' : '');
+    // The word count of the draft is the number the generating phase has, so
+    // the phase line below IS the draft row; a second one would say it twice.
+    + (orbPhase ? livePhaseLine(orbPhase,
+        {seconds: p ? p.elapsed : 0, words: draftCount(draft ? draft.text : ''),
+         files: liveFileCount(d)}, 'audit-event') : '');
   const activityTitle = p && !p.finished ? 'Live activity' : 'Run activity';
   const activity = (eventRows + liveRows) || '<div class="activity-empty">The generator and auditor show what they are doing here while a task runs.</div>';
   const task = p && p.task ? p.task : titleOf(d);

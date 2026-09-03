@@ -7,9 +7,12 @@ from crossaudit.console.page import PAGE
 def test_page_has_the_optimistic_echo_and_working_indicator():
     assert "function optimisticTurn(" in PAGE
     assert "let optimisticSend" in PAGE
-    # The working indicator is the thinking orb (64 px) in the turn body; the
-    # dots it replaced are gone, CSS included.
-    assert "orbMarkup(intakeOrbPhase(intake),64,intakeOrbLabel(intake),'turn-orb')" in PAGE
+    # D149: the working indicator is a LINE — the phase in words, its number,
+    # its elapsed — marked by a 20 px orb. The standalone 64 px orb it replaced
+    # said nothing, and the dots before that are gone, CSS included.
+    assert ("livePhaseLine(intakeOrbPhase(intake),\n"
+            "        {seconds:intake?intake.elapsed:0},'turn-phase')") in PAGE
+    assert "turn-orb" not in PAGE
     assert "thinking-dots" not in PAGE
     # Set on submit, and cleared when the real state takes over / on clarify / error.
     assert "optimisticSend={text:rawText" in PAGE

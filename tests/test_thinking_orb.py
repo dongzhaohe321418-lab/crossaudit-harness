@@ -39,14 +39,14 @@ STATE_LABEL = re.compile(r"^(" + "|".join(ENGINE_STATES + ENGINE_MODES) + r")\b[
 IDENTIFIER = re.compile(r"\b[0-9a-f]{12,}\b|\b(run|intake|cycle)[_ -]?id\b", re.I)
 
 #: The state map the surfaces ship (page.py ORB_STATES), phase → engine state.
-STATE_MAP = {
-    64: {"sending": "working", "routing": "working", "preparing": "working",
-         "answering": "composing", "generating": "composing", "thinking": "weaving",
-         "auditing": "solving", "waiting": "breathing"},
-    20: {"routing": "searching", "preparing": "connecting", "answering": "composing",
-         "generating": "composing", "thinking": "weaving", "auditing": "solving",
-         "waiting": "breathing"},
-}
+#: D149 collapsed the two size tiers into one: the standalone 64 px orb is
+#: gone, so every phase now draws at the single 20 px mark that leads a live
+#: line of words.
+STATE_MAP = {"sending": "searching", "routing": "searching",
+             "preparing": "connecting", "answering": "composing",
+             "generating": "composing", "thinking": "weaving",
+             "auditing": "solving", "waiting": "breathing",
+             "stopping": "breathing"}
 
 
 def _script() -> str:
@@ -243,19 +243,21 @@ console.log(JSON.stringify(r));
 
 # ============================================================== the state map
 @node
-def test_every_phase_maps_to_a_shipped_engine_state_at_both_sizes():
+def test_every_phase_maps_to_a_shipped_engine_state():
+    """D149: one size, and the per-phase map survives the deletion of the
+    64 px tier. Mutation: drop a phase from ORB_STATES and its drawing falls
+    back to `working`, which the comparison below catches."""
     out = _run(_wrapper_program(r"""
-const E=globalThis.ThinkingOrbsEngine;const r={};
-for(const size of [64,20]){r[size]={};for(const phase of Object.keys(ORB_STATES[size])){
-  const s=orbStateFor(phase,size);r[size][phase]={state:s,mode:E.STATE_TO_MODE[s],draw:typeof E.MODE_DRAWS[E.STATE_TO_MODE[s]]};}}
-r.unknown=orbStateFor('no-such-phase',20);
+const E=globalThis.ThinkingOrbsEngine;const r={phases:{}};
+for(const phase of Object.keys(ORB_STATES)){
+  const s=orbStateFor(phase);r.phases[phase]={state:s,mode:E.STATE_TO_MODE[s],draw:typeof E.MODE_DRAWS[E.STATE_TO_MODE[s]]};}
+r.unknown=orbStateFor('no-such-phase');
 console.log(JSON.stringify(r));
 """))
-    for size, table in STATE_MAP.items():
-        got = out[str(size)]
-        assert {k: v["state"] for k, v in got.items()} == table
-        for row in got.values():
-            assert row["mode"] and row["draw"] == "function"
+    got = out["phases"]
+    assert {k: v["state"] for k, v in got.items()} == STATE_MAP
+    for row in got.values():
+        assert row["mode"] and row["draw"] == "function"
     assert out["unknown"] == "working"
 
 
@@ -275,22 +277,41 @@ ROUTED = "The generator will do this"
 REPLYING = "The generator is replying"
 WAITING = "Waiting to retry the generator's provider · 2.5 s"
 
+#: D149. The label is no longer the newest narration step: it is the LINE the
+#: orb marks — the phase in words, the number that phase produces, and the
+#: elapsed once it passes 5 s. `_intake` records carry no elapsed, so these
+#: are the bare phase words.
 OPTIMISTIC_CASES = {
-    "no_intake": {"intake": None, "state": "working", "label": None},
+    "no_intake": {"intake": None, "state": "searching",
+                  "line": {"en": "Working out who should handle this", "zh": "正在判断由谁处理"}},
     "routing": {"intake": _intake("routing", [_step("received", RECEIVED)]),
-                "state": "working", "label": RECEIVED},
+                "state": "searching",
+                "line": {"en": "Working out who should handle this", "zh": "正在判断由谁处理"}},
     "preparing": {"intake": _intake("preparing", [_step("received", RECEIVED), _step("routed", ROUTED, detail="generator")], "generator"),
-                  "state": "working", "label": ROUTED},
+                  "state": "connecting",
+                  "line": {"en": "Reading the workspace", "zh": "正在读取工作区"}},
     "answering_chat": {"intake": _intake("answering", [_step("received", RECEIVED), _step("answering", REPLYING)]),
-                       "state": "composing", "label": REPLYING},
+                       "state": "composing",
+                       "line": {"en": "Writing a reply", "zh": "正在撰写回复"}},
     "answering_query": {"intake": _intake("answering", [_step("answering", "Looking up the audit record")], "query"),
-                        "state": "composing", "label": "Looking up the audit record"},
+                        "state": "composing",
+                        "line": {"en": "Writing a reply", "zh": "正在撰写回复"}},
     "waiting": {"intake": _intake("answering", [_step("answering", REPLYING), _step("provider_recovery", WAITING)]),
-                "state": "breathing", "label": WAITING},
+                "state": "breathing",
+                "line": {"en": "Waiting for the provider", "zh": "等待供应商"}},
+    # The one case with a number: past the 5 s threshold the wait itself is
+    # what the phase has to report, so it is the line's second half.
+    "waiting_38s": {"intake": dict(_intake("answering", [_step("answering", REPLYING), _step("provider_recovery", WAITING)]), elapsed=38),
+                    "state": "breathing",
+                    "line": {"en": "Waiting for the provider · 38s", "zh": "等待供应商 · 已等 38 秒"}},
+    "routing_72s": {"intake": dict(_intake("routing", [_step("received", RECEIVED)]), elapsed=72),
+                    "state": "searching",
+                    "line": {"en": "Working out who should handle this · 1m 12s",
+                             "zh": "正在判断由谁处理 · 1 分 12 秒"}},
 }
 
 
-def _render_optimistic(cases: dict) -> dict:
+def _optimistic_program(cases: dict) -> str:
     from extract_zh import shipped_js
     program = "\n".join([
         _DOM, f"require({str(VENDORED)!r});", shipped_js(ROOT), _esc(),
@@ -305,7 +326,7 @@ def _render_optimistic(cases: dict) -> dict:
         r"""for(const locale of ['en','zh']){currentLocale=locale;out[locale]={};
 for(const [name,c] of Object.entries(CASES))out[locale][name]=optimisticTurn('hello',Boolean(c.queued),c.intake,Boolean(c.replying));}
 console.log(JSON.stringify(out));"""])
-    return _run(program)
+    return program
 
 
 def _canvases(html: str) -> list[dict]:
@@ -322,8 +343,13 @@ def _unescape(text: str) -> str:
 
 
 @node
-def test_the_optimistic_turn_renders_one_orb_per_phase_labelled_with_the_phase_text_en_and_zh():
-    out = _render_optimistic(OPTIMISTIC_CASES)
+def test_the_optimistic_turn_renders_one_20px_orb_marking_a_line_of_words_en_and_zh():
+    """D149: nothing animates on its own. The turn carries ONE 20 px orb, and
+    the words beside it are the orb's own label — the phase, its number, its
+    elapsed. Mutation: drop the words from `livePhaseLine` and the
+    label-is-on-screen assertion fails; restore the 64 px size and the size
+    assertion fails."""
+    out = _run(_optimistic_program(OPTIMISTIC_CASES))
     for locale in ("en", "zh"):
         for name, case in OPTIMISTIC_CASES.items():
             html = out[locale][name]
@@ -332,15 +358,12 @@ def test_the_optimistic_turn_renders_one_orb_per_phase_labelled_with_the_phase_t
             assert len(orbs) == 1, (locale, name, html)
             orb = orbs[0]
             assert orb["data-orb"] == case["state"], (locale, name)
-            assert orb["data-orb-size"] == "64" and orb["role"] == "img"
-            assert "turn-orb" in orb["class"]
+            assert orb["data-orb-size"] == "20" and orb["role"] == "img"
+            assert "event-orb" in orb["class"] and "turn-orb" not in orb["class"]
             label = _unescape(orb["aria-label"])
-            if case["label"] is None:
-                assert label == ("正在处理你的消息" if locale == "zh" else "Handling your message")
-            else:
-                expected = phase_i18n(case["label"])[locale]
-                assert label == expected, (locale, name, label)
-                assert label in _unescape(html.split("</canvas>")[1]), "the label is the sentence on screen"
+            expected = case["line"][locale]
+            assert label == expected, (locale, name, label)
+            assert label in _unescape(html.split("</canvas>")[1]), "the label is the sentence on screen"
             if locale == "zh":
                 assert re.search(r"[一-鿿]", label), (name, label)
             assert not STATE_LABEL.match(label), (name, label)
@@ -350,9 +373,9 @@ def test_the_optimistic_turn_renders_one_orb_per_phase_labelled_with_the_phase_t
 
 @node
 def test_no_orb_once_a_reply_is_arriving_or_the_message_is_queued():
-    out = _render_optimistic({
+    out = _run(_optimistic_program({
         "replying": {"intake": _intake("answering", [_step("answering", REPLYING)]), "replying": True},
-        "queued": {"intake": None, "queued": True}})
+        "queued": {"intake": None, "queued": True}}))
     for locale in ("en", "zh"):
         for name in ("replying", "queued"):
             assert "<canvas" not in out[locale][name], (locale, name)
@@ -370,22 +393,42 @@ GEN_STEP = _step("prompt_ready", "Asking the generator to write", "generator")
 CLOCK = _step("still_working", "Still generating · 16 s")
 RETRY = _step("provider_recovery", "Retrying the generator's provider · attempt 2", "generator")
 
+#: D149. The run card's single orb sits on the live PHASE line, not on the
+#: newest thing that already happened. `_progress` records carry no elapsed,
+#: so these lines are the phase words plus the number that phase produced.
+DRAFTING = {"en": "Drafting", "zh": "正在撰写"}
+
+
+def _line(en: str, zh: str) -> dict:
+    return {"en": en, "zh": zh}
+
+
 RUN_CASES = {
-    "generating": {"state": _progress("GENERATING", [GEN_STEP]), "orb": "composing", "label": GEN_STEP["text"]},
-    "revising": {"state": _progress("REVISING", [GEN_STEP]), "orb": "composing", "label": GEN_STEP["text"]},
-    "auditing": {"state": _progress("AUDITING", [GEN_STEP, AUDIT_STEP]), "orb": "solving", "label": AUDIT_STEP["text"]},
-    "queued": {"state": _progress("QUEUED", [GEN_STEP]), "orb": "connecting", "label": GEN_STEP["text"]},
-    "clock_keeps_state": {"state": _progress("GENERATING", [GEN_STEP, CLOCK]), "orb": "composing", "label": CLOCK["text"]},
-    "provider_wait_state": {"state": _progress("WAITING_FOR_PROVIDER", [GEN_STEP]), "orb": "breathing", "label": GEN_STEP["text"]},
-    "provider_retry_step": {"state": _progress("GENERATING", [GEN_STEP, RETRY]), "orb": "breathing", "label": RETRY["text"]},
+    "generating": {"state": _progress("GENERATING", [GEN_STEP]), "orb": "composing",
+                   "line": DRAFTING},
+    "revising": {"state": _progress("REVISING", [GEN_STEP]), "orb": "composing",
+                 "line": DRAFTING},
+    "auditing": {"state": _progress("AUDITING", [GEN_STEP, AUDIT_STEP]), "orb": "solving",
+                 "line": _line("The auditor is reading", "审计者正在阅读")},
+    "queued": {"state": _progress("QUEUED", [GEN_STEP]), "orb": "connecting",
+               "line": _line("Reading the workspace", "正在读取工作区")},
+    "clock_keeps_state": {"state": _progress("GENERATING", [GEN_STEP, CLOCK]), "orb": "composing",
+                          "line": DRAFTING},
+    "provider_wait_state": {"state": _progress("WAITING_FOR_PROVIDER", [GEN_STEP]), "orb": "breathing",
+                            "line": _line("Waiting for the provider", "等待供应商")},
+    "provider_retry_step": {"state": _progress("GENERATING", [GEN_STEP, RETRY]), "orb": "breathing",
+                            "line": _line("Waiting for the provider", "等待供应商")},
     "thinking": {"state": _progress("GENERATING", [GEN_STEP]), "thinking": {"text": "weighing the units"},
-                 "orb": "weaving", "label": "Thinking · not audited", "row": "live-thinking"},
+                 "orb": "composing", "line": DRAFTING},
+    # The draft's word count IS the generating phase's number, so the line
+    # says it and no second draft row repeats it.
     "draft": {"state": _progress("GENERATING", [GEN_STEP]), "draft": {"text": "one two three"},
-              "orb": "composing", "label": "Draft: 3 words so far", "row": "live-draft"},
+              "orb": "composing", "line": _line("Drafting · 3 words so far", "正在撰写 · 已写 3 字")},
     "thinking_and_draft": {"state": _progress("GENERATING", [GEN_STEP]), "thinking": {"text": "w"},
-                           "draft": {"text": "one two"}, "orb": "weaving", "label": "Thinking · not audited",
-                           "row": "live-thinking"},
-    "stopping": {"state": _progress("CANCELLING", [GEN_STEP]), "orb": "working", "label": GEN_STEP["text"]},
+                           "draft": {"text": "one two"}, "orb": "composing",
+                           "line": _line("Drafting · 2 words so far", "正在撰写 · 已写 2 字")},
+    "stopping": {"state": _progress("CANCELLING", [GEN_STEP]), "orb": "breathing",
+                 "line": _line("Stopping", "正在停止")},
 }
 NO_ORB_CASES = {
     "finished_passed": {"state": _progress("PASSED", [GEN_STEP, AUDIT_STEP], finished=True, outcome="passed")},
@@ -396,14 +439,14 @@ NO_ORB_CASES = {
 }
 
 
-def _render_run_cards(cases: dict) -> dict:
+def _run_card_program(cases: dict) -> str:
     from extract_zh import shipped_js
     program = "\n".join([
         _DOM, f"require({str(VENDORED)!r});", shipped_js(ROOT), _esc(),
         "const at=()=>'10:27';const artifactList=()=>'';",
         "const auditStatus=()=>'passed';const chatProgress=d=>d.progress;",
         "const chatCycles=()=>[];const statusOf=()=>'ready';",
-        "let handoffAt=0,handoffDirection='';const runCostLine=()=>'';",
+        "let handoffAt=0,handoffDirection='';const runCostLine=()=>'';let activeChatId='';",
         "const forecastLine=()=>'';const titleOf=()=>'';",
         _snippet("const MARK = ") + ";",
         "let THINKING=null,DRAFT=null;const liveDraftFor=()=>DRAFT;const liveThinkingFor=()=>THINKING;",
@@ -417,7 +460,7 @@ def _render_run_cards(cases: dict) -> dict:
         _snippet("const ACTOR_MARKS") + ";",
         _snippet("function conciseDetail("),
         _orb_block(),
-        _snippet("function activityRow(s, orbPhase)"),
+        _snippet("function activityRow(s)"),
         _snippet("const CLOCK_KINDS") + ";",
         _snippet("function collapseClockRows("),
         _snippet("function runCard(d)"),
@@ -425,12 +468,17 @@ def _render_run_cards(cases: dict) -> dict:
         r"""for(const locale of ['en','zh']){currentLocale=locale;out[locale]={};
 for(const [name,c] of Object.entries(CASES)){THINKING=c.thinking||null;DRAFT=c.draft||null;out[locale][name]=runCard(c.state);}}
 console.log(JSON.stringify(out));"""])
-    return _run(program)
+    return program
 
 
 @node
-def test_the_run_card_renders_one_orb_on_the_newest_live_line_en_and_zh():
-    out = _render_run_cards(RUN_CASES)
+def test_the_run_card_renders_one_orb_on_the_live_phase_line_en_and_zh():
+    """D149: exactly one orb per card, on the line that says what is happening
+    now — never on an event row, which is a thing that already happened.
+    Mutation: put the orb back on the newest event row and the card carries
+    two canvases; drop the count from the generating line and the `draft`
+    case's expected words fail."""
+    out = _run(_run_card_program(RUN_CASES))
     for locale in ("en", "zh"):
         for name, case in RUN_CASES.items():
             html = out[locale][name]
@@ -440,31 +488,22 @@ def test_the_run_card_renders_one_orb_on_the_newest_live_line_en_and_zh():
             assert orb["data-orb"] == case["orb"], (locale, name, orb)
             assert orb["data-orb-size"] == "20" and orb["role"] == "img" and "event-orb" in orb["class"]
             label = _unescape(orb["aria-label"])
-            if case["label"] == "Thinking · not audited":
-                expected = "思考中 · 未经审计" if locale == "zh" else case["label"]
-            elif case["label"].startswith("Draft: "):
-                expected = "草稿：已写 3 字" if locale == "zh" else case["label"]
-            else:
-                expected = phase_i18n(case["label"])[locale]
+            expected = case["line"][locale]
             assert label == expected, (locale, name, label)
             assert not STATE_LABEL.match(label) and not IDENTIFIER.search(label), (name, label)
             if locale == "zh":
                 assert re.search(r"[一-鿿]", label), (name, label)
-            # The orb is the mark of the row whose sentence labels it.
-            row = html[html.index("<canvas"):]
-            row = row[:row.index("</div>", row.index("event-line"))]
+            # The orb is the mark of the line whose words label it.
+            row = html[html.index('<div class="live-phase'):]
+            row = row[:row.index("</div>", row.index("live-phase-text"))]
             assert expected in _unescape(row), (locale, name)
-            if case.get("row"):
-                before = html[:html.index("<canvas")]
-                assert before.rstrip().endswith(case["row"] + '">' if case["row"] == "live-draft"
-                                                else "<summary>"), (name, before[-80:])
-            # Only the newest line carries it: every other row keeps its actor mark.
+            # Every event row keeps its own actor mark; the orb is not one.
             assert html.count("<canvas") == 1
 
 
 @node
 def test_no_orb_where_nothing_is_in_progress():
-    out = _render_run_cards(NO_ORB_CASES)
+    out = _run(_run_card_program(NO_ORB_CASES))
     for locale in ("en", "zh"):
         for name in NO_ORB_CASES:
             html = out[locale][name]
@@ -476,8 +515,10 @@ def test_no_orb_where_nothing_is_in_progress():
 def test_the_dots_and_their_keyframes_are_gone_and_the_orb_is_mounted_after_each_render():
     assert "thinking-dots" not in PAGE
     assert "@keyframes think{" not in PAGE
-    assert ".turn-orb{width:64px;height:64px}" in PAGE
+    # D149: the 64 px standalone orb is deleted, size and all.
+    assert "turn-orb" not in PAGE and "width:64px" not in PAGE
     assert ".event-orb{width:20px;height:20px;margin:1px}" in PAGE
+    assert ".live-phase{" in PAGE
     conv = PAGE[PAGE.index("document.getElementById('conversation').innerHTML = html;"):]
     assert conv.split("\n")[1].strip() == "mountOrbs(document.getElementById('conversation'));"
     # The orb's label is always the caller's sentence; the engine's default
@@ -485,14 +526,16 @@ def test_the_dots_and_their_keyframes_are_gone_and_the_orb_is_mounted_after_each
     assert "Working…" not in _orb_block() and "Thinking…" not in _orb_block()
 
 
-def test_the_orb_is_the_mark_never_an_addition():
-    """The orb replaces the dots (optimistic turn) and the newest row's mark
-    (run card); it is never rendered next to either."""
+def test_the_orb_is_the_mark_of_a_line_of_words_never_an_event_of_its_own():
+    """D149. Both surfaces reach the orb only through `livePhaseLine`, which
+    cannot render a canvas without the sentence beside it. Mutation: call
+    `orbMarkup` directly from either renderer and these counts fail."""
+    line = _snippet("function livePhaseLine(phase,facts,cls)")
+    assert "orbMarkup(" in line and "live-phase-text" in line
     turn = _snippet("function optimisticTurn(text, queued, intake, replying)")
-    assert turn.count("orbMarkup(") == 1 and "event-mark" not in turn
-    row = _snippet("function activityRow(s, orbPhase)")
-    assert "orbPhase ? orbMarkup(orbPhase, 20, line, 'event-orb')" in row
-    assert ": '<span class=\"event-mark '" in row
+    assert turn.count("orbMarkup(") == 0 and turn.count("livePhaseLine(") == 1
+    row = _snippet("function activityRow(s)")
+    assert "orbMarkup(" not in row
+    assert "'<span class=\"event-mark '" in row
     card = _snippet("function runCard(d)")
-    assert card.count("orbMarkup(") == 2, "the thinking row and the draft row"
-    assert "orbPhase && !thinking && !draft && i === rows.length - 1" in card
+    assert card.count("orbMarkup(") == 0 and card.count("livePhaseLine(") == 1
