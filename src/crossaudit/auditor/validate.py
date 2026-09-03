@@ -23,6 +23,13 @@ def known_rules(constitution: str) -> set[str]:
     return set(RULE_HEADING.findall(constitution))
 
 
+#: The one parse failure that is not a malformed object: nothing that could
+#: be a reply was there at all (an empty completion, prose with no braces).
+#: Named because the bounded repair keys its fixed instruction on it and must
+#: never key on a reply-derived string.
+NO_JSON_REASON = "reply contains no JSON object"
+
+
 def parse_reply(text: str) -> tuple[dict | None, str | None]:
     """Extract the JSON object from a model reply. Prose around it is tolerated."""
     stripped = text.strip()
@@ -35,7 +42,7 @@ def parse_reply(text: str) -> tuple[dict | None, str | None]:
         pass
     start, end = stripped.find("{"), stripped.rfind("}")
     if start == -1 or end <= start:
-        return None, "reply contains no JSON object"
+        return None, NO_JSON_REASON
     try:
         return json.loads(stripped[start:end + 1]), None
     except json.JSONDecodeError as exc:

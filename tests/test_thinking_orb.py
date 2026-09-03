@@ -459,6 +459,7 @@ def _status_line_program(cases: dict) -> str:
         _snippet("function draftCount(text)"),
         _snippet("function formatUsd(value)"),
         _orb_block(),
+        _snippet("function statusRoundBar(p,d)"),
         _snippet("function statusRoundText(p,d)"),
         _snippet("function statusCostText(d,p)"),
         _snippet("function statusLine(d)"),

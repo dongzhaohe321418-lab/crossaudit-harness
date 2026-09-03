@@ -36,7 +36,7 @@ from ..runtime.runs import PROVIDER_WAIT_CATEGORIES
 from ..usage import record_completion
 from . import prompt as prompt_mod
 from .authority import decide_authority, records_from_audit
-from .validate import known_rules, parse_reply, validate_reply
+from .validate import (NO_JSON_REASON, known_rules, parse_reply, validate_reply)
 
 #: Deterministic checks named in words for the phase narration (D150). A
 #: plugin or future check falls back to its configured name — a word, not an
@@ -328,30 +328,52 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
                         **answer.commitments(retention)}
             return answer
 
-        def read(answer) -> tuple[dict | None, str | None]:
+        def read(answer) -> tuple[dict | None, str | None, str]:
+            """The reply, why it was rejected, and — only when NOTHING could be
+            read — which shape of absence it was.
+
+            The third value is what the bounded repair is allowed to fire on,
+            and it is empty for every CONTENT rejection. Merging the two used
+            to mean a fully parsed reply saying `"verdict": "BLOCKED"` bought a
+            second paid turn whenever it tripped a content rule, and three
+            measured inputs turned a first-turn BLOCKED into a PASS. A verdict
+            may not get looser because of a retry.
+            """
             parsed_reply, parse_error = parse_reply(answer.text)
-            return parsed_reply, (parse_error
-                                  or validate_reply(parsed_reply,
-                                                    known_rules(constitution)))
+            if parse_error is not None:
+                return parsed_reply, parse_error, (
+                    "no_json" if parse_error == NO_JSON_REASON else "malformed_json")
+            return (parsed_reply,
+                    validate_reply(parsed_reply, known_rules(constitution)), "")
 
         try:
             raw = ask(prompt)
             answered = prompt
-            parsed, invalid = read(raw)
-            if invalid is not None:
+            parsed, invalid, unreadable = read(raw)
+            if unreadable:
                 # ONE bounded repair attempt, at most once per round, against
-                # the SAME route, before anything else happens. The validator
-                # already knows exactly why the reply was rejected, and a model
-                # told what it got wrong usually answers in the required shape;
-                # an empty completion is the commonest case of all.
+                # the SAME route, and ONLY when there was no usable reply at
+                # all: an empty completion, prose with no object in it, a
+                # truncated one. A reply that parses and then fails a CONTENT
+                # rule stands as rejected with no second turn — otherwise the
+                # loop is offering a model a second chance to say something
+                # else about work it has already judged, and a BLOCKED can come
+                # back a PASS.
                 #
-                # Deliberately additive: it adds an attempt IN FRONT OF an
-                # existing failure path and moves no verdict mapping. A second
-                # failure falls through to the configured backup route exactly
-                # as before, a reply that is still unreadable is still
-                # INVALID_REPLY, and the repair prompt carries no hint about
-                # what the verdict should be — only the shape it must have.
-                repair_prompt = prompt + prompt_mod.repair_note(invalid)
+                # Additive in the only sense that matters: it adds an attempt
+                # IN FRONT OF an existing failure path, moves no verdict
+                # mapping, and can only fire where the first turn produced no
+                # verdict to loosen. The instruction it appends is a fixed
+                # catalogue entry about the SHAPE of the absence — never the
+                # validator's reason, which is reply-derived and, for content
+                # rules, names the edit that would make the rejection go away.
+                #
+                # The rejected turn is kept: its prompt digest, its response
+                # digest and the reason, so the answer that was discarded
+                # leaves a commitment in the receipt.
+                rejected_response = str(exchange.get("response_sha256", "") or "")
+                rejected_reason = str(invalid or "")
+                repair_prompt = prompt + prompt_mod.repair_note(unreadable)
                 try:
                     repaired = ask(repair_prompt)
                 except ProviderDenial:
@@ -372,7 +394,7 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
                     repair_attempts += 1
                     raw = repaired
                     answered = repair_prompt
-                    parsed, invalid = read(raw)
+                    parsed, invalid, unreadable = read(raw)
             reply = parsed if invalid is None else None
             # BOTH digests name the turn that answered. `prompt_sha256` is
             # stamped on every model-tier evidence record as its
@@ -382,7 +404,9 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
             # was built first is kept beside it, named for what it is.
             if repair_attempts:
                 exchange = dict(exchange, repair_attempts=repair_attempts,
-                                rejected_prompt_sha256=prompt_sha)
+                                rejected_prompt_sha256=prompt_sha,
+                                rejected_response_sha256=rejected_response,
+                                rejected_reason=rejected_reason)
                 prompt_sha = hashlib.sha256(answered.encode("utf-8")).hexdigest()
         except ProviderDenial as exc:
             if (str(exc.detail.get("category", "")) in PROVIDER_WAIT_CATEGORIES

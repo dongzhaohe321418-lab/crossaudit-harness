@@ -203,20 +203,38 @@ def build(constitution: str, constitution_commit: str, dcl: dict,
             hashlib.sha256(prompt.encode("utf-8")).hexdigest())
 
 
-#: Why a reply was rejected, handed back to the auditor for ONE more attempt.
-#: It names the shape and the reason and nothing else: no finding, no verdict,
-#: no hint about what the answer should be. A prompt that leaned on the outcome
-#: would be the console teaching the auditor its opinion, which is the one
-#: thing this loop exists to prevent.
+#: The one instruction appended when a reply could not be read at all.
+#:
+#: It says that nothing readable arrived and what shape is required. It does
+#: NOT say why, in the validator's words. It used to: `repair_note(invalid)`
+#: interpolated `validate_reply`'s own reason verbatim, so a rejected round
+#: could hand the auditor the sentence "verdict BLOCKED without any BLOCKER
+#: finding" — whose cheapest conforming edit is BLOCKED -> PASS. That is the
+#: console teaching the auditor its opinion, which is the one thing this loop
+#: exists to prevent, and it is also how model-supplied text (the validator
+#: `repr()`s the fields it rejects) travelled past the closing INCREMENT fence
+#: into the trusted-instruction region.
+#:
+#: So: a FIXED catalogue, two entries, both describing the shape of the
+#: absence and neither derived from the reply.
+REPAIR_SHAPES = {
+    "no_json": "no JSON object was found in it",
+    "malformed_json": "the JSON object in it was not well formed",
+}
 REPAIR_HEADER = (
-    "\n\nYour previous reply was rejected before it could be read as a verdict, "
-    "because: {reason}.\n"
+    "\n\nYour previous reply could not be read: {shape}.\n"
     "Reply again now, to the same increment, in the required shape. Do not "
     "explain the rejection and do not change what you think — only answer in "
     "the form this protocol accepts.\n"
 )
 
 
-def repair_note(reason: str) -> str:
-    """The one repair instruction appended for a single retry."""
-    return REPAIR_HEADER.format(reason=str(reason or "the reply was empty"))
+def repair_note(shape: str = "no_json") -> str:
+    """The one repair instruction appended for a single retry.
+
+    `shape` is a KEY into REPAIR_SHAPES, never a sentence: passing a
+    reply-derived string cannot reach the prompt, because an unknown key
+    falls back to the neutral entry.
+    """
+    return REPAIR_HEADER.format(
+        shape=REPAIR_SHAPES.get(str(shape), REPAIR_SHAPES["no_json"]))
