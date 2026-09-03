@@ -482,7 +482,10 @@ def test_console_has_one_primary_command_composer():
     assert 'data-audience="generator"' in PAGE
     assert 'data-audience="auditor"' in PAGE
     assert "@Generator" in PAGE and "@Auditor" in PAGE
-    assert "delivery-status" in PAGE and "data-open-audits" in PAGE
+    # The delivery band is gone: every state it drew is a row now, and for a
+    # machine failure it repeated the stop in the framing the activity stream
+    # bans. `data-open-audits` still carries a person to the audit record.
+    assert "delivery-status" not in PAGE and "data-open-audits" in PAGE
     assert "data-admit-cycle" in PAGE and "/api/admit" in PAGE
     assert "The result will appear in this conversation" in PAGE
     assert "Math.round(r.confidence*100)" not in PAGE

@@ -1147,7 +1147,7 @@ def _render_stream(steps: list[dict]) -> str:
         "const at=()=>'10:27';let activeChatId='';",
         "const chatProgress=d=>d.progress;const chatCycles=()=>[];",
         "const turn=()=>'';const withTurnCost=h=>h;",
-        "const escalationRows=()=>[];",
+        "const streamStops=()=>[];",
         _page_snippet(script, "const esc = "),
         _page_snippet(script, "const localeText = ") + ";",
         _page_snippet(script, "const t = ") + ";",
