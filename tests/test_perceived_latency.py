@@ -495,7 +495,7 @@ def test_events_run_from_submit_to_verdict_in_the_owner_facing_order(
     events = []
     bridge = {}
 
-    def complete_factory(_cfg, _allow_custom, on_event=None, _heartbeat=None):
+    def complete_factory(_cfg, _allow_custom, on_event=None, _heartbeat=None, *_rest):
         bridge["provider"] = on_event
 
         def complete(*, system, prompt):
