@@ -17,6 +17,16 @@ exact project-relative path.
 """
 from __future__ import annotations
 
+from pathlib import Path as _Path
+
+#: The Thinking Orbs canvas engine (npm ``thinking-orbs`` 0.3.1, MIT; see
+#: THIRD_PARTY_NOTICES.md), vendored by scripts/vendor_thinking_orbs.py and
+#: served inline as a classic script ahead of the console's own: the console
+#: has no bundler and loads no remote code, so the file travels in the
+#: package and is pinned by tests/test_thinking_orbs_vendor.py.
+_ENGINE_JS = (_Path(__file__).with_name("vendor") / "thinking_orbs_engine.js").read_text(encoding="utf-8")
+_ENGINE_TAG = '<script id="thinking-orbs-engine">\n' + _ENGINE_JS + '</script>\n'
+
 PAGE = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -3140,7 +3150,7 @@ body.first-run [data-fr-step="1"]:not([hidden]) .fr-choice:nth-of-type(3){animat
   </aside>
 </div>
 
-<script>
+""" + _ENGINE_TAG + r"""<script>
 const T = new URLSearchParams(location.search).get('t') || '';
 const LOCALE_KEY='crossaudit-locale';
 const LOCALE_COOKIE='crossaudit_v4_locale';
