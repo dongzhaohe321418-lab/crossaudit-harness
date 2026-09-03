@@ -16,6 +16,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from ..runtime import ACTIVE_STATES, RunJournal, RunState
+from ..runtime.pacing import still_working_text  # noqa: F401  (re-export: one sentence, one place)
 
 
 # Fixed event copy is translated here because run events are also consumed by
@@ -63,10 +64,134 @@ def _detail_i18n(detail: str) -> dict[str, str]:
     return {"en": detail, "zh": detail}
 
 
+#: Phase narration (D150, perceived latency). Every kind here is a fixed
+#: sentence or a counted pattern, at most 60 characters, carrying no id, hash,
+#: sha, provider:model string or rule id: it is the main surface. The English
+#: sentence is what the journal stores; the Chinese form is projected here so
+#: page and non-page clients read the same catalogue.
+PHASE_KINDS = frozenset({
+    "received", "routed", "answering", "preparing", "prompt_ready",
+    "still_working", "auditor_reading", "auditor_progress",
+    "check_started", "check_finished", "answered",
+})
+
+PHASE_TEXT_ZH = {
+    "Got it — working out who should handle this": "已收到，正在判断由谁处理",
+    "The generator will do this": "交给生成者处理",
+    "The auditor will answer": "由审计者回答",
+    "The generator will reply directly": "生成者将直接回复",
+    "Looking up the audit record": "正在查询审计记录",
+    "Drafting a change to the rules": "正在起草规则修改",
+    "Sending the finding back to the auditor": "正在将该结论退回审计者",
+    "Recording your ruling": "正在记录你的裁定",
+    "Nothing to set up": "无需设置",
+    "The generator is replying": "生成者正在回复",
+    "The auditor is replying": "审计者正在回复",
+    "The auditor is drafting the rule change": "审计者正在起草规则修改",
+    "Asking the generator to write": "正在请生成者撰写",
+    "Reply received": "已收到回复",
+    "The auditor is reading the commit": "审计者正在阅读提交内容",
+}
+
+#: The phase words of ``still_working``; the number is a count of seconds in
+#: the phase, so the sentence is a pattern, never a fixed entry.
+STILL_WORKING_ZH = {
+    "routing": "仍在判断由谁处理",
+    "preparing": "仍在准备",
+    "generating": "仍在生成",
+    "auditing": "仍在审计",
+    "replying": "仍在回复",
+    "reviewing": "仍在审阅",
+}
+
+#: The Chinese form of each check word the auditor narrates (auditor.run
+#: CHECK_NAMES is the English source; a word missing here stays English, and
+#: the parity test below the catalogue is what notices).
+CHECK_WORDS_ZH = {
+    "Schema": "结构",
+    "Units": "单位",
+    "Convergence": "收敛",
+    "Provenance": "来源",
+    "Parseable": "可解析",
+    "Source provenance": "来源出处",
+    "Document integrity": "文档完整性",
+}
+
+
+def _zh_check(word: str) -> str:
+    return CHECK_WORDS_ZH.get(word, word)
+
+
+PHASE_PATTERNS_ZH = (
+    (re.compile(r"Still (routing|preparing|generating|auditing|replying|reviewing) · (\d+) s"),
+     lambda m: f"{STILL_WORKING_ZH[m.group(1)]} · {m.group(2)} 秒"),
+    (re.compile(r"Reading the workspace · (\d+) files?"),
+     lambda m: f"正在读取工作区 · {m.group(1)} 个文件"),
+    (re.compile(r"The auditor is reading (\d+) files?"),
+     lambda m: f"审计者正在阅读 {m.group(1)} 个文件"),
+    (re.compile(r"Running the (.+) check"),
+     lambda m: f"正在运行{_zh_check(m.group(1))}检查"),
+    (re.compile(r"(.+) check passed"),
+     lambda m: f"{_zh_check(m.group(1))}检查通过"),
+    (re.compile(r"(.+) check found (\d+) issues?"),
+     lambda m: f"{_zh_check(m.group(1))}检查发现 {m.group(2)} 个问题"),
+)
+
+
+def phase_i18n(text: str) -> dict[str, str]:
+    """EN/ZH pair for one phase sentence; unknown text stays as it is."""
+    zh = PHASE_TEXT_ZH.get(text)
+    if zh is None:
+        for pattern, render in PHASE_PATTERNS_ZH:
+            match = pattern.fullmatch(text)
+            if match:
+                zh = render(match)
+                break
+    return {"en": text, "zh": zh if zh is not None else text}
+
+
+#: Recovery narration carries ``vendor:model · attempt N`` in its detail. The
+#: attempt is the fact a person needs; the route identity is for the Models
+#: panel, not the run card (D150: no provider:model strings on the surface).
+_ROUTE_DETAIL = re.compile(r"^\S+:\S+ · (.+)$")
+
+
+#: Details older events compose with an identifier in them. The projection
+#: says the same thing in words; the identifier stays in the journal, the
+#: ledger and the audit detail, which is where a person looks it up.
+_CYCLE_REF = re.compile(r"\bcycle [a-f0-9]{16}\b")
+#: Kinds whose detail is a payload for another surface (the Plan tab parses
+#: the goal JSON) or a path list already handled by its own projection.
+_DETAIL_KEPT = frozenset({"goal", "context_condensed"})
+
+
+def concise_detail(kind: str, detail: str) -> str:
+    if kind in _DETAIL_KEPT or not detail:
+        return detail
+    match = _ROUTE_DETAIL.match(detail)
+    if match:
+        detail = match.group(1)
+    return _CYCLE_REF.sub("this cycle", detail)
+
+
+def _project_phase_step(step: dict) -> dict:
+    kind = str(step.get("kind") or "")
+    projected = step
+    if kind in PHASE_KINDS:
+        projected = dict(step)
+        projected["text_i18n"] = phase_i18n(str(step.get("text") or ""))
+    detail = str(step.get("detail") or "")
+    concise = concise_detail(kind, detail)
+    if concise != detail:
+        projected = dict(projected)
+        projected["detail"] = concise
+    return projected
+
+
 def _project_context_step(step: dict) -> dict:
     """Add locale-ready display copy without changing the durable event."""
     if step.get("kind") != "context_condensed":
-        return step
+        return _project_phase_step(step)
     text = str(step.get("text") or "")
     detail = str(step.get("detail") or "")
     projected = dict(step)

@@ -81,6 +81,17 @@ def test_reports_are_read_back_with_their_verdicts_and_findings(cfg):
 
 
 def test_latest_pipeline_follows_ledger_time_not_random_sha_order(cfg):
+    """The pipeline describes the newest cycle by ledger time, not by however
+    the shas happen to sort.
+
+    D150 took the sha off the Commit step — the run card is a main surface and
+    carries words — so the round number is what identifies the chosen cycle
+    here. Round 2 is the later write and the higher round; the earlier cycle is
+    round 1, so reading the older one would still be caught. Mutation: sort
+    ``read_cycles`` by directory name and the ff… cycle comes back first, which
+    is round 1, and this goes red. The sha assertion below is the second half
+    of the same change: it must not reappear on the card.
+    """
     first = add_audit(cfg, "ffffffffffff", "BLOCKED", BLOCKER, round_=1)
     final = add_audit(cfg, "111111111111", "PASS", round_=2)
     os.utime(first / "report.md", ns=(1_000_000_000, 1_000_000_000))
@@ -88,7 +99,8 @@ def test_latest_pipeline_follows_ledger_time_not_random_sha_order(cfg):
     cycles = overview.read_cycles(cfg)
     assert [c.verdict for c in cycles] == ["BLOCKED", "PASS"]
     steps = {s["title"]: s for s in overview.pipeline(cfg, cycles)}
-    assert steps["Commit"]["detail"].startswith("111111111111")
+    assert steps["Commit"]["detail"] == "round 2"
+    assert "111111111111" not in steps["Commit"]["detail"]
     assert steps["Verdict"]["detail"].startswith("PASS")
 
 

@@ -77,6 +77,7 @@ from ..runtime import (
 )
 from . import chats, daemon, overview, projects
 from .page import PAGE
+from .intake import INTAKE
 from .progress import TRACKER
 from .streams import bundle
 from .transfers import (
@@ -447,6 +448,7 @@ class _ConsoleHTTPServer(ThreadingHTTPServer):
         # embedded lifecycle checks can host several short-lived consoles in one
         # interpreter; do not leave their deleted journal bound globally.
         TRACKER.clear()
+        INTAKE.clear()
 
 
 def _notify_progress() -> None:
@@ -477,8 +479,26 @@ def _generation_sse_frame(run_id: str, event: dict) -> bytes:
     payload = json.dumps(
         {**event, "run_id": run_id}, sort_keys=True,
         separators=(",", ":"), ensure_ascii=False)
-    return (f"event: generation_chunk\nid: {int(event['event_id'])}\n"
+    # ``thinking_chunk`` (D150) rides the same path under its own name: the
+    # page keeps it apart from the draft, and a consumer that never subscribes
+    # to it simply never sees it.
+    name = "thinking_chunk" if event.get("kind") == "thinking_chunk" else "generation_chunk"
+    return (f"event: {name}\nid: {int(event['event_id'])}\n"
             f"data: {payload}\n\n").encode()
+
+
+def _intake_sse_frame(event: dict) -> bytes:
+    """One named ``intake_chunk`` frame: a lane reply arriving live.
+
+    Same consumer rules as ``generation_chunk`` — key by ``(intake_id,
+    stream.id)``, accept only the next seq, discard on a gap, ``done/aborted``
+    discards — and the same furniture rule: an unaudited reply wears no file
+    card, download, delivery band or PASS mark. The committed routing record
+    supersedes it when the lane finishes.
+    """
+    payload = json.dumps(event, sort_keys=True, separators=(",", ":"),
+                         ensure_ascii=False)
+    return f"event: intake_chunk\ndata: {payload}\n\n".encode()
 
 
 def _same_progress_fact(left: dict | None, right: dict | None) -> bool:
@@ -827,6 +847,9 @@ def snapshot(cfg: Config) -> dict:
         # "interrupted" report below depends on it surviving the process.
         # The ledger remains the evidence record; this is operational state.
         "progress": progress,
+        # The message being handled between Send and its run or reply (D150):
+        # process-local narration, refreshed on every progress frame.
+        "intake": INTAKE.snapshot(),
         # A build that was in flight when a previous process ended. The ledger
         # holds the rounds that were committed; only this can say one was cut off.
         "interrupted": daemon.interrupted(cfg),
@@ -896,6 +919,21 @@ def start_build(cfg: Config, task: str, *, before_start=None,
                             for item in staged]}
 
 
+class _NoWatch:
+    """The silent watcher: ``say()`` narrates into nothing unless asked to."""
+
+    def narrate(self, kind: str, text: str, detail: str = "") -> None:
+        pass
+
+    def routed(self, lane: str) -> None:
+        pass
+
+    def answering(self, lane: str) -> None:
+        pass
+
+    provider_event = None
+
+
 def setup_needed(cfg: Config) -> dict | None:
     """The setup card the app shows instead of starting anything.
 
@@ -919,16 +957,24 @@ def setup_needed(cfg: Config) -> dict | None:
 
 def say(cfg: Config, text: str, *, attachments=None,
         attachment_consent: bool = False,
-        chat_id: str = "", continuation_cycle: str = "") -> dict:
+        chat_id: str = "", continuation_cycle: str = "",
+        watch=None) -> dict:
     """Route one sentence and run its lane — the same path `talk` takes.
 
     Pressing Send is the action confirmation for the sentence and any attached
     files.  The server still requires the client to state that authorization
     explicitly, so a forged or older client cannot silently transmit files.
+
+    ``watch`` (D150) receives the phase narration — ``routed``, ``answering``
+    and the provider's recovery lines — and, when the lane's provider streams,
+    its reply chunks. The HTTP handler runs this whole function in a worker
+    thread with the intake as the watcher; the return value is unchanged, so
+    every direct caller keeps the synchronous contract.
     """
     from .. import router as router_mod
     from ..appservice import talk as talk_mod
 
+    watch = watch if watch is not None else _NoWatch()
     blocked = setup_needed(cfg)
     if blocked is not None:
         return blocked
@@ -969,6 +1015,7 @@ def say(cfg: Config, text: str, *, attachments=None,
                 "reasoning": routing.reasoning,
                 "clarify": routing.clarify or "Is this about the work, or about the "
                                               "standards it is judged by?"}
+    watch.routed(routing.lane)
     attachments_accepted = False
     queued_position = None
 
@@ -1021,16 +1068,23 @@ def say(cfg: Config, text: str, *, attachments=None,
         return {"asked": False, "lane": routing.lane,
                 "confidence": routing.confidence, "reasoning": routing.reasoning,
                 "executed": "refused — attachments are accepted only for generator tasks"}
+    # The lane's provider narrates recovery and, when it streams, its reply
+    # through the watcher; the generator lane narrates through the run journal
+    # instead, once the run exists.
+    provider_event = getattr(watch, "provider_event", None)
     lanes = {
         "amendment": lambda: talk_mod.lane_amendment(cfg, routing, assume_yes=True),
-        "auditor": lambda: talk_mod.lane_auditor(cfg, routing),
-        "chat": lambda: talk_mod.lane_chat(cfg, routing),
+        "auditor": lambda: talk_mod.lane_auditor(cfg, routing,
+                                                 on_event=provider_event),
+        "chat": lambda: talk_mod.lane_chat(cfg, routing, on_event=provider_event),
         "query": lambda: talk_mod.lane_query(cfg, routing),
         "generator": generator_lane,
         "dispute": lambda: talk_mod.lane_dispute(cfg, routing),
         "resolve": lambda: talk_mod.lane_resolve(cfg, routing, assume_yes=True),
         "project": lambda: talk_mod.lane_project(cfg, routing),
     }
+    if routing.lane != "generator":
+        watch.answering(routing.lane)
     try:
         executed = lanes[routing.lane]()
     except Denial as exc:
@@ -1048,6 +1102,67 @@ def say(cfg: Config, text: str, *, attachments=None,
         result["queued"] = True
         result["position"] = queued_position
     return result
+
+
+def accept_say(cfg: Config, text: str, *, attachments=None,
+               attachment_consent: bool = False, chat_id: str = "",
+               continuation_cycle: str = "") -> dict:
+    """Accept one sentence and return before anything slow happens (D150).
+
+    Validation that needs no provider — consent for attachments, one message
+    at a time, a role with no credential yet — is answered here as it always
+    was (a 4xx, or the app's setup card). Everything else
+    (the router's model call, the context read, preflight, staging, the routing
+    commit, the lane itself) runs in a worker thread narrating into the intake,
+    and the result ``say()`` returns lands on the intake record for the page to
+    read from the next state frame. A Denial in the worker becomes the intake's
+    error with the same reason the synchronous path used to send as a 400, so
+    nothing new can reach the page as a traceback.
+    """
+    prepared = list(attachments or [])
+    if prepared and not attachment_consent:
+        return {"error": "attachment contents require explicit consent for "
+                         "transmission to the configured generator "
+                         f"({cfg.generator_vendor or 'unknown vendor'})",
+                "status": 400}
+    # A missing credential is presence-only and local: no provider is called to
+    # learn it, so it stays on the fast path and answers the POST directly.
+    # Behind the worker it would arrive as an intake result, and the app would
+    # show a thread and a working indicator for a message it never sent.
+    blocked = setup_needed(cfg)
+    if blocked is not None:
+        return blocked
+    try:
+        record = INTAKE.begin(chat_id, text)
+    except RuntimeError as exc:
+        return {"error": str(exc), "status": 409}
+    intake_id = record.id
+    continuation_args = ({"continuation_cycle": continuation_cycle}
+                         if continuation_cycle else {})
+
+    def work() -> None:
+        try:
+            with MODEL_SWITCH_LOCK:
+                result = say(cfg, text, attachments=prepared,
+                             attachment_consent=attachment_consent,
+                             chat_id=chat_id, watch=INTAKE, **continuation_args)
+            result["chat_id"] = chat_id
+            INTAKE.finish(result)
+        except TransferError as exc:
+            INTAKE.fail(exc.status, exc.reason)
+        except Denial as exc:
+            INTAKE.fail(400, exc.reason)
+        except Exception as exc:  # noqa: BLE001 -- the page gets a sentence, never a trace
+            INTAKE.fail(500, f"{type(exc).__name__}: {exc}"[:400])
+        finally:
+            # Routing, amendments, disputes and resolutions change files other
+            # than the in-memory progress tracker. Publish those immediately too.
+            STREAM_CHANGES.notify()
+
+    INTAKE.watch()
+    threading.Thread(target=work, name=f"crossaudit-say-{intake_id}",
+                     daemon=True).start()
+    return {"accepted": True, "intake": intake_id, "chat_id": chat_id}
 
 
 def make_handler(cfg: Config, token: str, touch) -> type:
@@ -1374,6 +1489,7 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                     0, int(self.headers.get("Last-Event-ID", "0") or 0))
             except (TypeError, ValueError):
                 generation_cursor = 0
+            intake_seen, intake_cursor = "", -1
             self.server.stream_opened()
             try:
                 while not self.server.stop_event.is_set():
@@ -1386,6 +1502,7 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                         # the 100 ms fallback re-derives the durable state next.
                         state = dict(last_state)
                         state["progress"] = TRACKER.snapshot()
+                        state["intake"] = INTAKE.snapshot()
                     else:
                         # Idle ticks reuse the memoized snapshot; the expensive
                         # git/glob/YAML derivation runs only when a cheap
@@ -1431,6 +1548,20 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                                 delivered = True
                             if len(chunk_rows) < 256:
                                 break
+                    # Lane replies (chat, direct auditor) stream the same way:
+                    # named frames from the in-memory intake, never a snapshot.
+                    intake_row = state.get("intake")
+                    intake_id = (str(intake_row.get("id") or "")
+                                 if isinstance(intake_row, dict) else "")
+                    if intake_id != intake_seen:
+                        intake_seen, intake_cursor = intake_id, -1
+                    if intake_id:
+                        for event in INTAKE.reply_events(
+                                intake_id, after_sequence=intake_cursor):
+                            self.wfile.write(_intake_sse_frame(event))
+                            self.wfile.flush()
+                            intake_cursor = int(event["event_id"])
+                            delivered = True
                     if delivered:
                         last_beat = time.monotonic()
                         touch()
@@ -1974,24 +2105,17 @@ def make_handler(cfg: Config, token: str, touch) -> type:
             try:
                 chat = chats.touch(self._config(),
                                    str(payload.get("chat_id", "")), text)
-                with MODEL_SWITCH_LOCK:
-                    continuation = str(payload.get("continuation_cycle", ""))
-                    continuation_args = ({"continuation_cycle": continuation}
-                                         if continuation else {})
-                    result = say(
-                        self._config(), text, attachments=attachments,
-                        attachment_consent=payload.get("attachment_consent") is True,
-                        chat_id=chat["id"], **continuation_args)
-                result["chat_id"] = chat["id"]
-                STREAM_CHANGES.notify()
-            except TransferError as exc:
-                self._deny(exc.status, exc.reason)
-                return
             except Denial as exc:
                 self._deny(400, exc)
                 return
-            # Routing, amendments, disputes and resolutions change files other
-            # than the in-memory progress tracker. Publish those immediately too.
+            continuation = str(payload.get("continuation_cycle", ""))
+            result = accept_say(
+                self._config(), text, attachments=attachments,
+                attachment_consent=payload.get("attachment_consent") is True,
+                chat_id=chat["id"], continuation_cycle=continuation)
+            if "error" in result:
+                self._deny(result["status"], result["error"])
+                return
             STREAM_CHANGES.notify()
             self._send(json.dumps(result).encode(), "application/json")
 

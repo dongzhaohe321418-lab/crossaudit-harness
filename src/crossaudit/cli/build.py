@@ -250,6 +250,45 @@ def _conversation_context(cfg: Config, chat_id: str, run_id: str,
     return "\n".join(lines)
 
 
+AUDITOR_PROGRESS_EVERY_S = 10.0
+
+
+def _auditor_progress_clock(say, *, clock=time.monotonic, every=AUDITOR_PROGRESS_EVERY_S):
+    """An ``on_chunk`` that narrates time, never text.
+
+    Each arriving chunk proves the auditor is still writing; every ``every``
+    seconds of that the caller gets one "Still reviewing · N s" line. The chunk
+    text itself is dropped here, which is the whole point.
+    """
+    started = clock()
+    last = [started]
+
+    def on_chunk(_text: str, stream: dict) -> None:
+        if stream.get("done"):
+            return
+        now = clock()
+        if now - last[0] >= every:
+            last[0] = now
+            say(f"Still reviewing · {int(now - started)} s")
+
+    return on_chunk
+
+
+def _workspace_file_count(cfg: Config) -> int:
+    """How many files the workspace read below is about to open."""
+    count = 0
+    for d in (cfg.scope_dirs or []):
+        base = cfg.root / d
+        if not base.is_dir():
+            continue
+        for p in base.rglob("*"):
+            if "TEMPLATE" in p.parts:
+                continue
+            if p.is_file() and not p.is_symlink():
+                count += 1
+    return count
+
+
 def _current_work(cfg: Config, task: str = "", findings: str = "",
                   on_condense=None) -> dict[str, str]:
     """The work as it stands, read from the working tree inside the scope dirs.
@@ -592,12 +631,19 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         emit("generation_chunk", "generator", text,
              state=RunState.GENERATING, stream=stream)
 
+    def thinking_chunk(text: str, stream: dict) -> None:
+        """Summarised thinking, display-only (D150): its own stream kind, so
+        nothing that assembles the draft or the commit can pick it up."""
+        emit("thinking_chunk", "generator", text,
+             state=RunState.GENERATING, stream=stream)
+
     # The resilience layer renews the lease before each retry attempt through
     # the same attribute convention the run shell uses. Its streaming adapter
     # reads ``on_chunk`` from this callback, keeping existing provider-event
     # call signatures backward compatible for adapters without streaming.
     generator_provider_event.heartbeat = heartbeat
     generator_provider_event.on_chunk = generation_chunk
+    generator_provider_event.on_thinking = thinking_chunk
 
     if chat_id and not re.fullmatch(r"(?:history|[a-f0-9]{16})", chat_id):
         raise ConfigDenial("chat id is invalid")
@@ -607,7 +653,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     usage_context: dict = {"run_id": run_id, "chat_id": chat_id,
                            "cycle_id": continuation_cycle or "", "round": 0}
     complete = _generator_complete(cfg, allow_custom, generator_provider_event,
-                                   heartbeat, usage_context)
+                                   heartbeat, usage_context=usage_context)
 
     def budget_notice() -> None:
         """Raise any 80 % / 95 % budget alarm newly crossed, once per period."""
@@ -697,8 +743,16 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                      joined[:2000], state=RunState.GENERATING)
         emit("generation_started", "generator", "writing",
              state=RunState.GENERATING)
+        # D150: the workspace read is the longest silent stretch before the
+        # first token, so it is announced before it starts (the count is a
+        # cheap walk; the read is the cost) and the prompt hand-off after it.
+        emit("preparing", "generator",
+             f"Reading the workspace · {_workspace_file_count(cfg)} files",
+             state=RunState.GENERATING)
         current = _current_work(cfg, task, findings, context_report)
         in_force = skills_mod.select(house, list(current) or cfg.scope_dirs)
+        emit("prompt_ready", "generator", "Asking the generator to write",
+             state=RunState.GENERATING)
         try:
             while True:
                 outcome = gen_mod.generate(
@@ -1053,6 +1107,15 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         # attempt through the same handle convention as the generator's.
         run_args.on_step.heartbeat = heartbeat
         run_args.usage_context = {"run_id": run_id, "chat_id": chat_id}
+        # D150: the auditor's reply is not evidence until the verdict, so its
+        # chunks are never shown. They drive a progress clock instead — one
+        # line every 10 s while tokens arrive — and the phase narration
+        # (auditor_reading, check_*) lands through the same handle.
+        run_args.on_step.on_chunk = _auditor_progress_clock(
+            lambda text: emit("auditor_progress", "auditor", text,
+                              state=RunState.AUDITING))
+        run_args.on_step.narrate = lambda kind, text, detail="": emit(
+            kind, "auditor", text, detail, state=RunState.AUDITING)
         if heartbeat is not None:
             heartbeat()          # auditor provider turn: same silence problem
         budget_notice()          # the generator's spend, before the audit
@@ -1341,7 +1404,7 @@ def cmd_build(args) -> int:
             # A raw edit envelope on stdout has no live-draft affordance yet, so
             # the CLI keeps its existing phase narration rather than presenting
             # unaudited structured bytes as a finished-looking result.
-            if event.kind == "generation_chunk":
+            if event.kind in ("generation_chunk", "thinking_chunk"):
                 return
             if event.kind == "round_started":
                 label = f"round {event.round_no} of {event.round_limit}"

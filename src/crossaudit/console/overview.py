@@ -439,7 +439,9 @@ def pipeline(cfg: Config, cycles: list[Cycle]) -> list[dict]:
     admitted = status == "CONSUMED"
 
     return [
-        {"title": "Commit", "detail": f"{latest.sha[:12]} · round {latest.round}",
+        # The round, not the sha: the run card is a main surface and carries
+        # words (D150); the sha stays on the audit detail and the ledger.
+        {"title": "Commit", "detail": f"round {latest.round}",
          "state": "done"},
         {"title": "Checks",
          "detail": "clean" if not dcl_failed else "hard failure — final, no model "

@@ -35,7 +35,8 @@ def _usage_context(cfg: Config, chat_id: str, started: float) -> dict:
     return context
 
 
-def _auditor_complete(cfg: Config, *, role: str = "auditor", chat_id: str = ""):
+def _auditor_complete(cfg: Config, *, role: str = "auditor", chat_id: str = "",
+                      on_event=None):
     """A `complete(system, prompt)` bound to the auditor role.
 
     Routing and rule drafting run on the auditor side: it is the end whose job
@@ -44,12 +45,15 @@ def _auditor_complete(cfg: Config, *, role: str = "auditor", chat_id: str = ""):
     user's own words (P2). ``role`` names what the call was FOR in the usage
     ledger (``router`` for routing decisions, ``auditor`` for replies); the
     credential and the provider route are the auditor's either way.
+    ``on_event`` is the resilience layer's narration callback (recovery lines;
+    ``on_chunk`` when the reply may stream).
     """
     def complete(*, system: str, prompt: str):
         started = time.monotonic()
         reply = provider_resilience.complete(
             cfg, "auditor", cfg.auditor, system=system, prompt=prompt,
-            allow_custom=bool(os.environ.get("CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT")))
+            allow_custom=bool(os.environ.get("CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT")),
+            on_event=on_event)
         route = provider_resilience.route_from_reply(reply, cfg.auditor)
         record_completion(root=cfg.root, state_dir=cfg.state_dir, role=role,
                           phase="control", vendor=route["vendor"],
@@ -183,9 +187,10 @@ inspected them or that a formal audit ran. You may clarify audit intent, explain
 your role, or recommend sending work through the formal audit loop. Be concise."""
 
 
-def lane_auditor(cfg: Config, routing) -> str:
+def lane_auditor(cfg: Config, routing, on_event=None) -> str:
     """A direct auditor reply that transmits only the user's addressed message."""
-    reply = _auditor_complete(cfg, chat_id=str(getattr(routing, "chat_id", "") or ""))(
+    reply = _auditor_complete(
+        cfg, chat_id=str(getattr(routing, "chat_id", "") or ""), on_event=on_event)(
         system=AUDITOR_CHAT_SYSTEM, prompt=routing.restated)
     answer = reply.text.strip()
     if not answer:
@@ -204,7 +209,7 @@ seems to want actual work done, say they can simply ask for it and it will run
 through the audited loop."""
 
 
-def _generator_chat_complete(cfg: Config, chat_id: str = ""):
+def _generator_chat_complete(cfg: Config, chat_id: str = "", on_event=None):
     """A `complete(system, prompt)` bound to the generator role for direct chat.
 
     The generator role keeps its own credential (never the auditor's — the two
@@ -217,7 +222,8 @@ def _generator_chat_complete(cfg: Config, chat_id: str = ""):
         started = time.monotonic()
         reply = provider_resilience.complete(
             cfg, "generator", primary, system=system, prompt=prompt,
-            allow_custom=bool(os.environ.get("CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT")))
+            allow_custom=bool(os.environ.get("CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT")),
+            on_event=on_event)
         route = provider_resilience.route_from_reply(reply, primary)
         record_completion(root=cfg.root, state_dir=cfg.state_dir, role="generator",
                           phase="control", vendor=route["vendor"],
@@ -231,13 +237,14 @@ def _generator_chat_complete(cfg: Config, chat_id: str = ""):
     return complete
 
 
-def lane_chat(cfg: Config, routing) -> str:
+def lane_chat(cfg: Config, routing, on_event=None) -> str:
     """A direct, unaudited conversational answer from the generator.
 
     Transmits only the user's own words (P2); runs no build, writes no files,
     and mints no receipt — the reply is labeled as unaudited wherever it shows.
     """
-    reply = _generator_chat_complete(cfg, str(getattr(routing, "chat_id", "") or ""))(
+    reply = _generator_chat_complete(
+        cfg, chat_id=str(getattr(routing, "chat_id", "") or ""), on_event=on_event)(
         system=GENERATOR_CHAT_SYSTEM, prompt=routing.restated)
     answer = reply.text.strip()
     if not answer:

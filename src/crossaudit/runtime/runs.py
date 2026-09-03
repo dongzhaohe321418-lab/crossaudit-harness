@@ -393,12 +393,17 @@ class RunJournal:
 
     @staticmethod
     def _validate_stream_sequence(db: sqlite3.Connection, run_id: str,
-                                  stream: dict) -> None:
-        """Enforce contiguous, non-interleaved completion streams at commit."""
+                                  stream: dict, kind: str = "generation_chunk"
+                                  ) -> None:
+        """Enforce contiguous, non-interleaved completion streams at commit.
+
+        Text and thinking are two streams of one completion; each keeps its
+        own contiguity (they interleave in time by nature).
+        """
         row = db.execute(
             "SELECT stream_json FROM run_events WHERE run_id=? "
-            "AND kind='generation_chunk' ORDER BY sequence DESC LIMIT 1",
-            (run_id,),
+            "AND kind=? ORDER BY sequence DESC LIMIT 1",
+            (run_id, kind),
         ).fetchone()
         previous = None
         if row is not None:
@@ -418,9 +423,8 @@ class RunJournal:
                 raise RuntimeError(
                     "generation streams cannot interleave or begin out of sequence")
             earlier = db.execute(
-                "SELECT stream_json FROM run_events WHERE run_id=? "
-                "AND kind='generation_chunk'",
-                (run_id,),
+                "SELECT stream_json FROM run_events WHERE run_id=? AND kind=?",
+                (run_id, kind),
             ).fetchall()
             for item in earlier:
                 try:
@@ -500,7 +504,7 @@ class RunJournal:
         if not isinstance(event, RunEvent):
             raise TypeError("RunJournal.append requires a RunEvent")
         stream = None
-        if event.kind == "generation_chunk":
+        if event.kind in ("generation_chunk", "thinking_chunk"):
             # RunEvent is frozen but its mapping is intentionally JSON-shaped.
             # Copy and revalidate it at the durable boundary so a caller cannot
             # mutate a previously validated dict before this transaction.
@@ -532,8 +536,8 @@ class RunJournal:
                 db.rollback()
                 raise RuntimeError(
                     f"invalid run transition {current.value} -> {target.value}")
-            if event.kind == "generation_chunk":
-                self._validate_stream_sequence(db, run_id, stream)
+            if event.kind in ("generation_chunk", "thinking_chunk"):
+                self._validate_stream_sequence(db, run_id, stream, kind=event.kind)
             sequence = self._insert_event(
                 db, run_id, kind=event.kind, actor=event.actor, text=event.text,
                 detail=event.detail, state=target, at=now,
@@ -1274,7 +1278,7 @@ class RunJournal:
             # operational log remains queryable in the journal.
             events = db.execute(
                 "SELECT * FROM run_events WHERE run_id=? "
-                "AND kind<>'generation_chunk' "
+                "AND kind NOT IN ('generation_chunk','thinking_chunk') "
                 "ORDER BY sequence DESC LIMIT ?",
                 (row["run_id"], LATEST_STEP_LIMIT),
             ).fetchall()
@@ -1341,7 +1345,7 @@ class RunJournal:
             rows = db.execute(
                 "SELECT sequence,t,kind,actor,text,state,round_no,round_limit,"
                 "stream_json FROM run_events WHERE run_id=? "
-                "AND kind='generation_chunk' AND sequence>? "
+                "AND kind IN ('generation_chunk','thinking_chunk') AND sequence>? "
                 "ORDER BY sequence LIMIT ?",
                 (run_id, max(0, int(after_sequence)),
                  max(1, min(1024, int(limit)))),

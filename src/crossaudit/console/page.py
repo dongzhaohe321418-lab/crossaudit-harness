@@ -500,6 +500,11 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 @keyframes think{0%,70%,100%{opacity:.28;transform:translateY(0)}35%{opacity:1;transform:translateY(-4px)}}
 @media (prefers-reduced-motion:reduce){.thinking-dots i{animation:none;opacity:.55}}
 .turn-sub{margin-top:7px;color:var(--text-2);font-size:var(--fs-label)}
+/* Phase narration under the working indicator: quiet, one line each, the
+   latest a shade darker. No card, no mark — it is the indicator's caption. */
+.intake{margin-top:6px}
+.intake-line{color:var(--text-3);font-size:var(--fs-label);line-height:1.5}
+.intake-line.latest{color:var(--text-2)}
 .role-mark{width:24px;height:24px;border-radius:var(--r-sm);display:grid;place-items:center;flex:none;
   font-size:10px;font-weight:600;background:var(--surface-2);color:var(--text-2)}
 .role-mark.generator{background:var(--role-g-bg);color:var(--role-g)}
@@ -3671,6 +3676,7 @@ const ZH={
   ,"resuming with tool result":"携工具结果继续","resuming with compute result":"携计算结果继续","requesting remote calculation":"正在请求远程计算","note":"备注","document export refused":"文档导出被拒绝"
   ,"the round could not be committed":"该轮次无法提交","rendering final document locally":"正在本地渲染最终文档","the round reproduced the previous one; nothing new to audit":"本轮与上一轮结果相同；没有新的内容可审计"
   ,"the loop cannot settle this itself":"循环无法自行解决此问题","this stop is waiting for a human":"此次停止正在等待人工处理"
+  ,"Thinking":"思考中","Generator live reply · not audited":"生成者实时回复 · 未经审计","Auditor live reply · direct reply":"审计者实时回复 · 直接回复"
   ,"Connect a provider first":"请先连接供应商","The generator has no credential yet.":"生成者尚未连接凭据。","The auditor has no credential yet.":"审计者尚未连接凭据。"
   ,"Neither the generator nor the auditor has a credential yet.":"生成者与审计者都尚未连接凭据。","Open Settings → Providers":"打开设置 → 供应商"
   ,"Task started.":"任务已开始。","The result will appear in this conversation.":"结果会显示在此对话中。","Needs clarification.":"需要澄清。","Refused.":"已拒绝。","Message delivered.":"消息已送达。","Sending your files…":"正在发送文件…"
@@ -3841,7 +3847,9 @@ const ZH_PATTERNS=[
   ,[/^(.+) key works, but no models are available to it\.$/,m=>m[1]+' 密钥可用，但没有可用的模型。']
   ,[/^Could not reach (.+)\. Check your connection and try again\.$/,m=>'无法连接 '+m[1]+'。请检查网络后重试。']
   ,[/^reading (\d+) owner message\(s\)$/,m=>'正在读取 '+m[1]+' 条所有者补充信息'],
-  [/^reading (\d+) owner message\(s\)$/,m=>'正在读取 '+m[1]+' 条所有者补充信息'],
+  [/^Draft: (\d+) words so far$/,m=>'草稿：已写 '+m[1]+' 字'],
+  [/^Still (routing|preparing|generating|auditing|replying|reviewing) · (\d+) s$/,m=>
+    ({routing:'仍在判断由谁处理',preparing:'仍在准备',generating:'仍在生成',auditing:'仍在审计',replying:'仍在回复',reviewing:'仍在审阅'})[m[1]]+' · '+m[2]+' 秒'],
   [/^queued as owner guidance for the running build \(#(\d+)\); it will be read at the next round$/,m=>'已作为所有者补充信息排队（第 '+m[1]+' 位），将在下一轮读取'],
   [/^(\d+) queued$/,m=>m[1]+' 条排队中'],
   [/^generator provider failure in round (\d+): (.+)$/,m=>'生成者在第 '+m[1]+' 轮失败：'+m[2]],
@@ -4160,6 +4168,11 @@ let activeChatId = '';
 // cleared the moment the real state takes over (a live run, or the message
 // echoed back in the stream) or the send is refused / needs clarification.
 let optimisticSend = null;
+// D150. The message the server accepted and is still handling (routing, then
+// the lane) — its id, so a finished intake is applied exactly once — and the
+// lane reply arriving live through named intake_chunk frames.
+let pendingIntake=null;
+let liveReply=null;
 let archivedExpanded = false;
 const expandedGroups = new Set();
 const expandedReviews = new Set();
@@ -6101,21 +6114,42 @@ function turn(m,d){
 }
 // The instant, optimistic echo of a just-sent message: the typed text plus a
 // working indicator, so pressing Enter feels immediate.
-function optimisticTurn(text, queued){
+// The intake the page is waiting on, if the state carries it and it belongs to
+// this thread. A finished one is settled by settleIntake() and never rendered.
+function intakeFor(d){const i=d&&d.intake;if(!i||i.finished)return null;
+  if(pendingIntake&&i.id!==pendingIntake)return null;
+  if((i.chat_id||'')!==(activeChatId||''))return null;return i;}
+const AUDITOR_LANES=new Set(['auditor','amendment','dispute','resolve','query']);
+// The last few phase lines of the message being handled: fixed sentences from
+// the server catalogue, already in both locales — never an id, never prose
+// the page composes about a process it cannot see.
+function intakeLines(intake){
+  const steps=((intake&&intake.steps)||[]).slice(-3);
+  return steps.map((s,i)=>'<div class="intake-line'+(i===steps.length-1?' latest':'')+'">'
+    +esc(localeText(s.text_i18n,s.text))+'</div>').join('');}
+function optimisticTurn(text, queued, intake, replying){
   if(queued) return '<article class="turn user"><div class="turn-main">'
     + '<div class="turn-meta"><b>You</b><span class="direct-mark">'
     + (currentLocale==='zh'?'已排队 · 下一轮读取':'Queued — read at next round') + '</span>'
     + '<span class="turn-time">' + (currentLocale==='zh'?'刚刚':'now') + '</span></div>'
     + '<div class="turn-body">' + esc(text) + '</div></div></article>';
-  return '<article class="turn user"><div class="turn-main">'
+  const you='<article class="turn user"><div class="turn-main">'
     + '<div class="turn-meta"><b>You</b><span class="turn-time">'
     + (currentLocale==='zh'?'刚刚':'now') + '</span></div>'
-    + '<div class="turn-body">' + esc(text) + '</div></div></article>'
-    + '<article class="turn"><div class="turn-main">'
-    + '<div class="turn-meta"><span class="role-mark generator" aria-hidden="true">G</span>'
-    + '<b>Generator</b></div><div class="turn-body"><span class="thinking-dots" aria-label="'
+    + '<div class="turn-body">' + esc(text) + '</div></div></article>';
+  // A reply arriving live replaces the working indicator; nothing else here
+  // changes, so the bubble does not jump.
+  if(replying) return you;
+  const auditorSide=intake&&AUDITOR_LANES.has(intake.lane||'');
+  const who=auditorSide
+    ?'<span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b>'
+    :'<span class="role-mark generator" aria-hidden="true">G</span><b>Generator</b>';
+  return you + '<article class="turn"><div class="turn-main">'
+    + '<div class="turn-meta">' + who + '</div><div class="turn-body"><span class="thinking-dots" aria-label="'
     + (currentLocale==='zh'?'处理中':'Working') + '"><i></i><i></i><i></i></span>'
-    + '<div class="turn-forecast">' + esc(forecastText(lastState)) + '</div></div></div></article>';
+    + (intake?'<div class="intake">'+intakeLines(intake)+'</div>':'')
+    + '<div class="turn-forecast">' + esc(forecastText(lastState)) + '</div>'
+    + '</div></div></article>';
 }
 function modelTag(value){const raw=String(value||'');if(!raw)return '';
   const tail=raw.split(':').pop()||raw;
@@ -6272,6 +6306,36 @@ function reviewCard(d){
     +'</button>'+detail
     +'<div class="review-actions">'+actionRow+'</div></section>';
 }
+const ACTOR_NAMES = {generator:'Generator',auditor:'Auditor',compute:'Compute',tool:'Tool',loop:'Process',done:'Result',input:'You'};
+const ACTOR_MARKS = {generator:'G',auditor:'A',compute:'H',tool:'M',loop:'↻',done:'✓'};
+// The main surface carries words, never identifiers (D150 / North Star §12):
+// a raw payload (the goal record is JSON for the Plan tab) is not shown at
+// all, and a hash, sha, cycle id, provider:model route or rule id that an
+// older event still carries in its detail is dropped from the line here.
+function conciseDetail(s){
+  const raw=String(s.detail||'');
+  if(!raw||/^\s*[\x5b\x7b]/.test(raw))return '';
+  return humaniseDetail(raw)
+    .replace(/\bcycle [a-f0-9]{16}\b/g,'this cycle')
+    .replace(/\b[a-f0-9]{40}\b/g,'').replace(/\b[a-f0-9]{16}\b/g,'').replace(/\b[a-f0-9]{12}\b/g,'')
+    .replace(/\b[A-Za-z0-9_.-]+:(?:claude|gpt|gemini|deepseek|grok|o[0-9])[A-Za-z0-9_.-]*\b/g,'')
+    .replace(/\bCA-[A-Z]+-\d+\b/g,'').replace(/\s{2,}/g,' ').replace(/^[\s·;,:—-]+|[\s·;,:—-]+$/g,'');}
+// One live-activity row. A condensation notice is the runtime reporting on
+// itself, so it does not borrow the generator name or mark, and every row
+// localises from the wire fields (text_i18n) rather than showing English
+// under 中文.
+function activityRow(s){
+  const system = s.kind === 'context_condensed';
+  const mark = system ? '↻' : (ACTOR_MARKS[s.actor]||'·');
+  const who = system ? t('Context reduced') : t(ACTOR_NAMES[s.actor]||s.actor);
+  const line = (system || s.text_i18n) ? localeText(s.text_i18n, s.text) : s.text;
+  const detail = system ? localeText(s.detail_i18n, s.detail) : conciseDetail(s);
+  return '<div class="audit-event">'
+  + '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>'
+  + '<div class="event-main"><div class="event-line"><b>' + esc(who)
+  + '</b><span>' + esc(line) + '</span></div>'
+  + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
+  + '<time class="event-time">' + at(s.t) + '</time></div>';}
 function runCard(d){
   const p = chatProgress(d),cycles=chatCycles(d);
   const latestCycle=cycles.length?cycles[cycles.length-1]:null;
@@ -6297,26 +6361,23 @@ function runCard(d){
   const focusLabel = focus.state === 'current' ? 'Current step' : focus.state === 'failed' ? 'Stopped at'
     : focus.state === 'pending' ? 'Next step' : 'Completed step';
   const stateNames = {done:'Done',failed:'Stopped',current:'Active',pending:'Waiting'};
-  const actorNames = {generator:'Generator',auditor:'Auditor',compute:'Compute',tool:'Tool',loop:'Process',done:'Result',input:'You'};
-  const actorMarks = {generator:'G',auditor:'A',compute:'H',tool:'M',loop:'↻',done:'✓'};
-  const eventRows = p && p.steps ? p.steps.slice(-12).map(s => {
-    // A condensation notice is the runtime reporting on itself, so it does not
-    // borrow the generator name or mark here either, and it localises from
-    // the wire fields rather than showing English under 中文.
-    const system = s.kind === 'context_condensed';
-    const mark = system ? '↻' : (actorMarks[s.actor]||'·');
-    const who = system ? t('Context reduced') : (actorNames[s.actor]||s.actor);
-    const line = system ? localeText(s.text_i18n, s.text) : s.text;
-    const detail = system ? localeText(s.detail_i18n, s.detail) : humaniseDetail(s.detail);
-    return '<div class="audit-event">'
-    + '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>'
-    + '<div class="event-main"><div class="event-line"><b>' + esc(who)
-    + '</b><span>' + esc(line) + '</span></div>'
-    + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
-    + '<time class="event-time">' + at(s.t) + '</time></div>';
-  }).join('') : '';
+  const eventRows = p && p.steps ? p.steps.slice(-12).map(activityRow).join('') : '';
+  // D150: what is arriving right now, as one line each — a word count for the
+  // draft (the text itself lives in the unaudited draft article above) and
+  // the tail of the summarised thinking. Neither is a step; neither persists.
+  const draft = liveDraftFor(d), thinking = liveThinkingFor(d);
+  const liveRows = (thinking ? '<div class="audit-event live-thinking">'
+      + '<span class="event-mark runtime">…</span><div class="event-main"><div class="event-line"><b>'
+      + esc(currentLocale==='zh'?'思考中':'Thinking') + '</b><span>' + esc(thinking.text.slice(-160).replace(/\s+/g,' ')) + '</span></div></div>'
+      + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></div>' : '')
+    + (draft ? '<div class="audit-event live-draft">'
+      + '<span class="event-mark generator">G</span><div class="event-main"><div class="event-line"><b>'
+      + esc(t('Generator')) + '</b><span>' + esc(currentLocale==='zh'
+        ? '草稿：已写 ' + draftCount(draft.text) + ' 字'
+        : 'Draft: ' + draftCount(draft.text) + ' words so far') + '</span></div></div>'
+      + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></div>' : '');
   const activityTitle = p && !p.finished ? 'Live activity' : 'Run activity';
-  const activity = eventRows || '<div class="activity-empty">The generator and auditor show what they are doing here while a task runs.</div>';
+  const activity = (eventRows + liveRows) || '<div class="activity-empty">The generator and auditor show what they are doing here while a task runs.</div>';
   const task = p && p.task ? p.task : titleOf(d);
   const live = p && !p.finished;
   const stopBtn = live ? '<button type="button" class="run-stop"'
@@ -6897,6 +6958,72 @@ function announceThread(messages,d){
   // Their own words are not read back to them.
   if(!fresh.length)return false;
   return announce(threadArrivalSentence(d),'event');}
+// D150. The server answers Send at once and handles the message in a worker;
+// the result say() used to return arrives on the intake record instead. It is
+// applied here exactly once, from the state, so a reload or a reconnect sees
+// the same outcome the original tab did.
+function settleIntake(d){
+  const i=d&&d.intake;
+  if(!pendingIntake||!i||i.id!==pendingIntake||!i.finished)return;
+  pendingIntake=null;liveReply=null;
+  if(i.error){optimisticSend=null;route.className='route on error';
+    route.innerHTML='<b>Refused.</b> '+esc(i.error.reason||'');}
+  else applySayResult(i.result||{});
+  releaseComposer();}
+function releaseComposer(){
+  transferBusy=false;document.getElementById('attach').disabled=false;
+  send.disabled=false;say.disabled=false;say.focus();}
+function applySayResult(r){
+  if(r.asked){optimisticSend=null;route.innerHTML='<b class="ask">Needs clarification.</b> '+esc(r.clarify);return;}
+  activeChatId=r.chat_id||activeChatId;if(optimisticSend)optimisticSend.chat=activeChatId||'';
+  // chat is answered in the worker: the echo + reply land in the next snapshot,
+  // so the optimistic bubble stays until the real turns take over (echo-detection).
+  if(r.lane!=='generator'&&r.lane!=='chat'){optimisticSend=null;}route.innerHTML=r.queued
+    ?'<b>Queued.</b> Will be read at the next generator round'+(r.position?' · #'+esc(r.position):'')
+    :(r.lane==='generator'&&String(r.executed||'').indexOf('refused')===0)
+    ?'<b>Refused.</b> '+esc(String(r.executed).slice(10))
+    :r.lane==='generator'
+    ?'<b>Task started.</b> The result will appear in this conversation.'
+    :r.lane==='chat'?'<b>Answered.</b>'
+    :'<b>Message delivered.</b>';
+  if(!r.queued&&optimisticSend)optimisticSend.queued=false;
+  if(r.lane==='generator')pendingContinuation={cycle:'',chat:''};
+  if(!pendingFiles.length||r.attachments_accepted){say.value='';pendingFiles=[];uploadProgress=new Map();fileInput.value='';drawFiles();syncAudience();}}
+// The live lane reply (chat, direct auditor): the same consumer rules as the
+// generator draft — key by (intake, stream), accept only the next seq, discard
+// the whole text on any gap, discard on done/aborted. Superseded by the
+// committed routing record when the intake settles.
+function replyChunk(row){
+  const stream=row&&row.stream;
+  if(!stream||typeof stream!=='object')return;
+  const intake=String(row.intake_id||''),id=String(stream.id||'');
+  const seq=Number(stream.seq),done=stream.done===true;
+  if(!intake||!id||!Number.isInteger(seq)||seq<0)return;
+  const same=liveReply&&liveReply.intake===intake&&liveReply.id===id;
+  if(!same){
+    if(seq!==0){liveReply={intake:intake,id:id,seq:seq,text:'',done:true,broken:true,lane:row.lane||''};return;}
+    liveReply={intake:intake,id:id,seq:-1,text:'',done:false,broken:false,lane:row.lane||''};
+  }
+  if(liveReply.broken)return;
+  if(seq!==liveReply.seq+1){liveReply.text='';liveReply.broken=true;liveReply.done=true;
+    if(lastState)render(lastState);return;}
+  liveReply.seq=seq;
+  if(!done)liveReply.text+=String(row.text||'');
+  else{liveReply.done=true;if(stream.outcome!=='complete'){liveReply.text='';liveReply.broken=true;}}
+  if(lastState)render(lastState);}
+function liveReplyTurn(d){
+  if(!liveReply||liveReply.broken||!liveReply.text)return '';
+  const i=d&&d.intake;
+  if(!i||i.finished||String(i.id||'')!==liveReply.intake)return '';
+  if((i.chat_id||'')!==(activeChatId||''))return '';
+  const auditorSide=AUDITOR_LANES.has(liveReply.lane||i.lane||'');
+  const label=auditorSide?'Auditor live reply · direct reply':'Generator live reply · not audited';
+  return '<article class="turn draft"><div class="turn-main">'
+    +'<div class="turn-meta"><span class="role-mark '+(auditorSide?'auditor':'generator')+'" aria-hidden="true">'
+    +(auditorSide?'A':'G')+'</span><b class="draft-label">'+esc(t(label))+'</b>'
+    +'<span class="spacer"></span><span class="turn-time">'
+    +(currentLocale==='zh'?'刚刚':'now')+'</span></div>'
+    +'<div class="turn-body draft-body">'+esc(liveReply.text)+'</div></div></article>';}
 function renderConversation(d){
   const thread = document.getElementById('thread');
   const previousTop = thread.scrollTop;
@@ -6915,6 +7042,7 @@ function renderConversation(d){
     // Optimistic echo: keep the just-sent message + working indicator on screen
     // until the real state takes over (a live run appears, or the message is
     // echoed back in the stream), so the send feels instant.
+    settleIntake(d);
     let optimistic = '';
     if(optimisticSend && (!optimisticSend.chat || optimisticSend.chat===(activeChatId||''))){
       const want=(optimisticSend.text||'').trim();
@@ -6922,7 +7050,8 @@ function renderConversation(d){
       // A queued steering message must NOT be cleared by the live run it is
       // steering — only its own echo in the stream releases it.
       if(optimisticSend.queued ? echoed : ((p && !p.finished) || echoed)) optimisticSend = null;
-      else optimistic = optimisticTurn(optimisticSend.text, optimisticSend.queued);
+      else{const reply=liveReplyTurn(d);
+        optimistic = optimisticTurn(optimisticSend.text, optimisticSend.queued, intakeFor(d), Boolean(reply)) + reply;}
     }
     // One protagonist per screen: the welcome empty state renders only when
     // the timeline holds nothing at all, and the delivery band only when no
@@ -7213,6 +7342,37 @@ function startPolling(why){connected(false,why);if(poller)return;poller=setInter
 // generator wrote, and presenting it would be a smaller version of the defect
 // F1 closes — text on screen that nothing stands behind.
 let liveDraft=null;
+// D150. The summarised thinking of the generator, on its own named frame and its own
+// consumer: same gap rule, but only a bounded tail is kept, because it is a
+// glance at what the model is weighing, not a document.
+let liveThinking=null;
+const THINKING_TAIL=600;
+function thinkingChunk(row){
+  const stream=row&&row.stream;
+  if(!stream||typeof stream!=='object')return;
+  const run=String(row.run_id||''),id=String(stream.id||'');
+  const seq=Number(stream.seq),done=stream.done===true;
+  if(!run||!id||!Number.isInteger(seq)||seq<0)return;
+  const same=liveThinking&&liveThinking.run===run&&liveThinking.id===id;
+  if(!same){
+    if(seq!==0){liveThinking={run:run,id:id,seq:seq,text:'',done:true,broken:true};return;}
+    liveThinking={run:run,id:id,seq:-1,text:'',done:false,broken:false};
+  }
+  if(liveThinking.broken)return;
+  if(seq!==liveThinking.seq+1){liveThinking.text='';liveThinking.broken=true;liveThinking.done=true;return;}
+  liveThinking.seq=seq;
+  if(!done){liveThinking.text=(liveThinking.text+String(row.text||'')).slice(-THINKING_TAIL);}
+  else liveThinking.done=true;
+  if(lastState)render(lastState);}
+function liveThinkingFor(d){
+  if(!liveThinking||liveThinking.broken||!liveThinking.text||liveThinking.done)return null;
+  const p=chatProgress(d);
+  if(!p||p.finished||String(p.run_id||'')!==liveThinking.run)return null;
+  if(String(p.state||'').toUpperCase()!=='GENERATING')return null;
+  return liveThinking;}
+// Words for the draft line: CJK counts by character, everything else by word.
+function draftCount(text){const cjk=(String(text||'').match(/[\u4e00-\u9fff]/g)||[]).length;
+  const words=(String(text||'').replace(/[\u4e00-\u9fff]/g,' ').match(/\S+/g)||[]).length;return cjk+words;}
 function draftChunk(row){
   const stream=row&&row.stream;
   if(!stream||typeof stream!=='object')return;
@@ -7261,11 +7421,17 @@ function liveDraftTurn(d){
     +'<div class="turn-body draft-body">'+esc(draft.text)+'</div></div></article>';}
 function startStream(){let source;try{source=new EventSource('/api/stream?t='+encodeURIComponent(T));}
   catch(e){startPolling('polling');return;}source.onopen=()=>{connected(true,'live');
-  if(poller){clearInterval(poller);poller=null;}};source.onmessage=ev=>{try{render(JSON.parse(ev.data));
-  connected(true,'live');}catch(e){}};
+  if(poller){clearInterval(poller);poller=null;}};source.onmessage=ev=>{try{const d=JSON.parse(ev.data);
+  // A fresh frame that no longer carries the message we are waiting on means
+  // the process that accepted it is gone; the composer is given back rather
+  // than held for a reply that cannot come.
+  if(pendingIntake&&!(d.intake&&d.intake.id===pendingIntake)){pendingIntake=null;liveReply=null;releaseComposer();}
+  render(d);connected(true,'live');}catch(e){}};
+  source.addEventListener('intake_chunk',ev=>{try{replyChunk(JSON.parse(ev.data));}catch(e){}});
   // The named listener this whole finding is about. `onmessage` never sees it:
   // a frame with an `event:` line is dispatched by name and by name only.
   source.addEventListener('generation_chunk',ev=>{try{draftChunk(JSON.parse(ev.data));}catch(e){}});
+  source.addEventListener('thinking_chunk',ev=>{try{thinkingChunk(JSON.parse(ev.data));}catch(e){}});
   source.onerror=()=>startPolling('reconnecting');}
 
 const form=document.getElementById('f');const say=document.getElementById('say');
@@ -8083,28 +8249,24 @@ form.onsubmit=async ev=>{ev.preventDefault();const rawText=say.value.trim();if(!
   route.textContent=pendingFiles.length?'Sending your files…':'Starting…';
   try{const uploadBatch=pendingFiles.length?await uploadFiles(pendingFiles):null;
     const r=await api('/api/say',{text,chat_id:activeChatId,upload_batch:uploadBatch,attachment_consent:pendingFiles.length>0,
-      continuation_cycle:continuing?pendingContinuation.cycle:''});if(r.setup==='credentials'){optimisticSend=null;if(lastState)render(lastState);
+      continuation_cycle:continuing?pendingContinuation.cycle:''});
+    if(r.setup==='credentials'){optimisticSend=null;if(lastState)render(lastState);
     // A setup step, not an audit event: nothing started, the message stays in
     // the composer, and the one action is the place that fixes it.
     route.className='route on setup';route.innerHTML=setupCardMarkup(r.missing||[]);
     document.getElementById('setup-open-providers').onclick=()=>openSettings('providers');}
-    else if(r.asked){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b class="ask">Needs clarification.</b> '
-    + esc(r.clarify);}else{activeChatId=r.chat_id||activeChatId;if(optimisticSend)optimisticSend.chat=activeChatId||'';
-    // chat is synchronous: the echo + reply land in the next snapshot, so the
-    // optimistic bubble stays until the real turns take over (echo-detection).
-    if(r.lane!=='generator'&&r.lane!=='chat'){optimisticSend=null;}route.innerHTML=r.queued
-      ?'<b>Queued.</b> Will be read at the next generator round'+(r.position?' · #'+esc(r.position):'')
-      :(r.lane==='generator'&&String(r.executed||'').indexOf('refused')===0)
-      ?'<b>Refused.</b> '+esc(String(r.executed).slice(10))
-      :r.lane==='generator'
-      ?'<b>Task started.</b> The result will appear in this conversation.'
-      :r.lane==='chat'?'<b>Answered.</b>'
-      :'<b>Message delivered.</b>';
-    if(!r.queued&&optimisticSend)optimisticSend.queued=false;
-    if(r.lane==='generator')pendingContinuation={cycle:'',chat:''};
-    if(!pendingFiles.length||r.attachments_accepted){say.value='';pendingFiles=[];uploadProgress=new Map();fileInput.value='';drawFiles();syncAudience();}}}
+    else if(r.asked){optimisticSend=null;if(lastState)render(lastState);
+    route.innerHTML='<b class="ask">Needs clarification.</b> '+esc(r.clarify);}
+    else if(r.accepted){
+      // Accepted, not answered: the server is routing it now and narrates each
+      // phase into the state. The composer stays held until that settles —
+      // exactly as long as it used to be held by the response itself.
+      pendingIntake=r.intake;activeChatId=r.chat_id||activeChatId;if(optimisticSend)optimisticSend.chat=activeChatId||'';
+      route.textContent=currentLocale==='zh'?'处理中…':'Working…';
+      if(lastState)render(lastState);return;}
+    else applySayResult(r);}
   catch(e){optimisticSend=null;if(lastState)render(lastState);route.innerHTML='<b>Refused.</b> '+esc(e.message);}
-  transferBusy=false;document.getElementById('attach').disabled=false;send.disabled=false;say.disabled=false;say.focus();};
+  releaseComposer();};
 api('/api/state').then(render).catch(e=>{document.getElementById('thread-title').textContent='Disconnected: '+e.message;});
 startStream();
 /* ---- First-launch flow (North Star §4): shell + Welcome + Readiness ---- */

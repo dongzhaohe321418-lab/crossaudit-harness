@@ -245,8 +245,19 @@ def test_provider_coalesces_after_first_text_before_assigning_sequences():
     })
 
 
-def test_streaming_is_off_by_default_and_only_threads_to_first_adapter(
+def test_streaming_is_on_by_default_and_threads_to_every_capable_adapter(
         cfg, monkeypatch):
+    """D150 (owner directive: thinking and progress start showing at once;
+    never a long silent gap). This test used to pin streaming OFF by default and
+    to the one adapter named ``openai_compat``. Both pins are reversed on
+    purpose: the flag defaults to True, and the gate is the adapter's own
+    ``supports_streaming`` capability, so Anthropic and every vendor preset
+    built on the compatible adapter stream, while an adapter that declares
+    nothing (replay) never receives a callback it cannot honour.
+
+    Mutations: restore ``provider == "openai_compat"`` and the Anthropic call
+    loses ``on_chunk``; restore the False default and the first call loses it.
+    """
     calls = []
 
     def provider(**kwargs):
@@ -258,31 +269,46 @@ def test_streaming_is_off_by_default_and_only_threads_to_first_adapter(
     on_event.on_chunk = callback
     monkeypatch.setenv("CROSSAUDIT_GENERATOR_KEY", "fixture")
     monkeypatch.setattr(resilience, "get_provider", lambda _name: provider)
-    primary = Role("openai_compat", "fixture-model", "openai",
-                   "CROSSAUDIT_GENERATOR_KEY")
+    assert cfg.generator_streaming is True
 
-    resilience.complete(
-        cfg, "generator", primary, system="s", prompt="p", on_event=on_event)
-    enabled = replace(cfg, generator_streaming=True)
-    resilience.complete(
-        enabled, "generator", primary, system="s", prompt="p", on_event=on_event)
+    for provider_name in ("openai_compat", "anthropic", "deepseek", "google"):
+        assert resilience.supports_streaming(provider_name), provider_name
+        role = Role(provider_name, "fixture-model", "vendor",
+                    "CROSSAUDIT_GENERATOR_KEY")
+        resilience.complete(cfg, "generator", role, system="s", prompt="p",
+                            on_event=on_event)
+        assert calls[-1]["on_chunk"] is callback, provider_name
 
-    assert "on_chunk" not in calls[0]
-    assert calls[1]["on_chunk"] is callback
+    assert not resilience.supports_streaming("replay")
+    resilience.complete(cfg, "generator",
+                        Role("replay", "fixture-model", "vendor",
+                             "CROSSAUDIT_GENERATOR_KEY"),
+                        system="s", prompt="p", on_event=on_event)
+    assert "on_chunk" not in calls[-1]
+
+    disabled = replace(cfg, generator_streaming=False)
+    resilience.complete(disabled, "generator",
+                        Role("anthropic", "fixture-model", "anthropic",
+                             "CROSSAUDIT_GENERATOR_KEY"),
+                        system="s", prompt="p", on_event=on_event)
+    assert "on_chunk" not in calls[-1]
 
 
-def test_generator_streaming_setting_is_boolean_and_off_by_default(
+def test_generator_streaming_setting_is_boolean_and_on_by_default(
         science):
+    """D150: the default flipped from False to True on the owner's directive;
+    a project can still say ``streaming: false``, and a non-boolean is still
+    refused. Mutation: default back to False and the first assertion is red."""
     path = science / "crossaudit.yml"
-    assert load(path).generator_streaming is False
+    assert load(path).generator_streaming is True
     original = path.read_text(encoding="utf-8")
     path.write_text(original.replace(
         "generator:\n  vendor: openai\n",
-        "generator:\n  vendor: openai\n  streaming: true\n"),
+        "generator:\n  vendor: openai\n  streaming: false\n"),
         encoding="utf-8")
-    assert load(path).generator_streaming is True
+    assert load(path).generator_streaming is False
     path.write_text(path.read_text(encoding="utf-8").replace(
-        "streaming: true", "streaming: yes-please"), encoding="utf-8")
+        "streaming: false", "streaming: yes-please"), encoding="utf-8")
     with pytest.raises(ConfigDenial, match="generator.streaming must be true or false"):
         load(path)
 

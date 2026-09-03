@@ -19,6 +19,11 @@ from .runs import RunState
 
 MAX_GENERATION_CHUNK_BYTES = 8 * 1024
 
+#: Event kinds that carry a coalesced stream chunk. ``thinking_chunk`` (D150)
+#: is the generator's summarised thinking: same contract, same journal path,
+#: same exclusion from evidence, and additionally never part of the draft.
+STREAM_KINDS = frozenset({"generation_chunk", "thinking_chunk"})
+
 
 @dataclass(frozen=True, slots=True)
 class RunEvent:
@@ -47,7 +52,7 @@ class RunEvent:
         if self.waiting_reason is not None and not isinstance(
                 self.waiting_reason, dict):
             raise ValueError("a run event waiting_reason must be a mapping")
-        if self.kind != "generation_chunk":
+        if self.kind not in STREAM_KINDS:
             if self.stream is not None:
                 raise ValueError("stream metadata is only valid on generation chunks")
             return
