@@ -167,7 +167,13 @@ _ALLOWED_LATIN = {
     # greps for them. Translating one would make the instruction wrong.
     "CROSSAUDIT_AUDITOR_KEY", "CROSSAUDIT_GENERATOR_KEY", "CROSSAUDIT_SHOW_KEYS",
     # TYPE / MATCH — file names and extensions that appear on disk.
-    "AUDIT_RULES", "md", "yml", "env",
+    # `env` was here and is gone: its ONLY occurrence on this screen is the
+    # `.env` tail of the sandbox keys path, which the stray guard already
+    # excludes as a path fragment. Whether it survives as a standalone Latin
+    # run depends on where `tui.note` wrapped that path, so it was seen on
+    # Linux and not on macOS — pre-approved English held in place by a line
+    # break. The guard says delete such entries; this one is deleted.
+    "AUDIT_RULES", "md", "yml",
     # Terms of art that Chinese technical writing does not translate either.
     # Kept deliberately and named, rather than waved through as "technical".
     "API", "markdown",

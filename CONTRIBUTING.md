@@ -19,9 +19,12 @@ python -m pip install ".[dev]"
 python -m pytest -q --timeout=30
 ```
 
-That installs the same wheel layout users receive, which is what CI tests on
-Python 3.10 to 3.13 across Linux, macOS, and Windows. While iterating on
-source, run against the tree instead of reinstalling after every edit:
+That installs the same wheel layout users receive. CI tests Python 3.10 to
+3.13 on Linux and macOS, and runs the suite against the source tree
+(`PYTHONPATH=src`) because many guards read the tree they are auditing; the
+`package` job is what proves the built wheel installs and imports. While
+iterating on source, run against the tree instead of reinstalling after every
+edit:
 
 ```bash
 PYTHONPATH=src python -m pytest -q --timeout=30            # full suite, about 3 minutes
@@ -41,6 +44,29 @@ python -m coverage run -m pytest -q --timeout=30 && python -m coverage report
 ```
 
 The website under `website/` has its own toolchain; see `website/README.md`.
+
+### Windows
+
+Windows is **advisory**: the two `windows-latest` jobs run on every pull
+request and their result is visible, but they do not block a merge
+(`continue-on-error` in `.github/workflows/ci.yml`). CrossAudit's product is
+the macOS app; the Python package's Windows port is a separate, unfinished
+slice, and what is left is portability rather than flakiness:
+
+- `file_identity` establishes which directory entry a path names by comparing
+  `(st_dev, st_ino)`. Windows `os.scandir()` reports `st_ino` as `0`, so
+  nothing matches and the check denies.
+- A file another handle still holds open cannot be replaced or unlinked.
+- Some denial text is written with POSIX paths and separators.
+- `MAX_PATH` truncates the temporary trees the suite builds.
+- The local `.docx` and `.pdf` renderers have no Windows path.
+
+They stay in the matrix on purpose: a platform quietly dropped from CI is a
+platform nobody ever fixes, and the failure count is the measure of how far the
+port has to go. If you are working on it, fix a class rather than a test, and
+say which of the five above you closed. A Windows-only skip is acceptable only
+where the API genuinely does not exist there (`pty`, `socket.sendmsg`) and must
+carry that as its reason; never skip a whole file.
 
 ## The audit core is additive only
 

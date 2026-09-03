@@ -5,14 +5,35 @@ cannot see which branch a row takes; this can."""
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import subprocess
+import tempfile
 
 from extract_zh import shipped_js
 
 SLOTS = ["resolution-flag", "resolution-title", "resolution-summary",
          "resolution-limit-title", "resolution-limit-copy", "resolution-request",
          "resolution-reopen-title", "resolution-reopen-copy", "resolution-issues"]
+
+
+def _run_node(js: str) -> subprocess.CompletedProcess:
+    """Run `js` under node from a FILE, never from `node -e <argv>`.
+
+    The assembled program is ~200 KB. Linux caps a single argv entry at
+    `MAX_ARG_STRLEN` (128 KiB), so `node -e js` raised
+    `OSError: [Errno 7] Argument list too long` on every Linux runner while
+    passing on macOS, whose limit is on the total block rather than one entry.
+    A temporary file has no such cap and is byte-identical input.
+    """
+    handle, path = tempfile.mkstemp(suffix=".js", text=False)
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(js)
+        return subprocess.run(["node", path], text=True, capture_output=True,
+                              encoding="utf-8", errors="replace")
+    finally:
+        os.unlink(path)
 
 
 def _extract(script: str, sig: str) -> str:
@@ -99,7 +120,7 @@ def render(worktree: pathlib.Path, rows: dict) -> dict:
              _extract(script, "function resetSentence(resetAt)"),
              _extract(script, "function appendResolutionReset(row,budget,provider)")]
     js = "\n".join(parts) + _SHIM % (json.dumps(rows), json.dumps(SLOTS))
-    out = subprocess.run(["node", "-e", js], text=True, capture_output=True)
+    out = _run_node(js)
     assert out.returncode == 0, out.stderr
     return json.loads(out.stdout)
 
@@ -116,6 +137,6 @@ def eval_page(worktree: pathlib.Path, signatures: list[str], body: str,
     parts = [shipped_js(worktree), esc, prelude]
     parts += [_extract(script, sig) for sig in signatures]
     js = "\n".join(parts) + "\n" + body
-    out = subprocess.run(["node", "-e", js], text=True, capture_output=True)
+    out = _run_node(js)
     assert out.returncode == 0, out.stderr
     return out.stdout

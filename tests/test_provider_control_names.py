@@ -63,13 +63,13 @@ from the source without a browser, named for what they actually check:
 It does NOT claim to check accessible names. That claim belongs to the drive.
 """
 import json
-import re
 import shutil
-import subprocess
 
 import pytest
 
 from crossaudit.console.page import PAGE
+
+from .node_eval import run_node
 
 # Deliberately includes a provider whose label is two words and one whose label
 # differs from its slug, because those are the cases a fixed dictionary entry
@@ -106,8 +106,7 @@ def _needs_node():
 
 
 def _run(js):
-    return subprocess.run([shutil.which("node"), "-e", js], text=True,
-                          capture_output=True)
+    return run_node(js)
 
 
 def _locale_sources():

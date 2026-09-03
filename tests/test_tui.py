@@ -16,6 +16,8 @@ import pytest
 from crossaudit.cli import tui, wizard
 from crossaudit.errors import ConfigDenial
 
+from .loopback import SerialNumericLoopbackHTTPServer
+
 
 # ------------------------------------------------------------ key decoding
 @pytest.mark.parametrize("raw,expect", [
@@ -89,7 +91,8 @@ def _drive_select(keystrokes, options, **kw):
             drawn.append(chunk)
             last_drawn[0] = time.monotonic()
 
-    threading.Thread(target=drain, daemon=True).start()
+    reader = threading.Thread(target=drain, daemon=True)
+    reader.start()
     saved_in, saved_out = sys.stdin, sys.stdout
     sys.stdin = os.fdopen(slave, "r", buffering=1)
     sys.stdout = os.fdopen(os.dup(slave), "w", buffering=1)
@@ -122,7 +125,23 @@ def _drive_select(keystrokes, options, **kw):
         worker.join(timeout=20)
         assert not worker.is_alive(), "select never returned; it is waiting on a key"
     finally:
+        pty_in, pty_out = sys.stdin, sys.stdout
         sys.stdin, sys.stdout = saved_in, saved_out
+        # The LAST thing `select` draws is the spoken outcome ("chose 2) ...").
+        # Closing the master while those bytes are still between the slave end
+        # and the reader truncates them, and the guard then reads a menu with
+        # no result under it — a race in this harness, read as a defect in the
+        # product. It took out one job per run on the slower runners, a
+        # different test each time. Waiting for a quiet interval does not fix
+        # it (the drawing has been quiet since the keypress); closing every
+        # SLAVE fd does, because the reader then gets EOF and joining it is
+        # proof that everything written has been read.
+        for handle in (pty_out, pty_in):
+            try:
+                handle.close()
+            except OSError:                     # pragma: no cover - already shut
+                pass
+        reader.join(timeout=5)
         os.close(master)
     if "error" in result:
         raise result["error"]
@@ -1127,7 +1146,6 @@ def test_a_real_400_reaches_the_caller_intact():
     """End to end through urllib, since the body is read from a stream that is
     easy to consume twice or not at all."""
     import http.server
-    import socketserver
     import threading
 
     from crossaudit.errors import ProviderDenial
@@ -1147,13 +1165,7 @@ def test_a_real_400_reaches_the_caller_intact():
         def log_message(self, *a):                            # keep pytest output clean
             pass
 
-    class NumericLoopbackHTTPServer(http.server.HTTPServer):
-        def server_bind(self):
-            socketserver.TCPServer.server_bind(self)
-            self.server_name = str(self.server_address[0])
-            self.server_port = int(self.server_address[1])
-
-    server = NumericLoopbackHTTPServer(("127.0.0.1", 0), Handler)
+    server = SerialNumericLoopbackHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:

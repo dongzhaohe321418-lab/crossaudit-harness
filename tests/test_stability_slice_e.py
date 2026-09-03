@@ -136,11 +136,18 @@ def test_a_running_daemon_never_retires_past_its_window(cfg, monkeypatch):
 
 
 def test_a_live_stream_holds_an_otherwise_idle_daemon_open(cfg, monkeypatch):
-    # idle_timeout (0.2s) is far below the 15s heartbeat, so touch() alone would
+    # idle_timeout (1s) is far below the 15s heartbeat, so touch() alone would
     # let the console look idle after the first frame; the active_streams guard
     # is what keeps a streamed-to daemon alive.
+    #
+    # It was 0.2s, which is less time than a loaded runner needs to open the
+    # loopback connection: the daemon retired before the stream existed and the
+    # first readline returned b"" — the guard failing for want of a subject
+    # rather than for the property it is about. A second is still far inside
+    # the heartbeat and still retires the daemon well before the assertions
+    # below if the active_streams accounting is removed.
     monkeypatch.setattr(server_mod, "IDLE_POLL_S", 0.05)
-    url, httpd, thread = _serve_bg(cfg, idle_timeout=0.2)
+    url, httpd, thread = _serve_bg(cfg, idle_timeout=1.0)
     stream = None
     try:
         stream = urllib.request.urlopen(       # nosec B310 — loopback test URL
@@ -150,7 +157,7 @@ def test_a_live_stream_holds_an_otherwise_idle_daemon_open(cfg, monkeypatch):
             line = stream.readline()
         assert line.startswith(b"data:")       # connected and streaming
         assert _wait(lambda: httpd.active_streams >= 1)
-        time.sleep(0.6)                        # well past the idle window
+        time.sleep(1.5)                        # well past the idle window
         assert not httpd.stop_event.is_set(), "a live stream was reaped"
         assert httpd.active_streams >= 1
     finally:

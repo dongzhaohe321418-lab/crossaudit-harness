@@ -124,6 +124,13 @@ _DRAFT_REPLY = {
     ]}
 
 
+#: These drive the real `crossaudit init` over a real terminal, which needs
+#: `pty` — POSIX only. There is no Windows equivalent to point them at.
+needs_a_pty = pytest.mark.skipif(
+    not hasattr(os, "openpty"),
+    reason="a real pty; the `pty` module is POSIX-only")
+
+
 def _init_on_a_pty(tmp_path, monkeypatch, *, answers, name="pvstudy"):
     """Run the real `crossaudit init` on a real terminal.
 
@@ -245,6 +252,7 @@ def _checks_line(project: Path) -> str:
                 if line.startswith("checks:"))
 
 
+@needs_a_pty
 def test_the_inference_is_shown_as_a_proposal_with_its_grounds(
         tmp_path, monkeypatch):
     project, out = _init_on_a_pty(
@@ -268,6 +276,7 @@ def test_the_inference_is_shown_as_a_proposal_with_its_grounds(
     assert "CA-DATA-001" in rules and "<PROJECT>" not in rules
 
 
+@needs_a_pty
 def test_the_proposal_can_be_refused_and_refusing_it_changes_the_file(
         tmp_path, monkeypatch):
     """Refusal is the half that makes it a proposal rather than an announcement."""
@@ -280,6 +289,7 @@ def test_the_proposal_can_be_refused_and_refusing_it_changes_the_file(
     assert "CA-DATA-001" in (project / "AUDIT_RULES.md").read_text()
 
 
+@needs_a_pty
 def test_a_prose_project_is_never_asked_at_all(tmp_path, monkeypatch):
     """No grounds, no proposal — the walkthrough's project must see nothing."""
     from crossaudit.providers import replay
@@ -347,6 +357,7 @@ def test_silence_still_never_selects_the_laboratory_contract(
 
 
 # ------------------------------------------- D10: demonstrate the guards fail
+@needs_a_pty
 def test_the_proposal_guards_fail_when_the_pack_is_taken_without_asking(
         tmp_path, monkeypatch):
     """Mutate the real product back to the behaviour that caused the harm.

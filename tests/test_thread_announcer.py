@@ -23,13 +23,13 @@ The runtime property is now guarded where it can only be settled by execution:
 records EVERY value the live-region node holds, in order. This file keeps the
 delta behaviour — what is announced, when, and how many times.
 """
-import re
 import shutil
-import subprocess
 
 import pytest
 
 from crossaudit.console.page import PAGE
+
+from .node_eval import run_node
 
 
 def _script():
@@ -62,8 +62,7 @@ def _sources():
 
 
 def _run(js):
-    return subprocess.run([shutil.which("node"), "-e", js], text=True,
-                          capture_output=True)
+    return run_node(js)
 
 
 def _needs_node():

@@ -32,6 +32,8 @@ import pytest
 
 from crossaudit.console.page import PAGE
 
+from .node_eval import run_node
+
 # The pieces of the page the harness executes. CHECK_STATES is the vocabulary,
 # the rest is everything that turns payload into markup.
 SOURCES = (
@@ -178,7 +180,7 @@ def _sources() -> str:
 
 def _run(js: str) -> subprocess.CompletedProcess:
     node = shutil.which("node")
-    return subprocess.run([node, "-e", js], text=True, capture_output=True)
+    return run_node(js, node)
 
 
 def _needs_node():

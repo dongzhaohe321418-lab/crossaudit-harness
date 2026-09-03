@@ -4,13 +4,14 @@ import json
 import sys
 import threading
 import time
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from socketserver import TCPServer
+from http.server import BaseHTTPRequestHandler
 
 import pytest
 
 from crossaudit import mcp
 from crossaudit.errors import ConfigDenial
+
+from .loopback import NumericLoopbackHTTPServer
 
 SERVER = r'''import json, sys
 for line in sys.stdin:
@@ -183,15 +184,6 @@ class HTTPFixture(BaseHTTPRequestHandler):
 
     def log_message(self, *_args):
         pass
-
-
-class NumericLoopbackHTTPServer(ThreadingHTTPServer):
-    """Test fixture that cannot depend on the CI host's reverse DNS."""
-
-    def server_bind(self):
-        TCPServer.server_bind(self)
-        self.server_name = str(self.server_address[0])
-        self.server_port = int(self.server_address[1])
 
 
 def test_loopback_streamable_http_initializes_and_preserves_session(cfg):

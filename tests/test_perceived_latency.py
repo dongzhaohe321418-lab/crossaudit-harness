@@ -20,7 +20,9 @@ import pytest
 from crossaudit import router as router_mod
 from crossaudit.cli import talk as talk_mod
 from crossaudit.console import intake as intake_mod
-from crossaudit.console import server as server_mod
+
+from .node_eval import run_node
+from .loopback import NumericLoopbackHTTPServer
 
 
 
@@ -225,7 +227,7 @@ class _AnthropicFixture:
 
     def __init__(self) -> None:
         fixture = self
-        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        from http.server import BaseHTTPRequestHandler
 
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, _format, *_args):
@@ -281,7 +283,7 @@ class _AnthropicFixture:
                     time.sleep(0.003)
 
         self.payloads: list[dict] = []
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.server = NumericLoopbackHTTPServer(("127.0.0.1", 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
 
     @property
@@ -1085,7 +1087,6 @@ def _render_run_card(steps: list[dict]) -> str:
     stubbed; the activity path — activityRow, the actor tables, the identifier
     scrub, and the clock collapse under test — is the real shipped source.
     """
-    import subprocess as sp
 
     from crossaudit.console import page as page_mod
 
@@ -1125,7 +1126,7 @@ def _render_run_card(steps: list[dict]) -> str:
         _page_snippet(script, "function runCard("),
         "console.log(runCard(" + json.dumps(state, ensure_ascii=False) + "));",
     ]
-    run = sp.run(["node", "-e", "\n".join(pieces)], capture_output=True, text=True)
+    run = run_node("\n".join(pieces))
     assert run.returncode == 0, run.stderr
     return run.stdout
 

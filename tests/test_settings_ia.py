@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import re
 import shutil
-import subprocess
 from collections import Counter
 from html.parser import HTMLParser
 
 from crossaudit.console.page import PAGE
+
+from .node_eval import run_node
 
 
 # ---------------------------------------------------------------- static shell
@@ -148,8 +149,7 @@ A(settingsSearchMatch({keywords:'keychain redaction'}, 'redaction'), 'keyword ma
 A(!settingsSearchMatch({group:'General',label:'Appearance'}, 'zzzz'), 'no false match');
 console.log('ok');
 """
-    result = subprocess.run([node, "-e", harness],
-                            text=True, capture_output=True)
+    result = run_node(harness, node)
     assert result.returncode == 0, result.stderr
     assert "ok" in result.stdout
 

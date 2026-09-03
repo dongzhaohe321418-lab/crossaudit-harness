@@ -20,11 +20,12 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
 
 import pytest
 
 from crossaudit.console.page import PAGE
+
+from .node_eval import run_node
 
 SENTENCE_EN = ("Earlier turns in this chat were summarised for the generator; "
                "the full conversation is still here")
@@ -134,8 +135,7 @@ def _needs_node():
 
 
 def _run(js: str):
-    return subprocess.run([shutil.which("node"), "-e", js], text=True,
-                          capture_output=True)
+    return run_node(js)
 
 
 def _program(locale: str, page=None) -> str:

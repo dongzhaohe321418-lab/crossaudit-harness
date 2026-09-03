@@ -56,6 +56,19 @@ _BLOB_READ_CHUNK = 1 << 20
 #: codex_subscription.py already bound their subprocesses.
 GIT_TIMEOUT_S = 240.0
 
+#: How git's output is decoded. Two things go wrong with a bare ``text=True``:
+#:
+#:  * git emits the CONTENT of files. ``git diff --cached`` over a staged PDF
+#:    prints bytes that are not UTF-8 at all, and the strict default raised
+#:    ``UnicodeDecodeError: 'utf-8' codec can't decode byte 0x93`` out of
+#:    ``subprocess`` itself — a crash, not a denial, in the middle of a build.
+#:  * Windows would decode through the console code page rather than UTF-8, so
+#:    a path or a commit message with a non-ASCII character came back mojibake.
+#:
+#: Replacement characters are right here: every caller reads git's output as
+#: text to scan or to show, never to reproduce a file byte-for-byte.
+_TEXT = {"text": True, "encoding": "utf-8", "errors": "replace"}
+
 
 def _git_timeout() -> float:
     raw = os.environ.get("CROSSAUDIT_GIT_TIMEOUT", "").strip()
@@ -73,7 +86,7 @@ def git(*args: str, cwd: Path, check: bool = True) -> str:
     timeout = _git_timeout()
     try:
         proc = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True,
-                              text=True, timeout=timeout)
+                              timeout=timeout, **_TEXT)
     except subprocess.TimeoutExpired as exc:
         # A timed-out git reaches a terminal outcome instead of wedging: the
         # loop treats ConfigDenial from the commit as ``commit_refused`` and
@@ -181,7 +194,7 @@ def entries(repo: Path, sha: str, prefix: str = "") -> list[tuple[str, str, str]
     args = ["ls-tree", "-r", "-z", sha]
     if prefix:
         args += ["--", prefix]
-    raw = subprocess.run(["git", *args], cwd=str(repo), capture_output=True, text=True)
+    raw = subprocess.run(["git", *args], cwd=str(repo), capture_output=True, **_TEXT)
     if raw.returncode != 0:
         raise ConfigDenial(f"git ls-tree failed: {raw.stderr.strip()[:200]}", repo=str(repo))
     out = []

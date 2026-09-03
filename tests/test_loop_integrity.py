@@ -573,6 +573,10 @@ def test_unknown_schema_version_is_not_guessed():
         validate({"receipt_schema": 99})
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="git for Windows checks a symlink out as a plain file by default "
+           "(core.symlinks=false), so the tree under test holds nothing to refuse")
 def test_symlink_in_the_increment_is_refused(science, cfg):
     d = science / "experiments" / "demo"
     d.mkdir(parents=True, exist_ok=True)

@@ -25,6 +25,8 @@ from crossaudit.config import load
 from crossaudit.console import serve, transfers
 from crossaudit.console.transfers import TransferError, preview_artifact
 
+from .node_eval import run_node
+
 
 def commit(cfg, relative: str, data: bytes, message: str) -> None:
     """Record one file as generator output so the preview endpoints resolve it."""
@@ -410,7 +412,7 @@ def _render_shipped_markdown(payloads):
     node = shutil.which("node")
     if not node:
         pytest.skip("node is not available")
-    run = subprocess.run([node, "-e", js], text=True, capture_output=True)
+    run = run_node(js, node)
     assert run.returncode == 0, run.stderr
     return json.loads(run.stdout.strip().splitlines()[-1])
 

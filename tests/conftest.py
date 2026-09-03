@@ -19,6 +19,29 @@ from crossaudit.scaffold import read as read_template
 #: Loopback and unix sockets are the suite's own servers and are always allowed.
 _LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "0.0.0.0", ""}
 
+#: Every environment variable that can hand a test a usable provider key.
+#: `app_keys.write()` legitimately exports a key into `os.environ` for the app's
+#: own core process; a test that exercises it therefore leaks a key into the
+#: rest of the SESSION, and every later `create_project` then took the live
+#: provider path (`can_draft` is `bool(os.environ[key_env])`). On a developer's
+#: machine that call leaves through a local proxy and comes back a 401, which
+#: `create_project` swallows as "draft unavailable" — so it passed here and
+#: failed on CI, where the socket is direct and the network guard sees it.
+#: Scrubbing these per test makes the starting environment the same everywhere,
+#: and — because `monkeypatch.setenv` records "was not set" — also undoes a key
+#: a test exports directly.
+def _provider_key_envs():
+    from crossaudit import app_keys
+
+    names = set(app_keys.PROVIDER_ENVS.values())
+    names |= {app_keys.backup_env_for_vendor(v) for v in app_keys.PROVIDER_ENVS}
+    names |= set(app_keys.ROLE_FALLBACKS.values())
+    names |= {"CROSSAUDIT_AUDITOR_KEY", "CROSSAUDIT_GENERATOR_KEY"}
+    names |= {n for n in os.environ
+              if n.startswith("CROSSAUDIT_") and n.endswith("_KEY")}
+    return sorted(names)
+
+
 
 def _is_local(host) -> bool:
     """Loopback by name or by address (127.0.0.0/8, ::1, ::ffff:127.x)."""
@@ -55,6 +78,10 @@ def _sandboxed_keys_file_and_no_in_process_network(monkeypatch, tmp_path_factory
         resolves `DEFAULT_KEYS_FILE` from the real home at import, so setting
         `HOME` does not move it; exactly one test file was sandboxing it and
         every other test could load the developer's real keys.
+      * Every provider key ENVIRONMENT VARIABLE is removed for the duration of
+        the test (see `_provider_key_envs`). An exported key, or one leaked into
+        `os.environ` by an earlier test through `app_keys.write()`, otherwise
+        makes later tests take the live provider path.
       * `socket.socket.connect`, `connect_ex`, `sendto` and `sendmsg` are
         refused for any non-loopback peer, FOR CALLS MADE IN THIS PROCESS
         through the Python `socket.socket` class (which `ssl`, `http.client`,
@@ -101,6 +128,12 @@ def _sandboxed_keys_file_and_no_in_process_network(monkeypatch, tmp_path_factory
         "CROSSAUDIT_KEYS_FILE",
         str(tmp_path_factory.mktemp("keys") / "crossaudit-keys.env"))
 
+    for name in _provider_key_envs():
+        # setenv first: it records the prior state (including "absent"), so the
+        # teardown removes a key the test exported into os.environ itself.
+        monkeypatch.setenv(name, "")
+        monkeypatch.delenv(name, raising=False)
+
     def refuse_unless_local(address):
         host = _peer_host(address)
         if host is not None and not _is_local(host):
@@ -112,7 +145,9 @@ def _sandboxed_keys_file_and_no_in_process_network(monkeypatch, tmp_path_factory
     real_connect = socket.socket.connect
     real_connect_ex = socket.socket.connect_ex
     real_sendto = socket.socket.sendto
-    real_sendmsg = socket.socket.sendmsg
+    # `sendmsg` is POSIX-only; on Windows the attribute does not exist and
+    # reading it here made this autouse fixture raise for EVERY test.
+    real_sendmsg = getattr(socket.socket, "sendmsg", None)
 
     def guarded_connect(self, address):
         refuse_unless_local(address)
@@ -137,7 +172,8 @@ def _sandboxed_keys_file_and_no_in_process_network(monkeypatch, tmp_path_factory
     monkeypatch.setattr(socket.socket, "connect", guarded_connect)
     monkeypatch.setattr(socket.socket, "connect_ex", guarded_connect_ex)
     monkeypatch.setattr(socket.socket, "sendto", guarded_sendto)
-    monkeypatch.setattr(socket.socket, "sendmsg", guarded_sendmsg)
+    if real_sendmsg is not None:
+        monkeypatch.setattr(socket.socket, "sendmsg", guarded_sendmsg)
     yield
 
 
