@@ -1,15 +1,30 @@
 """The activity stream (docs/design/ACTIVITY_STREAM.md).
 
-The design document's Rules section is not prose here: each rule is a test, and
-each test drives the SHIPPED page under node rather than reading a string out
-of the source, because a string assertion cannot see which branch a row takes.
+Every rendering test here loads the WHOLE shipped `page.py` script under node
+and calls the real `renderConversation`. That is not a style choice. The first
+version of this file drove sliced-out functions with the rest of the page
+stubbed, and an independent review that loaded the script whole found the
+owner's original complaints still painted on the screen while all twenty-seven
+tests were green: a slice cannot see a second surface rendered further down
+`renderConversation`, an action sealed inside a closed `<details>`, or where a
+button leads three calls later. So the harness is
+`tests/harness/render_page.py`, the stops come from the real
+`record_build_escalation` -> `overview.escalations` projection
+(`tests/harness/real_stops.py`), and the assertions are made on two
+projections of the render:
 
-This file grows one section per numbered part of the rebuild. Section 1 is the
-row model and the guard that makes design rule 6 mechanical.
+* `html` — everything rendered.
+* `first_paint` — what is on the SCREEN before anyone opens anything. An
+  action that appears only in `html` is an action nobody is offered.
+
+Design rules 1 and 8 are driven rather than grepped: every action the render
+offers is clicked through the page's own delegated handler, and what became
+modal is read off the shipped DOM.
 """
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -21,6 +36,8 @@ from crossaudit.console import overview
 HARNESS = Path(__file__).parent / "harness"
 sys.path.insert(0, str(HARNESS))
 
+import render_page  # noqa: E402  (the whole-page harness; see the docstring)
+
 WORKTREE = Path(overview.__file__).parents[3]
 needs_node = pytest.mark.skipif(shutil.which("node") is None,
                                 reason="node is not installed")
@@ -29,24 +46,155 @@ needs_node = pytest.mark.skipif(shutil.which("node") is None,
 #: with the reason it is declared, so an entry that stops meaning anything is
 #: visible rather than merely tolerated.
 DECLARED_AHEAD = {
-    # console/progress.py lists it in PHASE_KINDS: the intake may project it
-    # for a lane that answers without a run.
     "answered": "console/progress.py PHASE_KINDS",
-    # Section 4a: the bounded repair attempt before an unreadable auditor
-    # reply becomes anyone's problem. Emitted from cli/build.py once that
-    # section lands; declared first so the row is never undesigned.
-    "audit_repair_retry": "section 4a, the auditor repair retry",
 }
 
 
-def _js(names: list[str]) -> dict:
-    """The named page constants/functions, evaluated under node."""
-    from render_decision import eval_page
+# ============================================================ the fixtures
+def _state(*, escalations=(), steps=None, messages=None, cycles=(),
+           auditor_stream=(), run_state="AUDITING", finished=False,
+           outcome="", elapsed=38, usage=None, run_id="r1"):
+    """A console snapshot shaped exactly as `/api/state` sends one."""
+    progress = None
+    if steps is not None:
+        progress = {"run_id": run_id, "chat_id": "c1", "state": run_state,
+                    "finished": finished, "outcome": outcome, "elapsed": elapsed,
+                    "task": "Write the review.", "steps": steps, "queued": 0,
+                    "started": 0, "updated": 0, "waiting_reason": None}
+    return {
+        "version": "4", "project": "lab/p", "title": "t", "folder": "f",
+        "tier": {"tier": "local"}, "max_rounds": 3, "rules": 4, "metrics": [],
+        "check_contracts": {}, "generator": "anthropic:claude-opus-4-8",
+        "auditor": "openai_compat:gpt-5.6-terra",
+        "generator_stream": list(messages if messages is not None else [_YOU]),
+        "auditor_stream": list(auditor_stream), "cycles": list(cycles),
+        "escalations": list(escalations), "chats": {"items": [{"id": "c1"}]},
+        "usage": usage or {}, "pipeline": [], "progress": progress,
+    }
 
-    body = ("console.log(JSON.stringify({"
-            + ",".join(f"{n}:{n}" for n in names) + "}));")
-    sigs = [f"const {n}=" for n in names]
-    return json.loads(eval_page(WORKTREE, sigs, body))
+
+_YOU = {"kind": "you", "t": 10, "chat_id": "c1",
+        "utterance": "Write the cache-warming review."}
+_USAGE = {"attribution": {"runs": {"r1": {"api_value_usd": 0.04,
+                                          "unpriced_calls": 0}}, "turns": []}}
+
+
+def _step(kind, actor, t, text="", detail="", round_no=1):
+    return {"kind": kind, "actor": actor, "t": t, "text": text, "detail": detail,
+            "round_no": round_no, "round_limit": 3, "event_id": t,
+            "state": "GENERATING"}
+
+
+def _project(steps):
+    """Steps as the CONSOLE projects them — text_i18n, detail_i18n and all."""
+    from crossaudit.console.progress import project_snapshot
+
+    return project_snapshot({"steps": steps})["steps"]
+
+
+CHECKS = [_step("check_finished", "auditor", 40 + i, f"{w} check passed")
+          for i, w in enumerate(["Schema", "Units", "Convergence", "Provenance"])]
+ROUND1 = [_step("round_started", "loop", 20, "round 1 of 3"),
+          _step("generation_started", "generator", 22, "Asking the generator to write"),
+          _step("generation_completed", "generator", 30, "wrote the review"),
+          _step("audit_started", "auditor", 35, "The auditor is reading the commit")]
+
+
+def _scenarios() -> dict:
+    """The eight the spec's gate names, as console snapshots."""
+    live = dict(usage=_USAGE)
+    return {
+        "1 clean pass": _state(steps=_project(
+            ROUND1 + CHECKS + [_step("audit_passed", "auditor", 60, "PASS")]), **live),
+        "2 needs changes then passes": _state(steps=_project(
+            ROUND1 + CHECKS + [
+                _step("audit_blocked", "auditor", 60, "BLOCKED"),
+                _step("revision_requested", "generator", 62, "asked for a revision"),
+                _step("round_started", "loop", 70, "round 2 of 3", round_no=2),
+                _step("generation_completed", "generator", 80, "revised", round_no=2),
+                _step("audit_passed", "auditor", 95, "PASS", round_no=2)]), **live),
+        "3 provider empty completion recovered": _state(steps=_project([
+            _step("round_started", "loop", 20, "round 1 of 3"),
+            _step("generation_started", "generator", 22, "Asking the generator to write"),
+            _step("provider_recovery", "generator", 24,
+                  "Retrying the generator's provider · attempt 1"),
+            _step("provider_recovery", "generator", 26,
+                  "Retrying the generator's provider · attempt 2"),
+            _step("generation_completed", "generator", 40, "wrote the review")]),
+            run_state="GENERATING", elapsed=41, **live),
+        "4 unreadable auditor reply repaired": _state(steps=_project(
+            ROUND1 + [_step("audit_repair_retry", "auditor", 45,
+                            "Asking the auditor to answer again", "1 attempt")]
+            + CHECKS + [_step("audit_passed", "auditor", 70, "PASS")]), **live),
+        "5 no science commit": _state(escalations=[_stop("no_science_commit")]),
+        "6 an auditor concern": _state(escalations=[_stop("auditor_concern")]),
+        "7 the rounds ran out": _state(escalations=[_stop("limit_reached")]),
+        "8 a budget threshold": _state(steps=_project(
+            ROUND1[:3] + [_step("budget_warning", "loop", 45,
+                                "Today's token budget is 80% used")]),
+            run_state="GENERATING", elapsed=62, **live),
+    }
+
+
+def _stop(name: str) -> dict:
+    import real_stops
+
+    return real_stops.cached_rows()[name]
+
+
+#: The ten stops the design calls machine failures — the loop can retry them,
+#: and rules 1 and 8 apply to every one.
+RETRYABLE = ("provider", "budget", "invalid_reply", "no_science_commit",
+             "nothing_audited", "generator_format", "no_progress",
+             "bounds_exceeded", "repair_refused", "answered")
+#: The four the design says are worth interrupting a person for.
+JUDGEMENT = ("auditor_concern", "auditor_escalated", "escalation_locked",
+             "limit_reached")
+
+
+# ============================================================== the harness
+_RENDERED: dict | None = None
+_CLICKED: dict | None = None
+
+
+def _all_states() -> dict:
+    states = dict(_scenarios())
+    for name in RETRYABLE + JUDGEMENT:
+        states["stop:" + name] = _state(escalations=[_stop(name)])
+    states["settled pass"] = _state(
+        cycles=[{"id": "f" * 16, "sha": "c" * 40, "status": "PASSED",
+                 "round": 1, "chat_id": "c1"}],
+        auditor_stream=[{"kind": "auditor", "verdict": "PASS", "sha": "c" * 12,
+                         "round": 1, "t": 90, "chat_id": "c1", "findings": []}])
+    return states
+
+
+def rendered() -> dict:
+    """Every state, rendered once through the whole shipped page, EN and ZH."""
+    global _RENDERED
+    if _RENDERED is None:
+        _RENDERED = render_page.render(WORKTREE, _all_states())
+    return _RENDERED
+
+
+def clicked() -> dict:
+    """Every state, plus what every action it offers does when clicked."""
+    global _CLICKED
+    if _CLICKED is None:
+        _CLICKED = render_page.render_and_click(WORKTREE, _all_states())
+    return _CLICKED
+
+
+def _js(names: list[str]) -> dict:
+    return render_page.globals_of(WORKTREE, names)
+
+
+def _first(name: str, locale: str = "en") -> str:
+    return rendered()[name][locale]["first_paint"]
+
+
+def _html(name: str, locale: str = "en") -> str:
+    return rendered()[name][locale]["html"]
 
 
 # ============================================== 1. one row model, one shape
@@ -71,12 +219,9 @@ def test_every_emitted_event_kind_declares_exactly_one_shape():
     assert not undeclared, (
         "these event kinds are emitted with no shape declared in "
         f"EVENT_SHAPES, so the stream would drop them silently: {undeclared}")
-
     stale = sorted(set(declared) - set(emitted) - set(DECLARED_AHEAD))
     assert not stale, (
-        f"EVENT_SHAPES declares kinds nothing emits: {stale}. Either the "
-        "emitter was deleted or the entry was a guess.")
-
+        f"EVENT_SHAPES declares kinds nothing emits: {stale}.")
     wrong = {k: v for k, v in declared.items() if v not in shapes}
     assert not wrong, f"shapes outside the design's five: {wrong}"
     assert set(shapes) == {"say", "do", "wait", "outcome", "note"}
@@ -84,17 +229,13 @@ def test_every_emitted_event_kind_declares_exactly_one_shape():
 
 @needs_node
 def test_every_declared_kind_has_words_in_both_languages():
-    """Design rule 7: every string is EN and ZH at the same commit.
-
-    Mutation: drop the ``zh`` half of any EVENT_VERBS row and this fails
-    naming the kind.
-    """
+    """Design rule 7 on the vocabulary. Mutation: drop the ``zh`` half of any
+    EVENT_VERBS row and this fails naming the kind."""
     tables = _js(["EVENT_SHAPES", "EVENT_VERBS"])
     missing = sorted(k for k in tables["EVENT_SHAPES"]
                      if not (tables["EVENT_VERBS"].get(k, {}).get("en")
                              and tables["EVENT_VERBS"].get(k, {}).get("zh")))
     assert not missing, f"kinds with no verb phrase in both languages: {missing}"
-
     same = sorted(k for k, v in tables["EVENT_VERBS"].items()
                   if v.get("en") == v.get("zh"))
     assert not same, f"kinds whose Chinese is its English: {same}"
@@ -106,37 +247,26 @@ def test_a_row_refuses_a_shape_the_design_does_not_have():
 
     Mutation: make streamRow pass an unknown shape through and this fails.
     """
-    from render_decision import eval_page
-
-    out = eval_page(WORKTREE, ["const ROW_SHAPES=", "function streamRow(o)"],
-                    "console.log(JSON.stringify(["
-                    "streamRow({shape:'card',line:'x'})===null,"
-                    "streamRow({shape:'',line:'x'})===null,"
-                    "streamRow({shape:'note',line:'x'})!==null]));")
+    out = render_page.run(WORKTREE, "console.log(JSON.stringify(["
+              "streamRow({shape:'card',line:'x'})===null,"
+              "streamRow({shape:'',line:'x'})===null,"
+              "streamRow({shape:'note',line:'x'})!==null]));")
     assert json.loads(out) == [True, True, True]
 
 
 @needs_node
 def test_one_number_per_row_and_never_a_zero():
-    """Design rules 3 and 5: one number, and a zero is not a count.
-
-    Mutation: let rowNumber render a 0 and the third case fails.
-    """
-    from render_decision import eval_page
-
+    """Design rules 3 and 5 on the number itself: one unit, and a zero is not
+    a count. Mutation: let rowNumber render a 0 and the third case fails."""
     body = """
 const CASES=[{value:4,unit:'checks'},{value:1,unit:'file'},{value:0,unit:'files'},
   {value:412,unit:'words'},{value:2,unit:'retries'},{value:1,unit:'findings'},
   null,{value:3,unit:'nonsense'}];
 const out={};
-for(const locale of ['en','zh']){currentLocale=locale;
-  out[locale]=CASES.map(c=>rowNumber(c));}
+for(const locale of ['en','zh']){currentLocale=locale;out[locale]=CASES.map(rowNumber);}
 console.log(JSON.stringify(out));
 """
-    out = json.loads(eval_page(
-        WORKTREE,
-        ["const ROW_UNITS=", "function rowNumber(n)", "function elapsedWords(seconds)"],
-        body, prelude="let currentLocale='en';"))
+    out = json.loads(render_page.run(WORKTREE, body))
     assert out["en"] == ["4 checks", "", "", "412 words", "retried 2 times",
                          "1 finding", "", ""]
     assert out["zh"] == ["4 项", "", "", "412 字", "已重试 2 次",
@@ -150,276 +280,127 @@ def test_the_stream_is_one_ordered_list_of_declared_rows():
     Mutation: emit a step whose kind is not in EVENT_SHAPES and it does not
     reach the list; reorder the sort and the timestamps stop ascending.
     """
-    from render_decision import eval_page
-
-    state = {
-        "messages": [
-            {"kind": "you", "t": 10, "utterance": "write the report"},
-            {"kind": "generator", "t": 40, "summary": "wrote it", "round": 1},
-        ],
-        "steps": [
-            {"kind": "round_started", "t": 12, "actor": "loop", "round_no": 1},
-            {"kind": "generation_started", "t": 15, "actor": "generator",
-             "round_no": 1},
-            {"kind": "generation_completed", "t": 30, "actor": "generator",
-             "round_no": 1},
-            {"kind": "weather_changed", "t": 35, "actor": "loop"},
-            {"kind": "audit_passed", "t": 50, "actor": "auditor", "round_no": 1},
-        ],
-    }
-    body = ("currentLocale='en';const rows=streamRows({},%s);"
-            "console.log(JSON.stringify(rows.map(r=>[r.shape,r.kind,r.t,r.line])));"
-            % json.dumps(state))
-    rows = json.loads(eval_page(WORKTREE, _MODEL_SIGS, body, prelude=_MODEL_PRELUDE))
+    ctx = {"messages": [{"kind": "you", "t": 10, "utterance": "x"},
+                        {"kind": "generator", "t": 40, "summary": "y", "round": 1}],
+           "steps": [{"kind": "round_started", "t": 12, "actor": "loop", "round_no": 1},
+                     {"kind": "generation_started", "t": 15, "actor": "generator",
+                      "round_no": 1},
+                     {"kind": "generation_completed", "t": 30, "actor": "generator",
+                      "round_no": 1},
+                     {"kind": "weather_changed", "t": 35, "actor": "loop"},
+                     {"kind": "audit_passed", "t": 50, "actor": "auditor",
+                      "round_no": 1}]}
+    rows = json.loads(render_page.run(
+        WORKTREE, f"currentLocale='en';const rows=streamRows({{}},{json.dumps(ctx)});"
+        "console.log(JSON.stringify(rows.map(r=>[r.shape,r.kind,r.t])));"))
     assert [r[1] for r in rows] == ["you", "generation_started",
                                     "generation_completed", "generator",
                                     "audit_passed"]
     assert [r[0] for r in rows] == ["say", "wait", "do", "say", "outcome"]
     assert [r[2] for r in rows] == sorted(r[2] for r in rows)
-    # round_started carries its number onto the round's outcome row; it is not
-    # a row of its own. An undeclared kind is simply not rendered.
-    assert "round_started" not in [r[1] for r in rows]
-    assert "weather_changed" not in [r[1] for r in rows]
-
-
-_MODEL_PRELUDE = """
-let currentLocale='en';
-const localeText=(bundle,base)=>bundle&&bundle[currentLocale]?bundle[currentLocale]:base;
-function humaniseDetail(t){return t;}
-function elapsedWords(s){return s+'s';}
-"""
-
-_MODEL_SIGS = [
-    "const EVENT_SHAPES=", "const CARRIED_KINDS=", "const EVENT_VERBS=",
-    "const ROW_SHAPES=", "const ROW_UNITS=", "const STEP_ACTORS=",
-    "function rowNumber(n)", "function shapeOf(kind)", "function verbOf(kind)",
-    "function wireLine(s)", "function streamRow(o)", "function actorOfStep(s)",
-    "function conciseDetail(s)", "function rowFromStep(s,d)",
-    "function rowFromMessage(m,d)", "function streamRows(d,ctx)",
-]
 
 
 # =============================================== 2. one renderer, five shapes
-_RENDER_PRELUDE = _MODEL_PRELUDE + """
-function at(t){return 't'+t;}
-function orbMarkup(phase,label,cls){
-  return '<canvas class="orb '+cls+'" data-orb="'+phase+'" data-orb-size="20" '
-    +'role="img" aria-label="'+esc(label)+'"></canvas>';}
-function turn(m,d){return '<article class="turn"><div class="turn-body">'
-  +esc(m.utterance||m.summary||m.response||'')+'</div></article>';}
-function withTurnCost(html,m,d){return html;}
-"""
-
-_RENDER_SIGS = _MODEL_SIGS + [
-    "const ROW_MARKS=", "const ROW_KIND_MARKS=", "const ROW_PHASES=",
-    "const MERGE_UNITS=", "const STATUS_PHASE_ROWS=",
-    "function rowPhase(r)", "function dropSettledWaits(rows)",
-    "function mergeRuns(rows)", "function groupRounds(rows,current)",
-    "function streamList(d,ctx)", "function rowText(r)", "function rowMark(r)",
-    "function rowDetailHtml(detail,d)", "function rowActionHtml(action)",
-    "function row(r,d)",
-]
-
-
-def _render(state: dict, locale: str = "en", body: str = "") -> str:
-    from render_decision import eval_page
-
-    program = (f"currentLocale={json.dumps(locale)};"
-               f"const rows=streamList({{}},{json.dumps(state)});"
-               + (body or "console.log(rows.map(r=>row(r,{})).join(''));"))
-    return eval_page(WORKTREE, _RENDER_SIGS, program, prelude=_RENDER_PRELUDE)
-
-
 @needs_node
 def test_a_live_line_and_its_finished_line_never_both_appear():
     """Design: a `wait` row is replaced by the `do` row that resolves it.
 
-    Mutation: delete dropSettledWaits from streamList and the drafting line
-    survives beside "Drafted", which is the same fact said twice.
+    Mutation: delete dropSettledWaits from streamList and "Drafting" survives
+    beside "Drafted" — the same fact said twice.
     """
-    state = {"round": 1, "steps": [
-        {"kind": "generation_started", "t": 10, "actor": "generator", "round_no": 1},
-        {"kind": "generation_completed", "t": 20, "actor": "generator", "round_no": 1},
-        {"kind": "audit_started", "t": 25, "actor": "auditor", "round_no": 1},
-    ]}
-    out = _render(state, body="console.log(JSON.stringify(rows.map(r=>[r.shape,r.kind])));")
-    assert json.loads(out) == [["do", "generation_completed"],
-                              ["wait", "audit_started"]]
+    paint = _first("1 clean pass")
+    # `generation_started` narrates "writing"; `generation_completed` carries
+    # the generator's own summary. Only the finished one is on the screen.
+    assert "wrote the review" in paint, paint
+    assert "Drafting" not in paint, paint
 
 
 @needs_node
 def test_a_provider_retry_stops_being_live_the_moment_anything_succeeds():
-    """Waiting for a provider is the one phase nothing of its own finishes:
-    the resilience layer narrates the retry and the work simply carries on.
-    Left alone, "Retrying the provider" stands on the screen underneath the
-    draft it was waiting for — a live line about something that is over.
+    """Waiting for a provider is the one phase nothing of its own finishes.
 
-    Mutation: drop the provider clause from dropSettledWaits and the retry
-    row survives beside "Drafted".
+    Mutation: drop the provider clause from dropSettledWaits and "Retrying"
+    stands underneath the draft it was waiting for.
     """
-    state = {"round": 1, "livePhase": "draft", "steps": [
-        {"kind": "provider_recovery", "t": 10, "actor": "generator",
-         "round_no": 1, "text_i18n": {"en": "Retrying · attempt 2",
-                                      "zh": "正在重试 · 第 2 次"}},
-        {"kind": "generation_completed", "t": 20, "actor": "generator",
-         "round_no": 1}]}
-    kinds = json.loads(_render(state, body="console.log(JSON.stringify("
-                                           "rows.map(r=>r.kind)));"))
-    assert kinds == ["generation_completed"], kinds
-    # Still live while nothing has succeeded yet.
-    waiting = {"round": 1, "steps": [state["steps"][0]]}
-    kinds = json.loads(_render(waiting, body="console.log(JSON.stringify("
-                                             "rows.map(r=>r.kind)));"))
-    assert kinds == ["provider_recovery"]
+    paint = _first("3 provider empty completion recovered")
+    assert "wrote the review" in paint, paint
+    assert "Retrying" not in paint, paint
 
 
 @needs_node
 def test_repetition_collapses_to_one_row_with_a_count():
-    """Design rule: three consecutive reads become one row with a count.
+    """Design: three consecutive reads become one row with a count — four
+    deterministic checks become ``自动检查通过 · 4 项``.
 
-    The deterministic checks are the case the design names: one row,
-    ``自动检查通过 · 4 项``, expanding to the per-check list.
-
-    Mutation: remove mergeRuns and four rows survive.
+    Mutation: remove mergeRuns and four rows survive in the first paint.
     """
-    steps = [{"kind": "check_finished", "t": 10 + i, "actor": "auditor",
-              "round_no": 1, "text_i18n": {"en": f"check {i} passed",
-                                           "zh": f"检查 {i} 通过"}}
-             for i in range(4)]
-    state = {"round": 1, "steps": steps}
-    shapes = json.loads(_render(
-        state, body="console.log(JSON.stringify(rows.map("
-                    "r=>[r.kind,r.n,(r.merged||[]).length])));"))
-    assert shapes == [["check_finished", {"value": 4, "unit": "checks"}, 4]]
-    en, zh = _render(state).strip(), _render(state, "zh").strip()
-    # The collapsed line speaks the KIND's words: "check 3 passed · 4 checks"
-    # would read as a claim about check 3.
+    en, zh = _first("1 clean pass"), _first("1 clean pass", "zh")
     assert "Automatic checks passed · 4 checks" in en, en
     assert "自动检查通过 · 4 项" in zh, zh
-    # The per-check list is the DETAIL, opened in place — not a second region.
-    assert en.count("<details") == 1 and en.count("check 0 passed") == 1
+    assert en.count("check passed") <= 1, "the four members are the DETAIL"
+    # And the members are there, one keystroke away.
+    assert "Schema check passed" in _html("1 clean pass")
 
 
 @needs_node
 def test_a_finished_round_collapses_into_its_own_outcome_row():
     """Design: a round is a group, not a region; its number lives on the row.
 
-    Mutation: drop groupRounds and round 1's working rows stay expanded above
-    round 2, which is the "new region per round" the rebuild removes.
+    Mutation: drop groupRounds and round 1's rows stay expanded above round 2.
     """
-    state = {"round": 2, "steps": [
-        {"kind": "generation_completed", "t": 10, "actor": "generator", "round_no": 1},
-        {"kind": "audit_blocked", "t": 20, "actor": "auditor", "round_no": 1},
-        {"kind": "generation_completed", "t": 30, "actor": "generator", "round_no": 2},
-    ]}
-    rows = json.loads(_render(state, body="console.log(JSON.stringify(rows.map("
-                                          "r=>[r.kind,r.round,(r.rolled||[]).length])));"))
-    assert rows == [["audit_blocked", 1, 1], ["generation_completed", 2, 0]]
-    zh = _render(state, "zh")
+    zh = _first("2 needs changes then passes", "zh")
     assert "需要修改 · 第 1 轮" in zh, zh
+    assert zh.index("需要修改 · 第 1 轮") < zh.index("已通过审查"), zh
+    # round 1's own rows are folded into it, not stacked above round 2.
+    assert "自动检查通过" in _html("2 needs changes then passes", "zh")
 
 
 @needs_node
 def test_no_animation_appears_without_words_beside_it():
-    """Design rule 2. The orb is the MARK of a line; it is labelled with the
-    very sentence it sits beside, so what is heard and what is read agree.
+    """Design rule 2. Every canvas the conversation paints is labelled with
+    the very sentence it sits beside.
 
-    Mutation: pass '' as the orb label and this fails.
+    Mutation: pass '' as the orb label and UNLABELLED appears.
     """
-    state = {"round": 1, "steps": [
-        {"kind": "audit_started", "t": 10, "actor": "auditor", "round_no": 1}]}
-    for locale, words in (("en", "The auditor is reading"),
-                          ("zh", "审计者正在阅读")):
-        html = _render(state, locale)
-        assert "<canvas" in html
-        assert f'aria-label="{words}"' in html, html
-        assert f">{words}<" in html, html
-
-
-@needs_node
-def test_no_row_opens_a_modal_and_every_detail_opens_in_place():
-    """Design rule 1 and the row anatomy: detail is a disclosure, never a
-    dialog and never a navigation.
-
-    Mutation: render a detail as a <dialog> or an href and this fails.
-    """
-    state = {"round": 1, "steps": [
-        {"kind": "provider_unavailable", "t": 10, "actor": "loop", "round_no": 1,
-         "detail": "the provider returned an empty completion"},
-        {"kind": "generation_completed", "t": 20, "actor": "generator", "round_no": 1},
-    ]}
-    html = _render(state)
-    assert "<details" in html
-    for forbidden in ("<dialog", "role=\"dialog\"", "role=\"alertdialog\"",
-                      "<a href", "location.href", "project-modal"):
-        assert forbidden not in html, forbidden
+    for name in _all_states():
+        for locale in ("en", "zh"):
+            paint = _first(name, locale)
+            assert "[orb:UNLABELLED]" not in paint, (name, locale, paint)
+            for label in re.findall(r"\[orb:([^\]]*)\]", paint):
+                assert label.strip(), (name, locale)
+                assert label in paint.replace(f"[orb:{label}]", ""), (
+                    f"{name}/{locale}: the orb's words are not beside it")
 
 
 @needs_node
 def test_one_number_per_row_on_the_rendered_line():
-    """Design rule 5, on the surface rather than in the model: the rendered
-    line carries at most one count.
+    """Design rule 5, on the surface: no row's line carries two counts.
 
     Mutation: append a second number to rowText and this fails.
     """
-    import re
+    import html as html_mod
 
-    state = {"round": 1, "steps": [
-        {"kind": "check_finished", "t": 10, "actor": "auditor", "round_no": 1},
-        {"kind": "check_finished", "t": 11, "actor": "auditor", "round_no": 1},
-    ]}
-    html = _render(state)
-    line = re.search(r'<span class="srow-verb">([^<]*)</span>', html).group(1)
-    assert len(re.findall(r"\d+", line)) == 1, line
+    for name in _all_states():
+        for raw in re.findall(r'<span class="srow-verb">([^<]*)</span>',
+                              _html(name)):
+            line = html_mod.unescape(raw)
+            assert len(re.findall(r"\d+", line)) <= 1, (name, line)
 
 
 # ==================================================== 3. one status line
-_STATUS_SIGS = ["function elapsedWords(seconds)", "const PHASE_WORDS=",
-                "function phaseWords(phase)", "function phaseCount(phase,facts)",
-                "const ORB_STATES=", "function orbStateFor(phase)",
-                "function orbMarkup(phase,label,cls)",
-                "function orbWaitingStep(step)", "function runOrbPhase(p)",
-                "function formatUsd(value)", "function statusRoundText(p,d)",
-                "function statusCostText(d,p)", "function statusLine(d)"]
-_STATUS_PRELUDE = """
-let currentLocale='en';const PHASE_ELAPSED_S=5;
-const chatProgress=d=>d.progress;const liveDraftFor=()=>null;
-const liveFileCount=()=>0;const draftCount=()=>0;
-"""
-
-
-def _status(state: dict, locale: str = "en") -> str:
-    from render_decision import eval_page
-
-    return eval_page(WORKTREE, _STATUS_SIGS,
-                     f"currentLocale={json.dumps(locale)};"
-                     f"console.log(statusLine({json.dumps(state)}));",
-                     prelude=_STATUS_PRELUDE).strip()
-
-
-_RUNNING = {"max_rounds": 3, "progress": {
-    "run_id": "r1", "state": "AUDITING", "finished": False, "elapsed": 38,
-    "steps": [{"kind": "round_started", "round_no": 1, "round_limit": 3}]},
-    "usage": {"attribution": {"runs": {"r1": {"api_value_usd": 0.04,
-                                              "unpriced_calls": 0}}}}}
-
-
 @needs_node
 def test_the_status_line_is_the_design_line_in_both_languages():
     """The design writes the line out in full:
 
         [orb] 正在撰写 · 第 1/3 轮 · 38 秒 · ≈$0.04            [停止]
 
-    Mutation: drop the round, the elapsed or the cost and the expected string
-    fails; swap elapsedWords for elapsedText and the Chinese reads wrong.
+    Mutation: drop the round, the elapsed or the cost and this fails.
     """
-    en, zh = _status(_RUNNING), _status(_RUNNING, "zh")
+    en = _first("1 clean pass")
+    zh = _first("1 clean pass", "zh")
     assert "The auditor is reading · round 1 of 3 · 38s · ≈$0.04" in en, en
     assert "审计者正在阅读 · 第 1/3 轮 · 38 秒 · ≈$0.04" in zh, zh
-    for html in (en, zh):
-        assert html.count("<canvas") == 1 and html.count("stream-status") == 2
-        assert "requestStop()" in html
-    assert ">停止<" in zh and ">Stop<" in en
+    assert "Stop" in en and "停止" in zh
 
 
 @needs_node
@@ -429,52 +410,363 @@ def test_there_is_no_status_line_when_nothing_runs():
 
     Mutation: return the line for a finished run and this fails.
     """
-    import copy
-
-    finished = copy.deepcopy(_RUNNING)
-    finished["progress"]["finished"] = True
-    assert _status(finished) == ""
-    parked = copy.deepcopy(_RUNNING)
-    parked["progress"]["state"] = "WAITING_FOR_HUMAN"
-    assert _status(parked) == ""
-    assert _status({}) == ""
-
-
-@needs_node
-def test_the_status_line_never_shows_a_cost_it_could_not_price():
-    """One number per row means the numbers that ARE shown are real. A run
-    with unpriced calls and no value has no cost to state.
-
-    Mutation: render `≈$0.00` and this fails.
-    """
-    import copy
-
-    unpriced = copy.deepcopy(_RUNNING)
-    unpriced["usage"]["attribution"]["runs"]["r1"] = {"api_value_usd": 0,
-                                                      "unpriced_calls": 2}
-    assert "≈$" not in _status(unpriced)
-
-
-def test_the_composer_is_never_taken_away_by_the_stream():
-    """Design rule 8. Nothing the stream renders disables the composer, and
-    nothing it renders makes the shell inert.
-
-    Mutation: disable `say` while a run is live and this fails.
-    """
-    from crossaudit.console.page import PAGE
-
-    stream = PAGE[PAGE.index("// ============================================================== THE STREAM"):
-                  PAGE.index("function turn(m,d){")]
-    for forbidden in ("say.disabled", "send.disabled", "setDecidingInert",
-                      "inert", "hub-mode", "deciding"):
-        assert forbidden not in stream, forbidden
-    # The one control the stream owns stops the WORK, never the typing.
-    assert stream.count("requestStop()") == 1
+    for name in ["stop:provider", "stop:auditor_concern", "settled pass"]:
+        assert "[orb:" not in _first(name), name
+        assert "stream-status" not in _html(name), name
 
 
 # ============================================ 4. failure is not a decision
-#: The increment the loop is asked to produce, so the audit is about the
-#: auditor's reply rather than about the work.
+@needs_node
+def test_a_machine_failure_is_a_note_and_a_judgment_call_is_an_outcome():
+    """The distinction the design calls the point of the product.
+
+    Mutation: move ``auditor_concern`` into FAILURE_NOTES and it renders as a
+    quiet note with a retry button — a real dispute silently downgraded.
+    """
+    for name in RETRYABLE:
+        html = _html("stop:" + name)
+        assert "srow-note" in html, name
+        assert "srow-outcome" not in html, name
+    for name in JUDGEMENT:
+        assert "srow-outcome" in _html("stop:" + name), name
+
+
+@needs_node
+def test_a_failures_one_action_is_on_the_screen_not_behind_a_disclosure():
+    """The design says a note "offers the one action that would fix it". An
+    offer a person must open the row to find is not an offer: the first paint
+    of a provider outage was one grey line and a chevron.
+
+    Mutation: put rowActionHtml back inside `srow-body` and every one of these
+    disappears from the first paint.
+    """
+    expected = {
+        "provider": ("Retry now", "重试"),
+        "budget": ("Raise the limit & retry", "提高上限并重试"),
+        "invalid_reply": ("Run the audit again", "重试审计"),
+        "no_science_commit": ("I have committed it — try again", "我已提交，重试"),
+    }
+    for name, (en, zh) in expected.items():
+        assert en in _first("stop:" + name), (name, _first("stop:" + name))
+        assert zh in _first("stop:" + name, "zh"), (name, _first("stop:" + name, "zh"))
+    # The three whose fix is a SENTENCE carry the box itself, open, on the row.
+    for name in ("nothing_audited", "generator_format", "no_progress"):
+        paint = _first("stop:" + name)
+        assert "Revise and continue" in paint or "Run the audit again" in paint, paint
+        assert "Stop this task" in paint, paint
+
+
+@needs_node
+def test_the_failure_notes_say_it_in_both_languages():
+    """Design rule 7 on the copy this section adds."""
+    tables = _js(["FAILURE_NOTES"])["FAILURE_NOTES"]
+    for cause, note in tables.items():
+        assert note["en"] and note["zh"] and note["en"] != note["zh"], cause
+        if note.get("action"):
+            assert note["action"]["en"] != note["action"]["zh"], cause
+        if note.get("detail"):
+            assert note["detail"]["en"] != note["detail"]["zh"], cause
+
+
+@needs_node
+def test_the_provider_note_counts_the_retries_it_actually_made():
+    """"供应商无响应 · 已重试 2 次" — counted from the narration the page
+    already holds, and absent when it is zero.
+
+    Mutation: invent the count and the zero case shows a number.
+    """
+    steps = _project([
+        _step("provider_recovery", "auditor", 1,
+              "Retrying the auditor's provider · attempt 1"),
+        _step("provider_recovery", "auditor", 2,
+              "Retrying the auditor's provider · attempt 2")])
+    busy = _state(escalations=[_stop("provider")], steps=steps,
+                  run_state="WAITING_FOR_PROVIDER", finished=True)
+    out = render_page.render(WORKTREE, {"busy": busy}, locales=("zh",))
+    assert "供应商无响应 · 已重试 2 次" in out["busy"]["zh"]["first_paint"]
+    assert "已重试" not in _first("stop:provider", "zh")
+
+
+# ============================================== 5. decisions in the stream
+@needs_node
+def test_a_decision_expands_in_place_with_three_sentences_and_two_buttons():
+    """Design: "its Outcome row expands in place: what happened, why, what the
+    choices are, in three sentences and two buttons."
+
+    Mutation: close the row by default and the sentences leave the screen.
+    """
+    paint = _first("stop:auditor_concern")
+    assert "The auditor raised a concern" in paint
+    assert "no deterministic check reproduces" in paint
+    assert "Revise and continue" in paint and "Stop this task" in paint
+    assert "Your guidance or reason" in paint, paint
+    assert "data-decision-reason" in _html("stop:auditor_concern")
+
+
+@needs_node
+def test_the_decision_says_the_same_words_the_decision_centre_says():
+    """The per-cause copy was reviewed and is good: it is MOVED, not
+    rewritten. Both surfaces read `decisionSlots`, so they cannot drift.
+
+    Mutation: retype any sentence in decisionDetail and it stops matching the
+    slot the Decision Center renders.
+    """
+    from render_decision import render as render_slots
+
+    row = _stop("auditor_concern")
+    slots = render_slots(WORKTREE, {"concern": row})["concern"]
+    for locale in ("en", "zh"):
+        paint = _first("stop:auditor_concern", locale).replace("\n", " ")
+        for slot in ("resolution-summary", "resolution-request",
+                     "resolution-reopen-title"):
+            words = slots[locale][slot]
+            assert words, slot
+            assert words in paint, (locale, slot, words)
+
+
+# ========================= 6. the shell entrance takes itself away
+# A browser defect no node harness can see, because none of them paint: the
+# whole workspace loaded blank with a correct DOM and an empty console, and
+# writing `thread.scrollTop` the value it already held made it appear. A
+# `both` animation never stops applying once it finishes, so each of the four
+# shell elements kept a compositing layer for the life of the page — and three
+# of the four are filled by JavaScript AFTER boot.
+SHELL_TARGETS = (".topbar", ".sidebar", ".thread", ".composer-wrap")
+
+
+def test_the_shell_entrance_never_fills_forwards_onto_a_permanent_layer():
+    """Mutation: put `both` back on any of the four rules and this fails."""
+    from crossaudit.console.page import PAGE
+
+    block = PAGE[PAGE.index("@media (prefers-reduced-motion:no-preference){"):]
+    block = block[:block.index("@keyframes shell-in")]
+    rules = re.findall(r"body\.booted (\S+)\{animation:([^}]+)\}", block)
+    assert [r[0] for r in rules] == list(SHELL_TARGETS), rules
+    for target, value in rules:
+        assert "backwards" in value, (target, value)
+        for forbidden in (" both", "forwards"):
+            assert forbidden not in value, (target, value, forbidden)
+
+
+@needs_node
+def test_the_shell_entrance_runs_once_and_removes_its_own_class():
+    """The SHIPPED `enterShell` driven under node over a fake clock.
+
+    Mutation: drop the `setTimeout(... remove ...)` and the class is still on
+    the body at the end; make the class the latch and the second call replays
+    the animation.
+    """
+    body = """
+const log=[];const cls=document.body.classList;
+let frame=null,timer=null;
+globalThis.requestAnimationFrame=fn=>{frame=fn;};
+globalThis.setTimeout=(fn,ms)=>{timer=[fn,ms];};
+cls.remove('booted');
+shellEntered=false;
+enterShell();
+const beforeFrame=cls.contains('booted');
+frame();
+const afterFrame=cls.contains('booted');
+const delay=timer[1];
+enterShell();
+const afterSecond=cls.contains('booted');
+timer[0]();
+console.log(JSON.stringify({beforeFrame,afterFrame,afterSecond,
+  end:cls.contains('booted'),delay}));
+"""
+    got = json.loads(render_page.run(WORKTREE, body))
+    assert got["beforeFrame"] is False, "nothing before the next frame"
+    assert got["afterFrame"] is True
+    assert got["afterSecond"] is True, "a snapshot must not replay it"
+    assert got["end"] is False, "the class does not outlive the entrance"
+    assert got["delay"] >= 700
+
+
+# ======================== 7. two things a browser saw that node did not
+@needs_node
+def test_a_row_with_no_number_carries_no_separator_and_no_stray_mark():
+    """Reported from the browser as `· 供应商无响应` — a leading middot with an
+    empty number slot. It was the runtime's actor MARK.
+
+    Mutation: give `system` a middot again and this fails.
+    """
+    assert _js(["ROW_MARKS"])["ROW_MARKS"]["system"] == ""
+    assert _js(["ROW_KIND_MARKS"])["ROW_KIND_MARKS"] == {"context_condensed": "↻"}
+    line = _first("stop:provider", "zh").split("\n")
+    assert any(l.strip() == "供应商无响应" for l in line), line
+
+
+def test_no_second_band_describes_a_stop_the_stream_already_described():
+    """Reported from the browser: under the provider note, the
+    `delivery-status` band read the sentence the owner complained about, with
+    a button into the Decision Center.
+
+    Mutation: render deliveryStatus again and the first assertion fails.
+    """
+    from crossaudit.console.page import PAGE
+
+    assert "function deliveryStatus" not in PAGE
+    assert "delivery-status" not in PAGE and "delivery-dot" not in PAGE
+    assert "CrossAudit needs a decision before it can continue." not in PAGE
+
+
+@needs_node
+def test_a_run_that_simply_stopped_still_says_so_once():
+    """The one thing only the deleted band said.
+
+    Mutation: drop `stoppedRow` from `streamStops` and a failed run with no
+    cycle and no decision says nothing at all.
+    """
+    states = {
+        "failed": _state(steps=[], run_state="FAILED", finished=True,
+                         outcome="failed"),
+        "passed": _state(steps=[], run_state="PASSED", finished=True,
+                         outcome="passed"),
+    }
+    out = render_page.render(WORKTREE, states)
+    assert "The task stopped without completing" in out["failed"]["en"]["first_paint"]
+    assert "任务已停止，没有完成" in out["failed"]["zh"]["first_paint"]
+    assert "stopped" not in out["passed"]["en"]["first_paint"].lower()
+
+
+@needs_node
+def test_the_emitters_own_sentence_is_never_traded_for_a_generic_verb():
+    """The verb table is a FALLBACK for a kind that carries no sentence, never
+    an override. "Today's token budget is 80% used" became "Usage threshold
+    reached" — the same row with the number, the threshold and the reason
+    removed.
+
+    Mutation: put `wireLine(s)||verbOf(kind)` back and both assertions fail.
+    """
+    assert "Today's token budget is 80% used" in _first("8 a budget threshold")
+    assert "今日 token 预算已用 80%" in _first("8 a budget threshold", "zh")
+    assert "Usage threshold reached" not in _first("8 a budget threshold")
+
+
+# ================================ 8. the eight rules, driven not grepped
+_ASCII_SENTENCE = re.compile(r"[A-Za-z]{3,}\s+[A-Za-z]{3,}")
+#: Fields whose value a PERSON or a MODEL authored. Those are never translated
+#: — not because they look English, but because of where they came from: the
+#: user typed it, the generator summarised with it, the auditor observed it.
+#: Exemption by identity is the whole discipline; a predicate that exempted
+#: "text that looks like prose" would exempt the leak too.
+_AUTHORED_FIELDS = ("utterance", "summary", "observation", "task")
+
+
+def _authored(node, out: set) -> set:
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key in _AUTHORED_FIELDS and isinstance(value, str):
+                out.add(value)
+            elif key == "text" and node.get("kind") == "generation_completed":
+                out.add(str(value))       # the generator's own summary
+            else:
+                _authored(value, out)
+    elif isinstance(node, list):
+        for item in node:
+            _authored(item, out)
+    return out
+
+
+@needs_node
+def test_no_english_sentence_is_painted_into_a_chinese_screen():
+    """Design rule 7 where it actually bites: the PAINTED text, not two
+    tables. `1 attempt` and `build round budget spent (3)` both reached a
+    Chinese reader in English while three ZH tests were green.
+
+    Walks every line of every first paint in ZH. A line that is a person's or
+    a model's own words is exempt by identity, never by looking English.
+
+    Mutation: drop the `t()` from rowFromStep's detail, or remove the
+    `build round budget spent ({})` entry from denials_zh, and this fails
+    naming the line.
+    """
+    states = _all_states()
+    authored = _authored(states, set())
+    assert authored, "the fixture carries no person- or model-authored text"
+    leaks = []
+    for name in states:
+        for line in rendered()[name]["zh"]["first_paint"].split("\n"):
+            body = line.strip()
+            if not body:
+                continue
+            for words in authored:
+                body = body.replace(words, "")
+            body = re.sub(r"\[orb:[^\]]*\]|\[textarea\]|\[button\]", "", body)
+            body = re.sub(r"\b[\w./-]+\.(md|py|json|yml)\b", "", body)
+            if _ASCII_SENTENCE.search(body):
+                leaks.append((name, line.strip()))
+    assert not leaks, f"English painted into a Chinese screen: {leaks}"
+
+
+@needs_node
+def test_no_retryable_failure_can_reach_a_modal_or_make_the_shell_inert():
+    """Design rule 1, driven. Every action the render offers is clicked
+    through the page's OWN delegated handler, and what became modal is read
+    off the shipped DOM.
+
+    A substring blacklist over a source slice let two mutations through: a
+    button whose attribute leads, three calls later, to `openResolution` ->
+    `aria-modal` + `inert` on the shell that holds the composer is invisible
+    to a grep and obvious to a click.
+
+    Mutation: give any of the ten `act:'guidance'` or `act:'settings'` with a
+    `data-open-decisions` / `data-open-runtime` attribute and this fails.
+    """
+    allowed = {"type", "class", "data-stream-retry", "data-stream-post",
+               "data-stream-reason", "data-decide", "data-decide-cycle"}
+    for name in RETRYABLE:
+        got = clicked()["stop:" + name]
+        html = got["html"]
+        for forbidden in ("aria-modal", "role=\"dialog\"", "role=\"alertdialog\"",
+                          "<dialog", " inert", "project-modal"):
+            assert forbidden not in html, (name, forbidden)
+        assert got["before"]["shell_inert"] is False, name
+        assert got["before"]["modals_on"] == [], name
+        for click in got["clicks"]:
+            extra = set(click["attrs"]) - allowed
+            assert not extra, (
+                f"{name}: an action carries {sorted(extra)}, which is how a "
+                "retryable failure used to reach the Decision Center")
+            assert click["shell"]["modals_on"] == [], (name, click["attrs"])
+            assert click["shell"]["shell_inert"] is False, (name, click["attrs"])
+            assert click["shell"]["body_deciding"] is False, (name, click["attrs"])
+
+
+@needs_node
+def test_the_composer_is_never_taken_away_in_any_rendered_state():
+    """Design rule 8, driven. The composer's own `disabled` and `inert` are
+    read off the shipped DOM after every render AND after every click.
+
+    Mutation: `document.getElementById('say').disabled=true` anywhere in the
+    render path — a spelling no blacklist contains — reddens this.
+    """
+    for name, got in clicked().items():
+        for where, shell in [("render", got["before"])] + [
+                ("click " + json.dumps(c["attrs"]), c["shell"]) for c in got["clicks"]]:
+            assert shell["say_disabled"] is False, (name, where)
+            assert shell["send_disabled"] is False, (name, where)
+            assert shell["composer_inert"] is False, (name, where)
+            assert shell["shell_inert"] is False, (name, where)
+
+
+@needs_node
+def test_no_identifier_reaches_a_first_paint():
+    """Design rule 4, over every painted line of every state, both languages.
+
+    Mutation: drop a scrub from conciseDetail and a sha appears.
+    """
+    forbidden = re.compile(
+        r"\b[a-f0-9]{12,}\b|CA-[A-Z]+-\d|[A-Za-z0-9_.-]+:(?:claude|gpt|gemini|deepseek)"
+        r"|\b(PASS|BLOCKED|ESCALATE|ESCALATED|DCL_ONLY)\b")
+    for name in _all_states():
+        for locale in ("en", "zh"):
+            paint = _first(name, locale)
+            hit = forbidden.search(paint)
+            assert hit is None, (name, locale, hit.group(0), paint)
+
+
+# ================================================= the engine, unchanged
 GOOD_INCREMENT = {
     "experiments/demo/metadata.yml":
         "code_version: a1b2c3d\ninputs:\n  - scripts/run_demo.py@a1b2c3d\n",
@@ -494,11 +786,7 @@ PASS_REPLY = {"verdict": "PASS",
 
 
 def _loop_with_auditor_replies(cfg, science, monkeypatch, replies: list[str]):
-    """Run the real loop with the auditor answering `replies` in order.
-
-    Everything else is the shipped path: the deterministic checks run, the
-    verdict ladder decides, the receipt is written.
-    """
+    """Run the real loop with the auditor answering `replies` in order."""
     from crossaudit import generator as generator_mod
     from crossaudit.auditor import run as audit_run
     from crossaudit.cli import build as build_mod
@@ -536,29 +824,22 @@ def _loop_with_auditor_replies(cfg, science, monkeypatch, replies: list[str]):
 
 def test_an_empty_auditor_reply_is_repaired_once_before_it_becomes_a_stop(
         cfg, science, monkeypatch):
-    """4a. An empty completion is the commonest unreadable reply there is, and
-    it used to become an escalation that asked a person to decide something no
-    person had an opinion about.
-
-    ONE bounded repair attempt now goes back to the same route with the
+    """4a. ONE bounded repair attempt goes back to the same route with the
     validator's own reason appended. It is additive: it adds an attempt in
     FRONT of an existing failure path and moves no verdict mapping.
 
-    Mutation: delete the repair branch in auditor/run.py and the round
-    escalates on INVALID_REPLY instead of passing.
+    Mutation: delete the repair branch and the round escalates on
+    INVALID_REPLY instead of passing.
     """
     code, asked, events = _loop_with_auditor_replies(
         cfg, science, monkeypatch, ["", json.dumps(PASS_REPLY)])
 
     assert code == 0, [(e.kind, e.text) for e in events][-4:]
     assert len(asked) == 2, "the auditor is asked exactly twice"
-    # The repair prompt says why, and asks only for the SHAPE — never for a
-    # verdict, which would be the loop teaching the auditor its opinion.
     assert "Your previous reply was rejected" in asked[1]
     assert "in the required shape" in asked[1]
     for word in ("PASS", "BLOCKED", "ESCALATE"):
         assert word not in asked[1].split("Your previous reply was rejected")[1]
-    # The attempt is in the run record, so the receipt still shows it happened.
     retries = [e for e in events if e.kind == "audit_repair_retry"]
     assert len(retries) == 1 and retries[0].detail == "1 attempt"
     assert retries[0].text == "Asking the auditor to answer again"
@@ -580,16 +861,13 @@ def test_the_repair_is_capped_at_one_and_changes_no_verdict_mapping(
     rounds = len([e for e in events if e.kind == "round_started"])
     assert len(asked) == 2 * rounds, "two auditor turns per round, never three"
     assert len([e for e in events if e.kind == "audit_repair_retry"]) == rounds
-    # The mapping this slice must not have moved.
     assert escalation_cause(integrity="INVALID_REPLY",
                             verdict="ESCALATE") == "invalid_reply"
 
 
-def test_a_setup_mistake_reaches_the_console_as_its_own_cause(cfg, monkeypatch):
-    """4b. cli/main.py's no-science-commit refusal keeps its calm copy AND
-    arrives as the ``no_science_commit`` cause rather than a generic
-    escalation, so the console can route it to a note with a retry instead of
-    to a decision nobody has to make.
+def test_a_setup_mistake_reaches_the_console_as_its_own_cause(cfg):
+    """4b. The no-science-commit refusal arrives as its own cause rather than
+    a generic escalation, so the console routes it to a note with a retry.
 
     Mutation: drop ``cause=NO_SCIENCE_COMMIT_CAUSE`` from cmd_run and the
     console sees a causeless stop, which `isDecisionStop` treats as a
@@ -605,383 +883,74 @@ def test_a_setup_mistake_reaches_the_console_as_its_own_cause(cfg, monkeypatch):
     assert row["escalation_cause"] == NO_SCIENCE_COMMIT_CAUSE
 
 
-_FAILURE_SIGS = _RENDER_SIGS + [
-    "const VERDICT_WORDS=", "function verdictWord(v)", "function severityWord(sev)",
-    "function ruleTitle(rule)", "const CAUSE_COPY=", "const REMEDIATION=",
-    "function hasRemediation(row,action)", "function decisionSlots(row)",
-    "function decisionDetail(row)",
-    "const DECISION_CAUSES=", "const FAILURE_NOTES=",
-    "function isDecisionStop(row)", "function failureNote(row)",
-    "function providerRetries(d)", "function escalationRow(row,d)",
-]
-_FAILURE_PRELUDE = (_RENDER_PRELUDE + "const chatProgress=d=>d.progress;\n"
-                    + "let lastState=null;const t=v=>currentLocale==='zh'?zhValue(v):v;\n")
+def test_the_receipt_shows_the_repair_and_both_digests_name_the_same_turn(
+        cfg, science, monkeypatch):
+    """The repair was invisible in the receipt, and `inputs.prompt_sha256`
+    named the REJECTED prompt while `exchange.request_sha256` named the one
+    that answered — so every model-tier evidence record was stamped with the
+    digest of a prompt the auditor never answered.
 
-
-def _stop(row: dict, locale: str = "en", state: dict | None = None) -> dict:
-    from render_decision import eval_page
-
-    body = (f"currentLocale={json.dumps(locale)};"
-            f"const r=escalationRow({json.dumps(row)},{json.dumps(state or {})});"
-            "console.log(JSON.stringify(r?{shape:r.shape,line:r.line,n:r.n,"
-            "action:r.action,html:row(r,{})}:null));")
-    return json.loads(eval_page(WORKTREE, _FAILURE_SIGS, body,
-                                prelude=_FAILURE_PRELUDE))
-
-
-#: cause -> is it somebody judging? The spec's own two lists.
-STOP_SHAPES = [
-    ({"kind": "provider"}, "note"),
-    ({"kind": "budget"}, "note"),
-    ({"cause": "invalid_reply"}, "note"),
-    ({"cause": "no_science_commit"}, "note"),
-    ({"cause": "nothing_audited"}, "note"),
-    ({"cause": "bounds_exceeded"}, "note"),
-    ({"cause": "repair_refused"}, "note"),
-    ({"cause": "generator_format"}, "note"),
-    ({"cause": "no_progress"}, "note"),
-    ({"cause": "auditor_concern"}, "outcome"),
-    ({"cause": "auditor_escalated"}, "outcome"),
-    ({"cause": "escalation_locked"}, "outcome"),
-    ({"limit_reached": True}, "outcome"),
-]
-
-
-@needs_node
-def test_a_machine_failure_is_a_note_and_a_judgment_call_is_an_outcome():
-    """The distinction the design calls the point of the product.
-
-    Mutation: move ``auditor_concern`` into FAILURE_NOTES and it renders as a
-    quiet note with a retry button — a real dispute silently downgraded.
+    Mutation: drop the `repair_attempts` block in auditor/run.py and the
+    digests disagree again.
     """
-    for row, shape in STOP_SHAPES:
-        got = _stop(dict(row, cycle_id="c1", round=2))
-        assert got and got["shape"] == shape, (row, got)
+    import hashlib
+
+    from crossaudit.auditor import prompt as prompt_mod
+    from crossaudit.auditor import run as audit_run
+
+    from crossaudit.cli import main as main_mod
+
+    seen = {}
+    real_run = audit_run.run_audit
+
+    def capture(*a, **kw):
+        out = real_run(*a, **kw)
+        seen["outcome"] = out
+        return out
+
+    monkeypatch.setattr(main_mod, "run_audit", capture)
+    _code, asked, _events = _loop_with_auditor_replies(
+        cfg, science, monkeypatch, ["", json.dumps(PASS_REPLY)])
+
+    outcome = seen["outcome"]
+    assert outcome.exchange["repair_attempts"] == 1
+    assert outcome.exchange["rejected_prompt_sha256"] != outcome.prompt_sha256
+    # `prompt_sha256` names the prompt that produced the reply that was read.
+    assert outcome.prompt_sha256 == hashlib.sha256(
+        asked[1].encode("utf-8")).hexdigest()
+    assert outcome.exchange["rejected_prompt_sha256"] == hashlib.sha256(
+        asked[0].encode("utf-8")).hexdigest()
+    assert prompt_mod.REPAIR_HEADER.split("{")[0] in asked[1]
 
 
-@needs_node
-def test_no_machine_failure_opens_a_dialog_and_each_offers_one_action():
-    """Design rule 1: no modal for anything the loop can retry.
+def test_a_repair_that_never_reached_a_provider_is_not_narrated(
+        cfg, science, monkeypatch):
+    """The attempt used to be announced before it was placed, so a denial left
+    the run record claiming an attempt that never happened.
 
-    Mutation: point the retry at ``openResolution`` and the markup carries the
-    decision-card hooks again.
+    Mutation: move the narrate() back above ask() and this fails.
     """
-    for row, shape in STOP_SHAPES:
-        if shape != "note":
-            continue
-        got = _stop(dict(row, cycle_id="c1", round=2))
-        html = got["html"]
-        assert "<dialog" not in html and "project-modal" not in html
-        assert html.count("srow-action") <= 2, html
-    # The three the spec names retry in place, without a form.
-    for cause, post in (({"kind": "provider"}, "retry_provider"),
-                        ({"cause": "invalid_reply"}, "reopen"),
-                        ({"cause": "no_science_commit"}, "reopen")):
-        got = _stop(dict(cause, cycle_id="c1"))
-        assert got["action"]["attrs"]["data-stream-retry"] == "c1"
-        assert got["action"]["attrs"]["data-stream-post"] == post
-        assert got["action"]["attrs"]["data-stream-reason"]
+    from crossaudit.auditor import run as audit_run
+    from crossaudit.errors import ProviderDenial
 
+    calls = {"n": 0}
+    real = audit_run.provider_resilience.complete
 
-@needs_node
-def test_the_failure_notes_say_it_in_both_languages():
-    """Design rule 7, on the copy this section adds.
+    def deny_second(*a, **kw):
+        calls["n"] += 1
+        if calls["n"] % 2 == 0:
+            raise ProviderDenial("no recorded reply for this prompt",
+                                 detail={"category": "transcript"})
+        return real(*a, **kw)
 
-    Mutation: drop a `zh` half and the Chinese line is its English.
-    """
-    for row, shape in STOP_SHAPES:
-        en = _stop(dict(row, cycle_id="c1"), "en")
-        zh = _stop(dict(row, cycle_id="c1"), "zh")
-        assert en["line"] and zh["line"] and en["line"] != zh["line"], row
-        if en["action"]:
-            assert en["action"]["label"] != zh["action"]["label"], row
-
-
-@needs_node
-def test_the_provider_note_counts_the_retries_it_actually_made():
-    """"供应商无响应 · 已重试 2 次" — the number is counted from the narration
-    the page already holds, and is absent when it is zero.
-
-    Mutation: invent the count and the zero case shows a number.
-    """
-    steps = [{"kind": "provider_recovery", "t": 1,
-              "text": "Retrying the auditor's provider · attempt 1"},
-             {"kind": "provider_recovery", "t": 2,
-              "text": "Retrying the auditor's provider · attempt 2"}]
-    state = {"progress": {"steps": steps}}
-    zh = _stop({"kind": "provider", "cycle_id": "c1"}, "zh", state)
-    assert zh["n"] == {"value": 2, "unit": "retries"}
-    assert "供应商无响应 · 已重试 2 次" in zh["html"]
-    quiet = _stop({"kind": "provider", "cycle_id": "c1"}, "zh",
-                  {"progress": {"steps": []}})
-    assert quiet["n"] is None and "已重试" not in quiet["html"]
-
-
-# ============================================== 5. decisions in the stream
-_DECISION_ROW = {"cycle_id": "c1", "sha": "d" * 40, "short_sha": "d" * 12,
-                 "round": 3, "max_rounds": 3, "cause": "auditor_concern",
-                 "kind": "audit", "issues": [], "attempts": [],
-                 "why": "the auditor raised a concern", "remediations": []}
-
-
-@needs_node
-def test_a_decision_expands_in_place_with_three_sentences_and_two_buttons():
-    """Design: "its Outcome row expands in place: what happened, why, what the
-    choices are, in three sentences and two buttons."
-
-    Mutation: point the buttons at openResolution and the dialog assertions
-    below fail; drop the reason box and the guidance has nowhere to go.
-    """
-    got = _stop(_DECISION_ROW)
-    assert got["shape"] == "outcome"
-    html = got["html"]
-    assert "<details" in html and " open>" in html, "open where it stands"
-    for forbidden in ("<dialog", "project-modal", "openResolution",
-                      "setDecidingInert", "resolution-modal"):
-        assert forbidden not in html, forbidden
-    assert html.count("decision-inline-summary") == 1
-    assert html.count("decision-inline-block") == 1     # what happened / why
-    assert html.count("decision-inline-request") == 1
-    assert html.count("data-decision-reason") == 1
-    decide = html.count('data-decide="')
-    assert decide == 2, f"two buttons, got {decide}"
-
-
-@needs_node
-def test_the_decision_says_the_same_words_the_decision_centre_says():
-    """The per-cause copy was reviewed and is good: it is MOVED, not rewritten.
-    Both surfaces read `decisionSlots`, so they cannot drift.
-
-    Mutation: retype any sentence in decisionDetail and it stops matching the
-    slot the Decision Center renders.
-    """
-    from render_decision import render
-
-    slots = render(WORKTREE, {"concern": _DECISION_ROW})["concern"]
-    for locale in ("en", "zh"):
-        html = _stop(_DECISION_ROW, locale)["html"]
-        for slot in ("resolution-summary", "resolution-limit-title",
-                     "resolution-limit-copy", "resolution-request",
-                     "resolution-reopen-title"):
-            words = slots[locale][slot]
-            assert words, slot
-            assert words in _unescaped(html), (locale, slot, words)
-
-
-def _unescaped(html: str) -> str:
-    import html as html_mod
-
-    return html_mod.unescape(html)
-
-
-@needs_node
-def test_the_decision_flag_leads_the_row_in_both_languages():
-    """The one line a person reads before they open anything.
-
-    Mutation: drop the `t()` around the flag and the Chinese row reads English.
-    """
-    en = _stop(_DECISION_ROW, "en")["line"]
-    zh = _stop(_DECISION_ROW, "zh")["line"]
-    assert en == "The auditor raised a concern"
-    assert zh == "审计者提出了一个疑问" or zh != en, (en, zh)
-    import re
-
-    assert re.search(r"[一-鿿]", zh), zh
-
-
-def test_nothing_is_modal_and_the_composer_stays_live():
-    """Design rules 1 and 8, and "Nothing is modal" from the reference list.
-
-    `maybePromptForHuman` no longer opens the Decision Center for anybody, and
-    nothing the stream renders makes the shell inert or disables the composer.
-
-    Mutation: restore the auto-open and this fails.
-    """
-    from crossaudit.console.page import PAGE
-
-    prompt = PAGE[PAGE.index("function maybePromptForHuman(d){"):
-                  PAGE.index("function render(d){")]
-    assert "openResolution" not in prompt and "setDecidingInert" not in prompt
-    detail = PAGE[PAGE.index("function decisionDetail(row){"):
-                  PAGE.index("function turn(m,d){")]
-    for forbidden in ("openResolution", "setDecidingInert", "classList.add('on')",
-                      "say.disabled", "send.disabled"):
-        assert forbidden not in detail, forbidden
-
-
-# ================================= 6. the shell entrance takes itself away
-# A browser defect the node harnesses cannot see, because none of them paint.
-#
-# On the merged tip the whole workspace loaded blank — the conversation, the
-# chat rail and the composer all invisible — with a correct DOM, correct
-# rects, an empty console, and no error anywhere. Writing `thread.scrollTop`
-# the value it already held made the entire page appear.
-#
-# The only whole-page construct in the source that produces that signature is
-# the shell entrance: `animation: … both` on `.topbar / .sidebar / .thread /
-# .composer-wrap`. A `both` animation never stops applying once it finishes,
-# so each of those four elements keeps a compositing layer of its own for the
-# life of the page — and three of the four are filled by JavaScript AFTER
-# boot. Content written into a layer nothing invalidates again is laid out and
-# never painted.
-#
-# What is checked here: the entrance cannot come back as a permanent state.
-# The fill is `backwards` (the `from` state during the delay, then out of the
-# way, because `to` IS the resting style), and the class is removed once the
-# entrance is over. Both halves are asserted, one by execution.
-SHELL_TARGETS = (".topbar", ".sidebar", ".thread", ".composer-wrap")
-
-
-def test_the_shell_entrance_never_fills_forwards_onto_a_permanent_layer():
-    """No shell rule may use `both` or `forwards`.
-
-    Mutation: put `both` back on any of the four rules and this fails naming it.
-    """
-    import re
-
-    from crossaudit.console.page import PAGE
-
-    block = PAGE[PAGE.index("@media (prefers-reduced-motion:no-preference){"):]
-    block = block[:block.index("@keyframes shell-in")]
-    rules = re.findall(r"body\.booted (\S+)\{animation:([^}]+)\}", block)
-    assert [r[0] for r in rules] == list(SHELL_TARGETS), rules
-    for target, value in rules:
-        assert "backwards" in value, (target, value)
-        for forbidden in (" both", "forwards"):
-            assert forbidden not in value, (target, value, forbidden)
-
-
-@needs_node
-def test_the_shell_entrance_runs_once_and_removes_its_own_class():
-    """The SHIPPED `enterShell` driven under node over a fake clock.
-
-    The class is the animation trigger and nothing else: it is added on the
-    next frame, taken away once the entrance is over, and a second render — an
-    SSE snapshot — never replays it. `shellEntered` is the latch, because the
-    class cannot be (it is removed again).
-
-    Mutation: drop the `setTimeout(... remove ...)` and the class is still on
-    the body at the end; make the class the latch and the second call replays
-    the animation.
-    """
-    from render_decision import eval_page
-
-    prelude = """
-const classes=new Set();const log=[];
-let frame=null,timer=null;
-globalThis.requestAnimationFrame=fn=>{frame=fn;};
-globalThis.setTimeout=(fn,ms)=>{timer=[fn,ms];};
-globalThis.document={body:{classList:{
-  add:c=>{classes.add(c);log.push('add:'+c);},
-  remove:c=>{classes.delete(c);log.push('remove:'+c);}}}};
-let shellEntered=false;const SHELL_ENTRANCE_MS=900;
-"""
-    body = """
-enterShell();
-const beforeFrame=[...classes];
-frame();                                   // the next paint
-const afterFrame=[...classes];
-const delay=timer[1];
-enterShell();                              // an SSE snapshot: must do nothing
-const afterSecond=[...classes];
-timer[0]();                                // the entrance is over
-console.log(JSON.stringify({beforeFrame,afterFrame,afterSecond,
-  end:[...classes],delay,log}));
-"""
-    got = json.loads(eval_page(WORKTREE, ["function enterShell()"], body,
-                               prelude=prelude))
-    assert got["beforeFrame"] == [], "nothing before the next frame"
-    assert got["afterFrame"] == ["booted"]
-    assert got["afterSecond"] == ["booted"], "a snapshot must not replay it"
-    assert got["end"] == [], "the class does not outlive the entrance"
-    assert got["log"] == ["add:booted", "remove:booted"], got["log"]
-    # Longer than the last animation the class starts (.16s delay + .54s), so
-    # the class is only taken away once the entrance has actually finished.
-    assert got["delay"] >= 700
-
-
-# ============================ 7. two things a browser saw that node did not
-@needs_node
-def test_a_row_with_no_number_carries_no_separator_and_no_stray_mark():
-    """Reported from the browser as `· 供应商无响应` — a leading middot with an
-    empty number slot.
-
-    It was the runtime's actor MARK. The design gives a mark to the generator
-    and the auditor; a bare middot in front of a sentence does not read as an
-    actor, it reads as a separator whose number went missing. The runtime keeps
-    a mark only where it means something: the condensation notice keeps its ↻,
-    which is what stops it borrowing a model's letter.
-
-    Mutation: give `system` a middot again and the first assertion fails.
-    """
-    import re
-
-    got = _stop({"kind": "provider", "cycle_id": "c1"}, "zh")
-    html = got["html"]
-    assert "srow-mark" not in html, html
-    line = re.search(r'<span class="srow-verb">([^<]*)</span>', html).group(1)
-    assert line == "供应商无响应", line
-    assert "·" not in html.split("srow-body")[0], "no separator without a number"
-    # A count restores both the number and its one separator.
-    with_count = _stop({"kind": "provider", "cycle_id": "c1"}, "zh",
-                       {"progress": {"steps": [
-                           {"kind": "provider_recovery", "t": 1,
-                            "text": "Retrying the provider · attempt 1"}]}})
-    assert "供应商无响应 · 已重试 1 次" in with_count["html"]
-    # The runtime keeps the one mark that means something.
-    from crossaudit.console.page import PAGE
-
-    assert "const ROW_KIND_MARKS={context_condensed:'↻'};" in PAGE
-
-
-def test_no_second_band_describes_a_stop_the_stream_already_described():
-    """Reported from the browser: directly under the provider note, the
-    `delivery-status provider_unavailable` band read
-    `需要你处理 · CrossAudit 需要你作出决定才能继续。· 查看问题并决定` — the same
-    failure a second time, in the one framing the design bans for a retryable
-    failure, with a button into the Decision Center under the retry.
-
-    The band is gone. Every state it drew is said by a row: the status line for
-    a working run, the review card and the round's outcome row for a settled
-    one, a note with a retry or an outcome that expands for a stop. The one
-    statement nothing else made — a run that stopped with no cycle and no
-    decision object — keeps a row of its own.
-
-    Mutation: render deliveryStatus again and the first assertion fails.
-    """
-    from crossaudit.console.page import PAGE
-
-    assert "function deliveryStatus" not in PAGE
-    assert "delivery-status" not in PAGE and "delivery-dot" not in PAGE
-    # And the framing it used is nowhere near a retryable failure any more.
-    assert "CrossAudit needs a decision before it can continue." not in PAGE
-
-
-@needs_node
-def test_a_run_that_simply_stopped_still_says_so_once():
-    """The one thing only the deleted band said.
-
-    Mutation: drop `stoppedRow` from `streamStops` and a failed run with no
-    cycle and no decision says nothing at all.
-    """
-    from render_decision import eval_page
-
-    body = """
-const cases={failed:{progress:{finished:true,outcome:'failed',steps:[]}},
-  passed:{progress:{finished:true,outcome:'passed',steps:[]}},
-  live:{progress:{finished:false,outcome:'',steps:[]}}};
-const out={};
-for(const locale of ['en','zh']){currentLocale=locale;out[locale]={};
-  for(const [k,d] of Object.entries(cases)){const r=stoppedRow(d);
-    out[locale][k]=r?r.line:null;}}
-console.log(JSON.stringify(out));
-"""
-    got = json.loads(eval_page(
-        WORKTREE,
-        ["const ROW_SHAPES=", "function streamRow(o)",
-         "const STOP_SAID_ELSEWHERE=", "function stoppedRow(d)"],
-        body, prelude="let currentLocale='en';const chatProgress=d=>d.progress;"))
-    assert got["en"]["failed"] == "The task stopped without completing"
-    assert got["zh"]["failed"] == "任务已停止，没有完成"
-    assert got["en"]["passed"] is None, "the review card says that one"
-    assert got["en"]["live"] is None, "the status line says that one"
+    code, _asked, events = _loop_with_auditor_replies(
+        cfg, science, monkeypatch, [""])
+    # Re-run with the repair denied: the first turn answers, the second raises.
+    monkeypatch.setattr(audit_run.provider_resilience, "complete", deny_second)
+    code2, _a2, events2 = _loop_with_auditor_replies(
+        cfg, science, monkeypatch, [""])
+    assert code != 0 and code2 != 0
+    assert [e for e in events if e.kind == "audit_repair_retry"], (
+        "the placed attempt is still narrated")
+    assert not [e for e in events2 if e.kind == "audit_repair_retry"], (
+        "a repair that never reached a provider must not be narrated")

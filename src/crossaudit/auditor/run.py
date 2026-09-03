@@ -286,6 +286,10 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
     exchange: dict = {"mode": "none"}
     actual = cfg.auditor
     model_decided = False
+    #: How many bounded repair attempts this round actually placed. Recorded on
+    #: the exchange so the receipt shows that a repair happened, and to nothing
+    #: else: it decides no verdict.
+    repair_attempts = 0
 
     if not offline:
         ok, why = heterogeneity(cfg)
@@ -332,6 +336,7 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
 
         try:
             raw = ask(prompt)
+            answered = prompt
             parsed, invalid = read(raw)
             if invalid is not None:
                 # ONE bounded repair attempt, at most once per round, against
@@ -346,12 +351,9 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
                 # as before, a reply that is still unreadable is still
                 # INVALID_REPLY, and the repair prompt carries no hint about
                 # what the verdict should be — only the shape it must have.
-                if narrate is not None:
-                    narrate("audit_repair_retry",
-                            "Asking the auditor to answer again",
-                            REPAIR_ATTEMPT_DETAIL)
+                repair_prompt = prompt + prompt_mod.repair_note(invalid)
                 try:
-                    repaired = ask(prompt + prompt_mod.repair_note(invalid))
+                    repaired = ask(repair_prompt)
                 except ProviderDenial:
                     # The repair could not even be PLACED: a recorded-transcript
                     # route has no reply for a prompt it was never asked, a rate
@@ -360,9 +362,28 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
                     # attempt existed — additive means it can only help.
                     repaired = None
                 if repaired is not None:
+                    # Narrated AFTER the call was placed, never before: a
+                    # denial used to leave the run record claiming an attempt
+                    # that never reached a provider.
+                    if narrate is not None:
+                        narrate("audit_repair_retry",
+                                "Asking the auditor to answer again",
+                                REPAIR_ATTEMPT_DETAIL)
+                    repair_attempts += 1
                     raw = repaired
+                    answered = repair_prompt
                     parsed, invalid = read(raw)
             reply = parsed if invalid is None else None
+            # BOTH digests name the turn that answered. `prompt_sha256` is
+            # stamped on every model-tier evidence record as its
+            # producer_digest, so a repaired round used to attribute its
+            # findings to a prompt the auditor never answered while
+            # `exchange.request_sha256` named the one it did. The prompt that
+            # was built first is kept beside it, named for what it is.
+            if repair_attempts:
+                exchange = dict(exchange, repair_attempts=repair_attempts,
+                                rejected_prompt_sha256=prompt_sha)
+                prompt_sha = hashlib.sha256(answered.encode("utf-8")).hexdigest()
         except ProviderDenial as exc:
             if (str(exc.detail.get("category", "")) in PROVIDER_WAIT_CATEGORIES
                     and not escalation_lock

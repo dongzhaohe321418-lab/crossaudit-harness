@@ -884,6 +884,21 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "审计者在第 {} 轮失败：已配置的所有审计者供应商路由都失败了。{} — 未配置 {} 凭据 ${}"),
     ("generator provider failure in round {}: {}", "生成者在第 {} 轮失败：{}"),
     ("auditor provider failure in round {}: {}", "审计者在第 {} 轮失败：{}"),
+    # cli/build.py's other termination reasons. Every one of these is written
+    # into the cycle as `escalation_reason` and painted, unopened, as the stop
+    # reason of a decision that is open by default — so an English one is
+    # English in the first paint of a Chinese screen, which is where
+    # `build round budget spent (3)` was found.
+    ("build round budget spent ({})", "已用完本次构建的 {} 轮修订额度"),
+    ("generator produced no new auditable revision in round {}",
+     "生成者在第 {} 轮没有产出新的可审计修订"),
+    ("generator revision could not be committed in round {}",
+     "第 {} 轮的生成者修订无法提交"),
+    ("generator revision would have committed {} in round {}",
+     "第 {1} 轮的生成者修订会把 {0} 提交进来"),
+    ("document export failed in round {}: {}", "第 {} 轮的文档导出失败：{}"),
+    ("the automatic repair was refused in round {} because {}",
+     "第 {} 轮的自动修复被拒绝，原因：{}"),
     # ----------------------------------------------------- receipt/build.py
     # Raised through a constant (`f"{EVIDENCE_BROKEN_REASON}: {reason}"`), so
     # the static reader sees only `{}: {}`; this is the sentence a person meets.
@@ -1475,4 +1490,6 @@ COMPOSITES: frozenset[str] = frozenset({
     "provider failure left this task waiting for a person: {}",
     "generator provider failure in round {}: {}",
     "auditor provider failure in round {}: {}",
+    "document export failed in round {}: {}",
+    "the automatic repair was refused in round {} because {}",
 })

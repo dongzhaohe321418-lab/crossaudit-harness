@@ -48,13 +48,19 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import sys
 from html.parser import HTMLParser
+from pathlib import Path
 
 import pytest
 
+from crossaudit.console import overview
 from crossaudit.console.page import PAGE
 
 from .node_eval import run_node
+
+sys.path.insert(0, str(Path(__file__).parent / "harness"))
+ROOT = Path(overview.__file__).parents[3]
 
 # ------------------------------------------------------------------ payloads
 # Wire-shaped rows, exactly as console/streams.py and console/progress.py emit
@@ -141,111 +147,74 @@ def _extract_fn(signature: str) -> str:
 
 
 # ------------------------------------------------------------- the executor
+# The WHOLE shipped script, loaded under node, with the real `turn` and the
+# real `renderConversation` — not a slice with the rest stubbed. A slice is
+# how a second surface underneath the stream went unnoticed for a whole
+# review cycle, so this file uses `tests/harness/render_page.py` too.
+import render_page  # noqa: E402
+
+#: The locale-transition test below builds its own miniature world around the
+#: shipped `turn` and `applyLocale`; these are the two page-level helpers that
+#: world needs and does not otherwise have.
 _STUBS = """
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const at = () => '10:27';
 const artifactList = () => '';
 const auditStatus = () => 'passed';
-const chatProgress = d => d.progress;
-const chatCycles = () => [];
-const statusOf = () => 'ready';
-let handoffAt = 0, handoffDirection = '';
 """
 
 
+def _conversation_state(steps: list[dict]) -> dict:
+    """A console snapshot whose live run carries `steps`."""
+    return {"version": "4", "project": "p", "title": "t", "folder": "f",
+            "tier": {"tier": "local"}, "max_rounds": 3, "rules": 4,
+            "metrics": [], "check_contracts": {}, "generator": "a:b",
+            "auditor": "c:d", "generator_stream": [], "auditor_stream": [],
+            "cycles": [], "escalations": [], "chats": {"items": [{"id": "c1"}]},
+            "usage": {}, "pipeline": [],
+            "progress": {"run_id": "r1", "chat_id": "c1", "state": "GENERATING",
+                         "finished": False, "outcome": "", "elapsed": 3,
+                         "task": "write a review", "steps": steps, "queued": 0,
+                         "waiting_reason": None}}
+
+
 def _render(cases: list[dict]) -> dict[str, str]:
-    """Execute the REAL turn()/streamList() over real payloads; return HTML."""
-    node = shutil.which("node")
-    if not node:
+    """Execute the REAL turn() / renderConversation() over real payloads."""
+    if not shutil.which("node"):
         pytest.skip("node is required to execute the page renderers")
-    # The page's OWN table, plus the upstream sentences it does not carry.
-    zh_map = dict(_page_zh_table())
-    zh_map.setdefault(TRACKED_EN, _zh_for(TRACKED_EN))
-    zh_map.setdefault(UNTRACKED_EN, _zh_for(UNTRACKED_EN))
-    program = "\n".join([
-        _STUBS,
-        f"const ZH = {json.dumps(zh_map, ensure_ascii=False)};",
-        "const zhValue = v => ZH[v] || v;",
-        "let currentLocale = 'en';",
-        _extract_fn("const localeText = (bundle, base) =>") + ";",
-        _extract_fn("const t = value =>") + ";",
-        _extract_fn("function turn(m,d)"),
-        # Round 3: the run card reads elapsed time and event details in words.
-        _extract_fn("function durationText(seconds)"),
-        _extract_fn("function humaniseDetail(text)"),
-        # Billing slice: runCard ends with its cost-line hook. Stubbed to
-        # nothing here — this file is about the notice's attribution; the
-        # hook's own rendering is pinned in test_billing.py.
-        "const runCostLine = () => '';",
-        # The run card is gone: its events are rows in the one activity
-        # stream now. The row model and the single renderer are shipped code,
-        # extracted here whole — a notice that renders as a speaker turn would
-        # have to do it through THESE functions.
-        _extract_fn("function conciseDetail(s)"),
-        _extract_fn("const EVENT_SHAPES=") + ";",
-        _extract_fn("const CARRIED_KINDS=") + ";",
-        _extract_fn("const EVENT_VERBS=") + ";",
-        _extract_fn("const ROW_SHAPES=") + ";",
-        _extract_fn("const ROW_UNITS=") + ";",
-        _extract_fn("const STEP_ACTORS=") + ";",
-        _extract_fn("const ROW_MARKS=") + ";",
-        _extract_fn("const ROW_KIND_MARKS=") + ";",
-        _extract_fn("const ROW_PHASES=") + ";",
-        _extract_fn("const MERGE_UNITS=") + ";",
-        _extract_fn("const STATUS_PHASE_ROWS=") + ";",
-        _extract_fn("function rowNumber(n)"),
-        _extract_fn("function shapeOf(kind)"),
-        _extract_fn("function verbOf(kind)"),
-        _extract_fn("function wireLine(s)"),
-        _extract_fn("function streamRow(o)"),
-        _extract_fn("function actorOfStep(s)"),
-        _extract_fn("function rowFromStep(s,d)"),
-        _extract_fn("function rowFromMessage(m,d)"),
-        _extract_fn("function streamRows(d,ctx)"),
-        _extract_fn("function rowPhase(r)"),
-        _extract_fn("function dropSettledWaits(rows)"),
-        _extract_fn("function mergeRuns(rows)"),
-        _extract_fn("function groupRounds(rows,current)"),
-        _extract_fn("function streamList(d,ctx)"),
-        _extract_fn("function rowText(r)"),
-        _extract_fn("function rowMark(r)"),
-        _extract_fn("function rowDetailHtml(detail,d)"),
-        _extract_fn("function rowActionHtml(action)"),
-        _extract_fn("function row(r,d)"),
-        _extract_fn("function streamContext(d,messages)"),
-        "const withTurnCost = html => html;",
-        "const streamStops=()=>[];",
-        # Thinking-orbs slice: the card's one orb marks the live phase line.
-        _extract_fn("const ORB_STATES") + ";",
-        _extract_fn("function orbStateFor(phase)"),
-        _extract_fn("function orbMarkup(phase,label,cls)"),
-        _extract_fn("const PHASE_WORDS") + ";",
-        _extract_fn("function elapsedWords(seconds)"),
-        _extract_fn("function phaseWords(phase)"),
-        _extract_fn("function phaseCount(phase,facts)"),
-        _extract_fn("function phaseLineText(phase,facts)"),
-        _extract_fn("function livePhaseLine(phase,facts,cls)"),
-        _extract_fn("function liveFileCount(d)"),
-        _extract_fn("function orbWaitingStep(step)"),
-        _extract_fn("function runOrbPhase(p)"),
-        "const liveDraftFor = () => null; const liveThinkingFor = () => null;",
-        "const draftCount = () => 0;",
-        f"const CASES = {json.dumps(cases, ensure_ascii=False)};",
-        """
-const out = {};
-for (const c of CASES) {
-  currentLocale = c.locale || 'en';
-  out[c.name] = c.fn === 'stream'
-    ? streamList(c.state,streamContext(c.state,[])).map(r=>row(r,c.state)).join('')
-    : turn(c.row, c.state || {});
-}
-console.log(JSON.stringify(out));
-""",
-    ])
-    result = run_node(program, node)
-    assert result.returncode == 0, result.stderr
-    return json.loads(result.stdout)
+    turns, streams = {}, {}
+    for c in cases:
+        if c.get("fn") == "stream":
+            streams[c["name"]] = (c["state"], c.get("locale", "en"))
+        else:
+            turns[c["name"]] = (c["row"], c.get("locale", "en"))
+    out: dict[str, str] = {}
+    if turns:
+        # `T` is the page's own session token, so the driver names nothing
+        # the shipped script already named.
+        body = ("const __turns=" + json.dumps(turns, ensure_ascii=False)
+                + ";const __out={};"
+                "for(const [n,[row,loc]] of Object.entries(__turns)){"
+                "currentLocale=loc;lastState={};__out[n]=turn(row,{});}"
+                "console.log(JSON.stringify(__out));")
+        rendered = json.loads(render_page.run(ROOT, body))
+        for name, (_row, locale) in turns.items():
+            html = rendered[name]
+            out[name] = _localise(html) if locale == "zh" else html
+    for name, (state, locale) in streams.items():
+        got = render_page.render(ROOT, {name: state}, locales=(locale,))
+        out[name] = got[name][locale]["html"]
+    return out
+
+
+def _localise(html: str) -> str:
+    """The page locale observer, over rendered markup: every text node through
+    the shipped `zhValue`, which is what a Chinese reader actually gets."""
+    body = ("const __html=" + json.dumps(html, ensure_ascii=False) + ";"
+            "console.log(JSON.stringify(__html.replace(/>([^<]+)</g,"
+            "(m,x)=>'>'+translatePreservingSpace(x)+'<')));")
+    return json.loads(render_page.run(ROOT, body))
 
 
 def _stream_row(text: str, detail: str, locale_zh: str | None = None) -> dict:
@@ -259,10 +228,7 @@ def _stream_row(text: str, detail: str, locale_zh: str | None = None) -> dict:
 
 
 def _progress(steps: list[dict]) -> dict:
-    return {"progress": {"steps": steps, "finished": False, "outcome": "",
-                         "state": "GENERATING", "task": "write a review"},
-            "pipeline": [{"state": "done", "label": "Generate"}],
-            "cycles": [], "max_rounds": 3}
+    return _conversation_state(steps)
 
 
 def _step(kind: str, actor: str, text: str, detail: str = "",

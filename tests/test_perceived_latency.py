@@ -712,92 +712,76 @@ def _sample_steps() -> list[dict]:
 
 
 @pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node is not installed")
-def test_the_stream_renders_every_new_event_in_both_locales_without_identifiers(
-        tmp_path):
-    """(f) The shipped row model and renderer, driven under node over the server's own
-    projection of every new event kind plus older events that carry
-    identifiers. In zh every phase line is Chinese; in both locales the
-    rendered HTML holds no 40-hex, no 16-hex, no 12-hex, no rule id, no
-    provider:model route and no raw JSON.
+def test_the_stream_renders_every_new_event_in_both_locales_without_identifiers():
+    """(f) The WHOLE shipped page, rendering the server's own projection of
+    every new event kind plus older events that carry identifiers.
 
-    Mutations: drop ``text_i18n`` from ``wireLine`` and the zh assertion is
-    red (the verb table's own Chinese would still be Chinese, so the test also
-    checks the English sentence is not echoed); drop a scrub from
-    conciseDetail and the identifier grep is red.
+    In zh every narrated line is Chinese; in both locales the painted screen
+    holds no 40-hex, no 16-hex, no 12-hex, no rule id, no provider:model route
+    and no raw JSON.
+
+    Loaded whole rather than sliced: a slice with `turn`, `at` and
+    `chatProgress` stubbed cannot see what else `renderConversation` puts on
+    the screen, which is how a second surface survived a review cycle.
+
+    Mutations: drop `text_i18n` from ``wireLine`` and the zh assertion is red;
+    drop a scrub from conciseDetail and the identifier grep is red.
     """
     import re
-    import subprocess as sp
     import sys
+    from pathlib import Path as _Path
 
-    from crossaudit.console import page as page_mod
+    from crossaudit.console import overview
     from crossaudit.console.progress import project_snapshot
 
-    harness = Path(__file__).parent / "harness" / "extract_zh.py"
-    zh_js = sp.run([sys.executable, str(harness), str(Path(page_mod.__file__).parents[3])],
-                   capture_output=True, text=True, check=True).stdout
-    script = page_mod.PAGE.split("<script>")[1].split("</script>")[0]
-    pieces = [zh_js, "let currentLocale='en';",
-              "const at=()=>'';",
-              _page_snippet(script, "const esc = "),
-              _page_snippet(script, "const localeText = "),
-              _page_snippet(script, "const t = "),
-              _page_snippet(script, "function durationText("),
-              _page_snippet(script, "function humaniseDetail("),
-              _page_snippet(script, "function conciseDetail("),
-              _page_snippet(script, "function elapsedWords("),
-              _page_snippet(script, "const ORB_STATES=") + ";",
-              _page_snippet(script, "function orbStateFor("),
-              _page_snippet(script, "function orbMarkup("),
-              _page_snippet(script, "const EVENT_SHAPES=") + ";",
-              _page_snippet(script, "const CARRIED_KINDS=") + ";",
-              _page_snippet(script, "const EVENT_VERBS=") + ";",
-              _page_snippet(script, "const ROW_SHAPES=") + ";",
-              _page_snippet(script, "const ROW_UNITS=") + ";",
-              _page_snippet(script, "const STEP_ACTORS=") + ";",
-              _page_snippet(script, "const ROW_MARKS=") + ";",
-              _page_snippet(script, "const ROW_KIND_MARKS=") + ";",
-              _page_snippet(script, "function rowNumber("),
-              _page_snippet(script, "function shapeOf("),
-              _page_snippet(script, "function verbOf("),
-              _page_snippet(script, "function wireLine("),
-              _page_snippet(script, "function streamRow("),
-              _page_snippet(script, "function actorOfStep("),
-              _page_snippet(script, "function rowFromStep("),
-              _page_snippet(script, "function rowText("),
-              _page_snippet(script, "function rowMark("),
-              _page_snippet(script, "function rowDetailHtml("),
-              _page_snippet(script, "function rowActionHtml("),
-              _page_snippet(script, "function row(")]
+    sys.path.insert(0, str(_Path(__file__).parent / "harness"))
+    import render_page
+
+    root = _Path(overview.__file__).parents[3]
     projected = project_snapshot({"steps": _sample_steps()})["steps"]
-    driver = "\n".join(pieces) + "\nconst STEPS=" + json.dumps(projected, ensure_ascii=False) + ";" + """
-const out={};
-for(const locale of ['en','zh']){currentLocale=locale;
-  out[locale]=STEPS.map(s=>[s.kind,row(rowFromStep(s,{}),{})]);}
-console.log(JSON.stringify(out));
-"""
-    (tmp_path / "rows.js").write_text(driver)
-    run = sp.run(["node", str(tmp_path / "rows.js")], capture_output=True, text=True)
-    assert run.returncode == 0, run.stderr
-    rendered = json.loads(run.stdout)
+    state = {"version": "4", "project": "p", "title": "t", "folder": "f",
+             "tier": {"tier": "local"}, "max_rounds": 3, "rules": 4,
+             "metrics": [], "check_contracts": {}, "generator": "a:b",
+             "auditor": "c:d", "generator_stream": [], "auditor_stream": [],
+             "cycles": [], "escalations": [], "chats": {"items": [{"id": "c1"}]},
+             "usage": {}, "pipeline": [],
+             "progress": {"run_id": "r1", "chat_id": "c1", "state": "GENERATING",
+                          "finished": False, "outcome": "", "elapsed": 3,
+                          "task": "produce the experiment", "steps": projected,
+                          "queued": 0, "waiting_reason": None}}
+    # Each kind ALONE, so the assertion is about that kind rather than about
+    # which of its neighbours settled it — a `received` line is replaced by
+    # the `routed` line that resolves it, and correctly so.
+    states = {"all": state}
+    for s in projected:
+        one = dict(state)
+        one["progress"] = dict(state["progress"], steps=[s])
+        states["kind:" + s["kind"]] = one
+    out = render_page.render(root, states)
 
     forbidden = re.compile(r"[a-f0-9]{40}|[a-f0-9]{16}|(?<![a-z0-9])[a-f0-9]{12}(?![a-z0-9])"
                            r"|CA-[A-Z]+-\d|:claude|:gpt|[{\[]\"")
-    for locale in ("en", "zh"):
-        html = "\n".join(row for _kind, row in rendered[locale])
-        assert not forbidden.search(html), (locale, forbidden.search(html).group(0))
-        assert "attempt 2" in html                     # the fact survives the scrub
-        assert "this cycle is waiting for a human" in html
-    kinds_seen = [kind for kind, _row in rendered["zh"]]
-    assert set(NEW_KINDS) <= set(kinds_seen)
-    for kind, row in rendered["zh"]:
-        if kind in NEW_KINDS:
-            assert re.search(r"[一-鿿]", row), (kind, row)
-            en_text = next(s["text"] for s in projected if s["kind"] == kind)
-            assert en_text not in row, (kind, row)         # translated, not echoed
-    for kind, row in rendered["en"]:
-        if kind in NEW_KINDS:
-            en_text = next(s["text"] for s in projected if s["kind"] == kind)
-            assert en_text in row and len(en_text) <= 60
+    for name in states:
+        for locale in ("en", "zh"):
+            hit = forbidden.search(out[name][locale]["html"])
+            assert hit is None, (name, locale, hit.group(0))
+    # The FACT survives the scrub that removed the identifier around it.
+    assert "attempt 2" in out["kind:provider_recovery"]["en"]["html"]
+    assert "this cycle is waiting for a human" in out["kind:audit_escalated"]["en"]["html"]
+    assert "此循环正在等待人工处理" in out["kind:audit_escalated"]["zh"]["html"], (
+        "the detail of an escalation reaches a Chinese reader in Chinese")
+    for s in projected:
+        kind, text = s["kind"], s["text"]
+        if kind not in NEW_KINDS:
+            continue
+        en = out["kind:" + kind]["en"]["html"]
+        zh = out["kind:" + kind]["zh"]["html"]
+        assert len(text) <= 60, (kind, text)
+        assert text in en, (kind, text)
+        zh_text = s.get("text_i18n", {}).get("zh", text)
+        assert zh_text in zh, (kind, zh_text)
+        if zh_text != text:
+            assert text not in zh, (kind, "English echoed under 中文")
 
 
 def test_phase_copy_is_short_bilingual_and_free_of_identifiers():
@@ -1042,63 +1026,56 @@ def test_an_unexpected_error_shows_a_sentence_not_the_exception(
 
 
 @pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node is not installed")
-def test_the_clock_never_crowds_the_narration_off_the_stream(tmp_path):
+def test_the_clock_never_crowds_the_narration_off_the_stream():
     """D7. The clock speaks every 8 s of silence and the auditor's every 10 s
     of streaming, so a two-minute audit emitted fifteen rows and every one of
     the twelve visible slots became "Still auditing · N s".
 
-    Repetition collapses (docs/design/ACTIVITY_STREAM.md): a run of consecutive
-    rows of one kind is ONE row. For a `wait` shape — a clock is one fact, how
-    long this phase has been going — only its newest survives, in place.
+    Repetition collapses: a run of consecutive rows of one kind is ONE row,
+    and for a `wait` shape — a clock is one fact, how long this phase has been
+    going — only its newest survives, in place. Asserted on the PAINTED
+    screen, through the whole shipped page.
 
     Mutation: drop the wait branch from ``mergeRuns`` and fifteen clock rows
-    are back.
+    are back on the screen.
     """
-    import subprocess as sp
+    import re
+    import sys
+    from pathlib import Path as _Path
 
-    from crossaudit.console import page as page_mod
+    from crossaudit.console import overview
+    from crossaudit.console.progress import project_snapshot
+
+    sys.path.insert(0, str(_Path(__file__).parent / "harness"))
+    import render_page
 
     substantive = [{"kind": "audit_started", "text": "reviewing the commit"},
                    {"kind": "check_started", "text": "Running the Schema check"},
                    {"kind": "check_finished", "text": "Schema check passed"}]
-    # A 120 s audit on the 8 s clock: fifteen consecutive clock rows.
     clock = [{"kind": "still_working", "text": f"Still auditing · {n * 8} s"}
              for n in range(1, 16)]
-    steps = [dict(s, t=1788000000 + i, actor="loop", round_no=1, detail="")
+    steps = [dict(s, t=1788000000 + i, actor="loop", round_no=1, round_limit=3,
+                  detail="", state="AUDITING")
              for i, s in enumerate(substantive + clock)]
-    script = page_mod.PAGE.split("<script>")[1].split("</script>")[0]
-    driver = "\n".join([
-        "let currentLocale='en';",
-        "const localeText=(b,base)=>(b&&b[currentLocale])||base||'';",
-        "function humaniseDetail(x){return x;}",
-        _page_snippet(script, "const EVENT_SHAPES=") + ";",
-        _page_snippet(script, "const CARRIED_KINDS=") + ";",
-        _page_snippet(script, "const EVENT_VERBS=") + ";",
-        _page_snippet(script, "const ROW_SHAPES=") + ";",
-        _page_snippet(script, "const STEP_ACTORS=") + ";",
-        _page_snippet(script, "const ROW_PHASES=") + ";",
-        _page_snippet(script, "const MERGE_UNITS=") + ";",
-        _page_snippet(script, "function shapeOf("),
-        _page_snippet(script, "function verbOf("),
-        _page_snippet(script, "function wireLine("),
-        _page_snippet(script, "function streamRow("),
-        _page_snippet(script, "function actorOfStep("),
-        _page_snippet(script, "function conciseDetail("),
-        _page_snippet(script, "function rowFromStep("),
-        _page_snippet(script, "function rowPhase("),
-        _page_snippet(script, "function mergeRuns("),
-        "const STEPS=" + json.dumps(steps, ensure_ascii=False) + ";",
-        "const kept=mergeRuns(STEPS.map(s=>rowFromStep(s,{})).filter(Boolean));",
-        "console.log(JSON.stringify(kept.map(r=>[r.kind,r.line])));"])
-    (tmp_path / "clock.js").write_text(driver)
-    run = sp.run(["node", str(tmp_path / "clock.js")], capture_output=True, text=True)
-    assert run.returncode == 0, run.stderr
-    kept = json.loads(run.stdout)
-    clocks = [line for kind, line in kept if kind == "still_working"]
-    assert len(clocks) == 1, kept
-    # No wire i18n on these fixtures, so the row speaks the verb table's words:
-    # what matters is that ONE clock row survives, not fifteen.
-    assert [kind for kind, _ in kept[:3]] == [s["kind"] for s in substantive]
+    state = {"version": "4", "project": "p", "title": "t", "folder": "f",
+             "tier": {"tier": "local"}, "max_rounds": 3, "rules": 4,
+             "metrics": [], "check_contracts": {}, "generator": "a:b",
+             "auditor": "c:d", "generator_stream": [], "auditor_stream": [],
+             "cycles": [], "escalations": [], "chats": {"items": [{"id": "c1"}]},
+             "usage": {}, "pipeline": [],
+             "progress": {"run_id": "r1", "chat_id": "c1", "state": "AUDITING",
+                          "finished": False, "outcome": "", "elapsed": 120,
+                          "task": "x", "steps": project_snapshot({"steps": steps})["steps"],
+                          "queued": 0, "waiting_reason": None}}
+    root = _Path(overview.__file__).parents[3]
+    paint = render_page.render(root, {"clock": state})["clock"]["en"]["first_paint"]
+
+    clocks = [line for line in paint.split("\n") if "Still auditing" in line]
+    assert len(clocks) == 1, paint
+    assert "Still auditing · 120 s" in clocks[0], "the newest, not the first"
+    assert "Still auditing · 8 s" not in paint
+    # The substantive rows are never what gets dropped.
+    assert "Schema check passed" in paint, paint
 
 
 def test_the_thinking_row_is_folded_shut_and_says_it_is_unaudited():
@@ -1127,85 +1104,36 @@ def test_the_thinking_row_is_folded_shut_and_says_it_is_unaudited():
 
 
 def _render_stream(steps: list[dict]) -> str:
-    """The SHIPPED stream renderer executed under node over run steps.
+    """The conversation rendered through the WHOLE shipped page."""
+    import sys
+    from pathlib import Path as _Path
 
-    Everything the stream reaches for that is not part of the row path is
-    stubbed; the row path — the shape table, the verb table, the identifier
-    scrub, the collapse under test and ``row()`` itself — is real shipped
-    source.
-    """
+    from crossaudit.console import overview
+    from crossaudit.console.progress import project_snapshot
 
-    from crossaudit.console import page as page_mod
+    sys.path.insert(0, str(_Path(__file__).parent / "harness"))
+    import render_page
 
-    script = page_mod.PAGE.split("<script>")[1].split("</script>")[0]
-    state = {"progress": {"steps": steps, "finished": False, "outcome": "",
-                          "state": "AUDITING", "run_id": "r1",
-                          "task": "produce the experiment"},
-             "cycles": [], "max_rounds": 3}
-    pieces = [
-        "let currentLocale='en';const ZH={};const zhValue=v=>ZH[v]||v;",
-        "const at=()=>'10:27';let activeChatId='';",
-        "const chatProgress=d=>d.progress;const chatCycles=()=>[];",
-        "const turn=()=>'';const withTurnCost=h=>h;",
-        "const streamStops=()=>[];",
-        _page_snippet(script, "const esc = "),
-        _page_snippet(script, "const localeText = ") + ";",
-        _page_snippet(script, "const t = ") + ";",
-        _page_snippet(script, "function durationText("),
-        _page_snippet(script, "function humaniseDetail("),
-        _page_snippet(script, "function elapsedWords("),
-        _page_snippet(script, "function conciseDetail("),
-        _page_snippet(script, "const ORB_STATES=") + ";",
-        _page_snippet(script, "function orbStateFor("),
-        _page_snippet(script, "function orbMarkup("),
-        _page_snippet(script, "function orbWaitingStep("),
-        _page_snippet(script, "function runOrbPhase("),
-        _page_snippet(script, "const EVENT_SHAPES=") + ";",
-        _page_snippet(script, "const CARRIED_KINDS=") + ";",
-        _page_snippet(script, "const EVENT_VERBS=") + ";",
-        _page_snippet(script, "const ROW_SHAPES=") + ";",
-        _page_snippet(script, "const ROW_UNITS=") + ";",
-        _page_snippet(script, "const STEP_ACTORS=") + ";",
-        _page_snippet(script, "const ROW_MARKS=") + ";",
-        _page_snippet(script, "const ROW_KIND_MARKS=") + ";",
-        _page_snippet(script, "const ROW_PHASES=") + ";",
-        _page_snippet(script, "const MERGE_UNITS=") + ";",
-        _page_snippet(script, "const STATUS_PHASE_ROWS=") + ";",
-        _page_snippet(script, "function rowNumber("),
-        _page_snippet(script, "function shapeOf("),
-        _page_snippet(script, "function verbOf("),
-        _page_snippet(script, "function wireLine("),
-        _page_snippet(script, "function streamRow("),
-        _page_snippet(script, "function actorOfStep("),
-        _page_snippet(script, "function rowFromStep("),
-        _page_snippet(script, "function rowFromMessage("),
-        _page_snippet(script, "function streamRows("),
-        _page_snippet(script, "function rowPhase("),
-        _page_snippet(script, "function dropSettledWaits("),
-        _page_snippet(script, "function mergeRuns("),
-        _page_snippet(script, "function groupRounds("),
-        _page_snippet(script, "function streamList("),
-        _page_snippet(script, "function rowText("),
-        _page_snippet(script, "function rowMark("),
-        _page_snippet(script, "function rowDetailHtml("),
-        _page_snippet(script, "function rowActionHtml("),
-        _page_snippet(script, "function row("),
-        _page_snippet(script, "function streamContext("),
-        "const D=" + json.dumps(state, ensure_ascii=False) + ";",
-        "console.log(streamList(D,streamContext(D,[])).map(r=>row(r,D)).join(''));",
-    ]
-    run = run_node("\n".join(pieces))
-    assert run.returncode == 0, run.stderr
-    return run.stdout
+    state = {"version": "4", "project": "p", "title": "t", "folder": "f",
+             "tier": {"tier": "local"}, "max_rounds": 3, "rules": 4,
+             "metrics": [], "check_contracts": {}, "generator": "a:b",
+             "auditor": "c:d", "generator_stream": [], "auditor_stream": [],
+             "cycles": [], "escalations": [], "chats": {"items": [{"id": "c1"}]},
+             "usage": {}, "pipeline": [],
+             "progress": {"run_id": "r1", "chat_id": "c1", "state": "AUDITING",
+                          "finished": False, "outcome": "", "elapsed": 16,
+                          "task": "produce the experiment",
+                          "steps": project_snapshot({"steps": steps})["steps"],
+                          "queued": 0, "waiting_reason": None}}
+    root = _Path(overview.__file__).parents[3]
+    return render_page.render(root, {"s": state})["s"]["en"]["html"]
 
 
 @pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node is not installed")
 def test_the_shipped_stream_collapses_the_clock_rows_it_renders():
-    """D7, the call site. Closure audit 2: the test above drives the collapse
-    directly, so dropping the call from the renderer — the mutation its own
-    docstring names — survived. This one renders the shipped stream over a
-    progress payload holding two consecutive clock rows and counts what comes
-    out.
+    """D7, the call site. The test above drives the collapse through the same
+    renderer, so this one is its sibling on a two-row payload: the shipped
+    conversation, two consecutive clock rows in, one out.
 
     Mutation: drop ``mergeRuns`` from ``streamList`` and two "Still auditing"
     rows are rendered instead of one.
@@ -1214,19 +1142,15 @@ def test_the_shipped_stream_collapses_the_clock_rows_it_renders():
 
     def step(kind: str, actor: str, text: str) -> dict:
         return {"kind": kind, "actor": actor, "text": text, "detail": "",
-                "text_i18n": {"en": text, "zh": text},
-                "t": 1788000000, "round_no": 1, "round_limit": 3, "event_id": 3}
+                "t": 1788000000, "round_no": 1, "round_limit": 3,
+                "state": "AUDITING"}
 
     html = _render_stream([
         step("audit_started", "auditor", "reviewing the commit"),
         step("still_working", "loop", "Still auditing \u00b7 8 s"),
         step("still_working", "loop", "Still auditing \u00b7 16 s")])
 
-    # Counted on the LINE, not on the markup: the orb beside a live line is
-    # labelled with that same sentence, which is the point of the orb.
     lines = re.findall(r'<span class="srow-verb">([^<]*)</span>', html)
     assert [x for x in lines if "Still auditing" in x] == ["Still auditing · 16 s"], html
     assert "Still auditing · 8 s" not in html
-    # The substantive row is never what gets dropped — and here it is the LIVE
-    # phase, so the status line carries it; the stream keeps its own rows.
     assert "srow" in html
