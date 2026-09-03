@@ -38,3 +38,41 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+---
+
+# Datasets referenced but NOT redistributed
+
+The entries below are **not** vendored. CrossAudit ships code that *fetches* them; the
+corpus itself never enters this repository, is never committed, and is not part of any
+distribution. Anyone running the benchmark downloads the data themselves and accepts the
+upstream licence directly.
+
+## ExpertLongBench
+
+- Source: <https://huggingface.co/datasets/launch/ExpertLongBench>
+- Paper: Jie Ruan, Inderjeet Jayakumar Nair, Shuyang Cao, Amy Liu, Sheza Munir, Micah
+  Pollens-Dempsey, et al. *ExpertLongBench: Benchmarking Language Models on Expert-Level
+  Long-Form Generation Tasks with Structured Checklists.* arXiv:2506.01241, 2025.
+- Fetched by: `benchmarks/expertlongbench/fetch.py` into `benchmarks/expertlongbench/data/`,
+  which is **gitignored**. Digests and row counts are pinned in
+  `benchmarks/expertlongbench/manifest.json`; no dataset text is committed.
+- Licence: **CC BY-NC-SA 4.0** — Attribution, **NonCommercial**, ShareAlike
+  (<https://creativecommons.org/licenses/by-nc-sa/4.0/>), per the paper's appendix I.6 for
+  the seven publicly released tasks. (The Hugging Face dataset card declares the slightly
+  weaker `cc-by-nc-4.0`; we comply with the stricter of the two.)
+
+Consequences we hold ourselves to, in full:
+
+- **Attribution** — the citation above accompanies any use or reporting of results.
+- **NonCommercial** — `benchmarks/` is a research and measurement artefact. It sits outside
+  `src/crossaudit/`, is not imported by the package, is excluded from the built wheel
+  (`[tool.setuptools.packages.find] where = ["src"]`), and must not be wired into a paid
+  product surface or used in marketing.
+- **ShareAlike** — applies to adaptations of the data, so we create none that leave this
+  machine. Model outputs, mapped checklists and judge transcripts all quote or derive from
+  the corpus and are therefore written only into gitignored run directories. Only aggregate
+  statistics — counts, means, F1 values, sha256 digests — are ever committed.
+
+The paper additionally records the upstream licences of the source corpora in its appendix
+I.5; those are reproduced in `benchmarks/expertlongbench/NOTES.md` section 7.
