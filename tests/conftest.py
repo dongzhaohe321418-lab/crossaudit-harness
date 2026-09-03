@@ -234,6 +234,21 @@ def cfg(science: Path):
     return load(science / "crossaudit.yml")
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_credentials(monkeypatch):
+    """The credential preflight must see the same world on every machine.
+
+    It checks presence only (env variable, else the app's Keychain presence
+    API). Without this, a suite passed on a laptop whose Keychain held an
+    OpenAI key and failed on one that did not -- three CLI build tests
+    reddened the night the key was removed. A test that wants the keyless
+    world deletes these itself (tests/test_setup_preflight.py does).
+    """
+    for name in ("CROSSAUDIT_GENERATOR_KEY", "CROSSAUDIT_AUDITOR_KEY"):
+        if not os.environ.get(name):
+            monkeypatch.setenv(name, "test-credential-present")
+
+
 @pytest.fixture()
 def transcripts(tmp_path: Path, monkeypatch) -> Path:
     d = tmp_path / "transcripts"
