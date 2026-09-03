@@ -77,7 +77,7 @@ def build(package_dir: Path) -> str:
     header = "\n".join([
         "/*!",
         f" * {PACKAGE_NAME} {version} — dist/engine.es.js, vendored for the CrossAudit console.",
-        f" * https://www.npmjs.com/package/{PACKAGE_NAME}",
+        f" * npm package {PACKAGE_NAME} (the npmjs registry); no URL here, the console page reaches nowhere.",
         " *",
         " * The module body below is the package's build output, unchanged. Only the",
         " * trailing ES `export` block was replaced by the IIFE assignment at the end,",

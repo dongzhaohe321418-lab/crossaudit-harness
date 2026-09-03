@@ -1,6 +1,6 @@
 /*!
  * thinking-orbs 0.3.1 — dist/engine.es.js, vendored for the CrossAudit console.
- * https://www.npmjs.com/package/thinking-orbs
+ * npm package thinking-orbs (the npmjs registry); no URL here, the console page reaches nowhere.
  *
  * The module body below is the package's build output, unchanged. Only the
  * trailing ES `export` block was replaced by the IIFE assignment at the end,

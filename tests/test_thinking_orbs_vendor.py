@@ -24,7 +24,7 @@ NOTICES = ROOT / "THIRD_PARTY_NOTICES.md"
 
 #: sha256 of the reviewed vendored file. Regenerating from a different
 #: package version, or editing the file by hand, changes this on purpose.
-PINNED_SHA256 = "481d8a0b79c2e0d3601847d23cdf8c806c41603a76acdd692b6335c2480fc10c"
+PINNED_SHA256 = "aa0f86f7c6c82eecec6fd0276dab3f8efc9976811b2a93b63feb76df53280784"
 PINNED_VERSION = "0.3.1"
 PUBLISHED = ("resolvePreset", "MODE_DRAWS", "STATE_TO_MODE", "MODE_FRAMES",
              "paintFrame", "finalizeFrame")

@@ -6161,9 +6161,9 @@ const AUDITOR_LANES=new Set(['auditor','amendment','dispute','resolve','query'])
 // The last few phase lines of the message being handled: fixed sentences from
 // the server catalogue, already in both locales — never an id, never prose
 // the page composes about a process it cannot see.
-// ---- The thinking orb. thinking-orbs 0.3.1's engine (vendored, MIT — see
+// ---- The thinking orb. The engine of thinking-orbs 0.3.1 (vendored, MIT — see
 // THIRD_PARTY_NOTICES.md) paints one frame of one state onto a canvas; this
-// is the React component's behaviour without React. One canvas exists where
+// is the behaviour of the React component without React. One canvas exists where
 // a state is actually in progress and nowhere else: it is the mark of the
 // line it sits on (the dots the optimistic turn used to show, the mark of the
 // newest live row), never something beside it. Theme follows data-theme /
@@ -6191,8 +6191,8 @@ function crossauditOrb(canvas,options){
   const dpr=Math.min(2,(typeof devicePixelRatio==='number'&&devicePixelRatio>0?devicePixelRatio:1));
   canvas.width=Math.round(size*dpr);canvas.height=Math.round(size*dpr);
   if(canvas.style){canvas.style.width=size+'px';canvas.style.height=size+'px';}
-  // The label is the caller's sentence — the phase text a person can read —
-  // never the engine's state word.
+  // The label is the sentence the caller passes — the phase text a person can
+  // read — never the state word of the engine.
   canvas.setAttribute('role','img');canvas.setAttribute('aria-label',String(o.label||''));
   let state=engine.STATE_TO_MODE[o.state]?o.state:'working',speed=Number(o.speed)>0?Number(o.speed):1;
   let paused=Boolean(o.paused),theme=o.theme==='dark'||o.theme==='light'?o.theme:'auto';
@@ -6235,7 +6235,7 @@ function watchOrbEnvironment(){
       .observe(document.documentElement,{attributes:true,attributeFilter:['class','data-theme']});}
 watchOrbEnvironment();
 // Phase → drawing. The phase words are the ones the runtime narrates
-// (pacing.RUN_PHASES, intake.PHASE_WORD); `thinking` is the generator's
+// (pacing.RUN_PHASES, intake.PHASE_WORD); `thinking` is the generator
 // summarised reasoning arriving, `waiting` a provider retry or rate-limit
 // pause, `sending` the window before the server has said anything. The
 // 64 px turn orb stays on the calm `working` drawing until something is
@@ -6250,10 +6250,10 @@ function orbMarkup(phase,size,label,cls){const px=Number(size)===20?20:64;
   return '<canvas class="orb '+esc(cls||'')+'" data-orb="'+esc(orbStateFor(phase,px))+'" data-orb-size="'+px
     +'" role="img" aria-label="'+esc(label)+'"></canvas>';}
 // A step narrated by the resilience layer that means the run is waiting on
-// the provider's clock rather than on the model.
+// the clock of the provider rather than on the model.
 function orbWaitingStep(step){return Boolean(step&&step.kind==='provider_recovery'
   &&/^(Waiting to retry|Retrying) /.test(String(step.text||'')));}
-// The run card's phase, from the run state the ledger reports. Nothing is in
+// The phase of the run card, from the run state the ledger reports. Nothing is in
 // progress while a person or a decision is being waited for, so those states
 // map to no orb at all.
 function runOrbPhase(p){
@@ -6266,7 +6266,7 @@ function runOrbPhase(p){
   if(s==='DRAFT'||s==='QUEUED')return 'preparing';
   if(s==='CANCELLING')return 'stopping';
   return '';}
-// The optimistic turn's phase, from the intake record the server keeps for
+// The phase of the optimistic turn, from the intake record the server keeps for
 // the message in flight (routing → preparing | answering).
 function intakeOrbPhase(intake){
   if(!intake)return 'sending';
@@ -6549,7 +6549,7 @@ function runCard(d){
   const draft = liveDraftFor(d), thinking = liveThinkingFor(d);
   // One orb per card, on the newest live line: the thinking row while
   // reasoning arrives, else the draft row while text arrives, else the
-  // newest event row in the run's own phase. Nothing once the run is over.
+  // newest event row in the phase of the run itself. Nothing once the run is over.
   const orbPhase = p && !p.finished ? runOrbPhase(p) : '';
   const rows = p && p.steps ? collapseClockRows(p.steps).slice(-12) : [];
   const eventRows = rows.map((s, i) => activityRow(s,
