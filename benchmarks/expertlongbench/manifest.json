@@ -1,0 +1,150 @@
+{
+  "dataset": "launch/ExpertLongBench",
+  "source": "https://huggingface.co/datasets/launch/ExpertLongBench",
+  "paper": "arXiv:2506.01241",
+  "license": "CC BY-NC-SA 4.0",
+  "note": "Digests and row counts only. The corpus itself is never committed -- see NOTES.md section 7. Regenerate with --rewrite-manifest only when an upstream change has been reviewed on purpose.",
+  "tasks": {
+    "T01LegalMDS": {
+      "filename": "T01LegalMDS.jsonl",
+      "sha256": "0d13750e8f757702ec7767a6256042c7ccf2f9a052715a116cf3fd8f8a19803f",
+      "bytes": 46090275,
+      "rows": 100,
+      "checklist_items": [
+        "All Reported Opinions Cited with Shortened Bluebook Citation",
+        "Appeal",
+        "Cause of Action",
+        "Class Action or Individual Plaintiffs",
+        "Consolidated Cases Noted",
+        "Court Rulings",
+        "Date of Settlement",
+        "Dates of All Decrees",
+        "Disputes Over Settlement Enforcement",
+        "Factual Basis of Case",
+        "Filing Date",
+        "First and Last name of Judge",
+        "How Long Decrees will Last",
+        "How Long Settlement will Last",
+        "Monitor Reports",
+        "Name of the Monitor",
+        "Note Important Filings",
+        "Related Cases Listed by Their Case Code Number",
+        "Remedy Sought",
+        "Significant Terms of Decrees",
+        "Significant Terms of Settlement",
+        "Statutory or Constitutional Basis for the Case",
+        "Trials",
+        "Type of Counsel",
+        "Whether the Settlement is Court-enforced or Not",
+        "Who are the Parties"
+      ]
+    },
+    "T03MaterialSEG": {
+      "filename": "T03MaterialSEG.jsonl",
+      "sha256": "0b525eae93aab406d13e5f90b61afbed575dae7d789e70af6a470a764a2b1af0",
+      "bytes": 81740,
+      "rows": 50,
+      "checklist_items": [
+        "Selection of Precursors [level] Handling Precursor Reactivity",
+        "Selection of Precursors [level] Physical and Chemical Properties of Precursors",
+        "Selection of Precursors [level] Structural Considerations",
+        "Synthesis Conditions [level] Atmosphere",
+        "Synthesis Conditions [level] Duration",
+        "Synthesis Conditions [level] Temperature and Heating Method"
+      ]
+    },
+    "T04EduPAE": {
+      "filename": "T04EduPAE.jsonl",
+      "sha256": "9c28b831c132c37ba87a2ac594d157d72510b4b7ba5919b61a83380ccc1e7f8e",
+      "bytes": 222535,
+      "rows": 100,
+      "checklist_items": [
+        "Evaluation of the student response",
+        "Mistake identification",
+        "Mistake identification type",
+        "Mistake rectification",
+        "Mistake rectification type",
+        "Repeated mistake",
+        "Sub-question Transition"
+      ]
+    },
+    "T06HealthCNG": {
+      "filename": "T06HealthCNG.jsonl",
+      "sha256": "8bd9b60605b81443b26df90dd0973bcc7280508236f920cf20e01dab6edd2252",
+      "bytes": 1047045,
+      "rows": 100,
+      "checklist_items": [
+        "Activities",
+        "Alleviating and Aggravating Factors",
+        "Character",
+        "Diagnosis and Clinical Impression",
+        "Drugs",
+        "Duration",
+        "Eating habits",
+        "Education",
+        "Employment",
+        "Family History",
+        "Home and Environment",
+        "Location",
+        "Onset",
+        "Other Objective Data",
+        "Patient Age",
+        "Patient Reason for the Visit",
+        "Patient Sex",
+        "Physical Examination Findings",
+        "Radiation",
+        "Reason for Patient Office Visit or Hospitalization",
+        "Relevant Medical History",
+        "Review of Systems (ROS)",
+        "Severity",
+        "Sexuality",
+        "Suicide/Depression",
+        "Surgical History",
+        "Temporal Factor",
+        "Treatment and Management Plan",
+        "Vital Signs"
+      ]
+    },
+    "T07ChemMDG": {
+      "filename": "T07ChemMDG.jsonl",
+      "sha256": "935f22c72222b771864caf958303355b18c66c294e2445b5d1147a69a2832771",
+      "bytes": 166663,
+      "rows": 100,
+      "checklist_items": [
+        "Biological Function and Applications",
+        "Chemical Compound Classifications",
+        "Conjugate acid",
+        "Conjugate base",
+        "Origin",
+        "Structure"
+      ]
+    },
+    "T08BioPDG": {
+      "filename": "T08BioPDG.jsonl",
+      "sha256": "bba75f28d1266e21d0baec373ecb584abb60a37d016177bd0fba5d8d1296113b",
+      "bytes": 247203,
+      "rows": 100,
+      "checklist_items": [
+        "Cellular Localization",
+        "Domain/Motif",
+        "Functional Role",
+        "Gene Ontology",
+        "Interactions"
+      ]
+    },
+    "T11CyberRDG": {
+      "filename": "T11CyberRDG.jsonl",
+      "sha256": "132d6b86dbc9bda94398073099ec52ee7256999da0a39d381444bce036b1894d",
+      "bytes": 380902,
+      "rows": 100,
+      "checklist_items": [
+        "Attack Tools",
+        "Label",
+        "Motivation",
+        "Outcome",
+        "Trigger",
+        "Trigger tools"
+      ]
+    }
+  }
+}
