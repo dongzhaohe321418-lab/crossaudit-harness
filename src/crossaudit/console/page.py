@@ -6719,7 +6719,12 @@ function resetSentence(resetAt){const zh=currentLocale==='zh',lead=zh?'已达供
   if(at-Date.now()/1000<=0)return lead+(zh?'现在重置':'resets now');
   return zh?lead+countdownText(at)+'后重置':lead+'resets in '+countdownText(at);}
 function providerResetLine(p){const w=p&&p.waiting_reason;if(!w||p.state!=='PROVIDER_UNAVAILABLE')return '';
-  if(!w.reset_at)return w.rate_limited?'<span class="run-reset">'+esc(resetSentence(0))+'</span>':'';
+  // A quota sentence needs a quota wall. A mixed exhaustion (one route 429, the
+  // next 500) may still carry a reset moment from the route that was limited;
+  // saying "Provider limit reached" there sends a person to wait out a window
+  // that is not what stopped the run. The flag, not the moment, decides.
+  if(!w.rate_limited)return '';
+  if(!w.reset_at)return '<span class="run-reset">'+esc(resetSentence(0))+'</span>';
   return '<span class="run-reset" data-reset-at="'+esc(w.reset_at)+'">'+esc(resetSentence(w.reset_at))+'</span>';}
 setInterval(()=>{document.querySelectorAll('[data-reset-at]').forEach(el=>{el.textContent=resetSentence(Number(el.getAttribute('data-reset-at')));});},30000);
 function resetWords(g){g=g||{};const zh=currentLocale==='zh',r=g.resets||{};
@@ -6727,7 +6732,7 @@ function resetWords(g){g=g||{};const zh=currentLocale==='zh',r=g.resets||{};
 function appendResolutionReset(row,budget,provider){const summary=document.getElementById('resolution-summary');if(!summary)return;
   const g=lastState&&lastState.usage&&lastState.usage.budget||{},p=lastState&&lastState.progress;let extra='';
   if(budget)extra=resetWords(g);
-  else if(provider&&p&&p.state==='PROVIDER_UNAVAILABLE'&&p.waiting_reason&&p.waiting_reason.reset_at)extra=resetSentence(p.waiting_reason.reset_at);
+  else if(provider&&p&&p.state==='PROVIDER_UNAVAILABLE'&&p.waiting_reason&&p.waiting_reason.rate_limited)extra=resetSentence(p.waiting_reason.reset_at);
   if(extra)summary.textContent=summary.textContent+' '+extra;}
 function runCostLine(d){const p=chatProgress(d);if(!p||!p.run_id)return '';
   const b=((d.usage&&d.usage.attribution&&d.usage.attribution.runs)||{})[p.run_id];const reset=providerResetLine(p);
