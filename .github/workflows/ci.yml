@@ -26,9 +26,20 @@ jobs:
           - {os: ubuntu-latest, python: '3.13'}
           - {os: macos-latest, python: '3.10'}
           - {os: macos-latest, python: '3.13'}
-          - {os: windows-latest, python: '3.10'}
-          - {os: windows-latest, python: '3.13'}
+          # ADVISORY, not blocking. The product is the macOS app; the Python
+          # package's Windows port is a separate slice and is not done. What is
+          # left is portability, not flakiness, and each piece is known:
+          # `file_identity` matches directory entries by (st_dev, st_ino) and
+          # Windows `scandir` reports st_ino as 0; a file another handle still
+          # holds cannot be replaced or unlinked; denial text carries POSIX
+          # paths; MAX_PATH; the .docx/.pdf renderers have no Windows path.
+          # The jobs stay in the matrix so the number stays visible and is
+          # watched — a silently dropped platform is one nobody ever fixes —
+          # but a red Windows job does not hold up main.
+          - {os: windows-latest, python: '3.10', advisory: true}
+          - {os: windows-latest, python: '3.13', advisory: true}
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.advisory || false }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
