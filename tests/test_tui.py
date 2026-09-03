@@ -91,7 +91,8 @@ def _drive_select(keystrokes, options, **kw):
             drawn.append(chunk)
             last_drawn[0] = time.monotonic()
 
-    threading.Thread(target=drain, daemon=True).start()
+    reader = threading.Thread(target=drain, daemon=True)
+    reader.start()
     saved_in, saved_out = sys.stdin, sys.stdout
     sys.stdin = os.fdopen(slave, "r", buffering=1)
     sys.stdout = os.fdopen(os.dup(slave), "w", buffering=1)
@@ -123,17 +124,24 @@ def _drive_select(keystrokes, options, **kw):
         threading.Thread(target=feed, daemon=True).start()
         worker.join(timeout=20)
         assert not worker.is_alive(), "select never returned; it is waiting on a key"
-        # `select` has RETURNED, but the last thing it drew — the spoken
-        # outcome, "chose 2) ..." — may still be between the slave end and the
-        # drain thread. Closing the master immediately truncates it, and the
-        # guard then reads a menu with no result under it and blames the
-        # product (seen on two ubuntu jobs of run 33717126593, a different
-        # test each time). Wait for the reader to fall quiet first.
-        settle = time.monotonic() + 2
-        while time.monotonic() < settle and time.monotonic() - last_drawn[0] < 0.1:
-            time.sleep(0.02)
     finally:
+        pty_in, pty_out = sys.stdin, sys.stdout
         sys.stdin, sys.stdout = saved_in, saved_out
+        # The LAST thing `select` draws is the spoken outcome ("chose 2) ...").
+        # Closing the master while those bytes are still between the slave end
+        # and the reader truncates them, and the guard then reads a menu with
+        # no result under it — a race in this harness, read as a defect in the
+        # product. It took out one job per run on the slower runners, a
+        # different test each time. Waiting for a quiet interval does not fix
+        # it (the drawing has been quiet since the keypress); closing every
+        # SLAVE fd does, because the reader then gets EOF and joining it is
+        # proof that everything written has been read.
+        for handle in (pty_out, pty_in):
+            try:
+                handle.close()
+            except OSError:                     # pragma: no cover - already shut
+                pass
+        reader.join(timeout=5)
         os.close(master)
     if "error" in result:
         raise result["error"]
