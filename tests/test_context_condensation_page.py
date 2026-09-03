@@ -215,7 +215,7 @@ def _render(cases: list[dict]) -> dict[str, str]:
         _extract_fn("function row(r,d)"),
         _extract_fn("function streamContext(d,messages)"),
         "const withTurnCost = html => html;",
-        "const escalationRows=()=>[];",
+        "const streamStops=()=>[];",
         # Thinking-orbs slice: the card's one orb marks the live phase line.
         _extract_fn("const ORB_STATES") + ";",
         _extract_fn("function orbStateFor(phase)"),

@@ -205,12 +205,25 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .hub-bar{height:48px;margin:8px 8px 0;padding:0 var(--sp-4);position:sticky;top:8px;z-index:var(--z-chrome)}
 /* One-time shell entrance: plays once when `booted` is set on the first paint,
    never on an SSE snapshot. The default (no class) is the natural resting
-   state, so a page that never boots is fully visible — no blank-shell risk. */
+   state, so a page that never boots is fully visible — no blank-shell risk.
+
+   THE FILL IS `backwards`, NEVER `both`, AND THE CLASS IS REMOVED WHEN THE
+   ENTRANCE IS OVER. A `both` animation never stops applying once it finishes,
+   which keeps each of these four elements on a compositing layer of its own for
+   the life of the page. Three of the four are filled by JavaScript AFTER boot —
+   the conversation, the chat rail, the composer — and content written into a
+   layer nothing invalidates again is laid out correctly and never painted. The
+   whole workspace reads as blank, with a correct DOM, correct rects and an
+   empty console; any forced invalidation (a scrollTop write, removing the
+   class) makes it appear at once. Found in Chrome on the merged tip; no node
+   harness can see it, because none of them paint. `backwards` gives the same
+   entrance — the `from` state during the delay — and then gets out of the way,
+   because `to` IS the resting style. */
 @media (prefers-reduced-motion:no-preference){
-  body.booted .topbar{animation:shell-in .46s var(--ease-out) both}
-  body.booted .sidebar{animation:shell-in .5s var(--ease-out) .06s both}
-  body.booted .thread{animation:shell-rise .5s var(--ease-out) .10s both}
-  body.booted .composer-wrap{animation:shell-rise .54s var(--ease-out) .16s both}
+  body.booted .topbar{animation:shell-in .46s var(--ease-out) backwards}
+  body.booted .sidebar{animation:shell-in .5s var(--ease-out) .06s backwards}
+  body.booted .thread{animation:shell-rise .5s var(--ease-out) .10s backwards}
+  body.booted .composer-wrap{animation:shell-rise .54s var(--ease-out) .16s backwards}
 }
 @keyframes shell-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 @keyframes shell-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -744,17 +757,6 @@ details.draft-fold>.draft-body{margin-top:9px}
   color:var(--text-2);display:grid;place-items:center;flex:none}
 
 /* Delivery status band and stop banners. */
-.delivery-status{margin:2px 0 var(--sp-6);border:1px solid var(--line);border-radius:var(--r-md);
-  padding:10px var(--sp-3);background:var(--surface);display:flex;align-items:center;gap:9px;
-  color:var(--text-2);font-size:var(--fs-label)}
-.delivery-status .delivery-dot{width:7px;height:7px;border-radius:50%;background:var(--state-work);flex:none}
-.delivery-status.passed .delivery-dot,.delivery-status.consumed .delivery-dot{background:var(--pass)}
-.delivery-status.blocked .delivery-dot{background:var(--blocked)}
-.delivery-status.escalated .delivery-dot,.delivery-status.provider_unavailable .delivery-dot{background:var(--state-decide)}
-.delivery-status b{color:var(--text);font-weight:500}
-.delivery-status button{margin-left:auto;border:0;background:transparent;color:var(--text-2);
-  font-size:var(--fs-label);flex:none}
-.delivery-status button:hover{color:var(--text)}
 /* §41.9 admission explanation card — a refusal that answers, not a dead end. */
 .admission-card{margin:2px 0 var(--sp-6);border:1px solid var(--line);border-left:3px solid var(--escalated);
   border-radius:var(--r-md);padding:12px var(--sp-3);background:var(--surface);font-size:var(--fs-label)}
@@ -3500,12 +3502,12 @@ const ZH={
   "no model audit ran, so the result cannot pass":"没有运行模型审计，因此结果无法通过","the automatic audit loop stopped":"自动审计循环已停止"
   ,"/ project folder":"/ 项目文件夹","local controller":"本地控制器","No chats yet":"尚无对话",
   "Describe a task in plain language. A generator will make the change, deterministic checks will run, and an independent model will audit every round before admission.":"用自然语言描述任务。生成者完成修改，系统运行确定性检查，并由独立模型在准入前审计每一轮。",
-  "Working":"处理中","The result will appear here when it is ready.":"结果就绪后会显示在这里。",
-  "The delivered files passed the independent review.":"交付文件已通过独立审查。","Needs revision":"需要修订",
-  "The result did not pass review yet.":"结果尚未通过审查。","Needs your input":"需要你决定",
-  "Ready for your correction":"已准备接收你的修正","Send the approved guidance to start the human-authorized audited attempt.":"发送已确认的指导，以启动由你授权的受审计尝试。",
-  "CrossAudit needs a decision before it can continue.":"CrossAudit 需要你作出决定才能继续。","Stopped":"已停止",
-  "The task did not complete.":"任务未完成。","View audit details":"查看审计详情",
+  "Working":"处理中",
+  
+  "Needs your input":"需要你决定",
+  
+  "Stopped":"已停止",
+  "View audit details":"查看审计详情",
   "conversational reply · not audited":"对话回复 · 未经审计",
   "Queued.":"已排队。","Will be read at the next generator round":"将在下一轮生成时读取",
   "Queued — read at next round":"已排队 · 下一轮读取",
@@ -4011,8 +4013,7 @@ const ZH_PATTERNS=[
   [/^Automatic rounds used: (\d+) \/ (\d+)$/i,m=>'已用自动轮数：'+m[1]+' / '+m[2]],
   [/^Round history: (.+)$/i,m=>'轮次记录：'+m[1].replace(/Round (\d+):/gi,'第 $1 轮：').replace(/BLOCKED/gi,'未通过').replace(/PASS/gi,'通过').replace(/(\d+) issues?/gi,'$1 个问题')],[/^Affects (.+)$/i,m=>'影响 '+m[1]],
   [/^(\d+) remaining issues?$/i,m=>'剩余 '+m[1]+' 个问题'],
-  [/^Automatic limit reached · (\d+) \/ (\d+) rounds$/i,m=>'已达自动上限 · '+m[1]+' / '+m[2]+' 轮'],
-  [/^(·\s*)?CrossAudit paused after (\d+) of (\d+) rounds with (\d+) issues? remaining\.$/i,m=>(m[1]?'· ':'')+'CrossAudit 在第 '+m[2]+' / '+m[3]+' 轮后暂停，仍有 '+m[4]+' 个问题。']
+  [/^Automatic limit reached · (\d+) \/ (\d+) rounds$/i,m=>'已达自动上限 · '+m[1]+' / '+m[2]+' 轮']
   ,[/^(\d+) remote jobs active$/i,m=>m[1]+' 个远程任务正在运行']
   ,[/^Generator tool · (\d+) jobs\/task · (\d+) CPU · (\d+) GPU$/i,m=>'生成者工具 · 每任务 '+m[1]+' 个作业 · '+m[2]+' CPU · '+m[3]+' GPU']
   ,[/^Offline view · (.+) · the remote job continues independently$/i,m=>'离线视图 · '+m[1]+' · 远程任务仍在独立运行']
@@ -4281,6 +4282,11 @@ const localeText = (bundle, base) => {
 const t = value => currentLocale==='zh' ? zhValue(value) : value;
 const MARK = {done:'✓',failed:'×',current:'·',pending:''};
 let lastState = null;
+//: The shell entrance, once. Longer than the last animation it starts
+//: (.16s delay + .54s), so the class is only taken away after the entrance is
+//: actually over.
+const SHELL_ENTRANCE_MS=900;
+let shellEntered=false;
 let pendingContinuation={cycle:'',chat:''};
 let pendingFiles = [];
 let uploadProgress = new Map();
@@ -6454,9 +6460,13 @@ function streamRows(d,ctx){
 // twenty-eight cards failed at. Detail opens IN PLACE (a disclosure), never a
 // modal and never a navigation.
 
-//: The mark at the head of a row. The words of a person need none: that row is
+//: The mark at the head of a row. Only the two models get one — that is what
+//: the design gives a mark to. The words of a person need none: that row is
 //: the full text, right-aligned, and a letter beside it would be furniture.
-const ROW_MARKS={you:'',generator:'G',auditor:'A',system:'·'};
+//: The runtime gets none either: a bare middot in front of a sentence does not
+//: read as an actor, it reads as a separator whose number went missing, which
+//: is exactly how it was reported.
+const ROW_MARKS={you:'',generator:'G',auditor:'A',system:''};
 //: A kind whose mark is its own. The runtime reporting on ITSELF borrows
 //: the letter of neither model — attributing it to the generator is a claim
 //: about who produced the words.
@@ -6591,7 +6601,7 @@ function row(r,d){
   const cls='srow srow-'+esc(r.shape)+(r.tone?' srow-'+esc(r.tone):'');
   const line='<div class="srow-line">'+rowMark(r)
     +'<span class="srow-verb">'+esc(rowText(r))+'</span>'
-    +'<time class="srow-time">'+esc(r.t?at(r.t):'')+'</time></div>';
+    +(r.t?'<time class="srow-time">'+esc(at(r.t))+'</time>':'')+'</div>';
   const inner=rowDetailHtml(r.detail,d)
     +(r.rolled&&r.rolled.length?'<div class="srow-rolled">'
       +r.rolled.map(x=>row(x,d)).join('')+'</div>':'')
@@ -6676,7 +6686,7 @@ function streamContext(d,messages){
   const rounds=steps.filter(s=>s.kind==='round_started');
   const last=rounds.length?rounds[rounds.length-1]:null;
   const cycles=chatCycles(d),cycle=cycles.length?cycles[cycles.length-1]:null;
-  return {messages:messages||[],steps:steps,stops:escalationRows(d),
+  return {messages:messages||[],steps:steps,stops:streamStops(d),
     livePhase:live?(STATUS_PHASE_ROWS[runOrbPhase(p)]||''):'',
     round:Number((last&&last.round_no)||(cycle&&cycle.round)||0)};}
 
@@ -6774,6 +6784,26 @@ function escalationRow(row,d){
           'data-stream-reason':String(note.reason||'')}}:null});}
 function escalationRows(d){
   return currentEscalations(d).map(row=>escalationRow(row,d)).filter(Boolean);}
+//: A run that simply stopped — no cycle, no decision object, nothing for a
+//: person to settle — is the one thing the delivery band said that no other
+//: row says. It keeps one note, with no action: the composer is right there.
+const STOP_SAID_ELSEWHERE={passed:1,consumed:1,blocked:1,escalated:1,
+  provider_unavailable:1,running:1};
+function stoppedRow(d){
+  const p=chatProgress(d);
+  if(!p||!p.finished)return null;
+  const outcome=String(p.outcome||'').toLowerCase();
+  if(!outcome||STOP_SAID_ELSEWHERE[outcome])return null;
+  return streamRow({shape:'note',actor:'system',kind:'loop_stopped',key:'stopped',
+    line:currentLocale==='zh'?'任务已停止，没有完成':'The task stopped without completing'});}
+//: The recorded stops this conversation is sitting on. A decision or a machine
+//: failure has a row of its own; only when there is neither does a bare
+//: stopped run need saying.
+function streamStops(d){
+  const rows=escalationRows(d);
+  if(rows.length)return rows;
+  const stopped=stoppedRow(d);
+  return stopped?[stopped]:[];}
 
 // ------------------------------------------------ decisions in the stream
 // docs/design/ACTIVITY_STREAM.md §Decisions happen in the stream. When a round
@@ -7351,26 +7381,14 @@ function admissionCard(){
     +(a.cycleId?'<button type="button" data-admit data-admit-cycle="'+esc(a.cycleId)+'">Try again</button>':'')
     +'</div></section>';
 }
-function deliveryStatus(d){
-  const p=chatProgress(d),cycles=chatCycles(d),cycle=cycles.length?cycles[cycles.length-1]:null;
-  const raw=p&&!p.finished?'running':p&&p.finished?p.outcome:cycle?cycle.status.toLowerCase():'';
-  if(!raw)return'';const status=String(raw).toLowerCase();
-  const escalation=status==='escalated'?currentEscalations(d).slice(-1)[0]:null;
-  const copy=status==='running'?['Working','The result will appear here when it is ready.']
-    :status==='passed'||status==='consumed'?['Ready','The delivered files passed the independent review.']
-    :status==='blocked'?['Needs revision','The result did not pass review yet.']
-    :status==='open'?['Ready for your correction','Send the approved guidance to start the human-authorized audited attempt.']
-    :status==='escalated'&&escalation&&escalation.limit_reached?['Automatic audit limit reached',
-      'CrossAudit paused after '+escalation.round+' of '+escalation.max_rounds+' rounds with '+(escalation.issues||[]).length+' issue'+((escalation.issues||[]).length===1?'':'s')+' remaining.']
-    :status==='escalated'||status==='provider_unavailable'?['Needs your input','CrossAudit needs a decision before it can continue.']
-    :['Stopped','The task did not complete.'];
-  const action=status==='passed'?'<button type="button" data-admit data-admit-cycle="'+esc(cycle.id)+'">Admit result</button>'
-    :status==='escalated'||status==='provider_unavailable'?'<button type="button" data-open-decisions>Review issues & decide</button>'
-    :status==='open'?''
-    :'<button type="button" data-open-audits>View audit details</button>';
-  return '<div class="delivery-status '+esc(status)+'"><span class="delivery-dot"></span><span><b>'
-    +copy[0]+'</b></span><span>'+copy[1]+'</span>'+action+'</div>';
-}
+// deliveryStatus() is gone. Every band it drew is now said by a row: the
+// status line says a run is working, the review card and the round outcome row
+// say passed / admitted / needs changes, and a stop is a note with a retry or
+// an outcome that expands into the decision. It survived the migration saying
+// all of that a second time, and for a machine failure it said it in the one
+// framing the design bans — "needs your decision", with a button into the
+// Decision Center, directly under the note that had just offered the retry.
+// The one statement nothing else made keeps a row of its own, below.
 function artifactRows(d){
   const files = new Map();
   d.generator_stream.filter(m => m.kind === 'generator'&&(m.chat_id||'history')===activeChatId).forEach(m => (m.artifacts||m.files||[]).forEach(item => {
@@ -7946,7 +7964,7 @@ function renderConversation(d){
     // status line is the only thing that is not a row, and it is at the foot.
     const body = streamList(d,streamContext(d,messages)).map(r=>row(r,d)).join('')
       + optimistic + liveDraftTurn(d) + liveThinkingRow(d) + approval + review
-      + admissionCard() + (review ? '' : deliveryStatus(d)) + statusLine(d);
+      + admissionCard() + statusLine(d);
     html = body || welcome();
   }
   document.getElementById('conversation').innerHTML = html;
@@ -8146,13 +8164,32 @@ function maybePromptForHuman(d){
   const row=currentEscalations(d).slice(-1)[0];
   if(row)promptedEscalations.add(row.cycle_id);
 }
+// The one-time shell entrance, and the reason it takes itself away again.
+//
+// The animation is an EVENT, not a state. `shellEntered` is the latch — the
+// class cannot be it, because the class is removed again — so an SSE snapshot
+// never replays the entrance, and no rule that promotes a compositing layer
+// outlives the animation that needed one. With `animation: … both` those four
+// rules never stop applying: each element keeps a layer of its own for the
+// life of the page, and three of the four are filled by JavaScript AFTER boot
+// (the conversation, the chat rail, the composer). Content written into a
+// layer that nothing invalidates again is laid out correctly and never
+// painted — a blank workspace with a correct DOM, correct rects and an empty
+// console, which any forced invalidation repairs at once.
+function enterShell(){
+  if(shellEntered)return;
+  shellEntered=true;
+  requestAnimationFrame(()=>{
+    document.body.classList.add('booted');
+    setTimeout(()=>document.body.classList.remove('booted'),SHELL_ENTRANCE_MS);
+  });
+}
 function render(d){
   lastState = d;
   // A one-time entrance for the shell (topbar / rail / thread / composer). The
   // class is added on the first paint only, so it plays once on load and never
   // replays on an SSE snapshot — no per-frame flicker. Reduced-motion opts out.
-  if(!document.body.classList.contains('booted'))
-    requestAnimationFrame(()=>document.body.classList.add('booted'));
+  enterShell();
   const chatRows=(d.chats&&d.chats.items)||[];
   if(activeChatId&&!chatRows.some(row=>row.id===activeChatId))activeChatId='';
   if(!activeChatId&&chatRows.length&&!newTaskMode)activeChatId=chatRows[0].id;

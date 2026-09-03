@@ -807,3 +807,181 @@ def test_nothing_is_modal_and_the_composer_stays_live():
     for forbidden in ("openResolution", "setDecidingInert", "classList.add('on')",
                       "say.disabled", "send.disabled"):
         assert forbidden not in detail, forbidden
+
+
+# ================================= 6. the shell entrance takes itself away
+# A browser defect the node harnesses cannot see, because none of them paint.
+#
+# On the merged tip the whole workspace loaded blank — the conversation, the
+# chat rail and the composer all invisible — with a correct DOM, correct
+# rects, an empty console, and no error anywhere. Writing `thread.scrollTop`
+# the value it already held made the entire page appear.
+#
+# The only whole-page construct in the source that produces that signature is
+# the shell entrance: `animation: … both` on `.topbar / .sidebar / .thread /
+# .composer-wrap`. A `both` animation never stops applying once it finishes,
+# so each of those four elements keeps a compositing layer of its own for the
+# life of the page — and three of the four are filled by JavaScript AFTER
+# boot. Content written into a layer nothing invalidates again is laid out and
+# never painted.
+#
+# What is checked here: the entrance cannot come back as a permanent state.
+# The fill is `backwards` (the `from` state during the delay, then out of the
+# way, because `to` IS the resting style), and the class is removed once the
+# entrance is over. Both halves are asserted, one by execution.
+SHELL_TARGETS = (".topbar", ".sidebar", ".thread", ".composer-wrap")
+
+
+def test_the_shell_entrance_never_fills_forwards_onto_a_permanent_layer():
+    """No shell rule may use `both` or `forwards`.
+
+    Mutation: put `both` back on any of the four rules and this fails naming it.
+    """
+    import re
+
+    from crossaudit.console.page import PAGE
+
+    block = PAGE[PAGE.index("@media (prefers-reduced-motion:no-preference){"):]
+    block = block[:block.index("@keyframes shell-in")]
+    rules = re.findall(r"body\.booted (\S+)\{animation:([^}]+)\}", block)
+    assert [r[0] for r in rules] == list(SHELL_TARGETS), rules
+    for target, value in rules:
+        assert "backwards" in value, (target, value)
+        for forbidden in (" both", "forwards"):
+            assert forbidden not in value, (target, value, forbidden)
+
+
+@needs_node
+def test_the_shell_entrance_runs_once_and_removes_its_own_class():
+    """The SHIPPED `enterShell` driven under node over a fake clock.
+
+    The class is the animation trigger and nothing else: it is added on the
+    next frame, taken away once the entrance is over, and a second render — an
+    SSE snapshot — never replays it. `shellEntered` is the latch, because the
+    class cannot be (it is removed again).
+
+    Mutation: drop the `setTimeout(... remove ...)` and the class is still on
+    the body at the end; make the class the latch and the second call replays
+    the animation.
+    """
+    from render_decision import eval_page
+
+    prelude = """
+const classes=new Set();const log=[];
+let frame=null,timer=null;
+globalThis.requestAnimationFrame=fn=>{frame=fn;};
+globalThis.setTimeout=(fn,ms)=>{timer=[fn,ms];};
+globalThis.document={body:{classList:{
+  add:c=>{classes.add(c);log.push('add:'+c);},
+  remove:c=>{classes.delete(c);log.push('remove:'+c);}}}};
+let shellEntered=false;const SHELL_ENTRANCE_MS=900;
+"""
+    body = """
+enterShell();
+const beforeFrame=[...classes];
+frame();                                   // the next paint
+const afterFrame=[...classes];
+const delay=timer[1];
+enterShell();                              // an SSE snapshot: must do nothing
+const afterSecond=[...classes];
+timer[0]();                                // the entrance is over
+console.log(JSON.stringify({beforeFrame,afterFrame,afterSecond,
+  end:[...classes],delay,log}));
+"""
+    got = json.loads(eval_page(WORKTREE, ["function enterShell()"], body,
+                               prelude=prelude))
+    assert got["beforeFrame"] == [], "nothing before the next frame"
+    assert got["afterFrame"] == ["booted"]
+    assert got["afterSecond"] == ["booted"], "a snapshot must not replay it"
+    assert got["end"] == [], "the class does not outlive the entrance"
+    assert got["log"] == ["add:booted", "remove:booted"], got["log"]
+    # Longer than the last animation the class starts (.16s delay + .54s), so
+    # the class is only taken away once the entrance has actually finished.
+    assert got["delay"] >= 700
+
+
+# ============================ 7. two things a browser saw that node did not
+@needs_node
+def test_a_row_with_no_number_carries_no_separator_and_no_stray_mark():
+    """Reported from the browser as `· 供应商无响应` — a leading middot with an
+    empty number slot.
+
+    It was the runtime's actor MARK. The design gives a mark to the generator
+    and the auditor; a bare middot in front of a sentence does not read as an
+    actor, it reads as a separator whose number went missing. The runtime keeps
+    a mark only where it means something: the condensation notice keeps its ↻,
+    which is what stops it borrowing a model's letter.
+
+    Mutation: give `system` a middot again and the first assertion fails.
+    """
+    import re
+
+    got = _stop({"kind": "provider", "cycle_id": "c1"}, "zh")
+    html = got["html"]
+    assert "srow-mark" not in html, html
+    line = re.search(r'<span class="srow-verb">([^<]*)</span>', html).group(1)
+    assert line == "供应商无响应", line
+    assert "·" not in html.split("srow-body")[0], "no separator without a number"
+    # A count restores both the number and its one separator.
+    with_count = _stop({"kind": "provider", "cycle_id": "c1"}, "zh",
+                       {"progress": {"steps": [
+                           {"kind": "provider_recovery", "t": 1,
+                            "text": "Retrying the provider · attempt 1"}]}})
+    assert "供应商无响应 · 已重试 1 次" in with_count["html"]
+    # The runtime keeps the one mark that means something.
+    from crossaudit.console.page import PAGE
+
+    assert "const ROW_KIND_MARKS={context_condensed:'↻'};" in PAGE
+
+
+def test_no_second_band_describes_a_stop_the_stream_already_described():
+    """Reported from the browser: directly under the provider note, the
+    `delivery-status provider_unavailable` band read
+    `需要你处理 · CrossAudit 需要你作出决定才能继续。· 查看问题并决定` — the same
+    failure a second time, in the one framing the design bans for a retryable
+    failure, with a button into the Decision Center under the retry.
+
+    The band is gone. Every state it drew is said by a row: the status line for
+    a working run, the review card and the round's outcome row for a settled
+    one, a note with a retry or an outcome that expands for a stop. The one
+    statement nothing else made — a run that stopped with no cycle and no
+    decision object — keeps a row of its own.
+
+    Mutation: render deliveryStatus again and the first assertion fails.
+    """
+    from crossaudit.console.page import PAGE
+
+    assert "function deliveryStatus" not in PAGE
+    assert "delivery-status" not in PAGE and "delivery-dot" not in PAGE
+    # And the framing it used is nowhere near a retryable failure any more.
+    assert "CrossAudit needs a decision before it can continue." not in PAGE
+
+
+@needs_node
+def test_a_run_that_simply_stopped_still_says_so_once():
+    """The one thing only the deleted band said.
+
+    Mutation: drop `stoppedRow` from `streamStops` and a failed run with no
+    cycle and no decision says nothing at all.
+    """
+    from render_decision import eval_page
+
+    body = """
+const cases={failed:{progress:{finished:true,outcome:'failed',steps:[]}},
+  passed:{progress:{finished:true,outcome:'passed',steps:[]}},
+  live:{progress:{finished:false,outcome:'',steps:[]}}};
+const out={};
+for(const locale of ['en','zh']){currentLocale=locale;out[locale]={};
+  for(const [k,d] of Object.entries(cases)){const r=stoppedRow(d);
+    out[locale][k]=r?r.line:null;}}
+console.log(JSON.stringify(out));
+"""
+    got = json.loads(eval_page(
+        WORKTREE,
+        ["const ROW_SHAPES=", "function streamRow(o)",
+         "const STOP_SAID_ELSEWHERE=", "function stoppedRow(d)"],
+        body, prelude="let currentLocale='en';const chatProgress=d=>d.progress;"))
+    assert got["en"]["failed"] == "The task stopped without completing"
+    assert got["zh"]["failed"] == "任务已停止，没有完成"
+    assert got["en"]["passed"] is None, "the review card says that one"
+    assert got["en"]["live"] is None, "the status line says that one"
