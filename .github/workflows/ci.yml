@@ -38,10 +38,20 @@ jobs:
       - run: git config --global user.name CrossAudit-CI
       - run: git config --global user.email crossaudit-ci@local.invalid
       - run: python -m pip install --upgrade pip
-      # Install a real wheel. Editable installs can succeed while their .pth
-      # file is ignored by the interpreter, and are not what users receive.
+      # The install is for the dependency set. The suite itself runs against
+      # the SOURCE TREE (PYTHONPATH=src), because that is what it is written to
+      # audit: guards locate product files through `crossaudit.__file__`, the
+      # node/zh harnesses read `src/crossaudit/console/page.py`, and
+      # `test_verifier_rederives_remaining.py::test_these_guards_ran_against_
+      # the_tree_under_test` FAILS BY DESIGN unless the imported package is
+      # this checkout. Run it off site-packages and ~90 guards report on a
+      # tree nobody changed. The release gate runs it this way too.
+      # The wheel is not left untested: the `package` job below builds one and
+      # installs it in a fresh environment as its own self-test.
       - run: python -m pip install ".[dev]"
       - run: python -m pytest -q --timeout=30
+        env:
+          PYTHONPATH: src
 
   quality:
     env:
@@ -59,6 +69,9 @@ jobs:
         run: python -m ruff check --select E9,F63,F7,F82 src tests
       - run: python -m compileall -q src tests
       - name: Measure branch coverage and enforce the baseline
+        # Same reasoning as the test job: the suite reads the source tree.
+        env:
+          PYTHONPATH: src
         run: |
           python -m coverage run -m pytest -q --timeout=30
           python -m coverage report
