@@ -299,3 +299,93 @@ def test_no_identifier_reaches_the_first_paint_of_a_decision_card(science):
             assert RULE_ID.search(text) is None, (locale, slot)
             assert PROVIDER_MODEL.search(text) is None, (locale, slot)
             assert RAW_VERDICT.search(text) is None, (locale, slot)
+
+
+# ================================================ S5 a setup mistake, recorded
+def _rules_only_commit(science: Path) -> str:
+    (science / "AUDIT_RULES.md").write_text(
+        (science / "AUDIT_RULES.md").read_text() + "\n<!-- a note -->\n")
+    git("add", "-A", cwd=science)
+    git("commit", "-q", "-m", "Tune the rules for the perovskite review", cwd=science)
+    return git("rev-parse", "HEAD", cwd=science)
+
+
+def test_a_commit_with_no_experiment_stops_with_its_own_cause(science, monkeypatch):
+    """S5. The stop is a SETUP mistake — nothing was audited, nothing is in
+    dispute — so it carries `no_science_commit`, recorded through the same
+    record_build_escalation(cause=) the escalation lock uses.
+
+    Mutation: drop the `cause=` argument and the decision object falls back to
+    the generic escalation card the screenshot showed.
+    """
+    from crossaudit.cli.main import cmd_run
+    from crossaudit.errors import NO_SCIENCE_COMMIT_CAUSE
+
+    monkeypatch.chdir(science)
+    sha = _rules_only_commit(science)
+    with pytest.raises(ConfigDenial) as caught:
+        cmd_run(SimpleNamespace(sha=None, json=False, allow_custom_endpoint=False,
+                                continue_cycle=None, offline=False, science=None))
+    reason = caught.value.reason
+    assert reason.startswith("Your last commit ('Tune the rules")
+    assert HEX.search(reason) is None, "no sha leads the sentence a person reads"
+
+    from crossaudit.config import load
+    cfg = load(science / "crossaudit.yml")
+    rows = {r["cycle_id"]: r for r in overview.escalations(cfg)}
+    assert len(rows) == 1
+    row = next(iter(rows.values()))
+    assert row["cause"] == NO_SCIENCE_COMMIT_CAUSE
+    assert row["stop_reason"] == reason
+    assert row["stop_reason_zh"].startswith("你的上一次提交")
+    # The sha is not lost — it is the cycle's own commit, which the card
+    # carries in its closed details block.
+    assert row["sha"] == sha
+
+
+def _setup_row(science: Path, monkeypatch) -> dict:
+    """The decision object the no-experiment stop mints for itself."""
+    from crossaudit.cli.main import cmd_run
+    from crossaudit.config import load
+
+    monkeypatch.chdir(science)
+    _rules_only_commit(science)
+    with pytest.raises(ConfigDenial):
+        cmd_run(SimpleNamespace(sha=None, json=False, allow_custom_endpoint=False,
+                                continue_cycle=None, offline=False, science=None))
+    cfg = load(science / "crossaudit.yml")
+    return {"setup": overview.escalations(cfg)[0]}
+
+
+@needs_node
+def test_the_setup_card_is_calm_and_says_the_stop_reason_in_chinese(science, monkeypatch):
+    """S5/S3 together, through the shipped openResolution: the card takes the
+    shape of the credential setup card, its primary action says the person has
+    already committed, and the stop reason under `What happened` is the
+    translated sentence — not English inside a Chinese card.
+
+    Mutation: remove `no_science_commit` from CAUSE_COPY and the flag falls
+    back to `Automatic loop paused`, the escalation wording the owner saw.
+    """
+    from render_decision import render
+
+    out = render(WORKTREE, _setup_row(science, monkeypatch))["setup"]
+    assert out["en"]["resolution-flag"] == "Nothing to audit yet"
+    assert out["zh"]["resolution-flag"] == "没有可审计的改动"
+    assert out["en"]["resolution-title"] == "That commit had no experiment in it"
+    assert out["zh"]["resolution-title"] == "这次提交里没有实验文件"
+    assert out["en"]["resolution-limit-title"] == "What happened"
+    assert out["en"]["resolution-request"] == "Commit your experiment, then run again."
+    assert out["zh"]["resolution-request"] == "把你的实验文件提交后再运行一次。"
+    assert out["en"]["resolution-reopen-title"] == "I have committed it — try again"
+    assert out["zh"]["resolution-reopen-title"] == "我已提交，重试"
+    # The stop reason a person reads, in each language, from the same row.
+    assert out["en"]["resolution-limit-copy"].startswith("Your last commit ('Tune the rules")
+    assert out["zh"]["resolution-limit-copy"].startswith("你的上一次提交")
+    # Not the escalation wording: nothing was audited and nothing is disputed.
+    for locale in ("en", "zh"):
+        assert "Automatic loop paused" not in out[locale]["resolution-flag"]
+        # ...and it carries no findings section either.
+        assert out["extra"][locale]["issues_hidden"] is True
+
+

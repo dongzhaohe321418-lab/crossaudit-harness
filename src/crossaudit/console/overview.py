@@ -236,6 +236,11 @@ CAUSE_REQUESTED = {
                           "how to address it or stop this task."),
     "escalation_locked": ("Open the earlier decision and settle it; this task "
                           "continues from there."),
+    # A setup mistake (errors.NO_SCIENCE_COMMIT_CAUSE). Deliberately absent
+    # from CAUSE_WHY: the stop reason already names the commit by its subject
+    # and says what it changed, so a fixed sentence here would replace the
+    # only specific thing on the card with a general one.
+    "no_science_commit": "Commit your experiment, then run again.",
 }
 
 

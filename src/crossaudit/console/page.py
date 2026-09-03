@@ -4928,6 +4928,18 @@ const CAUSE_COPY={
     reopenTitle:'Revise and continue',
     reopenCopy:'Tell the generator how to address the auditor\u2019s reason, then unlock one additional audited round.',
     hint:''},
+  // S5. A SETUP mistake, not an audit dispute: the commit held no experiment,
+  // so nothing was audited and nothing is contested. It takes the shape of the
+  // credential setup card — calm, one thing to do — not the escalation card.
+  // No `empty` copy: the stop reason above already names the commit and what
+  // it did change, so a findings section here would only point back at it.
+  no_science_commit:{flag:'Nothing to audit yet',title:'That commit had no experiment in it',
+    summary:'Your last commit changed only rules, configuration or the ledger — no file the auditor watches. Nothing was audited, nothing was admitted, and nothing is in dispute.',
+    limitTitle:'What happened',
+    request:'Commit your experiment, then run again.',
+    reopenTitle:'I have committed it — try again',
+    reopenCopy:'Commit the files your experiment produced, then unlock one more audited round.',
+    hint:''},
   escalation_locked:{flag:'Waiting on an earlier decision',title:'This task is already waiting for your earlier decision',
     summary:'An earlier round of this task is still waiting for you. No new round can run until that decision is made.',
     limitTitle:'What happened',

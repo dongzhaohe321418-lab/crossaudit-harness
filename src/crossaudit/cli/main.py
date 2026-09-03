@@ -22,6 +22,7 @@ from ..dcl import run_checks
 from .. import doctor_shared
 from ..doctor_shared import constitution_state, CONSTITUTION_READY_SENTENCE
 from ..errors import (CONTESTED_MODEL_BLOCKER_REASON, escalation_cause, EXIT_BLOCKED, EXIT_CONFIG,
+                      NO_SCIENCE_COMMIT_CAUSE,
                       EXIT_ESCALATED, EXIT_INTEGRITY, EXIT_OK, ConfigDenial, Denial,
                       IntegrityDenial)
 from ..gitio import (changed_paths, entries, git, is_ancestor, is_repo, materialise,
@@ -1657,10 +1658,25 @@ def cmd_run(args: argparse.Namespace) -> int:
         # The sha is not gone — it is the cycle's own `active_sha`, which the
         # decision card carries in its collapsed details, and it is untouched
         # in --json, in receipts and in the ledger.
-        raise ConfigDenial(
-            f"Your last commit ({subject!r}) changed no science files — only "
-            f"rules, configuration or ledger. Commit your experiment, then "
-            f"run again.")
+        reason = (f"Your last commit ({subject!r}) changed no science files — "
+                  f"only rules, configuration or ledger. Commit your "
+                  f"experiment, then run again.")
+        # This is a SETUP mistake, not an audit dispute: nothing was audited
+        # and nothing is contested. The decision object is minted here — the
+        # only place that knows which branch this is — with its structured
+        # cause, the way the escalation lock is (_record_lock). Fail-closed:
+        # the cycle store refuses to overwrite a recorded verdict, and that
+        # refusal must never turn a setup mistake into a traceback.
+        context = getattr(args, "usage_context", None) or {}
+        try:
+            _state(cfg).record_build_escalation(
+                cfg.science_repo, sha, reason, 1,
+                str(context.get("chat_id", "") or ""),
+                _committed_task(cfg, sha), run_id=str(context.get("run_id", "") or ""),
+                kind="audit", cause=NO_SCIENCE_COMMIT_CAUSE)
+        except Denial:
+            pass
+        raise ConfigDenial(reason)
 
     dirty = git("status", "--porcelain", cwd=cfg.root, check=False)
     from ..providers.registry import NEEDS_KEY
