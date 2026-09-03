@@ -505,6 +505,18 @@ details.srow-open[open]>summary .srow-line:after{transform:rotate(90deg)}
 .srow-action{border:1px solid var(--line);background:var(--surface-2);color:var(--text);
   font-size:var(--fs-label);padding:5px 11px;border-radius:var(--r-sm)}
 .srow-action:hover{background:var(--hover)}
+/* The status line: the only persistent chrome, and only while something runs.
+   One line at the foot of the stream — the orb of the live phase, that phase
+   in words, the round, the elapsed, the running cost, and the one control that
+   stops it. It is not a row: it is replaced by its result. */
+.stream-status{position:sticky;bottom:0;display:flex;align-items:center;gap:9px;
+  padding:9px 2px;margin-top:var(--sp-2);background:var(--bg);
+  border-top:1px solid var(--line);font-size:var(--fs-label);color:var(--text-2)}
+.stream-status-text{min-width:0;overflow-wrap:anywhere}
+.stream-stop{margin-left:auto;flex:none;border:1px solid var(--line);background:var(--surface-2);
+  color:var(--text);font-size:var(--fs-caption);padding:4px 10px;border-radius:var(--r-sm)}
+.stream-stop:hover:not(:disabled){background:var(--hover)}
+.stream-stop:disabled{opacity:.55}
 /* Message rows: a work record, not a chat app. */
 .turn{margin-bottom:var(--sp-6)}
 .turn.user{display:flex;justify-content:flex-end}
@@ -4012,7 +4024,6 @@ const ZH_PATTERNS=[
   ,[/^no heartbeat for (.+)$/,m=>'已 '+zhValue(m[1])+'无心跳']
   ,[/^(\d+) min ago$/,m=>m[1]+' 分钟前'],[/^(\d+) h ago$/,m=>m[1]+' 小时前'],[/^(\d+) days? ago$/,m=>m[1]+' 天前']
   ,[/^(\d+) s$/,m=>m[1]+' 秒'],[/^(\d+) min$/,m=>m[1]+' 分钟'],[/^(\d+) h$/,m=>m[1]+' 小时']
-  ,[/^(\d+)m (\d+)s elapsed$/,m=>'已运行 '+m[1]+' 分 '+m[2]+' 秒'],[/^(\d+)h (\d+)m elapsed$/,m=>'已运行 '+m[1]+' 小时 '+m[2]+' 分']
   ,[/^(.+) · round (\d+)$/,m=>zhValue(m[1])+' · 第 '+m[2]+' 轮']
   ,[/^(\d+)([mhd])$/,m=>m[1]+({m:' 分钟前',h:' 小时前',d:' 天前'})[m[2]]]
   ,[/^The local demo could not be prepared: (.+?)( — you can still create or import a project\.)?$/i,m=>'无法准备本地演示：'+m[1]+(m[2]?'——你仍可以创建或导入项目。':'')]
@@ -4056,7 +4067,6 @@ const ZH_PATTERNS=[
   ,[/^of (\d+) gates reached$/,m=>'/ '+m[1]+' 个关卡已到达']
   ,[/^of (\d+) steps done$/,m=>'/ '+m[1]+' 步已完成']
   ,[/^(\d+) passed review$/,m=>m[1]+' 次通过复核']
-  ,[/^(\d+)s elapsed$/,m=>'已运行 '+m[1]+' 秒']
   ,[/^(\d+) events?$/,m=>m[1]+' 个事件']
   ,[/^(.+): (Complete|Blocked|Active|Pending)$/,m=>zhValue(m[1])+'：'+zhValue(m[2])]
   ,[/^([0-9a-f]{7,40}) · round (\d+)$/i,m=>m[1]+' · 第 '+m[2]+' 轮']
@@ -4288,9 +4298,9 @@ function relAge(seconds){const s=Math.max(0,Math.floor(Number(seconds)||0));
   if(s<86400)return Math.floor(s/3600)+' h ago';const d=Math.floor(s/86400);return d+(d===1?' day ago':' days ago');}
 function durationText(seconds){const s=Math.max(0,Math.floor(Number(seconds)||0));
   if(s<60)return s+' s';if(s<3600)return Math.floor(s/60)+' min';return Math.floor(s/3600)+' h';}
-function elapsedText(seconds){const s=Math.max(0,Math.floor(Number(seconds)||0));
-  if(s<60)return s+'s elapsed';if(s<3600)return Math.floor(s/60)+'m '+(s%60)+'s elapsed';
-  return Math.floor(s/3600)+'h '+Math.floor(s%3600/60)+'m elapsed';}
+// The run card meta row appended the word "elapsed" for a table cell. It is
+// gone with the card: the stream says elapsed INSIDE a sentence, where
+// elapsedWords() reads correctly in both languages.
 // The runtime writes "no heartbeat for 205214s" into an event detail; read it
 // back in words before it reaches the screen.
 function humaniseDetail(text){const m=/^no heartbeat for (\d+)s$/.exec(String(text||''));return m?'no heartbeat for '+durationText(m[1]):text;}
@@ -6179,7 +6189,7 @@ function forecastText(d){const f=d&&d.usage&&d.usage.forecast;const zh=currentLo
   return time+cost;}
 function forecastLine(d){return '<span class="run-forecast">'+esc(forecastText(d))+'</span>';}
 // ============================================================== THE STREAM
-// docs/design/ACTIVITY_STREAM.md is the authority for everything below. The
+// docs/design/ACTIVITY_STREAM.md governs everything below. The
 // loop emits roughly thirty event kinds; the conversation renders FIVE
 // shapes. This block is the row model: the shape table, the vocabulary, the
 // one number each row may carry, and the pure function that turns one state
@@ -6191,9 +6201,9 @@ const ROW_SHAPES={say:'say',do:'do',wait:'wait',outcome:'outcome',note:'note'};
 
 //: Every event kind the engine emits, and the ONE shape it renders as
 //: (design rule 6). tests/test_activity_stream.py enumerates the kinds FROM
-//: THE SOURCE — build.py's emit(), the auditor's and the intake's narrate(),
-//: the run journal's own inserts, streams.py's message kinds — and fails when
-//: one arrives with no shape here. The rule made mechanical, not remembered.
+//: THE SOURCE — the emit() in build.py, the narrate() in the auditor and the
+//: intake, the run journal inserts, the streams.py message kinds — and fails
+//: when one arrives with no shape here. Mechanical, not remembered.
 const EVENT_SHAPES={
   // ---- console/streams.py: what a person and the two models said.
   you:'say',generator:'say',generator_chat:'say',auditor_chat:'say',
@@ -6216,7 +6226,7 @@ const EVENT_SHAPES={
   // ---- auditor/run.py, narrated through on_event.narrate.
   auditor_reading:'wait',check_started:'wait',check_finished:'do',
   //: The bounded repair attempt before an unreadable auditor reply becomes
-  //: anyone's problem: worth knowing, needs no action.
+  //: a problem for anyone: worth knowing, needs no action.
   audit_repair_retry:'note',
   // ---- console/intake.py: the message still in flight.
   received:'wait',routed:'do',answering:'wait',answered:'do',
@@ -6225,19 +6235,19 @@ const EVENT_SHAPES={
   run_stalled:'note',cancel_requested:'note',still_working:'wait',
   guidance_queued:'say',interruption_dismissed:'note',
   human_wait_reconciled:'note',attachments_received:'do',
-  //: RunEvent's own default kind, for a step nobody named.
+  //: The RunEvent dataclass default, for a step nobody named.
   activity:'do'};
 
 //: Kinds whose fact is carried by ANOTHER row rather than by one of their own.
-//: A round is a group, not a region, so its number lives on that round's
-//: outcome row; the streamed chunks are the number on the live drafting row;
+//: A round is a group, not a region, so its number lives on the outcome row
+//: of that round; the streamed chunks are the number on the live draft row;
 //: a run beginning is the stream beginning. Declared shapes all the same —
 //: rule 6 is about being declared, not about being drawn.
 const CARRIED_KINDS={round_started:1,generation_chunk:1,thinking_chunk:1,
   run_started:1};
 
 //: The verb phrase of each kind — present while the thing is happening, past
-//: once it has happened, in the reader's language, never an internal constant.
+//: once it has happened, in the language of the reader, never a constant.
 //: Both languages live here (design rule 7) rather than in the ZH catalogue,
 //: because a row line is BUILT: a count sits beside it. A wire row that
 //: carries its own localised sentence (text_i18n, from console/progress.py)
@@ -6325,7 +6335,7 @@ function rowNumber(n){
 function shapeOf(kind){
   const shape=EVENT_SHAPES[String(kind||'')];
   return shape&&ROW_SHAPES[shape]?shape:'';}
-//: The words for a kind, in the reader's language.
+//: The words for a kind, in the language of the reader.
 function verbOf(kind){
   const row=EVENT_VERBS[String(kind||'')];if(!row)return '';
   return currentLocale==='zh'?row.zh:row.en;}
@@ -6350,7 +6360,7 @@ function streamRow(o){
     tone:String((o&&o.tone)||''),open:Boolean(o&&o.open)};}
 
 //: Which side of the pair a step belongs to. The runtime reporting on itself
-//: never borrows the generator's name or mark.
+//: never borrows the name or the mark of the generator.
 const STEP_ACTORS={generator:'generator',auditor:'auditor',input:'you',
   user:'you',done:'system',loop:'system',controller:'system',watchdog:'system',
   tool:'system',compute:'system'};
@@ -6372,7 +6382,7 @@ function rowFromStep(s,d){
     detail:detail?{kind:'text',text:detail}:null});}
 
 //: One conversation message becomes exactly one row: words from a person or
-//: an agent are a `say`, an auditor report is the round's `outcome`.
+//: an agent are a `say`; an auditor report is the `outcome` of its round.
 function rowFromMessage(m,d){
   const kind=String((m&&m.kind)||'generator');
   const shape=shapeOf(kind);
@@ -6402,12 +6412,16 @@ function streamRows(d,ctx){
 // twenty-eight cards failed at. Detail opens IN PLACE (a disclosure), never a
 // modal and never a navigation.
 
-//: The mark at the head of a row. A person's own words need none: their row is
+//: The mark at the head of a row. The words of a person need none: that row is
 //: the full text, right-aligned, and a letter beside it would be furniture.
 const ROW_MARKS={you:'',generator:'G',auditor:'A',system:'·'};
+//: A kind whose mark is its own. The runtime reporting on ITSELF borrows
+//: the letter of neither model — attributing it to the generator is a claim
+//: about who produced the words.
+const ROW_KIND_MARKS={context_condensed:'↻'};
 //: Which phase a kind belongs to, so a `wait` row can be replaced by the `do`
-//: row that resolves it. Both never appear for one phase (design: "one live
-//: line, replaced by its Do row when it resolves — never both").
+//: row that resolves it. Both never appear for one phase — the design says
+//: one live line, replaced by its Do row when it resolves, never both.
 const ROW_PHASES={
   preparing:'prepare',prompt_ready:'prepare',
   generation_started:'draft',generation_chunk:'draft',thinking_chunk:'draft',
@@ -6475,11 +6489,20 @@ function groupRounds(rows,current){
     out.push(r);}
   return out;}
 
+//: The live phase of the run, named the way a ROW names its phase. The line
+//: at the foot of the stream IS the live line of that phase, so the fact must
+//: not also stand as a row halfway up the screen.
+const STATUS_PHASE_ROWS={preparing:'prepare',generating:'draft',auditing:'audit',
+  waiting:'provider',answering:'answer'};
 //: The list the conversation actually paints: declared rows, live lines that
-//: have not been settled, repetition collapsed, finished rounds folded.
+//: have not been settled or moved to the status line, repetition collapsed,
+//: finished rounds folded into their own outcome rows.
 function streamList(d,ctx){
   const current=Number((ctx&&ctx.round)||0);
-  return groupRounds(mergeRuns(dropSettledWaits(streamRows(d,ctx))),current);}
+  const live=String((ctx&&ctx.livePhase)||'');
+  let rows=dropSettledWaits(streamRows(d,ctx));
+  if(live)rows=rows.filter(r=>r.shape!=='wait'||ROW_PHASES[r.kind]!==live);
+  return groupRounds(mergeRuns(rows),current);}
 
 function rowText(r){
   const parts=[String(r.line||'')];
@@ -6490,7 +6513,7 @@ function rowText(r){
 //: a letter for the two models, a hairline dot for the runtime.
 function rowMark(r){
   if(r.shape==='wait')return orbMarkup(r.phase||'routing',rowText(r),'srow-orb');
-  const mark=ROW_MARKS[r.actor];
+  const mark=ROW_KIND_MARKS[r.kind]||ROW_MARKS[r.actor];
   if(!mark)return '';
   return '<span class="srow-mark '+esc(r.actor)+'" aria-hidden="true">'+esc(mark)+'</span>';}
 function rowDetailHtml(detail,d){
@@ -6523,6 +6546,87 @@ function row(r,d){
   if(!inner)return '<div class="'+cls+'">'+line+'</div>';
   return '<details class="'+cls+' srow-open"'+(r.open?' open':'')+'>'
     +'<summary>'+line+'</summary><div class="srow-body">'+inner+'</div></details>';}
+// ------------------------------------------------------------ the status line
+// docs/design/ACTIVITY_STREAM.md §The status line. The ONLY persistent chrome
+// on this surface, and only while something is actually running:
+//
+//     [orb] 正在撰写 · 第 1/3 轮 · 38 秒 · ≈$0.04            [停止]
+//
+// It replaces the run card header — the outcome pill, the step meter, the
+// six-stage pipeline diagram and the focus panel — every one of which drew the
+// audit protocol's state machine rather than the person's work. When nothing
+// runs it is not there at all.
+function statusRoundText(p,d){
+  const rows=((p&&p.steps)||[]).filter(s=>s.kind==='round_started');
+  const last=rows.length?rows[rows.length-1]:null;
+  const n=last?Number(last.round_no||0):0;
+  const limit=(last&&last.round_limit)?Number(last.round_limit):Number((d&&d.max_rounds)||0);
+  if(!n||!limit)return '';
+  return currentLocale==='zh'?'第 '+n+'/'+limit+' 轮':'round '+n+' of '+limit;}
+//: The running cost of THIS run, from the per-run aggregate of the billing
+//: slice. Absent while nothing has been priced — an estimate of nothing is not
+//: a number a person would act on.
+function statusCostText(d,p){
+  const runs=(d&&d.usage&&d.usage.attribution&&d.usage.attribution.runs)||{};
+  const b=runs[(p&&p.run_id)||''];
+  if(!b||b.api_value_usd==null||(b.unpriced_calls&&!b.api_value_usd))return '';
+  return '≈'+formatUsd(b.api_value_usd);}
+function statusLine(d){
+  const p=chatProgress(d);
+  if(!p||p.finished)return '';
+  // No phase means nothing is in progress — a person or a decision is being
+  // waited for — and then there is no line, rather than an orb spinning over
+  // a sentence nobody wrote.
+  const phase=runOrbPhase(p);
+  if(!phase)return '';
+  const zh=currentLocale==='zh';
+  const draft=liveDraftFor(d);
+  const parts=[phaseWords(phase)];
+  const count=phaseCount(phase,{words:draftCount(draft?draft.text:''),
+    files:liveFileCount(d)});
+  if(count)parts.push(count);
+  const round=statusRoundText(p,d);if(round)parts.push(round);
+  const seconds=Math.max(0,Math.floor(Number(p.elapsed||0)));
+  if(seconds>=PHASE_ELAPSED_S)parts.push(elapsedWords(seconds));
+  const cost=statusCostText(d,p);if(cost)parts.push(cost);
+  const text=parts.join(' · ');
+  const stopping=String(p.state||'').toUpperCase()==='CANCELLING';
+  return '<div class="stream-status" role="status">'
+    +orbMarkup(phase,text,'srow-orb')
+    +'<span class="stream-status-text">'+esc(text)+'</span>'
+    +'<button type="button" class="stream-stop"'+(stopping?' disabled':'')
+    +' onclick="requestStop()" aria-label="'+esc(zh?'停止此任务':'Stop this task')+'">'
+    +esc(zh?(stopping?'正在停止…':'停止'):(stopping?'Stopping…':'Stop'))
+    +'</button></div>';}
+// D8 / D4, moved onto the stream unchanged: thinking is model text no auditor
+// has read — further from evidence than the draft, which already says so on
+// its face. One line that names what it is, folded shut, never written
+// anywhere: the row disappears with the run.
+function liveThinkingRow(d){
+  const thinking=liveThinkingFor(d);
+  if(!thinking)return '';
+  return '<details class="audit-event live-thinking">'
+    +'<summary>'+'<span class="event-mark runtime">…</span>'
+    +'<div class="event-main"><div class="event-line"><b>'
+    +esc(currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited')+'</b></div></div>'
+    +'<time class="event-time">'+(currentLocale==='zh'?'刚刚':'now')+'</time></summary>'
+    +'<div class="event-detail">'+esc(thinking.text.slice(-160).replace(/\s+/g,' '))
+    +'</div></details>';}
+//: What the stream is built from for this conversation: the messages the
+//: client already de-duplicated, the steps of the run that is actually running
+//: (the steps of a finished run are its record, not its news), and the round
+//: loop is on, so earlier rounds can fold into their own outcome rows.
+function streamContext(d,messages){
+  const p=chatProgress(d);
+  const live=Boolean(p&&!p.finished);
+  const steps=live?((p&&p.steps)||[]):[];
+  const rounds=steps.filter(s=>s.kind==='round_started');
+  const last=rounds.length?rounds[rounds.length-1]:null;
+  const cycles=chatCycles(d),cycle=cycles.length?cycles[cycles.length-1]:null;
+  return {messages:messages||[],steps:steps,
+    livePhase:live?(STATUS_PHASE_ROWS[runOrbPhase(p)]||''):'',
+    round:Number((last&&last.round_no)||(cycle&&cycle.round)||0)};}
+
 function turn(m,d){
   if(m.kind === 'you'){
     const explicit=m.routing_mode==='explicit';const recipient=m.addressed_to||m.lane;
@@ -6970,8 +7074,6 @@ function reviewCard(d){
     +'</button>'+detail
     +'<div class="review-actions">'+actionRow+'</div></section>';
 }
-const ACTOR_NAMES = {generator:'Generator',auditor:'Auditor',compute:'Compute',tool:'Tool',loop:'Process',done:'Result',input:'You'};
-const ACTOR_MARKS = {generator:'G',auditor:'A',compute:'H',tool:'M',loop:'↻',done:'✓'};
 // The main surface carries words, never identifiers (D150 / North Star §12):
 // a raw payload (the goal record is JSON for the Plan tab) is not shown at
 // all, and a hash, sha, cycle id, provider:model route or rule id that an
@@ -6984,121 +7086,10 @@ function conciseDetail(s){
     .replace(/\b[a-f0-9]{40}\b/g,'').replace(/\b[a-f0-9]{16}\b/g,'').replace(/\b[a-f0-9]{12}\b/g,'')
     .replace(/\b[A-Za-z0-9_.-]+:(?:claude|gpt|gemini|deepseek|grok|o[0-9])[A-Za-z0-9_.-]*\b/g,'')
     .replace(/\bCA-[A-Z]+-\d+\b/g,'').replace(/\s{2,}/g,' ').replace(/^[\s·;,:—-]+|[\s·;,:—-]+$/g,'');}
-// One live-activity row. A condensation notice is the runtime reporting on
-// itself, so it does not borrow the generator name or mark, and every row
-// localises from the wire fields (text_i18n) rather than showing English
-// under 中文.
-function activityRow(s){
-  const system = s.kind === 'context_condensed';
-  const mark = system ? '↻' : (ACTOR_MARKS[s.actor]||'·');
-  const who = system ? t('Context reduced') : t(ACTOR_NAMES[s.actor]||s.actor);
-  const line = (system || s.text_i18n) ? localeText(s.text_i18n, s.text) : s.text;
-  const detail = system ? localeText(s.detail_i18n, s.detail) : conciseDetail(s);
-  // D149. Every row keeps its own actor mark. What is happening RIGHT NOW is
-  // said once, in the live phase line below the rows, rather than by animating
-  // the newest thing that has already happened.
-  return '<div class="audit-event">'
-  + '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>'
-  + '<div class="event-main"><div class="event-line"><b>' + esc(who)
-  + '</b><span>' + esc(line) + '</span></div>'
-  + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
-  + '<time class="event-time">' + at(s.t) + '</time></div>';}
-// Review D7: the cure for silence must not eat the narration it protects.
-// The clock speaks every 8 s of silence, and the auditor clock every 10 s
-// of streaming, so a two-minute audit produced fifteen rows and pushed all
-// twelve substantive steps off the card. A run of consecutive clock rows is
-// one fact — how long this phase has been going — so only its newest survives,
-// in place. Rows of any other kind are never dropped.
-const CLOCK_KINDS = new Set(['still_working','auditor_progress']);
-function collapseClockRows(steps){
-  const out=[];
-  for(const step of steps||[]){
-    const prev=out.length?out[out.length-1]:null;
-    if(prev&&CLOCK_KINDS.has(step.kind)&&CLOCK_KINDS.has(prev.kind)){out[out.length-1]=step;continue;}
-    out.push(step);}
-  return out;}
-function runCard(d){
-  const p = chatProgress(d),cycles=chatCycles(d);
-  const latestCycle=cycles.length?cycles[cycles.length-1]:null;
-  const ownsPipeline=p||(latestCycle&&d.cycles.length&&latestCycle.sha===d.cycles[d.cycles.length-1].sha);
-  const pipeline=ownsPipeline?d.pipeline:[];
-  const show = p || pipeline.some(s => s.state !== 'pending');
-  if(!show) return '';
-  const rawOutcome = p ? (p.finished ? p.outcome : 'running') : statusOf(d);
-  const outcome = rawOutcome==='provider_unavailable' ? 'escalated' : rawOutcome;
-  const tone = String(outcome||'ready').toLowerCase();
-  // Plain-language status the reader actually understands; the raw enum stays as
-  // the CSS class for colour, but never as the words on screen.
-  const outcomeLabel = ({running:'Working',ready:'Ready',passed:'Passed review',consumed:'Admitted',blocked:'Needs changes',escalated:'Needs your input',failed:'Stopped'})[tone] || outcome;
-  const handoff = (Date.now()-handoffAt<700&&handoffDirection)?' data-handoff="'+esc(handoffDirection)+'"':'';
-  const reached = pipeline.filter(s => s.state !== 'pending').length;
-  const meter = pipeline.length ? Math.round(reached / pipeline.length * 100) : 0;
-  const roundEvents = p && p.steps ? p.steps.filter(s => s.kind === 'round_started') : [];
-  const roundEvent = roundEvents.length ? roundEvents[roundEvents.length-1] : null;
-  const round = roundEvent ? roundEvent.round_no : latestCycle ? latestCycle.round : '-';
-  const roundLimit = roundEvent&&roundEvent.round_limit ? roundEvent.round_limit : d.max_rounds;
-  const focus = pipeline.find(s => s.state === 'current') || pipeline.find(s => s.state === 'failed')
-    || pipeline.find(s => s.state === 'pending') || pipeline[pipeline.length-1];
-  const focusLabel = focus.state === 'current' ? 'Current step' : focus.state === 'failed' ? 'Stopped at'
-    : focus.state === 'pending' ? 'Next step' : 'Completed step';
-  const stateNames = {done:'Done',failed:'Stopped',current:'Active',pending:'Waiting'};
-  // D150: what is arriving right now, as one line each — a word count for the
-  // draft (the text itself lives in the unaudited draft article above) and
-  // the tail of the summarised thinking. Neither is a step; neither persists.
-  const draft = liveDraftFor(d), thinking = liveThinkingFor(d);
-  // D149. ONE orb per card, and it sits on the live phase line — the phase in
-  // words, the number that phase produces, and how long it has been going.
-  // Nothing once the run is over.
-  const orbPhase = p && !p.finished ? runOrbPhase(p) : '';
-  const rows = p && p.steps ? collapseClockRows(p.steps).slice(-12) : [];
-  const eventRows = rows.map(s => activityRow(s)).join('');
-  // Review D8 / D4: thinking is model text no auditor has read — further from
-  // evidence than the draft, which already says so on its face. It is folded
-  // away behind a summary that says what it is, opens only if the reader asks,
-  // and is never written anywhere: the row disappears with the run.
-  const liveRows = (thinking ? '<details class="audit-event live-thinking">'
-      + '<summary>' + '<span class="event-mark runtime">…</span>'
-      + '<div class="event-main"><div class="event-line"><b>'
-      + esc(currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited') + '</b></div></div>'
-      + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></summary>'
-      + '<div class="event-detail">' + esc(thinking.text.slice(-160).replace(/\s+/g,' ')) + '</div></details>' : '')
-    // The word count of the draft is the number the generating phase has, so
-    // the phase line below IS the draft row; a second one would say it twice.
-    + (orbPhase ? livePhaseLine(orbPhase,
-        {seconds: p ? p.elapsed : 0, words: draftCount(draft ? draft.text : ''),
-         files: liveFileCount(d)}, 'audit-event') : '');
-  const activityTitle = p && !p.finished ? 'Live activity' : 'Run activity';
-  const activity = (eventRows + liveRows) || '<div class="activity-empty">The generator and auditor show what they are doing here while a task runs.</div>';
-  const task = p && p.task ? p.task : titleOf(d);
-  const live = p && !p.finished;
-  const stopBtn = live ? '<button type="button" class="run-stop"'
-    + (p.state==='CANCELLING'?' disabled':'') + ' onclick="requestStop()" '
-    + 'aria-label="Stop this task"><span class="run-stop-glyph" aria-hidden="true"></span>'
-    + (p.state==='CANCELLING'?'Stopping…':'Stop') + '</button>' : '';
-  return '<section class="run-card ' + esc(tone) + '"' + handoff + ' aria-label="Audit loop">'
-    + '<div class="run-overview"><div class="run-top">'
-    + '<span class="run-eyebrow">Audit loop</span><span class="status ' + esc(outcome) + '">'
-    + esc(outcomeLabel) + '</span>' + stopBtn + '</div><div class="run-task">' + esc(task) + '</div><div class="run-meta">'
-    + '<span>Round <strong>' + esc(round) + '</strong> of ' + esc(roundLimit) + '</span>'
-    + '<span><strong>' + reached + '</strong> of ' + pipeline.length + ' steps done</span>'
-    + '<span>' + (p ? elapsedText(p.elapsed) : 'Ledger snapshot') + '</span>'
-    + (p&&p.queued&&!p.finished?'<span><strong>'+esc(p.queued)+'</strong> queued</span>':'')
-    + (live ? forecastLine(d) : '') + '</div>'
-    + '<div class="run-handoff" aria-hidden="true"><i></i></div>'
-    + '<div class="run-meter" role="progressbar" aria-label="Audit steps done" aria-valuemin="0" '
-    + 'aria-valuemax="100" aria-valuenow="' + meter + '"><i style="width:' + meter + '%"></i></div></div>'
-    + '<div class="loop">' + pipeline.map((s,i) => '<div class="loop-step ' + esc(s.state) + '" '
-      + 'aria-label="' + esc(s.title + ': ' + stateNames[s.state]) + '"><div class="loop-track">'
-      + '<div class="loop-mark">' + esc(MARK[s.state] || String(i+1)) + '</div></div>'
-      + '<div class="loop-name">' + esc(s.title) + '</div>'
-      + '<div class="loop-detail" title="' + esc(s.detail) + '">' + esc(s.detail) + '</div>'
-      + '<div class="loop-state">' + esc(stateNames[s.state]) + '</div></div>').join('') + '</div>'
-    + '<div class="loop-focus ' + esc(focus.state) + '"><div class="loop-focus-label">' + focusLabel + '</div>'
-    + '<div class="loop-focus-copy"><b>' + esc(focus.title) + '</b><p>' + esc(focus.detail) + '</p></div></div>'
-    + '<div class="activity"><div class="activity-head">' + activityTitle + '<span>'
-    + (p && p.steps ? p.steps.length + ' event' + (p.steps.length===1?'':'s') : 'Ledger-backed state')
-    + '</span></div><div class="activity-list">' + activity + '</div></div>' + runCostLine(d) + '</section>';
-}
+// D149's activityRow, the clock collapse and the run card are gone: the run's
+// events are rows in the one stream now (rowFromStep + mergeRuns), and the
+// card's header is the status line. ACTOR_NAMES / ACTOR_MARKS went with them —
+// the actor of a row is a mark, not a repeated speaker name.
 function approvalCard(d){
   // A live build proposed a Level 3+ action and paused for the user. The card
   // states what/why/scope/reversibility/cost; the buttons deliver the decision
@@ -7220,7 +7211,7 @@ function artifactsView(d){
 function auditsView(d){
   const audits = d.auditor_stream.filter(m => m.kind === 'auditor'&&(m.chat_id||'history')===activeChatId);
   return '<div class="view-heading"><h2>Audits</h2><p>Independent verdicts and findings reconstructed from the ledger.</p></div>'
-    + runCard(d) + (audits.length ? '<div class="audit-evidence-head"><h3>Audit evidence</h3><span>'
+    + (audits.length ? '<div class="audit-evidence-head"><h3>Audit evidence</h3><span>'
       + audits.length + ' report' + (audits.length===1?'':'s') + '</span></div>'
       + audits.map(m=>turn(m,d)).join('') : '<div class="empty">No audit evidence yet.</div>');
 }
@@ -7753,7 +7744,6 @@ function renderConversation(d){
     announceThread(messages,d);
     announceCondensation(d);
     const p = chatProgress(d);
-    const live = p && !p.finished ? runCard(d) : '';
     const approval = approvalCard(d);
     const review = reviewCard(d);
     // Optimistic echo: keep the just-sent message + working indicator on screen
@@ -7773,8 +7763,12 @@ function renderConversation(d){
     // One protagonist per screen: the welcome empty state renders only when
     // the timeline holds nothing at all, and the delivery band only when no
     // review card already states the outcome of the same cycle.
-    const body = messages.map(m=>withTurnCost(turn(m,d),m,d)).join('') + optimistic + liveDraftTurn(d) + live + approval + review
-      + admissionCard() + (review ? '' : deliveryStatus(d));
+    // ONE list. Every message and every run event is a row of the same
+    // renderer; the live draft and the folded thinking are rows too; the
+    // status line is the only thing that is not a row, and it is at the foot.
+    const body = streamList(d,streamContext(d,messages)).map(r=>row(r,d)).join('')
+      + optimistic + liveDraftTurn(d) + liveThinkingRow(d) + approval + review
+      + admissionCard() + (review ? '' : deliveryStatus(d)) + statusLine(d);
     html = body || welcome();
   }
   document.getElementById('conversation').innerHTML = html;

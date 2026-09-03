@@ -211,7 +211,8 @@ function withTurnCost(html,m,d){return html;}
 """
 
 _RENDER_SIGS = _MODEL_SIGS + [
-    "const ROW_MARKS=", "const ROW_PHASES=", "const MERGE_UNITS=",
+    "const ROW_MARKS=", "const ROW_KIND_MARKS=", "const ROW_PHASES=",
+    "const MERGE_UNITS=", "const STATUS_PHASE_ROWS=",
     "function rowPhase(r)", "function dropSettledWaits(rows)",
     "function mergeRuns(rows)", "function groupRounds(rows,current)",
     "function streamList(d,ctx)", "function rowText(r)", "function rowMark(r)",
@@ -344,3 +345,102 @@ def test_one_number_per_row_on_the_rendered_line():
     html = _render(state)
     line = re.search(r'<span class="srow-verb">([^<]*)</span>', html).group(1)
     assert len(re.findall(r"\d+", line)) == 1, line
+
+
+# ==================================================== 3. one status line
+_STATUS_SIGS = ["function elapsedWords(seconds)", "const PHASE_WORDS=",
+                "function phaseWords(phase)", "function phaseCount(phase,facts)",
+                "const ORB_STATES=", "function orbStateFor(phase)",
+                "function orbMarkup(phase,label,cls)",
+                "function orbWaitingStep(step)", "function runOrbPhase(p)",
+                "function formatUsd(value)", "function statusRoundText(p,d)",
+                "function statusCostText(d,p)", "function statusLine(d)"]
+_STATUS_PRELUDE = """
+let currentLocale='en';const PHASE_ELAPSED_S=5;
+const chatProgress=d=>d.progress;const liveDraftFor=()=>null;
+const liveFileCount=()=>0;const draftCount=()=>0;
+"""
+
+
+def _status(state: dict, locale: str = "en") -> str:
+    from render_decision import eval_page
+
+    return eval_page(WORKTREE, _STATUS_SIGS,
+                     f"currentLocale={json.dumps(locale)};"
+                     f"console.log(statusLine({json.dumps(state)}));",
+                     prelude=_STATUS_PRELUDE).strip()
+
+
+_RUNNING = {"max_rounds": 3, "progress": {
+    "run_id": "r1", "state": "AUDITING", "finished": False, "elapsed": 38,
+    "steps": [{"kind": "round_started", "round_no": 1, "round_limit": 3}]},
+    "usage": {"attribution": {"runs": {"r1": {"api_value_usd": 0.04,
+                                              "unpriced_calls": 0}}}}}
+
+
+@needs_node
+def test_the_status_line_is_the_design_line_in_both_languages():
+    """The design writes the line out in full:
+
+        [orb] 正在撰写 · 第 1/3 轮 · 38 秒 · ≈$0.04            [停止]
+
+    Mutation: drop the round, the elapsed or the cost and the expected string
+    fails; swap elapsedWords for elapsedText and the Chinese reads wrong.
+    """
+    en, zh = _status(_RUNNING), _status(_RUNNING, "zh")
+    assert "The auditor is reading · round 1 of 3 · 38s · ≈$0.04" in en, en
+    assert "审计者正在阅读 · 第 1/3 轮 · 38 秒 · ≈$0.04" in zh, zh
+    for html in (en, zh):
+        assert html.count("<canvas") == 1 and html.count("stream-status") == 2
+        assert "requestStop()" in html
+    assert ">停止<" in zh and ">Stop<" in en
+
+
+@needs_node
+def test_there_is_no_status_line_when_nothing_runs():
+    """Design: "When nothing runs it is not there." Not a line saying idle,
+    not a still orb — nothing.
+
+    Mutation: return the line for a finished run and this fails.
+    """
+    import copy
+
+    finished = copy.deepcopy(_RUNNING)
+    finished["progress"]["finished"] = True
+    assert _status(finished) == ""
+    parked = copy.deepcopy(_RUNNING)
+    parked["progress"]["state"] = "WAITING_FOR_HUMAN"
+    assert _status(parked) == ""
+    assert _status({}) == ""
+
+
+@needs_node
+def test_the_status_line_never_shows_a_cost_it_could_not_price():
+    """One number per row means the numbers that ARE shown are real. A run
+    with unpriced calls and no value has no cost to state.
+
+    Mutation: render `≈$0.00` and this fails.
+    """
+    import copy
+
+    unpriced = copy.deepcopy(_RUNNING)
+    unpriced["usage"]["attribution"]["runs"]["r1"] = {"api_value_usd": 0,
+                                                      "unpriced_calls": 2}
+    assert "≈$" not in _status(unpriced)
+
+
+def test_the_composer_is_never_taken_away_by_the_stream():
+    """Design rule 8. Nothing the stream renders disables the composer, and
+    nothing it renders makes the shell inert.
+
+    Mutation: disable `say` while a run is live and this fails.
+    """
+    from crossaudit.console.page import PAGE
+
+    stream = PAGE[PAGE.index("// ============================================================== THE STREAM"):
+                  PAGE.index("function turn(m,d){")]
+    for forbidden in ("say.disabled", "send.disabled", "setDecidingInert",
+                      "inert", "hub-mode", "deciding"):
+        assert forbidden not in stream, forbidden
+    # The one control the stream owns stops the WORK, never the typing.
+    assert stream.count("requestStop()") == 1

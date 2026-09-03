@@ -353,12 +353,22 @@ console.log(JSON.stringify(out));"""
                          "通常不到 1 分钟 · 约 $0.01", "通常不到 1 分钟"]
 
 
-def test_the_forecast_line_is_one_line_in_the_two_existing_places():
-    start = PAGE[PAGE.index("function optimisticTurn("):PAGE.index("function friendlyModel(") if False else PAGE.index("function userState(d)")]
+def test_the_forecast_line_is_one_line_at_task_start_and_nowhere_else():
+    """R4 kept, narrowed by the activity stream.
+
+    The run card's header carried the forecast beside a step meter; the header
+    is now the status line, which says the RUNNING COST from the billing
+    slice's per-run aggregate. An estimate beside a measurement of the same
+    thing is the weaker of the two, so the forecast stays where it is the only
+    number available — the moment the task is sent.
+
+    Mutation: add forecastLine() back to statusLine and this fails.
+    """
+    start = PAGE[PAGE.index("function optimisticTurn("):PAGE.index("function userState(d)")]
     assert start.count("forecastText(") == 1
-    run_card = PAGE[PAGE.index("function runCard(d){"):PAGE.index("function approvalCard(d){")]
-    assert run_card.count("forecastLine(d)") == 1
-    assert "(live ? forecastLine(d) : '')" in run_card, "only while the run is live"
+    status = PAGE[PAGE.index("function statusLine(d){"):PAGE.index("function liveThinkingRow(d){")]
+    assert "forecast" not in status
+    assert "statusCostText(d,p)" in status
 
 
 # ============================================================ R5 every branch

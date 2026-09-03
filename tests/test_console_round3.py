@@ -94,10 +94,11 @@ def test_relative_ages_and_durations_are_words_in_both_languages():
     from render_decision import eval_page
 
     out = eval_page(WORKTREE, ["function relAge(seconds)", "function durationText(seconds)",
-                               "function elapsedText(seconds)", "function humaniseDetail(text)"], """
+                               "function elapsedWords(seconds)", "function humaniseDetail(text)"], """
+    let currentLocale='en';
     const rows=[relAge(5),relAge(90),relAge(7200),relAge(86400),relAge(205214),
       'Waiting for the provider · heartbeat '+relAge(205214),'last heartbeat '+relAge(150),
-      elapsedText(12),elapsedText(252),elapsedText(3900),humaniseDetail('no heartbeat for 7200s'),
+      elapsedWords(12),elapsedWords(252),elapsedWords(3900),humaniseDetail('no heartbeat for 7200s'),
       humaniseDetail('other detail')];
     console.log(JSON.stringify(rows.map(v=>[v,zhValue(v)])));
     """)
@@ -107,8 +108,6 @@ def test_relative_ages_and_durations_are_words_in_both_languages():
     assert rows["1 day ago"] == "1 天前" and rows["2 days ago"] == "2 天前"
     assert rows["Waiting for the provider · heartbeat 2 days ago"] == "等待供应商 · 心跳 2 天前"
     assert rows["last heartbeat 2 min ago"] == "最后心跳 2 分钟前"
-    assert rows["12s elapsed"] == "已运行 12 秒" and rows["4m 12s elapsed"] == "已运行 4 分 12 秒"
-    assert rows["1h 5m elapsed"] == "已运行 1 小时 5 分"
     assert rows["no heartbeat for 2 h"] == "已 2 小时无心跳"
     assert rows["other detail"] == "other detail"
 
@@ -116,7 +115,10 @@ def test_relative_ages_and_durations_are_words_in_both_languages():
 def test_no_surface_renders_a_raw_seconds_count():
     script = PAGE.split("<script>")[1].split("</script>")[0]
     assert "+'s ago'" not in script and "p.elapsed + 's elapsed'" not in script
-    assert "heartbeatAge+'s" not in script and "elapsedText(p.elapsed)" in script
+    # elapsedText went with the run card's meta row; the stream says elapsed
+    # inside a sentence, where elapsedWords reads correctly in both languages.
+    assert "heartbeatAge+'s" not in script and "function elapsedText" not in script
+    assert "function elapsedWords(seconds)" in script
     assert "等待 provider" not in PAGE and "Waiting for provider'" not in PAGE
 
 
@@ -194,4 +196,4 @@ def test_the_review_card_button_carries_its_cycle_and_falls_back_to_the_detail()
     handler = handler[:handler.index("openInspector();")]
     assert "decisionRowFor(lastState,id,sha)" in handler
     assert "expandedReviews.add(id);render(lastState);openPanelTab('audits');" in handler
-    assert "pendingLine" in PAGE[PAGE.index("function reviewCard(d){"):PAGE.index("function runCard(d){")]
+    assert "pendingLine" in PAGE[PAGE.index("function reviewCard(d){"):PAGE.index("function approvalCard(d){")]

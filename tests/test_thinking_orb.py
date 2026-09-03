@@ -3,7 +3,7 @@
 Two halves. The wrapper (``crossauditOrb``) is executed under node over a
 canvas stub — theme, DPR, the frame loop, off-screen and hidden-tab pauses,
 reduced motion, state switches, destroy. The surfaces (the optimistic turn,
-the run card's newest live row) are the SHIPPED renderers executed over
+the stream's status line) are the SHIPPED renderers executed over
 progress payloads in EN and ZH, so the state map is asserted on what is
 rendered and the aria-label on what a reader is told: the phase sentence,
 never the drawing's name.
@@ -439,46 +439,47 @@ NO_ORB_CASES = {
 }
 
 
-def _run_card_program(cases: dict) -> str:
+def _status_line_program(cases: dict) -> str:
+    """The SHIPPED status line, driven under node.
+
+    The run card is gone: the one orb of a live run now leads the ONE line at
+    the foot of the stream (docs/design/ACTIVITY_STREAM.md §The status line),
+    and everything the card used to draw around it — the outcome pill, the step
+    meter, the pipeline, the focus panel — went with it. The invariant this
+    file exists for did not change: one canvas where a state is in progress,
+    labelled with the sentence a person reads beside it.
+    """
     from extract_zh import shipped_js
     program = "\n".join([
         _DOM, f"require({str(VENDORED)!r});", shipped_js(ROOT), _esc(),
-        "const at=()=>'10:27';const artifactList=()=>'';",
-        "const auditStatus=()=>'passed';const chatProgress=d=>d.progress;",
-        "const chatCycles=()=>[];const statusOf=()=>'ready';",
-        "let handoffAt=0,handoffDirection='';const runCostLine=()=>'';let activeChatId='';",
-        "const forecastLine=()=>'';const titleOf=()=>'';",
-        _snippet("const MARK = ") + ";",
+        "const chatProgress=d=>d.progress;let activeChatId='';",
         "let THINKING=null,DRAFT=null;const liveDraftFor=()=>DRAFT;const liveThinkingFor=()=>THINKING;",
         _snippet("const localeText = (bundle, base) =>") + ";",
         "const t = value => currentLocale==='zh' ? zhValue(value) : value;",
         _snippet("function draftCount(text)"),
-        _snippet("function durationText("),
-        _snippet("function elapsedText("),
-        _snippet("function humaniseDetail("),
-        _snippet("const ACTOR_NAMES") + ";",
-        _snippet("const ACTOR_MARKS") + ";",
-        _snippet("function conciseDetail("),
+        _snippet("function formatUsd(value)"),
         _orb_block(),
-        _snippet("function activityRow(s)"),
-        _snippet("const CLOCK_KINDS") + ";",
-        _snippet("function collapseClockRows("),
-        _snippet("function runCard(d)"),
+        _snippet("function statusRoundText(p,d)"),
+        _snippet("function statusCostText(d,p)"),
+        _snippet("function statusLine(d)"),
         f"const CASES={json.dumps(cases, ensure_ascii=False)};const out={{}};",
         r"""for(const locale of ['en','zh']){currentLocale=locale;out[locale]={};
-for(const [name,c] of Object.entries(CASES)){THINKING=c.thinking||null;DRAFT=c.draft||null;out[locale][name]=runCard(c.state);}}
+for(const [name,c] of Object.entries(CASES)){THINKING=c.thinking||null;DRAFT=c.draft||null;out[locale][name]=statusLine(c.state);}}
 console.log(JSON.stringify(out));"""])
     return program
 
 
 @node
-def test_the_run_card_renders_one_orb_on_the_live_phase_line_en_and_zh():
-    """D149: exactly one orb per card, on the line that says what is happening
-    now — never on an event row, which is a thing that already happened.
-    Mutation: put the orb back on the newest event row and the card carries
-    two canvases; drop the count from the generating line and the `draft`
-    case's expected words fail."""
-    out = _run(_run_card_program(RUN_CASES))
+def test_the_status_line_renders_one_orb_on_the_live_phase_line_en_and_zh():
+    """D149, on the surface that replaced the run card: exactly one orb while
+    a run is live, on the line that says what is happening now — never on an
+    event row, which is a thing that already happened.
+
+    Mutation: put the orb back on a finished row and the line carries two
+    canvases; drop the count from the generating line and the `draft` case's
+    expected words fail.
+    """
+    out = _run(_status_line_program(RUN_CASES))
     for locale in ("en", "zh"):
         for name, case in RUN_CASES.items():
             html = out[locale][name]
@@ -486,7 +487,7 @@ def test_the_run_card_renders_one_orb_on_the_live_phase_line_en_and_zh():
             assert len(orbs) == 1, (locale, name, html)
             orb = orbs[0]
             assert orb["data-orb"] == case["orb"], (locale, name, orb)
-            assert orb["data-orb-size"] == "20" and orb["role"] == "img" and "event-orb" in orb["class"]
+            assert orb["data-orb-size"] == "20" and orb["role"] == "img" and "srow-orb" in orb["class"]
             label = _unescape(orb["aria-label"])
             expected = case["line"][locale]
             assert label == expected, (locale, name, label)
@@ -494,21 +495,22 @@ def test_the_run_card_renders_one_orb_on_the_live_phase_line_en_and_zh():
             if locale == "zh":
                 assert re.search(r"[一-鿿]", label), (name, label)
             # The orb is the mark of the line whose words label it.
-            row = html[html.index('<div class="live-phase'):]
-            row = row[:row.index("</div>", row.index("live-phase-text"))]
-            assert expected in _unescape(row), (locale, name)
-            # Every event row keeps its own actor mark; the orb is not one.
+            text = html[html.index('<span class="stream-status-text">'):]
+            text = text[:text.index("</span>")]
+            assert expected in _unescape(text), (locale, name)
             assert html.count("<canvas") == 1
+            # Interruptible always: the one control on the line stops the work.
+            assert "stream-stop" in html and "requestStop()" in html
 
 
 @node
-def test_no_orb_where_nothing_is_in_progress():
-    out = _run(_run_card_program(NO_ORB_CASES))
+def test_no_status_line_where_nothing_is_in_progress():
+    """A finished, parked or person-waiting run is not "running", so there is
+    no line at all — not a line with a still orb on it."""
+    out = _run(_status_line_program(NO_ORB_CASES))
     for locale in ("en", "zh"):
         for name in NO_ORB_CASES:
-            html = out[locale][name]
-            assert "<canvas" not in html, (locale, name)
-            assert "event-mark" in html, "the rows keep their ordinary marks"
+            assert out[locale][name] == "", (locale, name)
 
 
 # ================================================================ the markup
@@ -518,7 +520,7 @@ def test_the_dots_and_their_keyframes_are_gone_and_the_orb_is_mounted_after_each
     # D149: the 64 px standalone orb is deleted, size and all.
     assert "turn-orb" not in PAGE and "width:64px" not in PAGE
     assert ".event-orb{width:20px;height:20px;margin:1px}" in PAGE
-    assert ".live-phase{" in PAGE
+    assert ".live-phase{" in PAGE and ".srow-orb{" in PAGE
     conv = PAGE[PAGE.index("document.getElementById('conversation').innerHTML = html;"):]
     assert conv.split("\n")[1].strip() == "mountOrbs(document.getElementById('conversation'));"
     # The orb's label is always the caller's sentence; the engine's default
@@ -534,8 +536,14 @@ def test_the_orb_is_the_mark_of_a_line_of_words_never_an_event_of_its_own():
     assert "orbMarkup(" in line and "live-phase-text" in line
     turn = _snippet("function optimisticTurn(text, queued, intake, replying)")
     assert turn.count("orbMarkup(") == 0 and turn.count("livePhaseLine(") == 1
-    row = _snippet("function activityRow(s)")
-    assert "orbMarkup(" not in row
-    assert "'<span class=\"event-mark '" in row
-    card = _snippet("function runCard(d)")
-    assert card.count("orbMarkup(") == 0 and card.count("livePhaseLine(") == 1
+    # The stream: a row reaches the orb only for a `wait` shape, and only
+    # through `rowMark`, which labels it with `rowText(r)` — the very line the
+    # canvas sits beside. Every other shape gets a letter or a dot.
+    mark = _snippet("function rowMark(r)")
+    assert mark.count("orbMarkup(") == 1 and "rowText(r)" in mark
+    assert "'<span class=\"srow-mark '" in mark
+    row = _snippet("function row(r,d)")
+    assert row.count("orbMarkup(") == 0 and row.count("rowMark(r)") == 1
+    # The status line: one orb, labelled with the sentence it leads.
+    status = _snippet("function statusLine(d)")
+    assert status.count("orbMarkup(") == 1 and "orbMarkup(phase,text," in status

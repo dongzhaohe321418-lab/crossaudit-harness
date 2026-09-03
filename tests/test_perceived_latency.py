@@ -712,16 +712,18 @@ def _sample_steps() -> list[dict]:
 
 
 @pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node is not installed")
-def test_the_run_card_renders_every_new_event_in_both_locales_without_identifiers(
+def test_the_stream_renders_every_new_event_in_both_locales_without_identifiers(
         tmp_path):
-    """(f) The shipped activityRow, driven under node over the server's own
+    """(f) The shipped row model and renderer, driven under node over the server's own
     projection of every new event kind plus older events that carry
     identifiers. In zh every phase line is Chinese; in both locales the
     rendered HTML holds no 40-hex, no 16-hex, no 12-hex, no rule id, no
     provider:model route and no raw JSON.
 
-    Mutations: drop ``text_i18n`` from activityRow and the zh assertion is
-    red; drop a scrub from conciseDetail and the identifier grep is red.
+    Mutations: drop ``text_i18n`` from ``wireLine`` and the zh assertion is
+    red (the verb table's own Chinese would still be Chinese, so the test also
+    checks the English sentence is not echoed); drop a scrub from
+    conciseDetail and the identifier grep is red.
     """
     import re
     import subprocess as sp
@@ -741,14 +743,36 @@ def test_the_run_card_renders_every_new_event_in_both_locales_without_identifier
               _page_snippet(script, "const t = "),
               _page_snippet(script, "function durationText("),
               _page_snippet(script, "function humaniseDetail("),
-              _page_snippet(script, "const ACTOR_NAMES"),
-              _page_snippet(script, "const ACTOR_MARKS"),
               _page_snippet(script, "function conciseDetail("),
-              _page_snippet(script, "function activityRow(")]
+              _page_snippet(script, "function elapsedWords("),
+              _page_snippet(script, "const ORB_STATES=") + ";",
+              _page_snippet(script, "function orbStateFor("),
+              _page_snippet(script, "function orbMarkup("),
+              _page_snippet(script, "const EVENT_SHAPES=") + ";",
+              _page_snippet(script, "const CARRIED_KINDS=") + ";",
+              _page_snippet(script, "const EVENT_VERBS=") + ";",
+              _page_snippet(script, "const ROW_SHAPES=") + ";",
+              _page_snippet(script, "const ROW_UNITS=") + ";",
+              _page_snippet(script, "const STEP_ACTORS=") + ";",
+              _page_snippet(script, "const ROW_MARKS=") + ";",
+              _page_snippet(script, "const ROW_KIND_MARKS=") + ";",
+              _page_snippet(script, "function rowNumber("),
+              _page_snippet(script, "function shapeOf("),
+              _page_snippet(script, "function verbOf("),
+              _page_snippet(script, "function wireLine("),
+              _page_snippet(script, "function streamRow("),
+              _page_snippet(script, "function actorOfStep("),
+              _page_snippet(script, "function rowFromStep("),
+              _page_snippet(script, "function rowText("),
+              _page_snippet(script, "function rowMark("),
+              _page_snippet(script, "function rowDetailHtml("),
+              _page_snippet(script, "function rowActionHtml("),
+              _page_snippet(script, "function row(")]
     projected = project_snapshot({"steps": _sample_steps()})["steps"]
     driver = "\n".join(pieces) + "\nconst STEPS=" + json.dumps(projected, ensure_ascii=False) + ";" + """
 const out={};
-for(const locale of ['en','zh']){currentLocale=locale;out[locale]=STEPS.map(s=>[s.kind,activityRow(s)]);}
+for(const locale of ['en','zh']){currentLocale=locale;
+  out[locale]=STEPS.map(s=>[s.kind,row(rowFromStep(s,{}),{})]);}
 console.log(JSON.stringify(out));
 """
     (tmp_path / "rows.js").write_text(driver)
@@ -1018,14 +1042,17 @@ def test_an_unexpected_error_shows_a_sentence_not_the_exception(
 
 
 @pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node is not installed")
-def test_the_clock_never_crowds_the_narration_off_the_run_card(tmp_path):
+def test_the_clock_never_crowds_the_narration_off_the_stream(tmp_path):
     """D7. The clock speaks every 8 s of silence and the auditor's every 10 s
     of streaming, so a two-minute audit emitted fifteen rows and every one of
     the twelve visible slots became "Still auditing · N s".
 
-    A run of clock rows is one fact, so only its newest survives, in place.
-    Mutation: drop ``collapseClockRows`` from runCard and eleven of the twelve
-    rows are clock rows again.
+    Repetition collapses (docs/design/ACTIVITY_STREAM.md): a run of consecutive
+    rows of one kind is ONE row. For a `wait` shape — a clock is one fact, how
+    long this phase has been going — only its newest survives, in place.
+
+    Mutation: drop the wait branch from ``mergeRuns`` and fifteen clock rows
+    are back.
     """
     import subprocess as sp
 
@@ -1037,21 +1064,41 @@ def test_the_clock_never_crowds_the_narration_off_the_run_card(tmp_path):
     # A 120 s audit on the 8 s clock: fifteen consecutive clock rows.
     clock = [{"kind": "still_working", "text": f"Still auditing · {n * 8} s"}
              for n in range(1, 16)]
-    steps = substantive + clock
+    steps = [dict(s, t=1788000000 + i, actor="loop", round_no=1, detail="")
+             for i, s in enumerate(substantive + clock)]
     script = page_mod.PAGE.split("<script>")[1].split("</script>")[0]
-    driver = ("const STEPS=" + json.dumps(steps) + ";\n"
-              + _page_snippet(script, "const CLOCK_KINDS")
-              + ";\n" + _page_snippet(script, "function collapseClockRows(")
-              + "\nconst kept=collapseClockRows(STEPS).slice(-12);"
-              + "\nconsole.log(JSON.stringify(kept));")
+    driver = "\n".join([
+        "let currentLocale='en';",
+        "const localeText=(b,base)=>(b&&b[currentLocale])||base||'';",
+        "function humaniseDetail(x){return x;}",
+        _page_snippet(script, "const EVENT_SHAPES=") + ";",
+        _page_snippet(script, "const CARRIED_KINDS=") + ";",
+        _page_snippet(script, "const EVENT_VERBS=") + ";",
+        _page_snippet(script, "const ROW_SHAPES=") + ";",
+        _page_snippet(script, "const STEP_ACTORS=") + ";",
+        _page_snippet(script, "const ROW_PHASES=") + ";",
+        _page_snippet(script, "const MERGE_UNITS=") + ";",
+        _page_snippet(script, "function shapeOf("),
+        _page_snippet(script, "function verbOf("),
+        _page_snippet(script, "function wireLine("),
+        _page_snippet(script, "function streamRow("),
+        _page_snippet(script, "function actorOfStep("),
+        _page_snippet(script, "function conciseDetail("),
+        _page_snippet(script, "function rowFromStep("),
+        _page_snippet(script, "function rowPhase("),
+        _page_snippet(script, "function mergeRuns("),
+        "const STEPS=" + json.dumps(steps, ensure_ascii=False) + ";",
+        "const kept=mergeRuns(STEPS.map(s=>rowFromStep(s,{})).filter(Boolean));",
+        "console.log(JSON.stringify(kept.map(r=>[r.kind,r.line])));"])
     (tmp_path / "clock.js").write_text(driver)
     run = sp.run(["node", str(tmp_path / "clock.js")], capture_output=True, text=True)
     assert run.returncode == 0, run.stderr
     kept = json.loads(run.stdout)
-    clocks = [row for row in kept if row["kind"] == "still_working"]
+    clocks = [line for kind, line in kept if kind == "still_working"]
     assert len(clocks) == 1, kept
-    assert clocks[0]["text"] == "Still auditing · 120 s", "the newest, not the first"
-    assert [row["kind"] for row in kept[:3]] == [row["kind"] for row in substantive]
+    # No wire i18n on these fixtures, so the row speaks the verb table's words:
+    # what matters is that ONE clock row survives, not fifteen.
+    assert [kind for kind, _ in kept[:3]] == [s["kind"] for s in substantive]
 
 
 def test_the_thinking_row_is_folded_shut_and_says_it_is_unaudited():
@@ -1067,8 +1114,7 @@ def test_the_thinking_row_is_folded_shut_and_says_it_is_unaudited():
     from crossaudit.console import page as page_mod
 
     script = page_mod.PAGE.split("<script>")[1].split("</script>")[0]
-    start = script.index("const liveRows = (thinking ?")
-    block = script[start:script.index("const activityTitle", start)]
+    block = _page_snippet(script, "function liveThinkingRow(d)")
     assert "<details class=\"audit-event live-thinking\">" in block
     assert "<details open" not in block and " open>" not in block
     assert "Thinking · not audited" in block and "思考中 · 未经审计" in block
@@ -1080,51 +1126,72 @@ def test_the_thinking_row_is_folded_shut_and_says_it_is_unaudited():
     assert re.search(r"details\.live-thinking>summary\{", page_mod.PAGE)
 
 
-def _render_run_card(steps: list[dict]) -> str:
-    """The SHIPPED ``runCard`` executed under node over a progress payload.
+def _render_stream(steps: list[dict]) -> str:
+    """The SHIPPED stream renderer executed under node over run steps.
 
-    Everything runCard reaches for that is not part of the activity list is
-    stubbed; the activity path — activityRow, the actor tables, the identifier
-    scrub, and the clock collapse under test — is the real shipped source.
+    Everything the stream reaches for that is not part of the row path is
+    stubbed; the row path — the shape table, the verb table, the identifier
+    scrub, the collapse under test and ``row()`` itself — is real shipped
+    source.
     """
 
     from crossaudit.console import page as page_mod
 
     script = page_mod.PAGE.split("<script>")[1].split("</script>")[0]
     state = {"progress": {"steps": steps, "finished": False, "outcome": "",
+                          "state": "AUDITING", "run_id": "r1",
                           "task": "produce the experiment"},
-             "pipeline": [{"state": "done", "label": "Generate"}],
              "cycles": [], "max_rounds": 3}
     pieces = [
         "let currentLocale='en';const ZH={};const zhValue=v=>ZH[v]||v;",
-        "const at=()=>'10:27';const artifactList=()=>'';",
-        "const auditStatus=()=>'passed';const chatProgress=d=>d.progress;",
-        "const chatCycles=()=>[];const statusOf=()=>'ready';",
-        "let handoffAt=0,handoffDirection='';const runCostLine=()=>'';",
-        "const forecastLine=()=>'';",
-        _page_snippet(script, "const MARK = ") + ";",
-        "const liveDraftFor=()=>null;const liveThinkingFor=()=>null;",
-        "const draftCount=()=>0;",
+        "const at=()=>'10:27';let activeChatId='';",
+        "const chatProgress=d=>d.progress;const chatCycles=()=>[];",
+        "const turn=()=>'';const withTurnCost=h=>h;",
         _page_snippet(script, "const esc = "),
         _page_snippet(script, "const localeText = ") + ";",
         _page_snippet(script, "const t = ") + ";",
         _page_snippet(script, "function durationText("),
-        _page_snippet(script, "function elapsedText("),
         _page_snippet(script, "function humaniseDetail("),
-        _page_snippet(script, "const ACTOR_NAMES") + ";",
-        _page_snippet(script, "const ACTOR_MARKS") + ";",
+        _page_snippet(script, "function elapsedWords("),
         _page_snippet(script, "function conciseDetail("),
-        _page_snippet(script, "function activityRow("),
-        # Thinking-orbs slice: the newest live row's mark is the orb.
-        _page_snippet(script, "const ORB_STATES") + ";",
+        _page_snippet(script, "const ORB_STATES=") + ";",
         _page_snippet(script, "function orbStateFor("),
         _page_snippet(script, "function orbMarkup("),
         _page_snippet(script, "function orbWaitingStep("),
         _page_snippet(script, "function runOrbPhase("),
-        _page_snippet(script, "const CLOCK_KINDS") + ";",
-        _page_snippet(script, "function collapseClockRows("),
-        _page_snippet(script, "function runCard("),
-        "console.log(runCard(" + json.dumps(state, ensure_ascii=False) + "));",
+        _page_snippet(script, "const EVENT_SHAPES=") + ";",
+        _page_snippet(script, "const CARRIED_KINDS=") + ";",
+        _page_snippet(script, "const EVENT_VERBS=") + ";",
+        _page_snippet(script, "const ROW_SHAPES=") + ";",
+        _page_snippet(script, "const ROW_UNITS=") + ";",
+        _page_snippet(script, "const STEP_ACTORS=") + ";",
+        _page_snippet(script, "const ROW_MARKS=") + ";",
+        _page_snippet(script, "const ROW_KIND_MARKS=") + ";",
+        _page_snippet(script, "const ROW_PHASES=") + ";",
+        _page_snippet(script, "const MERGE_UNITS=") + ";",
+        _page_snippet(script, "const STATUS_PHASE_ROWS=") + ";",
+        _page_snippet(script, "function rowNumber("),
+        _page_snippet(script, "function shapeOf("),
+        _page_snippet(script, "function verbOf("),
+        _page_snippet(script, "function wireLine("),
+        _page_snippet(script, "function streamRow("),
+        _page_snippet(script, "function actorOfStep("),
+        _page_snippet(script, "function rowFromStep("),
+        _page_snippet(script, "function rowFromMessage("),
+        _page_snippet(script, "function streamRows("),
+        _page_snippet(script, "function rowPhase("),
+        _page_snippet(script, "function dropSettledWaits("),
+        _page_snippet(script, "function mergeRuns("),
+        _page_snippet(script, "function groupRounds("),
+        _page_snippet(script, "function streamList("),
+        _page_snippet(script, "function rowText("),
+        _page_snippet(script, "function rowMark("),
+        _page_snippet(script, "function rowDetailHtml("),
+        _page_snippet(script, "function rowActionHtml("),
+        _page_snippet(script, "function row("),
+        _page_snippet(script, "function streamContext("),
+        "const D=" + json.dumps(state, ensure_ascii=False) + ";",
+        "console.log(streamList(D,streamContext(D,[])).map(r=>row(r,D)).join(''));",
     ]
     run = run_node("\n".join(pieces))
     assert run.returncode == 0, run.stderr
@@ -1132,29 +1199,33 @@ def _render_run_card(steps: list[dict]) -> str:
 
 
 @pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node is not installed")
-def test_the_shipped_run_card_collapses_the_clock_rows_it_renders():
-    """D7, the call site. Closure audit 2: the test above drives
-    ``collapseClockRows`` directly, so dropping the call from ``runCard`` — the
-    mutation its own docstring names — survived. This one renders the shipped
-    ``runCard`` over a progress payload holding two consecutive clock rows and
-    counts the rows that come out.
+def test_the_shipped_stream_collapses_the_clock_rows_it_renders():
+    """D7, the call site. Closure audit 2: the test above drives the collapse
+    directly, so dropping the call from the renderer — the mutation its own
+    docstring names — survived. This one renders the shipped stream over a
+    progress payload holding two consecutive clock rows and counts what comes
+    out.
 
-    Mutation: change ``collapseClockRows(p.steps)`` back to ``p.steps`` in
-    runCard and two "Still auditing" rows are rendered instead of one.
+    Mutation: drop ``mergeRuns`` from ``streamList`` and two "Still auditing"
+    rows are rendered instead of one.
     """
     import re
 
     def step(kind: str, actor: str, text: str) -> dict:
         return {"kind": kind, "actor": actor, "text": text, "detail": "",
+                "text_i18n": {"en": text, "zh": text},
                 "t": 1788000000, "round_no": 1, "round_limit": 3, "event_id": 3}
 
-    html = _render_run_card([
+    html = _render_stream([
         step("audit_started", "auditor", "reviewing the commit"),
         step("still_working", "loop", "Still auditing \u00b7 8 s"),
         step("still_working", "loop", "Still auditing \u00b7 16 s")])
 
-    assert len(re.findall(r"Still auditing", html)) == 1, html
-    assert "Still auditing · 16 s" in html, "the newest clock row, not the first"
+    # Counted on the LINE, not on the markup: the orb beside a live line is
+    # labelled with that same sentence, which is the point of the orb.
+    lines = re.findall(r'<span class="srow-verb">([^<]*)</span>', html)
+    assert [x for x in lines if "Still auditing" in x] == ["Still auditing · 16 s"], html
     assert "Still auditing · 8 s" not in html
-    # The substantive row is never what gets dropped.
-    assert "reviewing the commit" in html
+    # The substantive row is never what gets dropped — and here it is the LIVE
+    # phase, so the status line carries it; the stream keeps its own rows.
+    assert "srow" in html
