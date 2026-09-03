@@ -45,7 +45,7 @@ test("server-renders the CrossAudit product story and real download path", async
   assert.match(html, /HPC and Slurm/);
   assert.equal([...html.matchAll(/<section\b/g)].length, 10);
   assert.match(html, /Download for macOS/);
-  assert.match(html, /dongzhaohe321418-lab\/crossaudit_v4\/releases\/latest/);
+  assert.match(html, /dongzhaohe321418-lab\/crossaudit-harness\/releases\/latest/);
   assert.match(html, /community build is ad-hoc signed/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
   assert.doesNotMatch(html, /Codex/);
@@ -74,7 +74,7 @@ test("keeps accessibility, release fallback, and responsive safeguards in source
   assert.match(component, /t\.flowSteps\[auditState\]/);
   assert.match(component, /className="flow-events"/);
   assert.match(component, /aria-expanded=\{indepOpen\}/);
-  assert.match(component, /api\.github\.com\/repos\/dongzhaohe321418-lab\/crossaudit_v4\/releases\/latest/);
+  assert.match(component, /api\.github\.com\/repos\/dongzhaohe321418-lab\/crossaudit-harness\/releases\/latest/);
   assert.match(component, /assets\.dmg\?\.browser_download_url \?\? RELEASES/);
   assert.match(component, /asset\.name\.endsWith\("\.sha256"\)/);
   assert.match(component, /assets\.checksum \? \(/);
