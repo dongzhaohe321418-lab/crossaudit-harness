@@ -172,6 +172,27 @@ def post_json_to(console: str, path: str, payload: dict):
         return response.status, json.loads(response.read()), dict(response.headers)
 
 
+def settled_say(console: str, accepted: dict, timeout: float = 5.0) -> dict:
+    """The result ``say()`` produced for an accepted message (D150).
+
+    ``/api/say`` answers ``{accepted, intake}`` at once and runs the lane in a
+    worker; the outcome lands on the state's ``intake`` record. Polls the same
+    ``/api/state`` the page reads until that record is finished.
+    """
+    import time
+
+    assert accepted.get("accepted") is True, accepted
+    state_url = console.replace("/?t=", "/api/state?t=")
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        _status, raw, _headers = fetch(state_url)
+        intake = json.loads(raw).get("intake") or {}
+        if intake.get("id") == accepted["intake"] and intake.get("finished"):
+            return intake
+        time.sleep(0.02)
+    raise AssertionError("the accepted message never settled")
+
+
 def post_json(console: str, payload: dict):
     return post_json_to(console, "/api/say", payload)
 
@@ -407,7 +428,8 @@ def test_validated_attachments_reach_say_only_after_consent(console, monkeypatch
 
     seen = {}
 
-    def fake_say(_cfg, text, *, attachments, attachment_consent, chat_id=""):
+    def fake_say(_cfg, text, *, attachments, attachment_consent, chat_id="",
+                 watch=None):
         seen.update(text=text, attachments=attachments,
                     attachment_consent=attachment_consent, chat_id=chat_id)
         return {"asked": False, "lane": "generator", "confidence": 1.0,
@@ -418,7 +440,12 @@ def test_validated_attachments_reach_say_only_after_consent(console, monkeypatch
     status, body, _headers = post_json(console, {
         "text": "Use it", "attachments": [attachment("input.csv", b"x,y\n1,2\n")],
         "attachment_consent": True})
-    assert status == 200 and body["attachments_accepted"] is True
+    # D150: the POST answers "accepted"; the lane result is read from the
+    # intake record on the state. Mutation: answer the lane inline again and
+    # ``accepted`` disappears from the body, which settled_say refuses.
+    assert status == 200 and body["accepted"] is True
+    result = settled_say(console, body)["result"]
+    assert result["attachments_accepted"] is True
     assert seen["attachment_consent"] is True
     assert len(seen["chat_id"]) == 16
     assert seen["attachments"][0].text == "x,y\n1,2\n"
@@ -441,7 +468,8 @@ def test_chunked_http_batch_accepts_large_binary_and_reaches_say(
     assert status == 200 and uploaded["complete"] is True
     seen = {}
 
-    def fake_say(_cfg, text, *, attachments, attachment_consent, chat_id=""):
+    def fake_say(_cfg, text, *, attachments, attachment_consent, chat_id="",
+                 watch=None):
         seen.update(text=text, attachments=attachments, chat_id=chat_id)
         return {"asked": False, "lane": "generator", "confidence": 1.0,
                 "reasoning": "test", "executed": "building: smoke",
@@ -453,7 +481,9 @@ def test_chunked_http_batch_accepts_large_binary_and_reaches_say(
         "attachment_consent": True,
     })
 
-    assert status == 200 and body["attachments_accepted"] is True
+    assert status == 200 and body["accepted"] is True      # D150, see above
+    result = settled_say(console, body)["result"]
+    assert result["attachments_accepted"] is True
     item = seen["attachments"][0]
     assert item.name == "evidence.bin" and item.size == len(data)
     assert item.text is None and item.source.read_bytes() == data

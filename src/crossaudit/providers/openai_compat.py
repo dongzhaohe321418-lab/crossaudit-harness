@@ -10,19 +10,17 @@ from __future__ import annotations
 
 import codecs
 import json
-import secrets
-import time
 from urllib.parse import urlparse
 
 from ..errors import ProviderDenial
 from .base import (Reply, egress_check, read_key, request_json, request_stream,
                    sha256_text, vendor_message)
 from .specs import capability_card
+from .streaming import (STREAM_CHUNK_BYTES, STREAM_FLUSH_SECONDS, ChunkEmitter,
+                        take_prefix)
 
 BUILTIN_ORIGIN = "https://api.openai.com"
 BUILTIN_BASE = "https://api.openai.com/v1"
-STREAM_FLUSH_SECONDS = 0.200
-STREAM_CHUNK_BYTES = 8 * 1024
 
 
 def _origin(url: str) -> str:
@@ -99,83 +97,17 @@ def _request_stream(url: str, payload: dict, headers: dict, timeout: float,
             on_bytes=parser.feed, on_idle=parser.idle)
 
 
-def _take_prefix(value: str, limit: int = STREAM_CHUNK_BYTES) -> tuple[str, str]:
-    """Split at a character boundary without exceeding a UTF-8 byte limit."""
-    used = 0
-    for index, char in enumerate(value):
-        size = len(char.encode("utf-8"))
-        if used + size > limit:
-            return value[:index], value[index:]
-        used += size
-    return value, ""
-
-
-class _ChunkEmitter:
-    """Coalesce decoded text before assigning contiguous consumer sequence."""
-
-    def __init__(self, callback, *, clock=time.monotonic) -> None:
-        self.callback = callback
-        self.clock = clock
-        self.stream_id = secrets.token_hex(16)
-        self.seq = 0
-        self.pending = ""
-        self.pending_since: float | None = None
-        self.first = True
-        self.finished = False
-
-    def _emit(self, text: str, *, done: bool = False,
-              outcome: str | None = None) -> None:
-        stream = {"id": self.stream_id, "seq": self.seq, "done": done}
-        if outcome is not None:
-            stream["outcome"] = outcome
-        self.callback(text, stream)
-        self.seq += 1
-
-    def _flush(self) -> None:
-        if not self.pending:
-            self.pending_since = None
-            return
-        text, self.pending = _take_prefix(self.pending)
-        self._emit(text)
-        self.pending_since = self.clock() if self.pending else None
-
-    def feed(self, text: str) -> None:
-        if self.finished or not text:
-            return
-        now = self.clock()
-        if not self.pending:
-            self.pending_since = now
-        self.pending += text
-        if self.first:
-            # The first decoded text is visible immediately, independently of
-            # provider token size and before the 200 ms coalescing window.
-            self._flush()
-            self.first = False
-        while len(self.pending.encode("utf-8")) >= STREAM_CHUNK_BYTES:
-            self._flush()
-        if (self.pending and self.pending_since is not None
-                and now - self.pending_since >= STREAM_FLUSH_SECONDS):
-            self._flush()
-
-    def idle(self) -> None:
-        if (self.pending and self.pending_since is not None
-                and self.clock() - self.pending_since >= STREAM_FLUSH_SECONDS):
-            self._flush()
-
-    def finish(self, outcome: str) -> None:
-        if self.finished:
-            return
-        while self.pending:
-            self._flush()
-        self._emit("", done=True, outcome=outcome)
-        self.finished = True
+# The coalescer is shared with every streaming adapter (D4 contract, one copy).
+_take_prefix = take_prefix
+_ChunkEmitter = ChunkEmitter
 
 
 class _ChatStream:
     """Incrementally decode and assemble OpenAI-compatible SSE data events."""
 
-    def __init__(self, emitter: _ChunkEmitter) -> None:
+    def __init__(self, emitter: _ChunkEmitter, thinking: _ChunkEmitter | None = None) -> None:
         self.emitter = emitter
+        self.thinking = thinking
         self.decoder = codecs.getincrementaldecoder("utf-8")("strict")
         self.lines = ""
         self.data_lines: list[str] = []
@@ -240,6 +172,13 @@ class _ChatStream:
             return
         first = choices[0]
         delta = first.get("delta") if isinstance(first, dict) else None
+        # Reasoning-model extensions (``reasoning_content`` on DeepSeek and
+        # compatible origins) are summarised thinking: display-only, kept
+        # apart from the completion text and never committed.
+        thought = (delta.get("reasoning_content") or delta.get("reasoning")
+                   if isinstance(delta, dict) else None)
+        if isinstance(thought, str) and thought and self.thinking is not None:
+            self.thinking.feed(thought)
         content = delta.get("content") if isinstance(delta, dict) else None
         if content is None:
             return
@@ -274,7 +213,7 @@ def complete(*, model: str, system: str, prompt: str, key_env: str,
              base_url: str | None = None, allow_custom: bool = False,
              max_tokens: int = 4096, timeout: float = 120.0,
              reasoning_effort: str | None = None,
-             on_chunk=None,
+             on_chunk=None, on_thinking=None,
              _builtin_base: str = BUILTIN_BASE,
              _extra_headers: dict[str, str] | None = None,
              _official_bases: tuple[str, ...] = (),
@@ -318,7 +257,8 @@ def complete(*, model: str, system: str, prompt: str, key_env: str,
         if _vendor == "openai" and is_builtin:
             payload["stream_options"] = {"include_usage": True}
         emitter = _ChunkEmitter(on_chunk)
-        parser = _ChatStream(emitter)
+        thinking = _ChunkEmitter(on_thinking) if on_thinking is not None else None
+        parser = _ChatStream(emitter, thinking)
         try:
             header_rid = _request_stream(
                 url, payload, headers, timeout, parser,
@@ -330,19 +270,22 @@ def complete(*, model: str, system: str, prompt: str, key_env: str,
             # event. Only the assembled text — never transport/SSE bytes — is
             # committed by response_sha256.
             emitter.finish("complete")
+            if thinking is not None:
+                thinking.finish("complete")
             return Reply(
                 text=text, request_id=header_rid or parser.request_id,
                 request_sha256=sha256_text(system + "\n" + prompt),
                 response_sha256=sha256_text(text), raw={"usage": parser.usage})
         except Exception:
-            if not emitter.finished:
-                try:
-                    emitter.finish("aborted")
-                except Exception:
-                    # Preserve the original provider/transport failure. A
-                    # callback failure already prevents a successful reply and
-                    # the run's liveness event supersedes the open draft.
-                    pass
+            for open_stream in (emitter, thinking):
+                if open_stream is not None and not open_stream.finished:
+                    try:
+                        open_stream.finish("aborted")
+                    except Exception:
+                        # Preserve the original provider/transport failure. A
+                        # callback failure already prevents a successful reply
+                        # and the run's liveness event supersedes the open draft.
+                        pass
             raise
     data, rid = _request(url, payload, headers, timeout, repair=card.compat_retry)
     try:
@@ -354,3 +297,7 @@ def complete(*, model: str, system: str, prompt: str, key_env: str,
     return Reply(text=text, request_id=rid or data.get("id"),
                  request_sha256=sha256_text(system + "\n" + prompt),
                  response_sha256=sha256_text(text), raw={"usage": data.get("usage", {})})
+
+
+#: Adapter capability (D150): see registry.supports_streaming.
+complete.supports_streaming = True
