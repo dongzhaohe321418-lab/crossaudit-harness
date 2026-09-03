@@ -317,7 +317,8 @@ class StateStore:
     def record_build_escalation(self, repo: str, sha: str, reason: str,
                                 round_: int, chat_id: str = "",
                                 task: str = "", run_id: str = "",
-                                kind: str = "", cause: str = "") -> dict:
+                                kind: str = "", cause: str = "",
+                                locked_by: str = "") -> dict:
         """Persist a build that stopped before any auditable revision existed.
 
         Provider refusals can consume the whole generator budget before there is
@@ -355,6 +356,12 @@ class StateStore:
                      escalation_kind=kind or classify_escalation_kind(reason))
             if cause:
                 c["escalation_cause"] = cause[:64]
+            if locked_by:
+                # The cycle whose pending decision refused this commit (the
+                # escalation lock, open_or_advance). Recorded on the REFUSED
+                # commit's own cycle so the holder's record is never rewritten
+                # and the console can open the decision that actually blocks.
+                c["locked_by"] = locked_by[:64]
             if run_id:
                 # The run this decision object records; reconciliation heals
                 # only referenced runs (see escalate()).
