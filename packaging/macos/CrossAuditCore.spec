@@ -5,6 +5,9 @@ from PyInstaller.utils.hooks import collect_data_files
 
 root = Path(SPECPATH).parents[1]
 datas = collect_data_files("crossaudit.scaffold")
+# The console serves a vendored, hash-pinned copy of the Thinking Orbs engine
+# (MIT); it lives beside page.py as data, not code, so PyInstaller must be told.
+datas += collect_data_files("crossaudit.console", includes=["vendor/*.js"])
 datas += collect_data_files("certifi")
 # python-docx computes template paths relative to ``docx.parts.__file__``.
 # Modules normally live only inside PyInstaller's PYZ archive, leaving that
