@@ -197,3 +197,150 @@ _MODEL_SIGS = [
     "function conciseDetail(s)", "function rowFromStep(s,d)",
     "function rowFromMessage(m,d)", "function streamRows(d,ctx)",
 ]
+
+
+# =============================================== 2. one renderer, five shapes
+_RENDER_PRELUDE = _MODEL_PRELUDE + """
+function at(t){return 't'+t;}
+function orbMarkup(phase,label,cls){
+  return '<canvas class="orb '+cls+'" data-orb="'+phase+'" data-orb-size="20" '
+    +'role="img" aria-label="'+esc(label)+'"></canvas>';}
+function turn(m,d){return '<article class="turn"><div class="turn-body">'
+  +esc(m.utterance||m.summary||m.response||'')+'</div></article>';}
+function withTurnCost(html,m,d){return html;}
+"""
+
+_RENDER_SIGS = _MODEL_SIGS + [
+    "const ROW_MARKS=", "const ROW_PHASES=", "const MERGE_UNITS=",
+    "function rowPhase(r)", "function dropSettledWaits(rows)",
+    "function mergeRuns(rows)", "function groupRounds(rows,current)",
+    "function streamList(d,ctx)", "function rowText(r)", "function rowMark(r)",
+    "function rowDetailHtml(detail,d)", "function rowActionHtml(action)",
+    "function row(r,d)",
+]
+
+
+def _render(state: dict, locale: str = "en", body: str = "") -> str:
+    from render_decision import eval_page
+
+    program = (f"currentLocale={json.dumps(locale)};"
+               f"const rows=streamList({{}},{json.dumps(state)});"
+               + (body or "console.log(rows.map(r=>row(r,{})).join(''));"))
+    return eval_page(WORKTREE, _RENDER_SIGS, program, prelude=_RENDER_PRELUDE)
+
+
+@needs_node
+def test_a_live_line_and_its_finished_line_never_both_appear():
+    """Design: a `wait` row is replaced by the `do` row that resolves it.
+
+    Mutation: delete dropSettledWaits from streamList and the drafting line
+    survives beside "Drafted", which is the same fact said twice.
+    """
+    state = {"round": 1, "steps": [
+        {"kind": "generation_started", "t": 10, "actor": "generator", "round_no": 1},
+        {"kind": "generation_completed", "t": 20, "actor": "generator", "round_no": 1},
+        {"kind": "audit_started", "t": 25, "actor": "auditor", "round_no": 1},
+    ]}
+    out = _render(state, body="console.log(JSON.stringify(rows.map(r=>[r.shape,r.kind])));")
+    assert json.loads(out) == [["do", "generation_completed"],
+                              ["wait", "audit_started"]]
+
+
+@needs_node
+def test_repetition_collapses_to_one_row_with_a_count():
+    """Design rule: three consecutive reads become one row with a count.
+
+    The deterministic checks are the case the design names: one row,
+    ``自动检查通过 · 4 项``, expanding to the per-check list.
+
+    Mutation: remove mergeRuns and four rows survive.
+    """
+    steps = [{"kind": "check_finished", "t": 10 + i, "actor": "auditor",
+              "round_no": 1, "text_i18n": {"en": f"check {i} passed",
+                                           "zh": f"检查 {i} 通过"}}
+             for i in range(4)]
+    state = {"round": 1, "steps": steps}
+    shapes = json.loads(_render(
+        state, body="console.log(JSON.stringify(rows.map("
+                    "r=>[r.kind,r.n,(r.merged||[]).length])));"))
+    assert shapes == [["check_finished", {"value": 4, "unit": "checks"}, 4]]
+    en, zh = _render(state).strip(), _render(state, "zh").strip()
+    # The collapsed line speaks the KIND's words: "check 3 passed · 4 checks"
+    # would read as a claim about check 3.
+    assert "Automatic checks passed · 4 checks" in en, en
+    assert "自动检查通过 · 4 项" in zh, zh
+    # The per-check list is the DETAIL, opened in place — not a second region.
+    assert en.count("<details") == 1 and en.count("check 0 passed") == 1
+
+
+@needs_node
+def test_a_finished_round_collapses_into_its_own_outcome_row():
+    """Design: a round is a group, not a region; its number lives on the row.
+
+    Mutation: drop groupRounds and round 1's working rows stay expanded above
+    round 2, which is the "new region per round" the rebuild removes.
+    """
+    state = {"round": 2, "steps": [
+        {"kind": "generation_completed", "t": 10, "actor": "generator", "round_no": 1},
+        {"kind": "audit_blocked", "t": 20, "actor": "auditor", "round_no": 1},
+        {"kind": "generation_completed", "t": 30, "actor": "generator", "round_no": 2},
+    ]}
+    rows = json.loads(_render(state, body="console.log(JSON.stringify(rows.map("
+                                          "r=>[r.kind,r.round,(r.rolled||[]).length])));"))
+    assert rows == [["audit_blocked", 1, 1], ["generation_completed", 2, 0]]
+    zh = _render(state, "zh")
+    assert "需要修改 · 第 1 轮" in zh, zh
+
+
+@needs_node
+def test_no_animation_appears_without_words_beside_it():
+    """Design rule 2. The orb is the MARK of a line; it is labelled with the
+    very sentence it sits beside, so what is heard and what is read agree.
+
+    Mutation: pass '' as the orb label and this fails.
+    """
+    state = {"round": 1, "steps": [
+        {"kind": "audit_started", "t": 10, "actor": "auditor", "round_no": 1}]}
+    for locale, words in (("en", "The auditor is reading"),
+                          ("zh", "审计者正在阅读")):
+        html = _render(state, locale)
+        assert "<canvas" in html
+        assert f'aria-label="{words}"' in html, html
+        assert f">{words}<" in html, html
+
+
+@needs_node
+def test_no_row_opens_a_modal_and_every_detail_opens_in_place():
+    """Design rule 1 and the row anatomy: detail is a disclosure, never a
+    dialog and never a navigation.
+
+    Mutation: render a detail as a <dialog> or an href and this fails.
+    """
+    state = {"round": 1, "steps": [
+        {"kind": "provider_unavailable", "t": 10, "actor": "loop", "round_no": 1,
+         "detail": "the provider returned an empty completion"},
+        {"kind": "generation_completed", "t": 20, "actor": "generator", "round_no": 1},
+    ]}
+    html = _render(state)
+    assert "<details" in html
+    for forbidden in ("<dialog", "role=\"dialog\"", "role=\"alertdialog\"",
+                      "<a href", "location.href", "project-modal"):
+        assert forbidden not in html, forbidden
+
+
+@needs_node
+def test_one_number_per_row_on_the_rendered_line():
+    """Design rule 5, on the surface rather than in the model: the rendered
+    line carries at most one count.
+
+    Mutation: append a second number to rowText and this fails.
+    """
+    import re
+
+    state = {"round": 1, "steps": [
+        {"kind": "check_finished", "t": 10, "actor": "auditor", "round_no": 1},
+        {"kind": "check_finished", "t": 11, "actor": "auditor", "round_no": 1},
+    ]}
+    html = _render(state)
+    line = re.search(r'<span class="srow-verb">([^<]*)</span>', html).group(1)
+    assert len(re.findall(r"\d+", line)) == 1, line

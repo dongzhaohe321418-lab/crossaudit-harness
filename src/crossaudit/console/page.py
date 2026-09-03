@@ -464,6 +464,47 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .welcome h2{font-size:var(--fs-h2);margin:0;letter-spacing:-.015em;font-weight:600}
 .welcome p{color:var(--text-2);max-width:460px;margin:var(--sp-2) auto 0;line-height:1.6;font-size:var(--fs-prose)}
 
+/* The activity stream (docs/design/ACTIVITY_STREAM.md). One list, one visual
+   language, five shapes. A row is a LINE; its detail opens in place. Weight is
+   the only difference between shapes — no shape gets its own region, its own
+   card or its own chrome. */
+.srow{padding:3px 0;color:var(--text-2);font-size:var(--fs-label)}
+.srow-line{display:flex;align-items:center;gap:8px;min-height:22px}
+.srow-verb{min-width:0;overflow-wrap:anywhere}
+.srow-time{margin-left:auto;flex:none;color:var(--text-3);font-size:var(--fs-caption);
+  font-family:var(--font-label)}
+.srow-mark{width:20px;height:20px;border-radius:var(--r-xs);display:grid;place-items:center;
+  flex:none;font-size:10px;font-weight:600;font-family:var(--font-label);
+  background:var(--surface-2);color:var(--text-3)}
+.srow-mark.generator{background:var(--role-g-bg);color:var(--role-g)}
+.srow-mark.auditor{background:var(--role-a-bg);color:var(--role-a)}
+.srow-orb{width:20px;height:20px;flex:none}
+/* Worth knowing, needs no action. */
+.srow-note{color:var(--text-3)}
+/* A round's result: the one line that carries weight, and the actions when it
+   needs a person. Still a row — a rule above and below it, never a card. */
+.srow-outcome{color:var(--text);font-size:var(--fs-body);padding:9px 0;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  margin:var(--sp-2) 0}
+.srow-outcome .srow-verb{font-weight:600}
+.srow-outcome.srow-passed .srow-mark{background:var(--pass-bg);color:var(--pass)}
+.srow-outcome.srow-blocked .srow-mark{background:var(--blocked-bg,var(--surface-2));color:var(--blocked)}
+.srow-outcome.srow-decide .srow-mark{background:var(--escalated-bg);color:var(--escalated)}
+/* Detail opens in place. The disclosure triangle is the control; the summary
+   IS the line, so nothing is repeated inside. */
+details.srow-open>summary{cursor:pointer;list-style:none}
+details.srow-open>summary::-webkit-details-marker{display:none}
+details.srow-open>summary .srow-line:after{content:'\203a';color:var(--text-3);
+  flex:none;transition:transform var(--dur-fast) var(--ease-out)}
+details.srow-open[open]>summary .srow-line:after{transform:rotate(90deg)}
+.srow-body{padding:6px 0 8px 28px}
+.srow-detail{color:var(--text-3);font-size:var(--fs-caption);line-height:1.5;
+  overflow-wrap:anywhere}
+.srow-rolled{display:grid;gap:1px}
+.srow-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.srow-action{border:1px solid var(--line);background:var(--surface-2);color:var(--text);
+  font-size:var(--fs-label);padding:5px 11px;border-radius:var(--r-sm)}
+.srow-action:hover{background:var(--hover)}
 /* Message rows: a work record, not a chat app. */
 .turn{margin-bottom:var(--sp-6)}
 .turn.user{display:flex;justify-content:flex-end}
@@ -6354,6 +6395,134 @@ function streamRows(d,ctx){
   // them differently on every frame.
   return rows.map((r,i)=>[r,i]).sort((a,b)=>(a[0].t-b[0].t)||(a[1]-b[1]))
     .map(pair=>pair[0]);}
+
+// ------------------------------------------------------------ the renderer
+// ONE function renders any shape. The shape decides weight and affordances,
+// never a different code path per event kind — that is the discipline the
+// twenty-eight cards failed at. Detail opens IN PLACE (a disclosure), never a
+// modal and never a navigation.
+
+//: The mark at the head of a row. A person's own words need none: their row is
+//: the full text, right-aligned, and a letter beside it would be furniture.
+const ROW_MARKS={you:'',generator:'G',auditor:'A',system:'·'};
+//: Which phase a kind belongs to, so a `wait` row can be replaced by the `do`
+//: row that resolves it. Both never appear for one phase (design: "one live
+//: line, replaced by its Do row when it resolves — never both").
+const ROW_PHASES={
+  preparing:'prepare',prompt_ready:'prepare',
+  generation_started:'draft',generation_chunk:'draft',thinking_chunk:'draft',
+  generation_completed:'draft',generation_refused:'draft',
+  audit_started:'audit',auditor_reading:'audit',auditor_progress:'audit',
+  audit_passed:'audit',audit_blocked:'audit',audit_escalated:'audit',
+  check_started:'checks',check_finished:'checks',
+  received:'route',routed:'route',answering:'answer',answered:'answer',
+  provider_recovery:'provider',provider_unavailable:'provider',
+  document_rendering:'document',document_refused:'document'};
+//: The unit a merged run of rows counts in. Deterministic checks are the
+//: obvious case: four rows become one line and four is the number.
+const MERGE_UNITS={check_finished:'checks',attachments_received:'files',
+  provider_recovery:'retries'};
+function rowPhase(r){
+  const phase=ROW_PHASES[r.kind];
+  return phase?phase+'#'+r.round:'';}
+
+//: A live line and the finished line for the same phase are the same fact
+//: said twice. The finished one wins, and the live one is dropped.
+function dropSettledWaits(rows){
+  const settled={};
+  for(const r of rows||[])
+    if(r.shape!=='wait'){const p=rowPhase(r);if(p)settled[p]=true;}
+  return (rows||[]).filter(r=>r.shape!=='wait'||!settled[rowPhase(r)]);}
+
+//: Repetition collapses. A run of consecutive rows of the same kind is one
+//: row with a count, expanding to the individual lines. A `wait` run keeps
+//: only its newest — a clock that has spoken fifteen times is still one fact,
+//: how long this phase has been going.
+function mergeRuns(rows){
+  const out=[];
+  for(const r of rows||[]){
+    const prev=out.length?out[out.length-1]:null;
+    if(!prev||!r.key||prev.key!==r.key||prev.shape!==r.shape||prev.round!==r.round){
+      out.push(r);continue;}
+    if(r.shape==='wait'||r.shape==='say'){out[out.length-1]=r;continue;}
+    const held=(prev.merged||[prev]).concat([r]);
+    // The collapsed line is the KIND's own words, never one member's sentence:
+    // "check 3 passed · 4 checks" reads as a claim about check 3.
+    out[out.length-1]=Object.assign({},prev,{merged:held,t:r.t,
+      line:verbOf(r.kind)||prev.line,
+      n:{value:held.length,unit:MERGE_UNITS[r.kind]||'times'},
+      detail:{kind:'rows',rows:held}});}
+  return out;}
+
+//: A revision round is a group, not a region. A finished round collapses into
+//: its own outcome row — the round number lives THERE, not in a header — and
+//: expands in place. The current round stays open. A round with no outcome row
+//: keeps every row it has: nothing is ever hidden behind a row that is not on
+//: the screen.
+function groupRounds(rows,current){
+  const ended={};
+  for(const r of rows||[])
+    if(r.shape==='outcome'&&r.round>0&&(!current||r.round<current))ended[r.round]=true;
+  const out=[],held={};
+  for(const r of rows||[]){
+    const n=Number(r.round||0);
+    if(n&&ended[n]&&r.shape!=='outcome'&&r.shape!=='say'){
+      (held[n]=held[n]||[]).push(r);continue;}
+    if(n&&ended[n]&&r.shape==='outcome'){
+      const rolled=held[n]||[];held[n]=[];
+      out.push(Object.assign({},r,{rolled:rolled,
+        n:r.n||{value:n,unit:'rounds'}}));continue;}
+    out.push(r);}
+  return out;}
+
+//: The list the conversation actually paints: declared rows, live lines that
+//: have not been settled, repetition collapsed, finished rounds folded.
+function streamList(d,ctx){
+  const current=Number((ctx&&ctx.round)||0);
+  return groupRounds(mergeRuns(dropSettledWaits(streamRows(d,ctx))),current);}
+
+function rowText(r){
+  const parts=[String(r.line||'')];
+  const n=rowNumber(r.n);if(n)parts.push(n);
+  return parts.filter(Boolean).join(' · ');}
+//: The mark: the 20 px orb while the phase is live (an animation NEVER appears
+//: without the words beside it — it is labelled with the very line it marks),
+//: a letter for the two models, a hairline dot for the runtime.
+function rowMark(r){
+  if(r.shape==='wait')return orbMarkup(r.phase||'routing',rowText(r),'srow-orb');
+  const mark=ROW_MARKS[r.actor];
+  if(!mark)return '';
+  return '<span class="srow-mark '+esc(r.actor)+'" aria-hidden="true">'+esc(mark)+'</span>';}
+function rowDetailHtml(detail,d){
+  if(!detail)return '';
+  if(detail.kind==='html')return String(detail.html||'');
+  if(detail.kind==='rows')return (detail.rows||[]).map(r=>row(r,d)).join('');
+  if(detail.kind==='message')return turn(detail.message,d);
+  return '<div class="srow-detail">'+esc(String(detail.text||''))+'</div>';}
+function rowActionHtml(action){
+  if(!action||!action.label)return '';
+  const attrs=Object.keys(action.attrs||{}).map(
+    k=>' '+k+'="'+esc(String(action.attrs[k]))+'"').join('');
+  return '<div class="srow-actions"><button type="button" class="srow-action"'
+    +attrs+'>'+esc(action.label)+'</button></div>';}
+
+//: THE ROW. Every shape, one function.
+function row(r,d){
+  if(!r)return '';
+  // A `say` row is words, so it is the words: full text, wrapping, unchanged.
+  if(r.shape==='say'&&r.detail&&r.detail.kind==='message')
+    return withTurnCost(turn(r.detail.message,d),r.detail.message,d);
+  const cls='srow srow-'+esc(r.shape)+(r.tone?' srow-'+esc(r.tone):'');
+  const line='<div class="srow-line">'+rowMark(r)
+    +'<span class="srow-verb">'+esc(rowText(r))+'</span>'
+    +'<time class="srow-time">'+esc(r.t?at(r.t):'')+'</time></div>';
+  const inner=rowDetailHtml(r.detail,d)
+    +(r.rolled&&r.rolled.length?'<div class="srow-rolled">'
+      +r.rolled.map(x=>row(x,d)).join('')+'</div>':'')
+    +rowActionHtml(r.action);
+  if(!inner)return '<div class="'+cls+'">'+line+'</div>';
+  return '<details class="'+cls+' srow-open"'+(r.open?' open':'')+'>'
+    +'<summary>'+line+'</summary><div class="srow-body">'+inner+'</div></details>';}
 function turn(m,d){
   if(m.kind === 'you'){
     const explicit=m.routing_mode==='explicit';const recipient=m.addressed_to||m.lane;
