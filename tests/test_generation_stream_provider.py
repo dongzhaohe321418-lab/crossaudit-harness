@@ -131,6 +131,25 @@ def test_streaming_reduces_silence_and_preserves_assembled_commitment(monkeypatc
         baseline = _complete(fixture.base_url)
         baseline_elapsed = time.monotonic() - baseline_at
 
+        # One wall-clock sample of each is not a measurement on a shared
+        # runner: a scheduling hiccup inside either call decides the
+        # comparison on its own (macOS CI, run 33717126593: 0.61 against 0.42
+        # with a 0.15 margin, for two paths that do the same work). Repeat
+        # both and keep the FASTEST of each — the figure interference can only
+        # inflate, never deflate. The extra calls come after the pair above so
+        # `fixture.payloads[0]` and `[1]` are still the streamed and
+        # non-streamed request, and they discard their chunks so the sequence
+        # assertions below still describe one stream.
+        def timed(**kwargs) -> float:
+            at = time.monotonic()
+            _complete(fixture.base_url, **kwargs)
+            return time.monotonic() - at
+
+        for _ in range(2):
+            stream_elapsed = min(stream_elapsed,
+                                 timed(on_chunk=lambda text, stream: None))
+            baseline_elapsed = min(baseline_elapsed, timed())
+
     first_text = next(row for row in chunks if row[1])
     ttft = first_text[0] - streamed_at
     assert ttft < 1.0 and ttft < baseline_elapsed

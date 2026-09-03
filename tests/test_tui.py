@@ -123,6 +123,15 @@ def _drive_select(keystrokes, options, **kw):
         threading.Thread(target=feed, daemon=True).start()
         worker.join(timeout=20)
         assert not worker.is_alive(), "select never returned; it is waiting on a key"
+        # `select` has RETURNED, but the last thing it drew — the spoken
+        # outcome, "chose 2) ..." — may still be between the slave end and the
+        # drain thread. Closing the master immediately truncates it, and the
+        # guard then reads a menu with no result under it and blames the
+        # product (seen on two ubuntu jobs of run 33717126593, a different
+        # test each time). Wait for the reader to fall quiet first.
+        settle = time.monotonic() + 2
+        while time.monotonic() < settle and time.monotonic() - last_drawn[0] < 0.1:
+            time.sleep(0.02)
     finally:
         sys.stdin, sys.stdout = saved_in, saved_out
         os.close(master)
