@@ -117,7 +117,11 @@ def _executes_something(fn: ast.AST, product: set[str], helpers: dict) -> bool:
         root = _root_of(node.func)
         if root is None:
             continue
-        if root in product or root in {"subprocess", "urllib", "requests"}:
+        # `run_node` is the shared harness that runs an assembled program under
+        # node; a body that calls it is executing the shipped script, exactly as
+        # a direct `subprocess.run(["node", ...])` was.
+        if root in product or root in {"subprocess", "urllib", "requests",
+                                       "run_node"}:
             return True
         if helpers.get(root):          # a module-local helper that does
             return True

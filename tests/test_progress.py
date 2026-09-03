@@ -33,6 +33,19 @@ def enable_build_scope(cfg) -> None:
         encoding="utf-8")
 
 
+@pytest.fixture
+def build_credentials(monkeypatch):
+    """`cmd_build` refuses for a missing credential BEFORE it reaches the lease.
+
+    These three guards are about the lease and the journal, so the credential
+    has to be there for the run to get that far. It used to be there by
+    accident: an earlier test exported a key into `os.environ` and it stayed
+    for the session. The sandbox fixture scrubs provider keys now, so the tests
+    that need one say so.
+    """
+    monkeypatch.setenv("CROSSAUDIT_GENERATOR_KEY", "test-only-generator")
+
+
 def test_a_fresh_tracker_has_nothing_to_show():
     t = Tracker()
     assert t.snapshot() is None and not t.running
@@ -234,7 +247,7 @@ def test_the_cli_and_the_console_share_one_run_command_service():
     assert "RunJournal" not in cli_source and "TRACKER.start" not in ui_source
 
 
-def test_cli_and_ui_share_one_project_mutation_lease(cfg, monkeypatch):
+def test_cli_and_ui_share_one_project_mutation_lease(cfg, monkeypatch, build_credentials):
     from crossaudit.cli import build as build_mod
 
     monkeypatch.chdir(cfg.root)
@@ -249,7 +262,7 @@ def test_cli_and_ui_share_one_project_mutation_lease(cfg, monkeypatch):
 
 
 def test_cli_build_is_projected_into_the_same_durable_run_journal(
-        cfg, monkeypatch):
+        cfg, monkeypatch, build_credentials):
     from crossaudit.cli import build as build_mod
 
     monkeypatch.chdir(cfg.root)
@@ -275,7 +288,8 @@ def test_cli_build_is_projected_into_the_same_durable_run_journal(
     assert workspace_capacity(cfg)["active"] == 0
 
 
-def test_cli_failure_releases_workspace_lease_and_records_failure(cfg, monkeypatch):
+def test_cli_failure_releases_workspace_lease_and_records_failure(
+        cfg, monkeypatch, build_credentials):
     from crossaudit.cli import build as build_mod
 
     monkeypatch.chdir(cfg.root)
