@@ -264,9 +264,11 @@ def test_the_page_names_the_tier_in_a_sentence_and_never_a_route():
     assert "'raised by the auditor, not yet reproduced'" in PAGE, (
         "a model-only claim must say it is not yet reproduced, not merely lack a word")
     assert ROUTE_NAME.search(PAGE) is None
-    # The run card's loop steps are untouched: no tier or route on the main surface.
-    loop = PAGE[PAGE.index("function runCard(d){"):PAGE.index("function approvalCard(d){")]
-    assert "tierWord" not in loop and "authority" not in loop
+    # The stream's rows are untouched: no tier or route on the main surface.
+    # (The run card is gone; the loop's events are rows now.)
+    stream = PAGE[PAGE.index("// ============================================================== THE STREAM"):
+                  PAGE.index("function turn(m,d){")]
+    assert "tierWord" not in stream and "authority" not in stream
 
 
 # ----------------------------------------------------------------- Chinese

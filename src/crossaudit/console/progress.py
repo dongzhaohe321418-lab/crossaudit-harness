@@ -52,6 +52,8 @@ COUNTED_DETAIL_ZH = (
     # matching the pattern and lands in the other failure mode: an English
     # "1 turn" shown to a Chinese reader.
     (re.compile(r"(\d+) turns?"), "{0} 轮"),
+    # The repair attempt (auditor.run.REPAIR_ATTEMPT_DETAIL).
+    (re.compile(r"(\d+) attempts?"), "{0} 次尝试"),
 )
 
 
@@ -73,6 +75,9 @@ PHASE_KINDS = frozenset({
     "received", "routed", "answering", "preparing", "prompt_ready",
     "still_working", "auditor_reading", "auditor_progress",
     "check_started", "check_finished", "answered",
+    # The one bounded repair attempt a round may make before an unreadable
+    # auditor reply becomes a problem for anybody (auditor/run.py).
+    "audit_repair_retry",
     # The resilience layer's narration (providers/resilience.py emitters):
     # composed sentences, so each is a pattern below, never a fixed entry.
     "provider_recovery",
@@ -94,6 +99,7 @@ PHASE_TEXT_ZH = {
     "Asking the generator to write": "正在请生成者撰写",
     "Reply received": "已收到回复",
     "The auditor is reading the commit": "审计者正在阅读提交内容",
+    "Asking the auditor to answer again": "正在请审计者重新作答",
 }
 
 #: The phase words of ``still_working``; the number is a count of seconds in

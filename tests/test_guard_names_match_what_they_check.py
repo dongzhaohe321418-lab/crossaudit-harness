@@ -119,9 +119,14 @@ def _executes_something(fn: ast.AST, product: set[str], helpers: dict) -> bool:
             continue
         # `run_node` is the shared harness that runs an assembled program under
         # node; a body that calls it is executing the shipped script, exactly as
-        # a direct `subprocess.run(["node", ...])` was.
+        # a direct `subprocess.run(["node", ...])` was. `eval_page` is the same
+        # thing one layer up (tests/harness/render_decision.py): it slices the
+        # named functions OUT OF the shipped page and runs them under node, so a
+        # body that reaches it is executing product, not reading source. Both
+        # are named because they run something; a helper whose name merely
+        # sounds like rendering buys nothing here.
         if root in product or root in {"subprocess", "urllib", "requests",
-                                       "run_node"}:
+                                       "run_node", "eval_page"}:
             return True
         if helpers.get(root):          # a module-local helper that does
             return True

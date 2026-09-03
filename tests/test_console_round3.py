@@ -94,10 +94,11 @@ def test_relative_ages_and_durations_are_words_in_both_languages():
     from render_decision import eval_page
 
     out = eval_page(WORKTREE, ["function relAge(seconds)", "function durationText(seconds)",
-                               "function elapsedText(seconds)", "function humaniseDetail(text)"], """
+                               "function elapsedWords(seconds)", "function humaniseDetail(text)"], """
+    let currentLocale='en';
     const rows=[relAge(5),relAge(90),relAge(7200),relAge(86400),relAge(205214),
       'Waiting for the provider · heartbeat '+relAge(205214),'last heartbeat '+relAge(150),
-      elapsedText(12),elapsedText(252),elapsedText(3900),humaniseDetail('no heartbeat for 7200s'),
+      elapsedWords(12),elapsedWords(252),elapsedWords(3900),humaniseDetail('no heartbeat for 7200s'),
       humaniseDetail('other detail')];
     console.log(JSON.stringify(rows.map(v=>[v,zhValue(v)])));
     """)
@@ -107,8 +108,6 @@ def test_relative_ages_and_durations_are_words_in_both_languages():
     assert rows["1 day ago"] == "1 天前" and rows["2 days ago"] == "2 天前"
     assert rows["Waiting for the provider · heartbeat 2 days ago"] == "等待供应商 · 心跳 2 天前"
     assert rows["last heartbeat 2 min ago"] == "最后心跳 2 分钟前"
-    assert rows["12s elapsed"] == "已运行 12 秒" and rows["4m 12s elapsed"] == "已运行 4 分 12 秒"
-    assert rows["1h 5m elapsed"] == "已运行 1 小时 5 分"
     assert rows["no heartbeat for 2 h"] == "已 2 小时无心跳"
     assert rows["other detail"] == "other detail"
 
@@ -116,7 +115,10 @@ def test_relative_ages_and_durations_are_words_in_both_languages():
 def test_no_surface_renders_a_raw_seconds_count():
     script = PAGE.split("<script>")[1].split("</script>")[0]
     assert "+'s ago'" not in script and "p.elapsed + 's elapsed'" not in script
-    assert "heartbeatAge+'s" not in script and "elapsedText(p.elapsed)" in script
+    # elapsedText went with the run card's meta row; the stream says elapsed
+    # inside a sentence, where elapsedWords reads correctly in both languages.
+    assert "heartbeatAge+'s" not in script and "function elapsedText" not in script
+    assert "function elapsedWords(seconds)" in script
     assert "等待 provider" not in PAGE and "Waiting for provider'" not in PAGE
 
 
@@ -166,32 +168,42 @@ def test_a_recovered_chat_is_dated_by_its_evidence_not_by_the_snapshot(tmp_path)
 
 # ---------------------------------------------------------------- (5)
 @node
-def test_the_review_card_button_finds_its_own_decision_and_names_a_later_round():
+def test_a_decision_finds_its_own_row_by_cycle_or_by_commit():
+    """The lookup that carries a person from a button to the stop it is about.
+
+    A5 retired ``pendingDecisionLine``: a pending decision is its own row in
+    the stream now, carrying the decision itself, so a second line about it
+    under a card would be the same news twice. ``decisionRowFor`` stayed, and
+    it is what both the cross-task banner and the inline decision read.
+    """
     from render_decision import eval_page
 
     prelude = "globalThis.activeChatId='chat-1';globalThis.chatCycles=d=>d.cycles||[];"
-    out = eval_page(WORKTREE, ["function currentEscalations(d)", "function decisionRowFor(d,cycleId,sha)",
-                               "function pendingDecisionLine(row,lastRound)"], """
+    out = eval_page(WORKTREE, ["function currentEscalations(d)",
+                               "function decisionRowFor(d,cycleId,sha)"], """
     const st={cycles:[{id:'c1',sha:'abc',chat_id:'chat-1'}],escalations:[
       {cycle_id:'c2',sha:'abc',chat_id:'other',kind:'provider',round:2},
       {cycle_id:'c3',sha:'zzz',chat_id:'other',kind:'audit',round:1}]};
     const byId=decisionRowFor(st,'c2','');const bySha=decisionRowFor(st,'nope','abc');
     const none=decisionRowFor({cycles:[],escalations:[]},'c9','');
-    const lines=[pendingDecisionLine(byId,1),pendingDecisionLine({kind:'audit',round:1},1),
-      pendingDecisionLine({kind:'audit',round:2},1),pendingDecisionLine({kind:'budget',round:1},1)];
-    console.log(JSON.stringify({byId:byId&&byId.cycle_id,bySha:bySha&&bySha.cycle_id,none,lines,zh:lines.map(zhValue)}));
+    console.log(JSON.stringify({byId:byId&&byId.cycle_id,bySha:bySha&&bySha.cycle_id,none}));
     """, prelude=prelude)
     got = json.loads(out)
     assert got["byId"] == "c2" and got["bySha"] == "c2" and got["none"] is None
-    assert got["lines"] == ["Waiting for the provider · round 2", "", "Needs your decision · round 2", "Usage limit reached"]
-    assert got["zh"][0] == "等待供应商 · 第 2 轮" and got["zh"][2] == "需要你决定 · 第 2 轮"
-    assert got["zh"][3] == "已达用量上限"
 
 
-def test_the_review_card_button_carries_its_cycle_and_falls_back_to_the_detail():
-    assert 'data-open-decisions="\'+esc(cycle.id)+\'"' in PAGE
+def test_the_decision_center_is_reachable_but_never_thrown_at_anybody():
+    """A5. Nothing is modal: the stop is an outcome row that expands in place,
+    and `maybePromptForHuman` no longer opens the dialog for anyone. The
+    Decision Center stays reachable — the cross-task banner and the
+    Needs-attention panel both still open it.
+
+    Mutation: put the auto-open back and this fails.
+    """
+    prompt = PAGE[PAGE.index("function maybePromptForHuman(d){"):PAGE.index("function render(d){")]
+    assert "openResolution" not in prompt
     handler = PAGE[PAGE.index("const openDecisions=ev.target.closest('[data-open-decisions]')"):]
     handler = handler[:handler.index("openInspector();")]
     assert "decisionRowFor(lastState,id,sha)" in handler
     assert "expandedReviews.add(id);render(lastState);openPanelTab('audits');" in handler
-    assert "pendingLine" in PAGE[PAGE.index("function reviewCard(d){"):PAGE.index("function runCard(d){")]
+    assert "document.getElementById('decision-banner-review').onclick" in PAGE

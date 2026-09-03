@@ -335,7 +335,7 @@ def test_page_markup_places_the_provenance_note_outside_the_findings_list():
         "the auditor observed")
     # The review card, which is where a person meets the result first.
     card = PAGE[PAGE.index("const roundLines="):]
-    card = card[:card.index("function runCard(d)")]
+    card = card[:card.index("function approvalCard(d)")]
     assert "report_note" in card and "report-provenance" in card
     # Both sentences are translated: neither is composed, so both are fixed
     # entries rather than patterns.

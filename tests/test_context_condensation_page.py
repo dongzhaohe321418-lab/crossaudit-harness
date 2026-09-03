@@ -155,7 +155,7 @@ let handoffAt = 0, handoffDirection = '';
 
 
 def _render(cases: list[dict]) -> dict[str, str]:
-    """Execute the REAL turn()/runCard() over real payloads; return rendered HTML."""
+    """Execute the REAL turn()/streamList() over real payloads; return HTML."""
     node = shutil.which("node")
     if not node:
         pytest.skip("node is required to execute the page renderers")
@@ -171,24 +171,51 @@ def _render(cases: list[dict]) -> dict[str, str]:
         _extract_fn("const localeText = (bundle, base) =>") + ";",
         _extract_fn("const t = value =>") + ";",
         _extract_fn("function turn(m,d)"),
-        _extract_fn("function runCard(d)"),
         # Round 3: the run card reads elapsed time and event details in words.
         _extract_fn("function durationText(seconds)"),
-        _extract_fn("function elapsedText(seconds)"),
         _extract_fn("function humaniseDetail(text)"),
         # Billing slice: runCard ends with its cost-line hook. Stubbed to
         # nothing here — this file is about the notice's attribution; the
         # hook's own rendering is pinned in test_billing.py.
         "const runCostLine = () => '';",
-        # D150: the run card's activity rows moved into activityRow (with the
-        # actor tables and the identifier scrub beside it), and the card reads
-        # the live draft/thinking consumers, stubbed empty here. Mutation: put
-        # the rows back inline in runCard and activityRow stops being shipped
-        # code — this harness would then be extracting a dead function.
-        _extract_fn("const ACTOR_NAMES") + ";",
-        _extract_fn("const ACTOR_MARKS") + ";",
+        # The run card is gone: its events are rows in the one activity
+        # stream now. The row model and the single renderer are shipped code,
+        # extracted here whole — a notice that renders as a speaker turn would
+        # have to do it through THESE functions.
         _extract_fn("function conciseDetail(s)"),
-        _extract_fn("function activityRow(s)"),
+        _extract_fn("const EVENT_SHAPES=") + ";",
+        _extract_fn("const CARRIED_KINDS=") + ";",
+        _extract_fn("const EVENT_VERBS=") + ";",
+        _extract_fn("const ROW_SHAPES=") + ";",
+        _extract_fn("const ROW_UNITS=") + ";",
+        _extract_fn("const STEP_ACTORS=") + ";",
+        _extract_fn("const ROW_MARKS=") + ";",
+        _extract_fn("const ROW_KIND_MARKS=") + ";",
+        _extract_fn("const ROW_PHASES=") + ";",
+        _extract_fn("const MERGE_UNITS=") + ";",
+        _extract_fn("const STATUS_PHASE_ROWS=") + ";",
+        _extract_fn("function rowNumber(n)"),
+        _extract_fn("function shapeOf(kind)"),
+        _extract_fn("function verbOf(kind)"),
+        _extract_fn("function wireLine(s)"),
+        _extract_fn("function streamRow(o)"),
+        _extract_fn("function actorOfStep(s)"),
+        _extract_fn("function rowFromStep(s,d)"),
+        _extract_fn("function rowFromMessage(m,d)"),
+        _extract_fn("function streamRows(d,ctx)"),
+        _extract_fn("function rowPhase(r)"),
+        _extract_fn("function dropSettledWaits(rows)"),
+        _extract_fn("function mergeRuns(rows)"),
+        _extract_fn("function groupRounds(rows,current)"),
+        _extract_fn("function streamList(d,ctx)"),
+        _extract_fn("function rowText(r)"),
+        _extract_fn("function rowMark(r)"),
+        _extract_fn("function rowDetailHtml(detail,d)"),
+        _extract_fn("function rowActionHtml(action)"),
+        _extract_fn("function row(r,d)"),
+        _extract_fn("function streamContext(d,messages)"),
+        "const withTurnCost = html => html;",
+        "const escalationRows=()=>[];",
         # Thinking-orbs slice: the card's one orb marks the live phase line.
         _extract_fn("const ORB_STATES") + ";",
         _extract_fn("function orbStateFor(phase)"),
@@ -202,11 +229,6 @@ def _render(cases: list[dict]) -> dict[str, str]:
         _extract_fn("function liveFileCount(d)"),
         _extract_fn("function orbWaitingStep(step)"),
         _extract_fn("function runOrbPhase(p)"),
-        # Review D7: the card now collapses a run of clock rows to its newest
-        # before it takes the last twelve. Mutation: drop the call from runCard
-        # and this extraction is of a function nothing ships.
-        _extract_fn("const CLOCK_KINDS") + ";",
-        _extract_fn("function collapseClockRows(steps)"),
         "const liveDraftFor = () => null; const liveThinkingFor = () => null;",
         "const draftCount = () => 0;",
         f"const CASES = {json.dumps(cases, ensure_ascii=False)};",
@@ -214,7 +236,9 @@ def _render(cases: list[dict]) -> dict[str, str]:
 const out = {};
 for (const c of CASES) {
   currentLocale = c.locale || 'en';
-  out[c.name] = c.fn === 'runCard' ? runCard(c.state) : turn(c.row, c.state || {});
+  out[c.name] = c.fn === 'stream'
+    ? streamList(c.state,streamContext(c.state,[])).map(r=>row(r,c.state)).join('')
+    : turn(c.row, c.state || {});
 }
 console.log(JSON.stringify(out));
 """,
@@ -235,8 +259,8 @@ def _stream_row(text: str, detail: str, locale_zh: str | None = None) -> dict:
 
 
 def _progress(steps: list[dict]) -> dict:
-    return {"progress": {"steps": steps, "finished": True, "outcome": "passed",
-                         "task": "write a review"},
+    return {"progress": {"steps": steps, "finished": False, "outcome": "",
+                         "state": "GENERATING", "task": "write a review"},
             "pipeline": [{"state": "done", "label": "Generate"}],
             "cycles": [], "max_rounds": 3}
 
@@ -278,24 +302,29 @@ def test_turn_still_renders_an_ordinary_generator_row_as_the_generator():
     assert "Generator" in dom.text_of("turn-meta")
 
 
-def test_run_card_does_not_attribute_the_notice_to_the_generator_either():
+def test_the_stream_does_not_attribute_the_notice_to_the_generator_either():
+    """The activity stream carries the same rule the run card did: a row's
+    actor is its MARK, and the runtime reporting on itself gets its own.
+
+    The speaker NAME is gone from every row — the design's anatomy is
+    ``[actor mark] [verb phrase] · [number]`` — so "Generator" written beside
+    a runtime notice is no longer merely wrong, it is unrepresentable.
+    """
     steps = [
         _step("activity", "generator", "writing"),
         _step("context_condensed", "generator", TRACKED_EN, TRACKED_PATHS,
               _zh_for(TRACKED_EN), TRACKED_PATHS),
     ]
-    dom = _Dom(_render([{"name": "card", "fn": "runCard",
-                         "state": _progress(steps)}])["card"])
+    html = _render([{"name": "card", "fn": "stream",
+                     "state": _progress(steps)}])["card"]
+    dom = _Dom(html)
 
-    rows = dom.by_class("audit-event")
-    assert len(rows) == 2
-    marks = [n["text"].strip() for n in dom.by_class("event-mark")]
+    rows = dom.by_class("srow")
+    assert len(rows) == 2, html
+    marks = [n["text"].strip() for n in dom.by_class("srow-mark")]
     assert marks == ["G", "↻"], f"the notice must not carry the G mark: {marks}"
-    # The ordinary activity row keeps the generator's name; the notice does not.
-    lines = [n["text"] for n in dom.by_class("event-line")]
-    assert "Generator" in lines[0]
-    assert "Generator" not in lines[1]
-    assert "Context reduced" in lines[1]
+    lines = [n["text"] for n in dom.by_class("srow-verb")]
+    assert "Generator" not in html, "no row names a speaker any more"
     assert TRACKED_EN in lines[1]
 
 
@@ -383,15 +412,15 @@ console.log(JSON.stringify(seen));
     assert seen["localizeCalls"] == 2, "the text-node translator still runs"
 
 
-def test_run_card_localises_from_the_wire_fields_too():
+def test_the_stream_localises_from_the_wire_fields_too():
     steps = [_step("context_condensed", "generator", TRACKED_EN, TRACKED_PATHS,
                    _zh_for(TRACKED_EN), TRACKED_PATHS)]
     rendered = _render([
-        {"name": "en", "fn": "runCard", "state": _progress(steps), "locale": "en"},
-        {"name": "zh", "fn": "runCard", "state": _progress(steps), "locale": "zh"},
+        {"name": "en", "fn": "stream", "state": _progress(steps), "locale": "en"},
+        {"name": "zh", "fn": "stream", "state": _progress(steps), "locale": "zh"},
     ])
-    assert TRACKED_EN in _Dom(rendered["en"]).one("event-line")["text"]
-    zh_line = _Dom(rendered["zh"]).one("event-line")["text"]
+    assert TRACKED_EN in _Dom(rendered["en"]).one("srow-verb")["text"]
+    zh_line = _Dom(rendered["zh"]).one("srow-verb")["text"]
     assert _zh_for(TRACKED_EN) in zh_line
     assert TRACKED_EN not in zh_line, "English must not leak under 中文"
 

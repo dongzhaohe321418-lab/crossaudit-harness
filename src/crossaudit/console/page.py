@@ -464,6 +464,74 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .welcome h2{font-size:var(--fs-h2);margin:0;letter-spacing:-.015em;font-weight:600}
 .welcome p{color:var(--text-2);max-width:460px;margin:var(--sp-2) auto 0;line-height:1.6;font-size:var(--fs-prose)}
 
+/* The activity stream (docs/design/ACTIVITY_STREAM.md). One list, one visual
+   language, five shapes. A row is a LINE; its detail opens in place. Weight is
+   the only difference between shapes — no shape gets its own region, its own
+   card or its own chrome. */
+.srow{padding:3px 0;color:var(--text-2);font-size:var(--fs-label)}
+.srow-line{display:flex;align-items:center;gap:8px;min-height:22px}
+.srow-verb{min-width:0;overflow-wrap:anywhere}
+.srow-time{margin-left:auto;flex:none;color:var(--text-3);font-size:var(--fs-caption);
+  font-family:var(--font-label)}
+.srow-mark{width:20px;height:20px;border-radius:var(--r-xs);display:grid;place-items:center;
+  flex:none;font-size:10px;font-weight:600;font-family:var(--font-label);
+  background:var(--surface-2);color:var(--text-3)}
+.srow-mark.generator{background:var(--role-g-bg);color:var(--role-g)}
+.srow-mark.auditor{background:var(--role-a-bg);color:var(--role-a)}
+.srow-orb{width:20px;height:20px;flex:none}
+/* Worth knowing, needs no action. */
+.srow-note{color:var(--text-3)}
+/* A round's result: the one line that carries weight, and the actions when it
+   needs a person. Still a row — a rule above and below it, never a card. */
+.srow-outcome{color:var(--text);font-size:var(--fs-body);padding:9px 0;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  margin:var(--sp-2) 0}
+.srow-outcome .srow-verb{font-weight:600}
+.srow-outcome.srow-passed .srow-mark{background:var(--pass-bg);color:var(--pass)}
+.srow-outcome.srow-blocked .srow-mark{background:var(--blocked-bg,var(--surface-2));color:var(--blocked)}
+.srow-outcome.srow-decide .srow-mark{background:var(--escalated-bg);color:var(--escalated)}
+/* Detail opens in place. The disclosure triangle is the control; the summary
+   IS the line, so nothing is repeated inside. */
+details.srow-open>summary{cursor:pointer;list-style:none}
+details.srow-open>summary::-webkit-details-marker{display:none}
+details.srow-open>summary .srow-line:after{content:'\203a';color:var(--text-3);
+  flex:none;transition:transform var(--dur-fast) var(--ease-out)}
+details.srow-open[open]>summary .srow-line:after{transform:rotate(90deg)}
+.srow-body{padding:6px 0 8px 28px}
+.srow-detail{color:var(--text-3);font-size:var(--fs-caption);line-height:1.5;
+  overflow-wrap:anywhere}
+.srow-rolled{display:grid;gap:1px}
+.srow-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.srow-action{border:1px solid var(--line);background:var(--surface-2);color:var(--text);
+  font-size:var(--fs-label);padding:5px 11px;border-radius:var(--r-sm)}
+.srow-action:hover{background:var(--hover)}
+/* The status line: the only persistent chrome, and only while something runs.
+   One line at the foot of the stream — the orb of the live phase, that phase
+   in words, the round, the elapsed, the running cost, and the one control that
+   stops it. It is not a row: it is replaced by its result. */
+.stream-status{position:sticky;bottom:0;display:flex;align-items:center;gap:9px;
+  padding:9px 2px;margin-top:var(--sp-2);background:var(--bg);
+  border-top:1px solid var(--line);font-size:var(--fs-label);color:var(--text-2)}
+.stream-status-text{min-width:0;overflow-wrap:anywhere}
+.stream-stop{margin-left:auto;flex:none;border:1px solid var(--line);background:var(--surface-2);
+  color:var(--text);font-size:var(--fs-caption);padding:4px 10px;border-radius:var(--r-sm)}
+.stream-stop:hover:not(:disabled){background:var(--hover)}
+.stream-stop:disabled{opacity:.55}
+/* The decision, in the stream. Three sentences, the findings when there are
+   any, one box and two buttons — the expanded detail of an outcome row, never
+   a dialog, and the composer stays live beside it the whole time. */
+.decision-inline{display:grid;gap:9px;max-width:62ch}
+.decision-inline-summary{margin:0;font-size:var(--fs-body);line-height:1.55;color:var(--text)}
+.decision-inline-block{border-left:2px solid var(--line-strong);padding-left:var(--sp-3)}
+.decision-inline-block b{display:block;font-size:var(--fs-caption);color:var(--text-3);
+  font-weight:600;margin-bottom:3px}
+.decision-inline-block p{margin:0;font-size:var(--fs-label);line-height:1.5;color:var(--text-2)}
+.decision-inline-request{margin:0;font-size:var(--fs-label);color:var(--text-2);line-height:1.5}
+.decision-inline-reason{display:grid;gap:4px;font-size:var(--fs-caption);color:var(--text-3)}
+.decision-inline-reason textarea{width:100%;resize:vertical;font:inherit;font-size:var(--fs-label);
+  color:var(--text);background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:7px 9px}
+.decision-inline-error{margin:0;color:var(--blocked);font-size:var(--fs-caption)}
 /* Message rows: a work record, not a chat app. */
 .turn{margin-bottom:var(--sp-6)}
 .turn.user{display:flex;justify-content:flex-end}
@@ -3971,7 +4039,6 @@ const ZH_PATTERNS=[
   ,[/^no heartbeat for (.+)$/,m=>'已 '+zhValue(m[1])+'无心跳']
   ,[/^(\d+) min ago$/,m=>m[1]+' 分钟前'],[/^(\d+) h ago$/,m=>m[1]+' 小时前'],[/^(\d+) days? ago$/,m=>m[1]+' 天前']
   ,[/^(\d+) s$/,m=>m[1]+' 秒'],[/^(\d+) min$/,m=>m[1]+' 分钟'],[/^(\d+) h$/,m=>m[1]+' 小时']
-  ,[/^(\d+)m (\d+)s elapsed$/,m=>'已运行 '+m[1]+' 分 '+m[2]+' 秒'],[/^(\d+)h (\d+)m elapsed$/,m=>'已运行 '+m[1]+' 小时 '+m[2]+' 分']
   ,[/^(.+) · round (\d+)$/,m=>zhValue(m[1])+' · 第 '+m[2]+' 轮']
   ,[/^(\d+)([mhd])$/,m=>m[1]+({m:' 分钟前',h:' 小时前',d:' 天前'})[m[2]]]
   ,[/^The local demo could not be prepared: (.+?)( — you can still create or import a project\.)?$/i,m=>'无法准备本地演示：'+m[1]+(m[2]?'——你仍可以创建或导入项目。':'')]
@@ -4015,7 +4082,6 @@ const ZH_PATTERNS=[
   ,[/^of (\d+) gates reached$/,m=>'/ '+m[1]+' 个关卡已到达']
   ,[/^of (\d+) steps done$/,m=>'/ '+m[1]+' 步已完成']
   ,[/^(\d+) passed review$/,m=>m[1]+' 次通过复核']
-  ,[/^(\d+)s elapsed$/,m=>'已运行 '+m[1]+' 秒']
   ,[/^(\d+) events?$/,m=>m[1]+' 个事件']
   ,[/^(.+): (Complete|Blocked|Active|Pending)$/,m=>zhValue(m[1])+'：'+zhValue(m[2])]
   ,[/^([0-9a-f]{7,40}) · round (\d+)$/i,m=>m[1]+' · 第 '+m[2]+' 轮']
@@ -4247,9 +4313,9 @@ function relAge(seconds){const s=Math.max(0,Math.floor(Number(seconds)||0));
   if(s<86400)return Math.floor(s/3600)+' h ago';const d=Math.floor(s/86400);return d+(d===1?' day ago':' days ago');}
 function durationText(seconds){const s=Math.max(0,Math.floor(Number(seconds)||0));
   if(s<60)return s+' s';if(s<3600)return Math.floor(s/60)+' min';return Math.floor(s/3600)+' h';}
-function elapsedText(seconds){const s=Math.max(0,Math.floor(Number(seconds)||0));
-  if(s<60)return s+'s elapsed';if(s<3600)return Math.floor(s/60)+'m '+(s%60)+'s elapsed';
-  return Math.floor(s/3600)+'h '+Math.floor(s%3600/60)+'m elapsed';}
+// The run card meta row appended the word "elapsed" for a table cell. It is
+// gone with the card: the stream says elapsed INSIDE a sentence, where
+// elapsedWords() reads correctly in both languages.
 // The runtime writes "no heartbeat for 205214s" into an event detail; read it
 // back in words before it reaches the screen.
 function humaniseDetail(text){const m=/^no heartbeat for (\d+)s$/.exec(String(text||''));return m?'no heartbeat for '+durationText(m[1]):text;}
@@ -4947,18 +5013,13 @@ const CAUSE_COPY={
     reopenTitle:'Settle the earlier decision',
     reopenCopy:'Open the earlier decision first. Guidance recorded here applies once it is settled.',
     hint:''}};
-function openResolution(value,action='',sha=''){
-  let row=typeof value==='object'&&value?value:null;
-  if(!row&&lastState)row=(lastState.escalations||[]).find(item=>item.cycle_id===value);
-  row=row||{cycle_id:value,short_sha:sha,sha,round:1,max_rounds:lastState&&lastState.max_rounds||3,
-    limit_reached:false,why:'The automatic audit loop stopped.',issues:[],attempts:[],
-    requested:'Review why the loop stopped, then decide whether to revise or stop.'};
-  activeResolution=row;promptedEscalations.add(row.cycle_id);
+//: EVERY sentence one recorded stop puts on the screen, in ONE place, so the
+//: Decision Center and the row in the stream cannot drift apart. Pure: it
+//: reads the row and the locale and returns strings; nothing here touches the
+//: DOM. The per-cause copy is the copy that was reviewed — moved here, not
+//: rewritten, so a reader meets the same words wherever the decision appears.
+function decisionSlots(row){
   const copy=CAUSE_COPY[String(row.cause||'')]||null;
-  document.getElementById('resolution-cycle').value=row.cycle_id||'';
-  // R5. The guidance box opens prefilled where the next step is obvious
-  // (nothing produced, unreadable reply); the person can still change it.
-  document.getElementById('resolution-reason').value=copy&&copy.hint?t(copy.hint):'';
   const used=Number(row.round||0),maximum=Number(row.max_rounds||(lastState&&lastState.max_rounds)||0);
   // A budget (usage-guardrail) pause is a provider-family stop — no audit ran,
   // nothing was admitted — but its remedy is to raise or clear the local limit,
@@ -4978,14 +5039,21 @@ function openResolution(value,action='',sha=''){
   // dial handing a model-only blocker to a person. Same slots, no new elements.
   const repairRefused=row.cause==='repair_refused';
   const auditorConcern=row.cause==='auditor_concern';
-  document.getElementById('resolution-flag').textContent=copy?copy.flag:budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':repairRefused?'Automatic repair refused':auditorConcern?'The auditor raised a concern':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
-  document.getElementById('resolution-title').textContent=copy?copy.title:budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':repairRefused?'The revision reached outside the audited files':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
-  document.getElementById('resolution-summary').textContent=copy?copy.summary:budget
+  const issues=row.issues||[];
+  const emptyCopy=issues.length?'':(copy?(copy.empty||''):formatCause
+    ?'No audit ran because the generator never produced readable work. What usually helps: rewrite the task as one concrete instruction, or switch the generator model in Settings, then run one more round.'
+    :'');
+  return {
+  copy:copy,budget:budget,provider:provider,issues:issues,emptyCopy:emptyCopy,
+  used:used,maximum:maximum,
+  flag:copy?copy.flag:budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':repairRefused?'Automatic repair refused':auditorConcern?'The auditor raised a concern':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused',
+  title:copy?copy.title:budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':repairRefused?'The revision reached outside the audited files':row.limit_reached?'The audit needs your decision':'The audit needs your decision',
+  summary:copy?copy.summary:budget
     ?'CrossAudit stopped before spending past your usage limit. No result was admitted and the original task is ready once you raise or clear the limit.'
     :provider
     ?'CrossAudit stopped before an audit began. No result was admitted and the original task is ready to retry.'
     :repairRefused
-    ?'The generator\u2019s revision was refused: it changed files outside the audited directories, or wrote a binary file that cannot be reviewed line by line. The refused attempt was rolled back, so the audited files are unchanged and nothing was admitted.'
+    ?'The generator’s revision was refused: it changed files outside the audited directories, or wrote a binary file that cannot be reviewed line by line. The refused attempt was rolled back, so the audited files are unchanged and nothing was admitted.'
     :auditorConcern
     ?'The auditor blocked this round on its own reading; no deterministic check reproduces the concern. CrossAudit does not let a model-only claim drive automatic rewrites, so it stopped and left the files unchanged.'
     :answered
@@ -4996,62 +5064,24 @@ function openResolution(value,action='',sha=''){
     ?'The generator was asked twice and both replies matched the already-committed work byte for byte, so there was nothing new to audit. The existing files are untouched. Make the task more specific about what should change, or stop the task if the current work already satisfies it.'
     :row.limit_reached
     ?'CrossAudit used all '+used+' of '+maximum+' automatic rounds without a passing result. Nothing will continue or be admitted until you decide.'
-    :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
-  appendResolutionReset(row,budget,provider);   // billing: "Resets at midnight" / "resets in 2 h 10 min"
-  document.getElementById('resolution-limit-title').textContent=copy?((row.cause==='auditor_escalated'&&!(row.issues||[]).length)?'What happened':copy.limitTitle):budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
-    ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
+    :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.',
+  limitTitle:copy?((row.cause==='auditor_escalated'&&!(row.issues||[]).length)?'What happened':copy.limitTitle):budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
+    ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely',
   // A refused repair leads with the sentence the repair guard wrote (it names
   // the file and the pattern) rather than the round-numbered wrapper around it.
-  document.getElementById('resolution-limit-copy').textContent=(formatCause
+  limitCopy:(formatCause
     ?'The reply was corrected once automatically and still failed to parse. Technical detail: '
     :noProgress?'One corrective retry was already made automatically. Technical detail: ':'')
-    +String((repairRefused&&row.why)||(typeof currentLocale!=='undefined'&&currentLocale==='zh'&&(row.stop_reason_zh||row.why_zh))||row.stop_reason||row.why||'The audit controller paused this task.');
-  const attemptRows=row.attempts||[];
-  document.getElementById('resolution-attempts').innerHTML=attemptRows.map(item=>{
-    const word=String(item.verdict||'').toLowerCase();
-    // R1. The verdict word a person reads; the raw word stays as the class.
-    return '<div class="decision-attempt"><span class="round-n">round '+esc(item.round)+'</span><span>'
-      +esc(item.findings)+' issue'+(item.findings===1?'':'s')+'</span><span class="verdict-word '+esc(word)
-      +'">'+esc(verdictWord(item.verdict))+'</span></div>';}).join('');
-  document.getElementById('resolution-goal').textContent=(lastState?titleOf(lastState):'')||'The task this conversation asked for.';
-  // D149. The identifiers stay reachable but leave the first paint: the
-  // commit this decision is about is named by its subject in the stop reason
-  // above, and its sha lives here, behind a closed disclosure.
-  document.getElementById('resolution-details').textContent=
-    (currentLocale==='zh'?'提交 ':'Commit ')+String(row.short_sha||row.sha||'');
-  const issues=row.issues||[];
-  // S4. Never a count badge of 0 — a zero is not a count, it is the absence
-  // of one, and a badge saying so is furniture.
-  const countBadge=document.getElementById('resolution-issue-count');
-  countBadge.textContent=issues.length?String(issues.length):'';
-  countBadge.hidden=!issues.length;
-  const emptyCopy=issues.length?'':(copy?(copy.empty||''):formatCause
-    ?'No audit ran because the generator never produced readable work. What usually helps: rewrite the task as one concrete instruction, or switch the generator model in Settings, then run one more round.'
-    :'');
-  // R2. Each issue leads with the observation; severity as a consequence,
-  // the place and the rule id on one muted details line under it.
-  document.getElementById('resolution-issues').innerHTML=issues.length?issues.map((issue,index)=>
-    '<article class="decision-issue"'+ruleTitle(issue.rule)+'><p class="finding-observation">'+esc(issue.observation||'No explanation was recorded.')+'</p>'
-    +'<div class="finding-details"><span class="severity '+(severityWord(issue.severity||'BLOCKER')==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(issue.severity||'BLOCKER'))+'</span>'
-    +(issue.artifact?'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-where">'+esc(issue.artifact)+'</span>':'')
-    +'</div></article>').join('')
-    :(emptyCopy?'<div class="decision-empty">'+emptyCopy+'</div>':'');
-  // S4. The section is rendered only when it carries something a person has
-  // not already read: findings, or empty copy that explains the ABSENCE with
-  // a fact the stop reason does not carry — what too large to audit in one
-  // pass means, or what usually helps after an unreadable generator reply.
-  // The rest pointed back at the stop reason above, under a heading and a
-  // zero badge: a section pointing at the section before it.
-  document.getElementById('resolution-issues-section').hidden=!(issues.length||emptyCopy);
-  document.getElementById('resolution-request').textContent=copy?copy.request:budget
+    +String((repairRefused&&row.why)||(typeof currentLocale!=='undefined'&&currentLocale==='zh'&&(row.stop_reason_zh||row.why_zh))||row.stop_reason||row.why||'The audit controller paused this task.'),
+  request:copy?copy.request:budget
     ?'Raise or clear the usage limit and rerun the original task, or stop this task.'
     :provider
     ?'Retry the same task now, review the model connection first, or stop this task.'
     :formatCause
     ?'Rewrite the task as one concrete instruction and run one more round, switch the generator model, or stop this task.'
-    :(row.requested||'Choose whether to revise and continue, or stop this task.');
-  document.getElementById('resolution-reopen-title').textContent=copy?copy.reopenTitle:budget?'Raise the limit & retry':provider?'Retry provider':'Revise and continue';
-  document.getElementById('resolution-reopen-copy').textContent=copy?copy.reopenCopy:budget
+    :(row.requested||'Choose whether to revise and continue, or stop this task.'),
+  reopenTitle:copy?copy.reopenTitle:budget?'Raise the limit & retry':provider?'Retry provider':'Revise and continue',
+  reopenCopy:copy?copy.reopenCopy:budget
     ?'Adjust the usage limit in Project controls, then rerun the original task.'
     :provider
     ?'Use the current connection and rerun the original task.'
@@ -5059,20 +5089,80 @@ function openResolution(value,action='',sha=''){
     ?'Name the file inside the audited directories that should change, then unlock one additional audited round.'
     :auditorConcern
     ?'If the concern is right, tell the generator how to address it. If it is a misreading, say so here; your reason is recorded.'
-    :'Give the generator specific correction guidance and unlock one additional audited round.';
+    :'Give the generator specific correction guidance and unlock one additional audited round.',
+  // R5. The guidance box opens prefilled where the next step is obvious
+  // (nothing produced, unreadable reply); the person can still change it.
+  hint:copy&&copy.hint?t(copy.hint):'',
   // The runtime affordance carries the budget person to the same Project
   // controls that hold the usage limits; relabel it so it names that, not a
   // model change, when the stop is a guardrail pause.
-  document.getElementById('resolution-open-runtime').textContent=budget?'Adjust usage limits':'Change model or fallback';
-  document.getElementById('resolution-open-runtime').hidden=!(hasRemediation(row,'select_model')||hasRemediation(row,'open_billing'));
+  runtimeLabel:budget?'Adjust usage limits':'Change model or fallback',
+  runtimeHidden:!(hasRemediation(row,'select_model')||hasRemediation(row,'open_billing')),
   // R5. The one real action of a locked cycle is the EARLIER decision; the
   // secondary button carries it (relabelled, with the cycle to open) so no new
   // control is added. Cleared for every other row so the label stays honest.
+  earlier:row.cause==='escalation_locked'?String(row.earlier_cycle_id||''):'',
+  settingsHidden:!hasRemediation(row,'validate_credential'),
+  // D149. The identifiers stay reachable but leave the first paint: the
+  // commit this decision is about is named by its subject in the stop reason
+  // above, and its sha lives here, behind a closed disclosure.
+  details:(currentLocale==='zh'?'提交 ':'Commit ')+String(row.short_sha||row.sha||''),
+  attemptsHtml:(row.attempts||[]).map(item=>{
+    const word=String(item.verdict||'').toLowerCase();
+    // R1. The verdict word a person reads; the raw word stays as the class.
+    return '<div class="decision-attempt"><span class="round-n">round '+esc(item.round)+'</span><span>'
+      +esc(item.findings)+' issue'+(item.findings===1?'':'s')+'</span><span class="verdict-word '+esc(word)
+      +'">'+esc(verdictWord(item.verdict))+'</span></div>';}).join(''),
+  // R2. Each issue leads with the observation; severity as a consequence,
+  // the place and the rule id on one muted details line under it.
+  issuesHtml:issues.length?issues.map(issue=>
+    '<article class="decision-issue"'+ruleTitle(issue.rule)+'><p class="finding-observation">'+esc(issue.observation||'No explanation was recorded.')+'</p>'
+    +'<div class="finding-details"><span class="severity '+(severityWord(issue.severity||'BLOCKER')==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(issue.severity||'BLOCKER'))+'</span>'
+    +(issue.artifact?'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-where">'+esc(issue.artifact)+'</span>':'')
+    +'</div></article>').join('')
+    :(emptyCopy?'<div class="decision-empty">'+emptyCopy+'</div>':'')};
+}
+function openResolution(value,action='',sha=''){
+  let row=typeof value==='object'&&value?value:null;
+  if(!row&&lastState)row=(lastState.escalations||[]).find(item=>item.cycle_id===value);
+  row=row||{cycle_id:value,short_sha:sha,sha,round:1,max_rounds:lastState&&lastState.max_rounds||3,
+    limit_reached:false,why:'The automatic audit loop stopped.',issues:[],attempts:[],
+    requested:'Review why the loop stopped, then decide whether to revise or stop.'};
+  activeResolution=row;promptedEscalations.add(row.cycle_id);
+  const s=decisionSlots(row);
+  document.getElementById('resolution-cycle').value=row.cycle_id||'';
+  document.getElementById('resolution-reason').value=s.hint;
+  document.getElementById('resolution-flag').textContent=s.flag;
+  document.getElementById('resolution-title').textContent=s.title;
+  document.getElementById('resolution-summary').textContent=s.summary;
+  appendResolutionReset(row,s.budget,s.provider);   // billing: "Resets at midnight" / "resets in 2 h 10 min"
+  document.getElementById('resolution-limit-title').textContent=s.limitTitle;
+  document.getElementById('resolution-limit-copy').textContent=s.limitCopy;
+  document.getElementById('resolution-attempts').innerHTML=s.attemptsHtml;
+  document.getElementById('resolution-goal').textContent=(lastState?titleOf(lastState):'')||'The task this conversation asked for.';
+  document.getElementById('resolution-details').textContent=s.details;
+  // S4. Never a count badge of 0 — a zero is not a count, it is the absence
+  // of one, and a badge saying so is furniture.
+  const countBadge=document.getElementById('resolution-issue-count');
+  countBadge.textContent=s.issues.length?String(s.issues.length):'';
+  countBadge.hidden=!s.issues.length;
+  document.getElementById('resolution-issues').innerHTML=s.issuesHtml;
+  // S4. The section is rendered only when it carries something a person has
+  // not already read: findings, or empty copy that explains the ABSENCE with
+  // a fact the stop reason does not carry — what too large to audit in one
+  // pass means, or what usually helps after an unreadable generator reply.
+  // The rest pointed back at the stop reason above, under a heading and a
+  // zero badge: a section pointing at the section before it.
+  document.getElementById('resolution-issues-section').hidden=!(s.issues.length||s.emptyCopy);
+  document.getElementById('resolution-request').textContent=s.request;
+  document.getElementById('resolution-reopen-title').textContent=s.reopenTitle;
+  document.getElementById('resolution-reopen-copy').textContent=s.reopenCopy;
+  document.getElementById('resolution-open-runtime').textContent=s.runtimeLabel;
+  document.getElementById('resolution-open-runtime').hidden=s.runtimeHidden;
   const settingsButton=document.getElementById('resolution-open-settings');
-  const earlier=row.cause==='escalation_locked'?String(row.earlier_cycle_id||''):'';
-  settingsButton.setAttribute('data-earlier-cycle',earlier);
-  settingsButton.textContent=earlier?'Open the earlier decision':'Review provider connection';
-  settingsButton.hidden=!hasRemediation(row,'validate_credential')&&!earlier;
+  settingsButton.setAttribute('data-earlier-cycle',s.earlier);
+  settingsButton.textContent=s.earlier?'Open the earlier decision':'Review provider connection';
+  settingsButton.hidden=s.settingsHidden&&!s.earlier;
   resolutionChoice(action||'reopen');
   document.getElementById('resolution-error').className='wizard-error';
   resolutionModal.classList.add('on');document.body.classList.add('deciding');
@@ -6137,6 +6227,588 @@ function forecastText(d){const f=d&&d.usage&&d.usage.forecast;const zh=currentLo
   const cost=(f.usd&&f.usd.p50!=null)?(zh?' · 约 ':' · about ')+formatUsd(f.usd.p50):'';
   return time+cost;}
 function forecastLine(d){return '<span class="run-forecast">'+esc(forecastText(d))+'</span>';}
+// ============================================================== THE STREAM
+// docs/design/ACTIVITY_STREAM.md governs everything below. The
+// loop emits roughly thirty event kinds; the conversation renders FIVE
+// shapes. This block is the row model: the shape table, the vocabulary, the
+// one number each row may carry, and the pure function that turns one state
+// snapshot into an ordered list of rows. Nothing here touches the DOM, the
+// clock or the network, so it runs under node exactly as it runs on the page.
+
+//: The five shapes. A row is one of these or it is not a row.
+const ROW_SHAPES={say:'say',do:'do',wait:'wait',outcome:'outcome',note:'note'};
+
+//: Every event kind the engine emits, and the ONE shape it renders as
+//: (design rule 6). tests/test_activity_stream.py enumerates the kinds FROM
+//: THE SOURCE — the emit() in build.py, the narrate() in the auditor and the
+//: intake, the run journal inserts, the streams.py message kinds — and fails
+//: when one arrives with no shape here. Mechanical, not remembered.
+const EVENT_SHAPES={
+  // ---- console/streams.py: what a person and the two models said.
+  you:'say',generator:'say',generator_chat:'say',auditor_chat:'say',
+  //: An auditor report IS a round's result, so it is the round's outcome row.
+  auditor:'outcome',
+  // ---- cli/build.py: the audit loop.
+  goal:'note',preparing:'wait',prompt_ready:'do',
+  generation_started:'wait',generation_chunk:'wait',thinking_chunk:'wait',
+  generation_completed:'do',generation_resumed:'note',generation_note:'note',
+  generation_refused:'note',round_started:'note',
+  audit_started:'wait',auditor_progress:'wait',
+  audit_passed:'outcome',audit_blocked:'outcome',audit_escalated:'outcome',
+  revision_requested:'do',revision_retry:'note',revision_unchanged:'note',
+  repair_caution:'note',repair_refused:'note',commit_refused:'note',
+  capability_requested:'note',capability_refused:'note',
+  document_rendering:'wait',document_refused:'note',
+  context_condensed:'note',budget_warning:'note',
+  provider_recovery:'wait',provider_unavailable:'note',
+  guidance_received:'say',loop_stopped:'outcome',
+  // ---- auditor/run.py, narrated through on_event.narrate.
+  auditor_reading:'wait',check_started:'wait',check_finished:'do',
+  //: The bounded repair attempt before an unreadable auditor reply becomes
+  //: a problem for anyone: worth knowing, needs no action.
+  audit_repair_retry:'note',
+  // ---- console/intake.py: the message still in flight.
+  received:'wait',routed:'do',answering:'wait',answered:'do',
+  // ---- runtime/runs.py, runtime/commands.py, console/server.py.
+  run_started:'note',run_finished:'outcome',run_cancelled:'outcome',
+  run_stalled:'note',cancel_requested:'note',still_working:'wait',
+  guidance_queued:'say',interruption_dismissed:'note',
+  human_wait_reconciled:'note',attachments_received:'do',
+  //: The RunEvent dataclass default, for a step nobody named.
+  activity:'do'};
+
+//: Kinds whose fact is carried by ANOTHER row rather than by one of their own.
+//: A round is a group, not a region, so its number lives on the outcome row
+//: of that round; the streamed chunks are the number on the live draft row;
+//: a run beginning is the stream beginning. Declared shapes all the same —
+//: rule 6 is about being declared, not about being drawn.
+const CARRIED_KINDS={round_started:1,generation_chunk:1,thinking_chunk:1,
+  run_started:1};
+
+//: The verb phrase of each kind — present while the thing is happening, past
+//: once it has happened, in the language of the reader, never a constant.
+//: Both languages live here (design rule 7) rather than in the ZH catalogue,
+//: because a row line is BUILT: a count sits beside it. A wire row that
+//: carries its own localised sentence (text_i18n, from console/progress.py)
+//: prefers that sentence; this table is the vocabulary and the fallback.
+const EVENT_VERBS={
+  you:{en:'You',zh:'你'},
+  generator:{en:'Generator',zh:'生成者'},
+  generator_chat:{en:'Generator',zh:'生成者'},
+  auditor_chat:{en:'Auditor',zh:'审计者'},
+  auditor:{en:'Reviewed',zh:'已审查'},
+  goal:{en:'Recorded the task',zh:'已记录任务'},
+  preparing:{en:'Reading the workspace',zh:'正在读取工作区'},
+  prompt_ready:{en:'Prepared the request',zh:'已准备好请求'},
+  generation_started:{en:'Drafting',zh:'正在撰写'},
+  generation_chunk:{en:'Drafting',zh:'正在撰写'},
+  thinking_chunk:{en:'Thinking it through',zh:'正在思考'},
+  generation_completed:{en:'Drafted',zh:'已撰写'},
+  generation_resumed:{en:'Picked up where it stopped',zh:'已从中断处继续'},
+  generation_note:{en:'A note from the generator',zh:'生成者的说明'},
+  generation_refused:{en:'The generator produced nothing to audit',zh:'生成者没有产出可审计的内容'},
+  round_started:{en:'Round started',zh:'本轮开始'},
+  audit_started:{en:'The auditor is reading',zh:'审计者正在阅读'},
+  auditor_reading:{en:'The auditor is reading',zh:'审计者正在阅读'},
+  auditor_progress:{en:'The auditor is still reading',zh:'审计者仍在阅读'},
+  audit_passed:{en:'Passed review',zh:'已通过审查'},
+  audit_blocked:{en:'Needs changes',zh:'需要修改'},
+  audit_escalated:{en:'Needs your decision',zh:'需要你的决定'},
+  revision_requested:{en:'Asked for a revision',zh:'已请求修订'},
+  revision_retry:{en:'Asked again',zh:'已再次请求'},
+  revision_unchanged:{en:'The revision changed nothing',zh:'修订没有带来任何改动'},
+  repair_caution:{en:'A caution was passed to the auditor',zh:'已向审计者转达一条提醒'},
+  repair_refused:{en:'The revision was rolled back',zh:'该修订已回滚'},
+  commit_refused:{en:'The commit was refused',zh:'提交被拒绝'},
+  capability_requested:{en:'Asked to use a capability',zh:'请求使用一项能力'},
+  capability_refused:{en:'A capability was refused',zh:'一项能力被拒绝'},
+  document_rendering:{en:'Rendering the document',zh:'正在渲染文档'},
+  document_refused:{en:'The document could not be rendered',zh:'文档无法渲染'},
+  context_condensed:{en:'Context reduced',zh:'已精简上下文'},
+  budget_warning:{en:'Usage threshold reached',zh:'已达用量阈值'},
+  provider_recovery:{en:'Waiting for the provider',zh:'等待供应商'},
+  provider_unavailable:{en:'The provider did not answer',zh:'供应商无响应'},
+  guidance_received:{en:'Your guidance',zh:'你的补充说明'},
+  loop_stopped:{en:'Stopped',zh:'已停止'},
+  check_started:{en:'Running a check',zh:'正在运行检查'},
+  check_finished:{en:'Automatic checks passed',zh:'自动检查通过'},
+  audit_repair_retry:{en:'Asked the auditor to answer again',zh:'已请审计者重新作答'},
+  received:{en:'Working out who should handle this',zh:'正在判断由谁处理'},
+  routed:{en:'Chose who handles this',zh:'已确定由谁处理'},
+  answering:{en:'Writing a reply',zh:'正在撰写回复'},
+  answered:{en:'Replied',zh:'已回复'},
+  run_started:{en:'Started',zh:'已开始'},
+  run_finished:{en:'Finished',zh:'已完成'},
+  run_cancelled:{en:'Stopped at your request',zh:'已按你的要求停止'},
+  run_stalled:{en:'No sign of progress',zh:'长时间没有进展'},
+  cancel_requested:{en:'Stopping',zh:'正在停止'},
+  still_working:{en:'Still working',zh:'仍在进行'},
+  guidance_queued:{en:'Queued — read at the next round',zh:'已排队 · 下一轮读取'},
+  interruption_dismissed:{en:'Notice dismissed',zh:'提示已忽略'},
+  human_wait_reconciled:{en:'The pending decision was reconciled',zh:'待定的决定已对齐'},
+  attachments_received:{en:'Added files',zh:'已添加文件'},
+  activity:{en:'Working',zh:'正在进行'}};
+
+//: The ONE number a row may carry, and how it reads in each language. A row
+//: names at most one of these (design rule 5), and a zero never renders — a
+//: zero is the absence of a count, not a count (design rule 3).
+const ROW_UNITS={
+  words:{en:n=>n+(n===1?' word':' words'),zh:n=>n+' 字'},
+  files:{en:n=>n+(n===1?' file':' files'),zh:n=>n+' 个文件'},
+  checks:{en:n=>n+(n===1?' check':' checks'),zh:n=>n+' 项'},
+  findings:{en:n=>n+(n===1?' finding':' findings'),zh:n=>n+' 条发现'},
+  rounds:{en:n=>'round '+n,zh:n=>'第 '+n+' 轮'},
+  retries:{en:n=>'retried '+n+(n===1?' time':' times'),zh:n=>'已重试 '+n+' 次'},
+  seconds:{en:n=>elapsedWords(n),zh:n=>elapsedWords(n)},
+  times:{en:n=>'×'+n,zh:n=>'×'+n}};
+function rowNumber(n){
+  if(!n||!n.unit)return '';
+  const unit=ROW_UNITS[n.unit];if(!unit)return '';
+  const value=Math.max(0,Math.floor(Number(n.value||0)));if(!value)return '';
+  return currentLocale==='zh'?unit.zh(value):unit.en(value);}
+
+//: The declared shape of a kind, or '' — and '' means NOT RENDERED. A new
+//: event kind names its shape or the stream stays silent about it, which is
+//: the honest failure: a row nobody designed is worse than a row nobody sees,
+//: and the guard test turns the silence into a red build.
+function shapeOf(kind){
+  const shape=EVENT_SHAPES[String(kind||'')];
+  return shape&&ROW_SHAPES[shape]?shape:'';}
+//: The words for a kind, in the language of the reader.
+function verbOf(kind){
+  const row=EVENT_VERBS[String(kind||'')];if(!row)return '';
+  return currentLocale==='zh'?row.zh:row.en;}
+//: The line a wire row already carries in both languages (console/progress.py
+//: localises the narrated phases). Absent for the kinds it does not cover, and
+//: then the verb table speaks instead — never English under 中文.
+function wireLine(s){
+  return s&&s.text_i18n?localeText(s.text_i18n,s.text):'';}
+
+//: One row. Shape, who it is about, the words, the one number, when, an
+//: optional detail that opens IN PLACE, an optional action, and the round it
+//: belongs to. `key` groups rows that merge; `phase` names the orb of a live
+//: one. An undeclared shape returns null rather than a row nobody designed.
+function streamRow(o){
+  const shape=String((o&&o.shape)||'');
+  if(!ROW_SHAPES[shape])return null;
+  return {shape:shape,actor:String((o&&o.actor)||'system'),
+    kind:String((o&&o.kind)||''),line:String((o&&o.line)||''),
+    n:(o&&o.n)||null,t:Number((o&&o.t)||0),detail:(o&&o.detail)||null,
+    action:(o&&o.action)||null,round:Number((o&&o.round)||0),
+    phase:String((o&&o.phase)||''),key:String((o&&o.key)||''),
+    tone:String((o&&o.tone)||''),open:Boolean(o&&o.open)};}
+
+//: Which side of the pair a step belongs to. The runtime reporting on itself
+//: never borrows the name or the mark of the generator.
+const STEP_ACTORS={generator:'generator',auditor:'auditor',input:'you',
+  user:'you',done:'system',loop:'system',controller:'system',watchdog:'system',
+  tool:'system',compute:'system'};
+function actorOfStep(s){
+  if(String((s&&s.kind)||'')==='context_condensed')return 'system';
+  return STEP_ACTORS[String((s&&s.actor)||'')]||'system';}
+
+//: One run-journal step becomes at most one row. A carried kind becomes none:
+//: its fact is on another row already.
+function rowFromStep(s,d){
+  const kind=String((s&&s.kind)||'');
+  const shape=shapeOf(kind);
+  if(!shape||CARRIED_KINDS[kind])return null;
+  const line=wireLine(s)||verbOf(kind);
+  if(!line)return null;
+  const detail=s.detail_i18n?localeText(s.detail_i18n,s.detail):conciseDetail(s);
+  return streamRow({shape:shape,actor:actorOfStep(s),kind:kind,line:line,
+    t:s.t,round:s.round_no,key:kind,
+    detail:detail?{kind:'text',text:detail}:null});}
+
+//: One conversation message becomes exactly one row: words from a person or
+//: an agent are a `say`; an auditor report is the `outcome` of its round.
+function rowFromMessage(m,d){
+  const kind=String((m&&m.kind)||'generator');
+  const shape=shapeOf(kind);
+  if(!shape)return null;
+  return streamRow({shape:shape,kind:kind,t:m.t,round:m.round,
+    actor:kind==='you'?'you':(kind==='auditor'||kind==='auditor_chat')?'auditor':'generator',
+    line:verbOf(kind),detail:{kind:'message',message:m}});}
+
+//: THE STREAM. One snapshot in, one ordered list of rows out — pure, so the
+//: same call runs on the page and under node. `ctx` carries what only the
+//: client knows (the messages it already de-duplicated, the live draft) so
+//: this function never reaches for a global.
+function streamRows(d,ctx){
+  const c=ctx||{};
+  const rows=[];
+  for(const m of (c.messages||[])){const r=rowFromMessage(m,d);if(r)rows.push(r);}
+  for(const s of (c.steps||[])){const r=rowFromStep(s,d);if(r)rows.push(r);}
+  // Chronological, and stable inside one second: a message and the step that
+  // reports it share a timestamp often enough that a sort alone would shuffle
+  // them differently on every frame.
+  const ordered=rows.map((r,i)=>[r,i]).sort((a,b)=>(a[0].t-b[0].t)||(a[1]-b[1]))
+    .map(pair=>pair[0]);
+  // A recorded stop has no clock of its own: it is where the conversation IS,
+  // so it stands last rather than at whatever second it was written.
+  return ordered.concat((c.stops||[]).filter(Boolean));}
+
+// ------------------------------------------------------------ the renderer
+// ONE function renders any shape. The shape decides weight and affordances,
+// never a different code path per event kind — that is the discipline the
+// twenty-eight cards failed at. Detail opens IN PLACE (a disclosure), never a
+// modal and never a navigation.
+
+//: The mark at the head of a row. The words of a person need none: that row is
+//: the full text, right-aligned, and a letter beside it would be furniture.
+const ROW_MARKS={you:'',generator:'G',auditor:'A',system:'·'};
+//: A kind whose mark is its own. The runtime reporting on ITSELF borrows
+//: the letter of neither model — attributing it to the generator is a claim
+//: about who produced the words.
+const ROW_KIND_MARKS={context_condensed:'↻'};
+//: Which phase a kind belongs to, so a `wait` row can be replaced by the `do`
+//: row that resolves it. Both never appear for one phase — the design says
+//: one live line, replaced by its Do row when it resolves, never both.
+const ROW_PHASES={
+  preparing:'prepare',prompt_ready:'prepare',
+  generation_started:'draft',generation_chunk:'draft',thinking_chunk:'draft',
+  generation_completed:'draft',generation_refused:'draft',
+  audit_started:'audit',auditor_reading:'audit',auditor_progress:'audit',
+  audit_passed:'audit',audit_blocked:'audit',audit_escalated:'audit',
+  check_started:'checks',check_finished:'checks',
+  received:'route',routed:'route',answering:'answer',answered:'answer',
+  provider_recovery:'provider',provider_unavailable:'provider',
+  document_rendering:'document',document_refused:'document'};
+//: The unit a merged run of rows counts in. Deterministic checks are the
+//: obvious case: four rows become one line and four is the number.
+const MERGE_UNITS={check_finished:'checks',attachments_received:'files',
+  provider_recovery:'retries'};
+function rowPhase(r){
+  const phase=ROW_PHASES[r.kind];
+  return phase?phase+'#'+r.round:'';}
+
+//: A live line and the finished line for the same phase are the same fact
+//: said twice. The finished one wins, and the live one is dropped.
+//:
+//: Waiting for a provider is the one phase nothing of its own ever finishes:
+//: the resilience layer narrates the retry and then the work simply carries
+//: on. So it is settled by the next thing that SUCCEEDS at all — otherwise
+//: "retrying the provider" would stand on the screen underneath the draft it
+//: was waiting for.
+function dropSettledWaits(rows){
+  const settled={},moved={};
+  for(const r of rows||[]){
+    if(r.shape==='wait')continue;
+    const p=rowPhase(r);if(p)settled[p]=true;
+    if(r.shape==='do'||r.shape==='outcome')moved[r.round]=Math.max(moved[r.round]||0,r.t);}
+  return (rows||[]).filter(r=>{
+    if(r.shape!=='wait')return true;
+    if(settled[rowPhase(r)])return false;
+    return !(ROW_PHASES[r.kind]==='provider'&&(moved[r.round]||0)>r.t);});}
+
+//: Repetition collapses. A run of consecutive rows of the same kind is one
+//: row with a count, expanding to the individual lines. A `wait` run keeps
+//: only its newest — a clock that has spoken fifteen times is still one fact,
+//: how long this phase has been going.
+function mergeRuns(rows){
+  const out=[];
+  for(const r of rows||[]){
+    const prev=out.length?out[out.length-1]:null;
+    if(!prev||!r.key||prev.key!==r.key||prev.shape!==r.shape||prev.round!==r.round){
+      out.push(r);continue;}
+    if(r.shape==='wait'||r.shape==='say'){out[out.length-1]=r;continue;}
+    const held=(prev.merged||[prev]).concat([r]);
+    // The collapsed line is the KIND's own words, never one member's sentence:
+    // "check 3 passed · 4 checks" reads as a claim about check 3.
+    out[out.length-1]=Object.assign({},prev,{merged:held,t:r.t,
+      line:verbOf(r.kind)||prev.line,
+      n:{value:held.length,unit:MERGE_UNITS[r.kind]||'times'},
+      detail:{kind:'rows',rows:held}});}
+  return out;}
+
+//: A revision round is a group, not a region. A finished round collapses into
+//: its own outcome row — the round number lives THERE, not in a header — and
+//: expands in place. The current round stays open. A round with no outcome row
+//: keeps every row it has: nothing is ever hidden behind a row that is not on
+//: the screen.
+function groupRounds(rows,current){
+  const ended={};
+  for(const r of rows||[])
+    if(r.shape==='outcome'&&r.round>0&&(!current||r.round<current))ended[r.round]=true;
+  const out=[],held={};
+  for(const r of rows||[]){
+    const n=Number(r.round||0);
+    if(n&&ended[n]&&r.shape!=='outcome'&&r.shape!=='say'){
+      (held[n]=held[n]||[]).push(r);continue;}
+    if(n&&ended[n]&&r.shape==='outcome'){
+      const rolled=held[n]||[];held[n]=[];
+      out.push(Object.assign({},r,{rolled:rolled,
+        n:r.n||{value:n,unit:'rounds'}}));continue;}
+    out.push(r);}
+  return out;}
+
+//: The live phase of the run, named the way a ROW names its phase. The line
+//: at the foot of the stream IS the live line of that phase, so the fact must
+//: not also stand as a row halfway up the screen.
+const STATUS_PHASE_ROWS={preparing:'prepare',generating:'draft',auditing:'audit',
+  waiting:'provider',answering:'answer'};
+//: The list the conversation actually paints: declared rows, live lines that
+//: have not been settled or moved to the status line, repetition collapsed,
+//: finished rounds folded into their own outcome rows.
+function streamList(d,ctx){
+  const current=Number((ctx&&ctx.round)||0);
+  const live=String((ctx&&ctx.livePhase)||'');
+  let rows=dropSettledWaits(streamRows(d,ctx));
+  if(live)rows=rows.filter(r=>r.shape!=='wait'||ROW_PHASES[r.kind]!==live);
+  return groupRounds(mergeRuns(rows),current);}
+
+function rowText(r){
+  const parts=[String(r.line||'')];
+  const n=rowNumber(r.n);if(n)parts.push(n);
+  return parts.filter(Boolean).join(' · ');}
+//: The mark: the 20 px orb while the phase is live (an animation NEVER appears
+//: without the words beside it — it is labelled with the very line it marks),
+//: a letter for the two models, a hairline dot for the runtime.
+function rowMark(r){
+  if(r.shape==='wait')return orbMarkup(r.phase||'routing',rowText(r),'srow-orb');
+  const mark=ROW_KIND_MARKS[r.kind]||ROW_MARKS[r.actor];
+  if(!mark)return '';
+  return '<span class="srow-mark '+esc(r.actor)+'" aria-hidden="true">'+esc(mark)+'</span>';}
+function rowDetailHtml(detail,d){
+  if(!detail)return '';
+  if(detail.kind==='html')return String(detail.html||'');
+  if(detail.kind==='rows')return (detail.rows||[]).map(r=>row(r,d)).join('');
+  if(detail.kind==='message')return turn(detail.message,d);
+  return '<div class="srow-detail">'+esc(String(detail.text||''))+'</div>';}
+function rowActionHtml(action){
+  if(!action||!action.label)return '';
+  const attrs=Object.keys(action.attrs||{}).map(
+    k=>' '+k+'="'+esc(String(action.attrs[k]))+'"').join('');
+  return '<div class="srow-actions"><button type="button" class="srow-action"'
+    +attrs+'>'+esc(action.label)+'</button></div>';}
+
+//: THE ROW. Every shape, one function.
+function row(r,d){
+  if(!r)return '';
+  // A `say` row is words, so it is the words: full text, wrapping, unchanged.
+  if(r.shape==='say'&&r.detail&&r.detail.kind==='message')
+    return withTurnCost(turn(r.detail.message,d),r.detail.message,d);
+  const cls='srow srow-'+esc(r.shape)+(r.tone?' srow-'+esc(r.tone):'');
+  const line='<div class="srow-line">'+rowMark(r)
+    +'<span class="srow-verb">'+esc(rowText(r))+'</span>'
+    +'<time class="srow-time">'+esc(r.t?at(r.t):'')+'</time></div>';
+  const inner=rowDetailHtml(r.detail,d)
+    +(r.rolled&&r.rolled.length?'<div class="srow-rolled">'
+      +r.rolled.map(x=>row(x,d)).join('')+'</div>':'')
+    +rowActionHtml(r.action);
+  if(!inner)return '<div class="'+cls+'">'+line+'</div>';
+  return '<details class="'+cls+' srow-open"'+(r.open?' open':'')+'>'
+    +'<summary>'+line+'</summary><div class="srow-body">'+inner+'</div></details>';}
+// ------------------------------------------------------------ the status line
+// docs/design/ACTIVITY_STREAM.md §The status line. The ONLY persistent chrome
+// on this surface, and only while something is actually running:
+//
+//     [orb] 正在撰写 · 第 1/3 轮 · 38 秒 · ≈$0.04            [停止]
+//
+// It replaces the run card header — the outcome pill, the step meter, the
+// six-stage pipeline diagram and the focus panel — every one of which drew the
+// audit protocol's state machine rather than the person's work. When nothing
+// runs it is not there at all.
+function statusRoundText(p,d){
+  const rows=((p&&p.steps)||[]).filter(s=>s.kind==='round_started');
+  const last=rows.length?rows[rows.length-1]:null;
+  const n=last?Number(last.round_no||0):0;
+  const limit=(last&&last.round_limit)?Number(last.round_limit):Number((d&&d.max_rounds)||0);
+  if(!n||!limit)return '';
+  return currentLocale==='zh'?'第 '+n+'/'+limit+' 轮':'round '+n+' of '+limit;}
+//: The running cost of THIS run, from the per-run aggregate of the billing
+//: slice. Absent while nothing has been priced — an estimate of nothing is not
+//: a number a person would act on.
+function statusCostText(d,p){
+  const runs=(d&&d.usage&&d.usage.attribution&&d.usage.attribution.runs)||{};
+  const b=runs[(p&&p.run_id)||''];
+  if(!b||b.api_value_usd==null||(b.unpriced_calls&&!b.api_value_usd))return '';
+  return '≈'+formatUsd(b.api_value_usd);}
+function statusLine(d){
+  const p=chatProgress(d);
+  if(!p||p.finished)return '';
+  // No phase means nothing is in progress — a person or a decision is being
+  // waited for — and then there is no line, rather than an orb spinning over
+  // a sentence nobody wrote.
+  const phase=runOrbPhase(p);
+  if(!phase)return '';
+  const zh=currentLocale==='zh';
+  const draft=liveDraftFor(d);
+  const parts=[phaseWords(phase)];
+  const count=phaseCount(phase,{words:draftCount(draft?draft.text:''),
+    files:liveFileCount(d)});
+  if(count)parts.push(count);
+  const round=statusRoundText(p,d);if(round)parts.push(round);
+  const seconds=Math.max(0,Math.floor(Number(p.elapsed||0)));
+  if(seconds>=PHASE_ELAPSED_S)parts.push(elapsedWords(seconds));
+  const cost=statusCostText(d,p);if(cost)parts.push(cost);
+  const text=parts.join(' · ');
+  const stopping=String(p.state||'').toUpperCase()==='CANCELLING';
+  return '<div class="stream-status" role="status">'
+    +orbMarkup(phase,text,'srow-orb')
+    +'<span class="stream-status-text">'+esc(text)+'</span>'
+    +'<button type="button" class="stream-stop"'+(stopping?' disabled':'')
+    +' onclick="requestStop()" aria-label="'+esc(zh?'停止此任务':'Stop this task')+'">'
+    +esc(zh?(stopping?'正在停止…':'停止'):(stopping?'Stopping…':'Stop'))
+    +'</button></div>';}
+// D8 / D4, moved onto the stream unchanged: thinking is model text no auditor
+// has read — further from evidence than the draft, which already says so on
+// its face. One line that names what it is, folded shut, never written
+// anywhere: the row disappears with the run.
+function liveThinkingRow(d){
+  const thinking=liveThinkingFor(d);
+  if(!thinking)return '';
+  return '<details class="audit-event live-thinking">'
+    +'<summary>'+'<span class="event-mark runtime">…</span>'
+    +'<div class="event-main"><div class="event-line"><b>'
+    +esc(currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited')+'</b></div></div>'
+    +'<time class="event-time">'+(currentLocale==='zh'?'刚刚':'now')+'</time></summary>'
+    +'<div class="event-detail">'+esc(thinking.text.slice(-160).replace(/\s+/g,' '))
+    +'</div></details>';}
+//: What the stream is built from for this conversation: the messages the
+//: client already de-duplicated, the steps of the run that is actually running
+//: (the steps of a finished run are its record, not its news), and the round
+//: loop is on, so earlier rounds can fold into their own outcome rows.
+function streamContext(d,messages){
+  const p=chatProgress(d);
+  const live=Boolean(p&&!p.finished);
+  const steps=live?((p&&p.steps)||[]):[];
+  const rounds=steps.filter(s=>s.kind==='round_started');
+  const last=rounds.length?rounds[rounds.length-1]:null;
+  const cycles=chatCycles(d),cycle=cycles.length?cycles[cycles.length-1]:null;
+  return {messages:messages||[],steps:steps,stops:escalationRows(d),
+    livePhase:live?(STATUS_PHASE_ROWS[runOrbPhase(p)]||''):'',
+    round:Number((last&&last.round_no)||(cycle&&cycle.round)||0)};}
+
+// ------------------------------------------- failure is not a decision
+// docs/design/ACTIVITY_STREAM.md, the section of that name. A MACHINE failure
+// — an empty completion, an unreadable reply, a provider timeout, a rate
+// limit, a commit with nothing in the audited scope — is a NOTE row with one
+// inline action. Only a genuine judgment call becomes an OUTCOME that asks for
+// a person. That distinction is the point of the product: the opinion of the
+// audit is worth interrupting someone for; a failure of the plumbing is not.
+
+//: The stops that are somebody judging, not somebody plumbing: the auditor
+//: raised a concern, the auditor itself asked for a person, an earlier
+//: decision is unsettled. The rounds running out joins them through
+//: `limit_reached`, which is a field rather than a cause.
+const DECISION_CAUSES={auditor_concern:1,auditor_escalated:1,escalation_locked:1};
+//: Every other stop is a note: what failed, in plain words, and the ONE action
+//: that would fix it. The words are MOVED from the decision card, not
+//: rewritten. `act` is what the button does — `retry` posts the reopen the
+//: loop needs and nothing else, `settings` opens the limits, `guidance` opens
+//: the round for a person who has something to say. `reason` is the sentence
+//: the ledger records: English, because a ledger is a record, not a rendering.
+const FAILURE_NOTES={
+  provider:{en:'The provider did not answer',zh:'供应商无响应',
+    act:'retry',post:'retry_provider',unit:'retries',
+    action:{en:'Retry now',zh:'重试'},
+    reason:'Retried the provider from the activity stream.'},
+  budget:{en:'Paused at your usage limit',zh:'已在用量上限处暂停',
+    act:'settings',action:{en:'Adjust usage limits',zh:'调整用量上限'}},
+  invalid_reply:{en:'The auditor reply could not be read',zh:'审计者的回复无法解析',
+    act:'retry',post:'reopen',action:{en:'Run the audit again',zh:'重试审计'},
+    reason:'Run the audit again on the same work; the previous auditor reply '
+      +'could not be read.'},
+  no_science_commit:{en:'That commit had no experiment in it',zh:'那次提交里没有实验内容',
+    act:'retry',post:'reopen',
+    action:{en:'I have committed it — try again',zh:'我已提交，重试'},
+    reason:'The experiment has been committed; run the audited round again.'},
+  nothing_audited:{en:'Nothing was produced in the audited folder',zh:'已审计目录中没有产出',
+    act:'guidance',action:{en:'Say what to create',zh:'说明要创建什么'}},
+  generator_format:{en:'The generator produced nothing auditable',zh:'生成者没有产出可审计的内容',
+    act:'guidance',action:{en:'Rewrite the task',zh:'重写任务'}},
+  no_progress:{en:'The generator repeated the existing work',zh:'生成者重复了已有的成果',
+    act:'guidance',action:{en:'Say what should change',zh:'说明应改动什么'}},
+  bounds_exceeded:{en:'The task is too large for one audit',zh:'任务超出单次审计可读取的范围'},
+  repair_refused:{en:'The revision was rolled back',zh:'该修订已回滚'},
+  answered:{en:'This answer did not become an audited deliverable',zh:'这次回答没有形成可审计的交付物'}};
+
+//: Whether a stop is a person judging. A stop with no cause at all is one:
+//: the loop paused and could not say why, and guessing "plumbing" would hide
+//: a real question behind a retry button.
+function isDecisionStop(row){
+  if(!row)return false;
+  if(row.limit_reached)return true;
+  const cause=String(row.cause||'');
+  if(DECISION_CAUSES[cause])return true;
+  if(row.kind==='provider'||row.kind==='budget')return false;
+  return !FAILURE_NOTES[cause];}
+//: The words for a machine failure, keyed on the structured cause and falling
+//: back to the stop kind for the two that carry no cause of their own.
+function failureNote(row){
+  return FAILURE_NOTES[String((row&&row.cause)||'')]
+    ||FAILURE_NOTES[String((row&&row.kind)||'')]||null;}
+//: How many times the resilience layer has already gone back to the provider
+//: in this run. Counted from the narration the page already holds, so the
+//: number is never invented and is absent when it is zero.
+function providerRetries(d){
+  const p=chatProgress(d);
+  return ((p&&p.steps)||[]).filter(s=>s.kind==='provider_recovery'
+    &&/^Retrying /.test(String(s.text||''))).length;}
+//: One recorded stop becomes one row: a note with an action, or an outcome
+//: that asks for a person. Nothing about the audit moves — this reads the
+//: cause the ledger already recorded and chooses a SHAPE.
+function escalationRow(row,d){
+  if(!row)return null;
+  const zh=currentLocale==='zh';
+  if(isDecisionStop(row))
+    return streamRow({shape:'outcome',actor:'auditor',kind:'audit_escalated',
+      tone:'decide',key:'decision:'+(row.cycle_id||''),open:true,
+      line:t(decisionSlots(row).flag),
+      n:row.round?{value:row.round,unit:'rounds'}:null,
+      detail:{kind:'html',html:decisionDetail(row)}});
+  const note=failureNote(row);
+  if(!note)return null;
+  const retries=note.unit==='retries'?providerRetries(d):0;
+  return streamRow({shape:'note',actor:'system',kind:'provider_unavailable',
+    key:'failure:'+(row.cycle_id||''),
+    line:zh?note.zh:note.en,
+    n:retries?{value:retries,unit:'retries'}:null,
+    action:note.action?{label:zh?note.action.zh:note.action.en,
+      attrs:note.act==='settings'?{'data-open-runtime':'1'}
+        :note.act==='guidance'?{'data-open-decisions':String(row.cycle_id||''),
+                                'data-open-decisions-sha':String(row.sha||'')}
+        :{'data-stream-retry':String(row.cycle_id||''),
+          'data-stream-post':String(note.post||'reopen'),
+          'data-stream-reason':String(note.reason||'')}}:null});}
+function escalationRows(d){
+  return currentEscalations(d).map(row=>escalationRow(row,d)).filter(Boolean);}
+
+// ------------------------------------------------ decisions in the stream
+// docs/design/ACTIVITY_STREAM.md §Decisions happen in the stream. When a round
+// truly needs a person, its outcome row expands IN PLACE: what happened, why,
+// what the choices are, in three sentences and two buttons. Nothing covers the
+// screen and the composer stays live, so a person can answer in the box they
+// were already typing in if the buttons are not what they want.
+//
+// The words come from decisionSlots — the same pure function the Decision
+// Center writes from — so the two surfaces cannot drift apart.
+function decisionDetail(row){
+  const s=decisionSlots(row);
+  const zh=currentLocale==='zh';
+  const cycle=esc(String(row.cycle_id||''));
+  return '<div class="decision-inline" data-decision="'+cycle+'">'
+    +'<p class="decision-inline-summary">'+esc(t(s.summary))+'</p>'
+    +'<div class="decision-inline-block"><b>'+esc(t(s.limitTitle))+'</b>'
+    +'<p>'+esc(t(s.limitCopy))+'</p></div>'
+    +(s.issuesHtml?'<div class="decision-inline-block">'+s.issuesHtml+'</div>':'')
+    +'<p class="decision-inline-request">'+esc(t(s.request))+'</p>'
+    +'<label class="decision-inline-reason"><span>'
+    +esc(zh?'你的指引或理由':'Your guidance or reason')+'</span>'
+    +'<textarea rows="2" data-decision-reason aria-label="'
+    +esc(zh?'你的指引或理由':'Your guidance or reason')+'"></textarea></label>'
+    +'<div class="srow-actions">'
+    +'<button type="button" class="srow-action" data-decide="reopen" data-decide-cycle="'
+    +cycle+'">'+esc(t(s.reopenTitle))+'</button>'
+    +'<button type="button" class="srow-action" data-decide="close" data-decide-cycle="'
+    +cycle+'">'+esc(zh?'停止此任务':'Stop this task')+'</button>'
+    +(s.earlier?'<button type="button" class="srow-action" data-open-decisions="'
+      +esc(s.earlier)+'">'+esc(t('Open the earlier decision'))+'</button>':'')
+    +(s.runtimeHidden?'':'<button type="button" class="srow-action" data-open-runtime="1">'
+      +esc(t(s.runtimeLabel))+'</button>')
+    +'</div><p class="decision-inline-error" role="alert" hidden></p></div>';}
+
 function turn(m,d){
   if(m.kind === 'you'){
     const explicit=m.routing_mode==='explicit';const recipient=m.addressed_to||m.lane;
@@ -6490,14 +7162,9 @@ function setStatePill(d){
 function decisionRowFor(d,cycleId,sha){const rows=(d&&d.escalations)||[];
   return rows.find(r=>r.cycle_id===cycleId)||rows.find(r=>sha&&r.sha&&(String(r.sha).startsWith(String(sha))||String(sha).startsWith(String(r.sha))))
     ||currentEscalations(d).slice(-1)[0]||null;}
-// One line under the round rows when the pending decision is not about the
-// rounds shown: a provider or usage stop, or a later round than the last
-// report. Otherwise "" — the round rows already say it.
-function pendingDecisionLine(row,lastRound){if(!row)return '';
-  const what=row.kind==='provider'?'Waiting for the provider':row.kind==='budget'?'Usage limit reached':'Needs your decision';
-  const round=Number(row.round||0),shown=Number(lastRound||0);
-  if(row.kind!=='provider'&&row.kind!=='budget'&&(!round||round===shown))return '';
-  return what+(round&&round!==shown?' · round '+round:'');}
+// pendingDecisionLine went with the escalated review card: a pending decision
+// is its own row in the stream now, carrying the decision itself, so a second
+// line about it under a card would be the same news twice.
 function reviewCard(d){
   const cycles=chatCycles(d);if(!cycles.length)return '';
   const cycle=cycles[cycles.length-1];
@@ -6536,8 +7203,11 @@ function reviewCard(d){
   // them passed. That is the same fabrication as the ticks below it: the console
   // is not told which checks ran. The claim is removed rather than restated, and
   // the check list in the detail carries its real state instead.
-  const pending=status==='escalated'?decisionRowFor(d,cycle.id,cycle.sha):null;
-  const pendingLine=pendingDecisionLine(pending,rows.length?rows[rows.length-1].round:cycle.round);
+  // A stopped cycle is a row in the stream now: a machine failure is a note
+  // with an inline retry, a judgment call is an outcome row that expands into
+  // the decision itself. A card announcing the same stop underneath would be
+  // the interface asking twice.
+  if(status==='escalated')return '';
   const checkLines=passed
     ?'<ul class="review-checks"><li>Independent auditor approved the result</li>'
       +'<li>No blocking findings</li>'
@@ -6572,20 +7242,16 @@ function reviewCard(d){
     +'</div></details></div></div>';
   const actionRow=status==='passed'
     ?'<button type="button" class="review-action" data-admit data-admit-cycle="'+esc(cycle.id)+'">Admit result</button>'
-    :status==='escalated'
-    ?'<button type="button" class="review-action" data-open-decisions="'+esc(cycle.id)+'" data-open-decisions-sha="'+esc(cycle.sha||'')+'">Review issues & decide</button>'
     :'<button type="button" class="review-action" data-open-audits>View audit details</button>';
   return '<section class="review-card'+(open?' open':'')+'" aria-label="Independent review">'
     +'<button type="button" class="review-summary" data-review-toggle="'+esc(cycle.id)+'" aria-expanded="'+(open?'true':'false')+'">'
     +'<div class="review-top"><span class="review-mark" aria-hidden="true"></span><b>Independent review</b>'
     +'<span class="status '+esc(cycle.status)+'">'+esc(statusLabel)+'</span><span class="review-chevron" aria-hidden="true"></span></div>'
     +checkLines
-    +'<div class="review-rounds">'+roundLines+(pendingLine?'<div class="review-round-row review-pending"><span>'+esc(pendingLine)+'</span></div>':'')+'</div>'
+    +'<div class="review-rounds">'+roundLines+'</div>'
     +'</button>'+detail
     +'<div class="review-actions">'+actionRow+'</div></section>';
 }
-const ACTOR_NAMES = {generator:'Generator',auditor:'Auditor',compute:'Compute',tool:'Tool',loop:'Process',done:'Result',input:'You'};
-const ACTOR_MARKS = {generator:'G',auditor:'A',compute:'H',tool:'M',loop:'↻',done:'✓'};
 // The main surface carries words, never identifiers (D150 / North Star §12):
 // a raw payload (the goal record is JSON for the Plan tab) is not shown at
 // all, and a hash, sha, cycle id, provider:model route or rule id that an
@@ -6598,121 +7264,10 @@ function conciseDetail(s){
     .replace(/\b[a-f0-9]{40}\b/g,'').replace(/\b[a-f0-9]{16}\b/g,'').replace(/\b[a-f0-9]{12}\b/g,'')
     .replace(/\b[A-Za-z0-9_.-]+:(?:claude|gpt|gemini|deepseek|grok|o[0-9])[A-Za-z0-9_.-]*\b/g,'')
     .replace(/\bCA-[A-Z]+-\d+\b/g,'').replace(/\s{2,}/g,' ').replace(/^[\s·;,:—-]+|[\s·;,:—-]+$/g,'');}
-// One live-activity row. A condensation notice is the runtime reporting on
-// itself, so it does not borrow the generator name or mark, and every row
-// localises from the wire fields (text_i18n) rather than showing English
-// under 中文.
-function activityRow(s){
-  const system = s.kind === 'context_condensed';
-  const mark = system ? '↻' : (ACTOR_MARKS[s.actor]||'·');
-  const who = system ? t('Context reduced') : t(ACTOR_NAMES[s.actor]||s.actor);
-  const line = (system || s.text_i18n) ? localeText(s.text_i18n, s.text) : s.text;
-  const detail = system ? localeText(s.detail_i18n, s.detail) : conciseDetail(s);
-  // D149. Every row keeps its own actor mark. What is happening RIGHT NOW is
-  // said once, in the live phase line below the rows, rather than by animating
-  // the newest thing that has already happened.
-  return '<div class="audit-event">'
-  + '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>'
-  + '<div class="event-main"><div class="event-line"><b>' + esc(who)
-  + '</b><span>' + esc(line) + '</span></div>'
-  + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
-  + '<time class="event-time">' + at(s.t) + '</time></div>';}
-// Review D7: the cure for silence must not eat the narration it protects.
-// The clock speaks every 8 s of silence, and the auditor clock every 10 s
-// of streaming, so a two-minute audit produced fifteen rows and pushed all
-// twelve substantive steps off the card. A run of consecutive clock rows is
-// one fact — how long this phase has been going — so only its newest survives,
-// in place. Rows of any other kind are never dropped.
-const CLOCK_KINDS = new Set(['still_working','auditor_progress']);
-function collapseClockRows(steps){
-  const out=[];
-  for(const step of steps||[]){
-    const prev=out.length?out[out.length-1]:null;
-    if(prev&&CLOCK_KINDS.has(step.kind)&&CLOCK_KINDS.has(prev.kind)){out[out.length-1]=step;continue;}
-    out.push(step);}
-  return out;}
-function runCard(d){
-  const p = chatProgress(d),cycles=chatCycles(d);
-  const latestCycle=cycles.length?cycles[cycles.length-1]:null;
-  const ownsPipeline=p||(latestCycle&&d.cycles.length&&latestCycle.sha===d.cycles[d.cycles.length-1].sha);
-  const pipeline=ownsPipeline?d.pipeline:[];
-  const show = p || pipeline.some(s => s.state !== 'pending');
-  if(!show) return '';
-  const rawOutcome = p ? (p.finished ? p.outcome : 'running') : statusOf(d);
-  const outcome = rawOutcome==='provider_unavailable' ? 'escalated' : rawOutcome;
-  const tone = String(outcome||'ready').toLowerCase();
-  // Plain-language status the reader actually understands; the raw enum stays as
-  // the CSS class for colour, but never as the words on screen.
-  const outcomeLabel = ({running:'Working',ready:'Ready',passed:'Passed review',consumed:'Admitted',blocked:'Needs changes',escalated:'Needs your input',failed:'Stopped'})[tone] || outcome;
-  const handoff = (Date.now()-handoffAt<700&&handoffDirection)?' data-handoff="'+esc(handoffDirection)+'"':'';
-  const reached = pipeline.filter(s => s.state !== 'pending').length;
-  const meter = pipeline.length ? Math.round(reached / pipeline.length * 100) : 0;
-  const roundEvents = p && p.steps ? p.steps.filter(s => s.kind === 'round_started') : [];
-  const roundEvent = roundEvents.length ? roundEvents[roundEvents.length-1] : null;
-  const round = roundEvent ? roundEvent.round_no : latestCycle ? latestCycle.round : '-';
-  const roundLimit = roundEvent&&roundEvent.round_limit ? roundEvent.round_limit : d.max_rounds;
-  const focus = pipeline.find(s => s.state === 'current') || pipeline.find(s => s.state === 'failed')
-    || pipeline.find(s => s.state === 'pending') || pipeline[pipeline.length-1];
-  const focusLabel = focus.state === 'current' ? 'Current step' : focus.state === 'failed' ? 'Stopped at'
-    : focus.state === 'pending' ? 'Next step' : 'Completed step';
-  const stateNames = {done:'Done',failed:'Stopped',current:'Active',pending:'Waiting'};
-  // D150: what is arriving right now, as one line each — a word count for the
-  // draft (the text itself lives in the unaudited draft article above) and
-  // the tail of the summarised thinking. Neither is a step; neither persists.
-  const draft = liveDraftFor(d), thinking = liveThinkingFor(d);
-  // D149. ONE orb per card, and it sits on the live phase line — the phase in
-  // words, the number that phase produces, and how long it has been going.
-  // Nothing once the run is over.
-  const orbPhase = p && !p.finished ? runOrbPhase(p) : '';
-  const rows = p && p.steps ? collapseClockRows(p.steps).slice(-12) : [];
-  const eventRows = rows.map(s => activityRow(s)).join('');
-  // Review D8 / D4: thinking is model text no auditor has read — further from
-  // evidence than the draft, which already says so on its face. It is folded
-  // away behind a summary that says what it is, opens only if the reader asks,
-  // and is never written anywhere: the row disappears with the run.
-  const liveRows = (thinking ? '<details class="audit-event live-thinking">'
-      + '<summary>' + '<span class="event-mark runtime">…</span>'
-      + '<div class="event-main"><div class="event-line"><b>'
-      + esc(currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited') + '</b></div></div>'
-      + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></summary>'
-      + '<div class="event-detail">' + esc(thinking.text.slice(-160).replace(/\s+/g,' ')) + '</div></details>' : '')
-    // The word count of the draft is the number the generating phase has, so
-    // the phase line below IS the draft row; a second one would say it twice.
-    + (orbPhase ? livePhaseLine(orbPhase,
-        {seconds: p ? p.elapsed : 0, words: draftCount(draft ? draft.text : ''),
-         files: liveFileCount(d)}, 'audit-event') : '');
-  const activityTitle = p && !p.finished ? 'Live activity' : 'Run activity';
-  const activity = (eventRows + liveRows) || '<div class="activity-empty">The generator and auditor show what they are doing here while a task runs.</div>';
-  const task = p && p.task ? p.task : titleOf(d);
-  const live = p && !p.finished;
-  const stopBtn = live ? '<button type="button" class="run-stop"'
-    + (p.state==='CANCELLING'?' disabled':'') + ' onclick="requestStop()" '
-    + 'aria-label="Stop this task"><span class="run-stop-glyph" aria-hidden="true"></span>'
-    + (p.state==='CANCELLING'?'Stopping…':'Stop') + '</button>' : '';
-  return '<section class="run-card ' + esc(tone) + '"' + handoff + ' aria-label="Audit loop">'
-    + '<div class="run-overview"><div class="run-top">'
-    + '<span class="run-eyebrow">Audit loop</span><span class="status ' + esc(outcome) + '">'
-    + esc(outcomeLabel) + '</span>' + stopBtn + '</div><div class="run-task">' + esc(task) + '</div><div class="run-meta">'
-    + '<span>Round <strong>' + esc(round) + '</strong> of ' + esc(roundLimit) + '</span>'
-    + '<span><strong>' + reached + '</strong> of ' + pipeline.length + ' steps done</span>'
-    + '<span>' + (p ? elapsedText(p.elapsed) : 'Ledger snapshot') + '</span>'
-    + (p&&p.queued&&!p.finished?'<span><strong>'+esc(p.queued)+'</strong> queued</span>':'')
-    + (live ? forecastLine(d) : '') + '</div>'
-    + '<div class="run-handoff" aria-hidden="true"><i></i></div>'
-    + '<div class="run-meter" role="progressbar" aria-label="Audit steps done" aria-valuemin="0" '
-    + 'aria-valuemax="100" aria-valuenow="' + meter + '"><i style="width:' + meter + '%"></i></div></div>'
-    + '<div class="loop">' + pipeline.map((s,i) => '<div class="loop-step ' + esc(s.state) + '" '
-      + 'aria-label="' + esc(s.title + ': ' + stateNames[s.state]) + '"><div class="loop-track">'
-      + '<div class="loop-mark">' + esc(MARK[s.state] || String(i+1)) + '</div></div>'
-      + '<div class="loop-name">' + esc(s.title) + '</div>'
-      + '<div class="loop-detail" title="' + esc(s.detail) + '">' + esc(s.detail) + '</div>'
-      + '<div class="loop-state">' + esc(stateNames[s.state]) + '</div></div>').join('') + '</div>'
-    + '<div class="loop-focus ' + esc(focus.state) + '"><div class="loop-focus-label">' + focusLabel + '</div>'
-    + '<div class="loop-focus-copy"><b>' + esc(focus.title) + '</b><p>' + esc(focus.detail) + '</p></div></div>'
-    + '<div class="activity"><div class="activity-head">' + activityTitle + '<span>'
-    + (p && p.steps ? p.steps.length + ' event' + (p.steps.length===1?'':'s') : 'Ledger-backed state')
-    + '</span></div><div class="activity-list">' + activity + '</div></div>' + runCostLine(d) + '</section>';
-}
+// D149's activityRow, the clock collapse and the run card are gone: the run's
+// events are rows in the one stream now (rowFromStep + mergeRuns), and the
+// card's header is the status line. ACTOR_NAMES / ACTOR_MARKS went with them —
+// the actor of a row is a mark, not a repeated speaker name.
 function approvalCard(d){
   // A live build proposed a Level 3+ action and paused for the user. The card
   // states what/why/scope/reversibility/cost; the buttons deliver the decision
@@ -6834,7 +7389,7 @@ function artifactsView(d){
 function auditsView(d){
   const audits = d.auditor_stream.filter(m => m.kind === 'auditor'&&(m.chat_id||'history')===activeChatId);
   return '<div class="view-heading"><h2>Audits</h2><p>Independent verdicts and findings reconstructed from the ledger.</p></div>'
-    + runCard(d) + (audits.length ? '<div class="audit-evidence-head"><h3>Audit evidence</h3><span>'
+    + (audits.length ? '<div class="audit-evidence-head"><h3>Audit evidence</h3><span>'
       + audits.length + ' report' + (audits.length===1?'':'s') + '</span></div>'
       + audits.map(m=>turn(m,d)).join('') : '<div class="empty">No audit evidence yet.</div>');
 }
@@ -7367,7 +7922,6 @@ function renderConversation(d){
     announceThread(messages,d);
     announceCondensation(d);
     const p = chatProgress(d);
-    const live = p && !p.finished ? runCard(d) : '';
     const approval = approvalCard(d);
     const review = reviewCard(d);
     // Optimistic echo: keep the just-sent message + working indicator on screen
@@ -7387,8 +7941,12 @@ function renderConversation(d){
     // One protagonist per screen: the welcome empty state renders only when
     // the timeline holds nothing at all, and the delivery band only when no
     // review card already states the outcome of the same cycle.
-    const body = messages.map(m=>withTurnCost(turn(m,d),m,d)).join('') + optimistic + liveDraftTurn(d) + live + approval + review
-      + admissionCard() + (review ? '' : deliveryStatus(d));
+    // ONE list. Every message and every run event is a row of the same
+    // renderer; the live draft and the folded thinking are rows too; the
+    // status line is the only thing that is not a row, and it is at the foot.
+    const body = streamList(d,streamContext(d,messages)).map(r=>row(r,d)).join('')
+      + optimistic + liveDraftTurn(d) + liveThinkingRow(d) + approval + review
+      + admissionCard() + (review ? '' : deliveryStatus(d)) + statusLine(d);
     html = body || welcome();
   }
   document.getElementById('conversation').innerHTML = html;
@@ -7580,10 +8138,13 @@ function renderInspector(d){
 }
 function maybePromptForHuman(d){
   if(document.body.classList.contains('hub-mode')||resolutionModal.classList.contains('on')||newTaskMode)return;
+  // Nothing is modal. A machine failure is a note row with one action; a
+  // judgment call is an outcome row that expands into the decision itself,
+  // in the stream, with the composer live beside it. The Decision Center is
+  // still reachable — from the cross-task banner and the Needs-attention
+  // panel — but it is never thrown at anybody.
   const row=currentEscalations(d).slice(-1)[0];
-  if(row&&!promptedEscalations.has(row.cycle_id))setTimeout(()=>{
-    if(lastState===d&&!resolutionModal.classList.contains('on'))openResolution(row);
-  },0);
+  if(row)promptedEscalations.add(row.cycle_id);
 }
 function render(d){
   lastState = d;
@@ -8266,6 +8827,60 @@ function handleActionClick(ev){
     if(open)expandedReviews.add(key);else expandedReviews.delete(key);
     if(card){card.classList.toggle('open',open);reviewToggle.setAttribute('aria-expanded',String(open));}
     return;}
+  // The inline retry of a machine failure: one POST, no dialog, and the
+  // composer is never touched. The reason it records is fixed English, because
+  // the ledger is a record rather than a rendering.
+  const decide=ev.target.closest('[data-decide]');
+  if(decide){
+    const box=decide.closest('.decision-inline');
+    const cycle=decide.getAttribute('data-decide-cycle')||'';
+    const action=decide.getAttribute('data-decide')||'';
+    const field=box?box.querySelector('[data-decision-reason]'):null;
+    const reason=field?field.value.trim():'';
+    const problem=box?box.querySelector('.decision-inline-error'):null;
+    const stop=lastState&&decisionRowFor(lastState,cycle,'');
+    const providerStop=Boolean(stop&&stop.kind==='provider');
+    if(!reason&&!(providerStop&&action==='reopen')){
+      if(problem){problem.hidden=false;problem.textContent=currentLocale==='zh'
+        ?'请写下具体的指引或理由，让这个决定可以被审计。'
+        :'Add concrete guidance or a reason so the decision is auditable.';}
+      if(field)field.focus();
+      return;}
+    if(problem)problem.hidden=true;
+    decide.disabled=true;
+    api('/api/escalation',{cycle_id:cycle,
+        action:providerStop&&action==='reopen'?'retry_provider':action,reason:reason})
+      .then(r=>{
+        route.className='route on';
+        if(r&&r.setup==='credentials'){showSetupCard(r.missing||[]);return;}
+        if(action==='reopen'){
+          pendingContinuation={cycle:cycle,chat:activeChatId};
+          say.value=reason;
+          route.innerHTML=currentLocale==='zh'
+            ?'<b>已再开一轮审计。</b> 你的指引在输入框里，确认后点击运行。'
+            :'<b>Another audited attempt is unlocked.</b> Your guidance is in the composer. Review it, then press Run task.';
+          setTimeout(()=>say.focus(),0);
+        }else route.innerHTML=currentLocale==='zh'
+          ?'<b>任务已停止。</b> 当前结果未被采纳，你的理由已记录。'
+          :'<b>Task stopped.</b> The current output remains unadmitted and your reason was recorded.';})
+      .catch(e=>{if(problem){problem.hidden=false;problem.textContent=e.message;}})
+      .finally(()=>{decide.disabled=false;});
+    return;}
+  const retry=ev.target.closest('[data-stream-retry]');
+  if(retry){
+    const cycle=retry.getAttribute('data-stream-retry')||'';
+    const action=retry.getAttribute('data-stream-post')||'reopen';
+    const reason=retry.getAttribute('data-stream-reason')||'';
+    retry.disabled=true;
+    api('/api/escalation',{cycle_id:cycle,action:action,reason:reason})
+      .then(()=>{route.className='route on';
+        route.innerHTML=currentLocale==='zh'
+          ?'<b>已重试。</b> 进度会显示在这里。'
+          :'<b>Retrying.</b> Progress appears here.';})
+      .catch(e=>{route.className='route on error';route.textContent=e.message;})
+      .finally(()=>{retry.disabled=false;});
+    return;}
+  if(ev.target.closest('[data-open-runtime]')){openRuntime();return;}
   if(ev.target.closest('[data-open-artifacts]'))openPanelTab('artifacts');
   if(ev.target.closest('[data-open-audits]'))openPanelTab('audits');
   const openDecisions=ev.target.closest('[data-open-decisions]');

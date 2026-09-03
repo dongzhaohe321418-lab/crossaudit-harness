@@ -56,6 +56,12 @@ def check_words(name: str) -> str:
     return CHECK_NAMES.get(name, name.replace("_", " "))
 
 
+#: The detail on the one repair attempt a round may make. Locale-neutral and
+#: countable, so the console can say it in either language without parsing
+#: prose, and the run record shows that the attempt happened.
+REPAIR_ATTEMPT_DETAIL = "1 attempt"
+
+
 @dataclass
 class AuditOutcome:
     verdict: str
@@ -288,13 +294,15 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
         if narrate is not None:
             narrate("auditor_reading", f"The auditor is reading {len(files)} file"
                     + ("" if len(files) == 1 else "s"))
-        try:
+        def ask(text: str):
+            """One auditor turn: place the call, price it, record the route."""
+            nonlocal actual, exchange
             started = time.monotonic()
-            raw = provider_resilience.complete(
+            answer = provider_resilience.complete(
                 cfg, "auditor", cfg.auditor, system=prompt_mod.SYSTEM,
-                prompt=prompt, allow_custom=allow_custom_endpoint,
+                prompt=text, allow_custom=allow_custom_endpoint,
                 on_event=on_event)
-            route = provider_resilience.route_from_reply(raw, cfg.auditor)
+            route = provider_resilience.route_from_reply(answer, cfg.auditor)
             # The kernel passes the caller's attribution through untouched and
             # adds only what it measured itself (the turn's duration).
             usage_meta = dict(usage_context or {})
@@ -302,7 +310,7 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
             record_completion(root=cfg.root, state_dir=cfg.state_dir, role="auditor",
                               phase="audit", vendor=route["vendor"],
                               provider=route["provider"], model=route["model"],
-                              reply=raw, system=prompt_mod.SYSTEM, prompt=prompt,
+                              reply=answer, system=prompt_mod.SYSTEM, prompt=text,
                               base_url=route.get("base_url"), context=usage_meta)
             actual = Role(provider=route["provider"], model=route["model"],
                           vendor=route["vendor"], key_env=route["key_env"],
@@ -313,9 +321,47 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
                         "base_url": actual.base_url,
                         "fallback": bool(route.get("fallback")),
                         "reasoning_effort": actual.reasoning_effort or "provider-default",
-                        **raw.commitments(retention)}
-            parsed, perr = parse_reply(raw.text)
-            invalid = perr or validate_reply(parsed, known_rules(constitution))
+                        **answer.commitments(retention)}
+            return answer
+
+        def read(answer) -> tuple[dict | None, str | None]:
+            parsed_reply, parse_error = parse_reply(answer.text)
+            return parsed_reply, (parse_error
+                                  or validate_reply(parsed_reply,
+                                                    known_rules(constitution)))
+
+        try:
+            raw = ask(prompt)
+            parsed, invalid = read(raw)
+            if invalid is not None:
+                # ONE bounded repair attempt, at most once per round, against
+                # the SAME route, before anything else happens. The validator
+                # already knows exactly why the reply was rejected, and a model
+                # told what it got wrong usually answers in the required shape;
+                # an empty completion is the commonest case of all.
+                #
+                # Deliberately additive: it adds an attempt IN FRONT OF an
+                # existing failure path and moves no verdict mapping. A second
+                # failure falls through to the configured backup route exactly
+                # as before, a reply that is still unreadable is still
+                # INVALID_REPLY, and the repair prompt carries no hint about
+                # what the verdict should be — only the shape it must have.
+                if narrate is not None:
+                    narrate("audit_repair_retry",
+                            "Asking the auditor to answer again",
+                            REPAIR_ATTEMPT_DETAIL)
+                try:
+                    repaired = ask(prompt + prompt_mod.repair_note(invalid))
+                except ProviderDenial:
+                    # The repair could not even be PLACED: a recorded-transcript
+                    # route has no reply for a prompt it was never asked, a rate
+                    # limit arrived between the two turns. The original
+                    # rejection then stands exactly as it did before this
+                    # attempt existed — additive means it can only help.
+                    repaired = None
+                if repaired is not None:
+                    raw = repaired
+                    parsed, invalid = read(raw)
             reply = parsed if invalid is None else None
         except ProviderDenial as exc:
             if (str(exc.detail.get("category", "")) in PROVIDER_WAIT_CATEGORIES

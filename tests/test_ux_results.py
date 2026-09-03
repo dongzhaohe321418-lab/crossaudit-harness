@@ -172,6 +172,18 @@ def _state(status: str, verdict: str, findings: list[dict]) -> dict:
     }
 
 
+@needs_node
+def test_an_escalated_cycle_is_a_row_in_the_stream_not_a_review_card():
+    """A5. A stopped cycle is a decision, and a decision happens in the stream:
+    a machine failure is a note row with one inline action, a judgment call is
+    an outcome row that expands into the decision itself. A review card
+    announcing the same stop underneath would be the interface asking twice.
+
+    Mutation: let reviewCard render the escalated branch again and this fails.
+    """
+    assert _review_card(_state("ESCALATED", "ESCALATE", [])).strip() == ""
+
+
 def _review_card(state: dict) -> str:
     from render_decision import eval_page
     return eval_page(WORKTREE, _CARD_SIGS,
@@ -182,8 +194,7 @@ def _review_card(state: dict) -> str:
 @pytest.mark.parametrize("status,verdict,findings", [
     ("PASSED", "PASS", []),
     ("BLOCKED", "BLOCKED", [{"severity": "BLOCKER", "rule": "CA-TXT-001",
-                             "artifact": "work/a.md", "observation": "Wrong figure."}]),
-    ("ESCALATED", "ESCALATE", [])])
+                             "artifact": "work/a.md", "observation": "Wrong figure."}])])
 def test_the_review_card_first_paint_carries_no_identifier(status, verdict, findings):
     """R3. The grep the owner asked for, on the rendered card: outside the
     closed Details block there is no 12/40-hex, no provider:model string and
@@ -353,12 +364,22 @@ console.log(JSON.stringify(out));"""
                          "通常不到 1 分钟 · 约 $0.01", "通常不到 1 分钟"]
 
 
-def test_the_forecast_line_is_one_line_in_the_two_existing_places():
-    start = PAGE[PAGE.index("function optimisticTurn("):PAGE.index("function friendlyModel(") if False else PAGE.index("function userState(d)")]
+def test_the_forecast_line_is_one_line_at_task_start_and_nowhere_else():
+    """R4 kept, narrowed by the activity stream.
+
+    The run card's header carried the forecast beside a step meter; the header
+    is now the status line, which says the RUNNING COST from the billing
+    slice's per-run aggregate. An estimate beside a measurement of the same
+    thing is the weaker of the two, so the forecast stays where it is the only
+    number available — the moment the task is sent.
+
+    Mutation: add forecastLine() back to statusLine and this fails.
+    """
+    start = PAGE[PAGE.index("function optimisticTurn("):PAGE.index("function userState(d)")]
     assert start.count("forecastText(") == 1
-    run_card = PAGE[PAGE.index("function runCard(d){"):PAGE.index("function approvalCard(d){")]
-    assert run_card.count("forecastLine(d)") == 1
-    assert "(live ? forecastLine(d) : '')" in run_card, "only while the run is live"
+    status = PAGE[PAGE.index("function statusLine(d){"):PAGE.index("function liveThinkingRow(d){")]
+    assert "forecast" not in status
+    assert "statusCostText(d,p)" in status
 
 
 # ============================================================ R5 every branch
