@@ -836,6 +836,13 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .audit-event{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:9px;align-items:start;
   padding:6px 5px;border-radius:var(--r-xs)}
 .audit-event:hover{background:var(--hover)}
+/* The folded thinking row: the grid lives on the summary, so the closed row
+   sits on the same rhythm as every other activity line. */
+details.audit-event{display:block}
+details.live-thinking>summary{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:9px;
+  align-items:start;cursor:pointer;list-style:none}
+details.live-thinking>summary::-webkit-details-marker{display:none}
+details.live-thinking>.event-detail{padding:2px 5px 4px 38px}
 .event-mark{width:22px;height:22px;border-radius:var(--r-xs);display:grid;place-items:center;
   background:var(--surface-2);color:var(--text-2);font-size:8.5px;font-weight:600}
 .event-mark.generator{background:var(--role-g-bg);color:var(--role-g)}
@@ -3677,6 +3684,9 @@ const ZH={
   ,"the round could not be committed":"该轮次无法提交","rendering final document locally":"正在本地渲染最终文档","the round reproduced the previous one; nothing new to audit":"本轮与上一轮结果相同；没有新的内容可审计"
   ,"the loop cannot settle this itself":"循环无法自行解决此问题","this stop is waiting for a human":"此次停止正在等待人工处理"
   ,"Thinking":"思考中","Generator live reply · not audited":"生成者实时回复 · 未经审计","Auditor live reply · direct reply":"审计者实时回复 · 直接回复"
+  ,"Thinking · not audited":"思考中 · 未经审计"
+  ,"the previous message is still being handled":"上一条消息仍在处理中"
+  ,"Something went wrong handling that message. Nothing was started.":"处理这条消息时出错，没有启动任何任务。"
   ,"Connect a provider first":"请先连接供应商","The generator has no credential yet.":"生成者尚未连接凭据。","The auditor has no credential yet.":"审计者尚未连接凭据。"
   ,"Neither the generator nor the auditor has a credential yet.":"生成者与审计者都尚未连接凭据。","Open Settings → Providers":"打开设置 → 供应商"
   ,"Task started.":"任务已开始。","The result will appear in this conversation.":"结果会显示在此对话中。","Needs clarification.":"需要澄清。","Refused.":"已拒绝。","Message delivered.":"消息已送达。","Sending your files…":"正在发送文件…"
@@ -6336,6 +6346,20 @@ function activityRow(s){
   + '</b><span>' + esc(line) + '</span></div>'
   + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
   + '<time class="event-time">' + at(s.t) + '</time></div>';}
+// Review D7: the cure for silence must not eat the narration it protects.
+// The clock speaks every 8 s of silence, and the auditor clock every 10 s
+// of streaming, so a two-minute audit produced fifteen rows and pushed all
+// twelve substantive steps off the card. A run of consecutive clock rows is
+// one fact — how long this phase has been going — so only its newest survives,
+// in place. Rows of any other kind are never dropped.
+const CLOCK_KINDS = new Set(['still_working','auditor_progress']);
+function collapseClockRows(steps){
+  const out=[];
+  for(const step of steps||[]){
+    const prev=out.length?out[out.length-1]:null;
+    if(prev&&CLOCK_KINDS.has(step.kind)&&CLOCK_KINDS.has(prev.kind)){out[out.length-1]=step;continue;}
+    out.push(step);}
+  return out;}
 function runCard(d){
   const p = chatProgress(d),cycles=chatCycles(d);
   const latestCycle=cycles.length?cycles[cycles.length-1]:null;
@@ -6361,15 +6385,20 @@ function runCard(d){
   const focusLabel = focus.state === 'current' ? 'Current step' : focus.state === 'failed' ? 'Stopped at'
     : focus.state === 'pending' ? 'Next step' : 'Completed step';
   const stateNames = {done:'Done',failed:'Stopped',current:'Active',pending:'Waiting'};
-  const eventRows = p && p.steps ? p.steps.slice(-12).map(activityRow).join('') : '';
+  const eventRows = p && p.steps ? collapseClockRows(p.steps).slice(-12).map(activityRow).join('') : '';
   // D150: what is arriving right now, as one line each — a word count for the
   // draft (the text itself lives in the unaudited draft article above) and
   // the tail of the summarised thinking. Neither is a step; neither persists.
   const draft = liveDraftFor(d), thinking = liveThinkingFor(d);
-  const liveRows = (thinking ? '<div class="audit-event live-thinking">'
-      + '<span class="event-mark runtime">…</span><div class="event-main"><div class="event-line"><b>'
-      + esc(currentLocale==='zh'?'思考中':'Thinking') + '</b><span>' + esc(thinking.text.slice(-160).replace(/\s+/g,' ')) + '</span></div></div>'
-      + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></div>' : '')
+  // Review D8 / D4: thinking is model text no auditor has read — further from
+  // evidence than the draft, which already says so on its face. It is folded
+  // away behind a summary that says what it is, opens only if the reader asks,
+  // and is never written anywhere: the row disappears with the run.
+  const liveRows = (thinking ? '<details class="audit-event live-thinking">'
+      + '<summary><span class="event-mark runtime">…</span><div class="event-main"><div class="event-line"><b>'
+      + esc(currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited') + '</b></div></div>'
+      + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></summary>'
+      + '<div class="event-detail">' + esc(thinking.text.slice(-160).replace(/\s+/g,' ')) + '</div></details>' : '')
     + (draft ? '<div class="audit-event live-draft">'
       + '<span class="event-mark generator">G</span><div class="event-main"><div class="event-line"><b>'
       + esc(t('Generator')) + '</b><span>' + esc(currentLocale==='zh'

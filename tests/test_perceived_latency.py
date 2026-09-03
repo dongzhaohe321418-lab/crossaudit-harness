@@ -527,8 +527,12 @@ def test_events_run_from_submit_to_verdict_in_the_owner_facing_order(
     assert code == 0, [(e.kind, e.text) for e in events][-4:]
 
     kinds = [event.kind for event in events]
-    expected = ["goal", "round_started", "generation_started", "preparing",
-                "prompt_ready", "generation_chunk", "thinking_chunk",
+    # Review D6: the order is the order things happen in. "writing" used to be
+    # announced before the workspace read it was waiting on, so the reader saw
+    # the conclusion first and the reason for the pause underneath it.
+    # Mutation: emit generation_started above preparing again and this goes red.
+    expected = ["goal", "round_started", "preparing", "prompt_ready",
+                "generation_started", "generation_chunk", "thinking_chunk",
                 "generation_completed", "audit_started", "check_started",
                 "check_finished", "auditor_reading", "audit_passed"]
     positions = [kinds.index(kind) for kind in expected]
@@ -798,3 +802,277 @@ def test_the_pipeline_commit_step_names_the_round_not_the_sha(science, cfg):
                            verdict="PASS", findings=[], at=0)
     steps = overview.pipeline(cfg, [cycle])
     assert steps[0]["title"] == "Commit" and steps[0]["detail"] == "round 2"
+
+
+# ============================================================ review fixes
+# Guards for the defects the independent review found (review-latency.md
+# D3-D8). Each names the mutation that reproduces the original defect.
+
+def _generator_role(monkeypatch):
+    """A configured generator role, so the chat lane reaches its provider."""
+    from crossaudit.config import Role
+
+    monkeypatch.setattr(
+        talk_mod.provider_resilience, "generator_role",
+        lambda _cfg: Role(vendor="anthropic", provider="anthropic",
+                          model="m", key_env="CROSSAUDIT_GENERATOR_KEY"))
+    monkeypatch.setattr(talk_mod, "record_completion", lambda **_kw: None)
+    monkeypatch.setattr(talk_mod, "check_budget_warnings", lambda _cfg: None)
+
+
+def _streaming_chat(monkeypatch, chunks: tuple[str, ...]):
+    """A chat lane whose generator streams ``chunks`` through the resilience
+    layer's real gate, so the callback plumbing is exercised, not stubbed."""
+    from crossaudit.providers.base import Reply
+
+    def complete(_cfg, _role, _primary, *, system, prompt, on_event=None, **_kw):
+        text = "".join(chunks)
+        callback = getattr(on_event, "on_chunk", None)
+        if callable(callback):
+            for seq, part in enumerate(chunks):
+                callback(part, {"id": "lane", "seq": seq, "done": False})
+            callback("", {"id": "lane", "seq": len(chunks), "done": True,
+                          "outcome": "complete"})
+        return Reply(text, "id", "a" * 64, "b" * 64, raw={})
+
+    _generator_role(monkeypatch)
+    monkeypatch.setattr(talk_mod.provider_resilience, "complete", complete)
+    return complete
+
+
+def test_a_streaming_chat_reply_reaches_the_page_as_intake_chunks(
+        console, monkeypatch):
+    """D3. The lane's narration object really carries ``on_chunk``.
+
+    Before the fix the lanes were handed ``INTAKE.provider_event`` — a bound
+    method, which has no ``__dict__``, so ``resilience`` could never read
+    ``on_chunk`` off it and ``Intake.chunk`` had no call site anywhere in the
+    source. The whole live-reply path (frames, cursor, consumer) was
+    unreachable and a chat question showed three dots until it finished.
+
+    Mutation: hand the lanes ``watch.provider_event`` again and the chunk
+    count is 0 while the reply still arrives — exactly the silent gap.
+    """
+    monkeypatch.setattr(router_mod, "route_addressed",
+                        lambda text, *, complete, context="": _routing(text, "chat"))
+    _streaming_chat(monkeypatch, ("Hel", "lo the", "re."))
+    _status, body, _headers = post_json_to(console, "/api/say", {"text": "hi"})
+    intake = settled_say(console, body)
+    assert intake["result"]["executed"] == "answered by generator: Hello there."
+    assert intake["chunks"] > 0, "the lane streamed nothing to the page"
+
+
+def test_a_lane_that_does_not_stream_still_ends_with_the_whole_reply(
+        console, monkeypatch):
+    """D3, the other half: an adapter with no streaming path is unchanged —
+    no chunks, and the complete answer at the end."""
+    from crossaudit.providers.base import Reply
+
+    monkeypatch.setattr(router_mod, "route_addressed",
+                        lambda text, *, complete, context="": _routing(text, "chat"))
+
+    def complete(_cfg, _role, _primary, *, system, prompt, on_event=None, **_kw):
+        return Reply("Quiet but complete.", "id", "a" * 64, "b" * 64, raw={})
+
+    _generator_role(monkeypatch)
+    monkeypatch.setattr(talk_mod.provider_resilience, "complete", complete)
+    _status, body, _headers = post_json_to(console, "/api/say", {"text": "hi"})
+    intake = settled_say(console, body)
+    assert intake["chunks"] == 0
+    assert intake["result"]["executed"] == "answered by generator: Quiet but complete."
+
+
+def test_the_lane_narration_object_can_carry_the_streaming_callback():
+    """D3, at the seam: the shape the resilience layer reads, asserted
+    directly, because the bound method it replaced looked identical at the
+    call site and failed only at ``getattr``."""
+    from crossaudit.console.intake import INTAKE
+
+    assert getattr(INTAKE.provider_event, "on_chunk", None) is None
+    narration = INTAKE.lane_narration()
+    assert callable(narration) and callable(getattr(narration, "on_chunk", None))
+
+
+@pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node is not installed")
+def test_the_page_renders_a_streamed_lane_reply_as_an_unaudited_turn(tmp_path):
+    """D3, page side: the shipped ``replyChunk``/``liveReplyTurn`` driven under
+    node over the frames the server now writes. Contiguous seqs assemble the
+    reply and label it unaudited; a dropped frame discards the whole text
+    rather than showing a hole. Mutation: drop the gap rule in replyChunk and
+    the second case renders 'Ac' as though nothing were missing."""
+    import subprocess as sp
+
+    from crossaudit.console import page as page_mod
+    from crossaudit.console.server import _intake_sse_frame
+
+    frames = [_intake_sse_frame(
+        {"event_id": seq, "t": 1, "text": text, "intake_id": "i1",
+         "chat_id": "", "lane": "chat",
+         "stream": {"id": "s", "seq": seq, "done": False}}).decode()
+        for seq, text in enumerate(("Hel", "lo."))]
+    assert all("\nid: intake:i1:" in frame for frame in frames), frames
+    rows = [json.loads(frame.split("data: ", 1)[1]) for frame in frames]
+    gapped = [rows[0], dict(rows[1], stream={"id": "s", "seq": 5, "done": False},
+                            text="c")]
+
+    script = page_mod.PAGE.split("<script>")[1].split("</script>")[0]
+    pieces = ["let currentLocale='en';let liveReply=null;let activeChatId='';",
+              "let lastState=null;const render=()=>{};const ZH={};",
+              "const AUDITOR_LANES=new Set(['auditor','amendment']);",
+              "const t=v=>v;",
+              _page_snippet(script, "const esc = "),
+              _page_snippet(script, "function replyChunk("),
+              _page_snippet(script, "function liveReplyTurn(")]
+    driver = "\n".join(pieces) + """
+const state={intake:{id:'i1',chat_id:'',finished:false,lane:'chat'}};
+const out={};
+for(const row of ROWS)replyChunk(row);
+out.whole=liveReplyTurn(state);
+liveReply=null;
+for(const row of GAPPED)replyChunk(row);
+out.gapped=liveReplyTurn(state);
+console.log(JSON.stringify(out));
+"""
+    driver = ("const ROWS=" + json.dumps(rows) + ";const GAPPED="
+              + json.dumps(gapped) + ";\n" + driver)
+    (tmp_path / "reply.js").write_text(driver)
+    run = sp.run(["node", str(tmp_path / "reply.js")], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    out = json.loads(run.stdout)
+    assert "Hello." in out["whole"]
+    assert "Generator live reply · not audited" in out["whole"]
+    assert 'class="turn draft"' in out["whole"]
+    assert out["gapped"] == "", "a dropped frame must discard the reply, not patch it"
+
+
+def test_a_refused_second_message_leaves_no_thread_behind(console, monkeypatch):
+    """D4. ``chats.touch`` ran before ``accept_say``, so the 409 path created
+    an empty conversation for a message the console never sent — the rule the
+    setup card already followed. Mutation: touch the chat before
+    ``say_refusal`` again and the chat count goes to 2.
+    """
+    import urllib.error
+
+    from crossaudit.config import load
+
+    gate = threading.Event()
+    monkeypatch.setattr(router_mod, "route_addressed",
+                        lambda text, *, complete, context="": _routing(text, "chat"))
+    monkeypatch.setattr(talk_mod, "lane_chat",
+                        lambda cfg, routing, on_event=None: (gate.wait(5), "answered by generator: ok")[1])
+    _status, body, _headers = post_json_to(console, "/api/say", {"text": "first"})
+    assert body["accepted"] is True
+    try:
+        post_json_to(console, "/api/say", {"text": "second"})
+        raise AssertionError("the second message was not refused")
+    except urllib.error.HTTPError as exc:
+        assert exc.code == 409
+        assert "still being handled" in exc.read().decode()
+    gate.set()
+    settled_say(console, body)
+
+    from crossaudit.console import chats
+    cfg = load(Path(json.loads(fetch(console.replace("/?t=", "/api/state?t="))[1])
+                    ["root"]) / "crossaudit.yml")
+    titles = [chat["title"] for chat in chats._read(cfg)["chats"]]
+    assert titles == ["first"], titles
+
+
+def test_the_refusal_sentences_the_page_paints_are_both_translated():
+    """D4/D5, copy: the two sentences a refused message can show are in the
+    page's Chinese catalogue, so the shipped text-node translator reaches
+    them. Mutation: drop either entry and this goes red."""
+    from crossaudit.console import page as page_mod
+    from crossaudit.console.server import UNEXPECTED_FAILURE
+
+    for sentence in ("the previous message is still being handled",
+                     UNEXPECTED_FAILURE):
+        assert f'"{sentence}":"' in page_mod.PAGE, sentence
+
+
+def test_an_unexpected_error_shows_a_sentence_not_the_exception(
+        console, monkeypatch):
+    """D5. The worker painted ``f"{type(exc).__name__}: {exc}"`` on the main
+    surface — a class name and whatever paths the message carried, English
+    only, a class of text that could not reach the page before D150.
+
+    Mutation: fail with the exception's own words again and the path and the
+    class name are back on the surface.
+    """
+    monkeypatch.setattr(router_mod, "route_addressed",
+                        lambda text, *, complete, context="": _routing(text, "chat"))
+
+    def boom(cfg, routing, on_event=None):
+        raise ValueError("internal boom with /Users/secret/path")
+
+    monkeypatch.setattr(talk_mod, "lane_chat", boom)
+    _status, body, _headers = post_json_to(console, "/api/say", {"text": "hi"})
+    intake = settled_say(console, body)
+    reason = intake["error"]["reason"]
+    assert intake["error"]["status"] == 500
+    assert reason == ("Something went wrong handling that message. "
+                      "Nothing was started.")
+    assert "ValueError" not in reason and "/Users/secret" not in reason
+
+
+@pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node is not installed")
+def test_the_clock_never_crowds_the_narration_off_the_run_card(tmp_path):
+    """D7. The clock speaks every 8 s of silence and the auditor's every 10 s
+    of streaming, so a two-minute audit emitted fifteen rows and every one of
+    the twelve visible slots became "Still auditing · N s".
+
+    A run of clock rows is one fact, so only its newest survives, in place.
+    Mutation: drop ``collapseClockRows`` from runCard and eleven of the twelve
+    rows are clock rows again.
+    """
+    import subprocess as sp
+
+    from crossaudit.console import page as page_mod
+
+    substantive = [{"kind": "audit_started", "text": "reviewing the commit"},
+                   {"kind": "check_started", "text": "Running the Schema check"},
+                   {"kind": "check_finished", "text": "Schema check passed"}]
+    # A 120 s audit on the 8 s clock: fifteen consecutive clock rows.
+    clock = [{"kind": "still_working", "text": f"Still auditing · {n * 8} s"}
+             for n in range(1, 16)]
+    steps = substantive + clock
+    script = page_mod.PAGE.split("<script>")[1].split("</script>")[0]
+    driver = ("const STEPS=" + json.dumps(steps) + ";\n"
+              + _page_snippet(script, "const CLOCK_KINDS")
+              + ";\n" + _page_snippet(script, "function collapseClockRows(")
+              + "\nconst kept=collapseClockRows(STEPS).slice(-12);"
+              + "\nconsole.log(JSON.stringify(kept));")
+    (tmp_path / "clock.js").write_text(driver)
+    run = sp.run(["node", str(tmp_path / "clock.js")], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    kept = json.loads(run.stdout)
+    clocks = [row for row in kept if row["kind"] == "still_working"]
+    assert len(clocks) == 1, kept
+    assert clocks[0]["text"] == "Still auditing · 120 s", "the newest, not the first"
+    assert [row["kind"] for row in kept[:3]] == [row["kind"] for row in substantive]
+
+
+def test_the_thinking_row_is_folded_shut_and_says_it_is_unaudited():
+    """D8. Thinking is model text no auditor has read — further from evidence
+    than the draft, which already wears its label. It rendered as a bare row
+    with 160 characters of reasoning showing and nothing saying what it was.
+
+    Mutation: render it as a `<div>` again, or open the `<details>` by
+    default, and this goes red.
+    """
+    import re
+
+    from crossaudit.console import page as page_mod
+
+    script = page_mod.PAGE.split("<script>")[1].split("</script>")[0]
+    start = script.index("const liveRows = (thinking ?")
+    block = script[start:script.index("const activityTitle", start)]
+    assert "<details class=\"audit-event live-thinking\">" in block
+    assert "<details open" not in block and " open>" not in block
+    assert "Thinking · not audited" in block and "思考中 · 未经审计" in block
+    assert "<summary>" in block
+    assert '"Thinking · not audited":"思考中 · 未经审计"' in page_mod.PAGE
+    # Display only: the fold is drawn from the live consumer every render, so
+    # there is nothing to persist and nothing that could be reopened later.
+    assert "localStorage" not in block
+    assert re.search(r"details\.live-thinking>summary\{", page_mod.PAGE)

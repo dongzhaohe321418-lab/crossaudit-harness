@@ -741,17 +741,21 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                 emit("guidance_received", "input",
                      f"reading {len(fresh_guidance)} owner message(s)",
                      joined[:2000], state=RunState.GENERATING)
-        emit("generation_started", "generator", "writing",
-             state=RunState.GENERATING)
         # D150: the workspace read is the longest silent stretch before the
         # first token, so it is announced before it starts (the count is a
         # cheap walk; the read is the cost) and the prompt hand-off after it.
+        # The order is the order things happen in: the reader learns the
+        # workspace is being read, then that the generator was asked, then
+        # that it is writing. Announcing "writing" first said the wrong thing
+        # first and buried the explanation for the pause underneath it.
         emit("preparing", "generator",
              f"Reading the workspace · {_workspace_file_count(cfg)} files",
              state=RunState.GENERATING)
         current = _current_work(cfg, task, findings, context_report)
         in_force = skills_mod.select(house, list(current) or cfg.scope_dirs)
         emit("prompt_ready", "generator", "Asking the generator to write",
+             state=RunState.GENERATING)
+        emit("generation_started", "generator", "writing",
              state=RunState.GENERATING)
         try:
             while True:

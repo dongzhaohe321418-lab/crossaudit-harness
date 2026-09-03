@@ -188,6 +188,11 @@ def _render(cases: list[dict]) -> dict[str, str]:
         _extract_fn("const ACTOR_MARKS") + ";",
         _extract_fn("function conciseDetail(s)"),
         _extract_fn("function activityRow(s)"),
+        # Review D7: the card now collapses a run of clock rows to its newest
+        # before it takes the last twelve. Mutation: drop the call from runCard
+        # and this extraction is of a function nothing ships.
+        _extract_fn("const CLOCK_KINDS") + ";",
+        _extract_fn("function collapseClockRows(steps)"),
         "const liveDraftFor = () => null; const liveThinkingFor = () => null;",
         "const draftCount = () => 0;",
         f"const CASES = {json.dumps(cases, ensure_ascii=False)};",

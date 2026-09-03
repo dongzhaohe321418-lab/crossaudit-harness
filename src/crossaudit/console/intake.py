@@ -181,6 +181,22 @@ class Intake:
         """The resilience layer's recovery narration, as a phase line."""
         self.narrate("provider_recovery", text, detail)
 
+    def lane_narration(self):
+        """The callback a lane hands its provider: recovery lines and chunks.
+
+        The resilience layer reads ``on_chunk`` off the object it is given —
+        the convention ``cli/build.py`` uses for the generator. A *bound
+        method* cannot carry it: it has no ``__dict__``, so the attribute can
+        neither be found on one nor set on one, and a lane that passed
+        ``self.provider_event`` streamed nothing while looking as though it
+        did. A plain function holds both, so this is what the lanes get.
+        """
+        def narrate(role: str, text: str, detail: str = "") -> None:
+            self.provider_event(role, text, detail)
+
+        narrate.on_chunk = self.chunk
+        return narrate
+
     def chunk(self, text: str, stream: dict) -> None:
         """A coalesced reply chunk; contiguous seq is re-assigned here."""
         with self._lock:
