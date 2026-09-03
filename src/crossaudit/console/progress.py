@@ -217,6 +217,15 @@ def _project_phase_step(step: dict) -> dict:
     if concise != detail:
         projected = dict(projected)
         projected["detail"] = concise
+    # A COUNTED detail is nothing but a number and its unit, so it translates
+    # here rather than reaching a Chinese reader in English — which is what
+    # `1 attempt` did on the repair row. Only when a pattern actually matched:
+    # a detail this cannot translate keeps no `detail_i18n`, so the page still
+    # runs it through its identifier scrub instead of trusting it verbatim.
+    counted = _detail_i18n(concise)
+    if concise and counted["zh"] != counted["en"]:
+        projected = dict(projected)
+        projected["detail_i18n"] = counted
     return projected
 
 

@@ -121,12 +121,14 @@ def _executes_something(fn: ast.AST, product: set[str], helpers: dict) -> bool:
         # node; a body that calls it is executing the shipped script, exactly as
         # a direct `subprocess.run(["node", ...])` was. `eval_page` is the same
         # thing one layer up (tests/harness/render_decision.py): it slices the
-        # named functions OUT OF the shipped page and runs them under node, so a
-        # body that reaches it is executing product, not reading source. Both
-        # are named because they run something; a helper whose name merely
-        # sounds like rendering buys nothing here.
+        # named functions OUT OF the shipped page and runs them under node.
+        # `render_page` is stronger still — it loads the WHOLE shipped script
+        # and calls the real `renderConversation`, which is exactly what a
+        # slice-and-stub harness could not see. All three are named because
+        # they RUN something; a helper whose name merely sounds like rendering
+        # buys nothing here.
         if root in product or root in {"subprocess", "urllib", "requests",
-                                       "run_node", "eval_page"}:
+                                       "run_node", "eval_page", "render_page"}:
             return True
         if helpers.get(root):          # a module-local helper that does
             return True
@@ -142,12 +144,25 @@ def _offenders(where: Path | None = None) -> list[str]:
         except SyntaxError:
             continue
         product = _product_symbols(module)
-        # one level of resolution: a test that calls a local helper which calls
-        # the product is exercising the product, however it is named.
+        # A test that calls a local helper which calls the product is
+        # exercising the product, however it is named — and so is one that
+        # calls a helper that calls a helper. One level was a floor, and it
+        # accused an honest render test whose cached accessor sat two calls
+        # from the harness. Resolved to a fixed point instead.
         helpers = {}
         for node in module.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 helpers[node.name] = _executes_something(node, product, {})
+        for _ in range(len(helpers)):
+            grew = False
+            for node in module.body:
+                if (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                        and not helpers[node.name]
+                        and _executes_something(node, product, helpers)):
+                    helpers[node.name] = True
+                    grew = True
+            if not grew:
+                break
         for node in ast.walk(module):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue

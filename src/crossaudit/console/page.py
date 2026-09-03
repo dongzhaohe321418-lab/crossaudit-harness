@@ -481,7 +481,9 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
    language, five shapes. A row is a LINE; its detail opens in place. Weight is
    the only difference between shapes — no shape gets its own region, its own
    card or its own chrome. */
-.srow{padding:3px 0;color:var(--text-2);font-size:var(--fs-label)}
+.srow{display:flex;align-items:flex-start;gap:10px;
+  padding:3px 0;color:var(--text-2);font-size:var(--fs-label)}
+.srow-fold,.srow>.srow-line{flex:1;min-width:0}
 .srow-line{display:flex;align-items:center;gap:8px;min-height:22px}
 .srow-verb{min-width:0;overflow-wrap:anywhere}
 .srow-time{margin-left:auto;flex:none;color:var(--text-3);font-size:var(--fs-caption);
@@ -504,17 +506,20 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .srow-outcome.srow-blocked .srow-mark{background:var(--blocked-bg,var(--surface-2));color:var(--blocked)}
 .srow-outcome.srow-decide .srow-mark{background:var(--escalated-bg);color:var(--escalated)}
 /* Detail opens in place. The disclosure triangle is the control; the summary
-   IS the line, so nothing is repeated inside. */
-details.srow-open>summary{cursor:pointer;list-style:none}
-details.srow-open>summary::-webkit-details-marker{display:none}
-details.srow-open>summary .srow-line:after{content:'\203a';color:var(--text-3);
+   IS the line, so nothing is repeated inside. The ACTION is not in here: it
+   sits beside the words, outside the fold, because an offer a person has to
+   open the row to find is not an offer. */
+details.srow-fold>summary{cursor:pointer;list-style:none}
+details.srow-fold>summary::-webkit-details-marker{display:none}
+details.srow-fold>summary .srow-line:after{content:'\203a';color:var(--text-3);
   flex:none;transition:transform var(--dur-fast) var(--ease-out)}
-details.srow-open[open]>summary .srow-line:after{transform:rotate(90deg)}
+details.srow-fold[open]>summary .srow-line:after{transform:rotate(90deg)}
 .srow-body{padding:6px 0 8px 28px}
 .srow-detail{color:var(--text-3);font-size:var(--fs-caption);line-height:1.5;
   overflow-wrap:anywhere}
 .srow-rolled{display:grid;gap:1px}
-.srow-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.srow-actions{display:flex;flex-wrap:wrap;gap:8px;flex:none}
+.srow-body .srow-actions{margin-top:8px}
 .srow-action{border:1px solid var(--line);background:var(--surface-2);color:var(--text);
   font-size:var(--fs-label);padding:5px 11px;border-radius:var(--r-sm)}
 .srow-action:hover{background:var(--hover)}
@@ -3881,6 +3886,7 @@ const ZH={
   ,"Open the earlier decision and settle it; this task continues from there.":"打开更早的决定并作出处理；此任务将从那里继续。"
   ,"Settle the earlier decision":"先处理更早的决定","Open the earlier decision first. Guidance recorded here applies once it is settled.":"请先打开更早的决定。此处记录的指引将在其处理完毕后生效。"
   ,"No new findings were recorded because the earlier decision is still open.":"由于更早的决定仍未处理，未记录新的发现。"
+  ,"this cycle is waiting for a human":"此循环正在等待人工处理"
   ,"Open the earlier decision":"打开更早的决定"
   ,"A newer commit was made while an earlier round was still waiting for you; the new commit was not audited, so the pending decision cannot be overtaken.":"在更早的一轮仍在等待你时，产生了新的提交；新提交未被审计，因此待定的决定不会被绕过。"
 };
@@ -6283,6 +6289,16 @@ const EVENT_SHAPES={
   //: The RunEvent dataclass default, for a step nobody named.
   activity:'do'};
 
+//: Kinds whose `text` is an INTERNAL CONSTANT rather than a sentence: the
+//: verdict word the loop writes into the journal for the ledger to read, the
+//: run outcome, a one-word lifecycle marker. For these — and ONLY these — the
+//: verb table is what a person reads: painting "PASS" or "cancelled" on the
+//: main surface is the raw vocabulary design rule 4 exists to keep off it.
+//: For every other kind the sentence belongs to whoever emitted it, and wins.
+const VERB_WINS={audit_passed:1,audit_blocked:1,audit_escalated:1,
+  generation_started:1,run_finished:1,run_cancelled:1,run_stalled:1,
+  cancel_requested:1};
+
 //: Kinds whose fact is carried by ANOTHER row rather than by one of their own.
 //: A round is a group, not a region, so its number lives on the outcome row
 //: of that round; the streamed chunks are the number on the live draft row;
@@ -6419,9 +6435,16 @@ function rowFromStep(s,d){
   const kind=String((s&&s.kind)||'');
   const shape=shapeOf(kind);
   if(!shape||CARRIED_KINDS[kind])return null;
-  const line=wireLine(s)||verbOf(kind);
+  // The sentence the EMITTER wrote wins. The verb table is the fallback for a
+  // kind that carries no sentence, never an override: a budget warning naming
+  // its percentage became "Usage threshold reached" — the same row with the
+  // number, the threshold and the reason removed. A sentence with no wire
+  // i18n goes through the page catalogue, where the composed ones are
+  // translated; test_activity_stream walks the painted text for what is left.
+  const line=VERB_WINS[kind]?verbOf(kind)
+    :(wireLine(s)||t(String((s&&s.text)||''))||verbOf(kind));
   if(!line)return null;
-  const detail=s.detail_i18n?localeText(s.detail_i18n,s.detail):conciseDetail(s);
+  const detail=s.detail_i18n?localeText(s.detail_i18n,s.detail):t(conciseDetail(s));
   return streamRow({shape:shape,actor:actorOfStep(s),kind:kind,line:line,
     t:s.t,round:s.round_no,key:kind,
     detail:detail?{kind:'text',text:detail}:null});}
@@ -6540,13 +6563,20 @@ function groupRounds(rows,current){
   const ended={};
   for(const r of rows||[])
     if(r.shape==='outcome'&&r.round>0&&(!current||r.round<current))ended[r.round]=true;
-  const out=[],held={};
+  // Collected in a FIRST pass, so a row that arrives after the outcome of its
+  // own round — a provider retry narrated late, a clock tick — is folded into
+  // that outcome rather than dropped on the floor, which is what a
+  // single-pass fold did to every row behind the verdict that ended it.
+  const held={};
   for(const r of rows||[]){
     const n=Number(r.round||0);
-    if(n&&ended[n]&&r.shape!=='outcome'&&r.shape!=='say'){
-      (held[n]=held[n]||[]).push(r);continue;}
-    if(n&&ended[n]&&r.shape==='outcome'){
-      const rolled=held[n]||[];held[n]=[];
+    if(n&&ended[n]&&r.shape!=='outcome'&&r.shape!=='say')(held[n]=held[n]||[]).push(r);}
+  const out=[];
+  for(const r of rows||[]){
+    const n=Number(r.round||0);
+    if(n&&ended[n]&&r.shape!=='outcome'&&r.shape!=='say')continue;
+    if(n&&ended[n]&&r.shape==='outcome'&&held[n]){
+      const rolled=held[n];delete held[n];
       out.push(Object.assign({},r,{rolled:rolled,
         n:r.n||{value:n,unit:'rounds'}}));continue;}
     out.push(r);}
@@ -6593,6 +6623,11 @@ function rowActionHtml(action){
     +attrs+'>'+esc(action.label)+'</button></div>';}
 
 //: THE ROW. Every shape, one function.
+//:
+//: The one action a row offers sits ON the row, beside the words, OUTSIDE the
+//: disclosure. It used to live inside the closed `<details>`, which means a
+//: person looking at a provider outage saw one grey line and a chevron and no
+//: "Retry now" at all: an offer behind a disclosure is not an offer.
 function row(r,d){
   if(!r)return '';
   // A `say` row is words, so it is the words: full text, wrapping, unchanged.
@@ -6602,13 +6637,12 @@ function row(r,d){
   const line='<div class="srow-line">'+rowMark(r)
     +'<span class="srow-verb">'+esc(rowText(r))+'</span>'
     +(r.t?'<time class="srow-time">'+esc(at(r.t))+'</time>':'')+'</div>';
-  const inner=rowDetailHtml(r.detail,d)
+  const body=rowDetailHtml(r.detail,d)
     +(r.rolled&&r.rolled.length?'<div class="srow-rolled">'
-      +r.rolled.map(x=>row(x,d)).join('')+'</div>':'')
-    +rowActionHtml(r.action);
-  if(!inner)return '<div class="'+cls+'">'+line+'</div>';
-  return '<details class="'+cls+' srow-open"'+(r.open?' open':'')+'>'
-    +'<summary>'+line+'</summary><div class="srow-body">'+inner+'</div></details>';}
+      +r.rolled.map(x=>row(x,d)).join('')+'</div>':'');
+  const fold=body?'<details class="srow-fold"'+(r.open?' open':'')+'><summary>'
+    +line+'</summary><div class="srow-body">'+body+'</div></details>':line;
+  return '<div class="'+cls+'">'+fold+rowActionHtml(r.action)+'</div>';}
 // ------------------------------------------------------------ the status line
 // docs/design/ACTIVITY_STREAM.md §The status line. The ONLY persistent chrome
 // on this surface, and only while something is actually running:
@@ -6714,8 +6748,16 @@ const FAILURE_NOTES={
     act:'retry',post:'retry_provider',unit:'retries',
     action:{en:'Retry now',zh:'重试'},
     reason:'Retried the provider from the activity stream.'},
+  //: A settings link would be one more `aria-modal` dialog opened from a
+  //: retryable failure, so the note says where the limit lives IN WORDS and
+  //: its button does the one thing the loop can do. Both sentences are the
+  //: reviewed Decision Center copy, moved.
   budget:{en:'Paused at your usage limit',zh:'已在用量上限处暂停',
-    act:'settings',action:{en:'Adjust usage limits',zh:'调整用量上限'}},
+    act:'retry',post:'reopen',
+    action:{en:'Raise the limit & retry',zh:'提高上限并重试'},
+    detail:{en:'Adjust the usage limit in Project controls, then rerun the original task.',
+      zh:'在项目控制中调整用量上限，然后重新运行原任务。'},
+    reason:'Retried after the usage limit was raised or reset.'},
   invalid_reply:{en:'The auditor reply could not be read',zh:'审计者的回复无法解析',
     act:'retry',post:'reopen',action:{en:'Run the audit again',zh:'重试审计'},
     reason:'Run the audit again on the same work; the previous auditor reply '
@@ -6725,11 +6767,11 @@ const FAILURE_NOTES={
     action:{en:'I have committed it — try again',zh:'我已提交，重试'},
     reason:'The experiment has been committed; run the audited round again.'},
   nothing_audited:{en:'Nothing was produced in the audited folder',zh:'已审计目录中没有产出',
-    act:'guidance',action:{en:'Say what to create',zh:'说明要创建什么'}},
+    act:'guidance'},
   generator_format:{en:'The generator produced nothing auditable',zh:'生成者没有产出可审计的内容',
-    act:'guidance',action:{en:'Rewrite the task',zh:'重写任务'}},
+    act:'guidance'},
   no_progress:{en:'The generator repeated the existing work',zh:'生成者重复了已有的成果',
-    act:'guidance',action:{en:'Say what should change',zh:'说明应改动什么'}},
+    act:'guidance'},
   bounds_exceeded:{en:'The task is too large for one audit',zh:'任务超出单次审计可读取的范围'},
   repair_refused:{en:'The revision was rolled back',zh:'该修订已回滚'},
   answered:{en:'This answer did not become an audited deliverable',zh:'这次回答没有形成可审计的交付物'}};
@@ -6771,17 +6813,23 @@ function escalationRow(row,d){
   const note=failureNote(row);
   if(!note)return null;
   const retries=note.unit==='retries'?providerRetries(d):0;
+  // A machine failure whose fix is a SENTENCE from a person gets the box
+  // inline, open, on the row. It used to get a button into the Decision
+  // Center, which is a dialog that makes the shell inert and takes the
+  // composer away — for a stop no person has to adjudicate. There is no code
+  // path from a retryable failure to a dialog any more.
+  const guidance=note.act==='guidance';
   return streamRow({shape:'note',actor:'system',kind:'provider_unavailable',
     key:'failure:'+(row.cycle_id||''),
     line:zh?note.zh:note.en,
+    open:guidance,
     n:retries?{value:retries,unit:'retries'}:null,
+    detail:guidance?{kind:'html',html:guidanceDetail(row)}
+      :note.detail?{kind:'text',text:zh?note.detail.zh:note.detail.en}:null,
     action:note.action?{label:zh?note.action.zh:note.action.en,
-      attrs:note.act==='settings'?{'data-open-runtime':'1'}
-        :note.act==='guidance'?{'data-open-decisions':String(row.cycle_id||''),
-                                'data-open-decisions-sha':String(row.sha||'')}
-        :{'data-stream-retry':String(row.cycle_id||''),
-          'data-stream-post':String(note.post||'reopen'),
-          'data-stream-reason':String(note.reason||'')}}:null});}
+      attrs:{'data-stream-retry':String(row.cycle_id||''),
+             'data-stream-post':String(note.post||'reopen'),
+             'data-stream-reason':String(note.reason||'')}}:null});}
 function escalationRows(d){
   return currentEscalations(d).map(row=>escalationRow(row,d)).filter(Boolean);}
 //: A run that simply stopped — no cycle, no decision object, nothing for a
@@ -6814,6 +6862,28 @@ function streamStops(d){
 //
 // The words come from decisionSlots — the same pure function the Decision
 // Center writes from — so the two surfaces cannot drift apart.
+//: A machine failure whose fix is a sentence from a person: the same inline
+//: box a decision uses, minus the decision framing and minus every route to a
+//: dialog. Deliberately NOT decisionDetail(): that one can offer the earlier
+//: decision and the model settings, both of which open a modal, and rule 1
+//: forbids a modal for anything the loop can retry. The words come from
+//: decisionSlots, the same place the Decision Center reads them.
+function guidanceDetail(row){
+  const s=decisionSlots(row);
+  const zh=currentLocale==='zh';
+  const cycle=esc(String(row.cycle_id||''));
+  const label=zh?'你的指引':'Your guidance';
+  return '<div class="decision-inline" data-decision="'+cycle+'">'
+    +'<p class="decision-inline-request">'+esc(t(s.request))+'</p>'
+    +'<label class="decision-inline-reason"><span>'+esc(label)+'</span>'
+    +'<textarea rows="2" data-decision-reason aria-label="'+esc(label)
+    +'"></textarea></label>'
+    +'<div class="srow-actions">'
+    +'<button type="button" class="srow-action" data-decide="reopen" data-decide-cycle="'
+    +cycle+'">'+esc(t(s.reopenTitle))+'</button>'
+    +'<button type="button" class="srow-action" data-decide="close" data-decide-cycle="'
+    +cycle+'">'+esc(zh?'停止此任务':'Stop this task')+'</button>'
+    +'</div><p class="decision-inline-error" role="alert" hidden></p></div>';}
 function decisionDetail(row){
   const s=decisionSlots(row);
   const zh=currentLocale==='zh';
