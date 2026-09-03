@@ -136,6 +136,9 @@ def test_udp_sendto_is_refused_for_a_remote_peer():
             s.sendto(b"x", 0, REMOTE)
 
 
+@pytest.mark.skipif(not hasattr(socket.socket, "sendmsg"),
+                    reason="socket.sendmsg is POSIX-only; Windows has no such call "
+                           "for the guard to widen to")
 def test_sendmsg_is_refused_for_a_remote_peer():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         with pytest.raises(AssertionError):
@@ -163,6 +166,9 @@ def test_loopback_is_still_allowed():
                 assert peer[0] == "127.0.0.1"
 
 
+@pytest.mark.skipif(not hasattr(socket.socket, "sendmsg"),
+                    reason="socket.sendmsg is POSIX-only; Windows has no such call "
+                           "for the guard to widen to")
 def test_udp_to_loopback_is_still_allowed():
     """Widening the patch to `sendto`/`sendmsg` must not break loopback UDP."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as srv:

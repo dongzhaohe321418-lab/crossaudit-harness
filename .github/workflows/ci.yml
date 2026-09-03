@@ -37,6 +37,14 @@ jobs:
           cache: pip
       - run: git config --global user.name CrossAudit-CI
       - run: git config --global user.email crossaudit-ci@local.invalid
+      # git for Windows ships core.autocrlf=true. The suite creates its own
+      # repositories, which inherit it, and the product hashes the bytes it
+      # wrote and re-reads them out of the commit: a checkout filter that
+      # rewrites line endings makes a receipt's constitution hash differ from
+      # the tree it was derived from. Byte-exact receipts and an eol filter are
+      # incompatible by construction, so the filter is off.
+      - run: git config --global core.autocrlf false
+      - run: git config --global core.longpaths true
       - run: python -m pip install --upgrade pip
       # The install is for the dependency set. The suite itself runs against
       # the SOURCE TREE (PYTHONPATH=src), because that is what it is written to
