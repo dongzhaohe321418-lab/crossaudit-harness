@@ -10,7 +10,7 @@
 - 决策记录：`docs/DECISIONS.md`，D39–D149 连续无缺口（有测试守着）
 - 融合方案与逐文件对比：`docs/findings/codex-fusion-dd725d3.md`（含三份分簇报告）
 - 设计文档：`docs/EVIDENCE_AUTHORITY.md`；DESIGN.md §7.1；README 两个档位说明
-- 打好的安装包：`~/Documents/Crossaudit/builds/CrossAudit-4.16.0-arm64.dmg`（153M，sha256 前 16 位 `a9295ebedd5635d0`，来自 fusion/evidence-authority 的最终提交）；上一版 4.15.0 仍在同目录
+- 打好的安装包：`~/Documents/Crossaudit/builds/CrossAudit-4.16.0-arm64.dmg`（153M，sha256 前 16 位 `5f3f46387167c230`，来自发布后的 main（含 Thinking Orbs））；上一版 4.15.0 仍在同目录
 
 ## 融合线做了什么（2026-09-02）
 
