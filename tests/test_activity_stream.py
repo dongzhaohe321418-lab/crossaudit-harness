@@ -580,11 +580,16 @@ def test_a_setup_mistake_reaches_the_console_as_its_own_cause(cfg, monkeypatch):
 
 
 _FAILURE_SIGS = _RENDER_SIGS + [
+    "const VERDICT_WORDS=", "function verdictWord(v)", "function severityWord(sev)",
+    "function ruleTitle(rule)", "const CAUSE_COPY=", "const REMEDIATION=",
+    "function hasRemediation(row,action)", "function decisionSlots(row)",
+    "function decisionDetail(row)",
     "const DECISION_CAUSES=", "const FAILURE_NOTES=",
     "function isDecisionStop(row)", "function failureNote(row)",
     "function providerRetries(d)", "function escalationRow(row,d)",
 ]
-_FAILURE_PRELUDE = _RENDER_PRELUDE + "const chatProgress=d=>d.progress;\n"
+_FAILURE_PRELUDE = (_RENDER_PRELUDE + "const chatProgress=d=>d.progress;\n"
+                    + "let lastState=null;const t=v=>currentLocale==='zh'?zhValue(v):v;\n")
 
 
 def _stop(row: dict, locale: str = "en", state: dict | None = None) -> dict:
@@ -684,3 +689,95 @@ def test_the_provider_note_counts_the_retries_it_actually_made():
     quiet = _stop({"kind": "provider", "cycle_id": "c1"}, "zh",
                   {"progress": {"steps": []}})
     assert quiet["n"] is None and "已重试" not in quiet["html"]
+
+
+# ============================================== 5. decisions in the stream
+_DECISION_ROW = {"cycle_id": "c1", "sha": "d" * 40, "short_sha": "d" * 12,
+                 "round": 3, "max_rounds": 3, "cause": "auditor_concern",
+                 "kind": "audit", "issues": [], "attempts": [],
+                 "why": "the auditor raised a concern", "remediations": []}
+
+
+@needs_node
+def test_a_decision_expands_in_place_with_three_sentences_and_two_buttons():
+    """Design: "its Outcome row expands in place: what happened, why, what the
+    choices are, in three sentences and two buttons."
+
+    Mutation: point the buttons at openResolution and the dialog assertions
+    below fail; drop the reason box and the guidance has nowhere to go.
+    """
+    got = _stop(_DECISION_ROW)
+    assert got["shape"] == "outcome"
+    html = got["html"]
+    assert "<details" in html and " open>" in html, "open where it stands"
+    for forbidden in ("<dialog", "project-modal", "openResolution",
+                      "setDecidingInert", "resolution-modal"):
+        assert forbidden not in html, forbidden
+    assert html.count("decision-inline-summary") == 1
+    assert html.count("decision-inline-block") == 1     # what happened / why
+    assert html.count("decision-inline-request") == 1
+    assert html.count("data-decision-reason") == 1
+    decide = html.count('data-decide="')
+    assert decide == 2, f"two buttons, got {decide}"
+
+
+@needs_node
+def test_the_decision_says_the_same_words_the_decision_centre_says():
+    """The per-cause copy was reviewed and is good: it is MOVED, not rewritten.
+    Both surfaces read `decisionSlots`, so they cannot drift.
+
+    Mutation: retype any sentence in decisionDetail and it stops matching the
+    slot the Decision Center renders.
+    """
+    from render_decision import render
+
+    slots = render(WORKTREE, {"concern": _DECISION_ROW})["concern"]
+    for locale in ("en", "zh"):
+        html = _stop(_DECISION_ROW, locale)["html"]
+        for slot in ("resolution-summary", "resolution-limit-title",
+                     "resolution-limit-copy", "resolution-request",
+                     "resolution-reopen-title"):
+            words = slots[locale][slot]
+            assert words, slot
+            assert words in _unescaped(html), (locale, slot, words)
+
+
+def _unescaped(html: str) -> str:
+    import html as html_mod
+
+    return html_mod.unescape(html)
+
+
+@needs_node
+def test_the_decision_flag_leads_the_row_in_both_languages():
+    """The one line a person reads before they open anything.
+
+    Mutation: drop the `t()` around the flag and the Chinese row reads English.
+    """
+    en = _stop(_DECISION_ROW, "en")["line"]
+    zh = _stop(_DECISION_ROW, "zh")["line"]
+    assert en == "The auditor raised a concern"
+    assert zh == "审计者提出了一个疑问" or zh != en, (en, zh)
+    import re
+
+    assert re.search(r"[一-鿿]", zh), zh
+
+
+def test_nothing_is_modal_and_the_composer_stays_live():
+    """Design rules 1 and 8, and "Nothing is modal" from the reference list.
+
+    `maybePromptForHuman` no longer opens the Decision Center for anybody, and
+    nothing the stream renders makes the shell inert or disables the composer.
+
+    Mutation: restore the auto-open and this fails.
+    """
+    from crossaudit.console.page import PAGE
+
+    prompt = PAGE[PAGE.index("function maybePromptForHuman(d){"):
+                  PAGE.index("function render(d){")]
+    assert "openResolution" not in prompt and "setDecidingInert" not in prompt
+    detail = PAGE[PAGE.index("function decisionDetail(row){"):
+                  PAGE.index("function turn(m,d){")]
+    for forbidden in ("openResolution", "setDecidingInert", "classList.add('on')",
+                      "say.disabled", "send.disabled"):
+        assert forbidden not in detail, forbidden

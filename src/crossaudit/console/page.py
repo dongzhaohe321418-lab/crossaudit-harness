@@ -517,6 +517,21 @@ details.srow-open[open]>summary .srow-line:after{transform:rotate(90deg)}
   color:var(--text);font-size:var(--fs-caption);padding:4px 10px;border-radius:var(--r-sm)}
 .stream-stop:hover:not(:disabled){background:var(--hover)}
 .stream-stop:disabled{opacity:.55}
+/* The decision, in the stream. Three sentences, the findings when there are
+   any, one box and two buttons — the expanded detail of an outcome row, never
+   a dialog, and the composer stays live beside it the whole time. */
+.decision-inline{display:grid;gap:9px;max-width:62ch}
+.decision-inline-summary{margin:0;font-size:var(--fs-body);line-height:1.55;color:var(--text)}
+.decision-inline-block{border-left:2px solid var(--line-strong);padding-left:var(--sp-3)}
+.decision-inline-block b{display:block;font-size:var(--fs-caption);color:var(--text-3);
+  font-weight:600;margin-bottom:3px}
+.decision-inline-block p{margin:0;font-size:var(--fs-label);line-height:1.5;color:var(--text-2)}
+.decision-inline-request{margin:0;font-size:var(--fs-label);color:var(--text-2);line-height:1.5}
+.decision-inline-reason{display:grid;gap:4px;font-size:var(--fs-caption);color:var(--text-3)}
+.decision-inline-reason textarea{width:100%;resize:vertical;font:inherit;font-size:var(--fs-label);
+  color:var(--text);background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:7px 9px}
+.decision-inline-error{margin:0;color:var(--blocked);font-size:var(--fs-caption)}
 /* Message rows: a work record, not a chat app. */
 .turn{margin-bottom:var(--sp-6)}
 .turn.user{display:flex;justify-content:flex-end}
@@ -4998,18 +5013,13 @@ const CAUSE_COPY={
     reopenTitle:'Settle the earlier decision',
     reopenCopy:'Open the earlier decision first. Guidance recorded here applies once it is settled.',
     hint:''}};
-function openResolution(value,action='',sha=''){
-  let row=typeof value==='object'&&value?value:null;
-  if(!row&&lastState)row=(lastState.escalations||[]).find(item=>item.cycle_id===value);
-  row=row||{cycle_id:value,short_sha:sha,sha,round:1,max_rounds:lastState&&lastState.max_rounds||3,
-    limit_reached:false,why:'The automatic audit loop stopped.',issues:[],attempts:[],
-    requested:'Review why the loop stopped, then decide whether to revise or stop.'};
-  activeResolution=row;promptedEscalations.add(row.cycle_id);
+//: EVERY sentence one recorded stop puts on the screen, in ONE place, so the
+//: Decision Center and the row in the stream cannot drift apart. Pure: it
+//: reads the row and the locale and returns strings; nothing here touches the
+//: DOM. The per-cause copy is the copy that was reviewed — moved here, not
+//: rewritten, so a reader meets the same words wherever the decision appears.
+function decisionSlots(row){
   const copy=CAUSE_COPY[String(row.cause||'')]||null;
-  document.getElementById('resolution-cycle').value=row.cycle_id||'';
-  // R5. The guidance box opens prefilled where the next step is obvious
-  // (nothing produced, unreadable reply); the person can still change it.
-  document.getElementById('resolution-reason').value=copy&&copy.hint?t(copy.hint):'';
   const used=Number(row.round||0),maximum=Number(row.max_rounds||(lastState&&lastState.max_rounds)||0);
   // A budget (usage-guardrail) pause is a provider-family stop — no audit ran,
   // nothing was admitted — but its remedy is to raise or clear the local limit,
@@ -5029,14 +5039,21 @@ function openResolution(value,action='',sha=''){
   // dial handing a model-only blocker to a person. Same slots, no new elements.
   const repairRefused=row.cause==='repair_refused';
   const auditorConcern=row.cause==='auditor_concern';
-  document.getElementById('resolution-flag').textContent=copy?copy.flag:budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':repairRefused?'Automatic repair refused':auditorConcern?'The auditor raised a concern':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused';
-  document.getElementById('resolution-title').textContent=copy?copy.title:budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':repairRefused?'The revision reached outside the audited files':row.limit_reached?'The audit needs your decision':'The audit needs your decision';
-  document.getElementById('resolution-summary').textContent=copy?copy.summary:budget
+  const issues=row.issues||[];
+  const emptyCopy=issues.length?'':(copy?(copy.empty||''):formatCause
+    ?'No audit ran because the generator never produced readable work. What usually helps: rewrite the task as one concrete instruction, or switch the generator model in Settings, then run one more round.'
+    :'');
+  return {
+  copy:copy,budget:budget,provider:provider,issues:issues,emptyCopy:emptyCopy,
+  used:used,maximum:maximum,
+  flag:copy?copy.flag:budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit answered':formatCause?'Generator reply format problem':refusedCause?'Generator request refused':noProgress?'Nothing new to audit':repairRefused?'Automatic repair refused':auditorConcern?'The auditor raised a concern':row.limit_reached?'Automatic audit limit reached':'Automatic loop paused',
+  title:copy?copy.title:budget?'The task paused at a usage limit':provider?'The task is waiting for a working Generator connection':answered?'CrossAudit answered, but made no audited deliverable':formatCause?'The generator could not produce auditable work':noProgress?'The generator repeated the existing work':repairRefused?'The revision reached outside the audited files':row.limit_reached?'The audit needs your decision':'The audit needs your decision',
+  summary:copy?copy.summary:budget
     ?'CrossAudit stopped before spending past your usage limit. No result was admitted and the original task is ready once you raise or clear the limit.'
     :provider
     ?'CrossAudit stopped before an audit began. No result was admitted and the original task is ready to retry.'
     :repairRefused
-    ?'The generator\u2019s revision was refused: it changed files outside the audited directories, or wrote a binary file that cannot be reviewed line by line. The refused attempt was rolled back, so the audited files are unchanged and nothing was admitted.'
+    ?'The generator’s revision was refused: it changed files outside the audited directories, or wrote a binary file that cannot be reviewed line by line. The refused attempt was rolled back, so the audited files are unchanged and nothing was admitted.'
     :auditorConcern
     ?'The auditor blocked this round on its own reading; no deterministic check reproduces the concern. CrossAudit does not let a model-only claim drive automatic rewrites, so it stopped and left the files unchanged.'
     :answered
@@ -5047,62 +5064,24 @@ function openResolution(value,action='',sha=''){
     ?'The generator was asked twice and both replies matched the already-committed work byte for byte, so there was nothing new to audit. The existing files are untouched. Make the task more specific about what should change, or stop the task if the current work already satisfies it.'
     :row.limit_reached
     ?'CrossAudit used all '+used+' of '+maximum+' automatic rounds without a passing result. Nothing will continue or be admitted until you decide.'
-    :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.';
-  appendResolutionReset(row,budget,provider);   // billing: "Resets at midnight" / "resets in 2 h 10 min"
-  document.getElementById('resolution-limit-title').textContent=copy?((row.cause==='auditor_escalated'&&!(row.issues||[]).length)?'What happened':copy.limitTitle):budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
-    ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely';
+    :'CrossAudit stopped safely. Nothing will continue or be admitted until you decide.',
+  limitTitle:copy?((row.cause==='auditor_escalated'&&!(row.issues||[]).length)?'What happened':copy.limitTitle):budget?'Usage limit reached':provider?'Generator connection stopped':answered?'CrossAudit reply':(formatCause||noProgress||auditorConcern)?'What happened':repairRefused?'Why the last revision was refused':row.limit_reached
+    ?'Automatic rounds used: '+used+' / '+maximum:'The automatic loop could not continue safely',
   // A refused repair leads with the sentence the repair guard wrote (it names
   // the file and the pattern) rather than the round-numbered wrapper around it.
-  document.getElementById('resolution-limit-copy').textContent=(formatCause
+  limitCopy:(formatCause
     ?'The reply was corrected once automatically and still failed to parse. Technical detail: '
     :noProgress?'One corrective retry was already made automatically. Technical detail: ':'')
-    +String((repairRefused&&row.why)||(typeof currentLocale!=='undefined'&&currentLocale==='zh'&&(row.stop_reason_zh||row.why_zh))||row.stop_reason||row.why||'The audit controller paused this task.');
-  const attemptRows=row.attempts||[];
-  document.getElementById('resolution-attempts').innerHTML=attemptRows.map(item=>{
-    const word=String(item.verdict||'').toLowerCase();
-    // R1. The verdict word a person reads; the raw word stays as the class.
-    return '<div class="decision-attempt"><span class="round-n">round '+esc(item.round)+'</span><span>'
-      +esc(item.findings)+' issue'+(item.findings===1?'':'s')+'</span><span class="verdict-word '+esc(word)
-      +'">'+esc(verdictWord(item.verdict))+'</span></div>';}).join('');
-  document.getElementById('resolution-goal').textContent=(lastState?titleOf(lastState):'')||'The task this conversation asked for.';
-  // D149. The identifiers stay reachable but leave the first paint: the
-  // commit this decision is about is named by its subject in the stop reason
-  // above, and its sha lives here, behind a closed disclosure.
-  document.getElementById('resolution-details').textContent=
-    (currentLocale==='zh'?'提交 ':'Commit ')+String(row.short_sha||row.sha||'');
-  const issues=row.issues||[];
-  // S4. Never a count badge of 0 — a zero is not a count, it is the absence
-  // of one, and a badge saying so is furniture.
-  const countBadge=document.getElementById('resolution-issue-count');
-  countBadge.textContent=issues.length?String(issues.length):'';
-  countBadge.hidden=!issues.length;
-  const emptyCopy=issues.length?'':(copy?(copy.empty||''):formatCause
-    ?'No audit ran because the generator never produced readable work. What usually helps: rewrite the task as one concrete instruction, or switch the generator model in Settings, then run one more round.'
-    :'');
-  // R2. Each issue leads with the observation; severity as a consequence,
-  // the place and the rule id on one muted details line under it.
-  document.getElementById('resolution-issues').innerHTML=issues.length?issues.map((issue,index)=>
-    '<article class="decision-issue"'+ruleTitle(issue.rule)+'><p class="finding-observation">'+esc(issue.observation||'No explanation was recorded.')+'</p>'
-    +'<div class="finding-details"><span class="severity '+(severityWord(issue.severity||'BLOCKER')==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(issue.severity||'BLOCKER'))+'</span>'
-    +(issue.artifact?'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-where">'+esc(issue.artifact)+'</span>':'')
-    +'</div></article>').join('')
-    :(emptyCopy?'<div class="decision-empty">'+emptyCopy+'</div>':'');
-  // S4. The section is rendered only when it carries something a person has
-  // not already read: findings, or empty copy that explains the ABSENCE with
-  // a fact the stop reason does not carry — what too large to audit in one
-  // pass means, or what usually helps after an unreadable generator reply.
-  // The rest pointed back at the stop reason above, under a heading and a
-  // zero badge: a section pointing at the section before it.
-  document.getElementById('resolution-issues-section').hidden=!(issues.length||emptyCopy);
-  document.getElementById('resolution-request').textContent=copy?copy.request:budget
+    +String((repairRefused&&row.why)||(typeof currentLocale!=='undefined'&&currentLocale==='zh'&&(row.stop_reason_zh||row.why_zh))||row.stop_reason||row.why||'The audit controller paused this task.'),
+  request:copy?copy.request:budget
     ?'Raise or clear the usage limit and rerun the original task, or stop this task.'
     :provider
     ?'Retry the same task now, review the model connection first, or stop this task.'
     :formatCause
     ?'Rewrite the task as one concrete instruction and run one more round, switch the generator model, or stop this task.'
-    :(row.requested||'Choose whether to revise and continue, or stop this task.');
-  document.getElementById('resolution-reopen-title').textContent=copy?copy.reopenTitle:budget?'Raise the limit & retry':provider?'Retry provider':'Revise and continue';
-  document.getElementById('resolution-reopen-copy').textContent=copy?copy.reopenCopy:budget
+    :(row.requested||'Choose whether to revise and continue, or stop this task.'),
+  reopenTitle:copy?copy.reopenTitle:budget?'Raise the limit & retry':provider?'Retry provider':'Revise and continue',
+  reopenCopy:copy?copy.reopenCopy:budget
     ?'Adjust the usage limit in Project controls, then rerun the original task.'
     :provider
     ?'Use the current connection and rerun the original task.'
@@ -5110,20 +5089,80 @@ function openResolution(value,action='',sha=''){
     ?'Name the file inside the audited directories that should change, then unlock one additional audited round.'
     :auditorConcern
     ?'If the concern is right, tell the generator how to address it. If it is a misreading, say so here; your reason is recorded.'
-    :'Give the generator specific correction guidance and unlock one additional audited round.';
+    :'Give the generator specific correction guidance and unlock one additional audited round.',
+  // R5. The guidance box opens prefilled where the next step is obvious
+  // (nothing produced, unreadable reply); the person can still change it.
+  hint:copy&&copy.hint?t(copy.hint):'',
   // The runtime affordance carries the budget person to the same Project
   // controls that hold the usage limits; relabel it so it names that, not a
   // model change, when the stop is a guardrail pause.
-  document.getElementById('resolution-open-runtime').textContent=budget?'Adjust usage limits':'Change model or fallback';
-  document.getElementById('resolution-open-runtime').hidden=!(hasRemediation(row,'select_model')||hasRemediation(row,'open_billing'));
+  runtimeLabel:budget?'Adjust usage limits':'Change model or fallback',
+  runtimeHidden:!(hasRemediation(row,'select_model')||hasRemediation(row,'open_billing')),
   // R5. The one real action of a locked cycle is the EARLIER decision; the
   // secondary button carries it (relabelled, with the cycle to open) so no new
   // control is added. Cleared for every other row so the label stays honest.
+  earlier:row.cause==='escalation_locked'?String(row.earlier_cycle_id||''):'',
+  settingsHidden:!hasRemediation(row,'validate_credential'),
+  // D149. The identifiers stay reachable but leave the first paint: the
+  // commit this decision is about is named by its subject in the stop reason
+  // above, and its sha lives here, behind a closed disclosure.
+  details:(currentLocale==='zh'?'提交 ':'Commit ')+String(row.short_sha||row.sha||''),
+  attemptsHtml:(row.attempts||[]).map(item=>{
+    const word=String(item.verdict||'').toLowerCase();
+    // R1. The verdict word a person reads; the raw word stays as the class.
+    return '<div class="decision-attempt"><span class="round-n">round '+esc(item.round)+'</span><span>'
+      +esc(item.findings)+' issue'+(item.findings===1?'':'s')+'</span><span class="verdict-word '+esc(word)
+      +'">'+esc(verdictWord(item.verdict))+'</span></div>';}).join(''),
+  // R2. Each issue leads with the observation; severity as a consequence,
+  // the place and the rule id on one muted details line under it.
+  issuesHtml:issues.length?issues.map(issue=>
+    '<article class="decision-issue"'+ruleTitle(issue.rule)+'><p class="finding-observation">'+esc(issue.observation||'No explanation was recorded.')+'</p>'
+    +'<div class="finding-details"><span class="severity '+(severityWord(issue.severity||'BLOCKER')==='must fix'?'must-fix':'suggestion')+'">'+esc(severityWord(issue.severity||'BLOCKER'))+'</span>'
+    +(issue.artifact?'<span class="finding-sep" aria-hidden="true">·</span><span class="finding-where">'+esc(issue.artifact)+'</span>':'')
+    +'</div></article>').join('')
+    :(emptyCopy?'<div class="decision-empty">'+emptyCopy+'</div>':'')};
+}
+function openResolution(value,action='',sha=''){
+  let row=typeof value==='object'&&value?value:null;
+  if(!row&&lastState)row=(lastState.escalations||[]).find(item=>item.cycle_id===value);
+  row=row||{cycle_id:value,short_sha:sha,sha,round:1,max_rounds:lastState&&lastState.max_rounds||3,
+    limit_reached:false,why:'The automatic audit loop stopped.',issues:[],attempts:[],
+    requested:'Review why the loop stopped, then decide whether to revise or stop.'};
+  activeResolution=row;promptedEscalations.add(row.cycle_id);
+  const s=decisionSlots(row);
+  document.getElementById('resolution-cycle').value=row.cycle_id||'';
+  document.getElementById('resolution-reason').value=s.hint;
+  document.getElementById('resolution-flag').textContent=s.flag;
+  document.getElementById('resolution-title').textContent=s.title;
+  document.getElementById('resolution-summary').textContent=s.summary;
+  appendResolutionReset(row,s.budget,s.provider);   // billing: "Resets at midnight" / "resets in 2 h 10 min"
+  document.getElementById('resolution-limit-title').textContent=s.limitTitle;
+  document.getElementById('resolution-limit-copy').textContent=s.limitCopy;
+  document.getElementById('resolution-attempts').innerHTML=s.attemptsHtml;
+  document.getElementById('resolution-goal').textContent=(lastState?titleOf(lastState):'')||'The task this conversation asked for.';
+  document.getElementById('resolution-details').textContent=s.details;
+  // S4. Never a count badge of 0 — a zero is not a count, it is the absence
+  // of one, and a badge saying so is furniture.
+  const countBadge=document.getElementById('resolution-issue-count');
+  countBadge.textContent=s.issues.length?String(s.issues.length):'';
+  countBadge.hidden=!s.issues.length;
+  document.getElementById('resolution-issues').innerHTML=s.issuesHtml;
+  // S4. The section is rendered only when it carries something a person has
+  // not already read: findings, or empty copy that explains the ABSENCE with
+  // a fact the stop reason does not carry — what too large to audit in one
+  // pass means, or what usually helps after an unreadable generator reply.
+  // The rest pointed back at the stop reason above, under a heading and a
+  // zero badge: a section pointing at the section before it.
+  document.getElementById('resolution-issues-section').hidden=!(s.issues.length||s.emptyCopy);
+  document.getElementById('resolution-request').textContent=s.request;
+  document.getElementById('resolution-reopen-title').textContent=s.reopenTitle;
+  document.getElementById('resolution-reopen-copy').textContent=s.reopenCopy;
+  document.getElementById('resolution-open-runtime').textContent=s.runtimeLabel;
+  document.getElementById('resolution-open-runtime').hidden=s.runtimeHidden;
   const settingsButton=document.getElementById('resolution-open-settings');
-  const earlier=row.cause==='escalation_locked'?String(row.earlier_cycle_id||''):'';
-  settingsButton.setAttribute('data-earlier-cycle',earlier);
-  settingsButton.textContent=earlier?'Open the earlier decision':'Review provider connection';
-  settingsButton.hidden=!hasRemediation(row,'validate_credential')&&!earlier;
+  settingsButton.setAttribute('data-earlier-cycle',s.earlier);
+  settingsButton.textContent=s.earlier?'Open the earlier decision':'Review provider connection';
+  settingsButton.hidden=s.settingsHidden&&!s.earlier;
   resolutionChoice(action||'reopen');
   document.getElementById('resolution-error').className='wizard-error';
   resolutionModal.classList.add('on');document.body.classList.add('deciding');
@@ -6704,12 +6743,10 @@ function escalationRow(row,d){
   const zh=currentLocale==='zh';
   if(isDecisionStop(row))
     return streamRow({shape:'outcome',actor:'auditor',kind:'audit_escalated',
-      tone:'decide',key:'decision:'+(row.cycle_id||''),
-      line:zh?'需要你的决定':'Needs your decision',
+      tone:'decide',key:'decision:'+(row.cycle_id||''),open:true,
+      line:t(decisionSlots(row).flag),
       n:row.round?{value:row.round,unit:'rounds'}:null,
-      action:{label:zh?'查看并决定':'Review & decide',
-        attrs:{'data-open-decisions':String(row.cycle_id||''),
-               'data-open-decisions-sha':String(row.sha||'')}}});
+      detail:{kind:'html',html:decisionDetail(row)}});
   const note=failureNote(row);
   if(!note)return null;
   const retries=note.unit==='retries'?providerRetries(d):0;
@@ -6726,6 +6763,40 @@ function escalationRow(row,d){
           'data-stream-reason':String(note.reason||'')}}:null});}
 function escalationRows(d){
   return currentEscalations(d).map(row=>escalationRow(row,d)).filter(Boolean);}
+
+// ------------------------------------------------ decisions in the stream
+// docs/design/ACTIVITY_STREAM.md §Decisions happen in the stream. When a round
+// truly needs a person, its outcome row expands IN PLACE: what happened, why,
+// what the choices are, in three sentences and two buttons. Nothing covers the
+// screen and the composer stays live, so a person can answer in the box they
+// were already typing in if the buttons are not what they want.
+//
+// The words come from decisionSlots — the same pure function the Decision
+// Center writes from — so the two surfaces cannot drift apart.
+function decisionDetail(row){
+  const s=decisionSlots(row);
+  const zh=currentLocale==='zh';
+  const cycle=esc(String(row.cycle_id||''));
+  return '<div class="decision-inline" data-decision="'+cycle+'">'
+    +'<p class="decision-inline-summary">'+esc(t(s.summary))+'</p>'
+    +'<div class="decision-inline-block"><b>'+esc(t(s.limitTitle))+'</b>'
+    +'<p>'+esc(t(s.limitCopy))+'</p></div>'
+    +(s.issuesHtml?'<div class="decision-inline-block">'+s.issuesHtml+'</div>':'')
+    +'<p class="decision-inline-request">'+esc(t(s.request))+'</p>'
+    +'<label class="decision-inline-reason"><span>'
+    +esc(zh?'你的指引或理由':'Your guidance or reason')+'</span>'
+    +'<textarea rows="2" data-decision-reason aria-label="'
+    +esc(zh?'你的指引或理由':'Your guidance or reason')+'"></textarea></label>'
+    +'<div class="srow-actions">'
+    +'<button type="button" class="srow-action" data-decide="reopen" data-decide-cycle="'
+    +cycle+'">'+esc(t(s.reopenTitle))+'</button>'
+    +'<button type="button" class="srow-action" data-decide="close" data-decide-cycle="'
+    +cycle+'">'+esc(zh?'停止此任务':'Stop this task')+'</button>'
+    +(s.earlier?'<button type="button" class="srow-action" data-open-decisions="'
+      +esc(s.earlier)+'">'+esc(t('Open the earlier decision'))+'</button>':'')
+    +(s.runtimeHidden?'':'<button type="button" class="srow-action" data-open-runtime="1">'
+      +esc(t(s.runtimeLabel))+'</button>')
+    +'</div><p class="decision-inline-error" role="alert" hidden></p></div>';}
 
 function turn(m,d){
   if(m.kind === 'you'){
@@ -7080,14 +7151,9 @@ function setStatePill(d){
 function decisionRowFor(d,cycleId,sha){const rows=(d&&d.escalations)||[];
   return rows.find(r=>r.cycle_id===cycleId)||rows.find(r=>sha&&r.sha&&(String(r.sha).startsWith(String(sha))||String(sha).startsWith(String(r.sha))))
     ||currentEscalations(d).slice(-1)[0]||null;}
-// One line under the round rows when the pending decision is not about the
-// rounds shown: a provider or usage stop, or a later round than the last
-// report. Otherwise "" — the round rows already say it.
-function pendingDecisionLine(row,lastRound){if(!row)return '';
-  const what=row.kind==='provider'?'Waiting for the provider':row.kind==='budget'?'Usage limit reached':'Needs your decision';
-  const round=Number(row.round||0),shown=Number(lastRound||0);
-  if(row.kind!=='provider'&&row.kind!=='budget'&&(!round||round===shown))return '';
-  return what+(round&&round!==shown?' · round '+round:'');}
+// pendingDecisionLine went with the escalated review card: a pending decision
+// is its own row in the stream now, carrying the decision itself, so a second
+// line about it under a card would be the same news twice.
 function reviewCard(d){
   const cycles=chatCycles(d);if(!cycles.length)return '';
   const cycle=cycles[cycles.length-1];
@@ -7126,13 +7192,11 @@ function reviewCard(d){
   // them passed. That is the same fabrication as the ticks below it: the console
   // is not told which checks ran. The claim is removed rather than restated, and
   // the check list in the detail carries its real state instead.
-  const pending=status==='escalated'?decisionRowFor(d,cycle.id,cycle.sha):null;
-  // Failure is not a decision: a machine failure is a note row in the stream
-  // with an inline retry, and a card that ALSO announced it as needing input
-  // would be the interface asking for a person twice about a stop that no
-  // person has to settle.
-  if(status==='escalated'&&pending&&!isDecisionStop(pending))return '';
-  const pendingLine=pendingDecisionLine(pending,rows.length?rows[rows.length-1].round:cycle.round);
+  // A stopped cycle is a row in the stream now: a machine failure is a note
+  // with an inline retry, a judgment call is an outcome row that expands into
+  // the decision itself. A card announcing the same stop underneath would be
+  // the interface asking twice.
+  if(status==='escalated')return '';
   const checkLines=passed
     ?'<ul class="review-checks"><li>Independent auditor approved the result</li>'
       +'<li>No blocking findings</li>'
@@ -7167,15 +7231,13 @@ function reviewCard(d){
     +'</div></details></div></div>';
   const actionRow=status==='passed'
     ?'<button type="button" class="review-action" data-admit data-admit-cycle="'+esc(cycle.id)+'">Admit result</button>'
-    :status==='escalated'
-    ?'<button type="button" class="review-action" data-open-decisions="'+esc(cycle.id)+'" data-open-decisions-sha="'+esc(cycle.sha||'')+'">Review issues & decide</button>'
     :'<button type="button" class="review-action" data-open-audits>View audit details</button>';
   return '<section class="review-card'+(open?' open':'')+'" aria-label="Independent review">'
     +'<button type="button" class="review-summary" data-review-toggle="'+esc(cycle.id)+'" aria-expanded="'+(open?'true':'false')+'">'
     +'<div class="review-top"><span class="review-mark" aria-hidden="true"></span><b>Independent review</b>'
     +'<span class="status '+esc(cycle.status)+'">'+esc(statusLabel)+'</span><span class="review-chevron" aria-hidden="true"></span></div>'
     +checkLines
-    +'<div class="review-rounds">'+roundLines+(pendingLine?'<div class="review-round-row review-pending"><span>'+esc(pendingLine)+'</span></div>':'')+'</div>'
+    +'<div class="review-rounds">'+roundLines+'</div>'
     +'</button>'+detail
     +'<div class="review-actions">'+actionRow+'</div></section>';
 }
@@ -8065,14 +8127,13 @@ function renderInspector(d){
 }
 function maybePromptForHuman(d){
   if(document.body.classList.contains('hub-mode')||resolutionModal.classList.contains('on')||newTaskMode)return;
+  // Nothing is modal. A machine failure is a note row with one action; a
+  // judgment call is an outcome row that expands into the decision itself,
+  // in the stream, with the composer live beside it. The Decision Center is
+  // still reachable — from the cross-task banner and the Needs-attention
+  // panel — but it is never thrown at anybody.
   const row=currentEscalations(d).slice(-1)[0];
-  // Design rule 1: no modal for anything the loop can retry. A machine
-  // failure is a note row with one action; only a judgment call may take the
-  // screen, and even that is on its way into the stream.
-  if(row&&!isDecisionStop(row))return;
-  if(row&&!promptedEscalations.has(row.cycle_id))setTimeout(()=>{
-    if(lastState===d&&!resolutionModal.classList.contains('on'))openResolution(row);
-  },0);
+  if(row)promptedEscalations.add(row.cycle_id);
 }
 function render(d){
   lastState = d;
@@ -8758,6 +8819,42 @@ function handleActionClick(ev){
   // The inline retry of a machine failure: one POST, no dialog, and the
   // composer is never touched. The reason it records is fixed English, because
   // the ledger is a record rather than a rendering.
+  const decide=ev.target.closest('[data-decide]');
+  if(decide){
+    const box=decide.closest('.decision-inline');
+    const cycle=decide.getAttribute('data-decide-cycle')||'';
+    const action=decide.getAttribute('data-decide')||'';
+    const field=box?box.querySelector('[data-decision-reason]'):null;
+    const reason=field?field.value.trim():'';
+    const problem=box?box.querySelector('.decision-inline-error'):null;
+    const stop=lastState&&decisionRowFor(lastState,cycle,'');
+    const providerStop=Boolean(stop&&stop.kind==='provider');
+    if(!reason&&!(providerStop&&action==='reopen')){
+      if(problem){problem.hidden=false;problem.textContent=currentLocale==='zh'
+        ?'请写下具体的指引或理由，让这个决定可以被审计。'
+        :'Add concrete guidance or a reason so the decision is auditable.';}
+      if(field)field.focus();
+      return;}
+    if(problem)problem.hidden=true;
+    decide.disabled=true;
+    api('/api/escalation',{cycle_id:cycle,
+        action:providerStop&&action==='reopen'?'retry_provider':action,reason:reason})
+      .then(r=>{
+        route.className='route on';
+        if(r&&r.setup==='credentials'){showSetupCard(r.missing||[]);return;}
+        if(action==='reopen'){
+          pendingContinuation={cycle:cycle,chat:activeChatId};
+          say.value=reason;
+          route.innerHTML=currentLocale==='zh'
+            ?'<b>已再开一轮审计。</b> 你的指引在输入框里，确认后点击运行。'
+            :'<b>Another audited attempt is unlocked.</b> Your guidance is in the composer. Review it, then press Run task.';
+          setTimeout(()=>say.focus(),0);
+        }else route.innerHTML=currentLocale==='zh'
+          ?'<b>任务已停止。</b> 当前结果未被采纳，你的理由已记录。'
+          :'<b>Task stopped.</b> The current output remains unadmitted and your reason was recorded.';})
+      .catch(e=>{if(problem){problem.hidden=false;problem.textContent=e.message;}})
+      .finally(()=>{decide.disabled=false;});
+    return;}
   const retry=ev.target.closest('[data-stream-retry]');
   if(retry){
     const cycle=retry.getAttribute('data-stream-retry')||'';

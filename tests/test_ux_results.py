@@ -172,6 +172,18 @@ def _state(status: str, verdict: str, findings: list[dict]) -> dict:
     }
 
 
+@needs_node
+def test_an_escalated_cycle_is_a_row_in_the_stream_not_a_review_card():
+    """A5. A stopped cycle is a decision, and a decision happens in the stream:
+    a machine failure is a note row with one inline action, a judgment call is
+    an outcome row that expands into the decision itself. A review card
+    announcing the same stop underneath would be the interface asking twice.
+
+    Mutation: let reviewCard render the escalated branch again and this fails.
+    """
+    assert _review_card(_state("ESCALATED", "ESCALATE", [])).strip() == ""
+
+
 def _review_card(state: dict) -> str:
     from render_decision import eval_page
     return eval_page(WORKTREE, _CARD_SIGS,
@@ -182,8 +194,7 @@ def _review_card(state: dict) -> str:
 @pytest.mark.parametrize("status,verdict,findings", [
     ("PASSED", "PASS", []),
     ("BLOCKED", "BLOCKED", [{"severity": "BLOCKER", "rule": "CA-TXT-001",
-                             "artifact": "work/a.md", "observation": "Wrong figure."}]),
-    ("ESCALATED", "ESCALATE", [])])
+                             "artifact": "work/a.md", "observation": "Wrong figure."}])])
 def test_the_review_card_first_paint_carries_no_identifier(status, verdict, findings):
     """R3. The grep the owner asked for, on the rendered card: outside the
     closed Details block there is no 12/40-hex, no provider:model string and

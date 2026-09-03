@@ -219,7 +219,10 @@ def test_page_markup_contains_the_provider_remediation_table():
     # The runtime affordance now also carries the budget billing action, so the
     # select_model gate is one term of that visibility expression.
     assert "hasRemediation(row,'select_model')" in PAGE
-    assert "hidden=!hasRemediation(row,'validate_credential')" in PAGE
+    # A5 moved the gate into decisionSlots, where both the Decision Center and
+    # the row in the stream read it from the same expression.
+    assert "settingsHidden:!hasRemediation(row,'validate_credential')" in PAGE
+    assert "settingsButton.hidden=s.settingsHidden&&!s.earlier" in PAGE
     # The A40 contract strings survive.
     for label in ("Retry provider now", "Review provider connection",
                   "Change model or fallback", "Stop this task"):
