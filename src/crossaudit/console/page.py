@@ -6565,8 +6565,9 @@ function renderUsageBanner(d){const banner=document.getElementById('usage-banner
   document.getElementById('usage-banner-text').textContent=zh?(top.text_zh||top.text):top.text;
   document.getElementById('usage-banner-reset').textContent=zh?(top.resets_zh||top.resets):top.resets;
   banner.dataset.key=warningKey(d,top);}
-document.getElementById('usage-banner-dismiss').onclick=()=>{const banner=document.getElementById('usage-banner');const key=banner.dataset.key||'';if(!key)return;
-  const keep=dismissedWarnings().filter(k=>k!==key).slice(-40);keep.push(key);try{localStorage.setItem(USAGE_DISMISS_KEY,JSON.stringify(keep));}catch(e){}banner.hidden=true;};
+function dismissUsageBanner(){const banner=document.getElementById('usage-banner');const key=banner.dataset.key||'';if(!key)return;
+  const keep=dismissedWarnings().filter(k=>k!==key).slice(-40);keep.push(key);try{localStorage.setItem(USAGE_DISMISS_KEY,JSON.stringify(keep));}catch(e){}banner.hidden=true;}
+document.getElementById('usage-banner-dismiss').onclick=dismissUsageBanner;
 document.getElementById('usage-pill').onclick=()=>openPanelTab('usage');
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-usage-mode]');if(b)setUsageMode(b.getAttribute('data-usage-mode'));});
 function countdownText(resetAt){const s=Math.floor(Number(resetAt)-Date.now()/1000),zh=currentLocale==='zh';

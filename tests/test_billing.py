@@ -142,6 +142,23 @@ class _Clock:
         return self.now
 
 
+#: Month names restated here on purpose: the reset wording is checked against
+#: the test's own calendar, not against ``usage._MONTHS``.
+_MONTH_NAMES = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep",
+                "Oct", "Nov", "Dec")
+
+
+def _today(hour: int) -> datetime:
+    """Anchor the fake clock to the real current day.
+
+    Ledger lines are stamped with wall-clock time, so a hard-coded date would
+    put every recorded call outside the period under test the moment the date
+    rolled past it. Only the *hour* is ours; the day comes from the machine.
+    """
+    return datetime.now().astimezone().replace(
+        hour=hour, minute=0, second=0, microsecond=0)
+
+
 def _spend(cfg, tokens: int) -> None:
     _record(cfg, reply=_reply({"usage": {"prompt_tokens": tokens,
                                          "completion_tokens": 0}}))
@@ -149,7 +166,7 @@ def _spend(cfg, tokens: int) -> None:
 
 def test_threshold_alarms_fire_once_persist_and_rearm_at_rollover(cfg):
     cfg = replace(cfg, budgets=Budgets(daily_token_limit=1000))
-    clock = _Clock(datetime(2026, 9, 2, 10, 0, tzinfo=timezone.utc))
+    clock = _Clock(_today(10))
     assert usage.check_budget_warnings(cfg, now=clock.now) == []       # nothing spent
     _spend(cfg, 790)
     assert usage.check_budget_warnings(cfg, now=clock.now) == []       # 79 %: quiet
@@ -165,7 +182,7 @@ def test_threshold_alarms_fire_once_persist_and_rearm_at_rollover(cfg):
     assert usage.check_budget_warnings(cfg, now=clock.tick(hours=1)) == []
     # A restart reads the persisted file, not memory.
     stored = json.loads((cfg.root / cfg.state_dir / usage.WARNINGS_NAME).read_text())
-    assert stored["daily"] == {"period": "2026-09-02", "fired": [80]}
+    assert stored["daily"] == {"period": clock.now.date().isoformat(), "fired": [80]}
     assert [w["threshold"] for w in
             usage.budget_warning_state(cfg, now=clock.now)["active"]] == [80]
     _spend(cfg, 140)                                                    # 96 %
@@ -189,7 +206,7 @@ def test_alarms_never_fire_when_no_budget_is_configured(cfg):
 
 def test_monthly_alarm_uses_cost_and_names_the_first_of_next_month(cfg):
     cfg = replace(cfg, budgets=Budgets(monthly_cost_warning_usd=0.01))
-    clock = _Clock(datetime(2026, 9, 15, 12, 0, tzinfo=timezone.utc))
+    clock = _Clock(_today(12))
     # 1000 input + 500 output on gpt-5.6-luna = $0.001 + $0.003 = $0.004 (40 %)
     _record(cfg)
     assert usage.check_budget_warnings(cfg, now=clock.now) == []
@@ -198,8 +215,12 @@ def test_monthly_alarm_uses_cost_and_names_the_first_of_next_month(cfg):
     assert [(w["budget"], w["threshold"]) for w in fired] == [("monthly", 80)]
     assert fired[0]["text"] == "This month's cost budget is 80% used"
     assert fired[0]["text_zh"] == "本月费用预算已用 80%"
-    assert fired[0]["resets"] == "Resets on Oct 1" and fired[0]["resets_zh"] == "10 月 1 日重置"
-    # December rolls into January of the next year.
+    first_next = (clock.now.replace(day=28) + timedelta(days=7)).replace(day=1)
+    assert fired[0]["resets"] == f"Resets on {_MONTH_NAMES[first_next.month - 1]} 1"
+    assert fired[0]["resets_zh"] == f"{first_next.month} 月 1 日重置"
+    # A September moment names October; December rolls into January of the next year.
+    assert usage.reset_moments(
+        datetime(2026, 9, 15, tzinfo=timezone.utc))["monthly"] == "Resets on Oct 1"
     assert usage.reset_moments(datetime(2026, 12, 3, tzinfo=timezone.utc))["monthly"] == "Resets on Jan 1"
 
 
@@ -382,6 +403,56 @@ def test_header_pill_token_mode_is_a_per_viewer_preference():
     renderUsagePill({usage:{all:{calls:1},today:{tokens:38000,api_value_usd:0.42},month:{tokens:1200000,api_value_usd:12.1},budget:{state:'ok'}}});
     console.log(document.getElementById('usage-pill').textContent);""")
     assert out.strip() == "Today 38K · Month 1.2M"
+
+
+@node
+def test_the_threshold_banner_is_soft_dismissable_and_re_arms_next_period():
+    """The alarm is a banner, never a modal: it shows the highest line crossed,
+    a dismissal is remembered per project/period/threshold, and the next
+    period's alarm comes back on its own."""
+    fns = ["function dismissedWarnings()", "function warningKey(d,w)",
+           "function warningDismissed(d,w)", "function renderUsageBanner(d)",
+           "function dismissUsageBanner()"]
+    prelude = _PRELUDE.replace("attrs:{},", "attrs:{},dataset:{},")
+    out = _eval(fns, """
+    Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{store:{},
+      getItem(k){return this.store[k]||null;},setItem(k,v){this.store[k]=String(v);}}});
+    const alarm=(budget,period,threshold,text,zh)=>({budget,period,threshold,text,text_zh:zh,
+      resets:'Resets at midnight',resets_zh:'明天 0:00 重置'});
+    const day=p=>({project:'/p',usage:{budget:{fired:[
+      alarm('daily',p,80,"Today's token budget is 80% used",'今日 token 预算已用 80%'),
+      alarm('daily',p,95,"Today's token budget is 95% used",'今日 token 预算已用 95%')]}}});
+    const read=()=>({hidden:document.getElementById('usage-banner').hidden,
+      text:document.getElementById('usage-banner-text').textContent,
+      reset:document.getElementById('usage-banner-reset').textContent});
+    const results={};
+    renderUsageBanner(day('2026-09-02'));results.en=read();
+    currentLocale='zh';renderUsageBanner(day('2026-09-02'));results.zh=read();
+    currentLocale='en';
+    dismissUsageBanner();results.afterDismiss=document.getElementById('usage-banner').hidden;
+    results.stored=localStorage.getItem('crossaudit-usage-dismissed');
+    renderUsageBanner(day('2026-09-02'));results.sameDay=read().hidden;
+    renderUsageBanner(day('2026-09-03'));results.nextDay=read();
+    renderUsageBanner({project:'/other',usage:{budget:{fired:day('2026-09-02').usage.budget.fired}}});
+    results.otherProject=read().hidden;
+    renderUsageBanner({project:'/p',usage:{budget:{fired:[]}}});results.quiet=read().hidden;
+    console.log(JSON.stringify(results));""", prelude)
+    got = json.loads(out)
+    # The higher line wins: one sentence, not a stack of them.
+    assert got["en"] == {"hidden": False, "text": "Today's token budget is 95% used",
+                         "reset": "Resets at midnight"}
+    assert got["zh"] == {"hidden": False, "text": "今日 token 预算已用 95%",
+                         "reset": "明天 0:00 重置"}
+    assert got["afterDismiss"] is True
+    assert json.loads(got["stored"]) == ["/p|daily|2026-09-02|95"]
+    # Dismissing 95 % also silences the 80 % line underneath it, same period.
+    assert got["sameDay"] is True
+    # A new day is a new period: the alarm re-arms without being re-armed.
+    assert got["nextDay"] == {"hidden": False, "text": "Today's token budget is 95% used",
+                              "reset": "Resets at midnight"}
+    # The dismissal belongs to the project it was made in.
+    assert got["otherProject"] is False
+    assert got["quiet"] is True
 
 
 @node
