@@ -503,14 +503,13 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
   border:1px solid var(--line);border-radius:var(--r-xs);padding:1px 6px;
   overflow-wrap:anywhere;max-width:100%}
 .event-mark.runtime{background:var(--surface-2);color:var(--text-3)}
-/* The optimistic "working" indicator shown the instant a message is sent. */
-.thinking-dots{display:inline-flex;gap:5px;align-items:center;height:20px}
-.thinking-dots i{width:6px;height:6px;border-radius:50%;background:var(--text-3);
-  animation:think 1.15s ease-in-out infinite}
-.thinking-dots i:nth-child(2){animation-delay:.15s}
-.thinking-dots i:nth-child(3){animation-delay:.3s}
-@keyframes think{0%,70%,100%{opacity:.28;transform:translateY(0)}35%{opacity:1;transform:translateY(-4px)}}
-@media (prefers-reduced-motion:reduce){.thinking-dots i{animation:none;opacity:.55}}
+/* The thinking orb: one canvas where a state is in progress, nothing anywhere
+   else. It is the mark of the line it sits on — the optimistic turn's working
+   indicator at 64 px, the newest live activity row's mark at 20 px — and the
+   engine paints it (motion, theme and reduced-motion live in the wrapper). */
+.orb{display:block;flex:none}
+.turn-orb{width:64px;height:64px}
+.event-orb{width:20px;height:20px;margin:1px}
 .turn-sub{margin-top:7px;color:var(--text-2);font-size:var(--fs-label)}
 /* Phase narration under the working indicator: quiet, one line each, the
    latest a shade darker. No card, no mark — it is the indicator's caption. */
@@ -6309,8 +6308,8 @@ function optimisticTurn(text, queued, intake, replying){
     ?'<span class="role-mark auditor" aria-hidden="true">A</span><b>Auditor</b>'
     :'<span class="role-mark generator" aria-hidden="true">G</span><b>Generator</b>';
   return you + '<article class="turn"><div class="turn-main">'
-    + '<div class="turn-meta">' + who + '</div><div class="turn-body"><span class="thinking-dots" aria-label="'
-    + (currentLocale==='zh'?'处理中':'Working') + '"><i></i><i></i><i></i></span>'
+    + '<div class="turn-meta">' + who + '</div><div class="turn-body">'
+    + orbMarkup(intakeOrbPhase(intake),64,intakeOrbLabel(intake),'turn-orb')
     + (intake?'<div class="intake">'+intakeLines(intake)+'</div>':'')
     + '<div class="turn-forecast">' + esc(forecastText(lastState)) + '</div>'
     + '</div></div></article>';
@@ -6490,14 +6489,17 @@ function conciseDetail(s){
 // itself, so it does not borrow the generator name or mark, and every row
 // localises from the wire fields (text_i18n) rather than showing English
 // under 中文.
-function activityRow(s){
+function activityRow(s, orbPhase){
   const system = s.kind === 'context_condensed';
   const mark = system ? '↻' : (ACTOR_MARKS[s.actor]||'·');
   const who = system ? t('Context reduced') : t(ACTOR_NAMES[s.actor]||s.actor);
   const line = (system || s.text_i18n) ? localeText(s.text_i18n, s.text) : s.text;
   const detail = system ? localeText(s.detail_i18n, s.detail) : conciseDetail(s);
+  // The newest row of a live run carries the orb as its mark: the phase in
+  // progress, labelled with the sentence beside it.
   return '<div class="audit-event">'
-  + '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>'
+  + (orbPhase ? orbMarkup(orbPhase, 20, line, 'event-orb')
+    : '<span class="event-mark ' + esc(system ? 'runtime' : s.actor) + '">' + esc(mark) + '</span>')
   + '<div class="event-main"><div class="event-line"><b>' + esc(who)
   + '</b><span>' + esc(line) + '</span></div>'
   + (detail ? '<div class="event-detail">' + esc(detail) + '</div>' : '') + '</div>'
@@ -6541,25 +6543,37 @@ function runCard(d){
   const focusLabel = focus.state === 'current' ? 'Current step' : focus.state === 'failed' ? 'Stopped at'
     : focus.state === 'pending' ? 'Next step' : 'Completed step';
   const stateNames = {done:'Done',failed:'Stopped',current:'Active',pending:'Waiting'};
-  const eventRows = p && p.steps ? collapseClockRows(p.steps).slice(-12).map(activityRow).join('') : '';
   // D150: what is arriving right now, as one line each — a word count for the
   // draft (the text itself lives in the unaudited draft article above) and
   // the tail of the summarised thinking. Neither is a step; neither persists.
   const draft = liveDraftFor(d), thinking = liveThinkingFor(d);
+  // One orb per card, on the newest live line: the thinking row while
+  // reasoning arrives, else the draft row while text arrives, else the
+  // newest event row in the run's own phase. Nothing once the run is over.
+  const orbPhase = p && !p.finished ? runOrbPhase(p) : '';
+  const rows = p && p.steps ? collapseClockRows(p.steps).slice(-12) : [];
+  const eventRows = rows.map((s, i) => activityRow(s,
+    orbPhase && !thinking && !draft && i === rows.length - 1 ? orbPhase : '')).join('');
   // Review D8 / D4: thinking is model text no auditor has read — further from
   // evidence than the draft, which already says so on its face. It is folded
   // away behind a summary that says what it is, opens only if the reader asks,
   // and is never written anywhere: the row disappears with the run.
+  const draftLabel = currentLocale==='zh'
+        ? '草稿：已写 ' + draftCount(draft ? draft.text : '') + ' 字'
+        : 'Draft: ' + draftCount(draft ? draft.text : '') + ' words so far';
   const liveRows = (thinking ? '<details class="audit-event live-thinking">'
-      + '<summary><span class="event-mark runtime">…</span><div class="event-main"><div class="event-line"><b>'
+      + '<summary>' + (orbPhase ? orbMarkup('thinking', 20,
+          currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited', 'event-orb')
+        : '<span class="event-mark runtime">…</span>')
+      + '<div class="event-main"><div class="event-line"><b>'
       + esc(currentLocale==='zh'?'思考中 · 未经审计':'Thinking · not audited') + '</b></div></div>'
       + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></summary>'
       + '<div class="event-detail">' + esc(thinking.text.slice(-160).replace(/\s+/g,' ')) + '</div></details>' : '')
     + (draft ? '<div class="audit-event live-draft">'
-      + '<span class="event-mark generator">G</span><div class="event-main"><div class="event-line"><b>'
-      + esc(t('Generator')) + '</b><span>' + esc(currentLocale==='zh'
-        ? '草稿：已写 ' + draftCount(draft.text) + ' 字'
-        : 'Draft: ' + draftCount(draft.text) + ' words so far') + '</span></div></div>'
+      + (orbPhase && !thinking ? orbMarkup('generating', 20, draftLabel, 'event-orb')
+        : '<span class="event-mark generator">G</span>')
+      + '<div class="event-main"><div class="event-line"><b>'
+      + esc(t('Generator')) + '</b><span>' + esc(draftLabel) + '</span></div></div>'
       + '<time class="event-time">' + (currentLocale==='zh'?'刚刚':'now') + '</time></div>' : '');
   const activityTitle = p && !p.finished ? 'Live activity' : 'Run activity';
   const activity = (eventRows + liveRows) || '<div class="activity-empty">The generator and auditor show what they are doing here while a task runs.</div>';
@@ -7272,6 +7286,7 @@ function renderConversation(d){
     html = body || welcome();
   }
   document.getElementById('conversation').innerHTML = html;
+  mountOrbs(document.getElementById('conversation'));
   if(followLive && !newTaskMode) thread.scrollTop = thread.scrollHeight;
   else thread.scrollTop = Math.min(previousTop,Math.max(0,thread.scrollHeight-thread.clientHeight));
 }
