@@ -36,6 +36,20 @@ const eslintConfig = defineConfig([
       },
     },
   },
+  {
+    /* scripts/ holds the Playwright screenshot and probe scripts used during
+       visual review. They run code inside page.evaluate() against the
+       console's own page globals, which the linter cannot see, and they are
+       never shipped. The product code in app/, lib/ and worker/ keeps the
+       full rule set. */
+    files: ["scripts/**/*.mjs"],
+    rules: {
+      "no-undef": "off",
+      "no-empty": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-unused-expressions": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
