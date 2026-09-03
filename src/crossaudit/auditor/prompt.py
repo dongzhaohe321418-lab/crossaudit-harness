@@ -201,3 +201,22 @@ def build(constitution: str, constitution_commit: str, dcl: dict,
     return (prompt,
             bounded or task_bounded or dcl_bounded or evidence_bounded or const_bounded,
             hashlib.sha256(prompt.encode("utf-8")).hexdigest())
+
+
+#: Why a reply was rejected, handed back to the auditor for ONE more attempt.
+#: It names the shape and the reason and nothing else: no finding, no verdict,
+#: no hint about what the answer should be. A prompt that leaned on the outcome
+#: would be the console teaching the auditor its opinion, which is the one
+#: thing this loop exists to prevent.
+REPAIR_HEADER = (
+    "\n\nYour previous reply was rejected before it could be read as a verdict, "
+    "because: {reason}.\n"
+    "Reply again now, to the same increment, in the required shape. Do not "
+    "explain the rejection and do not change what you think — only answer in "
+    "the form this protocol accepts.\n"
+)
+
+
+def repair_note(reason: str) -> str:
+    """The one repair instruction appended for a single retry."""
+    return REPAIR_HEADER.format(reason=str(reason or "the reply was empty"))

@@ -444,3 +444,243 @@ def test_the_composer_is_never_taken_away_by_the_stream():
         assert forbidden not in stream, forbidden
     # The one control the stream owns stops the WORK, never the typing.
     assert stream.count("requestStop()") == 1
+
+
+# ============================================ 4. failure is not a decision
+#: The increment the loop is asked to produce, so the audit is about the
+#: auditor's reply rather than about the work.
+GOOD_INCREMENT = {
+    "experiments/demo/metadata.yml":
+        "code_version: a1b2c3d\ninputs:\n  - scripts/run_demo.py@a1b2c3d\n",
+    "experiments/demo/results.json": json.dumps({
+        "quantities": [
+            {"name": "binding_energy", "value": -3.65, "unit": "kcal/mol",
+             "source": "scripts/run_demo.py@a1b2c3d"},
+            {"name": "distance", "value": 2.73, "unit": "angstrom",
+             "source": "scripts/run_demo.py@a1b2c3d"},
+        ],
+        "convergence": {"converged": True, "achieved": 7.4e-07, "threshold": 1e-06},
+    }, indent=1),
+    "experiments/demo/SUMMARY.md": "attempt one\n",
+}
+PASS_REPLY = {"verdict": "PASS",
+              "sections_applied": ["CA-DATA-001", "CA-METH-002"], "findings": []}
+
+
+def _loop_with_auditor_replies(cfg, science, monkeypatch, replies: list[str]):
+    """Run the real loop with the auditor answering `replies` in order.
+
+    Everything else is the shipped path: the deterministic checks run, the
+    verdict ladder decides, the receipt is written.
+    """
+    from crossaudit import generator as generator_mod
+    from crossaudit.auditor import run as audit_run
+    from crossaudit.cli import build as build_mod
+    from crossaudit.config import load
+    from crossaudit.providers.base import Reply, sha256_text
+
+    asked: list[str] = []
+    events = []
+
+    def complete_factory(_cfg, _allow_custom, on_event=None, _heartbeat=None, **_kw):
+        def complete(*, system, prompt):
+            return Reply("ok", "id", "a" * 64, "b" * 64)
+        return complete
+
+    def fake_generate(**kwargs):
+        kwargs["complete"](system="s", prompt="p")
+        return generator_mod.Work(summary="attempt", files=GOOD_INCREMENT)
+
+    def auditor_complete(_cfg, _role, _primary, *, system, prompt, **_kw):
+        asked.append(prompt)
+        text = replies[min(len(asked) - 1, len(replies) - 1)]
+        return Reply(text, "audit-id", sha256_text(system + "\n" + prompt),
+                     sha256_text(text), raw={})
+
+    monkeypatch.setattr(build_mod, "_generator_complete", complete_factory)
+    monkeypatch.setattr(build_mod.gen_mod, "generate", fake_generate)
+    monkeypatch.setattr(audit_run.provider_resilience, "complete", auditor_complete)
+    monkeypatch.chdir(science)
+    cfg.path.write_text(cfg.path.read_text(encoding="utf-8")
+                        + "scope:\n  dirs: [experiments]\n", encoding="utf-8")
+    code = build_mod.run_loop(load(cfg.path), "produce the experiment",
+                              on_event=events.append)
+    return code, asked, events
+
+
+def test_an_empty_auditor_reply_is_repaired_once_before_it_becomes_a_stop(
+        cfg, science, monkeypatch):
+    """4a. An empty completion is the commonest unreadable reply there is, and
+    it used to become an escalation that asked a person to decide something no
+    person had an opinion about.
+
+    ONE bounded repair attempt now goes back to the same route with the
+    validator's own reason appended. It is additive: it adds an attempt in
+    FRONT of an existing failure path and moves no verdict mapping.
+
+    Mutation: delete the repair branch in auditor/run.py and the round
+    escalates on INVALID_REPLY instead of passing.
+    """
+    code, asked, events = _loop_with_auditor_replies(
+        cfg, science, monkeypatch, ["", json.dumps(PASS_REPLY)])
+
+    assert code == 0, [(e.kind, e.text) for e in events][-4:]
+    assert len(asked) == 2, "the auditor is asked exactly twice"
+    # The repair prompt says why, and asks only for the SHAPE — never for a
+    # verdict, which would be the loop teaching the auditor its opinion.
+    assert "Your previous reply was rejected" in asked[1]
+    assert "in the required shape" in asked[1]
+    for word in ("PASS", "BLOCKED", "ESCALATE"):
+        assert word not in asked[1].split("Your previous reply was rejected")[1]
+    # The attempt is in the run record, so the receipt still shows it happened.
+    retries = [e for e in events if e.kind == "audit_repair_retry"]
+    assert len(retries) == 1 and retries[0].detail == "1 attempt"
+    assert retries[0].text == "Asking the auditor to answer again"
+
+
+def test_the_repair_is_capped_at_one_and_changes_no_verdict_mapping(
+        cfg, science, monkeypatch):
+    """The cap is one attempt per round, and a reply that is still unreadable
+    is still unreadable: the ladder is untouched.
+
+    Mutation: loop the repair and the ask count grows past two per round.
+    """
+    from crossaudit.errors import escalation_cause
+
+    code, asked, events = _loop_with_auditor_replies(
+        cfg, science, monkeypatch, ["", "still not json"])
+
+    assert code != 0
+    rounds = len([e for e in events if e.kind == "round_started"])
+    assert len(asked) == 2 * rounds, "two auditor turns per round, never three"
+    assert len([e for e in events if e.kind == "audit_repair_retry"]) == rounds
+    # The mapping this slice must not have moved.
+    assert escalation_cause(integrity="INVALID_REPLY",
+                            verdict="ESCALATE") == "invalid_reply"
+
+
+def test_a_setup_mistake_reaches_the_console_as_its_own_cause(cfg, monkeypatch):
+    """4b. cli/main.py's no-science-commit refusal keeps its calm copy AND
+    arrives as the ``no_science_commit`` cause rather than a generic
+    escalation, so the console can route it to a note with a retry instead of
+    to a decision nobody has to make.
+
+    Mutation: drop ``cause=NO_SCIENCE_COMMIT_CAUSE`` from cmd_run and the
+    console sees a causeless stop, which `isDecisionStop` treats as a
+    judgment call — the exact confusion this exists to end.
+    """
+    from crossaudit.controller import StateStore
+    from crossaudit.errors import NO_SCIENCE_COMMIT_CAUSE
+
+    store = StateStore(cfg.root / cfg.state_dir / "state.json")
+    row = store.record_build_escalation(
+        cfg.science_repo, "e" * 40, "that commit had no experiment in it", 1,
+        kind="audit", cause=NO_SCIENCE_COMMIT_CAUSE)
+    assert row["escalation_cause"] == NO_SCIENCE_COMMIT_CAUSE
+
+
+_FAILURE_SIGS = _RENDER_SIGS + [
+    "const DECISION_CAUSES=", "const FAILURE_NOTES=",
+    "function isDecisionStop(row)", "function failureNote(row)",
+    "function providerRetries(d)", "function escalationRow(row,d)",
+]
+_FAILURE_PRELUDE = _RENDER_PRELUDE + "const chatProgress=d=>d.progress;\n"
+
+
+def _stop(row: dict, locale: str = "en", state: dict | None = None) -> dict:
+    from render_decision import eval_page
+
+    body = (f"currentLocale={json.dumps(locale)};"
+            f"const r=escalationRow({json.dumps(row)},{json.dumps(state or {})});"
+            "console.log(JSON.stringify(r?{shape:r.shape,line:r.line,n:r.n,"
+            "action:r.action,html:row(r,{})}:null));")
+    return json.loads(eval_page(WORKTREE, _FAILURE_SIGS, body,
+                                prelude=_FAILURE_PRELUDE))
+
+
+#: cause -> is it somebody judging? The spec's own two lists.
+STOP_SHAPES = [
+    ({"kind": "provider"}, "note"),
+    ({"kind": "budget"}, "note"),
+    ({"cause": "invalid_reply"}, "note"),
+    ({"cause": "no_science_commit"}, "note"),
+    ({"cause": "nothing_audited"}, "note"),
+    ({"cause": "bounds_exceeded"}, "note"),
+    ({"cause": "repair_refused"}, "note"),
+    ({"cause": "generator_format"}, "note"),
+    ({"cause": "no_progress"}, "note"),
+    ({"cause": "auditor_concern"}, "outcome"),
+    ({"cause": "auditor_escalated"}, "outcome"),
+    ({"cause": "escalation_locked"}, "outcome"),
+    ({"limit_reached": True}, "outcome"),
+]
+
+
+@needs_node
+def test_a_machine_failure_is_a_note_and_a_judgment_call_is_an_outcome():
+    """The distinction the design calls the point of the product.
+
+    Mutation: move ``auditor_concern`` into FAILURE_NOTES and it renders as a
+    quiet note with a retry button — a real dispute silently downgraded.
+    """
+    for row, shape in STOP_SHAPES:
+        got = _stop(dict(row, cycle_id="c1", round=2))
+        assert got and got["shape"] == shape, (row, got)
+
+
+@needs_node
+def test_no_machine_failure_opens_a_dialog_and_each_offers_one_action():
+    """Design rule 1: no modal for anything the loop can retry.
+
+    Mutation: point the retry at ``openResolution`` and the markup carries the
+    decision-card hooks again.
+    """
+    for row, shape in STOP_SHAPES:
+        if shape != "note":
+            continue
+        got = _stop(dict(row, cycle_id="c1", round=2))
+        html = got["html"]
+        assert "<dialog" not in html and "project-modal" not in html
+        assert html.count("srow-action") <= 2, html
+    # The three the spec names retry in place, without a form.
+    for cause, post in (({"kind": "provider"}, "retry_provider"),
+                        ({"cause": "invalid_reply"}, "reopen"),
+                        ({"cause": "no_science_commit"}, "reopen")):
+        got = _stop(dict(cause, cycle_id="c1"))
+        assert got["action"]["attrs"]["data-stream-retry"] == "c1"
+        assert got["action"]["attrs"]["data-stream-post"] == post
+        assert got["action"]["attrs"]["data-stream-reason"]
+
+
+@needs_node
+def test_the_failure_notes_say_it_in_both_languages():
+    """Design rule 7, on the copy this section adds.
+
+    Mutation: drop a `zh` half and the Chinese line is its English.
+    """
+    for row, shape in STOP_SHAPES:
+        en = _stop(dict(row, cycle_id="c1"), "en")
+        zh = _stop(dict(row, cycle_id="c1"), "zh")
+        assert en["line"] and zh["line"] and en["line"] != zh["line"], row
+        if en["action"]:
+            assert en["action"]["label"] != zh["action"]["label"], row
+
+
+@needs_node
+def test_the_provider_note_counts_the_retries_it_actually_made():
+    """"供应商无响应 · 已重试 2 次" — the number is counted from the narration
+    the page already holds, and is absent when it is zero.
+
+    Mutation: invent the count and the zero case shows a number.
+    """
+    steps = [{"kind": "provider_recovery", "t": 1,
+              "text": "Retrying the auditor's provider · attempt 1"},
+             {"kind": "provider_recovery", "t": 2,
+              "text": "Retrying the auditor's provider · attempt 2"}]
+    state = {"progress": {"steps": steps}}
+    zh = _stop({"kind": "provider", "cycle_id": "c1"}, "zh", state)
+    assert zh["n"] == {"value": 2, "unit": "retries"}
+    assert "供应商无响应 · 已重试 2 次" in zh["html"]
+    quiet = _stop({"kind": "provider", "cycle_id": "c1"}, "zh",
+                  {"progress": {"steps": []}})
+    assert quiet["n"] is None and "已重试" not in quiet["html"]

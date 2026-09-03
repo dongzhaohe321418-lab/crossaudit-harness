@@ -6403,8 +6403,11 @@ function streamRows(d,ctx){
   // Chronological, and stable inside one second: a message and the step that
   // reports it share a timestamp often enough that a sort alone would shuffle
   // them differently on every frame.
-  return rows.map((r,i)=>[r,i]).sort((a,b)=>(a[0].t-b[0].t)||(a[1]-b[1]))
-    .map(pair=>pair[0]);}
+  const ordered=rows.map((r,i)=>[r,i]).sort((a,b)=>(a[0].t-b[0].t)||(a[1]-b[1]))
+    .map(pair=>pair[0]);
+  // A recorded stop has no clock of its own: it is where the conversation IS,
+  // so it stands last rather than at whatever second it was written.
+  return ordered.concat((c.stops||[]).filter(Boolean));}
 
 // ------------------------------------------------------------ the renderer
 // ONE function renders any shape. The shape decides weight and affordances,
@@ -6623,9 +6626,106 @@ function streamContext(d,messages){
   const rounds=steps.filter(s=>s.kind==='round_started');
   const last=rounds.length?rounds[rounds.length-1]:null;
   const cycles=chatCycles(d),cycle=cycles.length?cycles[cycles.length-1]:null;
-  return {messages:messages||[],steps:steps,
+  return {messages:messages||[],steps:steps,stops:escalationRows(d),
     livePhase:live?(STATUS_PHASE_ROWS[runOrbPhase(p)]||''):'',
     round:Number((last&&last.round_no)||(cycle&&cycle.round)||0)};}
+
+// ------------------------------------------- failure is not a decision
+// docs/design/ACTIVITY_STREAM.md, the section of that name. A MACHINE failure
+// — an empty completion, an unreadable reply, a provider timeout, a rate
+// limit, a commit with nothing in the audited scope — is a NOTE row with one
+// inline action. Only a genuine judgment call becomes an OUTCOME that asks for
+// a person. That distinction is the point of the product: the opinion of the
+// audit is worth interrupting someone for; a failure of the plumbing is not.
+
+//: The stops that are somebody judging, not somebody plumbing: the auditor
+//: raised a concern, the auditor itself asked for a person, an earlier
+//: decision is unsettled. The rounds running out joins them through
+//: `limit_reached`, which is a field rather than a cause.
+const DECISION_CAUSES={auditor_concern:1,auditor_escalated:1,escalation_locked:1};
+//: Every other stop is a note: what failed, in plain words, and the ONE action
+//: that would fix it. The words are MOVED from the decision card, not
+//: rewritten. `act` is what the button does — `retry` posts the reopen the
+//: loop needs and nothing else, `settings` opens the limits, `guidance` opens
+//: the round for a person who has something to say. `reason` is the sentence
+//: the ledger records: English, because a ledger is a record, not a rendering.
+const FAILURE_NOTES={
+  provider:{en:'The provider did not answer',zh:'供应商无响应',
+    act:'retry',post:'retry_provider',unit:'retries',
+    action:{en:'Retry now',zh:'重试'},
+    reason:'Retried the provider from the activity stream.'},
+  budget:{en:'Paused at your usage limit',zh:'已在用量上限处暂停',
+    act:'settings',action:{en:'Adjust usage limits',zh:'调整用量上限'}},
+  invalid_reply:{en:'The auditor reply could not be read',zh:'审计者的回复无法解析',
+    act:'retry',post:'reopen',action:{en:'Run the audit again',zh:'重试审计'},
+    reason:'Run the audit again on the same work; the previous auditor reply '
+      +'could not be read.'},
+  no_science_commit:{en:'That commit had no experiment in it',zh:'那次提交里没有实验内容',
+    act:'retry',post:'reopen',
+    action:{en:'I have committed it — try again',zh:'我已提交，重试'},
+    reason:'The experiment has been committed; run the audited round again.'},
+  nothing_audited:{en:'Nothing was produced in the audited folder',zh:'已审计目录中没有产出',
+    act:'guidance',action:{en:'Say what to create',zh:'说明要创建什么'}},
+  generator_format:{en:'The generator produced nothing auditable',zh:'生成者没有产出可审计的内容',
+    act:'guidance',action:{en:'Rewrite the task',zh:'重写任务'}},
+  no_progress:{en:'The generator repeated the existing work',zh:'生成者重复了已有的成果',
+    act:'guidance',action:{en:'Say what should change',zh:'说明应改动什么'}},
+  bounds_exceeded:{en:'The task is too large for one audit',zh:'任务超出单次审计可读取的范围'},
+  repair_refused:{en:'The revision was rolled back',zh:'该修订已回滚'},
+  answered:{en:'This answer did not become an audited deliverable',zh:'这次回答没有形成可审计的交付物'}};
+
+//: Whether a stop is a person judging. A stop with no cause at all is one:
+//: the loop paused and could not say why, and guessing "plumbing" would hide
+//: a real question behind a retry button.
+function isDecisionStop(row){
+  if(!row)return false;
+  if(row.limit_reached)return true;
+  const cause=String(row.cause||'');
+  if(DECISION_CAUSES[cause])return true;
+  if(row.kind==='provider'||row.kind==='budget')return false;
+  return !FAILURE_NOTES[cause];}
+//: The words for a machine failure, keyed on the structured cause and falling
+//: back to the stop kind for the two that carry no cause of their own.
+function failureNote(row){
+  return FAILURE_NOTES[String((row&&row.cause)||'')]
+    ||FAILURE_NOTES[String((row&&row.kind)||'')]||null;}
+//: How many times the resilience layer has already gone back to the provider
+//: in this run. Counted from the narration the page already holds, so the
+//: number is never invented and is absent when it is zero.
+function providerRetries(d){
+  const p=chatProgress(d);
+  return ((p&&p.steps)||[]).filter(s=>s.kind==='provider_recovery'
+    &&/^Retrying /.test(String(s.text||''))).length;}
+//: One recorded stop becomes one row: a note with an action, or an outcome
+//: that asks for a person. Nothing about the audit moves — this reads the
+//: cause the ledger already recorded and chooses a SHAPE.
+function escalationRow(row,d){
+  if(!row)return null;
+  const zh=currentLocale==='zh';
+  if(isDecisionStop(row))
+    return streamRow({shape:'outcome',actor:'auditor',kind:'audit_escalated',
+      tone:'decide',key:'decision:'+(row.cycle_id||''),
+      line:zh?'需要你的决定':'Needs your decision',
+      n:row.round?{value:row.round,unit:'rounds'}:null,
+      action:{label:zh?'查看并决定':'Review & decide',
+        attrs:{'data-open-decisions':String(row.cycle_id||''),
+               'data-open-decisions-sha':String(row.sha||'')}}});
+  const note=failureNote(row);
+  if(!note)return null;
+  const retries=note.unit==='retries'?providerRetries(d):0;
+  return streamRow({shape:'note',actor:'system',kind:'provider_unavailable',
+    key:'failure:'+(row.cycle_id||''),
+    line:zh?note.zh:note.en,
+    n:retries?{value:retries,unit:'retries'}:null,
+    action:note.action?{label:zh?note.action.zh:note.action.en,
+      attrs:note.act==='settings'?{'data-open-runtime':'1'}
+        :note.act==='guidance'?{'data-open-decisions':String(row.cycle_id||''),
+                                'data-open-decisions-sha':String(row.sha||'')}
+        :{'data-stream-retry':String(row.cycle_id||''),
+          'data-stream-post':String(note.post||'reopen'),
+          'data-stream-reason':String(note.reason||'')}}:null});}
+function escalationRows(d){
+  return currentEscalations(d).map(row=>escalationRow(row,d)).filter(Boolean);}
 
 function turn(m,d){
   if(m.kind === 'you'){
@@ -7027,6 +7127,11 @@ function reviewCard(d){
   // is not told which checks ran. The claim is removed rather than restated, and
   // the check list in the detail carries its real state instead.
   const pending=status==='escalated'?decisionRowFor(d,cycle.id,cycle.sha):null;
+  // Failure is not a decision: a machine failure is a note row in the stream
+  // with an inline retry, and a card that ALSO announced it as needing input
+  // would be the interface asking for a person twice about a stop that no
+  // person has to settle.
+  if(status==='escalated'&&pending&&!isDecisionStop(pending))return '';
   const pendingLine=pendingDecisionLine(pending,rows.length?rows[rows.length-1].round:cycle.round);
   const checkLines=passed
     ?'<ul class="review-checks"><li>Independent auditor approved the result</li>'
@@ -7961,6 +8066,10 @@ function renderInspector(d){
 function maybePromptForHuman(d){
   if(document.body.classList.contains('hub-mode')||resolutionModal.classList.contains('on')||newTaskMode)return;
   const row=currentEscalations(d).slice(-1)[0];
+  // Design rule 1: no modal for anything the loop can retry. A machine
+  // failure is a note row with one action; only a judgment call may take the
+  // screen, and even that is on its way into the stream.
+  if(row&&!isDecisionStop(row))return;
   if(row&&!promptedEscalations.has(row.cycle_id))setTimeout(()=>{
     if(lastState===d&&!resolutionModal.classList.contains('on'))openResolution(row);
   },0);
@@ -8646,6 +8755,24 @@ function handleActionClick(ev){
     if(open)expandedReviews.add(key);else expandedReviews.delete(key);
     if(card){card.classList.toggle('open',open);reviewToggle.setAttribute('aria-expanded',String(open));}
     return;}
+  // The inline retry of a machine failure: one POST, no dialog, and the
+  // composer is never touched. The reason it records is fixed English, because
+  // the ledger is a record rather than a rendering.
+  const retry=ev.target.closest('[data-stream-retry]');
+  if(retry){
+    const cycle=retry.getAttribute('data-stream-retry')||'';
+    const action=retry.getAttribute('data-stream-post')||'reopen';
+    const reason=retry.getAttribute('data-stream-reason')||'';
+    retry.disabled=true;
+    api('/api/escalation',{cycle_id:cycle,action:action,reason:reason})
+      .then(()=>{route.className='route on';
+        route.innerHTML=currentLocale==='zh'
+          ?'<b>已重试。</b> 进度会显示在这里。'
+          :'<b>Retrying.</b> Progress appears here.';})
+      .catch(e=>{route.className='route on error';route.textContent=e.message;})
+      .finally(()=>{retry.disabled=false;});
+    return;}
+  if(ev.target.closest('[data-open-runtime]')){openRuntime();return;}
   if(ev.target.closest('[data-open-artifacts]'))openPanelTab('artifacts');
   if(ev.target.closest('[data-open-audits]'))openPanelTab('audits');
   const openDecisions=ev.target.closest('[data-open-decisions]');
