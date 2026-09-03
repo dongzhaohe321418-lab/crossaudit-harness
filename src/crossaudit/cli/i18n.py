@@ -621,14 +621,48 @@ _SENTENCE_BREAK = re.compile(r"[.;!?]\s|\n")
 _ENGLISH_WORD = re.compile(r"^[A-Za-z][A-Za-z'\-]*[.,;:]?$")
 
 
+#: A template is GENERIC when its own fixed text is too short to identify the
+#: sentence it makes — `{} is not configured` is 18 characters and 3 words, and
+#: could frame anything. Above this, the fixed text IS the sentence, and a long
+#: slot in it is the user's own value (a commit subject, a quoted task), not a
+#: whole refusal that has been swallowed.
+_GENERIC_FIXED_CHARS = 25
+_GENERIC_FIXED_WORDS = 4
+
+
+def _fixed_text(pattern: re.Pattern[str]) -> str:
+    """The literal (non-slot) text of a compiled template, unescaped.
+
+    Read back off the pattern rather than stored beside it, so it cannot drift
+    from what actually matched: `_compile` builds every pattern as the escaped
+    literal parts joined by `(.*?)`.
+    """
+    body = pattern.pattern.removeprefix("^").removesuffix("$")
+    return re.sub(r"\\(.)", r"\1", "".join(body.split("(.*?)")))
+
+
+def _is_generic(pattern: re.Pattern[str]) -> bool:
+    fixed = _fixed_text(pattern).strip()
+    return (len(fixed) < _GENERIC_FIXED_CHARS
+            or len([w for w in fixed.split() if w]) < _GENERIC_FIXED_WORDS)
+
+
 def _swallows_a_sentence(pattern: re.Pattern[str], groups: tuple[str, ...]) -> bool:
-    """A template that BEGINS with a slot is anchored only by what follows
-    it, so `{} is not configured` matched a whole composed refusal and
+    """A GENERIC template that BEGINS with a slot is anchored only by what
+    follows it, so `{} is not configured` matched a whole composed refusal and
     answered `未配置 <an English paragraph>` — a half-translation that reads
     as done. A slot of such a template may carry a path, an id, a name: not
     sentence punctuation, and not more than six English words.
+
+    The guard was once applied to EVERY leading-slot template, which was wrong
+    for a specific one: `{} ('<subject>') changed no science files — only
+    rules, configuration or ledger. …` carries the user's own commit subject in
+    that slot, and an eleven-word subject made the sentence refuse to
+    translate, so a Chinese reader got the English stop reason inside a Chinese
+    card. A template with more fixed text than a frame is specific enough that
+    a long slot is a value, not a swallowed sentence.
     """
-    if not pattern.pattern.startswith("^(.*?)"):
+    if not pattern.pattern.startswith("^(.*?)") or not _is_generic(pattern):
         return False
     return any(_SENTENCE_BREAK.search(g)
                or sum(1 for token in g.split() if _ENGLISH_WORD.match(token)) > 6

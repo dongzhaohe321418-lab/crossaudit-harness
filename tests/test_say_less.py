@@ -179,3 +179,61 @@ def test_the_live_draft_is_one_line_until_the_reader_opens_it():
             assert borrowed not in html
     # Another project keeps its own default.
     assert 'class="draft-fold" open' not in out["other_project"]
+# ============================================================ S3 the sentence
+def test_the_reproduced_stop_reason_now_reaches_a_chinese_reader():
+    """The exact sentence from the owner's screenshot. It has a Chinese
+    template and was refused by the leading-slot guard because the slot held
+    an eleven-word commit subject.
+
+    Mutation: apply the guard to every leading-slot template again (drop the
+    `_is_generic` term from `_swallows_a_sentence`) and both reproductions
+    below go back to None — English inside a Chinese card.
+    """
+    subject = ("Complete the perovskite review article by filling in all "
+               "truncated sections (round 1)")
+    old = (f"68cb653b4148 ('{subject}') changed no science files — only rules, "
+           f"configuration or ledger. Commit your experiment, then run again.")
+    assert i18n.denial_zh(old) is not None
+    assert subject in i18n.denial_zh(old), "the person's own words are carried through"
+    new = (f"Your last commit ('{subject}') changed no science files — only "
+           f"rules, configuration or ledger. Commit your experiment, then "
+           f"run again.")
+    zh = i18n.denial_zh(new)
+    assert zh is not None and zh.startswith("你的上一次提交")
+    assert HEX.search(zh) is None, "and it names no sha"
+
+
+def test_a_genuinely_generic_template_still_refuses_a_sentence_shaped_slot():
+    """The guard the fix narrows must keep doing its job: a one-slot frame
+    whose own fixed text could introduce anything may not swallow a whole
+    composed refusal and answer with a half-translation.
+
+    Mutation: drop the guard entirely and this returns a Chinese frame wrapped
+    around an English paragraph.
+    """
+    swallowed = ("The generator produced nothing under the audited folder and "
+                 "the round was abandoned before any file was written is required")
+    assert i18n.denial_zh(swallowed) is None
+    # ...while a short, ordinary value in the same template still translates.
+    assert i18n.denial_zh("scope.dirs is required") == "必须设置 scope.dirs"
+
+
+def test_no_user_facing_stop_leads_with_a_commit_sha():
+    """S3 sweep. The four refusals that opened with `sha[:12]` now name the
+    commit by its subject. Mutation: restore any one of them and its literal
+    reappears in the source.
+    """
+    source = (WORKTREE / "src/crossaudit/cli/main.py").read_text(encoding="utf-8")
+    for gone in ('f"{sha[:12]} changed no science files',
+                 'f"{sha[:12]} was already admitted',
+                 'f"{sha[:12]} already has a recorded decision',
+                 'f"{sha[:12]} only touches the ledger'):
+        assert gone not in source, gone
+    for kept in ("Your last commit ({subject!r}) changed no science files",
+                 "That commit ({subject!r}) was already admitted",
+                 "That commit ({subject!r}) already has a recorded decision",
+                 "That commit ({subject!r}) only touches the ledger"):
+        assert kept in source, kept
+        # Each has its Chinese, or a Chinese reader gets the marked English.
+        assert kept.split(" ({subject!r})")[0] in (
+            WORKTREE / "src/crossaudit/cli/denials_zh.py").read_text(encoding="utf-8")

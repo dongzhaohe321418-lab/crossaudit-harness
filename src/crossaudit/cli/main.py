@@ -968,6 +968,10 @@ def cmd_audit(args: argparse.Namespace) -> int:
     if not is_repo(cfg.root):
         raise ConfigDenial(f"{cfg.root} is not a git repository")
     sha, tree = resolve(cfg.root, args.sha or "HEAD")
+    # D149: the refusals below name the commit by its SUBJECT rather than
+    # leading with a 12-hex id. The sha stays in --json, in the receipt and in
+    # the ledger; it is not the first thing a person is asked to read.
+    subject = git("log", "-1", "--format=%s", sha, cwd=cfg.root, check=False)
 
     # Local mode writes the ledger into the audited repository, so HEAD moves
     # when a report is committed. Auditing that commit would audit the audit —
@@ -976,9 +980,10 @@ def cmd_audit(args: argparse.Namespace) -> int:
                   cwd=cfg.root, check=False).splitlines()
     if changed and all(p.startswith(cfg.ledger_dir.rstrip("/") + "/") for p in changed):
         raise ConfigDenial(
-            f"{sha[:12]} only touches the ledger ({cfg.ledger_dir}/): this is an audit "
-            f"artefact, not an increment. Audit the science commit instead, or move the "
-            f"ledger to the audit repository (github-pair mode).")
+            f"That commit ({subject!r}) only touches the ledger "
+            f"({cfg.ledger_dir}/): this is an audit artefact, not an increment. "
+            f"Audit the science commit instead, or move the ledger to the audit "
+            f"repository (github-pair mode).")
 
     store = _state(cfg)
     continuation = getattr(args, "continue_cycle", None)
@@ -1004,16 +1009,17 @@ def cmd_audit(args: argparse.Namespace) -> int:
         cycle = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha),
                                       constitution_commit=head_const_commit)
     if cycle.get("already_admitted"):
-        raise ConfigDenial(f"{sha[:12]} was already admitted; open a new increment")
+        raise ConfigDenial(
+            f"That commit ({subject!r}) was already admitted; open a new increment")
     if cycle.get("verdict_already_recorded"):
         # D36 clause 2. Re-running the same commit used to advance a round and
         # replace the recorded decision. It is refused rather than absorbed, and
         # the sentence says which of the two legitimate routes to take.
         raise ConfigDenial(
-            f"{sha[:12]} already has a recorded decision in this cycle "
-            f"({cycle['status']}); a decision already made is not replaced by "
-            f"re-running it. Commit a revision to continue the cycle, or start a "
-            f"new increment to be judged afresh.",
+            f"That commit ({subject!r}) already has a recorded decision in this "
+            f"cycle ({cycle['status']}); a decision already made is not replaced "
+            f"by re-running it. Commit a revision to continue the cycle, or "
+            f"start a new increment to be judged afresh.",
             cycle_id=cycle["cycle_id"], status=cycle["status"])
 
     files, notes, scope_text = _materialise_tree_scope(cfg, sha, args.scope)
@@ -1647,9 +1653,14 @@ def cmd_run(args: argparse.Namespace) -> int:
                       f"commit instead: {sha[:12]})")
                 break
     if not science:
+        # D149: the sentence a person reads names the commit by its subject.
+        # The sha is not gone — it is the cycle's own `active_sha`, which the
+        # decision card carries in its collapsed details, and it is untouched
+        # in --json, in receipts and in the ledger.
         raise ConfigDenial(
-            f"{sha[:12]} ({subject!r}) changed no science files — only rules, "
-            f"configuration or ledger. Commit your experiment, then run again.")
+            f"Your last commit ({subject!r}) changed no science files — only "
+            f"rules, configuration or ledger. Commit your experiment, then "
+            f"run again.")
 
     dirty = git("status", "--porcelain", cwd=cfg.root, check=False)
     from ..providers.registry import NEEDS_KEY
