@@ -471,6 +471,13 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
   padding:10px 12px;background:transparent}
 .turn.draft .draft-label{font-weight:500;color:var(--text-2);font-size:var(--fs-caption)}
 .turn.draft .draft-body{white-space:pre-wrap;color:var(--text-2)}
+/* The live draft is one summarising line until the reader asks for the text.
+   The disclosure triangle is the control; the summary IS the line. */
+details.draft-fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:7px}
+details.draft-fold>summary::-webkit-details-marker{display:none}
+details.draft-fold>summary::after{content:'\203a';color:var(--text-3);transition:transform .12s}
+details.draft-fold[open]>summary::after{transform:rotate(90deg)}
+details.draft-fold>.draft-body{margin-top:9px}
 .turn.user .turn-main{max-width:85%;min-width:0}
 .turn.user .turn-body{background:var(--surface-2);border-radius:var(--r-lg) var(--r-lg) 6px var(--r-lg);
   padding:var(--sp-3) var(--sp-4)}
@@ -3662,7 +3669,6 @@ const ZH={
   "Generator and auditor must run on different providers. Independent review is the core of the protocol and cannot be turned off.":"生成者和审计者必须运行在不同的供应商上。独立审查是本协议的核心，无法关闭。",
   "You can swap either model later without losing history.":"你之后可以更换任一模型而不丢失历史记录。",
   "The copy of this report on disk differs from the audited one shown here. Run crossaudit verify to check the record.":"磁盘上的这份报告与此处显示的已审计版本不同。请运行 crossaudit verify 核对记录。",
-  "Generator live draft · not yet audited":"生成者实时草稿 · 尚未审计",
   "No receipt names the commit this report was audited at, so CrossAudit cannot confirm the version shown here is the one that was audited. Run crossaudit verify to check the record.":"没有收据记录这份报告在哪个提交上接受了审计，因此 CrossAudit 无法确认此处显示的版本就是当时被审计的版本。请运行 crossaudit verify 核对记录。",
   "This report is not committed yet, so it cannot be verified yet.":"这份报告尚未提交，因此暂时无法核验。",
   "Start using CrossAudit":"开始使用 CrossAudit","Paste your API key":"粘贴你的 API key",
@@ -7698,18 +7704,40 @@ function liveDraftFor(d){
   if(!p||p.finished||String(p.run_id||'')!==liveDraft.run)return null;
   if(String(p.state||'').toUpperCase()!=='GENERATING')return null;
   return liveDraft;}
+//: Whether the live draft is expanded, per project, in this browser. Default
+//: collapsed (D149): the whole streaming text says less than one line naming
+//: what is arriving, and it is unaudited either way.
+const DRAFT_OPEN_KEY='crossaudit-draft-open';
+function draftOpenKey(d){return DRAFT_OPEN_KEY+':'+((d&&d.project)||'');}
+function draftOpen(d){try{return localStorage.getItem(draftOpenKey(d))==='1';}catch(e){return false;}}
+function rememberDraftOpen(el){
+  try{localStorage.setItem(draftOpenKey(lastState),el&&el.open?'1':'0');}catch(e){}}
+// The one line the draft is, collapsed: who is writing, how much there is so
+// far (draftCount — CJK by character, everything else by word), and that no
+// auditor has read it. Built rather than looked up, because the count is
+// inside the sentence.
+function draftSummaryLine(draft){
+  const n=draftCount(draft?draft.text:'');
+  return currentLocale==='zh'
+    ?'生成者正在撰写 · 已写 '+n+' 字 · 尚未审计'
+    :'Generator is drafting · '+n+(n===1?' word':' words')+' so far · not yet audited';}
 function liveDraftTurn(d){
   const draft=liveDraftFor(d);
   if(!draft)return '';
   // Deliberately none of: a file card, a download, a delivery band, a PASS mark
   // or any audit styling. This is unaudited text and it may not borrow the
   // furniture of text that has been through the auditor.
+  // S2: and it is not dumped whole either. Collapsed by default behind the one
+  // line above; the text below is the same stream it always was, still labelled
+  // unaudited, and the choice of the reader is remembered for this project.
   return '<article class="turn draft"><div class="turn-main">'
-    +'<div class="turn-meta"><span class="role-mark" aria-hidden="true">G</span>'
-    +'<b class="draft-label">Generator live draft · not yet audited</b>'
+    +'<details class="draft-fold"'+(draftOpen(d)?' open':'')
+    +' ontoggle="rememberDraftOpen(this)">'
+    +'<summary class="turn-meta"><span class="role-mark" aria-hidden="true">G</span>'
+    +'<b class="draft-label">'+esc(draftSummaryLine(draft))+'</b>'
     +'<span class="spacer"></span><span class="turn-time">'
-    +(currentLocale==='zh'?'刚刚':'now')+'</span></div>'
-    +'<div class="turn-body draft-body">'+esc(draft.text)+'</div></div></article>';}
+    +(currentLocale==='zh'?'刚刚':'now')+'</span></summary>'
+    +'<div class="turn-body draft-body">'+esc(draft.text)+'</div></details></div></article>';}
 function startStream(){let source;try{source=new EventSource('/api/stream?t='+encodeURIComponent(T));}
   catch(e){startPolling('polling');return;}source.onopen=()=>{connected(true,'live');
   if(poller){clearInterval(poller);poller=null;}};source.onmessage=ev=>{try{const d=JSON.parse(ev.data);

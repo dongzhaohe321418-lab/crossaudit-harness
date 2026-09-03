@@ -116,3 +116,66 @@ def test_every_live_phase_line_says_the_phase_its_number_and_its_elapsed():
     for (phase, facts, en, zh), row in zip(PHASE_LINES, got):
         assert row["en"] == en, (phase, facts, row)
         assert row["zh"] == zh, (phase, facts, row)
+
+
+# ========================================================= S2 the folded draft
+_DRAFT_PRELUDE = """
+let currentLocale='en';let STORE={};let lastState={project:'lab/perovskite'};
+globalThis.localStorage={getItem:k=>k in STORE?STORE[k]:null,
+  setItem:(k,v)=>{STORE[k]=String(v);}};
+let DRAFT=null;const liveDraftFor=()=>DRAFT;
+"""
+
+
+@needs_node
+def test_the_live_draft_is_one_line_until_the_reader_opens_it():
+    """S2. Collapsed by default, the whole text behind a disclosure, and the
+    choice remembered per project.
+
+    Mutation: default the disclosure to open and the collapsed case renders
+    the body; drop the project from `draftOpenKey` and the second project
+    inherits the first one's choice.
+    """
+    esc = PAGE[PAGE.index("const esc = s =>"):]
+    esc = esc[:esc.index(";\n") + 1]
+    text = "第一段草稿 with three words"
+    program = "\n".join([
+        _DRAFT_PRELUDE, esc,
+        _page_snippet("function draftCount(text)"),
+        _page_snippet("const DRAFT_OPEN_KEY") + ";",
+        _page_snippet("function draftOpenKey(d)"),
+        _page_snippet("function draftOpen(d)"),
+        _page_snippet("function rememberDraftOpen(el)"),
+        _page_snippet("function draftSummaryLine(draft)"),
+        _page_snippet("function liveDraftTurn(d)"),
+        f"DRAFT={{text:{json.dumps(text)}}};const out={{}};",
+        "for(const locale of ['en','zh']){currentLocale=locale;"
+        "  out['collapsed_'+locale]=liveDraftTurn(lastState);}",
+        # The reader opens it; the page remembers, for THIS project only.
+        "rememberDraftOpen({open:true});",
+        "for(const locale of ['en','zh']){currentLocale=locale;"
+        "  out['open_'+locale]=liveDraftTurn(lastState);}",
+        "out.other_project=liveDraftTurn({project:'lab/other'});",
+        "console.log(JSON.stringify(out));"])
+    out = json.loads(_node(program))
+
+    # Collapsed: one line, the count, the unaudited label — and the text is
+    # inside a closed <details>, so it is not on the first paint.
+    for locale, line in (("en", "Generator is drafting · 8 words so far · not yet audited"),
+                         ("zh", "生成者正在撰写 · 已写 8 字 · 尚未审计")):
+        html = out["collapsed_" + locale]
+        assert line in html, (locale, html)
+        assert 'class="draft-fold" ontoggle=' in html, locale
+        assert 'class="draft-fold" open' not in html, locale
+        first_paint = re.sub(r"<details\b.*?</details>", "", html, flags=re.S)
+        assert text not in first_paint, "the whole draft is not on the first paint"
+    # Opened: the same line, and now the streaming text beside it, still
+    # labelled unaudited and still wearing none of the audited furniture.
+    for locale in ("en", "zh"):
+        html = out["open_" + locale]
+        assert 'class="draft-fold" open ontoggle=' in html
+        assert text in html
+        for borrowed in ("file-card", "data-download", "delivery", "status PASS"):
+            assert borrowed not in html
+    # Another project keeps its own default.
+    assert 'class="draft-fold" open' not in out["other_project"]
