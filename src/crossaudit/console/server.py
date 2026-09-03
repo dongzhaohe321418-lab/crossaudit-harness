@@ -960,7 +960,7 @@ def say(cfg: Config, text: str, *, attachments=None,
             routing_mode="human_continuation", chat_id=chat_id)
     else:
         routing = router_mod.apply_safe_default(router_mod.route_addressed(
-            text, complete=talk_mod._auditor_complete(cfg),
+            text, complete=talk_mod._auditor_complete(cfg, role="router", chat_id=chat_id),
             context=talk_mod._context(cfg, chat_id)))
         routing.chat_id = chat_id
     if not routing.certain:
@@ -1234,6 +1234,44 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                     self._deny(400, exc)
                     return
                 self._send_remote_download(process, filename, size)
+            elif parsed.path == "/api/usage/export":
+                # The project's own ledger, as a file: counts, routing metadata,
+                # attribution and ≈value. It never held prompts or keys, so
+                # neither can this. Token-gated like every other page.
+                query = parse_qs(parsed.query)
+                fmt = (query.get("format") or ["csv"])[0]
+                period = (query.get("period") or ["month"])[0]
+                if fmt not in ("csv", "json") or period not in ("day", "month", "all"):
+                    self._deny(400, "format must be csv or json; period must be day, month or all")
+                    return
+                current = self._config()
+                rows = usage.export_rows(current, period)
+                stamp = time.strftime("%Y%m%d")
+                filename = f"crossaudit-usage-{current.root.name}-{period}-{stamp}.{fmt}"
+                if fmt == "csv":
+                    body = usage.export_csv(rows).encode("utf-8")
+                    content_type = "text/csv; charset=utf-8"
+                else:
+                    body = json.dumps({"project": current.root.name, "period": period,
+                                       "columns": list(usage.EXPORT_COLUMNS),
+                                       "rows": rows, "price_snapshot": usage.PRICE_SNAPSHOT,
+                                       "local_only": True}).encode("utf-8")
+                    content_type = "application/json"
+                self.send_response(200)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.end_headers()
+                self.wfile.write(body)
+            elif parsed.path == "/api/usage/rollup":
+                # Every project the app knows, today / this month, from each
+                # one's own local ledger. Nothing leaves the machine.
+                current = self._config()
+                self._send(json.dumps(usage.workspace_rollup(
+                    projects.known_project_configs(current))).encode(),
+                    "application/json")
             else:
                 self._deny(404, "no such page")
 

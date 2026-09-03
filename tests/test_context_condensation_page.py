@@ -175,6 +175,10 @@ def _render(cases: list[dict]) -> dict[str, str]:
         _extract_fn("function durationText(seconds)"),
         _extract_fn("function elapsedText(seconds)"),
         _extract_fn("function humaniseDetail(text)"),
+        # Billing slice: runCard ends with its cost-line hook. Stubbed to
+        # nothing here — this file is about the notice's attribution; the
+        # hook's own rendering is pinned in test_billing.py.
+        "const runCostLine = () => '';",
         f"const CASES = {json.dumps(cases, ensure_ascii=False)};",
         """
 const out = {};

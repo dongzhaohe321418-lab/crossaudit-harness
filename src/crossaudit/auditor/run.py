@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -224,7 +225,7 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
               task: str = "",
               escalation_lock: bool = False, offline: bool = False,
               allow_custom_endpoint: bool = False, retention: str = "sealed",
-              on_event=None
+              on_event=None, usage_context: dict | None = None
               ) -> AuditOutcome:
     # A4/C.2: the opt-in source-provenance check needs the governed source-id set
     # from the evidence ledger; build it only when that check is enabled.
@@ -251,16 +252,21 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
         if not ok and cfg.generator_vendor:
             raise ConfigDenial(why)                   # a same-vendor pair is not CrossAudit
         try:
+            started = time.monotonic()
             raw = provider_resilience.complete(
                 cfg, "auditor", cfg.auditor, system=prompt_mod.SYSTEM,
                 prompt=prompt, allow_custom=allow_custom_endpoint,
                 on_event=on_event)
             route = provider_resilience.route_from_reply(raw, cfg.auditor)
+            # The kernel passes the caller's attribution through untouched and
+            # adds only what it measured itself (the turn's duration).
+            usage_meta = dict(usage_context or {})
+            usage_meta["duration_ms"] = int((time.monotonic() - started) * 1000)
             record_completion(root=cfg.root, state_dir=cfg.state_dir, role="auditor",
                               phase="audit", vendor=route["vendor"],
                               provider=route["provider"], model=route["model"],
                               reply=raw, system=prompt_mod.SYSTEM, prompt=prompt,
-                              base_url=route.get("base_url"))
+                              base_url=route.get("base_url"), context=usage_meta)
             actual = Role(provider=route["provider"], model=route["model"],
                           vendor=route["vendor"], key_env=route["key_env"],
                           base_url=route.get("base_url"),

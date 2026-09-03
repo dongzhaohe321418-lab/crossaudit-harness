@@ -222,9 +222,13 @@ def complete(cfg: Config, role_name: str, primary: Role, *, system: str,
                 return reply
             except ProviderDenial as exc:
                 last = exc
-                failures.append({**_route(role, fallback=index > 0),
-                                 "attempt": attempt, "reason": exc.reason[:500],
-                                 "category": exc.detail.get("category", "provider")})
+                failure = {**_route(role, fallback=index > 0),
+                           "attempt": attempt, "reason": exc.reason[:500],
+                           "category": exc.detail.get("category", "provider")}
+                reset_at = exc.detail.get("rate_limit_reset_at")
+                if isinstance(reset_at, (int, float)):
+                    failure["reset_at"] = float(reset_at)
+                failures.append(failure)
                 circuit = _record(cfg, route_id, success=False, reason=exc.reason)
                 retryable = bool(exc.detail.get("retryable"))
                 opened = float(circuit.get("open_until", 0)) > time.time()
@@ -247,9 +251,17 @@ def complete(cfg: Config, role_name: str, primary: Role, *, system: str,
     summary = "; ".join(
         f"{item['vendor']}:{item['model']} — {item['reason'].splitlines()[0]}"
         for item in failures[-4:])
+    # A provider's own reset moment survives the roll-up: when every route
+    # ended rate-limited, the parked run can say when the limit reopens.
+    extra: dict = {}
+    resets = [item["reset_at"] for item in failures if "reset_at" in item]
+    if resets:
+        extra["rate_limit_reset_at"] = max(resets)
+    if failures and all(item.get("category") == "rate_limit" for item in failures):
+        extra["rate_limited"] = True
     raise ProviderDenial(
         f"all configured {role_name} provider routes failed. {summary}",
         category="routes_exhausted", retryable=False,
         status=last_status if last_status is not None else 0,
         attempts=failures,
-        remediations=provider_remediations("routes_exhausted"))
+        remediations=provider_remediations("routes_exhausted"), **extra)

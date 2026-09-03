@@ -131,7 +131,10 @@ def test_run_loop_bridges_provider_chunks_without_entering_other_payloads(
     events = []
     bridge = {}
 
-    def complete_factory(_cfg, _allow_custom, on_event=None, _heartbeat=None):
+    def complete_factory(_cfg, _allow_custom, on_event=None, _heartbeat=None,
+                         _usage_context=None):
+        # The loop also hands its live usage attribution (billing slice);
+        # a factory refusing the fifth argument turns it into a TypeError.
         bridge["provider"] = on_event
         return object()
 

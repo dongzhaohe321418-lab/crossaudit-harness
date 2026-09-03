@@ -88,7 +88,15 @@ def render(worktree: pathlib.Path, rows: dict) -> dict:
              _extract(script, "function severityWord(sev)"),
              _extract(script, "function openResolution(value,action='',sha='')"),
              _extract(script, "function decisionSentence()"),
-             _extract(script, "function setDecidingInert(on)")]
+             _extract(script, "function setDecidingInert(on)"),
+             # Billing slice: openResolution appends the reset moment (budget
+             # pause) or the 429 countdown (provider pause) to the summary.
+             # With the shim's lastState=null both read nothing and the slots
+             # stay exactly what the branches wrote.
+             _extract(script, "function resetWords(g)"),
+             _extract(script, "function countdownText(resetAt)"),
+             _extract(script, "function resetSentence(resetAt)"),
+             _extract(script, "function appendResolutionReset(row,budget,provider)")]
     js = "\n".join(parts) + _SHIM % (json.dumps(rows), json.dumps(SLOTS))
     out = subprocess.run(["node", "-e", js], text=True, capture_output=True)
     assert out.returncode == 0, out.stderr
