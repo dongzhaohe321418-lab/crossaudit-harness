@@ -131,14 +131,22 @@ class RunCommandService:
         category = str(detail.get("category", ""))
         if category not in PROVIDER_WAIT_CATEGORIES:
             return False
+        waiting_reason = {"kind": waiting_kind(category), "category": category,
+                          "detail": exc.reason[:400]}
+        # A vendor rate limit names its own reset moment (providers/base.py
+        # parses the 429); it rides on the waiting reason so the console can
+        # count down to it rather than say "later".
+        reset_at = detail.get("rate_limit_reset_at")
+        if isinstance(reset_at, (int, float)) and not isinstance(reset_at, bool):
+            waiting_reason["reset_at"] = float(reset_at)
+        if detail.get("rate_limited"):
+            waiting_reason["rate_limited"] = True
         try:
             self.journal.append(run_id, RunEvent(
                 actor="loop", text="waiting for provider",
                 kind="provider_unavailable", detail=exc.reason[:2000],
                 state=RunState.PROVIDER_UNAVAILABLE,
-                waiting_reason={"kind": waiting_kind(category),
-                                "category": category,
-                                "detail": exc.reason[:400]}))
+                waiting_reason=waiting_reason))
         except (KeyError, RuntimeError):
             return False
         self._changed()

@@ -58,7 +58,7 @@ from ..runtime import (
     journal_path,
     waiting_kind,
 )
-from ..usage import record_completion
+from ..usage import check_budget_warnings, record_completion
 from .main import ALLOW_CUSTOM_ENV, cmd_run
 
 TASK_FILE = "TASK.md"
@@ -66,13 +66,28 @@ MAX_AGENT_JOBS_PER_BUILD = 20
 MAX_MCP_CALLS_PER_BUILD = 40
 
 
+def usage_attribution(cfg: Config, live: dict | None, started: float | None = None) -> dict:
+    """A copy of the loop's live attribution plus duration and price overrides."""
+    context = dict(live or {})
+    if started is not None:
+        context["duration_ms"] = int((time.monotonic() - started) * 1000)
+    prices = getattr(cfg, "prices", None)
+    if prices:
+        context["prices"] = prices
+    return context
+
+
 def _generator_complete(cfg: Config, allow_custom: bool, on_event=None,
-                        heartbeat=None):
+                        heartbeat=None, usage_context: dict | None = None):
     """A `complete(system, prompt)` bound to the generator role.
 
     The generator role needs its own credential; falling back to the auditor's
     would put one key behind both ends of a loop whose whole premise is that the
     ends are separate.
+
+    ``usage_context`` is a live mapping the loop keeps current (run id, chat id,
+    round, cycle id); each completion is recorded with a copy of it, so the
+    usage ledger can be read back per run, per cycle and per chat.
     """
     primary = provider_resilience.generator_role(cfg)
 
@@ -81,6 +96,7 @@ def _generator_complete(cfg: Config, allow_custom: bool, on_event=None,
         # boundary is what distinguishes "slow model" from "hung worker".
         if heartbeat is not None:
             heartbeat()
+        started = time.monotonic()
         reply = provider_resilience.complete(
             cfg, "generator", primary, system=system, prompt=prompt,
             allow_custom=allow_custom, on_event=on_event)
@@ -91,7 +107,8 @@ def _generator_complete(cfg: Config, allow_custom: bool, on_event=None,
         record_completion(root=cfg.root, state_dir=cfg.state_dir, role="generator",
                           phase="generation", vendor=route["vendor"],
                           provider=route["provider"], model=route["model"], reply=reply,
-                          system=system, prompt=prompt, base_url=route.get("base_url"))
+                          system=system, prompt=prompt, base_url=route.get("base_url"),
+                          context=usage_attribution(cfg, usage_context, started))
         return reply
 
     complete.last_route = None
@@ -631,8 +648,17 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     if chat_id and not re.fullmatch(r"(?:history|[a-f0-9]{16})", chat_id):
         raise ConfigDenial("chat id is invalid")
     allow_custom = bool(os.environ.get(ALLOW_CUSTOM_ENV))
+    # Usage attribution for this run: the loop keeps the round and cycle
+    # current; every generator and auditor completion is recorded with a copy.
+    usage_context: dict = {"run_id": run_id, "chat_id": chat_id,
+                           "cycle_id": continuation_cycle or "", "round": 0}
     complete = _generator_complete(cfg, allow_custom, generator_provider_event,
-                                   heartbeat)
+                                   heartbeat, usage_context=usage_context)
+
+    def budget_notice() -> None:
+        """Raise any 80 % / 95 % budget alarm newly crossed, once per period."""
+        for warning in check_budget_warnings(cfg):
+            emit("budget_warning", "loop", warning["text"], warning["resets"])
     constitution = (cfg.root / cfg.constitution).read_text(encoding="utf-8")
     store = StateStore(cfg.root / cfg.state_dir / "state.json")
     house = skills_mod.load(cfg.root)
@@ -695,6 +721,8 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     for round_no in range(1, cfg.max_rounds + 1):
         current_round = round_no
         last_round = round_no
+        usage_context["round"] = round_no
+        usage_context["cycle_id"] = build_cycle_id or ""
         emit("round_started", "loop", f"round {round_no} of {cfg.max_rounds}",
              state=RunState.GENERATING)
         # The safe boundary where mid-run owner messages join the work: drained
@@ -1078,6 +1106,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         # The auditor's resilience layer renews the lease before each retry
         # attempt through the same handle convention as the generator's.
         run_args.on_step.heartbeat = heartbeat
+        run_args.usage_context = {"run_id": run_id, "chat_id": chat_id}
         # D150: the auditor's reply is not evidence until the verdict, so its
         # chunks are never shown. They drive a progress clock instead — one
         # line every 10 s while tokens arrive — and the phase narration
@@ -1089,6 +1118,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             kind, "auditor", text, detail, state=RunState.AUDITING)
         if heartbeat is not None:
             heartbeat()          # auditor provider turn: same silence problem
+        budget_notice()          # the generator's spend, before the audit
         try:
             with contextlib.redirect_stdout(buffer):
                 code = cmd_run(run_args)
@@ -1112,6 +1142,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                 build_cycle_id = matched[0][0]
             break
         inner = buffer.getvalue()
+        budget_notice()          # and the auditor's
         cycles = store.snapshot().get("cycles", {})
         matched = [(cid, c) for cid, c in cycles.items()
                    if c.get("active_sha") == audit_sha]

@@ -22,7 +22,10 @@ ISOLATION_DIMS = ("parametric", "contextual", "permissive")
 
 _ALLOWED_TOP = {"version", "science_repo", "audit_repo", "constitution", "max_rounds",
                 "auditor", "generator", "isolation", "state", "ledger", "scope",
-                "checks", "plugins", "resilience", "budgets", "authority", "repair"}
+                "checks", "plugins", "resilience", "budgets", "authority", "repair",
+                "prices"}
+#: The four rates a per-project price override declares, USD per 1M tokens.
+PRICE_FIELDS = ("input", "output", "cache_write", "cache_read")
 _ALLOWED_ROLE = {"provider", "model", "base_url", "key_env", "vendor",
                  "reasoning_effort", "fallbacks"}
 _ALLOWED_GENERATOR = _ALLOWED_ROLE | {"streaming"}
@@ -119,6 +122,11 @@ class Config:
     budgets: Budgets = field(default_factory=Budgets)
     authority: AuthorityPolicy = field(default_factory=AuthorityPolicy)
     repair: RepairPolicy = field(default_factory=RepairPolicy)
+    #: Per-project price overrides: model id -> {input, output, cache_write,
+    #: cache_read} in USD per 1M tokens. Used for models the price snapshot
+    #: does not carry (or a relay that bills differently); stamped
+    #: ``user_priced`` in the usage ledger so the figure's origin stays visible.
+    prices: dict = field(default_factory=dict)
 
     @property
     def root(self) -> Path:
@@ -169,6 +177,34 @@ def _positive_optional(raw: dict, key: str, where: Path, *, integer: bool = Fals
     if isinstance(value, bool) or not valid_type or value <= 0:
         raise ConfigDenial(f"budgets.{key} must be a positive number or null", file=str(where))
     return int(value) if integer else float(value)
+
+
+def _prices(raw: object, where: Path) -> dict:
+    """Validate ``prices:`` — a mapping of model id to four non-negative rates."""
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ConfigDenial("prices must be a mapping", file=str(where))
+    out: dict[str, dict] = {}
+    for model, row in raw.items():
+        name = str(model).strip()
+        if not name or len(name) > 160:
+            raise ConfigDenial("prices: model ids must be 1 to 160 characters",
+                               file=str(where))
+        if not isinstance(row, dict) or set(row) - set(PRICE_FIELDS):
+            raise ConfigDenial(
+                f"prices.{name} must be a mapping of input, output, cache_write, cache_read",
+                file=str(where))
+        rates = {}
+        for key in PRICE_FIELDS:
+            value = row.get(key, 0)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+                raise ConfigDenial(
+                    f"prices.{name}.{key} must be a non-negative number (USD per 1M tokens)",
+                    file=str(where))
+            rates[key] = float(value)
+        out[name] = rates
+    return out
 
 
 def find(start: Path | None = None) -> Path:
@@ -364,6 +400,7 @@ def load(path: Path | None = None) -> Config:
             "repair.max_changed_lines must be an integer from 1 to 10000", file=str(p))
     repair = RepairPolicy(enabled=repair_enabled, mode=repair_mode,
                           max_changed_lines=repair_lines)
+    prices = _prices(raw.get("prices"), p)
 
     return Config(
         path=p,
@@ -390,6 +427,7 @@ def load(path: Path | None = None) -> Config:
         budgets=budgets,
         authority=authority,
         repair=repair,
+        prices=prices,
     )
 
 

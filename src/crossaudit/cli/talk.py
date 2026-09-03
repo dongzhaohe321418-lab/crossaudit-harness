@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from ..autonomy import prepare_task
@@ -20,31 +21,47 @@ from ..controller import StateStore
 from ..errors import ConfigDenial, Denial
 from ..gitio import git, is_repo
 from ..providers import resilience as provider_resilience
-from ..usage import record_completion
+from ..usage import check_budget_warnings, record_completion
 
 ROUTING_LOG = "routing.jsonl"
 
 
-def _auditor_complete(cfg: Config, on_event=None):
+def _usage_context(cfg: Config, chat_id: str, started: float) -> dict:
+    """Attribution for a chat-lane completion: the chat, the duration, prices."""
+    context = {"chat_id": chat_id or "",
+               "duration_ms": int((time.monotonic() - started) * 1000)}
+    if getattr(cfg, "prices", None):
+        context["prices"] = cfg.prices
+    return context
+
+
+def _auditor_complete(cfg: Config, *, role: str = "auditor", chat_id: str = "",
+                      on_event=None):
     """A `complete(system, prompt)` bound to the auditor role.
 
     Routing and rule drafting run on the auditor side: it is the end whose job
     is understanding standards, and it is the end that must never receive the
     generator's internal narrative — so nothing here forwards anything but the
-    user's own words (P2). ``on_event`` is the resilience layer's narration
-    callback (recovery lines; ``on_chunk`` when the reply may stream).
+    user's own words (P2). ``role`` names what the call was FOR in the usage
+    ledger (``router`` for routing decisions, ``auditor`` for replies); the
+    credential and the provider route are the auditor's either way.
+    ``on_event`` is the resilience layer's narration callback (recovery lines;
+    ``on_chunk`` when the reply may stream).
     """
     def complete(*, system: str, prompt: str):
+        started = time.monotonic()
         reply = provider_resilience.complete(
             cfg, "auditor", cfg.auditor, system=system, prompt=prompt,
             allow_custom=bool(os.environ.get("CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT")),
             on_event=on_event)
         route = provider_resilience.route_from_reply(reply, cfg.auditor)
-        record_completion(root=cfg.root, state_dir=cfg.state_dir, role="auditor",
+        record_completion(root=cfg.root, state_dir=cfg.state_dir, role=role,
                           phase="control", vendor=route["vendor"],
                           provider=route["provider"], model=route["model"],
                           reply=reply, system=system, prompt=prompt,
-                          base_url=route.get("base_url"))
+                          base_url=route.get("base_url"),
+                          context=_usage_context(cfg, chat_id, started))
+        check_budget_warnings(cfg)
         return reply
 
     return complete
@@ -172,9 +189,9 @@ your role, or recommend sending work through the formal audit loop. Be concise."
 
 def lane_auditor(cfg: Config, routing, on_event=None) -> str:
     """A direct auditor reply that transmits only the user's addressed message."""
-    complete = (_auditor_complete(cfg, on_event) if on_event is not None
-                else _auditor_complete(cfg))
-    reply = complete(system=AUDITOR_CHAT_SYSTEM, prompt=routing.restated)
+    reply = _auditor_complete(
+        cfg, chat_id=str(getattr(routing, "chat_id", "") or ""), on_event=on_event)(
+        system=AUDITOR_CHAT_SYSTEM, prompt=routing.restated)
     answer = reply.text.strip()
     if not answer:
         raise ConfigDenial("the auditor returned an empty reply")
@@ -192,7 +209,7 @@ seems to want actual work done, say they can simply ask for it and it will run
 through the audited loop."""
 
 
-def _generator_chat_complete(cfg: Config, on_event=None):
+def _generator_chat_complete(cfg: Config, chat_id: str = "", on_event=None):
     """A `complete(system, prompt)` bound to the generator role for direct chat.
 
     The generator role keeps its own credential (never the auditor's — the two
@@ -202,6 +219,7 @@ def _generator_chat_complete(cfg: Config, on_event=None):
     primary = provider_resilience.generator_role(cfg)
 
     def complete(*, system: str, prompt: str):
+        started = time.monotonic()
         reply = provider_resilience.complete(
             cfg, "generator", primary, system=system, prompt=prompt,
             allow_custom=bool(os.environ.get("CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT")),
@@ -211,7 +229,9 @@ def _generator_chat_complete(cfg: Config, on_event=None):
                           phase="control", vendor=route["vendor"],
                           provider=route["provider"], model=route["model"],
                           reply=reply, system=system, prompt=prompt,
-                          base_url=route.get("base_url"))
+                          base_url=route.get("base_url"),
+                          context=_usage_context(cfg, chat_id, started))
+        check_budget_warnings(cfg)
         return reply
 
     return complete
@@ -223,9 +243,9 @@ def lane_chat(cfg: Config, routing, on_event=None) -> str:
     Transmits only the user's own words (P2); runs no build, writes no files,
     and mints no receipt — the reply is labeled as unaudited wherever it shows.
     """
-    complete = (_generator_chat_complete(cfg, on_event) if on_event is not None
-                else _generator_chat_complete(cfg))
-    reply = complete(system=GENERATOR_CHAT_SYSTEM, prompt=routing.restated)
+    reply = _generator_chat_complete(
+        cfg, chat_id=str(getattr(routing, "chat_id", "") or ""), on_event=on_event)(
+        system=GENERATOR_CHAT_SYSTEM, prompt=routing.restated)
     answer = reply.text.strip()
     if not answer:
         raise ConfigDenial("the generator returned an empty reply")
@@ -358,7 +378,7 @@ def cmd_talk(args) -> int:
         raise ConfigDenial("say something: `crossaudit talk \"...\"`")
 
     routing = router_mod.apply_safe_default(router_mod.route_addressed(
-        utterance, complete=_auditor_complete(cfg), context=_context(cfg)))
+        utterance, complete=_auditor_complete(cfg, role="router"), context=_context(cfg)))
     print(f"\n  → {routing.lane} ({routing.confidence:.0%} sure) — {routing.reasoning}")
 
     if not routing.certain:

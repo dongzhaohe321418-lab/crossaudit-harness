@@ -33,10 +33,14 @@ def _routing(text="hi", lane="chat", confidence=0.95):
         reasoning="conversational", restated=text, t=1, chat_id="a" * 16)
 
 
+# Billing slice: the lanes now hand `_generator_chat_complete(cfg, chat_id)` the
+# chat being answered so the usage ledger can attribute the completion to it.
+# Every fake below accepts that second argument; a fake that refused it would
+# turn the attribution into a TypeError (the mutation this note names).
 # ------------------------------------------------------------- lane_chat unit
 def test_lane_chat_returns_the_generator_answer(monkeypatch):
     monkeypatch.setattr(talk_mod, "_generator_chat_complete",
-                        lambda cfg: lambda *, system, prompt: Reply("Hello!"))
+                        lambda cfg, chat_id="", **_kw: lambda *, system, prompt: Reply("Hello!"))
     executed = talk_mod.lane_chat(SimpleNamespace(), _routing("hi"))
     # The prefix is the wire contract streams reconstruction depends on.
     assert executed == "answered by generator: Hello!"
@@ -44,7 +48,7 @@ def test_lane_chat_returns_the_generator_answer(monkeypatch):
 
 def test_lane_chat_refuses_an_empty_reply(monkeypatch):
     monkeypatch.setattr(talk_mod, "_generator_chat_complete",
-                        lambda cfg: lambda *, system, prompt: Reply("   "))
+                        lambda cfg, chat_id="", **_kw: lambda *, system, prompt: Reply("   "))
     with pytest.raises(ConfigDenial, match="empty"):
         talk_mod.lane_chat(SimpleNamespace(), _routing("hi"))
 
@@ -54,7 +58,7 @@ def test_chat_prompt_contains_only_the_user_words(cfg, monkeypatch):
     no Constitution text, no audit records; and the system prompt says so."""
     sent = {}
 
-    def fake_complete(cfg_):
+    def fake_complete(cfg_, chat_id="", **_kw):
         def complete(*, system, prompt):
             sent.update(system=system, prompt=prompt)
             return Reply("2")
@@ -101,7 +105,7 @@ def test_say_chat_answers_without_starting_a_build(cfg, monkeypatch):
                         lambda _c, decision, executed: seen.update(
                             decision=decision, executed=executed))
     monkeypatch.setattr(talk_mod, "_generator_chat_complete",
-                        lambda cfg_: lambda *, system, prompt: Reply("You bet."))
+                        lambda cfg_, chat_id="", **_kw: lambda *, system, prompt: Reply("You bet."))
     result = server_mod.say(cfg, "thanks!", chat_id="history")
     assert result["asked"] is False and result["lane"] == "chat"
     assert result["executed"] == "answered by generator: You bet."
@@ -159,7 +163,7 @@ def test_provider_exception_during_chat_is_a_clean_refusal(cfg, monkeypatch):
                         lambda _c, decision, executed: recorded.update(
                             executed=executed))
 
-    def boom(cfg_):
+    def boom(cfg_, chat_id="", **_kw):
         def complete(*, system, prompt):
             raise ProviderDenial("model unavailable")
         return complete
@@ -179,7 +183,7 @@ def test_empty_chat_reply_is_ledgered_as_denied_not_answered(cfg, monkeypatch):
                         lambda _c, decision, executed: recorded.update(
                             executed=executed))
     monkeypatch.setattr(talk_mod, "_generator_chat_complete",
-                        lambda cfg_: lambda *, system, prompt: Reply(""))
+                        lambda cfg_, chat_id="", **_kw: lambda *, system, prompt: Reply(""))
     result = server_mod.say(cfg, "hi", chat_id="history")
     assert result["executed"].startswith("refused — ")
     assert recorded["executed"].startswith("denied:")

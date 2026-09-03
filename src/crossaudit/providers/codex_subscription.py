@@ -27,7 +27,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .. import __version__
-from ..errors import ConfigDenial, ProviderDenial
+from ..errors import ConfigDenial, ProviderDenial, provider_remediations
 from .base import Reply
 
 CLIENT = {"name": "crossaudit", "title": "CrossAudit", "version": __version__}
@@ -55,6 +55,28 @@ def executable() -> str:
     return path
 
 
+_LIMIT_WORDS = ("usage limit", "rate limit", "rate_limit", "usage_limit",
+                "too many requests", "quota")
+
+
+def rate_limit_from_error(error: dict | None, message: str = "",
+                          *, now: float | None = None) -> tuple[bool, float | None]:
+    """Whether the bundled runtime's turn error is a usage/rate limit, and when
+    it says the limit resets (epoch seconds) if it says so at all.
+
+    Only the event the runtime sent for THIS turn is read; nothing is polled
+    and no other application's session state is consulted.
+    """
+    from .base import rate_limit_reset
+
+    data = error if isinstance(error, dict) else {}
+    words = " ".join(str(v) for v in (data.get("code"), data.get("type"),
+                                      data.get("message"), message) if v).casefold()
+    limited = any(word in words for word in _LIMIT_WORDS)
+    reset_at = rate_limit_reset({}, json.dumps(data), now=now) if data else None
+    return limited, reset_at
+
+
 @dataclass
 class _Collector:
     thread_id: str
@@ -64,6 +86,9 @@ class _Collector:
     error: str = ""
     turn_id: str = ""
     usage: dict = field(default_factory=dict)
+    #: The runtime's structured error, when it sent one: a usage-limit stop
+    #: can carry its reset moment here (see ``rate_limit_from_error``).
+    error_data: dict = field(default_factory=dict)
     done: threading.Event = field(default_factory=threading.Event)
 
     def accept(self, message: dict) -> None:
@@ -90,6 +115,7 @@ class _Collector:
             error = turn.get("error")
             if isinstance(error, dict):
                 self.error = str(error.get("message") or error.get("detail") or error)
+                self.error_data = error
             elif error:
                 self.error = str(error)
             self.done.set()
@@ -380,6 +406,14 @@ class CodexAppServer:
             with self._state_lock:
                 self._collectors.pop(thread_id, None)
         if collector.status != "completed":
+            limited, reset_at = rate_limit_from_error(collector.error_data, collector.error)
+            if limited:
+                raise ProviderDenial(
+                    "ChatGPT subscription completion failed" +
+                    (f": {collector.error}" if collector.error else ""),
+                    category="rate_limit", retryable=True, status=429,
+                    remediations=provider_remediations("rate_limit"),
+                    **({"rate_limit_reset_at": reset_at} if reset_at is not None else {}))
             raise ProviderDenial(
                 "ChatGPT subscription completion failed" +
                 (f": {collector.error}" if collector.error else ""),
