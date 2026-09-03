@@ -234,8 +234,10 @@ CAUSE_REQUESTED = {
                         "and run one more round, or stop this task."),
     "auditor_escalated": ("Read the auditor's reason, then tell the generator "
                           "how to address it or stop this task."),
-    "escalation_locked": ("Open the earlier decision and settle it; this task "
-                          "continues from there."),
+    # The earlier decision is a row in the same conversation now, not a dialog
+    # this one can open: settling it happens where it is.
+    "escalation_locked": ("Settle the earlier decision on its own row above; "
+                          "this task continues from there."),
     # A setup mistake (errors.NO_SCIENCE_COMMIT_CAUSE). Deliberately absent
     # from CAUSE_WHY: the stop reason already names the commit by its subject
     # and says what it changed, so a fixed sentence here would replace the

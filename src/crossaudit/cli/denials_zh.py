@@ -899,6 +899,14 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("document export failed in round {}: {}", "第 {} 轮的文档导出失败：{}"),
     ("the automatic repair was refused in round {} because {}",
      "第 {} 轮的自动修复被拒绝，原因：{}"),
+    # The two non-retryable generator denials (build.py, `terminal_denial`).
+    # Both are minted with an English lead and the provider's own reason, and
+    # both land in `escalation_reason`, which a decision row paints unopened —
+    # so an English lead is English on a Chinese first paint.
+    ("the generator could not produce auditable work in round {}: {}",
+     "生成者在第 {} 轮未能产出可审计的成果：{}"),
+    ("the generator's request was refused in round {}: {}",
+     "第 {} 轮生成者的请求被拒绝：{}"),
     # ----------------------------------------------------- receipt/build.py
     # Raised through a constant (`f"{EVIDENCE_BROKEN_REASON}: {reason}"`), so
     # the static reader sees only `{}: {}`; this is the sentence a person meets.
@@ -1492,4 +1500,6 @@ COMPOSITES: frozenset[str] = frozenset({
     "auditor provider failure in round {}: {}",
     "document export failed in round {}: {}",
     "the automatic repair was refused in round {} because {}",
+    "the generator could not produce auditable work in round {}: {}",
+    "the generator's request was refused in round {}: {}",
 })

@@ -136,7 +136,7 @@ button,textarea,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 button,input,select,textarea{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,
-a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a:focus-visible,[tabindex],summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
   clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .spacer{margin-left:auto}
@@ -272,6 +272,7 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .usage-banner button{margin-left:auto}
 .run-cost{display:flex;flex-wrap:wrap;gap:var(--sp-3);padding:8px var(--sp-4);border-top:1px solid var(--line);
   color:var(--text-3);font-family:var(--font-label);font-size:var(--fs-caption)}
+.run-record-line{color:var(--text-2);font-size:var(--fs-caption);padding:4px 0}
 .run-cost .run-reset{color:color-mix(in srgb,var(--state-revise) 60%,var(--text))}
 .turn-cost{margin-top:6px;color:var(--text-3);font-family:var(--font-label);font-size:var(--fs-caption)}
 .usage-mode{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-pill);overflow:hidden;margin-left:auto;flex:none}
@@ -495,6 +496,11 @@ a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline
 .srow-orb{width:20px;height:20px;flex:none}
 /* Worth knowing, needs no action. */
 .srow-note{color:var(--text-3)}
+/* The report's provenance is not a routine step: it says whether the copy on
+   disk still matches the bytes that were audited. It kept its own treatment
+   when it was a paragraph on the review card; it keeps it as a row. */
+.srow-provenance .srow-verb{color:var(--state-decide);font-weight:500}
+.srow-provenance .srow-mark{display:none}
 /* A round's result: the one line that carries weight, and the actions when it
    needs a person. Still a row — a rule above and below it, never a card. */
 .srow-outcome{color:var(--text);font-size:var(--fs-body);padding:9px 0;
@@ -544,6 +550,7 @@ details.srow-fold[open]>summary .srow-line:after{transform:rotate(90deg)}
   font-weight:600;margin-bottom:3px}
 .decision-inline-block p{margin:0;font-size:var(--fs-label);line-height:1.5;color:var(--text-2)}
 .decision-inline-request{margin:0;font-size:var(--fs-label);color:var(--text-2);line-height:1.5}
+.decision-inline-where{margin:6px 0 0;font-size:var(--fs-caption);color:var(--text-2);line-height:1.5}
 .decision-inline-reason{display:grid;gap:4px;font-size:var(--fs-caption);color:var(--text-3)}
 .decision-inline-reason textarea{width:100%;resize:vertical;font:inherit;font-size:var(--fs-label);
   color:var(--text);background:var(--surface-2);border:1px solid var(--line);
@@ -3843,8 +3850,9 @@ const ZH={
   ,"Read the auditor's reason, then tell the generator how to address it or stop this task.":"阅读审计者的原因，然后告诉生成者如何处理；或停止此任务。"
   ,"Waiting on an earlier decision":"等待更早的决定","This task is already waiting for your earlier decision":"此任务仍在等待你更早的决定"
   ,"An earlier round of this task is still waiting for you. No new round can run until that decision is made.":"此任务更早的一轮仍在等待你。在作出该决定前，无法运行新的一轮。"
-  ,"Open the earlier decision and settle it; this task continues from there.":"打开更早的决定并作出处理；此任务将从那里继续。"
-  ,"Settle the earlier decision":"先处理更早的决定","Open the earlier decision first. Guidance recorded here applies once it is settled.":"请先打开更早的决定。此处记录的指引将在其处理完毕后生效。"
+  ,"Settle the earlier decision on its own row above; this task continues from there.":"请在上方它自己的那一行上处理更早的决定；此任务将从那里继续。"
+  ,"Settle the earlier decision first. Guidance recorded here applies once it is settled.":"请先处理更早的决定。此处记录的指引将在其处理完毕后生效。"
+  ,"Change the model or its fallback in Project controls, then rerun the original task.":"在项目控制中更改模型或其备用路由，然后重新运行原任务。"
   ,"No new findings were recorded because the earlier decision is still open.":"由于更早的决定仍未处理，未记录新的发现。"
   ,"this cycle is waiting for a human":"此循环正在等待人工处理"
   ,"Open the earlier decision":"打开更早的决定"
@@ -4981,9 +4989,9 @@ const CAUSE_COPY={
   escalation_locked:{flag:'Waiting on an earlier decision',title:'This task is already waiting for your earlier decision',
     summary:'An earlier round of this task is still waiting for you. No new round can run until that decision is made.',
     limitTitle:'What happened',
-    request:'Open the earlier decision and settle it; this task continues from there.',
-    reopenTitle:'Settle the earlier decision',
-    reopenCopy:'Open the earlier decision first. Guidance recorded here applies once it is settled.',
+    request:'Settle the earlier decision on its own row above; this task continues from there.',
+    reopenTitle:'Revise and continue',
+    reopenCopy:'Settle the earlier decision first. Guidance recorded here applies once it is settled.',
     hint:''}};
 //: EVERY sentence one recorded stop puts on the screen, in ONE place, so the
 //: Decision Center and the row in the stream cannot drift apart. Pure: it
@@ -5069,6 +5077,13 @@ function decisionSlots(row){
   // controls that hold the usage limits; relabel it so it names that, not a
   // model change, when the stop is a guardrail pause.
   runtimeLabel:budget?'Adjust usage limits':'Change model or fallback',
+  // A stream row may not open a dialog — rule 1 for a retryable failure and
+  // rule 8 for every row, because openRuntime() covers the composer. The row
+  // says WHERE the control is, in words, the way the budget note already does;
+  // the Decision Center keeps its button, which is a dialog already.
+  runtimeWhere:budget
+    ?'Adjust the usage limit in Project controls, then rerun the original task.'
+    :'Change the model or its fallback in Project controls, then rerun the original task.',
   runtimeHidden:!(hasRemediation(row,'select_model')||hasRemediation(row,'open_billing')),
   // R5. The one real action of a locked cycle is the EARLIER decision; the
   // secondary button carries it (relabelled, with the cycle to open) so no new
@@ -6198,7 +6213,6 @@ function forecastText(d){const f=d&&d.usage&&d.usage.forecast;const zh=currentLo
     :(brief?'Usually under a minute':ranged?'Usually '+lo+'–'+hi+' min':'Usually about '+mid+' min');
   const cost=(f.usd&&f.usd.p50!=null)?(zh?' · 约 ':' · about ')+formatUsd(f.usd.p50):'';
   return time+cost;}
-function forecastLine(d){return '<span class="run-forecast">'+esc(forecastText(d))+'</span>';}
 // ============================================================== THE STREAM
 // docs/design/ACTIVITY_STREAM.md governs everything below. The
 // loop emits roughly thirty event kinds; the conversation renders FIVE
@@ -6405,8 +6419,19 @@ function rowFromStep(s,d){
     :(wireLine(s)||t(String((s&&s.text)||''))||verbOf(kind));
   if(!line)return null;
   const detail=s.detail_i18n?localeText(s.detail_i18n,s.detail):t(conciseDetail(s));
+  //: An OUTCOME is the result of a round, and the design puts the round
+  //: number on that row. Only the folded branch of groupRounds attached it,
+  //: so a live verdict and a settled one stood on one screen saying the
+  //: same words with and without a number, as if they were two different
+  //: kinds of statement.
+  const round=Math.max(0,Math.floor(Number(s.round_no||0)));
+  //: The key is the kind AND the round: `mergeRuns` already refuses to merge
+  //: across rounds, so this changes no collapse — and it makes the key an
+  //: identity a fold can be remembered by, which a bare kind was not.
+  const key=kind+'#'+round;
   return streamRow({shape:shape,actor:actorOfStep(s),kind:kind,line:line,
-    t:s.t,round:s.round_no,key:kind,
+    t:s.t,round:s.round_no,key:key,open:expandedReviews.has(key),
+    n:(shape==='outcome'&&round)?{value:round,unit:'rounds'}:null,
     detail:detail?{kind:'text',text:detail}:null});}
 
 //: One conversation message becomes exactly one row: words from a person or
@@ -6415,9 +6440,13 @@ function rowFromMessage(m,d){
   const kind=String((m&&m.kind)||'generator');
   const shape=shapeOf(kind);
   if(!shape)return null;
-  return streamRow({shape:shape,kind:kind,t:m.t,round:m.round,
+  //: A message row is a fold like any other, so it carries the key that keeps
+  //: it open across the next snapshot — the same identity the de-duplicator
+  //: uses, so two renders of one message agree about which fold it is.
+  return streamRow({shape:shape,kind:kind,t:m.t,round:m.round,key:'msg:'+turnKey(m),
     actor:kind==='you'?'you':(kind==='auditor'||kind==='auditor_chat')?'auditor':'generator',
-    line:verbOf(kind),detail:{kind:'message',message:m}});}
+    line:verbOf(kind),open:expandedReviews.has('msg:'+turnKey(m)),
+    detail:{kind:'message',message:m}});}
 
 //: THE STREAM. One snapshot in, one ordered list of rows out — pure, so the
 //: same call runs on the page and under node. `ctx` carries what only the
@@ -6622,6 +6651,20 @@ function row(r,d){
 // six-stage pipeline diagram and the focus panel — every one of which drew the
 // audit protocol's state machine rather than the person's work. When nothing
 // runs it is not there at all.
+//: The rounds of this run as a real progressbar, for anything that reads the
+//: accessibility tree. Empty when the run has not named a round: a progressbar
+//: with no value is furniture, and rule 3 forbids a badge that says nothing.
+function statusRoundBar(p,d){
+  const rows=((p&&p.steps)||[]).filter(s=>s.kind==='round_started');
+  const last=rows.length?rows[rows.length-1]:null;
+  const n=last?Number(last.round_no||0):0;
+  const limit=(last&&last.round_limit)?Number(last.round_limit):Number((d&&d.max_rounds)||0);
+  if(!n||!limit)return '';
+  const label=currentLocale==='zh'?'审计轮次':'Audit rounds';
+  return '<span class="stream-progress" role="progressbar" aria-valuemin="1"'
+    +' aria-valuenow="'+esc(n)+'" aria-valuemax="'+esc(limit)+'"'
+    +' aria-valuetext="'+esc(statusRoundText(p,d))+'"'
+    +' aria-label="'+esc(label)+'"></span>';}
 function statusRoundText(p,d){
   const rows=((p&&p.steps)||[]).filter(s=>s.kind==='round_started');
   const last=rows.length?rows[rows.length-1]:null;
@@ -6656,6 +6699,12 @@ function statusLine(d){
   const count=phaseCount(phase,{words:draftCount(draft?draft.text:'')});
   if(count)parts.push(count);
   const round=statusRoundText(p,d);if(round)parts.push(round);
+  //: The step meter went with the run card, and `role="progressbar"` went with
+  //: it: there was no progress indication of any kind, visual or assistive.
+  //: What shows progress now is the round counter, so the progressbar IS the
+  //: round counter — an element with no text of its own, so nothing is said
+  //: twice on screen, and a real value/max for anything that reads the tree.
+  const bar=statusRoundBar(p,d);
   const seconds=Math.max(0,Math.floor(Number(p.elapsed||0)));
   if(seconds>=PHASE_ELAPSED_S)parts.push(elapsedWords(seconds));
   const cost=statusCostText(d,p);if(cost)parts.push(cost);
@@ -6663,7 +6712,7 @@ function statusLine(d){
   const stopping=String(p.state||'').toUpperCase()==='CANCELLING';
   return '<div class="stream-status" role="status">'
     +orbMarkup(phase,text,'srow-orb')
-    +'<span class="stream-status-text">'+esc(text)+'</span>'
+    +'<span class="stream-status-text">'+esc(text)+'</span>'+bar
     +'<button type="button" class="stream-stop"'+(stopping?' disabled':'')
     +' onclick="requestStop()" aria-label="'+esc(zh?'停止此任务':'Stop this task')+'">'
     +esc(zh?(stopping?'正在停止…':'停止'):(stopping?'Stopping…':'Stop'))
@@ -6712,6 +6761,96 @@ const CYCLE_WORDS={
   admit:{en:'Admit result',zh:'准入结果'}};
 function cycleWords(row){return currentLocale==='zh'?row.zh:row.en;}
 //: The settled cycle of this conversation, as ONE outcome row, or nothing.
+//: The auditor reports of ONE cycle, newest last: the ones committed against
+//: its sha when they can be matched, else the last `round` of them.
+function cycleReports(d,cycle){
+  const reports=((d&&d.auditor_stream)||[]).filter(
+    m=>m.kind==='auditor'&&(m.chat_id||'history')===activeChatId);
+  const sha=String((cycle&&cycle.sha)||'');
+  const related=reports.filter(m=>m.sha&&sha
+    &&(sha.startsWith(String(m.sha))||String(m.sha).startsWith(sha)));
+  return (related.length?related
+    :reports.slice(-Number((cycle&&cycle.round)||1))).slice(-8);}
+
+//: WHAT THE AUDIT DID, as folded rows: the deterministic checks and their real
+//: state, the findings, the provenance of the report, and the technical record
+//: (which models, which commit, which cycle, which rules, which round out of
+//: how many).
+//:
+//: Shared on purpose. It used to be built inline for a settled cycle only, so
+//: an ESCALATED one — the single state where a person is being asked to
+//: overrule a machine — carried no checks, no provenance and no record at all.
+//: The provenance of the audit is least optional exactly there.
+function auditRecordRows(d,cycle,rows,roundNo,opts){
+  const o=opts||{};
+  const key=String((cycle&&cycle.id)||'');
+  const sub=[];
+  //: The console is never told which checks RAN, so nothing here counts them
+  //: passed -- the list carries its own real state. A project that configures
+  //: none gets no section at all, rather than one whose entire content is
+  //: "No checks configured" six lines under a count of four.
+  const checks=checkRows(d);
+  if(checks.length)sub.push(streamRow({shape:'do',actor:'system',kind:'check_finished',
+    line:cycleWords(CYCLE_WORDS.checks),round:roundNo,key:key+':checks',
+    open:expandedReviews.has(key+':checks'),
+    detail:{kind:'html',html:'<p class="check-summary">'
+      +esc(t(checkSummary(checks,auditCount(d))))+'</p><div role="list" aria-label="'
+      +esc(cycleWords(CYCLE_WORDS.checks))+'">'+renderCheckRows(checks)+'</div>'
+      +'<div class="check-rules">'+esc(d.rules)+(d.rules===1?' rule':' rules')+'</div>'}}));
+  const findings=rows.reduce((all,m)=>all.concat(m.findings||[]),[]);
+  if(o.findings&&findings.length)sub.push(streamRow({shape:'do',actor:'auditor',kind:'auditor',
+    line:cycleWords(CYCLE_WORDS.findings),n:{value:findings.length,unit:'findings'},
+    round:roundNo,key:key+':findings',
+    open:expandedReviews.has(key+':findings'),
+    //: Grouped BY ROUND, the way the card printed them. Aggregating them into
+    //: one count lost which round raised what, which is the difference between
+    //: a finding the last revision answered and one it did not.
+    detail:{kind:'html',html:rows.filter(m=>(m.findings||[]).length).map(m=>
+      '<div class="review-round-row"><span class="round-n">'
+      +esc(currentLocale==='zh'?'第 '+m.round+' 轮':'round '+m.round)+'</span></div>'
+      +(m.findings||[]).map(findingCard).join('')).join('')}}));
+  //: The F1 provenance line: what was reviewed, and whether the copy on disk
+  //: still matches it. One row per DISTINCT note, because several rounds of
+  //: one cycle share the same edited file and repeating it would read as
+  //: several problems -- and outside the findings, where it would read as
+  //: something the auditor observed.
+  let noteIndex=0;
+  for(const note of [...new Set(rows.map(m=>m.report_note).filter(Boolean))])
+    sub.push(streamRow({shape:'note',actor:'system',line:t(note),round:roundNo,
+      tone:'provenance',key:key+':note:'+(noteIndex++)}));
+  //: The technical record, folded shut inside the folded row: the models by
+  //: their friendly names, then the identifiers, which never reach a paint
+  //: nobody asked for (design rule 4). `Round N of M` lives here because the
+  //: LIMIT has nowhere else to stand once a run ends -- the status line is
+  //: gone by then, and `round 3` alone does not say whether that was 3 of 3
+  //: or 3 of 10.
+  const ruleIds=[...new Set(rows.reduce(
+    (all,m)=>all.concat((m.findings||[]).map(f=>f.rule).filter(Boolean)),[]))];
+  const limit=Math.max(0,Math.floor(Number((d&&d.max_rounds)||0)));
+  const roundText=roundNo&&limit
+    ?(currentLocale==='zh'?'第 '+roundNo+'/'+limit+' 轮':'round '+roundNo+' of '+limit)
+    :'';
+  sub.push(streamRow({shape:'note',actor:'system',round:roundNo,
+    line:cycleWords(CYCLE_WORDS.record),key:key+':record',
+    open:expandedReviews.has(key+':record'),
+    detail:{kind:'html',html:'<div class="review-record">'
+      +(roundText?'<div class="review-record-row"><span>'
+        +esc(currentLocale==='zh'?'轮次':'Round')+'</span><span>'+esc(roundText)+'</span></div>':'')
+      +'<div class="review-record-row"><span>Generator</span><span>'+esc(friendlyModel(d.generator))+'</span></div>'
+      +'<div class="review-record-row"><span>Auditor</span><span>'+esc(friendlyModel(d.auditor))+'</span></div>'
+      +'<div class="review-record-row"><span>Commit</span><code>'+esc(String((cycle&&cycle.sha)||'').slice(0,12))+'</code></div>'
+      +'<div class="review-record-row"><span>Cycle</span><code>'+esc(key)+'</code></div>'
+      +(ruleIds.length?'<div class="review-record-row"><span>Rules</span><code>'+esc(ruleIds.join(', '))+'</code></div>':'')
+      //: Of the three ticks the card showed a passed cycle, two restated the
+      //: verdict above them. This one did not: it is the only claim on this
+      //: surface about the ledger, and it belongs with the record.
+      +(o.ledger?'<div class="review-record-row"><span>'
+        +esc(currentLocale==='zh'?'账本':'Ledger')+'</span><span>'
+        +esc(currentLocale==='zh'?'已记录到审计账本':'Recorded in the audit ledger')
+        +'</span></div>':'')
+      +'</div>'}}));
+  return sub;}
+
 function cycleRows(d){
   const cycles=chatCycles(d);if(!cycles.length)return [];
   const cycle=cycles[cycles.length-1];
@@ -6727,54 +6866,26 @@ function cycleRows(d){
   //: a person watching a live draft over a settled cycle needs it.
   const p=chatProgress(d);
   if(p&&!p.finished&&String(p.continuation_cycle||'')===String(cycle.id||''))return [];
-  const reports=((d&&d.auditor_stream)||[]).filter(
-    m=>m.kind==='auditor'&&(m.chat_id||'history')===activeChatId);
-  const related=reports.filter(m=>m.sha&&cycle.sha
-    &&(String(cycle.sha).startsWith(String(m.sha))||String(m.sha).startsWith(String(cycle.sha))));
-  const rows=(related.length?related:reports.slice(-Number(cycle.round||1))).slice(-8);
+  const rows=cycleReports(d,cycle);
   const last=rows.length?rows[rows.length-1]:null;
   const roundNo=Math.max(0,Math.floor(Number((last&&last.round)||cycle.round||0)));
-  const sub=[];
-  //: The console is never told which checks RAN, so nothing here counts them
-  //: passed -- the list carries its own real state. A project that configures
-  //: none gets no section at all, rather than one whose entire content is
-  //: "No checks configured" six lines under a count of four.
-  const checks=checkRows(d);
-  if(checks.length)sub.push(streamRow({shape:'do',actor:'system',kind:'check_finished',
-    line:cycleWords(CYCLE_WORDS.checks),round:roundNo,
-    detail:{kind:'html',html:'<p class="check-summary">'
-      +esc(t(checkSummary(checks,auditCount(d))))+'</p><div role="list" aria-label="'
-      +esc(cycleWords(CYCLE_WORDS.checks))+'">'+renderCheckRows(checks)+'</div>'
-      +'<div class="check-rules">'+esc(d.rules)+(d.rules===1?' rule':' rules')+'</div>'}}));
-  const findings=rows.reduce((all,m)=>all.concat(m.findings||[]),[]);
-  if(findings.length)sub.push(streamRow({shape:'do',actor:'auditor',kind:'auditor',
-    line:cycleWords(CYCLE_WORDS.findings),n:{value:findings.length,unit:'findings'},
-    round:roundNo,detail:{kind:'html',html:findings.map(findingCard).join('')}}));
-  //: The F1 provenance line: what was reviewed, and whether the copy on disk
-  //: still matches it. One row per DISTINCT note, because several rounds of
-  //: one cycle share the same edited file and repeating it would read as
-  //: several problems -- and outside the findings, where it would read as
-  //: something the auditor observed.
-  for(const note of [...new Set(rows.map(m=>m.report_note).filter(Boolean))])
-    sub.push(streamRow({shape:'note',actor:'system',line:t(note),round:roundNo}));
-  //: The technical record, folded shut inside the folded row: the models by
-  //: their friendly names, then the identifiers, which never reach a paint
-  //: nobody asked for (design rule 4).
-  const ruleIds=[...new Set(rows.reduce(
-    (all,m)=>all.concat((m.findings||[]).map(f=>f.rule).filter(Boolean)),[]))];
-  sub.push(streamRow({shape:'note',actor:'system',round:roundNo,
-    line:cycleWords(CYCLE_WORDS.record),
-    detail:{kind:'html',html:'<div class="review-record">'
-      +'<div class="review-record-row"><span>Generator</span><span>'+esc(friendlyModel(d.generator))+'</span></div>'
-      +'<div class="review-record-row"><span>Auditor</span><span>'+esc(friendlyModel(d.auditor))+'</span></div>'
-      +'<div class="review-record-row"><span>Commit</span><code>'+esc(String(cycle.sha||'').slice(0,12))+'</code></div>'
-      +'<div class="review-record-row"><span>Cycle</span><code>'+esc(cycle.id)+'</code></div>'
-      +(ruleIds.length?'<div class="review-record-row"><span>Rules</span><code>'+esc(ruleIds.join(', '))+'</code></div>':'')
-      +'</div>'}}));
+  const sub=auditRecordRows(d,cycle,rows,roundNo,
+    {findings:true,ledger:status==='PASSED'||status==='CONSUMED'});
   //: One action, on the row, never a dialog -- and never "View audit details",
   //: because the detail it used to navigate to opens here.
-  const action=status==='PASSED'?{label:cycleWords(CYCLE_WORDS.admit),
-    attrs:{'data-admit':String(cycle.id||''),'data-admit-cycle':String(cycle.id||'')}}:null;
+  //:
+  //: It is offered only when admitting is actually the next thing a person
+  //: can do. A run is producing a verdict right now, or a recorded decision
+  //: is open whose own words are: nothing will continue or be admitted
+  //: until you decide. Offering `Admit result` under either of those makes
+  //: one of the two statements on the screen false, which is the class of
+  //: contradiction this whole rebuild exists to end. The verdict row itself
+  //: stays — it is a true statement about what was settled.
+  const busy=Boolean(p&&!p.finished);
+  const undecided=currentEscalations(d).length>0;
+  const action=(status==='PASSED'&&!busy&&!undecided)
+    ?{label:cycleWords(CYCLE_WORDS.admit),
+      attrs:{'data-admit':String(cycle.id||''),'data-admit-cycle':String(cycle.id||'')}}:null;
   return [streamRow({shape:'outcome',actor:'auditor',kind:'auditor',tone:verdict.tone,
     line:cycleWords(verdict),n:roundNo?{value:roundNo,unit:'rounds'}:null,
     t:Number((last&&last.t)||0),round:roundNo,key:String(cycle.id||''),
@@ -6845,9 +6956,19 @@ const FAILURE_NOTES={
     act:'guidance'},
   no_progress:{en:'The generator repeated the existing work',zh:'生成者重复了已有的成果',
     act:'guidance'},
-  bounds_exceeded:{en:'The task is too large for one audit',zh:'任务超出单次审计可读取的范围'},
-  repair_refused:{en:'The revision was rolled back',zh:'该修订已回滚'},
-  answered:{en:'This answer did not become an audited deliverable',zh:'这次回答没有形成可审计的交付物'}};
+  //: These three used to offer nothing at all: one grey line, no mark, no
+  //: time, no button, on a stop the ledger had already recorded `revise` and
+  //: `stop` remediations for. The design says a machine failure says what
+  //: failed, in plain words, and offers the one action that would fix it —
+  //: and for all three that action is a sentence from a person (a narrower
+  //: scope, a file to change, what the deliverable should be), which is the
+  //: inline guidance box, not a dialog.
+  bounds_exceeded:{en:'The task is too large for one audit',zh:'任务超出单次审计可读取的范围',
+    act:'guidance'},
+  repair_refused:{en:'The revision was rolled back',zh:'该修订已回滚',
+    act:'guidance'},
+  answered:{en:'This answer did not become an audited deliverable',zh:'这次回答没有形成可审计的交付物',
+    act:'guidance'}};
 
 //: Whether a stop is a person judging. A stop with no cause at all is one:
 //: the loop paused and could not say why, and guessing "plumbing" would hide
@@ -6877,12 +6998,23 @@ function providerRetries(d){
 function escalationRow(row,d){
   if(!row)return null;
   const zh=currentLocale==='zh';
-  if(isDecisionStop(row))
-    return streamRow({shape:'outcome',actor:'auditor',kind:'audit_escalated',
+  if(isDecisionStop(row)){
+    //: The provenance of the audit, under the decision that needs it most.
+    //: An escalated cycle produced no `cycleRows`, so the one state where a
+    //: person is asked to overrule a machine was the one state with no checks
+    //: list, no report provenance and no record of which models, which commit
+    //: and which rules produced the thing being overruled.
+    const cycle={id:String(row.cycle_id||''),sha:String(row.sha||row.short_sha||''),
+                 round:Number(row.round||0)};
+    const reports=cycleReports(d,cycle);
+    const record=auditRecordRows(d,cycle,reports,Number(row.round||0),
+                                 {findings:false});
+    return Object.assign(streamRow({shape:'outcome',actor:'auditor',
+      kind:'audit_escalated',
       tone:'decide',key:'decision:'+(row.cycle_id||''),open:true,
       line:t(decisionSlots(row).flag),
       n:row.round?{value:row.round,unit:'rounds'}:null,
-      detail:{kind:'html',html:decisionDetail(row)}});
+      detail:{kind:'html',html:decisionDetail(row)}}),{rolled:record});}
   const note=failureNote(row);
   if(!note)return null;
   const retries=note.unit==='retries'?providerRetries(d):0;
@@ -6917,14 +7049,54 @@ function stoppedRow(d){
   if(!outcome||STOP_SAID_ELSEWHERE[outcome])return null;
   return streamRow({shape:'note',actor:'system',kind:'loop_stopped',key:'stopped',
     line:currentLocale==='zh'?'任务已停止，没有完成':'The task stopped without completing'});}
+
+// ------------------------------------------ the record of a finished run
+// The status line is the live line of a running task, and it is correctly
+// gone the moment the task ends. What went with it was the whole record: how
+// long the run took, what it cost, which round of how many it reached, and
+// every step it walked. None of that is decoration — it is the audit saying
+// what it did and what it spent — and the only place left that held any of it
+// was a panel three clicks away.
+//
+// So a finished run keeps ONE row, folded: the outcome and the duration on
+// the line, the cost and the round in the fold, and every step it took as
+// the rows they already are.
+const RUN_ENDING_KINDS={run_finished:1,run_cancelled:1};
+function runRecordRow(d){
+  const p=chatProgress(d);
+  if(!p||!p.finished)return null;
+  const steps=(p&&p.steps)||[];
+  const seconds=Math.max(0,Math.floor(Number(p.elapsed||0)));
+  if(!steps.length&&!seconds)return null;
+  const outcome=String(p.outcome||'').toLowerCase();
+  const kind=outcome==='cancelled'?'run_cancelled':'run_finished';
+  //: Every step the run took, through the SAME pipeline the live stream uses
+  //: — one renderer, one collapse, one fold per finished round — so the
+  //: record of a run reads exactly like the run did.
+  //: ...minus the ending of the run, which IS this row: a fold whose first
+  //: line repeats the line it folds under is the interface saying it twice.
+  const inner=streamList(d,{messages:[],cycles:[],stops:[],round:0,livePhase:'',
+    steps:steps.filter(x=>!RUN_ENDING_KINDS[String(x.kind||'')])});
+  const round=statusRoundText(p,d);
+  const cost=runCostLine(d);
+  const head=(round?'<div class="run-record-line">'+esc(round)+'</div>':'')+cost;
+  return Object.assign(streamRow({shape:'outcome',actor:'system',kind:kind,
+    key:'run:'+String(p.run_id||''),
+    line:verbOf(kind),
+    n:seconds?{value:seconds,unit:'seconds'}:null,
+    open:expandedReviews.has('run:'+String(p.run_id||'')),
+    detail:head?{kind:'html',html:head}:null}),
+    inner.length?{rolled:inner}:{});}
 //: The recorded stops this conversation is sitting on. A decision or a machine
 //: failure has a row of its own; only when there is neither does a bare
 //: stopped run need saying.
 function streamStops(d){
+  const record=runRecordRow(d);
   const rows=escalationRows(d);
-  if(rows.length)return rows;
+  if(rows.length)return record?[record].concat(rows):rows;
   const stopped=stoppedRow(d);
-  return stopped?[stopped]:[];}
+  const tail=stopped?[stopped]:[];
+  return record?[record].concat(tail):tail;}
 
 // ------------------------------------------------ decisions in the stream
 // docs/design/ACTIVITY_STREAM.md §Decisions happen in the stream. When a round
@@ -6971,15 +7143,16 @@ function decisionDetail(row){
     +esc(zh?'你的指引或理由':'Your guidance or reason')+'</span>'
     +'<textarea rows="2" data-decision-reason aria-label="'
     +esc(zh?'你的指引或理由':'Your guidance or reason')+'"></textarea></label>'
+    // The earlier decision needs no control here: it is a row of this same
+    // stream, open, a few lines up, and `request` already says so. A button
+    // that opened it covered the screen, made the shell inert and took the
+    // composer away — rules 1 and 8 — to reach something already on screen.
+    +(s.runtimeHidden?'':'<p class="decision-inline-where">'+esc(t(s.runtimeWhere))+'</p>')
     +'<div class="srow-actions">'
     +'<button type="button" class="srow-action" data-decide="reopen" data-decide-cycle="'
     +cycle+'">'+esc(t(s.reopenTitle))+'</button>'
     +'<button type="button" class="srow-action" data-decide="close" data-decide-cycle="'
     +cycle+'">'+esc(zh?'停止此任务':'Stop this task')+'</button>'
-    +(s.earlier?'<button type="button" class="srow-action" data-open-decisions="'
-      +esc(s.earlier)+'">'+esc(t('Open the earlier decision'))+'</button>':'')
-    +(s.runtimeHidden?'':'<button type="button" class="srow-action" data-open-runtime="1">'
-      +esc(t(s.runtimeLabel))+'</button>')
     +'</div><p class="decision-inline-error" role="alert" hidden></p></div>';}
 
 function turn(m,d){
@@ -7177,6 +7350,10 @@ function phaseCount(phase,facts){
   if(phase==='generating'||phase==='answering'||phase==='thinking'){
     const n=Math.max(0,Math.floor(Number(f.words||0)));if(!n)return '';
     return zh?'已写 '+n+' 字':n+(n===1?' word':' words')+' so far';}
+  //: Still reached, by `phaseLineText` -> `livePhaseLine` — the compact line
+  //: the intake and the optimistic turn draw. Only the STATUS LINE stopped
+  //: passing `files`, because a fourth figure that never moves is not the
+  //: number that belongs beside the verb (D10).
   if(phase==='preparing'||phase==='auditing'){
     const n=Math.max(0,Math.floor(Number(f.files||0)));if(!n)return '';
     return zh?n+' 个文件':n+(n===1?' file':' files');}
@@ -9013,10 +9190,11 @@ document.getElementById('panel-dynamic').onclick=handleActionClick;
 // remembers which folds are open, by the key of the row, so a snapshot
 // never shuts a detail a person opened. It is the same set that
 // `[data-open-decisions]` reaches for when it can only point at the cycle.
-document.addEventListener('toggle',ev=>{
+function rememberFold(ev){
   const el=ev&&ev.target;if(!el||!el.getAttribute)return;
   const key=el.getAttribute('data-srow-key');if(!key)return;
-  if(el.open)expandedReviews.add(key);else expandedReviews.delete(key);},true);
+  if(el.open)expandedReviews.add(key);else expandedReviews.delete(key);}
+document.addEventListener('toggle',rememberFold,true);
 const deleteChatModal=document.getElementById('delete-chat-modal');
 const deleteChatForm=document.getElementById('delete-chat-form');
 function closeDeleteChat(){deleteChatModal.className='project-modal';deleteChatForm.reset();
