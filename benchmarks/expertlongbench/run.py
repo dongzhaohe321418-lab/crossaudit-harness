@@ -53,9 +53,17 @@ RUNS_DIR = HERE / "runs"
 MANIFEST = HERE / "manifest.json"
 
 #: Where the generator is told to put the deliverable, inside the audited scope.
+#:
+#: The increment is a DIRECTORY under the scope root, not a file sitting at it.
+#: ``dcl.framework.scope_started`` treats a scope whose only contents are files at its
+#: root as scaffolding rather than work ("an increment is a directory, and a file sitting
+#: at the root is what `init` wrote"), and a scope it calls unstarted escalates at round
+#: one with NOTHING_TO_AUDIT before the auditor's verdict is ever consulted. The pilot run
+#: hit exactly that. This is the product's documented shape, so the harness adopts it.
 SCOPE_DIR = "work"
-OUTPUT_PATH = f"{SCOPE_DIR}/explanation.md"
-RECIPE_PATH = f"{SCOPE_DIR}/RECIPE.md"
+INCREMENT_DIR = f"{SCOPE_DIR}/synthesis"
+OUTPUT_PATH = f"{INCREMENT_DIR}/explanation.md"
+RECIPE_PATH = f"{INCREMENT_DIR}/RECIPE.md"
 
 
 def sha256_text(text: str) -> str:
@@ -165,7 +173,7 @@ def bootstrap_project(root: Path, task: Task, row: dict, options: "Options") -> 
     from crossaudit.scaffold import read as read_template
 
     project = root / "project"
-    (project / SCOPE_DIR).mkdir(parents=True)
+    (project / INCREMENT_DIR).mkdir(parents=True)
     subprocess.run(["git", "init", "-q", "-b", "main"], cwd=str(project), check=True)
     git("config", "user.email", "bench@crossaudit.invalid", cwd=project)
     git("config", "user.name", "ExpertLongBench harness", cwd=project)
@@ -195,7 +203,7 @@ def bootstrap_project(root: Path, task: Task, row: dict, options: "Options") -> 
         encoding="utf-8",
     )
     (project / ".gitignore").write_text(".crossaudit/\n", encoding="utf-8")
-    (project / SCOPE_DIR / "RECIPE.md").write_text(
+    (project / RECIPE_PATH).write_text(
         f"# Source material\n\nThis is the material the explanation must be justified "
         f"against. Do not change this file.\n\n{row['input']}\n",
         encoding="utf-8",
@@ -271,14 +279,12 @@ class Options:
 
 def run_arm_a(cfg, task: Task, row: dict, options: Options, run_id: str) -> ArmResult:
     """One generator call. No audit."""
-    from crossaudit.errors import CrossAuditError
-
     client = CrossAuditClient(cfg=cfg, phase="arm-a-generation", run_id=run_id)
     system, user = task.model_prompt, row["input"]
     started = time.monotonic()
     try:
         completion = client.complete(model=options.generator, system=system, user=user)
-    except (CrossAuditError, Exception) as exc:  # noqa: BLE001 - recorded, not swallowed
+    except Exception as exc:  # noqa: BLE001 - recorded on the result, never swallowed
         return ArmResult(
             arm="A",
             sample_id=row["id"],
@@ -660,7 +666,10 @@ def _execute(task: Task, rows: list[dict], options: Options, plan: dict, out_dir
     # A host project for arm A and for the scoring calls: resilience and metering need a
     # Config, and this keeps the benchmark's own spend in one ledger.
     host = out_dir / "_host"
-    host.mkdir(parents=True, exist_ok=True)
+    # A stale host from an interrupted run would be reused with its old git state and its
+    # old usage ledger, which would misattribute this run's cost. Start clean.
+    shutil.rmtree(host, ignore_errors=True)
+    host.mkdir(parents=True)
     host_project = bootstrap_project(host, task, rows[0], options)
     host_cfg = load(host_project / "crossaudit.yml")
 
