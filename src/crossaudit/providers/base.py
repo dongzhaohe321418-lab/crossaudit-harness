@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import queue
 import re
@@ -409,9 +410,17 @@ def _parse_duration_seconds(text: str) -> float | None:
     if not value:
         return None
     try:
-        return max(0.0, float(value))
+        number = float(value)
     except ValueError:
-        pass
+        number = None
+    if number is not None:
+        # `inf` and `nan` parse as floats. A non-finite moment is persisted on
+        # the run's waiting_reason and serialised into the state snapshot, where
+        # `Infinity` is not JSON and the console's JSON.parse throws on the
+        # frame — the surface would stop updating over one bad header. A
+        # negative wait is refused rather than clamped to zero: it is a broken
+        # header, not an instruction to retry immediately.
+        return number if math.isfinite(number) and number >= 0 else None
     match = _DURATION_RE.match(value)
     if not match or not any(match.groupdict().values()):
         return None
@@ -428,7 +437,9 @@ def _parse_reset_moment(value, now: float) -> float | None:
     """
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         number = float(value)
-        return number if number > 31_536_000 else now + max(0.0, number)
+        if not math.isfinite(number) or number < 0:
+            return None
+        return number if number > 31_536_000 else now + number
     text = str(value or "").strip()
     if not text:
         return None
@@ -477,13 +488,24 @@ def _reset_values_in_body(body: str) -> list:
     return found
 
 
+#: A reset further out than this is not a rate limit window, it is a typo or a
+#: sentinel ("99999999999999999999" renders as 27 quadrillion hours). A moment
+#: this far in the PAST is stale for the same reason; a few minutes behind is
+#: normal (a slow retry, a clock skew) and still means "you may retry now".
+MAX_RESET_HORIZON = 7 * 24 * 3600
+MAX_RESET_SLACK = 3600
+
+
 def rate_limit_reset(headers: dict | None, body: str = "", *,
                      now: float | None = None) -> float | None:
     """The epoch second when a 429'd limit reopens, from headers and/or body.
 
     When several windows are named (requests AND tokens), the later one wins:
     that is the moment the call can actually succeed again. None when the
-    response gives no usable reset information.
+    response gives no usable reset information — including a value that is not
+    finite, is long past, or names a moment further out than a week, none of
+    which a surface can honestly count down to. The card then says "resets
+    soon" rather than a number nobody should trust.
     """
     now = time.time() if now is None else now
     moments: list[float] = []
@@ -496,7 +518,9 @@ def rate_limit_reset(headers: dict | None, body: str = "", *,
         moment = _parse_reset_moment(value, now)
         if moment is not None:
             moments.append(moment)
-    return max(moments) if moments else None
+    usable = [m for m in moments
+              if math.isfinite(m) and now - MAX_RESET_SLACK <= m <= now + MAX_RESET_HORIZON]
+    return max(usable) if usable else None
 
 
 def _http_denial(status: int, body: str, url: str,

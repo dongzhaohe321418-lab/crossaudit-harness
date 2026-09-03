@@ -180,7 +180,14 @@ def _positive_optional(raw: dict, key: str, where: Path, *, integer: bool = Fals
 
 
 def _prices(raw: object, where: Path) -> dict:
-    """Validate ``prices:`` — a mapping of model id to four non-negative rates."""
+    """Validate ``prices:`` — model id to four non-negative rates, plus a flag.
+
+    ``trust_origin: true`` is the project saying it knows what a non-vendor
+    endpoint (a relay, a gateway) charges. Without it an override prices only
+    calls that went to the vendor itself, so a monthly cost *limit* — which
+    fails closed the moment anything is unpriced — cannot be reopened by a
+    guess about a route CrossAudit cannot see.
+    """
     if raw is None:
         return {}
     if not isinstance(raw, dict):
@@ -191,11 +198,18 @@ def _prices(raw: object, where: Path) -> dict:
         if not name or len(name) > 160:
             raise ConfigDenial("prices: model ids must be 1 to 160 characters",
                                file=str(where))
-        if not isinstance(row, dict) or set(row) - set(PRICE_FIELDS):
+        if not isinstance(row, dict) or set(row) - set(PRICE_FIELDS) - {"trust_origin"}:
             raise ConfigDenial(
-                f"prices.{name} must be a mapping of input, output, cache_write, cache_read",
+                f"prices.{name} must be a mapping of input, output, cache_write, "
+                "cache_read, trust_origin",
                 file=str(where))
-        rates = {}
+        trust = row.get("trust_origin", False)
+        if not isinstance(trust, bool):
+            raise ConfigDenial(
+                f"prices.{name}.trust_origin must be true or false (it declares that "
+                "this project knows what a non-vendor endpoint charges)",
+                file=str(where))
+        rates = {"trust_origin": trust} if trust else {}
         for key in PRICE_FIELDS:
             value = row.get(key, 0)
             if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:

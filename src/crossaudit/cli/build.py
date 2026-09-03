@@ -58,7 +58,7 @@ from ..runtime import (
     journal_path,
     waiting_kind,
 )
-from ..usage import check_budget_warnings, record_completion
+from ..usage import attribute_round, check_budget_warnings, record_completion
 from .main import ALLOW_CUSTOM_ENV, cmd_run
 
 TASK_FILE = "TASK.md"
@@ -659,6 +659,22 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
         """Raise any 80 % / 95 % budget alarm newly crossed, once per period."""
         for warning in check_budget_warnings(cfg):
             emit("budget_warning", "loop", warning["text"], warning["resets"])
+
+    def adopt_cycle(cycle_id: str | None) -> None:
+        """Attribute this round to the cycle the audit just minted.
+
+        The generation is recorded before the audit that opens the cycle, so
+        the id has to travel backwards one step: forward for the rounds still
+        to come, and onto the lines already written for the round in flight.
+        Without the backfill a single-cycle run's per-cycle total would be
+        smaller than its per-run total by its own first generation.
+        """
+        if not cycle_id:
+            return
+        usage_context["cycle_id"] = cycle_id
+        attribute_round(cfg.root, cfg.state_dir, run_id=run_id,
+                        round_no=usage_context.get("round") or 0,
+                        cycle_id=cycle_id)
     constitution = (cfg.root / cfg.constitution).read_text(encoding="utf-8")
     store = StateStore(cfg.root / cfg.state_dir / "state.json")
     house = skills_mod.load(cfg.root)
@@ -1144,6 +1160,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                        if c.get("active_sha") == audit_sha]
             if matched:
                 build_cycle_id = matched[0][0]
+                adopt_cycle(build_cycle_id)
             break
         inner = buffer.getvalue()
         budget_notice()          # and the auditor's
@@ -1152,6 +1169,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                    if c.get("active_sha") == audit_sha]
         if matched:
             build_cycle_id, latest = matched[0]
+            adopt_cycle(build_cycle_id)
         else:
             latest = {}
         status = latest.get("status", "?")
