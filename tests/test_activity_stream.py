@@ -248,6 +248,32 @@ def test_a_live_line_and_its_finished_line_never_both_appear():
 
 
 @needs_node
+def test_a_provider_retry_stops_being_live_the_moment_anything_succeeds():
+    """Waiting for a provider is the one phase nothing of its own finishes:
+    the resilience layer narrates the retry and the work simply carries on.
+    Left alone, "Retrying the provider" stands on the screen underneath the
+    draft it was waiting for — a live line about something that is over.
+
+    Mutation: drop the provider clause from dropSettledWaits and the retry
+    row survives beside "Drafted".
+    """
+    state = {"round": 1, "livePhase": "draft", "steps": [
+        {"kind": "provider_recovery", "t": 10, "actor": "generator",
+         "round_no": 1, "text_i18n": {"en": "Retrying · attempt 2",
+                                      "zh": "正在重试 · 第 2 次"}},
+        {"kind": "generation_completed", "t": 20, "actor": "generator",
+         "round_no": 1}]}
+    kinds = json.loads(_render(state, body="console.log(JSON.stringify("
+                                           "rows.map(r=>r.kind)));"))
+    assert kinds == ["generation_completed"], kinds
+    # Still live while nothing has succeeded yet.
+    waiting = {"round": 1, "steps": [state["steps"][0]]}
+    kinds = json.loads(_render(waiting, body="console.log(JSON.stringify("
+                                             "rows.map(r=>r.kind)));"))
+    assert kinds == ["provider_recovery"]
+
+
+@needs_node
 def test_repetition_collapses_to_one_row_with_a_count():
     """Design rule: three consecutive reads become one row with a count.
 

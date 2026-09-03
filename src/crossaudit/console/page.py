@@ -6484,11 +6484,22 @@ function rowPhase(r){
 
 //: A live line and the finished line for the same phase are the same fact
 //: said twice. The finished one wins, and the live one is dropped.
+//:
+//: Waiting for a provider is the one phase nothing of its own ever finishes:
+//: the resilience layer narrates the retry and then the work simply carries
+//: on. So it is settled by the next thing that SUCCEEDS at all — otherwise
+//: "retrying the provider" would stand on the screen underneath the draft it
+//: was waiting for.
 function dropSettledWaits(rows){
-  const settled={};
-  for(const r of rows||[])
-    if(r.shape!=='wait'){const p=rowPhase(r);if(p)settled[p]=true;}
-  return (rows||[]).filter(r=>r.shape!=='wait'||!settled[rowPhase(r)]);}
+  const settled={},moved={};
+  for(const r of rows||[]){
+    if(r.shape==='wait')continue;
+    const p=rowPhase(r);if(p)settled[p]=true;
+    if(r.shape==='do'||r.shape==='outcome')moved[r.round]=Math.max(moved[r.round]||0,r.t);}
+  return (rows||[]).filter(r=>{
+    if(r.shape!=='wait')return true;
+    if(settled[rowPhase(r)])return false;
+    return !(ROW_PHASES[r.kind]==='provider'&&(moved[r.round]||0)>r.t);});}
 
 //: Repetition collapses. A run of consecutive rows of the same kind is one
 //: row with a count, expanding to the individual lines. A `wait` run keeps
