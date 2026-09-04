@@ -30,6 +30,7 @@ through the exact calls `console/server.py::snapshot` makes, and hands out:
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import tempfile
 from pathlib import Path
@@ -147,6 +148,137 @@ def build(tmp: Path):
     store.record_verdict(second["cycle_id"], sha_b, "BLOCKED", "s" * 64,
                          cfg.max_rounds)
     return cfg, {"a": sha_a, "b": sha_b}
+
+
+# --------------------------------------------------------------- chat list
+#: The chat list is a column of rows, and each of the six shapes below broke a
+#: different part of it in 4.17.0. They are built the only way this module
+#: builds anything: by driving the product's own recorders — `chats.create` /
+#: `touch` / `archive` for the navigation record, a Git trailer for a thread's
+#: durable anchor, `StateStore` for the cycle whose status becomes a dot, and
+#: a plain untrailered commit plus its report for the legacy thread. A row is
+#: then read back through `console/server.snapshot`, whose `chats` slice is
+#: exactly what the sidebar renders.
+LONG_CJK = "生成一个钙钛矿太阳能电池稳定性研究的详细综述，并附上引用来源"
+#: The owner's own two examples, which have to stay distinguishable from each
+#: other at the sidebar's real width — the bar this list is judged against.
+OWNER_CJK = ("生成一个钙钛矿的综述", "写一个详细的实验方案")
+LONG_LATIN = ("Write a detailed review of perovskite solar-cell stability "
+              "with citations to the primary literature")
+
+
+class _Clock:
+    """The wall clock the product reads, held still.
+
+    A thread's `updated` is written by the product at the moment the person
+    touches it, so the only honest way to get a thread that is twelve hours
+    old is to touch it twelve hours ago. Nothing here writes a timestamp into
+    a row; it only moves the clock the recorders read.
+    """
+
+    def __init__(self, now: int):
+        self.now = now
+
+    def __call__(self) -> float:
+        return float(self.now)
+
+
+def chat_list(tmp: Path, now: int | None = None, noise: int = 0):
+    """A project whose sidebar holds every chat-row shape that has broken.
+
+    Returns ``(cfg, ids)``: the legacy thread, a chat with a status dot (a
+    blocked cycle), a chat without one (nothing has run in it), a very long
+    CJK title, a very long Latin title, and an archived row.
+
+    ``noise`` adds that many later commits and reports belonging to a real
+    thread. The streams are windowed, so enough of them push every legacy row
+    out of the window — the state in which the legacy thread lost its date.
+    """
+    import time as _time
+    from unittest import mock
+
+    now = int(_time.time()) if now is None else int(now)
+    root = tmp / "proj"
+    root.mkdir(parents=True)
+    _git(root, "init", "-q", "-b", "main")
+    (root / "AUDIT_RULES.md").write_text(RULES)
+    (root / "crossaudit.yml").write_text(CONFIG)
+    (root / "work").mkdir()
+    cfg = load(root / "crossaudit.yml")
+    clock = _Clock(now)
+
+    def at(seconds_ago: int):
+        clock.now = now - seconds_ago
+        return mock.patch("time.time", clock)
+
+    def commit(message: str, seconds_ago: int, chat_id: str | None = None):
+        _git(root, "add", "-A")
+        when = str(now - seconds_ago)
+        body = message + (f"\n\nCrossAudit-Chat: {chat_id}\n" if chat_id else "")
+        env = {"GIT_AUTHOR_DATE": when, "GIT_COMMITTER_DATE": when}
+        subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                        "commit", "-q", "-m", body], cwd=root, check=True,
+                       text=True, capture_output=True, env={**os.environ, **env})
+        return _git(root, "rev-parse", "HEAD")
+
+    def report(sha: str, verdict: str, round_: int, seconds_ago: int):
+        d = cfg.root / cfg.ledger_dir / f"{sha[:12]}-r{round_}"
+        d.mkdir(parents=True, exist_ok=True)
+        path = d / "report.md"
+        path.write_text(REPORT.format(sha=sha[:12], verdict=verdict,
+                                      round=round_, findings=""))
+        os.utime(path, (now - seconds_ago, now - seconds_ago))
+
+    # The legacy thread: work committed before the chat trailer existed, and
+    # the audit report about it. Nothing here carries a chat id, which is
+    # precisely what makes it the legacy thread's.
+    (root / "work" / "legacy.md").write_text("before threads\n")
+    legacy_sha = commit("Reviewed the first draft", 40 * 86400)
+    report(legacy_sha, "PASS", 1, 40 * 86400)
+
+    ids: dict[str, str] = {"legacy": chats.LEGACY_CHAT_ID}
+    # A chat with a status dot: a real thread with a blocked cycle behind it.
+    with at(12 * 3600):
+        ids["dot"] = chats.create(cfg, "Cache-warming review")["id"]
+        chats.touch(cfg, ids["dot"], "Write the cache-warming review.")
+    (root / "work" / "review.md").write_text("draft\n")
+    blocked_sha = commit("Drafted the cache-warming review. (round 1)",
+                         12 * 3600, ids["dot"])
+    report(blocked_sha, "BLOCKED", 1, 12 * 3600)
+    with at(12 * 3600):
+        store = StateStore(cfg.root / cfg.state_dir / "state.json")
+        cycle = store.open_or_advance(cfg.science_repo, blocked_sha, None)
+        store.record_verdict(cycle["cycle_id"], blocked_sha, "BLOCKED",
+                             "s" * 64, cfg.max_rounds)
+    # A chat with no dot: nothing has ever run in it, so its status is "ready".
+    with at(3 * 86400):
+        ids["plain"] = chats.create(cfg, "Notes")["id"]
+        chats.touch(cfg, ids["plain"], "Notes on the reviewer's comments.")
+    with at(5 * 60):
+        ids["cjk"] = chats.create(cfg, LONG_CJK)["id"]
+        chats.touch(cfg, ids["cjk"], LONG_CJK)
+    with at(14 * 86400):
+        ids["latin"] = chats.create(cfg, LONG_LATIN)["id"]
+        chats.touch(cfg, ids["latin"], LONG_LATIN)
+    for key, title, hours in (("owner_a", OWNER_CJK[0], 4),
+                              ("owner_b", OWNER_CJK[1], 6)):
+        with at(hours * 3600):
+            ids[key] = chats.create(cfg, title)["id"]
+            chats.touch(cfg, ids[key], title)
+    with at(2 * 86400):
+        ids["archived"] = chats.create(cfg, "Older figure pass")["id"]
+        chats.touch(cfg, ids["archived"], "Redo figure 2.")
+        chats.archive(cfg, ids["archived"])
+    for i in range(noise):
+        (root / "work" / f"n{i}.md").write_text(str(i))
+        sha = commit(f"Revised the review. (round {i + 1})", 3600, ids["dot"])
+        report(sha, "PASS", i + 1, 3600)
+    return cfg, ids
+
+
+def chat_rows(cfg) -> dict:
+    """The sidebar's own chat slice, through `console/server.snapshot`."""
+    return server.snapshot(cfg)["chats"]
 
 
 #: One run projection carrying a condensation notice, so `generator_stream`

@@ -80,7 +80,7 @@ from . import chats, daemon, overview, projects
 from .page import PAGE
 from .intake import INTAKE
 from .progress import TRACKER
-from .streams import bundle
+from .streams import bundle, legacy_seen
 from .transfers import (
     MAX_REQUEST_BYTES,
     TransferError,
@@ -723,12 +723,21 @@ def snapshot(cfg: Config) -> dict:
                    if row.get("chat_id")}
     # When each chat's evidence last moved, so a recovered thread is dated by
     # its newest commit, report or cycle event — never by this snapshot.
+    # A row with no chat association belongs to the legacy thread rather than
+    # to nobody: canonical_id says so, and dropping those rows is what left the
+    # legacy thread as the only row in the list showing no time at all.
     last_seen: dict[str, int] = {}
     for row in (*gen_stream, *aud_stream, *cycles):
-        chat_id = str(row.get("chat_id", "") or "")
+        chat_id = chats.canonical_id(row.get("chat_id"))
         when = int(row.get("t") or row.get("updated") or 0)
-        if chat_id and when > last_seen.get(chat_id, 0):
+        if when > last_seen.get(chat_id, 0):
             last_seen[chat_id] = when
+    # ...and the streams are windowed, while the legacy thread's evidence is
+    # the oldest in the project: on a busy project its rows fall off that
+    # window, so its date is read from the unwindowed evidence as well.
+    legacy_when = legacy_seen(cfg, report_texts, commit_chats)
+    if legacy_when > last_seen.get(chats.LEGACY_CHAT_ID, 0):
+        last_seen[chats.LEGACY_CHAT_ID] = legacy_when
     chat_state = chats.snapshot(cfg, known_chats, last_seen=last_seen)
     for row in chat_state["items"]:
         related = [cycle for cycle in cycles if cycle["chat_id"] == row["id"]]
