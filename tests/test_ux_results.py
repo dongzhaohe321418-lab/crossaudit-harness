@@ -74,7 +74,9 @@ _TURN_SIGS = ["const VERDICT_WORDS={", "function verdictWord(v)",
 
 def _auditor_turn(verdict: str, findings: list[dict] | None = None) -> str:
     from render_decision import eval_page
-    m = {"kind": "auditor", "verdict": verdict, "t": 0, "findings": findings or []}
+    m = real_state.row("auditor", for_sha=real_state.produced()["shas"]["a"],
+                       verdict=verdict, t=0, findings=findings or [],
+                       report_note="")
     return eval_page(WORKTREE, _TURN_SIGS,
                      f"console.log(turn({json.dumps(m)},{{}}));", _TURN_PRELUDE)
 
@@ -151,12 +153,13 @@ def test_finding_words_reach_a_chinese_reader(tmp_path):
 # shipped page (tests/harness/render_page.py) and the real `renderConversation`
 # rather than through a sliced-out `reviewCard` with its callers stubbed. The
 # claim is the same one and it is now made about what a person actually sees.
+import real_state  # noqa: E402  (rows built by the product, not by a fixture)
 import render_page  # noqa: E402  (the whole-page harness)
 
 
 def _cycle_state(status: str, verdict: str, findings: list[dict],
                  progress: dict | None = None) -> dict:
-    sha = _sha("c")
+    sha = real_state.produced()["shas"]["a"]
     return {
         "version": "4", "project": "lab/p", "title": "t", "folder": "f",
         "tier": {"tier": "local"}, "max_rounds": 3, "rules": 4, "metrics": [],
@@ -165,11 +168,12 @@ def _cycle_state(status: str, verdict: str, findings: list[dict],
         "auditor": "openai_compat:gpt-5.6-terra",
         "generator_stream": [], "escalations": [],
         "chats": {"items": [{"id": "c1"}]}, "progress": progress,
-        "cycles": [{"id": "f" * 16, "sha": sha, "status": status, "round": 1,
-                    "chat_id": "c1"}],
-        "auditor_stream": [{"kind": "auditor", "verdict": verdict,
-                            "sha": sha[:12], "round": 1, "t": 90,
-                            "chat_id": "c1", "findings": findings}],
+        # Built by the product, never typed: see tests/harness/real_state.py.
+        "cycles": [real_state.row("cycle", for_sha=sha, status=status,
+                                  round=1)],
+        "auditor_stream": [real_state.row("auditor", for_sha=sha,
+                                          verdict=verdict, round=1, t=90,
+                                          findings=findings, report_note="")],
     }
 
 
@@ -226,8 +230,10 @@ def test_a_settled_cycles_row_carries_no_identifier_until_it_is_opened(
     # ...and the record is there, one keystroke away, naming the models by the
     # names a person recognises.
     assert "Claude Opus" in html or "claude-opus" in html.lower(), html
-    assert _sha("c")[:12] in html, "the commit is in the record"
-    assert "f" * 16 in html, "the cycle id is in the record"
+    sha = real_state.produced()["shas"]["a"]
+    assert sha[:12] in html, "the commit is in the record"
+    assert real_state.row("cycle", for_sha=sha)["id"] in html, (
+        "the cycle id is in the record")
     if findings:
         assert "Wrong figure." in html and "Wrong figure." not in paint
         assert "CA-TXT-001" in html
