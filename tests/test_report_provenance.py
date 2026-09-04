@@ -37,12 +37,13 @@ from crossaudit.console import overview, streams
 
 HARNESS = Path(__file__).parent / "harness"
 sys.path.insert(0, str(HARNESS))
+import real_state  # noqa: E402  (rows built by the product, not by a fixture)
 import render_page  # noqa: E402  (the whole shipped page, under node)
 
 WORKTREE = Path(overview.__file__).parents[3]
 needs_node = pytest.mark.skipif(shutil.which("node") is None,
                                 reason="node is not installed")
-SETTLED_SHA = "c" * 40
+SETTLED_SHA = real_state.produced()["shas"]["a"]
 
 
 def _settled_state(note: str, *, progress: dict | None = None) -> dict:
@@ -55,11 +56,12 @@ def _settled_state(note: str, *, progress: dict | None = None) -> dict:
         "auditor": "openai_compat:gpt-5.6-terra",
         "generator_stream": [], "escalations": [],
         "chats": {"items": [{"id": "c1"}]}, "progress": progress,
-        "cycles": [{"id": "f" * 16, "sha": SETTLED_SHA, "status": "PASSED",
-                    "round": 1, "chat_id": "c1"}],
-        "auditor_stream": [{"kind": "auditor", "verdict": "PASS", "round": 1,
-                            "sha": SETTLED_SHA[:12], "t": 90, "chat_id": "c1",
-                            "findings": [], "report_note": note}],
+        # Built by the product, never typed: see tests/harness/real_state.py.
+        "cycles": [real_state.row("cycle", for_sha=SETTLED_SHA,
+                                  status="PASSED", round=1)],
+        "auditor_stream": [real_state.row("auditor", for_sha=SETTLED_SHA,
+                                          verdict="PASS", round=1, t=90,
+                                          findings=[], report_note=note)],
     }
 
 CONFIG = (
@@ -431,7 +433,9 @@ def test_the_settled_row_survives_a_run_that_is_not_superseding_it():
 
     states = {
         "other work": _settled_state(note, progress=_run("")),
-        "superseding": _settled_state(note, progress=_run("f" * 16)),
+        "superseding": _settled_state(
+            note, progress=_run(real_state.row("cycle",
+                                               for_sha=SETTLED_SHA)["id"])),
     }
     out = render_page.render(WORKTREE, states)
     assert note in out["other work"]["en"]["html"], (

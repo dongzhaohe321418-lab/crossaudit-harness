@@ -36,6 +36,7 @@ from crossaudit.console import overview
 HARNESS = Path(__file__).parent / "harness"
 sys.path.insert(0, str(HARNESS))
 
+import real_state  # noqa: E402  (rows built by the product, not by a fixture)
 import render_page  # noqa: E402  (the whole-page harness; see the docstring)
 
 WORKTREE = Path(overview.__file__).parents[3]
@@ -73,8 +74,13 @@ def _state(*, escalations=(), steps=None, messages=None, cycles=(),
     }
 
 
-_YOU = {"kind": "you", "t": 10, "chat_id": "c1",
-        "utterance": "Write the cache-warming review."}
+#: EVERY row below is produced by the product and then adjusted, never typed.
+#: `real_state.row` starts from a row `console/streams.py` actually emitted and
+#: refuses an override naming a key it does not carry — which is the third
+#: fixture-shaped-state defect in this rebuild made structurally impossible
+#: rather than merely watched for. See tests/harness/real_state.py.
+_YOU = real_state.row("you", t=10, utterance="Write the cache-warming review.")
+SHA = real_state.produced()["shas"]["a"]
 _USAGE = {"attribution": {"runs": {"r1": {"api_value_usd": 0.04,
                                           "unpriced_calls": 0}}, "turns": []}}
 
@@ -194,16 +200,14 @@ _FINDING = {"severity": "BLOCKER", "rule": "CA-TXT-001", "artifact": "work/revie
 def _settled(status: str, verdict: str, findings: list) -> dict:
     """A finished cycle exactly as `/api/state` carries one: the generator's
     message, the auditor's report, the cycle row and the project's checks."""
-    sha = "c" * 40
+    sha = SHA
     state = _state(
-        messages=[_YOU, {"kind": "generator", "t": 80, "chat_id": "c1", "round": 1,
-                         "sha": sha, "summary": "Drafted the review.",
-                         "files": ["work/review.md"]}],
-        cycles=[{"id": "f" * 16, "sha": sha, "status": status, "round": 1,
-                 "chat_id": "c1"}],
-        auditor_stream=[{"kind": "auditor", "verdict": verdict, "sha": sha[:12],
-                         "round": 1, "t": 90, "chat_id": "c1",
-                         "findings": findings}])
+        messages=[_YOU, real_state.row("generator", for_sha=SHA, t=80, round=1,
+                                       summary="Drafted the review.")],
+        cycles=[real_state.row("cycle", for_sha=SHA, status=status, round=1)],
+        auditor_stream=[real_state.row("auditor", for_sha=SHA, verdict=verdict,
+                                       round=1, t=90, findings=findings,
+                                       report_note="")])
     state["check_contracts"] = {
         "schema": {"description": "the results file parses", "state": "passed"},
         "units": {"description": "every quantity has a unit", "state": "passed"}}
@@ -322,8 +326,9 @@ def test_the_stream_is_one_ordered_list_of_declared_rows():
     Mutation: emit a step whose kind is not in EVENT_SHAPES and it does not
     reach the list; reorder the sort and the timestamps stop ascending.
     """
-    ctx = {"messages": [{"kind": "you", "t": 10, "utterance": "x"},
-                        {"kind": "generator", "t": 40, "summary": "y", "round": 1}],
+    ctx = {"messages": [real_state.row("you", t=10, utterance="x"),
+                        real_state.row("generator", for_sha=SHA, t=40, summary="y",
+                                       round=1)],
            "steps": [{"kind": "round_started", "t": 12, "actor": "loop", "round_no": 1},
                      {"kind": "generation_started", "t": 15, "actor": "generator",
                       "round_no": 1},
@@ -869,7 +874,7 @@ def test_a_finished_round_is_one_line_and_everything_else_opens_in_place():
     assert paint.count("Needs changes") == 1, paint
     for hidden in ("Automatic checks", "What the auditor raised", "Details",
                    "The cited speed-up is not in the paper.", "CA-TXT-001",
-                   "c" * 12, "f" * 16):
+                   SHA[:12], _settled("BLOCKED", "BLOCKED", [])["cycles"][0]["id"]):
         assert hidden in html, hidden
         assert hidden not in paint, (hidden, paint)
     # The files are rows already: the chips on the generator's say row, which
@@ -965,9 +970,9 @@ def test_the_status_line_does_not_carry_a_fourth_figure():
 
     assert "liveFileCount" not in PAGE
     states = {"auditing": _state(
-        messages=[_YOU, {"kind": "generator", "t": 80, "chat_id": "c1", "round": 1,
-                         "sha": "c" * 40, "summary": "Drafted.",
-                         "files": ["work/review.md", "work/notes.md"]}],
+        messages=[_YOU, real_state.row("generator", for_sha=SHA, t=80, round=1,
+                                       summary="Drafted.",
+                                       files=["work/review.md", "work/notes.md"])],
         steps=_project(ROUND1), usage=_USAGE)}
     out = render_page.render(WORKTREE, states)
     en = out["auditing"]["en"]["first_paint"]
@@ -1025,6 +1030,192 @@ def test_rows_that_arrive_after_their_rounds_outcome_fold_into_it_in_order():
     assert order == sorted(order), (order, text)
     assert text.index("Needs changes · round 1") < order[0], text
 
+
+
+# ================= 9b. a fixture may not describe a state production cannot
+#
+# Three defects in this rebuild had one shape: a fixture hand-wrote a
+# projection row, gave it a field the wire does not carry (or omitted one it
+# does), and every assertion over it was green while production took a
+# different branch. `kind=` for the modal, `locked_by` for the escalation lock,
+# `sha` for the auditor report. The last one meant an escalated decision showed
+# an EARLIER cycle's rule ids and provenance note, on the one surface the
+# provenance was restored to protect.
+#
+# The rule now: every row in every fixture is produced by driving the product
+# and reading it back through the calls `console/server.py::snapshot` makes.
+# These two tests are what keeps that true when someone adds a fixture.
+def test_no_fixture_row_has_a_shape_the_product_cannot_produce():
+    """Every row of every rendered state, against the key sets the production
+    projection actually emits for that kind.
+
+    A key production does not send is a branch production cannot take; a key
+    production always sends but the fixture omits is a branch production always
+    takes and the fixture never does. Both are the same defect.
+
+    Mutation: add `"sha": "c" * 12` to a hand-written auditor row — or delete
+    the `sha` line from `console/streams.py` — and this names the row.
+    """
+    templates = real_state.templates()
+    wrong = []
+    for name, state in _all_states().items():
+        for field in ("generator_stream", "auditor_stream", "cycles"):
+            for wire in state.get(field, []):
+                kind = "cycle" if field == "cycles" else str(wire.get("kind", ""))
+                shapes = templates.get(kind)
+                if shapes is None:
+                    wrong.append((name, kind, "no production row of this kind"))
+                elif frozenset(wire) not in shapes:
+                    extra = sorted(set(wire) - set().union(*shapes))
+                    missing = sorted(set(shapes[0]) - set(wire))
+                    wrong.append((name, kind,
+                                  f"invented {extra}, omitted {missing}"))
+    assert not wrong, (
+        "fixture rows the product cannot produce:\n"
+        + "\n".join(f"  {n} / {k}: {why}" for n, k, why in wrong))
+
+
+def test_the_row_model_reads_no_field_the_wire_never_sends():
+    """The sweep, made mechanical: every field the conversation reads off a
+    CONVERSATION ROW must be a field `console/streams.py` emits.
+
+    A read of a field production never sends is a branch production never
+    takes — which is what `m.sha` was, and what nothing in the suite could see
+    because the fixtures sent it. Extracted from the source of the functions
+    that consume wire rows, so a new read lands here because it was written.
+
+    `m.` reads are checked against the UNION of the row kinds those functions
+    are called with (one function serves several kinds); `cycle.` reads against
+    the cycle row. A field in neither is named in the failure.
+
+    Mutation: read `m.author` anywhere in `turn()` and this fails; delete the
+    `sha` line from `console/streams.py` and it fails naming `sha`.
+    """
+    import re as _re
+
+    from crossaudit.console.page import PAGE
+
+    script = PAGE.split("<script>")[1].split("</script>")[0]
+    starts = [(m.group(1), m.start())
+              for m in _re.finditer(r"^function ([a-zA-Z0-9_]+)\(", script, _re.M)]
+    bodies = {name: script[start:(starts[i + 1][1] if i + 1 < len(starts)
+                                  else len(script))]
+              for i, (name, start) in enumerate(starts)}
+    templates = real_state.templates()
+    message_kinds = set(templates) - {"cycle"}
+    wire = set().union(*(templates[k][0] for k in message_kinds))
+    cycle_keys = set(templates["cycle"][0])
+    #: What the row model may read besides the wire's own fields: things the
+    #: CLIENT attaches to a row after the projection hands it over.
+    CLIENT_SIDE = {"merged", "rolled"}
+    unknown = []
+    for name in ("rowFromMessage", "turn", "cycleReports", "auditRecordRows",
+                 "allMessages", "turnKey", "withTurnCost", "turnCost"):
+        body = bodies.get(name, "")
+        assert body, f"{name} is gone; the sweep is reading a stale name"
+        for field in sorted(set(_re.findall(r"\bm\.([a-zA-Z_][a-zA-Z0-9_]*)",
+                                            body))):
+            if field not in wire and field not in CLIENT_SIDE:
+                unknown.append((name, f"m.{field}"))
+    for name in ("cycleReports", "auditRecordRows", "cycleRows", "auditStatus",
+                 "chatCycles"):
+        body = bodies.get(name, "")
+        for field in sorted(set(_re.findall(
+                r"\bcycle\.([a-zA-Z_][a-zA-Z0-9_]*)", body))):
+            if field not in cycle_keys:
+                unknown.append((name, f"cycle.{field}"))
+    assert not unknown, (
+        "the row model reads fields the console projection never sends, so "
+        "these branches are exercised only by fixtures: "
+        + ", ".join(f"{fn}: {f}" for fn, f in unknown))
+
+
+def test_the_shapes_the_product_emits_are_declared_where_they_vary():
+    """A row kind whose production shape varies has a reason on the record.
+
+    Otherwise a new optional field is indistinguishable from the `sha` defect:
+    half the rows carry it, the branch that reads it looks exercised, and which
+    half production actually sends is nobody's job to know.
+
+    Mutation: emit `sha` from only one of `streams.py`'s two auditor branches
+    and this fails naming `auditor`.
+    """
+    varying = {kind: [sorted(v) for v in shapes]
+               for kind, shapes in real_state.templates().items()
+               if len(shapes) > 1}
+    undeclared = sorted(set(varying) - set(real_state.DECLARED_VARIANTS))
+    assert not undeclared, (
+        f"row kinds whose production shape varies for no declared reason: "
+        f"{ {k: varying[k] for k in undeclared} }")
+    stale = sorted(set(real_state.DECLARED_VARIANTS) - set(varying))
+    assert not stale, (
+        f"declared as varying but no longer does: {stale} — delete the entry "
+        "rather than leave a note about a shape that does not exist")
+
+
+@needs_node
+def test_the_reports_of_a_cycle_are_the_reports_of_that_cycle():
+    """N1, on the surface it broke. `cycleReports` matched on `m.sha`, which
+    `console/streams.py` never emitted, so the matching branch was dead against
+    the wire and the fallback — "the last `cycle.round` reports in this chat" —
+    was the production path. It runs ahead of the report count on every round
+    that stopped before the auditor wrote one, and painted the PREVIOUS cycle's
+    rule ids and provenance note inside the record of the decision a person was
+    being asked to overrule.
+
+    Built from two real cycles, each with its own report, through the product's
+    own recorders.
+
+    Mutation: drop `sha` from the auditor row in `console/streams.py`, or put
+    the count-based fallback back in `cycleReports`, and the older cycle's rule
+    and note appear under the newer one.
+    """
+    snap = real_state.produced()["snapshot"]
+    shas = real_state.produced()["shas"]
+    old_note = "The FIRST cycle's report, which belongs to nobody else."
+    state = _state(messages=[_YOU],
+                   cycles=[real_state.row("cycle", for_sha=shas["b"])],
+                   auditor_stream=[
+                       real_state.row("auditor", for_sha=shas["a"], round=1,
+                                      report_note=old_note,
+                                      findings=[dict(_FINDING,
+                                                     rule="CA-TXT-001")]),
+                       real_state.row("auditor", for_sha=shas["b"], round=2,
+                                      report_note="",
+                                      findings=[dict(_FINDING,
+                                                     rule="CA-TXT-002")])])
+    reports = [r for r in snap["auditor_stream"]
+               if r.get("kind") == "auditor" and r.get("sha")]
+    assert len(reports) == 2, "the fixture needs two real reports"
+    out = render_page.render(WORKTREE, {"two cycles": state})
+    text = out["two cycles"]["en"]["text"]
+    assert "CA-TXT-002" in text, text
+    assert "CA-TXT-001" not in text, (
+        "an earlier cycle's rule id is inside this cycle's record")
+    assert old_note not in text, (
+        "an earlier cycle's provenance note is inside this cycle's record")
+
+
+@needs_node
+def test_a_cycle_with_no_report_of_its_own_claims_none():
+    """The other half of N1: when nothing matches, the honest answer is that
+    this cycle has no report yet — not somebody else's. The record still says
+    what it knows (the commit, the cycle, the round, the checks).
+
+    Mutation: restore the `reports.slice(-cycle.round)` fallback and the
+    unrelated report's rule id appears.
+    """
+    shas = real_state.produced()["shas"]
+    state = _state(messages=[_YOU],
+                   cycles=[real_state.row("cycle", for_sha=shas["b"], round=2)],
+                   auditor_stream=[real_state.row(
+                       "auditor", for_sha=shas["a"], round=1,
+                       report_note="not this cycle's note",
+                       findings=[dict(_FINDING, rule="CA-TXT-001")])])
+    out = render_page.render(WORKTREE, {"orphan": state})
+    text = out["orphan"]["en"]["text"]
+    assert "CA-TXT-001" not in text and "not this cycle's note" not in text, text
+    assert shas["b"][:12] in text, "the record still names the commit it is about"
 
 # ============================ 10. what the review found in a real browser
 @needs_node
@@ -1153,6 +1344,60 @@ def test_two_verdict_rows_on_one_screen_speak_the_same_way():
     assert not re.search(r"Passed review(?! · round)", paint), paint
 
 
+
+def test_no_decision_row_can_reach_a_runtime_affordance_at_all():
+    """N2, answered by deletion rather than by a guard.
+
+    `Change model or fallback` was a button in `decisionDetail` that opened a
+    dialog over the composer; it was replaced by a sentence (`runtimeWhere`)
+    that nothing asserted. Asking which stop renders that sentence answers the
+    question: none can. A stop carrying `select_model` or `open_billing` is a
+    provider or a budget stop, and `isDecisionStop` sends both to a NOTE with
+    an inline retry — so `decisionDetail` never runs for one. The sentence was
+    a branch only a test could visit, which is the defect class this round is
+    about, so it is deleted rather than owned.
+
+    Mutation: reintroduce `runtimeWhere` and this fails; make `isDecisionStop`
+    return true for a provider stop and the second assertion fails.
+    """
+    from crossaudit.console.page import PAGE
+
+    assert "runtimeWhere" not in PAGE and "decision-inline-where" not in PAGE
+    carriers = [name for name in RETRYABLE + JUDGEMENT
+                if {"select_model", "open_billing"}
+                & set(_stop(name).get("remediations") or [])]
+    assert carriers, "no stop carries the model/billing remediations any more"
+    for name in carriers:
+        assert name in RETRYABLE, (
+            f"{name} carries a runtime remediation AND is a decision row, so "
+            "`decisionDetail` can reach a runtime affordance again")
+        assert "srow-note" in _html("stop:" + name), name
+
+
+@needs_node
+def test_a_step_rows_fold_key_names_its_round():
+    """N2, second half. The step row's key is `kind#round`; collapsing it to
+    `kind` left the suite green. `mergeRuns` refuses to merge across rounds
+    either way, so nothing about the COLLAPSE depends on it — what depends on
+    it is the fold: two rounds of checks are two folds, and a key that names
+    only the kind makes opening one open the other on the next snapshot.
+
+    Mutation: use `kind` alone as the key and the two rounds share a key.
+    """
+    steps = _project([
+        _step("check_finished", "auditor", 40, "Schema check passed", "schema"),
+        _step("audit_blocked", "auditor", 50, "BLOCKED"),
+        _step("round_started", "loop", 60, "round 2 of 3", round_no=2),
+        _step("check_finished", "auditor", 70, "Schema check passed", "schema",
+              round_no=2),
+    ])
+    html = render_page.render(
+        WORKTREE, {"two rounds": _state(steps=steps, usage=_USAGE)},
+        locales=("en",))["two rounds"]["en"]["html"]
+    keys = re.findall(r'data-srow-key="(check_finished[^"]*)"', html)
+    assert len(set(keys)) == len(keys) and len(keys) >= 2, (
+        f"two rounds of checks share a fold key: {keys}")
+
 # ============================ 11. what a person can still check
 @needs_node
 def test_a_finished_run_keeps_its_duration_its_cost_and_its_steps():
@@ -1203,12 +1448,12 @@ def test_an_escalated_cycle_keeps_the_provenance_of_what_it_is_overruling():
     row = _stop("auditor_concern")
     state = _state(escalations=[row])
     state["check_contracts"] = {"schema": {"description": "d", "state": "passed"}}
-    state["auditor_stream"] = [{"kind": "auditor", "verdict": "ESCALATE",
-                                "sha": str(row.get("short_sha") or "")[:12],
-                                "round": row.get("round", 2), "t": 90,
-                                "chat_id": "c1", "findings": [_FINDING],
-                                "report_note": "This report is not committed "
-                                               "yet, so it cannot be verified yet."}]
+    state["auditor_stream"] = [real_state.row(
+        "auditor", for_sha=SHA, verdict="ESCALATE",
+        sha=str(row.get("short_sha") or "")[:12], round=row.get("round", 2),
+        t=90, findings=[_FINDING],
+        report_note="This report is not committed yet, so it cannot be "
+                    "verified yet.")]
     out = render_page.render(WORKTREE, {"escalated": state})
     text = out["escalated"]["en"]["text"]
     paint = out["escalated"]["en"]["first_paint"]
@@ -1232,11 +1477,11 @@ def test_the_findings_still_say_which_round_raised_them():
     """
     state = _settled("BLOCKED", "BLOCKED", [_FINDING])
     state["auditor_stream"] = [
-        {"kind": "auditor", "verdict": "BLOCKED", "sha": "c" * 12, "round": 1,
-         "t": 90, "chat_id": "c1", "findings": [_FINDING]},
-        {"kind": "auditor", "verdict": "BLOCKED", "sha": "c" * 12, "round": 2,
-         "t": 95, "chat_id": "c1",
-         "findings": [dict(_FINDING, observation="The units are wrong.")]}]
+        real_state.row("auditor", for_sha=SHA, round=1, t=90, verdict="BLOCKED",
+                       findings=[_FINDING], report_note=""),
+        real_state.row("auditor", for_sha=SHA, round=2, t=95, verdict="BLOCKED",
+                       report_note="",
+                       findings=[dict(_FINDING, observation="The units are wrong.")])]
     out = render_page.render(WORKTREE, {"two rounds": state})
     text = out["two rounds"]["en"]["text"]
     assert "round 1" in text and "round 2" in text, text

@@ -550,7 +550,6 @@ details.srow-fold[open]>summary .srow-line:after{transform:rotate(90deg)}
   font-weight:600;margin-bottom:3px}
 .decision-inline-block p{margin:0;font-size:var(--fs-label);line-height:1.5;color:var(--text-2)}
 .decision-inline-request{margin:0;font-size:var(--fs-label);color:var(--text-2);line-height:1.5}
-.decision-inline-where{margin:6px 0 0;font-size:var(--fs-caption);color:var(--text-2);line-height:1.5}
 .decision-inline-reason{display:grid;gap:4px;font-size:var(--fs-caption);color:var(--text-3)}
 .decision-inline-reason textarea{width:100%;resize:vertical;font:inherit;font-size:var(--fs-label);
   color:var(--text);background:var(--surface-2);border:1px solid var(--line);
@@ -3852,7 +3851,7 @@ const ZH={
   ,"An earlier round of this task is still waiting for you. No new round can run until that decision is made.":"此任务更早的一轮仍在等待你。在作出该决定前，无法运行新的一轮。"
   ,"Settle the earlier decision on its own row above; this task continues from there.":"请在上方它自己的那一行上处理更早的决定；此任务将从那里继续。"
   ,"Settle the earlier decision first. Guidance recorded here applies once it is settled.":"请先处理更早的决定。此处记录的指引将在其处理完毕后生效。"
-  ,"Change the model or its fallback in Project controls, then rerun the original task.":"在项目控制中更改模型或其备用路由，然后重新运行原任务。"
+
   ,"No new findings were recorded because the earlier decision is still open.":"由于更早的决定仍未处理，未记录新的发现。"
   ,"this cycle is waiting for a human":"此循环正在等待人工处理"
   ,"Open the earlier decision":"打开更早的决定"
@@ -5076,14 +5075,12 @@ function decisionSlots(row){
   // The runtime affordance carries the budget person to the same Project
   // controls that hold the usage limits; relabel it so it names that, not a
   // model change, when the stop is a guardrail pause.
+  //: Read by the Decision Center dialog only. A stop that carries
+  //: `select_model` or `open_billing` is a provider or budget stop, and
+  //: `isDecisionStop` sends both of those to a NOTE with an inline retry — so
+  //: no row in the stream can reach this, and the sentence that briefly stood
+  //: in for the deleted button was a branch only a test could visit.
   runtimeLabel:budget?'Adjust usage limits':'Change model or fallback',
-  // A stream row may not open a dialog — rule 1 for a retryable failure and
-  // rule 8 for every row, because openRuntime() covers the composer. The row
-  // says WHERE the control is, in words, the way the budget note already does;
-  // the Decision Center keeps its button, which is a dialog already.
-  runtimeWhere:budget
-    ?'Adjust the usage limit in Project controls, then rerun the original task.'
-    :'Change the model or its fallback in Project controls, then rerun the original task.',
   runtimeHidden:!(hasRemediation(row,'select_model')||hasRemediation(row,'open_billing')),
   // R5. The one real action of a locked cycle is the EARLIER decision; the
   // secondary button carries it (relabelled, with the cycle to open) so no new
@@ -6761,16 +6758,26 @@ const CYCLE_WORDS={
   admit:{en:'Admit result',zh:'准入结果'}};
 function cycleWords(row){return currentLocale==='zh'?row.zh:row.en;}
 //: The settled cycle of this conversation, as ONE outcome row, or nothing.
-//: The auditor reports of ONE cycle, newest last: the ones committed against
-//: its sha when they can be matched, else the last `round` of them.
+//: The auditor reports of ONE cycle: the ones written about its commit, and
+//: NOTHING else.
+//:
+//: This used to fall back to the last cycle.round reports in this chat
+//: when it could match none, and it could match none in production always,
+//: because console/streams.py did not put the audited commit on an auditor
+//: row at all. So the fallback WAS the production path, and it painted an
+//: rule ids and a provenance note of an EARLIER cycle inside the record of
+//: the decision a person was being asked to overrule. The count runs ahead
+//: of the report count on every round that stopped before a report existed.
+//:
+//: The row carries a sha now. When nothing matches, the honest answer is
+//: that this cycle has no report yet, not that it has somebody elses.
 function cycleReports(d,cycle){
-  const reports=((d&&d.auditor_stream)||[]).filter(
-    m=>m.kind==='auditor'&&(m.chat_id||'history')===activeChatId);
   const sha=String((cycle&&cycle.sha)||'');
-  const related=reports.filter(m=>m.sha&&sha
-    &&(sha.startsWith(String(m.sha))||String(m.sha).startsWith(sha)));
-  return (related.length?related
-    :reports.slice(-Number((cycle&&cycle.round)||1))).slice(-8);}
+  if(!sha)return [];
+  return ((d&&d.auditor_stream)||[]).filter(
+    m=>m.kind==='auditor'&&(m.chat_id||'history')===activeChatId
+      &&m.sha&&(sha.startsWith(String(m.sha))||String(m.sha).startsWith(sha)))
+    .slice(-8);}
 
 //: WHAT THE AUDIT DID, as folded rows: the deterministic checks and their real
 //: state, the findings, the provenance of the report, and the technical record
@@ -7147,7 +7154,6 @@ function decisionDetail(row){
     // stream, open, a few lines up, and `request` already says so. A button
     // that opened it covered the screen, made the shell inert and took the
     // composer away — rules 1 and 8 — to reach something already on screen.
-    +(s.runtimeHidden?'':'<p class="decision-inline-where">'+esc(t(s.runtimeWhere))+'</p>')
     +'<div class="srow-actions">'
     +'<button type="button" class="srow-action" data-decide="reopen" data-decide-cycle="'
     +cycle+'">'+esc(t(s.reopenTitle))+'</button>'

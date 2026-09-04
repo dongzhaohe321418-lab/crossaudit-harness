@@ -226,10 +226,20 @@ def auditor_stream(cfg: Config, routing: list[dict],
         if m:
             verdict = m.group(1)
         round_match = re.search(r"-r(\d+)$", report.parent.name)
+        # The commit this report is ABOUT. The ledger directory is
+        # `<sha12>-r<N>`, so it was always here, and the chat lookup below has
+        # always read it — but the row never carried it, so a console that
+        # wanted to say "these are the reports of THIS cycle" had nothing to
+        # key on and had to guess by counting. It guessed wrong whenever a
+        # round stopped before the auditor wrote a report, and painted an
+        # earlier cycle's rule ids and provenance note inside the record of the
+        # decision a person was being asked to overrule.
+        audited_sha = report.parent.name.split("-r", 1)[0]
         stream.append({
             "kind": "auditor", "t": int(report.stat().st_mtime), "verdict": verdict,
+            "sha": audited_sha,
             "chat_id": next((chat for sha, chat in commit_chats.items()
-                              if sha.startswith(report.parent.name.split("-r", 1)[0])),
+                              if sha.startswith(audited_sha)),
                              LEGACY_CHAT_ID),
             "round": int(round_match.group(1)) if round_match else 1,
             # Each finding also says which tier raised it and whether a
@@ -257,6 +267,20 @@ def auditor_stream(cfg: Config, routing: list[dict],
             d = json.loads(line)
             stream.append({
                 "kind": "auditor", "t": d.get("t", 0), "verdict": d["ruling"],
+                # ONE shape per row kind. A dispute ruling and an audit report
+                # are both `kind: "auditor"`, and they used to carry different
+                # keys — so `row["report_state"]` raised on half of them, and a
+                # consumer could not be written without knowing which half it
+                # had. Each value below is true of a ruling rather than
+                # invented for the shape: a ruling is about a RULE, so it names
+                # no commit and no round; and it is a line in the disputes log,
+                # which `cli/talk.py` commits in the same breath as it writes,
+                # so its bytes are committed and cannot drift the way a
+                # working-copy report can.
+                "sha": "",
+                "round": 0,
+                "report_state": "committed",
+                "report_note": "",
                 "chat_id": canonical_id(d.get("chat_id")),
                 "findings": [{"severity": "dispute", "rule": d["rule"],
                               "artifact": d["artifact"],
