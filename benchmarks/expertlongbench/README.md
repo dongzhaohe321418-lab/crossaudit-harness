@@ -26,9 +26,11 @@ what decision **D142** deferred `authority.lone_model_blocker`'s default on.
 | `clear.py` | CLEAR: checklist mapping, bidirectional containment judging, precision / recall / accuracy / F1. |
 | `provider.py` | Binds CLEAR's model seam to CrossAudit's own provider layer, so mapper and judge calls are configured, retried and metered like any other call. |
 | `run.py` | The two-arm runner. |
-| `report.py` | The two numbers: paired accuracy difference, and the BLOCKER confirmation rate. |
+| `report.py` | Study 1's two numbers: paired accuracy difference, and the BLOCKER confirmation rate. |
+| `report2.py` | Study 2's numbers: the paired **within-instance** pre/post-revision difference, and the auditor's **recall against ground truth**. Joins several run directories by arm label. |
 | `tests/` | Unit tests for the scorer, over hand-built cases whose F1 is arithmetic. |
-| `RESULTS.md` | What actually happened, sample size in the headline. |
+| `RESULTS.md` | Study 1 (n=12). What actually happened, sample size in the headline. |
+| `RESULTS-2.md` | Study 2 (n=40 + two 10-instance arms). Why the auditor was silent, and whether revision helps. |
 
 ## Running it
 
@@ -39,6 +41,11 @@ python -m pytest benchmarks/expertlongbench/tests -q  # offline; no keys needed
 python benchmarks/expertlongbench/run.py --task T03MaterialSEG --n 10 --seed 20260904
 python benchmarks/expertlongbench/report.py benchmarks/expertlongbench/runs/<run-id>
 ```
+
+`--out`, if given, must be an **absolute** path: the loop chdirs into each scratch project,
+so a relative run directory makes the product resolve its own config root against the wrong
+place. `--resume` continues a run that was interrupted, skipping samples already recorded.
+`RESULTS-2.md` has the exact three commands that produced study 2.
 
 The unit tests are not in the repo's default `testpaths`; run them by path as above.
 
@@ -64,8 +71,9 @@ paid product surface or used in marketing material.
 1. **Do not tune arm B's prompts after seeing scores.** If anything in either arm changes
    mid-study, the study restarts and `RESULTS.md` says so.
 2. **A negative result is the point.** If the loop does not beat the single model, that goes
-   in the first sentence of `RESULTS.md`, not in a footnote, and it is not re-run until it
-   flips.
+   in the first sentence of the results file, not in a footnote, and it is not re-run until
+   it flips. Both studies so far are negative results and both say so in their first
+   sentence.
 3. **Every approximation of the paper's method is listed** under "Deviations from CLEAR" in
    `RESULTS.md`. The authors released no evaluation code, so absolute scores are not
    comparable to their leaderboard; the paired within-scorer comparison is.
