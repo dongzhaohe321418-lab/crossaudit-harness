@@ -1,6 +1,6 @@
-# CrossAudit 4.16.0
+# CrossAudit 4.17.0
 
-[![Version 4.16.0](https://img.shields.io/badge/version-4.16.0-6d5dfc)](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.16.0)
+[![Version 4.17.0](https://img.shields.io/badge/version-4.17.0-6d5dfc)](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.17.0)
 [![Latest release](https://img.shields.io/github/v/release/dongzhaohe321418-lab/crossaudit-harness?label=release&color=1f883d)](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/latest)
 [![CI](https://github.com/dongzhaohe321418-lab/crossaudit-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/dongzhaohe321418-lab/crossaudit-harness/actions/workflows/ci.yml)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B%20Apple%20Silicon-111111)](https://github.com/dongzhaohe321418-lab/crossaudit-harness#download-and-install)
@@ -18,7 +18,7 @@ authority. Two vendors, because a second prompt to the same model shares its
 training, its context, and its blind spots: the separation is enforced by the
 harness, not requested in a prompt.
 
-**Latest release: CrossAudit 4.16.0.** The source on `main` is authoritative
+**Latest release: CrossAudit 4.17.0.** The source on `main` is authoritative
 until the matching DMG is attached to a GitHub release.
 
 ## 60-second tour
@@ -48,7 +48,7 @@ until the matching DMG is attached to a GitHub release.
 | --- | --- |
 | ![The CrossAudit workspace: project rail, conversation, and composer](website/public/crossaudit-workspace-1600.png) | ![The same conversation with independent audit context expanded](website/public/crossaudit-audit-1600.png) |
 
-Both captures are the 4.16.0 console showing the credential-free local demo.
+Both captures are the 4.17.0 console showing the credential-free local demo.
 
 ## Why CrossAudit
 
@@ -86,7 +86,7 @@ acceptance criteria can be stated as rules.
 ## Download and install
 
 **macOS app (Apple Silicon, macOS 13 or later).** Download
-`CrossAudit-4.16.0-arm64.dmg` from the
+`CrossAudit-4.17.0-arm64.dmg` from the
 [latest release](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/latest)
 and drag CrossAudit to Applications. The DMG is ad-hoc signed and not
 Apple-notarized: the first time, right-click **CrossAudit.app**, choose
@@ -259,12 +259,12 @@ official OpenAI Codex runtime.
 > notarization. A production distribution should use Developer ID Application
 > signing, hardened runtime, notarization, and stapling.
 
-1. Download `CrossAudit-4.16.0-arm64.dmg` and its checksum from the
-   [V4.16.0 release](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.16.0).
+1. Download `CrossAudit-4.17.0-arm64.dmg` and its checksum from the
+   [V4.17.0 release](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.17.0).
 2. Optionally verify it in Terminal:
 
    ```bash
-   shasum -a 256 -c CrossAudit-4.16.0-arm64.dmg.sha256
+   shasum -a 256 -c CrossAudit-4.17.0-arm64.dmg.sha256
    ```
 
 3. Open the DMG and drag **CrossAudit** to **Applications**.
@@ -302,7 +302,7 @@ crossaudit --version
 Expected version output:
 
 ```text
-crossaudit 4.16.0 (receipt schema 2)
+crossaudit 4.17.0 (receipt schema 2)
 ```
 
 Use a virtual environment instead when developing CrossAudit, testing source
@@ -1284,13 +1284,13 @@ Exit codes are stable so scripts do not need to parse prose:
 
 V4 sends `max_completion_tokens` to the built-in OpenAI endpoint and retries
 once when a compatible endpoint explicitly asks for that field. Confirm that
-`crossaudit --version` reports 4.16.0 and reinstall if an older package is still
+`crossaudit --version` reports 4.17.0 and reinstall if an older package is still
 on your PATH. Restart a background console after upgrading because an existing
 daemon keeps the Python code that was loaded when it started.
 
 ### The macOS app is blocked on first launch
 
-Right-click **CrossAudit.app** → **Open** → **Open**; macOS asks once. V4.16.0
+Right-click **CrossAudit.app** → **Open** → **Open**; macOS asks once. V4.17.0
 is structurally signed with the hardened runtime but is not notarized, so
 verify the published SHA-256 checksum first (see [Install](#install)). An Apple
 Developer ID signed and notarized build is required before broad

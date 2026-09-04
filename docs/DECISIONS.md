@@ -6696,3 +6696,62 @@ CONTRIBUTING, because a platform quietly dropped from CI is one nobody fixes.
 
 **Left to the owner:** Vercel login for the deploy (interactive), Apple
 notarization, and whether the Windows port is worth a slice.
+
+## D152 — The console renders the user's activity, not the protocol's state machine — and three fixtures taught us why the tests were green
+
+The owner asked, plainly, why Claude Code and Codex have interfaces theirs does
+not. The answer was not polish. **Their surface is a chronological list of what
+happened; ours was the audit protocol's state machine drawn as furniture.**
+Cycles, verdicts, escalations and receipts were first-class objects on screen,
+so a state change produced a card — and every complaint followed from that one
+choice: a provider returning an empty completion got the same heavy modal as a
+real audit dispute, the generator's draft had no row to collapse into, the
+thinking animation had no line of words to mark, a commit with no experiment in
+it said "the audit needs your decision".
+
+`docs/design/ACTIVITY_STREAM.md` records the design: **five row shapes for
+fifty-six event kinds** — say, do, wait, outcome, note — one row being a verb, one
+number and an elapsed time, detail opening in place, a single status line while
+work runs, and **failure separated from judgment**. A machine failure is a note
+with one retry beside the words. Only the auditor's own concern, exhausted
+rounds, or an unsettled earlier decision may ask a person. Nothing is modal;
+the composer is never taken away. The run card, the review card and the
+delivery band are gone: a settled cycle and an escalated one are now the same
+rows.
+
+**One kernel change, and the ruling that shaped it.** An auditor reply that
+cannot be read at all is retried once per round against the same route. The
+first implementation also retried *content* rejections, and three measured
+inputs turned a first-turn BLOCKED into PASS — the loop offering a model a
+second chance to say something else about work it had already judged. A verdict
+may not get looser because of a retry. The repair now fires only when
+`parse_reply` fails, and its instruction is a fixed two-entry catalogue keyed
+rather than interpolated, because the earlier version handed the model the
+validator's own sentence — which is a map to the edit that makes the rejection
+disappear.
+
+**The part worth keeping longest is about testing.** Four defects shipped past a
+green suite in this rebuild, and every one had the same shape: **a fixture built
+a state the product never produces.** Twenty-seven tests passed while the
+owner's complaint was verbatim on screen, because the harness stubbed slices
+instead of calling the real `renderConversation`. Deleting an entire visible
+band left 2660 tests green because nothing owned it. A lock fixture missing
+`locked_by` hid a live path to the modal. A report matched on a `sha` the
+projection never sends, so production always took the fallback and an escalated
+decision showed a previous cycle's rules.
+
+Three rules now, all mechanical:
+
+1. Console tests drive the whole shipped script and the real `renderConversation`;
+   stops come from the real projection.
+2. **Fixtures are production rows.** `tests/harness/real_state.py` builds a real
+   project, drives the product's recorders and reads back through the server's
+   own snapshot chain; an invented key raises. A guard compares fixture and
+   production key sets per row kind, and a sweep matches every field the page
+   reads against what the wire sends — it found four branches only a test could
+   reach on its first run.
+3. Rules that matter are structural, not substring blacklists: click every
+   action through the shipped handler, then read `aria-modal`, `inert`,
+   `disabled`. And drive a **visible** browser — the extension's window reports
+   `visibilityState: "hidden"`, so Chrome does not paint it and its screenshots
+   are stale frames, which once faked a blank-first-paint bug that did not exist.

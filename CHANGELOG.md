@@ -3,6 +3,34 @@
 All notable changes to CrossAudit are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH` scheme; the source on `main` is authoritative.
 
+## 4.17.0 — The activity stream
+
+The conversation is now one chronological stream, in one visual language,
+instead of the audit protocol's state machine drawn as cards.
+
+### Changed
+- **Five row shapes for every event.** Say, do, wait, outcome, note. A row is a
+  verb, one number and an elapsed time; detail opens in place. Finished rounds
+  fold to a single row. The run card, the review card and the delivery band are
+  gone — a settled cycle and an escalated one render the same way.
+- **Failure is not a decision.** An empty completion, an unreadable reply, a
+  timeout, a rate limit or a commit with nothing in the audited folder is a note
+  with one retry beside the words. Only the auditor's own concern, exhausted
+  rounds or an unsettled earlier decision asks you to decide, and that happens
+  in the stream. Nothing is modal; the composer is never taken away.
+- **One status line while work runs**: the phase, the round, the elapsed time and
+  the running cost, with a stop control.
+- **Progress you can read.** The thinking animation marks a line of words rather
+  than spinning alone; the generator's draft is one summarising line you can
+  open; identifiers live in a closed details block.
+
+### Added
+- One bounded repair when an auditor reply cannot be read at all — never when it
+  parses and fails a content rule, because a verdict may not get looser because
+  of a retry. The attempt and the rejected reply's digest are in the receipt.
+- `benchmarks/expertlongbench` — an ExpertLongBench harness and a faithful CLEAR
+  reimplementation, with the first measured result recorded as it came out.
+
 ## 4.16.0 — Evidence Authority
 
 The audit records where a finding's power to block comes from, and the loop
