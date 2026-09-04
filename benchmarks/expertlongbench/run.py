@@ -649,7 +649,15 @@ def main(argv: list[str] | None = None) -> int:
     missing = missing_credentials(sorted(set(wanted)))
 
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    out_dir = Path(options.out) if options.out else RUNS_DIR / f"{args.task}-{options.label}-{run_id}"
+    # Absolute, always. ``run_arm_b`` chdirs into the scratch project so the loop sees a
+    # real working directory, and a Config whose ``root`` was relative would then resolve
+    # against the project rather than against the repo -- the loop would look for
+    # AUDIT_RULES.md inside itself and fail with a FileNotFoundError recorded as an
+    # instance failure. Study 1 never hit this because it used the default run directory,
+    # which is already absolute.
+    out_dir = (
+        Path(options.out) if options.out else RUNS_DIR / f"{args.task}-{options.label}-{run_id}"
+    ).resolve()
 
     plan = {
         "run_id": run_id,
