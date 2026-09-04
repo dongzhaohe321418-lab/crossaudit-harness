@@ -43,8 +43,16 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from adjudicate import Adjudicator, Finding, parse_report_findings  # noqa: E402
-from clear import ClearScorer, NAPolicy, ScoreCost  # noqa: E402
+from adjudicate import (  # noqa: E402
+    CONFIRMED,
+    FALSE_POSITIVE,
+    UNMAPPED,
+    UNREADABLE,
+    Adjudicator,
+    Finding,
+    parse_report_findings,
+)
+from clear import ClearScorer, NAPolicy, ScoreCost, parse_mapper_json  # noqa: E402
 from provider import CrossAuditClient, missing_credentials, parse_spec, role_for  # noqa: E402
 from tasks import Task, get_task  # noqa: E402
 
@@ -161,6 +169,64 @@ authority:
 """
 
 
+#: The preamble of a CrossAudit constitution, shared by both the shipped general rules and
+#: the rubric-derived ones, so that arm B and arm B-prime differ ONLY in their rule bodies.
+#: Copied from ``scaffold/templates/GENERAL_AUDIT_RULES.md``; if that template's preamble
+#: changes this becomes a silent divergence, which is why the study records both files'
+#: sha256 in ``plan.json``.
+CONSTITUTION_PREAMBLE = """\
+# Constitution — {project}
+
+Version this file in git. Every audit cites the commit that carried it. Rule
+changes take effect only between cycles, so work is never judged against a
+target that moved underneath it.
+
+Each rule has a stable ID and a decidable criterion. **BLOCKER** gates the
+increment when an objective requirement is not met. **ADVISORY** records
+judgement or an improvement opportunity and never gates admission.
+
+---
+"""
+
+
+def rubric_constitution(task: Task) -> str:
+    """A constitution generated mechanically from the task's own evaluation rubric.
+
+    One BLOCKER per rubric item, whose criterion is the item's description transcribed
+    from the paper's Appendix B -- no rewriting, no emphasis, no hints about what the
+    auditor "should" look for beyond what the rubric itself says. This is arm B-prime's
+    only difference from arm B, and it exists to answer one question: is the auditor quiet
+    because the generic rules never told it what this task is graded on?
+
+    Nothing here is derived from any score. It is a pure function of ``tasks.py``.
+    """
+    parts = [CONSTITUTION_PREAMBLE.format(project=task.task_id)]
+    for index, item in enumerate(task.items, start=1):
+        label = f"{item.group} / {item.name}" if item.group else item.name
+        parts.append(
+            f"### CA-RUBRIC-{index:03d}\n"
+            f"**BLOCKER.** *{label}.* {item.description} The deliverable must contain "
+            f"this explicitly, and what it says must be consistent with the supplied "
+            f"source material. An item the deliverable does not address, or addresses "
+            f"in a way the source material contradicts, is a defect.\n"
+        )
+    parts.append(
+        "### CA-CONTENT-001\n"
+        "**BLOCKER.** The primary deliverable is complete, internally consistent, and\n"
+        "contains no unresolved placeholder such as TODO, TBD, or sample text.\n"
+    )
+    return "\n".join(parts)
+
+
+def constitution_text(task: Task, options: "Options") -> str:
+    """The AUDIT_RULES.md the scratch project is bootstrapped with."""
+    if options.audit_rules == "rubric":
+        return rubric_constitution(task)
+    from crossaudit.scaffold import read as read_template
+
+    return read_template("GENERAL_AUDIT_RULES.md").replace("<PROJECT>", task.task_id)
+
+
 def bootstrap_project(root: Path, task: Task, row: dict, options: "Options") -> Path:
     """A fresh git project shaped the way a real user's would be for this kind of work.
 
@@ -170,8 +236,6 @@ def bootstrap_project(root: Path, task: Task, row: dict, options: "Options") -> 
     explanation against its source material -- which is exactly what CA-CONTENT-002 asks
     of it, and the only way a content audit of this task can mean anything.
     """
-    from crossaudit.scaffold import read as read_template
-
     project = root / "project"
     (project / INCREMENT_DIR).mkdir(parents=True)
     subprocess.run(["git", "init", "-q", "-b", "main"], cwd=str(project), check=True)
@@ -179,8 +243,7 @@ def bootstrap_project(root: Path, task: Task, row: dict, options: "Options") -> 
     git("config", "user.name", "ExpertLongBench harness", cwd=project)
 
     (project / "AUDIT_RULES.md").write_text(
-        read_template("GENERAL_AUDIT_RULES.md").replace("<PROJECT>", task.task_id),
-        encoding="utf-8",
+        constitution_text(task, options), encoding="utf-8"
     )
     generator_role = role_for(options.generator)
     auditor_role = role_for(options.auditor)
@@ -270,6 +333,17 @@ class Options:
     na_policy: str
     arms: str
     out: str
+    #: ``general`` (the shipped constitution) or ``rubric`` (generated from the task's own
+    #: evaluation rubric). Arm B-prime is exactly ``rubric``, everything else held fixed.
+    audit_rules: str = "general"
+    #: If non-zero, keep only the first ``subset`` of the seeded sample. Lets a follow-up
+    #: arm run on a strict subset of the main arm's instances, so the comparison is paired.
+    subset: int = 0
+    #: A name for this run's arm, carried into ``plan.json`` so runs can be joined.
+    label: str = "B"
+    #: Ask a model, once per sample, which rubric items are derivable from the committed
+    #: source material alone. Answers Q1's "the task" hypothesis.
+    probe_checkability: bool = False
 
 
 # --------------------------------------------------------------------------------------
@@ -509,6 +583,22 @@ def main(argv: list[str] | None = None) -> int:
                         choices=[policy.value for policy in NAPolicy])
     parser.add_argument("--arms", default="AB", help="which arms to run: A, B or AB")
     parser.add_argument("--out", default="", help="run directory (default: runs/<timestamp>)")
+    parser.add_argument(
+        "--audit-rules", default="general", choices=["general", "rubric"],
+        help="arm B's constitution: the shipped general rules, or one generated from the "
+             "task's own evaluation rubric (arm B-prime).",
+    )
+    parser.add_argument(
+        "--subset", type=int, default=0,
+        help="after seeding with --n, keep only the first SUBSET instances, so a "
+             "follow-up arm runs on a strict subset of the main arm's samples.",
+    )
+    parser.add_argument("--label", default="", help="a name for this run's arm")
+    parser.add_argument(
+        "--probe-checkability", action="store_true",
+        help="one extra model call per sample: which rubric items are derivable from the "
+             "committed source material alone.",
+    )
     parser.add_argument("--dry-run", action="store_true",
                         help="print the plan and the credentials it needs, call nothing")
     args = parser.parse_args(argv)
@@ -518,6 +608,9 @@ def main(argv: list[str] | None = None) -> int:
     task = get_task(args.task)
     corpus_sha = verify_corpus(args.task)
     rows = choose_samples(load_task_rows(args.task), args.n, args.seed)
+    full_sample = [row["id"] for row in rows]
+    if args.subset:
+        rows = rows[: args.subset]
 
     generator_vendor, _ = parse_spec(args.generator)
     auditor_vendor, _ = parse_spec(args.auditor)
@@ -537,6 +630,10 @@ def main(argv: list[str] | None = None) -> int:
         na_policy=args.na_policy,
         arms=args.arms.upper(),
         out=args.out,
+        audit_rules=args.audit_rules,
+        subset=args.subset,
+        label=args.label or ("B-" + args.audit_rules if args.audit_rules != "general" else "B"),
+        probe_checkability=args.probe_checkability,
     )
 
     if generator_vendor == auditor_vendor:
@@ -552,7 +649,7 @@ def main(argv: list[str] | None = None) -> int:
     missing = missing_credentials(sorted(set(wanted)))
 
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    out_dir = Path(options.out) if options.out else RUNS_DIR / f"{args.task}-{run_id}"
+    out_dir = Path(options.out) if options.out else RUNS_DIR / f"{args.task}-{options.label}-{run_id}"
 
     plan = {
         "run_id": run_id,
@@ -562,7 +659,10 @@ def main(argv: list[str] | None = None) -> int:
         "n": len(rows),
         "seed": args.seed,
         "sample_ids": [row["id"] for row in rows],
+        "full_sample_ids": full_sample,
+        "subset": args.subset,
         "arms": options.arms,
+        "label": options.label,
         "models": {
             "generator": options.generator,
             "auditor": options.auditor,
@@ -575,7 +675,10 @@ def main(argv: list[str] | None = None) -> int:
             "checks": options.checks,
             "lone_model_blocker": options.lone_model_blocker,
             "na_policy": options.na_policy,
+            "audit_rules": options.audit_rules,
+            "probe_checkability": options.probe_checkability,
         },
+        "constitution_sha256": sha256_text(constitution_text(task, options)),
         "prompts": {
             "task_model_prompt_sha256": sha256_text(task.model_prompt),
             "arm_b_instruction_sha256": sha256_text(arm_b_task(task)),
@@ -702,12 +805,39 @@ def _execute(task: Task, rows: list[dict], options: Options, plan: dict, out_dir
             shutil.rmtree(scratch, ignore_errors=True)
             scratch.mkdir(parents=True)
             result = run_arm_b(scratch, task, row, options, run_id)
-            entry = _score_arm(scorer, task, result, reference, outputs, "B")
-            entry["adjudications"] = _adjudicate_round_findings(
-                adjudicator, scorer, task, result, reference, outputs
+            # Every round is scored, not just the last one and not just the rounds that
+            # carried a blocker. That is what makes the pre-revision / post-revision
+            # difference measurable on the same instance -- the study's primary number.
+            scored_rounds = _score_rounds(scorer, task, result, reference, outputs)
+            entry = _score_arm(scorer, task, result, reference, outputs, "B",
+                               prescored=_final_scored(result, scored_rounds))
+            entry["round_scores"] = {
+                str(r): sc.score.to_json() for r, sc in sorted(scored_rounds.items())
+            }
+            entry["round_score_cost_usd"] = sum(
+                sc.cost.cost_usd for sc in scored_rounds.values()
             )
+            entry["round_score_calls"] = sum(sc.cost.calls for sc in scored_rounds.values())
+            entry["score_cost_usd"] = entry["round_score_cost_usd"]
+            entry["score_calls"] = entry["round_score_calls"]
+            entry["revision"] = _revision_pair(scored_rounds)
+            findings_mapped, recall = _instrument_audit(
+                adjudicator, task, result, scored_rounds
+            )
+            entry["findings_mapped"] = findings_mapped
+            entry["audit_recall"] = recall
+            # Kept in the shape report.py already reads, so the D142 confirmation rate
+            # continues to be computed the same way across both studies.
+            entry["adjudications"] = [
+                f for f in findings_mapped if f.get("severity") == "BLOCKER"
+            ]
             record["arms"]["B"] = entry
             shutil.rmtree(scratch, ignore_errors=True)
+
+        if options.probe_checkability:
+            record["checkability"] = _probe_checkability(
+                scorer_client, task, row, reference, options
+            )
 
         write_instance(out_dir, sample_id, record, outputs)
         records.append(record)
@@ -718,7 +848,8 @@ def _execute(task: Task, rows: list[dict], options: Options, plan: dict, out_dir
     return 0
 
 
-def _score_arm(scorer, task, result: ArmResult, reference, outputs: dict, arm: str) -> dict:
+def _score_arm(scorer, task, result: ArmResult, reference, outputs: dict, arm: str,
+               prescored=None) -> dict:
     entry = {k: v for k, v in asdict(result).items() if k not in {"output_text", "round_outputs"}}
     outputs[f"arm{arm}.output.md"] = result.output_text
     for round_no, text in result.round_outputs.items():
@@ -729,10 +860,10 @@ def _score_arm(scorer, task, result: ArmResult, reference, outputs: dict, arm: s
         entry["score_cost_usd"] = 0.0
         return entry
 
-    scored = scorer.score(task, result.sample_id, result.output_text, reference)
+    scored = prescored or scorer.score(task, result.sample_id, result.output_text, reference)
     entry["score"] = scored.score.to_json()
-    entry["score_cost_usd"] = scored.cost.cost_usd
-    entry["score_calls"] = scored.cost.calls
+    entry["score_cost_usd"] = 0.0 if prescored is not None else scored.cost.cost_usd
+    entry["score_calls"] = 0 if prescored is not None else scored.cost.calls
     entry["_judgements"] = [
         {"key": j.key, "precision_hit": j.precision_hit, "recall_hit": j.recall_hit}
         for j in scored.score.judgements
@@ -740,64 +871,245 @@ def _score_arm(scorer, task, result: ArmResult, reference, outputs: dict, arm: s
     return entry
 
 
-def _adjudicate_round_findings(adjudicator, scorer, task, result: ArmResult, reference,
-                               outputs: dict) -> list[dict]:
-    """Adjudicate every BLOCKER against the output of the round it was raised on.
+def _score_rounds(scorer, task, result: ArmResult, reference, outputs: dict) -> dict:
+    """Score the deliverable as it stood at the end of EVERY round.
 
-    Scoring a mid-round output costs a full CLEAR pass, so it is done once per round that
-    actually carries a blocker, and cached.
+    Study 1 scored only the final output plus, opportunistically, any round that carried a
+    blocker. That made "did the revision help?" answerable across arms (n = instances,
+    confounded by generation variance) but not within an instance. Scoring every round
+    makes it answerable within the instance: the same sample, the same generator, the same
+    scorer, with and without the audit's correction. n is then the number of revisions.
     """
-    blockers = [f for f in result.findings if f.get("severity") == "BLOCKER"]
-    if not blockers:
-        return []
+    scored_rounds: dict[int, object] = {}
+    for key in sorted(result.round_outputs, key=int):
+        text = result.round_outputs[key]
+        if not text.strip():
+            continue
+        scored = scorer.score(task, f"{result.sample_id}#r{key}", text, reference)
+        scored_rounds[int(key)] = scored
+        outputs[f"armB.round{key}.score.json"] = json.dumps(
+            scored.score.to_json(), indent=2
+        )
+    return scored_rounds
 
-    per_round_judgements: dict[int, list] = {}
-    adjudications = []
-    for finding in blockers:
+
+def _final_scored(result: ArmResult, scored_rounds: dict):
+    """The ScoredOutput for the round whose text IS the final output, if there is one.
+
+    ``run_arm_b`` sets ``output_text`` to the highest-numbered round's text, so this is a
+    lookup, not a re-score -- and it is guarded by a text comparison so that a change to
+    that invariant costs a duplicate scoring pass rather than silently mislabelling one.
+    """
+    if not scored_rounds:
+        return None
+    last = max(scored_rounds)
+    if result.round_outputs.get(str(last), "") != result.output_text:
+        return None
+    return scored_rounds[last]
+
+
+def _revision_pair(scored_rounds: dict) -> dict | None:
+    """The paired pre-revision / post-revision measurement. The study's primary number.
+
+    ``None`` when the loop passed at round one: there was no revision, so there is nothing
+    to measure. Counting those as zeros would dilute the very quantity being measured,
+    which is what study 1's headline did.
+    """
+    if len(scored_rounds) < 2:
+        return None
+    first, last = min(scored_rounds), max(scored_rounds)
+    pre = scored_rounds[first].score
+    post = scored_rounds[last].score
+    return {
+        "pre_round": first,
+        "post_round": last,
+        "n_revisions": last - first,
+        "pre_f1": pre.f1,
+        "post_f1": post.f1,
+        "delta_f1": post.f1 - pre.f1,
+        "pre_accuracy": pre.accuracy,
+        "post_accuracy": post.accuracy,
+        "delta_accuracy": post.accuracy - pre.accuracy,
+        "pre_precision": pre.precision,
+        "post_precision": post.precision,
+        "pre_recall": pre.recall,
+        "post_recall": post.recall,
+        "items_fixed": sorted(
+            j.key
+            for j in post.judgements
+            if j.accuracy_hit
+            and not next(k for k in pre.judgements if k.key == j.key).accuracy_hit
+        ),
+        "items_broken": sorted(
+            j.key
+            for j in post.judgements
+            if not j.accuracy_hit
+            and next(k for k in pre.judgements if k.key == j.key).accuracy_hit
+        ),
+    }
+
+
+def _instrument_audit(adjudicator, task, result: ArmResult, scored_rounds: dict):
+    """Map every finding onto rubric items and measure the auditor against ground truth.
+
+    Two products, and the second is the point of the study:
+
+    * **per finding** -- which rubric items it is about, and whether CLEAR had in fact
+      scored those items wrong in the very output the finding was raised against. That is
+      study 1's confirmation rate, now computed over findings of *every* severity rather
+      than BLOCKERs only.
+    * **per round** -- of the rubric items CLEAR marked wrong in that output, how many did
+      *any* finding name? That is the auditor's **recall against ground truth**. A round
+      with six wrong items and no findings scores 0/6, and that is the number study 1
+      could not produce.
+
+    Mapping is a model call and is fallible; the lookup of CLEAR's verdict is not.
+    """
+    by_round = {
+        r: {j.key: j for j in sc.score.judgements} for r, sc in scored_rounds.items()
+    }
+
+    mapped: list[dict] = []
+    for finding in result.findings:
         round_no = int(finding.get("round") or 0)
-        if round_no not in per_round_judgements:
-            text = result.round_outputs.get(str(round_no), "")
-            if not text.strip():
-                per_round_judgements[round_no] = []
-            else:
-                scored = scorer.score(task, f"{result.sample_id}#r{round_no}", text, reference)
-                per_round_judgements[round_no] = list(scored.score.judgements)
-                outputs[f"armB.round{round_no}.score.json"] = json.dumps(
-                    scored.score.to_json(), indent=2
-                )
-        judgements = per_round_judgements[round_no]
-        if not judgements:
-            adjudications.append(
-                {"rule": finding["rule"], "round": round_no, "verdict": "unreadable",
-                 "note": "no scored output for this round"}
+        record = {
+            "round": round_no,
+            "severity": finding.get("severity", ""),
+            "rule": finding.get("rule", ""),
+            "artifact": finding.get("artifact", ""),
+            "tier": finding.get("tier", ""),
+            "state": finding.get("state", ""),
+            "verdict": UNREADABLE,
+            "cited_items": [],
+            "item_was_wrong": {},
+            "note": "",
+        }
+        try:
+            indices = adjudicator.map_finding(
+                task,
+                Finding(
+                    severity=record["severity"],
+                    rule=record["rule"],
+                    artifact=record["artifact"],
+                    observation=finding.get("observation", ""),
+                    tier=record["tier"],
+                    round_no=round_no,
+                ),
             )
+        except Exception as exc:  # noqa: BLE001 - recorded, never silently scored
+            record["note"] = f"adjudicator call failed: {type(exc).__name__}: {exc}"
+            mapped.append(record)
             continue
 
-        decision = adjudicator.adjudicate(
-            task,
-            Finding(
-                severity=finding["severity"],
-                rule=finding["rule"],
-                artifact=finding["artifact"],
-                observation=finding["observation"],
-                tier=finding.get("tier", ""),
-                round_no=round_no,
-            ),
-            judgements,
-        )
-        adjudications.append(
+        cited = [task.items[i].key for i in indices]
+        record["cited_items"] = cited
+        judgements = by_round.get(round_no, {})
+        if not cited:
+            record["verdict"] = UNMAPPED
+            record["note"] = "the objection is about no rubric item"
+        elif not judgements:
+            record["note"] = f"no scored output for round {round_no}"
+        else:
+            was_wrong = {k: not judgements[k].accuracy_hit for k in cited if k in judgements}
+            record["item_was_wrong"] = was_wrong
+            if not was_wrong:
+                record["note"] = "cited items absent from the round's judgements"
+            else:
+                record["verdict"] = CONFIRMED if any(was_wrong.values()) else FALSE_POSITIVE
+        mapped.append(record)
+
+    recall: list[dict] = []
+    for round_no, judgements in sorted(by_round.items()):
+        wrong = {k for k, j in judgements.items() if not j.accuracy_hit}
+        in_round = [m for m in mapped if m["round"] == round_no]
+        named: set[str] = set()
+        for m in in_round:
+            named.update(m["cited_items"])
+        hit = wrong & named
+        recall.append(
             {
-                "rule": decision.finding.rule,
-                "artifact": decision.finding.artifact,
-                "tier": decision.finding.tier,
                 "round": round_no,
-                "verdict": decision.verdict,
-                "cited_items": list(decision.cited_items),
-                "item_was_wrong": decision.item_was_wrong,
-                "note": decision.note,
+                "n_findings": len(in_round),
+                "n_blockers": sum(1 for m in in_round if m["severity"] == "BLOCKER"),
+                "n_advisories": sum(1 for m in in_round if m["severity"] == "ADVISORY"),
+                "rules_cited": sorted({m["rule"] for m in in_round if m["rule"]}),
+                "n_items": len(judgements),
+                "n_items_wrong": len(wrong),
+                "n_items_named": len(named),
+                "n_wrong_and_named": len(hit),
+                "n_named_but_correct": len(named - wrong),
+                "recall": (len(hit) / len(wrong)) if wrong else None,
             }
         )
-    return adjudications
+    return mapped, recall
+
+
+#: One call per sample. Answers Q1's third candidate cause -- "the task" -- with a
+#: measurement rather than an argument: the auditor sees only the committed bytes (the
+#: recipe and the deliverable), while the reference checklist was annotated by a human
+#: from the full published paper. If most reference content is not derivable from the
+#: recipe, then no auditor reading the repo could name most of what CLEAR marks wrong.
+CHECKABILITY_SYSTEM = (
+    "You are a {domain} expert assessing what a reviewer could possibly verify.\n\n"
+    "You will be given a SOURCE RECIPE and, for each item of an evaluation rubric, the "
+    "REFERENCE ANSWER that a human expert wrote after reading the full published paper "
+    "that the recipe came from.\n\n"
+    "For each item, decide whether the reference answer's substance could be derived by a "
+    "competent expert from the SOURCE RECIPE alone.\n\n"
+    "- Answer YES if the recipe states, or an expert could soundly infer from the recipe "
+    "and general domain knowledge, what the reference answer says.\n"
+    "- Answer NO if the reference answer depends on information that appears nowhere in "
+    "the recipe -- specific characterisation results, the authors' stated motivations, "
+    "measured values, or comparisons to other work.\n\n"
+    "Output a single JSON object with keys item_1 .. item_{n} and values \"YES\" or "
+    "\"NO\". Output the JSON object and nothing else."
+)
+
+CHECKABILITY_USER = (
+    "Rubric items and their reference answers:\n{blocks}\n\n"
+    "SOURCE RECIPE:\n<recipe>\n{recipe}\n</recipe>\n\n"
+    "Return the JSON object with keys item_1 .. item_{n}."
+)
+
+
+def _probe_checkability(client, task: Task, row: dict, reference: dict, options: Options) -> dict:
+    """Which rubric items are answerable from the bytes the auditor can see."""
+    blocks = []
+    for index, item in enumerate(task.items, start=1):
+        label = f"{item.group} / {item.name}" if item.group else item.name
+        blocks.append(
+            f"item_{index}. {label}\n"
+            f"  definition: {item.description}\n"
+            f"  reference answer: {reference.get(item.key, 'N/A')}"
+        )
+    try:
+        completion = client.complete(
+            model=options.judge,
+            system=CHECKABILITY_SYSTEM.format(domain=task.domain, n=len(task.items)),
+            user=CHECKABILITY_USER.format(
+                blocks="\n\n".join(blocks), recipe=row["input"], n=len(task.items)
+            ),
+        )
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"{type(exc).__name__}: {exc}"}
+
+    try:
+        raw = parse_mapper_json(completion.text, task.items)
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"unparseable: {type(exc).__name__}: {exc}",
+                "cost_usd": completion.cost_usd}
+    verdicts = {
+        key: ("yes" if value.strip().upper().startswith("Y") else
+              "no" if value.strip().upper().startswith("N") else "unclear")
+        for key, value in raw.items()
+    }
+    return {
+        "per_item": verdicts,
+        "n_yes": sum(1 for v in verdicts.values() if v == "yes"),
+        "n_items": len(task.items),
+        "cost_usd": completion.cost_usd,
+        "model": completion.model,
+    }
 
 
 def _write_index(out_dir: Path, plan: dict, records: list[dict]) -> None:
