@@ -292,9 +292,41 @@ for (const el of await page.$$('#locale-toggle, #hub-locale, #decision-locale'))
 }
 await page.waitForTimeout(700);
 out.zh = await probe();
+// A focus ring at rest is not a focus ring: read what each row paints with
+// nobody on it, then walk the keyboard onto one and read it again.
+out.ringsAtRest = await page.evaluate(() =>
+  [...document.querySelectorAll('#task-list .task')]
+    .map(row => getComputedStyle(row).outlineStyle));
+await page.evaluate(() => document.getElementById('rail-search').focus());
+out.ringOnFocus = 'no row was reachable by keyboard';
+for (let i = 0; i < 24; i++) {
+  await page.keyboard.press('Tab');
+  const found = await page.evaluate(() => {
+    const el = document.activeElement;
+    return el && el.classList && el.classList.contains('task')
+      ? getComputedStyle(el).outlineStyle : null;
+  });
+  if (found) { out.ringOnFocus = found; break; }
+}
 console.log(JSON.stringify(out));
 await browser.close();
 """
+
+
+@needs_browser
+def test_a_chat_row_paints_a_focus_ring_only_when_it_is_focused(project):
+    """A fourth defect, found while measuring the first three.
+
+    The shared focus rule listed `[tabindex]` with no `:focus-visible` beside
+    the six selectors that had one, so it matched every focusable element at
+    all times. Each chat row painted a permanent 2px accent outline, which the
+    rail's scroll box clipped into a blue line above and below every row — the
+    sidebar looked ruled, and a keyboard user could not see where they were.
+    """
+    cfg, _ids = project
+    measured = _measure(cfg)
+    assert set(measured["ringsAtRest"]) == {"none"}, measured["ringsAtRest"]
+    assert measured["ringOnFocus"] == "solid", measured["ringOnFocus"]
 
 
 # ------------------------------------------------------- (3) the age itself

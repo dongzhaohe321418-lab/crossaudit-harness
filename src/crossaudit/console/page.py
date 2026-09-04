@@ -135,8 +135,12 @@ body{color:var(--text);background:
 button,textarea,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 button,input,select,textarea{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+/* `[tabindex]` here carried no `:focus-visible` and so matched ALWAYS: every
+   element made focusable — every chat row — painted a permanent 2px accent
+   outline, clipped by the rail's scroll box into a blue line above and below
+   each row. A focus ring that is always on is not a focus ring. */
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,
-a:focus-visible,[tabindex],summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a:focus-visible,[tabindex]:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
   clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .spacer{margin-left:auto}
