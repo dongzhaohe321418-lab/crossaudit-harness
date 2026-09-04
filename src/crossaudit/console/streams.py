@@ -314,6 +314,51 @@ def bundle(cfg: Config, reports: list[ReportSource] | None = None,
             auditor_stream(cfg, routing, commits, chat_map, reports), chat_map)
 
 
+def legacy_seen(cfg: Config, reports: list[ReportSource] | None = None,
+                commit_chats: dict[str, str] | None = None) -> int:
+    """When the legacy thread's evidence last moved, in epoch seconds (0: none).
+
+    Both streams are capped at their recent window, so on a project whose
+    recent work all belongs to real threads the legacy rows fall off that
+    window entirely, ``server.snapshot`` keeps no ``last_seen`` entry for the
+    legacy thread, and it renders as the one row in the list with no time at
+    all beside neighbours that have one.
+
+    Its date needs no window. Evidence that carries no chat association is, by
+    definition, the legacy thread's — that is what ``canonical_id`` means — so
+    the newest such row IS the legacy thread's date. Those rows are the audit
+    reports about a commit with no ``CrossAudit-Chat`` trailer, attributed
+    exactly as ``auditor_stream`` attributes them, and the routing utterances
+    written before the trailer existed. Both are read here from the sources the
+    streams read, before any window is applied.
+    """
+    newest = 0
+    routing = cfg.root / cfg.ledger_dir / "routing.jsonl"
+    if routing.is_file():
+        try:
+            for line in routing.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if canonical_id(row.get("chat_id")) == LEGACY_CHAT_ID:
+                    newest = max(newest, int(row.get("t") or 0))
+        except (OSError, ValueError, TypeError):
+            pass
+    by_sha = commit_chats or {}
+    sources = reports if reports is not None else read_report_sources(cfg)
+    for source in sources:
+        audited_sha = source.path.parent.name.split("-r", 1)[0]
+        chat = next((chat for sha, chat in by_sha.items()
+                     if sha.startswith(audited_sha)), LEGACY_CHAT_ID)
+        if chat != LEGACY_CHAT_ID:
+            continue
+        try:
+            newest = max(newest, int(source.path.stat().st_mtime))
+        except OSError:
+            pass
+    return newest
+
+
 def both(cfg: Config) -> tuple[list[dict], list[dict]]:
     generator, auditor, _chat_map = bundle(cfg)
     return generator, auditor

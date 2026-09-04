@@ -347,22 +347,28 @@ a:focus-visible,[tabindex],summary:focus-visible{outline:2px solid var(--accent)
 .side-label{font-size:var(--fs-caption);color:var(--text-3);padding:var(--sp-5) 10px var(--sp-1);
   font-weight:600}
 .task-list{overflow:auto;min-height:0;flex:1;margin-top:var(--sp-1)}
+/* The row's own chrome pays for the dot's reserved space: 24px hover actions
+   and 6px gaps instead of 28 and 8 give the title back the 16px that always
+   reserving the dot costs it, and then some. */
 .task{min-height:40px;padding:var(--sp-2) 6px var(--sp-2) 10px;border-radius:var(--r-md);
-  margin-bottom:2px;display:flex;align-items:center;gap:8px;cursor:pointer}
+  margin-bottom:2px;display:flex;align-items:center;gap:6px;cursor:pointer}
 .task:hover{background:var(--hover)}
 .task.active{background:var(--surface);box-shadow:var(--shadow-1)}
 .task.active .task-title{font-weight:500}
-.task-copy{min-width:0;flex:1;display:flex;align-items:center;gap:8px}
-.task-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:var(--fs-body);min-width:0;flex:1}
-.task-meta{display:flex;align-items:center;gap:6px;color:var(--text-3);font-size:var(--fs-caption);flex:none}
-.pin-button,.task-delete{width:28px;height:28px;border:0;border-radius:var(--r-xs);background:transparent;
+.task-copy{min-width:0;flex:1;display:flex;align-items:center;gap:6px;overflow:hidden}
+/* The title owns the row: it keeps a floor of ~6.5 characters however long the
+   age beside it is — the age is short by design and never eats into that. */
+.task-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:var(--fs-body);min-width:6.5em;flex:1 1 auto}
+.task-meta{display:flex;align-items:center;gap:6px;color:var(--text-3);font-size:var(--fs-caption);
+  flex:none;white-space:nowrap}
+.pin-button,.task-delete{width:24px;height:24px;border:0;border-radius:var(--r-xs);background:transparent;
   color:var(--text-3);opacity:0;flex:none;display:grid;place-items:center}
 .pin-button:before,.task-delete:before{width:14px;height:14px}
 .task:hover .pin-button,.task.active .pin-button,.pin-button.pinned,.task:focus-within .pin-button,
 .task:hover .task-delete,.task.active .task-delete,.task:focus-within .task-delete{opacity:1}
 .pin-button:hover{background:var(--hover);color:var(--text)}
 .task-delete:hover{background:var(--blocked-bg);color:var(--blocked)}
-.task-act{width:28px;height:28px;border:0;border-radius:var(--r-xs);background:transparent;
+.task-act{width:24px;height:24px;border:0;border-radius:var(--r-xs);background:transparent;
   color:var(--text-3);opacity:0;flex:none;display:grid;place-items:center;font-size:0;cursor:pointer}
 .task-act:before{content:"";display:block;width:14px;height:14px;background:currentColor;
   -webkit-mask:var(--ui-icon) center/contain no-repeat;mask:var(--ui-icon) center/contain no-repeat}
@@ -402,6 +408,9 @@ a:focus-visible,[tabindex],summary:focus-visible{outline:2px solid var(--accent)
   --ui-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E")}
 .archived-toggle[aria-expanded="true"] .archived-chevron{transform:rotate(90deg)}
 .task.is-archived .task-title{color:var(--text-2)}
+/* A status dot is meaningful, so a row with nothing to say does not drop it —
+   it renders an empty one, which holds the same 6px and keeps every title in
+   the list starting on the same x. */
 .state-dot{width:6px;height:6px;border-radius:50%;background:transparent;flex:none;
   transition:background var(--dur-base) ease}
 .state-dot.understand{background:var(--state-understand)}
@@ -3657,7 +3666,7 @@ const ZH={
   "These run with every task; no result has been reported for the latest round.":"它们会随每个任务运行；最近一轮尚未报告结果。",
   "No checks configured":"未配置任何检查",
   "Findings":"发现的问题","Record":"记录","Commit":"提交","Cycle":"审计循环",
-  "Open Files panel":"打开文件面板","now":"刚刚","Human decision":"人工决定",
+  "Open Files panel":"打开文件面板","now":"刚刚","Time unknown":"时间未知","Human decision":"人工决定",
   "First launch setup":"首次启动设置","Setup steps":"设置步骤","Welcome":"欢迎","Readiness":"就绪检查","Providers":"供应商","Roles":"角色",
   "Skip for now":"暂时跳过","Build with":"用","one agent.":"一个智能体来构建。","Verify with":"用","another.":"另一个来验证。",
   "One model does the work. A different model checks it, independently. Everything stays on your Mac — nothing is sent anywhere you didn't choose.":"一个模型完成工作，另一个模型独立检查它。一切都保留在你的 Mac 上——绝不会发送到任何你未选择的地方。",
@@ -4014,7 +4023,8 @@ const ZH_PATTERNS=[
   ,[/^(\d+) min ago$/,m=>m[1]+' 分钟前'],[/^(\d+) h ago$/,m=>m[1]+' 小时前'],[/^(\d+) days? ago$/,m=>m[1]+' 天前']
   ,[/^(\d+) s$/,m=>m[1]+' 秒'],[/^(\d+) min$/,m=>m[1]+' 分钟'],[/^(\d+) h$/,m=>m[1]+' 小时']
   ,[/^(.+) · round (\d+)$/,m=>zhValue(m[1])+' · 第 '+m[2]+' 轮']
-  ,[/^(\d+)([mhd])$/,m=>m[1]+({m:' 分钟前',h:' 小时前',d:' 天前'})[m[2]]]
+  ,[/^(\d+)([mhd])$/,m=>m[1]+({m:' 分钟',h:' 小时',d:' 天'})[m[2]]]
+  ,[/^(.+) · (just now|Time unknown|\d+ min ago|\d+ h ago|\d+ days? ago)$/,m=>zhValue(m[1])+' · '+zhValue(m[2])]
   ,[/^The local demo could not be prepared: (.+?)( — you can still create or import a project\.)?$/i,m=>'无法准备本地演示：'+m[1]+(m[2]?'——你仍可以创建或导入项目。':'')]
   ,[/^L(\d) (infer|read|write|command|network|high-impact|destructive)$/,m=>'L'+m[1]+' '+(({infer:'推断',read:'读取',write:'写入',command:'命令',network:'网络','high-impact':'高影响',destructive:'破坏性'})[m[2]]||m[2])]
   ,[/^⚠ flagged: (.+)$/,m=>'⚠ 已标记：'+m[1]]
@@ -4298,7 +4308,17 @@ function durationText(seconds){const s=Math.max(0,Math.floor(Number(seconds)||0)
 // The runtime writes "no heartbeat for 205214s" into an event detail; read it
 // back in words before it reaches the screen.
 function humaniseDetail(text){const m=/^no heartbeat for (\d+)s$/.exec(String(text||''));return m?'no heartbeat for '+durationText(m[1]):text;}
-function ago(t){if(!t)return '';return relAge(Date.now()/1000-Number(t));}
+// The chat list is a column: every row shows its age in the same place, so
+// none of them may be blank. An undated thread — durable evidence the console
+// can see, carrying no timestamp it can read — shows "—", which says that,
+// rather than nothing (a hole in the column) or "just now" (a lie about a
+// thread nobody has touched). agoShort is what the row has room for; agoFull
+// is the same age in words, carried on the title attribute for hover.
+function agoShort(t){if(!t)return '—';
+  const s=Math.max(0,Math.floor(Date.now()/1000-Number(t)));
+  if(s<60)return 'now';if(s<3600)return Math.floor(s/60)+'m';
+  if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';}
+function agoFull(t){return t?relAge(Date.now()/1000-Number(t)):'Time unknown';}
 const USER_STATES={DRAFT:'understand',QUEUED:'understand',GENERATING:'work',
   WAITING_FOR_PROVIDER:'work',WAITING_FOR_CAPABILITY:'work',AUDITING:'check',
   REVISING:'revise',PASSED:'done',WAITING_FOR_HUMAN:'decide',
@@ -8246,18 +8266,22 @@ function renderTasks(d){
   const archivedRows=((d.chats&&d.chats.archived)||[]).filter(matches);
   const chatRow=c=>{
     const status=String(c.status||'').toLowerCase();
-    const dot=(!status||status==='ready')?'':'<span class="state-dot '+esc(status)+'" title="'+esc(status)+'"></span>';
-    return '<div class="task'+(c.id===activeChatId?' active':'')+'" role="button" tabindex="0" data-chat-id="'+esc(c.id)+'">'
+    const dot=(!status||status==='ready')
+      ?'<span class="state-dot" aria-hidden="true"></span>'
+      :'<span class="state-dot '+esc(status)+'" title="'+esc(status)+'"></span>';
+    return '<div class="task'+(c.id===activeChatId?' active':'')+'" role="button" tabindex="0"'
+    +' title="'+esc(c.title+' · '+agoFull(c.updated))+'" data-chat-id="'+esc(c.id)+'">'
     +'<div class="task-copy">'+dot+'<span class="task-title">'+esc(c.title)+'</span>'
-    +'<span class="task-meta"><span>'+esc(ago(c.updated))+'</span></span></div>'
+    +'<span class="task-meta"><span>'+esc(agoShort(c.updated))+'</span></span></div>'
     +'<button type="button" class="pin-button'+(c.pinned?' pinned':'')+'" data-pin-chat="'+esc(c.id)+'" '
     +'aria-label="'+(c.pinned?'Unpin':'Pin')+' chat" title="'+(c.pinned?'Unpin':'Pin')+' chat">'+(c.pinned?'★':'☆')+'</button>'
     +'<button type="button" class="task-act more" data-chat-menu-open="'+esc(c.id)+'" '
     +'aria-haspopup="menu" aria-expanded="false" aria-label="More chat actions" title="More chat actions">⋯</button></div>';};
   const archivedRow=c=>
-    '<div class="task is-archived">'
-    +'<div class="task-copy"><span class="task-title">'+esc(c.title)+'</span>'
-    +'<span class="task-meta"><span>'+esc(ago(c.updated))+'</span></span></div>'
+    '<div class="task is-archived" title="'+esc(c.title+' · '+agoFull(c.updated))+'">'
+    +'<div class="task-copy"><span class="state-dot" aria-hidden="true"></span>'
+    +'<span class="task-title">'+esc(c.title)+'</span>'
+    +'<span class="task-meta"><span>'+esc(agoShort(c.updated))+'</span></span></div>'
     +'<button type="button" class="task-act unarchive" data-unarchive-chat="'+esc(c.id)+'" '
     +'aria-label="Unarchive chat" title="Unarchive chat"></button>'
     +'<button type="button" class="task-delete" data-delete-chat="'+esc(c.id)+'" '
