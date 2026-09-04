@@ -151,6 +151,36 @@ flagged to the auditor for the next round. The complete design is in
 The browser console shows this process live. It uses event-driven updates, so a
 new task, commit, finding, or verdict appears as soon as the state changes.
 
+## Does the second opinion actually help?
+
+We measure that, against an external benchmark, and publish what comes back —
+including when it is unflattering.
+
+[ExpertLongBench](https://arxiv.org/abs/2506.01241) (Ruan et al., Michigan +
+CMU) grades expert-level long-form writing against rubrics its domain experts
+wrote, so a claim about accuracy can be settled rather than asserted. A faithful
+reimplementation of its CLEAR scorer, the runner and both studies are in
+[`benchmarks/expertlongbench/`](benchmarks/expertlongbench/) — the corpus itself
+is CC BY-NC-SA 4.0 and is not redistributed here.
+
+What the first two studies found, on the materials-science task:
+
+| Question | Answer | n |
+|---|---|---|
+| Does the audited loop beat a single model? | Not measurably. +2.7 F1, p = 0.67 | 12 |
+| When the auditor speaks, is it right? | Yes — 23 of 23 blocking findings were real errors, no false positives | 23 findings |
+| How often does it speak? | Rarely — it named 2.0% of the items the benchmark scored wrong | 40 |
+| Does a revision improve the work? | It fixed 3 rubric items and broke 7 | 17 revisions |
+
+The auditor's problem is not judgement, it is coverage: precision is 100% and
+recall is 2%. Swapping in a stronger auditor model barely moved it; rules
+written from the task's own rubric multiplied it by eight, which says the
+bottleneck is the acceptance criteria a project writes, not the model that
+reads them. Both findings are being worked on in the open, and
+[`RESULTS.md`](benchmarks/expertlongbench/RESULTS.md) and
+[`RESULTS-2.md`](benchmarks/expertlongbench/RESULTS-2.md) lead with the
+uncomfortable number rather than burying it.
+
 ## What V4 includes
 
 - A native Apple Silicon macOS application: no terminal or separate browser is
