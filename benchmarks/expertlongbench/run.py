@@ -595,6 +595,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--label", default="", help="a name for this run's arm")
     parser.add_argument(
+        "--resume", action="store_true",
+        help="continue an interrupted run in --out: every sample already recorded in its "
+             "results.json is skipped and the rest are appended. Touches no arm, prompt, "
+             "model or setting -- it only decides which of the seeded samples still need "
+             "running.",
+    )
+    parser.add_argument(
         "--probe-checkability", action="store_true",
         help="one extra model call per sample: which rubric items are derivable from the "
              "committed source material alone.",
@@ -714,7 +721,7 @@ def main(argv: list[str] | None = None) -> int:
                                        encoding="utf-8")
     print(f"run {run_id}: {args.task}, n={len(rows)}, seed={args.seed} -> {out_dir}")
 
-    return _execute(task, rows, options, plan, out_dir, run_id)
+    return _execute(task, rows, options, plan, out_dir, run_id, resume=args.resume)
 
 
 def load_credentials() -> None:
@@ -770,18 +777,34 @@ def _prompt_sha(name: str, module: str = "clear") -> str:
     return sha256_text(getattr(importlib.import_module(module), name))
 
 
+def _load_completed(out_dir: Path) -> list[dict]:
+    """Instances an earlier, interrupted invocation already recorded in this run directory."""
+    index = out_dir / "results.json"
+    if not index.exists():
+        return []
+    with contextlib.suppress(json.JSONDecodeError, KeyError):
+        return json.loads(index.read_text(encoding="utf-8"))["instances"]
+    return []
+
+
 def _execute(task: Task, rows: list[dict], options: Options, plan: dict, out_dir: Path,
-             run_id: str) -> int:
+             run_id: str, resume: bool = False) -> int:
     from crossaudit.config import load
 
     # A host project for arm A and for the scoring calls: resilience and metering need a
     # Config, and this keeps the benchmark's own spend in one ledger.
     host = out_dir / "_host"
-    # A stale host from an interrupted run would be reused with its old git state and its
-    # old usage ledger, which would misattribute this run's cost. Start clean.
-    shutil.rmtree(host, ignore_errors=True)
-    host.mkdir(parents=True)
-    host_project = bootstrap_project(host, task, rows[0], options)
+    # A stale host from an *unrelated* run would be reused with its old git state and its
+    # old usage ledger, which would misattribute this run's cost. Start clean -- except on
+    # a resume, where that ledger is the record of what the first half of this same run
+    # already spent, and deleting it would erase half the study's cost.
+    if not resume:
+        shutil.rmtree(host, ignore_errors=True)
+    host.mkdir(parents=True, exist_ok=True)
+    if (host / "project" / "crossaudit.yml").exists():
+        host_project = host / "project"
+    else:
+        host_project = bootstrap_project(host, task, rows[0], options)
     host_cfg = load(host_project / "crossaudit.yml")
 
     scorer_client = CrossAuditClient(cfg=host_cfg, phase="clear-scoring", run_id=run_id)
@@ -796,9 +819,26 @@ def _execute(task: Task, rows: list[dict], options: Options, plan: dict, out_dir
         model=options.adjudicator,
     )
 
-    records = []
+    records: list[dict] = []
+    already: set[str] = set()
+    if resume:
+        records = _load_completed(out_dir)
+        already = {record["sample_id"] for record in records}
+        # The run id changes across invocations, so the cost of the resumed part lands
+        # under a new run_id in the ledger. Record every run id this directory used, or
+        # a later cost query would silently omit the resumed half.
+        plan.setdefault("run_ids", list(plan.get("run_ids", [plan["run_id"]])))
+        plan["run_ids"].append(run_id)
+        (out_dir / "plan.json").write_text(
+            json.dumps(plan, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        print(f"resuming: {len(already)} of {len(rows)} instances already recorded",
+              flush=True)
+
     for index, row in enumerate(rows, start=1):
         sample_id = row["id"]
+        if sample_id in already:
+            continue
         print(f"[{index}/{len(rows)}] {sample_id}", flush=True)
         reference = {k: str(v) for k, v in row["human_reference_checklist"].items()}
         record: dict = {"sample_id": sample_id, "arms": {}}
