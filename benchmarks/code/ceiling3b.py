@@ -35,7 +35,7 @@ CEILING3B = RECORDS / "ceiling3b"
 CACHES_BEFORE = (RECORDS / "explore", RECORDS / "ceiling", RECORDS / "ceiling3")
 
 MODEL = "anthropic:claude-sonnet-4-6"
-ROUTES = {"self-strong-R": MODEL, "self-strong-B": MODEL}
+ROUTES = {"self-strong-R": MODEL, "self-strong-B": MODEL, "self-strong-S": MODEL}   # S: Amendment 1, texts archived
 explore.ROUTES.update(ROUTES)
 explore.ROUTES.setdefault("self-strong", MODEL)
 
@@ -48,7 +48,8 @@ is; grade it BLOCKER. A finding that names no such input is ADVISORY.
 """
 
 #: (route, draw): the preregistered ladder, set by budget alone (§4).
-LADDER = [("self-strong-R", d) for d in range(1, 5)] + [("self-strong-B", d) for d in range(1, 5)]
+LADDER = ([("self-strong-R", d) for d in range(1, 5)] + [("self-strong-B", d) for d in range(1, 5)]
+          + [("self-strong-S", 1)])   # Amendment 1: one S reading with its texts archived, for H19d only
 
 
 def constitution_for(route: str, base: str) -> str:

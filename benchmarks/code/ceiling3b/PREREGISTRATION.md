@@ -87,3 +87,14 @@ archive only** (`~/Documents/Crossaudit/study-data/wt-ceiling3b-runs/findings-*.
 never the repository; the adjudication sheet is blind (id, finding text, the specification;
 no stratum, no arm); the key is committed. The hidden suite reaches no prompt, check or
 model; `src/` is not touched; the same-vendor bypass is the harness's as before.
+
+## Amendment 1 — 2026-09-10, during arm R draw 1; before any arm-S text reading
+
+§2 H19d adjudicates arm S's draw-1 finding texts, but study 18's harness popped finding
+texts before caching (`explore.run_detector` keeps hashes and counts), so no S text exists.
+**Added to the end of the ladder: one reading of arm S with texts archived** — route
+`self-strong-S`, the shipped constitution unchanged, draw 1 over the 260 instances
+(≈ $2.3, inside the $30 cap). It enters H19d only; the BLOCKER and any-finding contrasts
+of H19a–c keep using study 18's `self-strong` draws 1–4 as S, so a fifth S reading does
+not enter them. The adjudication sheet is built from the draw-1 findings of R, B and this
+S-text reading, blind as §5 says.
