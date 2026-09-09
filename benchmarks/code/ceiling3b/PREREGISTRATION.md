@@ -98,3 +98,15 @@ texts before caching (`explore.run_detector` keeps hashes and counts), so no S t
 of H19a–c keep using study 18's `self-strong` draws 1–4 as S, so a fifth S reading does
 not enter them. The adjudication sheet is built from the draw-1 findings of R, B and this
 S-text reading, blind as §5 says.
+
+## Amendment 2 — 2026-09-10, during arm R draw 1 (75 of 260 readings landed); the cap
+
+§4 estimated $2.3 per draw from study 18's Sonnet draws. Under the referent rule the
+replies are longer: the ledger shows $1.39 for the first 75 readings, ≈ $4.8 per draw, so
+the nine-draw ladder (R 1–4, B 1–4, S-text 1) would cost ≈ $43 and the $30 cap would stop
+it inside arm B, leaving H19a's B − S at unequal K. **The cap is raised to $55** so the
+ladder completes; the ladder order is unchanged. This is a cost-driven change made after
+the author had seen the interim cache of R draw 1 (P instances run first: 17 of the first
+95 blocked, 92 with a finding); it is disclosed here so the reader can weigh it, and it
+changes no arm, rule, outcome or kill. The running process, started with the old cap, is
+stopped and resumed with the new one; the loop is resumable and re-buys nothing.
