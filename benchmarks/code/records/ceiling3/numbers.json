@@ -9,6 +9,24 @@
             0.105,
             0.10666666666666667
           ],
+          "curve_cluster_ci95": [
+            [
+              0.052980132450331126,
+              0.14666666666666667
+            ],
+            [
+              0.05518763796909493,
+              0.15533071336642765
+            ],
+            [
+              0.057947019867549666,
+              0.1593959731543624
+            ],
+            [
+              0.05921052631578947,
+              0.16129032258064516
+            ]
+          ],
           "single_draw_mean": 0.09666666666666666,
           "union_at_kmax": {
             "cluster_ci95": [
@@ -32,6 +50,24 @@
             0.31969696969696976,
             0.325,
             0.32727272727272727
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.19144144144144143,
+              0.4218785837155963
+            ],
+            [
+              0.20215235304111454,
+              0.4409090909090909
+            ],
+            [
+              0.20535714285714285,
+              0.44819819819819817
+            ],
+            [
+              0.2072072072072072,
+              0.45045045045045046
+            ]
           ],
           "single_draw_mean": 0.30454545454545456,
           "union_at_kmax": {
@@ -64,6 +100,40 @@
             0.18,
             0.19333333333333333
           ],
+          "curve_cluster_ci95": [
+            [
+              0.029965753424657533,
+              0.07802026781515838
+            ],
+            [
+              0.051820148589237024,
+              0.11785894055608817
+            ],
+            [
+              0.0701953112256549,
+              0.15101752525406656
+            ],
+            [
+              0.08542069208635837,
+              0.17941729323308267
+            ],
+            [
+              0.09833329417293232,
+              0.20378151260504204
+            ],
+            [
+              0.10948767156986426,
+              0.22514478764478763
+            ],
+            [
+              0.11916666666666667,
+              0.24420529801324503
+            ],
+            [
+              0.12751677852348994,
+              0.2631578947368421
+            ]
+          ],
           "single_draw_mean": 0.051666666666666666,
           "union_at_kmax": {
             "cluster_ci95": [
@@ -91,6 +161,40 @@
             0.29805194805194807,
             0.32272727272727275,
             0.34545454545454546
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.05915178571428571,
+              0.1822429906542056
+            ],
+            [
+              0.09812971556090822,
+              0.24066924066924064
+            ],
+            [
+              0.1295059704230265,
+              0.28766545396567716
+            ],
+            [
+              0.1564935064935065,
+              0.3283194865784151
+            ],
+            [
+              0.18080005228442728,
+              0.3641233766233767
+            ],
+            [
+              0.20205395925261999,
+              0.3968307593307593
+            ],
+            [
+              0.22045454545454546,
+              0.4272801614273576
+            ],
+            [
+              0.23636363636363636,
+              0.45454545454545453
+            ]
           ],
           "single_draw_mean": 0.11477272727272728,
           "union_at_kmax": {
@@ -123,6 +227,40 @@
             0.27166666666666667,
             0.2733333333333333
           ],
+          "curve_cluster_ci95": [
+            [
+              0.18174150219298246,
+              0.3231292517006803
+            ],
+            [
+              0.1888396915057414,
+              0.3319065196548418
+            ],
+            [
+              0.19193548387096773,
+              0.335616519355633
+            ],
+            [
+              0.19394512771996214,
+              0.3385714285714286
+            ],
+            [
+              0.19607843137254902,
+              0.3414014403668567
+            ],
+            [
+              0.19791425092764378,
+              0.34375524328859053
+            ],
+            [
+              0.19966442953020133,
+              0.34628681990814336
+            ],
+            [
+              0.2012987012987013,
+              0.34868421052631576
+            ]
+          ],
           "single_draw_mean": 0.25166666666666665,
           "union_at_kmax": {
             "cluster_ci95": [
@@ -151,6 +289,40 @@
             0.20681818181818182,
             0.20909090909090908
           ],
+          "curve_cluster_ci95": [
+            [
+              0.09545454545454546,
+              0.28907129786036023
+            ],
+            [
+              0.1,
+              0.29980666897237995
+            ],
+            [
+              0.10185185185185185,
+              0.30357142857142855
+            ],
+            [
+              0.1036036036036036,
+              0.3063063063063063
+            ],
+            [
+              0.10472972972972973,
+              0.30855855855855857
+            ],
+            [
+              0.10681818181818181,
+              0.31136363636363634
+            ],
+            [
+              0.10795454545454546,
+              0.3141899640466154
+            ],
+            [
+              0.10909090909090909,
+              0.3177570093457944
+            ]
+          ],
           "single_draw_mean": 0.1875,
           "union_at_kmax": {
             "cluster_ci95": [
@@ -178,6 +350,24 @@
             0.16166666666666665,
             0.18
           ],
+          "curve_cluster_ci95": [
+            [
+              0.06,
+              0.136986301369863
+            ],
+            [
+              0.08783783783783786,
+              0.18999999999999997
+            ],
+            [
+              0.1054421768707483,
+              0.22297297297297297
+            ],
+            [
+              0.11688311688311688,
+              0.2483221476510067
+            ]
+          ],
           "single_draw_mean": 0.09666666666666666,
           "union_at_kmax": {
             "cluster_ci95": [
@@ -201,6 +391,24 @@
             0.15606060606060607,
             0.18636363636363637,
             0.20909090909090908
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.05357142857142857,
+              0.17272727272727273
+            ],
+            [
+              0.08108108108108109,
+              0.23853211009174313
+            ],
+            [
+              0.10044642857142858,
+              0.2798165137614679
+            ],
+            [
+              0.11607142857142858,
+              0.3119266055045872
+            ]
           ],
           "single_draw_mean": 0.10909090909090909,
           "union_at_kmax": {
@@ -233,6 +441,40 @@
             0.33416666666666667,
             0.34
           ],
+          "curve_cluster_ci95": [
+            [
+              0.12419354838709677,
+              0.22381756756756757
+            ],
+            [
+              0.17441959699433499,
+              0.29170865373954
+            ],
+            [
+              0.2051768941572214,
+              0.33381069015444026
+            ],
+            [
+              0.22686821192052978,
+              0.36458300155206147
+            ],
+            [
+              0.24159557404042697,
+              0.3856189336658087
+            ],
+            [
+              0.2523957492304587,
+              0.40010213296637137
+            ],
+            [
+              0.25986680856553146,
+              0.41036462037695587
+            ],
+            [
+              0.26490066225165565,
+              0.41721854304635764
+            ]
+          ],
           "single_draw_mean": 0.1725,
           "union_at_kmax": {
             "cluster_ci95": [
@@ -261,6 +503,40 @@
             0.5784090909090909,
             0.5909090909090909
           ],
+          "curve_cluster_ci95": [
+            [
+              0.25,
+              0.43068181818181817
+            ],
+            [
+              0.33474025974025984,
+              0.5442352616377847
+            ],
+            [
+              0.3821396683673469,
+              0.6012450851900393
+            ],
+            [
+              0.41058180658627086,
+              0.634567174920427
+            ],
+            [
+              0.43194905284749036,
+              0.6592535758160758
+            ],
+            [
+              0.4484117965367966,
+              0.6776136199617506
+            ],
+            [
+              0.46283783783783783,
+              0.6932972034534534
+            ],
+            [
+              0.4732142857142857,
+              0.7064220183486238
+            ]
+          ],
           "single_draw_mean": 0.3386363636363636,
           "union_at_kmax": {
             "cluster_ci95": [
@@ -280,6 +556,14 @@
         },
         "k_max": 8
       }
+    },
+    "gap_blocked_by_none_minus_mentioned_by_none_P": {
+      "cluster_ci95_points": [
+        18.01801801801802,
+        39.09090909090909
+      ],
+      "difference_points": 28.181818181818183,
+      "note": "paired per instance: blocked by no family (1/0) minus mentioned by no family (1/0)"
     },
     "never_any_finding_by_any_family_P": {
       "cluster_ci95": [
@@ -306,15 +590,24 @@
       -4.504504504504505
     ],
     "difference_points": -13.636363636363637,
+    "exact_unconditional_ci95_points": [
+      -24.040219187736508,
+      -2.272731336680325
+    ],
     "k": 8,
     "mcnemar_exact_p": 0.000728607177734375,
     "n": 110,
+    "one_signed_discordance": false,
     "signflip": {
       "method": "exact enumeration",
       "n_clusters": 56,
       "n_nonzero_clusters": 11,
       "p": 0.0146484375
-    }
+    },
+    "tango_ci95_points": [
+      -21.887668040236118,
+      -6.646840245822061
+    ]
   },
   "H18b_C_false_positives": {
     "a_only": 3,
@@ -326,15 +619,24 @@
       -6.122448979591836
     ],
     "difference_points": -12.666666666666666,
+    "exact_unconditional_ci95_points": [
+      -20.99999797344208,
+      -3.6666721105575575
+    ],
     "k": 8,
     "mcnemar_exact_p": 0.00015652179718017578,
     "n": 150,
+    "one_signed_discordance": false,
     "signflip": {
       "method": "sampled, 200000 draws, seed 20260915",
       "n_clusters": 143,
       "n_nonzero_clusters": 24,
       "p": 0.000244998775006125
-    }
+    },
+    "tango_ci95_points": [
+      -19.549064325194067,
+      -6.740835872517717
+    ]
   },
   "H18c_frontier_minus_astra_C_kmax": {
     "a_only": 3,
@@ -346,15 +648,24 @@
       -2.6490066225165565
     ],
     "difference_points": -8.0,
+    "exact_unconditional_ci95_points": [
+      -15.666664838790895,
+      0.3333315849304198
+    ],
     "k": 4,
     "mcnemar_exact_p": 0.007537841796875,
     "n": 150,
+    "one_signed_discordance": false,
     "signflip": {
       "method": "exact enumeration",
       "n_clusters": 143,
       "n_nonzero_clusters": 17,
       "p": 0.010894775390625
-    }
+    },
+    "tango_ci95_points": [
+      -14.172774458907023,
+      -2.7602971337849356
+    ]
   },
   "H18c_frontier_minus_astra_P_draw1_only_EXPLORATORY": {
     "a_only": 0,
@@ -366,15 +677,24 @@
       -16.359950859950914
     ],
     "difference_points": -27.272727272727273,
+    "exact_unconditional_ci95_points": [
+      -38.05546327070757,
+      -14.545459097081965
+    ],
     "k": 1,
     "mcnemar_exact_p": 1.862645149230957e-09,
     "n": 110,
+    "one_signed_discordance": true,
     "signflip": {
       "method": "exact enumeration",
       "n_clusters": 56,
       "n_nonzero_clusters": 16,
       "p": 3.0517578125e-05
-    }
+    },
+    "tango_ci95_points": [
+      -36.25658486856204,
+      -19.822684917718153
+    ]
   },
   "H18c_frontier_minus_astra_P_k1_mean_over_draws": {
     "a_mean_single": 0.004545454545454545,
@@ -403,15 +723,24 @@
       -20.0
     ],
     "difference_points": -31.818181818181817,
+    "exact_unconditional_ci95_points": [
+      -42.72727045145902,
+      -18.636368350549176
+    ],
     "k": 4,
     "mcnemar_exact_p": 5.820766091346741e-11,
     "n": 110,
+    "one_signed_discordance": true,
     "signflip": {
       "method": "exact enumeration",
       "n_clusters": 56,
       "n_nonzero_clusters": 19,
       "p": 3.814697265625e-06
-    }
+    },
+    "tango_ci95_points": [
+      -41.00965828646493,
+      -23.85375754255922
+    ]
   },
   "bootstrap": {
     "reps": 10000,
@@ -471,6 +800,7 @@
   "families": {
     "astra": {
       "C": {
+        "asymptote_is_extrapolation": false,
         "curve": [
           0.09666666666666666,
           0.10222222222222223,
@@ -511,8 +841,13 @@
           "tau": 0.40084926120567665
         },
         "fit_diagnostic_post_hoc": "tau <= K_max",
+        "fit_max_resid": 0.002059057197366987,
         "flattened_by_ceiling1_bar": true,
         "flattening_gain_last_step": 0.0016666666666666774,
+        "flattening_gain_last_step_cluster_ci95": [
+          0.0,
+          0.005102040816326536
+        ],
         "k_max": 4,
         "single_draw_mean": 0.09666666666666666,
         "union_at_kmax": {
@@ -529,9 +864,15 @@
             0.06673036965207342,
             0.16624622258414684
           ]
+        },
+        "zibb": {
+          "a": 0.10309844124729674,
+          "b": 0.06618949431107556,
+          "pi": 0.1588538749066046
         }
       },
       "P": {
+        "asymptote_is_extrapolation": false,
         "curve": [
           0.30227272727272725,
           0.31969696969696976,
@@ -572,8 +913,13 @@
           "tau": 0.3772240317668224
         },
         "fit_diagnostic_post_hoc": "tau <= K_max",
+        "fit_max_resid": 0.0034067870286805246,
         "flattened_by_ceiling1_bar": true,
         "flattening_gain_last_step": 0.0022727272727272596,
+        "flattening_gain_last_step_cluster_ci95": [
+          0.0,
+          0.006880733944954143
+        ],
         "k_max": 4,
         "single_draw_mean": 0.30227272727272725,
         "union_at_kmax": {
@@ -590,13 +936,24 @@
             0.24671132610522006,
             0.4194911242705093
           ]
+        },
+        "zibb": {
+          "a": 1.6831209606733928,
+          "b": 0.16360467048369315,
+          "pi": 0.331682286079194
         }
       },
+      "exchange_rate_cluster_ci95": [
+        0.3381212487520891,
+        8.710602804639509,
+        250
+      ],
       "exchange_rate_recall_per_fp": 2.5,
       "k_max": 4
     },
     "cross": {
       "C": {
+        "asymptote_is_extrapolation": true,
         "curve": [
           0.045,
           0.0707142857142857,
@@ -661,8 +1018,13 @@
           "tau": 4.339612336037277
         },
         "fit_diagnostic_post_hoc": "tau <= K_max",
+        "fit_max_resid": 0.006744382040602653,
         "flattened_by_ceiling1_bar": false,
         "flattening_gain_last_step": 0.010833333333333334,
+        "flattening_gain_last_step_cluster_ci95": [
+          0.005755638329893359,
+          0.016666666666666663
+        ],
         "k_max": 8,
         "single_draw_mean": 0.045,
         "union_at_kmax": {
@@ -679,9 +1041,15 @@
             0.10994008412845499,
             0.22703968204183714
           ]
+        },
+        "zibb": {
+          "a": 0.0838214272164603,
+          "b": 1.606957165073118,
+          "pi": 0.9999999999972446
         }
       },
       "P": {
+        "asymptote_is_extrapolation": true,
         "curve": [
           0.10681818181818181,
           0.14967532467532468,
@@ -746,8 +1114,13 @@
           "tau": 3.2658403285217634
         },
         "fit_diagnostic_post_hoc": "tau <= K_max",
+        "fit_max_resid": 0.023733145400592362,
         "flattened_by_ceiling1_bar": false,
         "flattening_gain_last_step": 0.01931818181818179,
+        "flattening_gain_last_step_cluster_ci95": [
+          0.011261261261261285,
+          0.028153153153153143
+        ],
         "k_max": 8,
         "single_draw_mean": 0.10681818181818181,
         "union_at_kmax": {
@@ -764,13 +1137,24 @@
             0.22229896444649316,
             0.39119860967277237
           ]
+        },
+        "zibb": {
+          "a": 0.1207745877171915,
+          "b": 0.8701208748206488,
+          "pi": 0.9999999999989448
         }
       },
+      "exchange_rate_cluster_ci95": [
+        0.97351943275988,
+        3.0237571666469423,
+        0
+      ],
       "exchange_rate_recall_per_fp": 1.6798418972332014,
       "k_max": 8
     },
     "self": {
       "C": {
+        "asymptote_is_extrapolation": false,
         "curve": [
           0.21916666666666668,
           0.22595238095238096,
@@ -835,8 +1219,13 @@
           "tau": 0.3718744199081986
         },
         "fit_diagnostic_post_hoc": "tau <= K_max",
+        "fit_max_resid": 0.0070150436176375786,
         "flattened_by_ceiling1_bar": true,
         "flattening_gain_last_step": 0.0016666666666666496,
+        "flattening_gain_last_step_cluster_ci95": [
+          0.0,
+          0.004194630872483229
+        ],
         "k_max": 8,
         "single_draw_mean": 0.21916666666666668,
         "union_at_kmax": {
@@ -853,9 +1242,15 @@
             0.17869313331595332,
             0.31429139375544646
           ]
+        },
+        "zibb": {
+          "a": 0.01037570035623573,
+          "b": 0.03684871755138915,
+          "pi": 0.9999999999448763
         }
       },
       "P": {
+        "asymptote_is_extrapolation": false,
         "curve": [
           0.15454545454545454,
           0.15876623376623378,
@@ -920,8 +1315,13 @@
           "tau": 0.38867730328325045
         },
         "fit_diagnostic_post_hoc": "tau <= K_max",
+        "fit_max_resid": 0.006568339298184678,
         "flattened_by_ceiling1_bar": true,
         "flattening_gain_last_step": 0.0022727272727272874,
+        "flattening_gain_last_step_cluster_ci95": [
+          0.0,
+          0.005681818181818177
+        ],
         "k_max": 8,
         "single_draw_mean": 0.15454545454545454,
         "union_at_kmax": {
@@ -938,13 +1338,24 @@
             0.11345918160580955,
             0.2540823033166252
           ]
+        },
+        "zibb": {
+          "a": 0.006594150104707378,
+          "b": 0.03497140372245276,
+          "pi": 0.9999999999921649
         }
       },
+      "exchange_rate_cluster_ci95": [
+        0.0,
+        5.114052007993153,
+        6
+      ],
       "exchange_rate_recall_per_fp": 0.8727272727272738,
       "k_max": 8
     },
     "self-frontier": {
       "C": {
+        "asymptote_is_extrapolation": true,
         "curve": [
           0.008333333333333333,
           0.015555555555555557,
@@ -985,8 +1396,13 @@
           "tau": 6.054426645501708
         },
         "fit_diagnostic_post_hoc": "tau > K_max: the asymptote extrapolates past the readings taken",
+        "fit_max_resid": 7.861330124829188e-05,
         "flattened_by_ceiling1_bar": true,
         "flattening_gain_last_step": 0.005000000000000001,
+        "flattening_gain_last_step_cluster_ci95": [
+          0.0,
+          0.01158940397350993
+        ],
         "k_max": 4,
         "single_draw_mean": 0.008333333333333333,
         "union_at_kmax": {
@@ -1003,9 +1419,15 @@
             0.010417940822967993,
             0.06655389051214453
           ]
+        },
+        "zibb": {
+          "a": 165952.8705988116,
+          "b": 961132.3810074407,
+          "pi": 0.05659110994127027
         }
       },
       "P": {
+        "asymptote_is_extrapolation": false,
         "curve": [
           0.004545454545454545,
           0.007575757575757576,
@@ -1046,8 +1468,13 @@
           "tau": 1.5446476223222363
         },
         "fit_diagnostic_post_hoc": "tau <= K_max",
+        "fit_max_resid": 0.0003688342423338372,
         "flattened_by_ceiling1_bar": true,
         "flattening_gain_last_step": 0.0,
+        "flattening_gain_last_step_cluster_ci95": [
+          0.0,
+          0.0
+        ],
         "k_max": 4,
         "single_draw_mean": 0.004545454545454545,
         "union_at_kmax": {
@@ -1064,13 +1491,24 @@
             0.0016065753043216016,
             0.0497056520793305
           ]
+        },
+        "zibb": {
+          "a": 834016.2875712818,
+          "b": 993576.3278761035,
+          "pi": 0.009961603618279514
         }
       },
+      "exchange_rate_cluster_ci95": [
+        0.0,
+        1.4509262435677512,
+        26
+      ],
       "exchange_rate_recall_per_fp": 0.24793388429752064,
       "k_max": 4
     },
     "self-strong": {
       "C": {
+        "asymptote_is_extrapolation": false,
         "curve": [
           0.016666666666666666,
           0.019761904761904762,
@@ -1135,8 +1573,13 @@
           "tau": 2.0219265303157146
         },
         "fit_diagnostic_post_hoc": "tau <= K_max",
+        "fit_max_resid": 0.004306876779784278,
         "flattened_by_ceiling1_bar": true,
         "flattening_gain_last_step": 0.0016666666666666635,
+        "flattening_gain_last_step_cluster_ci95": [
+          0.0,
+          0.004222972972972978
+        ],
         "k_max": 8,
         "single_draw_mean": 0.016666666666666666,
         "union_at_kmax": {
@@ -1153,9 +1596,15 @@
             0.01432043189809255,
             0.07565179617877894
           ]
+        },
+        "zibb": {
+          "a": 0.0056662395871329594,
+          "b": 0.26669359546299326,
+          "pi": 0.9999999999882405
         }
       },
       "P": {
+        "asymptote_is_extrapolation": true,
         "curve": [
           0.005681818181818182,
           0.011038961038961041,
@@ -1220,8 +1669,13 @@
           "tau": 14.25243229234373
         },
         "fit_diagnostic_post_hoc": "tau > K_max: the asymptote extrapolates past the readings taken",
+        "fit_max_resid": 8.121417920690238e-05,
         "flattened_by_ceiling1_bar": true,
         "flattening_gain_last_step": 0.0034090909090909102,
+        "flattening_gain_last_step_cluster_ci95": [
+          0.0,
+          0.007882882882882879
+        ],
         "k_max": 8,
         "single_draw_mean": 0.005681818181818182,
         "union_at_kmax": {
@@ -1238,8 +1692,18 @@
             0.014230310826517947,
             0.08978679281359792
           ]
+        },
+        "zibb": {
+          "a": 68325.2885093158,
+          "b": 984107.5992020572,
+          "pi": 0.08751944311931863
         }
       },
+      "exchange_rate_cluster_ci95": [
+        0.27850935828877005,
+        8.09240438460622,
+        94
+      ],
       "exchange_rate_recall_per_fp": 1.8409090909090906,
       "k_max": 8
     }
@@ -1373,15 +1837,24 @@
       -15.59633027522936
     ],
     "difference_points": -26.363636363636363,
+    "exact_unconditional_ci95_points": [
+      -37.727270343086936,
+      -13.18181996995752
+    ],
     "k": 8,
     "mcnemar_exact_p": 4.176981747150421e-07,
     "n": 110,
+    "one_signed_discordance": false,
     "signflip": {
       "method": "sampled, 200000 draws, seed 20260915",
       "n_clusters": 56,
       "n_nonzero_clusters": 24,
       "p": 1.9999900000499998e-05
-    }
+    },
+    "tango_ci95_points": [
+      -36.02017377567518,
+      -17.19218969381361
+    ]
   },
   "primary_at_k": 8,
   "reply_format_secondary": {
@@ -1392,6 +1865,8 @@
       "ledger_usd": 4.5562,
       "model_blockers_any": 3,
       "model_findings_any": 27,
+      "repair_prompt_rows": 5,
+      "repair_prompt_rows_still_invalid": 2,
       "replies_over_300_output_tokens": 56,
       "rows": 260
     },
@@ -1402,6 +1877,8 @@
       "ledger_usd": 4.5747,
       "model_blockers_any": 1,
       "model_findings_any": 23,
+      "repair_prompt_rows": 5,
+      "repair_prompt_rows_still_invalid": 1,
       "replies_over_300_output_tokens": 58,
       "rows": 260
     },
@@ -1412,6 +1889,8 @@
       "ledger_usd": 4.4939,
       "model_blockers_any": 2,
       "model_findings_any": 30,
+      "repair_prompt_rows": 3,
+      "repair_prompt_rows_still_invalid": 1,
       "replies_over_300_output_tokens": 51,
       "rows": 260
     },
@@ -1422,6 +1901,8 @@
       "ledger_usd": 4.5463,
       "model_blockers_any": 1,
       "model_findings_any": 26,
+      "repair_prompt_rows": 4,
+      "repair_prompt_rows_still_invalid": 1,
       "replies_over_300_output_tokens": 59,
       "rows": 260
     },
@@ -1432,6 +1913,8 @@
       "ledger_usd": 2.2629,
       "model_blockers_any": 3,
       "model_findings_any": 71,
+      "repair_prompt_rows": 3,
+      "repair_prompt_rows_still_invalid": 0,
       "replies_over_300_output_tokens": 74,
       "rows": 260
     },
@@ -1442,6 +1925,8 @@
       "ledger_usd": 2.2719,
       "model_blockers_any": 3,
       "model_findings_any": 61,
+      "repair_prompt_rows": 5,
+      "repair_prompt_rows_still_invalid": 0,
       "replies_over_300_output_tokens": 76,
       "rows": 260
     },
@@ -1452,6 +1937,8 @@
       "ledger_usd": 2.2416,
       "model_blockers_any": 5,
       "model_findings_any": 60,
+      "repair_prompt_rows": 4,
+      "repair_prompt_rows_still_invalid": 0,
       "replies_over_300_output_tokens": 71,
       "rows": 260
     },
@@ -1462,6 +1949,8 @@
       "ledger_usd": 2.1809,
       "model_blockers_any": 2,
       "model_findings_any": 60,
+      "repair_prompt_rows": 2,
+      "repair_prompt_rows_still_invalid": 0,
       "replies_over_300_output_tokens": 70,
       "rows": 260
     },
@@ -1472,6 +1961,8 @@
       "ledger_usd": 2.2393,
       "model_blockers_any": 3,
       "model_findings_any": 67,
+      "repair_prompt_rows": 4,
+      "repair_prompt_rows_still_invalid": 0,
       "replies_over_300_output_tokens": 74,
       "rows": 260
     },
@@ -1482,6 +1973,8 @@
       "ledger_usd": 2.2818,
       "model_blockers_any": 4,
       "model_findings_any": 73,
+      "repair_prompt_rows": 5,
+      "repair_prompt_rows_still_invalid": 0,
       "replies_over_300_output_tokens": 77,
       "rows": 260
     },
@@ -1492,6 +1985,8 @@
       "ledger_usd": 2.2291,
       "model_blockers_any": 2,
       "model_findings_any": 54,
+      "repair_prompt_rows": 4,
+      "repair_prompt_rows_still_invalid": 0,
       "replies_over_300_output_tokens": 73,
       "rows": 260
     },
@@ -1502,6 +1997,8 @@
       "ledger_usd": 2.1693,
       "model_blockers_any": 3,
       "model_findings_any": 59,
+      "repair_prompt_rows": 2,
+      "repair_prompt_rows_still_invalid": 0,
       "replies_over_300_output_tokens": 66,
       "rows": 260
     }

@@ -175,3 +175,30 @@ that were prose rather than the JSON the validator expects, from the harness's
    Amendment 1). "As the existing families did" was wrong for `astra`.
 6. **Ceiling 3b is drafted, not preregistered**; its preregistration is committed when its
    branch opens, after this study is quotable.
+
+## Amendment 4 — 2026-09-10, after the third review; corrections of record
+
+1. Amendment 3 item 6 said ceiling 3b would be preregistered "after this study is
+   quotable". It was preregistered (ed75d27) and run before this study's third review,
+   because both quotas had run out and the alternative was an idle line. Nothing in
+   ceiling 3b changes this study; the order is disclosed here.
+2. The repair-prompt disclosure said all 46 repaired readings succeeded; 41 did and 5
+   Opus readings stayed malformed (verdict ESCALATE, not flagged). Corrected.
+3. "Every rate carries Wilson and cluster intervals" was false for subset-averaged
+   curve points, single-draw means and mixed rates, which are means and carry the cluster
+   interval only; the tables now say which interval each kind of rate carries, and the
+   single-draw and `cross`-alone cells carry theirs.
+
+## Amendment 5 — 2026-09-10, after the fourth review; the inherited standard applied in full
+
+Ceiling 1 §1.2 and Amendments 3–5 are binding here and were only partly applied. Now
+delivered, all from the same records and seeds: the ZIBB sensitivity fit and the maximum
+absolute fit residual per family (Table 3); the Tango score interval and the exact
+unconditional interval beside every paired-binary contrast, with ceiling 1's rule for
+one-signed discordance applied to H18c's K = 4 contrast (0 vs 35); a problem-cluster
+interval on every derived rate the prose repeats — the last-step gains, the exchange
+ratios (2,000 resamples; resamples with no FP gain discarded and counted), the fitted
+asymptotes, and the paired difference between "blocked by none" and "mentioned by none";
+`cross`'s asymptote labelled an extrapolation beside its estimate, since it fails the
+flattening bar. The title no longer carries a rate. The long-reply counts are described as
+what they are (ledger calls per draw, repair calls included). Nothing measured changed.
