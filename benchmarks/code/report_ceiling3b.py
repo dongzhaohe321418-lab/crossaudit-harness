@@ -61,7 +61,47 @@ def block(draws: dict, ids: list[str], instances: dict) -> dict:
 
 
 def contrast(a: dict, b: dict, ids: list[str], instances: dict) -> dict:
-    out = r3.paired_union_difference(a, b, len(a), ids, instances)
+    return r3.paired_union_difference(a, b, len(a), ids, instances)
+
+
+def secondaries(run_dir: Path, arms: dict, P: list[str], instances: dict) -> dict:
+    """Reply format and cost from the archive's ledgers; BLOCKER share among findings; the
+    residual across ALL measured families when R or B is added; exchange rates."""
+    out: dict = {"per_draw": {}}
+    for arm, route in (("R", "self-strong-R"), ("B", "self-strong-B"), ("S-text", "self-strong-S")):
+        for d in range(1, 5 if arm != "S-text" else 2):
+            cache = C3B / "cache" / f"holistic__{route}__d{d}.jsonl"
+            if not cache.exists():
+                continue
+            rows = [json.loads(l) for l in cache.read_text().splitlines() if l.strip()]
+            ledger = run_dir / "projects" / f"project-holistic__{route}__d{d}" / ".crossaudit" / "usage.jsonl"
+            ev = [json.loads(l) for l in ledger.read_text().splitlines() if l.strip()] if ledger.exists() else []
+            findings = sum(int(r.get("model_findings", 0) or 0) for r in rows)
+            blockers = sum(int(r.get("model_blockers", 0) or 0) for r in rows)
+            out["per_draw"][f"{arm}-d{d}"] = {
+                "rows": len(rows), "invalid_reason_nonempty": sum(1 for r in rows if r.get("invalid_reason")),
+                "ledger_calls": len(ev), "ledger_usd": round(sum(float(e.get("api_value_usd") or 0) for e in ev), 4),
+                "extra_calls": len(ev) - len(rows),
+                "replies_over_300_output_tokens": sum(1 for e in ev if int(e.get("output", 0) or 0) > 300),
+                "findings_total": findings, "blockers_total": blockers,
+                "blocker_share_of_findings": (blockers / findings) if findings else None}
+    out["ledger_usd_total"] = round(sum(v["ledger_usd"] for v in out["per_draw"].values()), 4)
+    out["ledger_calls_total"] = sum(v["ledger_calls"] for v in out["per_draw"].values())
+    # the residual across all measured families (ceiling 1's five, at their K_max) plus R, plus B
+    c3 = json.loads((RECORDS / "ceiling3" / "numbers.json").read_text(encoding="utf-8"))
+    base_never = set(c3["never_flagged_by_any_family"]["instance_ids"])
+    rcls = json.loads((RECORDS / "ceiling" / "residual_classification.json").read_text(encoding="utf-8"))["classification"]
+    res = {"ceiling3_residual_n": len(base_never)}
+    for arm in ("R", "B"):
+        blk = arms[arm]["blocker"]
+        still = sorted(i for i in base_never if not any(blk[d].get(i) for d in blk))
+        left = sorted(i for i in base_never if i not in still)
+        cats: dict[str, int] = {}
+        for i in left:
+            c = rcls.get(i, {}).get("category", "unclassified"); cats[c] = cats.get(c, 0) + 1
+        res[f"with_{arm}"] = {"n": len(still), "left_by_category": dict(sorted(cats.items())),
+                             "rate": rc.clustered_rate({i: (i in still) for i in P}, P, instances, BOOTSTRAP, BOOT_SEED)}
+    out["residual"] = res
     return out
 
 
@@ -84,6 +124,12 @@ def main() -> int:
     for name, (x, y) in {"B_minus_S": ("B", "S"), "R_minus_S": ("R", "S"), "B_minus_R": ("B", "R")}.items():
         out["contrasts"][name] = {rule: {st: contrast(arms[x][rule], arms[y][rule], ids, instances)
                                          for st, ids in (("P", P), ("C", C))} for rule in ("blocker", "any")}
+    for arm in ARMS:
+        for rule in ("blocker", "any"):
+            e = out["arms"][arm][rule]; rec, fp = e["P"]["curve"], e["C"]["curve"]
+            e["exchange_rate_recall_per_fp"] = ((rec[-1] - rec[0]) / (fp[-1] - fp[0])) if fp[-1] != fp[0] else None
+    if args.run:
+        out["secondaries"] = secondaries(Path(args.run), arms, P, instances)
     prim = out["contrasts"]["B_minus_S"]["blocker"]["P"]
     out["H19a"] = {"difference_points": prim["difference_points"], "cluster_ci95_points": prim["cluster_ci95_points"],
                    "holds": prim["cluster_ci95_points"][0] > 0,
@@ -128,6 +174,7 @@ def main() -> int:
         out["H19d"] = h
     C3B.mkdir(parents=True, exist_ok=True)
     (C3B / "numbers.json").write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (C3B / "tables.md").write_text(render_tables(out), encoding="utf-8")
     for arm in ARMS:
         for rule in ("blocker", "any"):
             e = out["arms"][arm][rule]
@@ -140,6 +187,87 @@ def main() -> int:
     if "H19d" in out:
         print("H19d:", json.dumps({k: v for k, v in out["H19d"].items() if k != "by_arm"}), {a: (v["findings_yes"], v["findings"]) for a, v in out["H19d"]["by_arm"].items()})
     return 0
+
+
+LABEL = {"S": "S — shipped constitution (study 18's draws 1–4)", "R": "R — + referent rule (CA-COVER-001)", "B": "B — + grading rule (CA-GRADE-001)"}
+
+
+def _pc(x) -> str:
+    return f"{100 * x:.1f}"
+
+
+def _iv(p) -> str:
+    return f"{_pc(p[0])}–{_pc(p[1])}"
+
+
+def _ivp(p) -> str:
+    return f"[{p[0]:+.1f}, {p[1]:+.1f}]"
+
+
+def render_tables(out: dict) -> str:
+    L = ["<!-- generated by report_ceiling3b.py; do not edit -->", "",
+         "Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster percentile bootstrap "
+         "(10,000 resamples, seed 20260912); curve points and single-draw means are subset-averaged means and carry "
+         "the cluster interval only; paired contrasts carry the cluster interval (primary), Tango's score interval and "
+         "the grid-unconditional interval (an exact test maximised over a 41-point nuisance grid, no bound on the "
+         "missed supremum — ceiling 1 Amendment 5), the latter two ignoring clustering. Where every discordant pair "
+         "points one way, the grid-unconditional interval is the one to quote (ceiling 1's rule).", ""]
+    for rule, title in (("blocker", "BLOCKER rule (preregistered primary flag)"), ("any", "any-finding rule (preregistered secondary)")):
+        L += [f"### Table {'1' if rule == 'blocker' else '2'} — union of K = 4 readings, {title}", "",
+              "| arm | P union recall | Wilson | cluster | single-draw P [cluster] | C union FP | Wilson | cluster | single-draw C [cluster] | Δrecall/ΔFP |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
+        for arm in ("S", "R", "B"):
+            e = out["arms"][arm][rule]; p, c = e["P"]["union_at_kmax"], e["C"]["union_at_kmax"]
+            x = e.get("exchange_rate_recall_per_fp")
+            L.append(f"| {LABEL[arm]} | {p['k']}/{p['n']} = {_pc(p['rate'])}% | {_iv(p['wilson95'])} | {_iv(p['cluster_ci95'])} "
+                     f"| {_pc(e['P']['single_draw_mean'])} [{_iv(e['P']['curve_cluster_ci95'][0])}] "
+                     f"| {c['k']}/{c['n']} = {_pc(c['rate'])}% | {_iv(c['wilson95'])} | {_iv(c['cluster_ci95'])} "
+                     f"| {_pc(e['C']['single_draw_mean'])} [{_iv(e['C']['curve_cluster_ci95'][0])}] | {('%.2f' % x) if x is not None else 'n/a'} |")
+        L.append("")
+    L += ["### Table 3 — the curves at K = 1…4 with cluster intervals (P; then C), both rules", "",
+          "| arm | rule | stratum | K=1 | K=2 | K=3 | K=4 |", "|---|---|---|---|---|---|---|"]
+    for arm in ("S", "R", "B"):
+        for rule in ("blocker", "any"):
+            for st in ("P", "C"):
+                e = out["arms"][arm][rule][st]
+                L.append(f"| {arm} | {rule} | {st} | " + " | ".join(f"{_pc(v)} [{_iv(ci)}]" for v, ci in zip(e["curve"], e["curve_cluster_ci95"])) + " |")
+    L += ["", "### Table 4 — paired contrasts at K = 4 (points; a-only / b-only discordant counts)", "",
+          "| contrast | rule | stratum | difference | cluster 95% | Tango | grid-unconditional | one-signed | a-only / b-only | McNemar p | sign-flip p |",
+          "|---|---|---|---|---|---|---|---|---|---|---|"]
+    for name in ("B_minus_S", "R_minus_S", "B_minus_R"):
+        for rule in ("blocker", "any"):
+            for st in ("P", "C"):
+                v = out["contrasts"][name][rule][st]
+                L.append(f"| {name.replace('_minus_', ' − ')} | {rule} | {st} | {v['difference_points']:+.1f} | {_ivp(v['cluster_ci95_points'])} "
+                         f"| {_ivp(v['tango_ci95_points'])} | {_ivp(v['exact_unconditional_ci95_points'])} | {'yes' if v['one_signed_discordance'] else 'no'} "
+                         f"| {v['a_only']} / {v['b_only']} | {v['mcnemar_exact_p']:.2e} | {v['signflip']['p']:.2e} |")
+    if "H19d" in out and "by_arm" in out["H19d"]:
+        h = out["H19d"]
+        L += ["", f"### Table 5 — H19d, blinded adjudication of draw-1 findings on P instances: does the finding name the input class or behaviour on which the hidden test fails? "
+              f"({h['n_items']} items; L1 the author, L2 gpt-6-astra; agreement {h['agreement'][0]}/{h['agreement'][1]}, κ = {h['kappa']:.3f}; disputed items excluded from 'yes')", "",
+              "| arm | findings | yes | no | cannot tell | disputed | P instances with a finding | of which named by some finding | named / all 110 P | Wilson | cluster |",
+              "|---|---|---|---|---|---|---|---|---|---|---|"]
+        for arm in ("S", "R", "B"):
+            v = h["by_arm"][arm]; r = v["names_rate_over_all_P"]
+            L.append(f"| {LABEL[arm]} | {v['findings']} | {v['findings_yes']} | {v['findings_no']} | {v['findings_cannot_tell']} | {v['findings_disputed']} "
+                     f"| {v['P_instances_with_a_finding']} | {v['P_instances_named_by_some_finding']['k'] if v['P_instances_named_by_some_finding'] else 0} "
+                     f"| {r['k']}/{r['n']} = {_pc(r['rate'])}% | {_iv(r['wilson95'])} | {_iv(r['cluster_ci95'])} |")
+    sec = out.get("secondaries")
+    if sec:
+        L += ["", "### Table 6 — reply format and cost per draw, from the caches and the ledgers", "",
+              "| draw | readings | malformed | ledger calls | extra calls | replies > 300 output tokens | findings | BLOCKER findings | BLOCKER share | ledger USD |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
+        for k, v in sec["per_draw"].items():
+            L.append(f"| {k} | {v['rows']} | {v['invalid_reason_nonempty']} | {v['ledger_calls']} | {v['extra_calls']} | {v['replies_over_300_output_tokens']} "
+                     f"| {v['findings_total']} | {v['blockers_total']} | {(_pc(v['blocker_share_of_findings']) + '%') if v['blocker_share_of_findings'] is not None else 'n/a'} | ${v['ledger_usd']:.2f} |")
+        L.append(f"| **total** | | | {sec['ledger_calls_total']} | | | | | | **${sec['ledger_usd_total']:.2f}** |")
+        r = sec["residual"]
+        L += ["", f"### Table 7 — the residual: P instances blocked by no measured family (ceiling 3's five families: {r['ceiling3_residual_n']}) when an arm is added", "",
+              "| added arm | residual n | rate | Wilson | cluster | instances that left, by ceiling 1's category |", "|---|---|---|---|---|---|"]
+        for arm in ("R", "B"):
+            v = r[f"with_{arm}"]; rt = v["rate"]
+            L.append(f"| {arm} | {v['n']} | {rt['k']}/{rt['n']} = {_pc(rt['rate'])}% | {_iv(rt['wilson95'])} | {_iv(rt['cluster_ci95'])} | {', '.join(f'{k} {n}' for k, n in v['left_by_category'].items()) or 'none'} |")
+    return "\n".join(L) + "\n"
 
 
 if __name__ == "__main__":
