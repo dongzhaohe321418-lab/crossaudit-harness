@@ -7,11 +7,11 @@
     ],
     "clean_at_freeze": true,
     "files_this_study_added": {
-      "benchmarks/code/RESULTS-CEILING3B.md": "eadb1473298eeb4556a76228fddeb2e0686399570342594a930bdaeb3421c3a6",
+      "benchmarks/code/RESULTS-CEILING3B.md": "36e01bb1f75a712cb5a878fdbc160335a914cb6d243c4b4af5099b2b8de4b066",
       "benchmarks/code/ceiling3b.py": "97decf2d40428f1e4d94438bd0f0188decc26d911f7034dd5fb2a72ac4d3a3ef",
       "benchmarks/code/ceiling3b/PREREGISTRATION.md": "7a116b0fa1dcc1a2bb76ffbe9d63ba2234b9b8c9c78e980291cd55003b4fe458",
       "benchmarks/code/ceiling3b/adjudication_sheet.py": "e0b2aaa603ac096603ba868c928f5a3bc91a90e41da222324e3ae155d4474150",
-      "benchmarks/code/ceiling3b/finalise_manifest.py": "b36d1b693487554e9a5d4adbf4c5445a7227881c8a187aec70945cd57bbaa515",
+      "benchmarks/code/ceiling3b/finalise_manifest.py": "d206916d34c2cdb1dfaa50a181343e5486d972853c47a2d4f470a4d4e231cfbe",
       "benchmarks/code/ceiling3b/key-h19d.jsonl": "1f6909fe2cae55d03f64135dc4758fe67b5a3ca0a2605fac3e054a8523ac700c",
       "benchmarks/code/ceiling3b/splice_tables.py": "e53fe7bdf7a0bdad476ab872fda0cabc435da8189b3be7545b8f7a2f594d0442",
       "benchmarks/code/records/ceiling3b/L1-h19d-strict.csv": "90c203b0327d7f47de1f9b7e4dff12637f223f7427537e0de4d764a860562355",
@@ -40,13 +40,13 @@
       "benchmarks/code/records/ceiling3b/numbers.json": "fe81c8616529dc356218ca07f992900a5ee9fdfdb3d4df9961055d61e84fc37a",
       "benchmarks/code/records/ceiling3b/tables.md": "cb75ec531a7dc3a4c5bafbcb6c20182af93f5263669cf1028bf1f412c817d2d4",
       "benchmarks/code/report_ceiling3b.py": "c2d6bc9a28307e6ec1152f72b20f4bfbb13b9933d439955e95698703f49b9cc6",
-      "benchmarks/code/tests/test_ceiling3b_report.py": "cf6950a3b080d6c1598cfc8e6cbc77f65e964e1fde5c2388446b3e56e09ec2ed",
+      "benchmarks/code/tests/test_ceiling3b_report.py": "76434d694f92f28bfcb95f4cfdb1d69b3a29abc142167e14400d435b60c3d109",
       "benchmarks/reviews/2026-09-10-ceiling3b-r1.md": "a8d989bcd024fcb68a4e8dcaa6361c1e88962c66b08fe59a34b38f3f35571f35",
       "benchmarks/reviews/2026-09-10-ceiling3b-r2.md": "127e037d34b9d6173ccab1ff403ae865ac10a630a200d257db90ffac2ef7f347",
       "benchmarks/reviews/2026-09-10-ceiling3b-r3.md": "9a50d8265e63e63364d423e1666eadc7aa4f8fa19abb095b9278d1aa81e5760c"
     },
-    "frozen_commit": "36f623dc4fcac3fe79925e9d7f32b80965e44df9",
-    "frozen_commit_subject": "study 19 round 4: Table 5 renders H19d on the registered any-finding denominator (S 6/37, R 58/104, B 4/24) beside the all-P rate; 'correctly handled or only untested'; the 28 other findings said plainly; the inventory counts H19b's product-bar comparison (twenty quantities) and the test checks every named contrast; the manifest builder lists the earlier manifest and the review archives and gives S's reused draws the auditor's model, role, provider and settings; third review archived",
+    "frozen_commit": "e2f81b8b1d53b933f7fb08a2a33fdc2d1d68c5dd",
+    "frozen_commit_subject": "study 19 round 5: the manifest no longer claims allocation blinding \u2014 it records what the sheet withheld, what each adjudicator was not blind to, and L2's endpoint; the all-110-P naming rates are labelled derived, not registered; a test fails if the record ever contradicts the prose again",
     "note": "manifest.json is committed in the commit after frozen_commit; every other file the study added is listed here",
     "preregistration_and_amendment_commits": [
       {
@@ -188,17 +188,21 @@
     },
     "adjudicators": {
       "L1": {
-        "blind_to": "instance id, arm, allocation; not to finding text",
+        "not_blind_to": "the finding text, which names the rule id in five items; and, being the author, the study's design and its other results",
         "role": "adjudicator, naming and (post hoc) recognition questions",
-        "who": "the author (human)"
+        "who": "the author of this study and of the paper (human)",
+        "withheld_by_the_sheet": "instance id, arm, stratum"
       },
       "L2": {
-        "blind_to": "the same; sees the sheet only",
+        "base_url": "the Codex CLI's own OpenAI endpoint; not set by this harness and not recorded in any ledger here, because the CLI bills a subscription rather than this project's key",
         "model": "gpt-6-astra",
-        "provider": "OpenAI via the Codex CLI",
+        "not_blind_to": "the finding text, which names the rule id in five items",
+        "provider": "OpenAI via the Codex CLI (not the product's provider layer)",
         "role": "adjudicator, same questions",
-        "settings": "codex exec --sandbox read-only, model_reasoning_effort=high, default sampling"
-      }
+        "settings": "codex exec --sandbox read-only, model_reasoning_effort=high, default sampling",
+        "withheld_by_the_sheet": "instance id, arm, stratum"
+      },
+      "_blinding": "METADATA-BLIND, NOT ALLOCATION-BLIND. The sheet withholds the instance id, the arm and the stratum, but five of the 190 finding texts (and three of the 72 strict ones) name the added rule's id, CA-COVER-001 or CA-GRADE-001, so a reader of those items can infer the arm. RESULTS \u00a74 says the same; this field exists so the machine-readable record cannot say otherwise."
     },
     "self-strong-B__d1": {
       "auditor": {
