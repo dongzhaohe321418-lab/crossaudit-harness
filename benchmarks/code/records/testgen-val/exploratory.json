@@ -1,0 +1,174 @@
+{
+  "B_minus_A_by_half_stratum": {
+    "confirm-C": 1,
+    "confirm-P": 2,
+    "explore-C": 1
+  },
+  "confirm_C_false_positives": {
+    "b1:Mbpp/16": {
+      "A": false,
+      "B": true,
+      "Cprime": false
+    },
+    "b1:Mbpp/781": {
+      "A": false,
+      "B": false,
+      "Cprime": false
+    },
+    "b2:HumanEval/157": {
+      "A": true,
+      "B": true,
+      "Cprime": true
+    }
+  },
+  "note": "post hoc, not preregistered; intervals as in the primary (Wilson; problem-cluster bootstrap, seed 20260915, 10000 resamples)",
+  "rules": {
+    "A": {
+      "by_half_stratum": {
+        "confirm-C": 2,
+        "confirm-F": 4,
+        "explore-C": 4,
+        "explore-F": 1
+      },
+      "corroborated_only_by_wrong_tests": {
+        "bootstrap_problem_cluster": [
+          0.0,
+          0.8461538461538461
+        ],
+        "k": 5,
+        "n": 11,
+        "rate": 0.45454545454545453,
+        "wilson": [
+          0.21271271622459764,
+          0.719908462590678
+        ]
+      },
+      "kept_wrong_applications": 11,
+      "on_instances": 7,
+      "wrong_among_kept_P_and_C": {
+        "bootstrap_problem_cluster": [
+          0.0,
+          0.4482758620689655
+        ],
+        "k": 6,
+        "n": 33,
+        "rate": 0.18181818181818182,
+        "wilson": [
+          0.08610768208940667,
+          0.3438823163466992
+        ]
+      }
+    },
+    "B": {
+      "by_half_stratum": {
+        "confirm-C": 3,
+        "confirm-F": 4,
+        "confirm-P": 2,
+        "explore-C": 5,
+        "explore-F": 1
+      },
+      "corroborated_only_by_wrong_tests": {
+        "bootstrap_problem_cluster": [
+          0.23529411764705882,
+          0.8947368421052632
+        ],
+        "k": 9,
+        "n": 15,
+        "rate": 0.6,
+        "wilson": [
+          0.357468301206246,
+          0.8017550385865841
+        ]
+      },
+      "kept_wrong_applications": 15,
+      "on_instances": 11,
+      "wrong_among_kept_P_and_C": {
+        "bootstrap_problem_cluster": [
+          0.06818181818181818,
+          0.47062908496731964
+        ],
+        "k": 10,
+        "n": 43,
+        "rate": 0.23255813953488372,
+        "wilson": [
+          0.1315367847938448,
+          0.37744520297809003
+        ]
+      }
+    },
+    "Cprime": {
+      "by_half_stratum": {
+        "confirm-C": 2,
+        "confirm-F": 4,
+        "explore-C": 4,
+        "explore-F": 1
+      },
+      "kept_wrong_applications": 11,
+      "on_instances": 7,
+      "wrong_among_kept_P_and_C": {
+        "bootstrap_problem_cluster": [
+          0.0,
+          0.4482758620689655
+        ],
+        "k": 6,
+        "n": 33,
+        "rate": 0.18181818181818182,
+        "wilson": [
+          0.08610768208940667,
+          0.3438823163466992
+        ]
+      }
+    }
+  },
+  "validated_only": {
+    "b1:HumanEval/154": {
+      "A": "dropped",
+      "B": "kept",
+      "Cprime": "dropped",
+      "d2_failing": 1,
+      "d3_failing": 0
+    },
+    "b1:Mbpp/261": {
+      "A": "kept",
+      "B": "kept",
+      "Cprime": "kept",
+      "d2_failing": 2,
+      "d3_failing": 2
+    },
+    "b1:Mbpp/297": {
+      "A": "kept",
+      "B": "kept",
+      "Cprime": "kept",
+      "d2_failing": 2,
+      "d3_failing": 2
+    },
+    "b1:Mbpp/589": {
+      "A": "kept",
+      "B": "kept",
+      "Cprime": "kept",
+      "d2_failing": 2,
+      "d3_failing": 1
+    },
+    "b1:Mbpp/594": {
+      "A": "kept",
+      "B": "kept",
+      "Cprime": "kept",
+      "d2_failing": 4,
+      "d3_failing": 1
+    },
+    "b2:Mbpp/559": {
+      "A": "dropped",
+      "B": "dropped",
+      "Cprime": "dropped",
+      "d2_failing": 0,
+      "d3_failing": 0
+    },
+    "b2:Mbpp/594": {
+      "A": "kept",
+      "B": "kept",
+      "Cprime": "kept",
+      "d2_failing": 4,
+      "d3_failing": 1
+    }
+  }
+}

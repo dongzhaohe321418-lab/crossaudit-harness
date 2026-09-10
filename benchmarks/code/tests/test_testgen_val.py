@@ -191,3 +191,35 @@ def test_results_headline_figures_are_the_records():
         assert f"`{rid}` {v['calls']} calls, ${v['usd']:.4f}" in flat
     assert numbers["prompt_mismatches"] == 0
     assert not re.search(r"assert \w+\(", text), "no generated test text in the results file"
+
+
+def test_results_exploratory_figures_are_the_exploratory_record():
+    """§3's rates and their two intervals come from records/testgen-val/exploratory.json."""
+    import json
+    record = json.loads((HERE.parent / "records" / "testgen-val" / "exploratory.json").read_text(encoding="utf-8"))
+    flat = " ".join((HERE.parent / "RESULTS-TESTGEN-VAL.md").read_text(encoding="utf-8").split())
+
+    def quoted(block, both=True):
+        w = f"Wilson {100 * block['wilson'][0]:.1f}–{100 * block['wilson'][1]:.1f}%"
+        b = f"{100 * block['bootstrap_problem_cluster'][0]:.1f}–{100 * block['bootstrap_problem_cluster'][1]:.1f}%"
+        return f"{block['k']} of {block['n']}", w, b
+
+    for rule in ("A", "B"):
+        entry = record["rules"][rule]
+        for key in ("wrong_among_kept_P_and_C", "corroborated_only_by_wrong_tests"):
+            block = entry[key]
+            assert f"{100 * block['rate']:.1f}%" in flat
+            _n, wilson, boot = quoted(block)
+            assert wilson.removeprefix("Wilson ") in flat, (rule, key, wilson)
+            assert boot in flat, (rule, key, boot)
+    # C′ keeps A's P-and-C figure exactly, and the results file says so rather than repeating it
+    assert record["rules"]["Cprime"]["wrong_among_kept_P_and_C"]["k"] == record["rules"]["A"]["wrong_among_kept_P_and_C"]["k"]
+    assert "C′ 6 of 33 (the same as A)" in flat
+    # B's additions over A reconcile the two counts
+    additions = record["B_minus_A_by_half_stratum"]
+    assert sum(additions.values()) == (record["rules"]["B"]["kept_wrong_applications"]
+                                       - record["rules"]["A"]["kept_wrong_applications"])
+    assert "B's four additions over A are confirm-C 1, confirm-P 2 and explore-C 1" in flat
+    for half_stratum, n in additions.items():
+        half, stratum = half_stratum.split("-")
+        assert f"{half}-{stratum} {n}" in flat

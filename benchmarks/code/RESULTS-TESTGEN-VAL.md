@@ -129,16 +129,27 @@ What each rule did to the two classes, with both intervals (Wilson; bootstrap):
 
 ## 3. Exploratory, post hoc, not preregistered (`testgen/exploratory_val.py`)
 
+Every figure in this section was computed after the result was seen; the intervals are
+the study's own (Wilson; problem-cluster percentile bootstrap, seed 20260915, 10,000
+resamples), recomputed here and written to `records/testgen-val/exploratory.json`.
+
 * Where the kept wrong applications sit: under A, 11 on 7 instances — confirm-C 2,
-  confirm-F 4, explore-C 4, explore-F 1; under B, 15 on 11 — adding confirm-P 2 and
-  explore-C 1. On an F candidate (fails the visible suite) corroboration is trivial:
-  broken code fails correct tests too. **On P and C rows only — the candidates the
-  product meets — A keeps 6 wrong of 33 (18.2%, Wilson 8.6–34.4%), B 10 of 43 (23.3%,
-  13.2–37.7%), C′ 6 of 33**; the rules are no better where it matters.
-* Of A's 11 kept wrong applications, 5 are corroborated ONLY by wrong tests in the
-  other draws (every failing draw-2 and draw-3 test on that candidate fails the
-  canonical solution too); of B's 15, 9 (Wilson for 9 of 15: 35.7–80.2%). The other
-  draws agree with a wrong test because they contain the same misreading.
+  confirm-F 4, explore-C 4, explore-F 1; under B, 15 on 11 — confirm-C 3, confirm-F 4,
+  confirm-P 2, explore-C 5, explore-F 1. B's four additions over A are confirm-C 1,
+  confirm-P 2 and explore-C 1, which reconcile 11 with 15. On an F candidate (fails the
+  visible suite) corroboration is trivial: broken code fails correct tests too. **On P
+  and C rows only — the candidates the product meets — A keeps 6 wrong of 33 (18.2%,
+  Wilson 8.6–34.4%; bootstrap 0.0–44.8%), B 10 of 43 (23.3%, 13.2–37.7%; 6.8–47.1%), C′
+  6 of 33 (the same as A)**; the rules are no better where it matters, and at this n the
+  cluster intervals are wide enough to include rates far above and (for A) at zero.
+* Of A's 11 kept wrong applications, 5 are corroborated ONLY by tests that themselves
+  fail the canonical solution — every failing draw-2 and draw-3 test on that candidate
+  is wrong (45.5%, Wilson 21.3–72.0%; bootstrap 0.0–84.6%); of B's 15, 9 (60.0%,
+  35.7–80.2%; 23.5–89.5%). What this establishes is corroboration by canonical-failing
+  tests, and no more: it does not identify the cause, and it does not separate a
+  misreading the model repeats from a specification the canonical solution itself reads
+  differently — the same qualification §2 makes of the recurrence figures. The records
+  hold indices, not assertions, and neither reading was preregistered.
 * Study 16's three confirm-C false positives: `b1:Mbpp/781` is dropped by every rule,
   `b1:Mbpp/16` by A and C′ but not B, `b2:HumanEval/157` by none.
 
@@ -194,6 +205,12 @@ study: what this study adds to it is that the wrong-test rate replicates (3.8%, 
   preregistered; a test-level match (the same assertion in another draw — 39% of the
   new draws' tests are AST-identical to a draw-1 test) was not preregistered and is not
   evaluated here.
+* The suite of this study and study 16's (`test_testgen_val.py`, `test_testgen.py`,
+  `test_architectures.py`) is green on the run host: 39 tests at this commit, 38 at the
+  reviewed one. The independent reviewer could run 35 of those 38 — three need a writable
+  temporary directory for the executor's subprocess and were skipped in that environment
+  — so full-suite green is certified on the run host and on hosts that allow it, not
+  everywhere.
 * `tests/test_testgen_val.py::test_the_rules_never_see_the_canonical_solution` checks that
   the string "canonical" is absent from `keep`'s source — a blacklist, not behavioural
   proof that a rule cannot reach the oracle. What holds behaviourally is narrower:
