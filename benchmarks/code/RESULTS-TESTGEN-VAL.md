@@ -11,7 +11,11 @@ ledger.json, manifest.json, numbers.json}` — counts, hashes and per-test indic
 text. The generated text is in the run archive (`~/Documents/Crossaudit/study-data/
 wt-testval-runs/`, `MANIFEST.sha256`), as study 16's is. Harness `testgen_val.py`; rule
 tests `tests/test_testgen_val.py`. Report: `testgen_val.py report`; the exploratory lines
-in §3 come from `testgen/exploratory_val.py` and are labelled.
+in §3 come from `testgen/exploratory_val.py` and are labelled. **Every table below is
+generated, not typed**: `testgen_val.py report` renders them from `numbers.json` and
+`exploratory.json` into `records/testgen-val/tables.md`, and `testgen/splice_tables.py`
+splices that file between the markers in this document; the tests compare both directions
+byte for byte (studies 18 and the ceiling study use the same pattern).
 
 ## 1. The preregistered decision
 
@@ -23,11 +27,13 @@ draws' outcomes on that candidate and nothing else (§3 of the preregistration).
 1,545 test applications, 107 fail on a clean, classifiable candidate: 18 wrong (the test
 also fails on the canonical solution), 89 right.
 
+<!-- BEGIN TABLE primary (records/testgen-val/tables.md) -->
 | rule | wrong among kept failing applications | Wilson 95% | problem-cluster bootstrap | retained of the 7 | verdict |
 |---|---|---|---|---|---|
 | A — majority over draws (draw 2 AND draw 3 also fail on the candidate) | 11/90 = 12.2% | 7.0–20.6% | 3.6–22.6% | 5 of 7 | **KILL** (wrong rate) |
 | B — any-draw agreement (draw 2 OR draw 3 also fails) | 15/101 = 14.9% | 9.2–23.1% | 6.5–25.5% | 6 of 7 | **KILL** (wrong rate) |
 | C′ — within-draw corroboration (another draw-1 test also fails; no new call) | 11/86 = 12.8% | 7.3–21.5% | 3.9–23.9% | 5 of 7 | **KILL** (wrong rate) |
+<!-- END TABLE primary -->
 
 The intervals are for the binomial proportion of kept failing applications; Wilson
 treats applications as independent, the bootstrap resamples whole problems (seed
@@ -73,12 +79,14 @@ What each rule did to the two classes, with both intervals (Wilson; bootstrap):
 * **The arm each rule implies**, confirm half (flag = a kept failing draw-1 test, or a
   draw-1 timeout), reported and not decided on:
 
-  | arm | confirm P-recall | Wilson | bootstrap | confirm C-FP | Wilson | bootstrap |
-  |---|---|---|---|---|---|---|
-  | `testgen-A` (= `testgen-C′` on P and C) | 8/55 = 14.5% | 7.6–26.2% | 3.8–26.3% | 1/74 = 1.4% | 0.2–7.3% | 0.0–4.1% |
-  | `testgen-B` | 12/55 = 21.8% | 12.9–34.4% | 9.3–35.7% | 2/74 = 2.7% | 0.7–9.3% | 0.0–6.8% |
-  | `hc ∪ testgen-A` | 16/55 = 29.1% | 18.8–42.1% | 16.7–42.0% | 6/74 = 8.1% | 3.8–16.6% | 2.7–14.9% |
-  | `hc ∪ testgen-B` | 18/55 = 32.7% | 21.8–45.9% | 19.3–46.7% | 6/74 = 8.1% | 3.8–16.6% | 2.7–14.9% |
+<!-- BEGIN TABLE arm (records/testgen-val/tables.md) -->
+| arm | confirm P-recall | Wilson | bootstrap | confirm C-FP | Wilson | bootstrap |
+|---|---|---|---|---|---|---|
+| `testgen-A` (= `testgen-C′` on P and C) | 8/55 = 14.5% | 7.6–26.2% | 3.8–26.3% | 1/74 = 1.4% | 0.2–7.3% | 0.0–4.1% |
+| `testgen-B` | 12/55 = 21.8% | 12.9–34.4% | 9.3–35.7% | 2/74 = 2.7% | 0.7–9.3% | 0.0–6.8% |
+| `hc ∪ testgen-A` | 16/55 = 29.1% | 18.8–42.1% | 16.7–42.0% | 6/74 = 8.1% | 3.8–16.6% | 2.7–14.9% |
+| `hc ∪ testgen-B` | 18/55 = 32.7% | 21.8–45.9% | 19.3–46.7% | 6/74 = 8.1% | 3.8–16.6% | 2.7–14.9% |
+<!-- END TABLE arm -->
 
   For reference (study 16, frozen): `hc` 11/55 at 5/74; `testgen` 13/55 at 3/74;
   the oracle bound `hc ∪ testgen-validated` 18/55 at 5/74. Rule B's union reaches the
@@ -136,11 +144,13 @@ resamples), recomputed here and written to `records/testgen-val/exploratory.json
 **Where the kept wrong applications sit** (a kept failing draw-1 application whose test
 also fails the canonical solution):
 
+<!-- BEGIN TABLE where (records/testgen-val/tables.md) -->
 | rule | kept wrong applications | on instances | by half-stratum |
 |---|---|---|---|
 | A | 11 | 7 | confirm-C 2, confirm-F 4, explore-C 4, explore-F 1 |
 | B | 15 | 11 | confirm-C 3, confirm-F 4, confirm-P 2, explore-C 5, explore-F 1 |
 | C′ | 11 | 7 | confirm-C 2, confirm-F 4, explore-C 4, explore-F 1 |
+<!-- END TABLE where -->
 
 B's four additions over A are confirm-C 1, confirm-P 2 and explore-C 1, which reconcile
 11 with 15.
@@ -148,11 +158,13 @@ B's four additions over A are confirm-C 1, confirm-P 2 and explore-C 1, which re
 **On P and C rows only** — the candidates the product meets. On an F candidate, which
 fails the visible suite, corroboration is trivial: broken code fails correct tests too.
 
+<!-- BEGIN TABLE pc (records/testgen-val/tables.md) -->
 | rule | wrong among kept, P and C rows only | Wilson | problem-cluster bootstrap |
 |---|---|---|---|
 | A | 6/33 = 18.2% | 8.6–34.4% | 0.0–44.8% |
 | B | 10/43 = 23.3% | 13.2–37.7% | 6.8–47.1% |
 | C′ | 6/33 = 18.2% | 8.6–34.4% | 0.0–44.8% |
+<!-- END TABLE pc -->
 
 C′'s row is A's row in every column: on P and C candidates the two rules keep the same
 applications. The rules are no better where it matters, and at this n the cluster
@@ -162,10 +174,12 @@ intervals are wide enough to include rates far above these and, for A and C′, 
 failing draw-2 and draw-3 test on that candidate is wrong — among each rule's kept wrong
 applications:
 
+<!-- BEGIN TABLE corroboration (records/testgen-val/tables.md) -->
 | rule | corroborated only by canonical-failing tests | Wilson | problem-cluster bootstrap |
 |---|---|---|---|
 | A | 5/11 = 45.5% | 21.3–72.0% | 0.0–84.6% |
 | B | 9/15 = 60.0% | 35.7–80.2% | 23.5–89.5% |
+<!-- END TABLE corroboration -->
 
 C′ consults no other draw, so the quantity is not defined for it. What these two rows
 establish is corroboration by canonical-failing tests, and no more: they do not identify
@@ -231,8 +245,8 @@ study: what this study adds to it is that the wrong-test rate replicates (3.8%, 
   new draws' tests are AST-identical to a draw-1 test) was not preregistered and is not
   evaluated here.
 * The suite of this study and study 16's (`test_testgen_val.py`, `test_testgen.py`,
-  `test_architectures.py`) is green on the run host: 39 tests at this commit, 38 at the
-  reviewed one. The independent reviewer could run 35 of those 38 — three need a writable
+  `test_architectures.py`) is green on the run host: 41 tests at this commit, 38 at the
+  round-3 one. The independent reviewer could run 35 of those 38 — three need a writable
   temporary directory for the executor's subprocess and were skipped in that environment
   — so full-suite green is certified on the run host and on hosts that allow it, not
   everywhere.
@@ -241,6 +255,13 @@ study: what this study adds to it is that the wrong-test rate replicates (3.8%, 
   proof that a rule cannot reach the oracle. What holds behaviourally is narrower:
   `keep` takes the three failure-index sets and nothing else, and the rule tests
   exercise it on synthetic sets alone.
-* `tests/test_testgen_val.py` binds §1's table, the verdicts, the draw wrong-test counts
-  and the ledger totals to `records/testgen-val/numbers.json`; every other figure in this
-  file is checked by the reader.
+* `tests/test_testgen_val.py` binds every table byte for byte — the spliced blocks
+  against `records/testgen-val/tables.md`, and `tables.md` against what `render_tables`
+  rebuilds from `numbers.json` and `exploratory.json` — and refuses a table row outside
+  the generated blocks. Rounds 3–5 of the review each found a way past the markdown-table
+  parser this test used to be (a moved figure, a mislabelled column, a duplicate row, a
+  broken delimiter row, a table hidden in a comment); the byte comparison ends that class
+  of defect, and the round-5 commit lists the sixteen mutations it was checked against.
+  The prose figures — the verdicts, the draw wrong-test counts, the ledger totals, §3's
+  statements about the record — are bound to `numbers.json` and `exploratory.json` as
+  strings; every other figure in this file is checked by the reader.

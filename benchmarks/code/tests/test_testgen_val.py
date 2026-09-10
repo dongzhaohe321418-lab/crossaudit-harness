@@ -16,6 +16,9 @@ sys.path.insert(0, str(HERE.parent))
 import testgen  # noqa: E402
 import testgen_val as tv  # noqa: E402
 
+RESULTS = HERE.parent / "RESULTS-TESTGEN-VAL.md"
+TABLES = HERE.parent / "records" / "testgen-val" / "tables.md"
+
 
 # --- the rules, per candidate (§3) ----------------------------------------------------
 
@@ -168,15 +171,7 @@ def test_results_headline_figures_are_the_records():
     numbers = json.loads((HERE.parent / "records" / "testgen-val" / "numbers.json").read_text(encoding="utf-8"))
     text = (HERE.parent / "RESULTS-TESTGEN-VAL.md").read_text(encoding="utf-8")
     flat = " ".join(text.split())          # the prose wraps; the figures do not
-    for rule, label in (("A", "A — majority"), ("B", "B — any-draw"), ("Cprime", "C′ — within-draw")):
-        p = numbers["rules"][rule]["primary"]
-        b = p["wrong_among_kept"]
-        row = next(line for line in text.splitlines() if line.startswith(f"| {label}"))
-        assert f"{b['k']}/{b['n']} = {100 * b['rate']:.1f}%" in row
-        assert f"{100 * b['wilson'][0]:.1f}–{100 * b['wilson'][1]:.1f}%" in row
-        assert f"{100 * b['bootstrap_problem_cluster'][0]:.1f}–{100 * b['bootstrap_problem_cluster'][1]:.1f}%" in row
-        assert f"{p['retained']} of {p['retained_of']}" in row
-        assert ("KILL" in row) == p["killed"]
+    # §1's and §3's tables are generated and bound byte for byte below; the prose is bound here.
     assert numbers["decision"]["H17"] == "KILL" and "H17 is KILLED" in flat
     assert numbers["decision"]["best_rule"] == "A"
     assert "best-performing rule by the preregistered order is A" in flat
@@ -193,80 +188,65 @@ def test_results_headline_figures_are_the_records():
     assert not re.search(r"assert \w+\(", text), "no generated test text in the results file"
 
 
-def _table_rows(text: str, header: list[str], known_rules: set[str]) -> dict:
-    """The rows of the one §3 table whose header row is exactly ``header``, by rule.
+def _splice():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("splice_tables", HERE.parent / "testgen" / "splice_tables.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
-    The whole header is matched, label by label and in order, so that swapping two
-    column HEADINGS while leaving the values in place is caught: a mislabelled interval
-    is as wrong as a wrong one. Rows come back as lists of stripped cells, so an
-    assertion below compares a WHOLE cell with the record's figure; a duplicate rule row
-    or a rule the record does not know is refused rather than silently overwritten, so a
-    wrong row displayed above a right one cannot hide behind the later row.
+
+def test_the_tables_are_spliced_verbatim():
+    """Every §1–§3 table in the results file is `records/testgen-val/tables.md`, byte for byte.
+
+    Round 5 of the review retired the markdown-table parser these assertions used to be:
+    a reader can always be fooled by a table that renders differently from how it parses
+    (a duplicate row, a shifted pipe, a broken delimiter row, a table hidden in a
+    comment). Comparing bytes cannot be fooled — any byte that differs, anywhere in the
+    marked block, fails — and a table outside the marked blocks is refused outright.
     """
-    lines = text.splitlines()
-    heads = [i for i, line in enumerate(lines)
-             if line.startswith("|") and [c.strip() for c in line.strip().strip("|").split("|")] == header]
-    assert len(heads) == 1, f"expected exactly one table with header {header}, found {len(heads)}"
-    rows: dict[str, list[str]] = {}
-    for line in lines[heads[0] + 2:]:
-        if not line.startswith("|"):
-            break
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        assert len(cells) == len(header), f"row {cells[0]!r} has {len(cells)} cells, header has {len(header)}"
-        assert cells[0] in known_rules, f"unknown rule {cells[0]!r} in table {header[1]!r}"
-        assert cells[0] not in rows, f"duplicate row for rule {cells[0]!r} in table {header[1]!r}"
-        rows[cells[0]] = cells[1:]
-    assert rows, f"no rows under header {header}"
-    return rows
+    mod = _splice()
+    text = RESULTS.read_text(encoding="utf-8")
+    parts = mod.sections(TABLES.read_text(encoding="utf-8"))
+    assert parts, "tables.md has no <!-- TABLE name --> sections"
+    remaining = text
+    for name, body in parts.items():
+        begin, end = mod.markers(name)
+        assert text.count(begin) == 1 and text.count(end) == 1, f"marker pair for {name!r} is not unique"
+        a, b = text.index(begin) + len(begin), text.index(end)
+        assert a < b, f"markers for {name!r} are out of order"
+        assert text[a:b] == "\n" + body, f"the {name!r} table is not tables.md verbatim"
+        remaining = remaining.replace(text[text.index(begin):b + len(end)], "")
+    # the results file declares no table the record does not carry, and none is left loose
+    declared = {line[len("<!-- BEGIN TABLE "):line.index(" (")] for line in text.splitlines()
+                if line.startswith("<!-- BEGIN TABLE ")}
+    assert declared == set(parts), f"markers {declared} do not match tables.md sections {set(parts)}"
+    loose = [line for line in remaining.splitlines() if line.strip().startswith("|")]
+    assert not loose, f"table rows outside the generated blocks: {loose[:3]}"
 
 
-def test_results_exploratory_figures_are_the_exploratory_record():
-    """§3's tables say what records/testgen-val/exploratory.json says — cell by cell.
+def test_render_tables_reproduces_the_tables_file():
+    """`render_tables` rebuilds tables.md from numbers.json and exploratory.json exactly."""
+    import json
+    numbers = json.loads((HERE.parent / "records" / "testgen-val" / "numbers.json").read_text(encoding="utf-8"))
+    exploratory = json.loads((HERE.parent / "records" / "testgen-val" / "exploratory.json").read_text(encoding="utf-8"))
+    assert tv.render_tables(numbers, exploratory) == TABLES.read_text(encoding="utf-8")
 
-    Each rule's count, rate and BOTH intervals are asserted inside that rule's own row,
-    and C′'s block is compared against A's in full. Verified to fail under three
-    mutations: swapping A's and B's P/C intervals; changing a denominator (10/43 →
-    99/43); deleting an interval cell; swapping the Wilson and bootstrap column HEADINGS
-    with the values left in place; inserting a wrong duplicate B row above the right one;
-    and five others (see the round-4 commit message).
-    """
+
+def test_the_exploratory_prose_outside_the_tables_is_bound():
+    """What §3 says in prose about the record — the parts no table carries."""
     import json
     record = json.loads((HERE.parent / "records" / "testgen-val" / "exploratory.json").read_text(encoding="utf-8"))
-    text = (HERE.parent / "RESULTS-TESTGEN-VAL.md").read_text(encoding="utf-8")
-    label = {"A": "A", "B": "B", "Cprime": "C′"}
-
-    def cells_of(block: dict) -> list[str]:
-        return [f"{block['k']}/{block['n']} = {100 * block['rate']:.1f}%",
-                f"{100 * block['wilson'][0]:.1f}–{100 * block['wilson'][1]:.1f}%",
-                f"{100 * block['bootstrap_problem_cluster'][0]:.1f}–{100 * block['bootstrap_problem_cluster'][1]:.1f}%"]
-
-    known = set(label.values())
-    where = _table_rows(text, ["rule", "kept wrong applications", "on instances", "by half-stratum"], known)
-    for rule, name in label.items():
-        entry = record["rules"][rule]
-        strata = ", ".join(f"{k} {v}" for k, v in entry["by_half_stratum"].items())
-        assert where[name] == [str(entry["kept_wrong_applications"]), str(entry["on_instances"]), strata], name
-
-    pc = _table_rows(text, ["rule", "wrong among kept, P and C rows only", "Wilson",
-                            "problem-cluster bootstrap"], known)
-    for rule, name in label.items():
-        assert pc[name] == cells_of(record["rules"][rule]["wrong_among_kept_P_and_C"]), name
-    # C′ is A's block in every column, in the record and in the file
+    flat = " ".join(RESULTS.read_text(encoding="utf-8").split())
+    # C′ is A's block in every column, in the record and in the prose
     assert record["rules"]["Cprime"]["wrong_among_kept_P_and_C"] == record["rules"]["A"]["wrong_among_kept_P_and_C"]
-    assert pc["C′"] == pc["A"]
-    assert "C′'s row is A's row in every column" in text
-
-    only = _table_rows(text, ["rule", "corroborated only by canonical-failing tests", "Wilson",
-                              "problem-cluster bootstrap"], known)
-    for rule in ("A", "B"):
-        assert only[label[rule]] == cells_of(record["rules"][rule]["corroborated_only_by_wrong_tests"]), rule
-    assert "C′" not in only, "C′ consults no other draw; the quantity is undefined for it"
+    assert "C′'s row is A's row in every column" in flat
+    # C′ consults no other draw, so the corroboration quantity is undefined for it
     assert "corroborated_only_by_wrong_tests" not in record["rules"]["Cprime"]
-
+    assert "C′ consults no other draw, so the quantity is not defined for it" in flat
     # B's additions over A reconcile the two counts, and are stated
     additions = record["B_minus_A_by_half_stratum"]
     assert sum(additions.values()) == (record["rules"]["B"]["kept_wrong_applications"]
                                        - record["rules"]["A"]["kept_wrong_applications"])
-    stated = ", ".join(f"{k} {v}" for k, v in additions.items())
-    assert stated == "confirm-C 1, confirm-P 2, explore-C 1"
-    assert "B's four additions over A are confirm-C 1, confirm-P 2 and explore-C 1" in " ".join(text.split())
+    assert ", ".join(f"{k} {v}" for k, v in additions.items()) == "confirm-C 1, confirm-P 2, explore-C 1"
+    assert "B's four additions over A are confirm-C 1, confirm-P 2 and explore-C 1" in flat
