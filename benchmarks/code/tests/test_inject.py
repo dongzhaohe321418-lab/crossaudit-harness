@@ -117,7 +117,7 @@ def test_a_quote_shorter_than_six_words_is_rejected(mbpp_problem):
 def test_the_ladder_and_the_models_are_the_preregistered_ones():
     assert inject.LADDER == [("cross", d) for d in range(1, 9)]
     assert inject.INJECTOR_SPEC == "anthropic:claude-haiku-4-5-20251001"
-    assert inject.GATE_SPECS == ("anthropic:claude-sonnet-4-6", "openai:gpt-5.6-luna")
+    assert inject.GATE_SPECS == ("anthropic:claude-sonnet-4-6", "anthropic:claude-opus-4-8")
     assert inject.MIN_QUOTE_WORDS == 6 and inject.MAX_CHANGED_LINES == 4
 
 

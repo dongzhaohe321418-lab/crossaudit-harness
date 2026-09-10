@@ -43,7 +43,7 @@ EXPLORE_CACHE = RECORDS / "explore"
 
 #: §1: the injector is the generator's own model; the gate is two models, neither the auditor.
 INJECTOR_SPEC = "anthropic:claude-haiku-4-5-20251001"
-GATE_SPECS = ("anthropic:claude-sonnet-4-6", "openai:gpt-5.6-luna")
+GATE_SPECS = ("anthropic:claude-sonnet-4-6", "anthropic:claude-opus-4-8")   # Amendment 3
 PROBE_SPEC = "anthropic:claude-opus-4-8"
 AUDITOR_FAMILY = "cross"                      # openai:gpt-5.6-terra, ceiling 1's shipped cross
 LADDER = [(AUDITOR_FAMILY, d) for d in range(1, 9)]
@@ -256,7 +256,11 @@ allows B's behaviour.
 Answer with one word, YES or NO."""
 
 
-def gate_one(client, spec_model: str, problem: Problem, base: str, obj: dict) -> dict:
+def gate_one(clients: dict, spec_model: str, problem: Problem, base: str, obj: dict) -> dict:
+    """One gate verdict. Each gate model has its OWN project, so its route resolves: a client
+    built on the auditor's project refuses every other model of that vendor (a ProviderDenial,
+    which is how Amendment 2 found the second gate silently unanswered)."""
+    client = clients[spec_model]
     user = GATE_USER.format(spec=problem.spec, base=base, modified=obj["code"],
                             input_class=obj.get("input_class", ""), quote=obj.get("quote", ""))
     completion = client.complete(model=spec_model, system=GATE_SYSTEM, user=user)
@@ -305,6 +309,17 @@ def build(run_dir: Path, workers: int, timeout: float, limit: int | None) -> int
                                     study1.shipped_constitution())
     cfg = load(project / "crossaudit.yml")
     client = CrossAuditClient(cfg=cfg, phase="inject", run_id="inject-build", allow_custom=True)
+    # One project per gate model (Amendment 2's finding): a client on the auditor's project
+    # cannot route to a sibling model of the same vendor.
+    gate_clients: dict[str, object] = {}
+    for n, spec_model in enumerate(GATE_SPECS):
+        alias = f"inject-gate{n}"
+        explore.ROUTES[alias] = spec_model
+        gate_project = explore.build_project(scratch, ("holistic", alias, 0),
+                                             study1.shipped_constitution())
+        gate_cfg = load(gate_project / "crossaudit.yml")
+        gate_clients[spec_model] = CrossAuditClient(cfg=gate_cfg, phase="inject-gate",
+                                                   run_id="inject-gate", allow_custom=True)
 
     archive = run_dir / "injected"
     archive.mkdir(parents=True, exist_ok=True)
@@ -390,7 +405,7 @@ def build(run_dir: Path, workers: int, timeout: float, limit: int | None) -> int
         verdicts = []
         for spec_model in GATE_SPECS:
             try:
-                verdicts.append(gate_one(client, spec_model, problem, base, cache[iid]))
+                verdicts.append(gate_one(gate_clients, spec_model, problem, base, cache[iid]))
             except Exception as exc:  # noqa: BLE001
                 verdicts.append({"model": spec_model, "yes": False,
                                  "error": f"{type(exc).__name__}: {exc}", "cost_usd": 0.0})
