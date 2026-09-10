@@ -4,7 +4,10 @@
 
 Sheet items: every finding (any severity) on a stratum-P instance in draw 1 of arms R, B and
 the S-text reading. Each item shows an opaque id, the specification, the candidate
-solution, and the finding text — no arm, no severity, no stratum, no hidden test. The key
+solution, the hidden failure (the first failing hidden inputs with expected and actual
+values — the thing the finding is judged against) and the finding text — no arm, no
+severity. The question per item: does the finding name the input class, or the behaviour,
+on which the hidden test fails? yes / no / cannot tell. The key
 (id -> instance, arm, severity, rule) is written beside the sheet and committed later;
 the sheet itself stays in the archive (it quotes model output and the benchmark's
 specifications). Order is shuffled with seed 20260912.
@@ -21,7 +24,9 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE.parent.parent / "expertlongbench"))
 
+import execute  # noqa: E402
 import explore  # noqa: E402
+import residual_dump  # noqa: E402
 from corpus import load_problems  # noqa: E402
 
 SEED = 20260912
@@ -60,13 +65,26 @@ def main() -> int:
             for k, f in enumerate(rec["findings"]):
                 items.append({"instance": iid, "arm": arm, "k": k, "severity": f.get("severity"),
                               "rule": f.get("rule"), "text": f.get("observation", "")})
+    # The hidden failure each finding is judged against (H19d): the first failing hidden
+    # inputs with expected and actual values, recovered model-free by re-running the
+    # hidden suite in execute.py's sandbox (residual_dump.witness_for). Cached per instance.
+    witnesses: dict[str, dict] = {}
+    for it in items:
+        iid = it["instance"]
+        if iid in witnesses:
+            continue
+        problem = problems[instances[iid]["problem_id"]]
+        program, instrumented = problem.hidden_program(solutions[iid])
+        hidden = execute.run_suite(program, instrumented=instrumented).as_dict()
+        witnesses[iid] = residual_dump.witness_for(problem, solutions[iid], hidden)
     rng = random.Random(SEED)
     rng.shuffle(items)
     sheet, key = [], []
     for n, it in enumerate(items, 1):
         sid = f"J{n:04d}"
         p = problems[instances[it["instance"]]["problem_id"]]
-        sheet.append({"id": sid, "specification": p.spec, "solution": solutions[it["instance"]], "finding": it["text"]})
+        sheet.append({"id": sid, "specification": p.spec, "solution": solutions[it["instance"]],
+                      "hidden_failure": witnesses[it["instance"]], "finding": it["text"]})
         key.append({"id": sid, "instance": it["instance"], "arm": it["arm"], "k": it["k"],
                     "severity": it["severity"], "rule": it["rule"]})
     (args.out / "sheet-h19d.jsonl").write_text("".join(json.dumps(x, ensure_ascii=False) + "\n" for x in sheet), encoding="utf-8")
