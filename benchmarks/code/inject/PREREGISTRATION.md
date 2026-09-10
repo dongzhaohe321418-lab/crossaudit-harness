@@ -183,3 +183,47 @@ which can only lower recall on I. Both directions are conservative for H22a.
 **Unchanged:** the base population, the six filters and their thresholds, the two-model gate,
 the auditor, the constitution, the ladder, K, every hypothesis, the primary, the kill, the
 budget and the boundary. No outcome has been seen and none may change any of these.
+
+## Amendment 2 — 2026-09-11, after a twelve-instance yield pilot, before any instance of I exists and before any audit call
+
+**What was run.** The pilot of Amendment 1, on twelve base instances: 30 injector calls and 6
+gate calls, $0.149, cumulative construction spend $0.178, **no audit call of any kind**. The
+filters accepted 3 of 12 (Amendment 1's fix worked: F1 and F2 dropped nothing). The gate
+accepted none of the three: `claude-sonnet-4-6` said yes to one and no to two — on quotes like
+"sum of the elements with at most two digits" against negative numbers of more than two digits,
+where the prose genuinely does not settle it, which is the gate doing its job — and
+`gpt-5.6-luna` answered nothing at all: every call to it was refused by the harness project's
+own model allowlist (`ProviderDenial`), not by the model.
+
+Population I is still empty and no auditor has read anything. Three changes, all to
+construction:
+
+1. **The second gate model is actually called.** The build client is constructed with the
+   harness's `allow_custom` flag so `gpt-5.6-luna` resolves, as `claude-sonnet-4-6` already did.
+   Without this the gate was one model, not two. The pilot's six gate verdicts are discarded and
+   re-taken.
+2. **The base frame is every stratum-C instance of the frozen corpus (910), not only the 150 in
+   ceiling 1's audit set.** The pilot's joint yield — roughly a quarter through the filters and
+   a minority of those through the gate — cannot produce a population of useful size from 150.
+   The frame is walked in one fixed order: the 910 ids sorted, then shuffled with seed 20260916.
+   The walk stops at **|I| = 110** (ceiling 1's stratum-P size, chosen for comparability, not by
+   any outcome) or when the **construction spend reaches $12** of the study's $35 cap, whichever
+   comes first; both numbers are reported, and so is how much of the frame was consumed.
+   The 150 instances that are in ceiling 1's audit set are flagged in the records: H22b's paired
+   comparison (McNemar and the sign-flip test against the unmodified twin's already-measured
+   audit) is computed **on that subset only**, and its n is reported. For the rest of I the
+   false-positive comparator is ceiling 1's population-level 24/150 = 16.0%, not a paired twin.
+3. **The drop accounting is per attempt.** The pilot's `filter_drop_reasons` counted only
+   instances that ended accepted, so it reported zeros. It now counts, over every attempt of
+   every base instance, which filter rejected it, and reports the per-instance attempt count.
+
+**A confound this creates, and how it is measured.** Stratum P consists of instances where the
+generator failed; stratum C of instances where it succeeded. Widening the frame to all C
+instances means I sits on problems the generator found easier. Whether that makes an injected
+defect easier to see is measurable and is added to §4 as a fourth secondary: **union recall on I
+split by whether the instance's problem also contributes an instance to stratum P**, with
+intervals, reported whatever it shows.
+
+**Unchanged:** the injector, the six filters and their thresholds, both gate models and the
+requirement that both say yes, the auditor, the constitution, the ladder, K, every hypothesis,
+the primary, the kill, the $35 cap and the boundary. No outcome has been seen.
