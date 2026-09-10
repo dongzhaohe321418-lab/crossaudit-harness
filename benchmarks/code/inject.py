@@ -46,7 +46,8 @@ INJECTOR_SPEC = "anthropic:claude-haiku-4-5-20251001"
 GATE_SPECS = ("anthropic:claude-sonnet-4-6", "anthropic:claude-opus-4-8")   # Amendment 3
 PROBE_SPEC = "anthropic:claude-opus-4-8"
 AUDITOR_FAMILY = "cross"                      # openai:gpt-5.6-terra, ceiling 1's shipped cross
-LADDER = [(AUDITOR_FAMILY, d) for d in range(1, 9)]
+#: Amendment 4: the injected arm, then the unmodified twin of every instance of I.
+LADDER = ([("I", d) for d in range(1, 9)] + [("twin", d) for d in range(1, 9)])
 MIN_QUOTE_WORDS = 6                           # F1
 MAX_CHANGED_LINES = 4                         # F4
 SEED = 20260916
@@ -515,6 +516,13 @@ def injected_id(iid: str) -> str:
     return f"inj:{iid}"
 
 
+def arm_scope(arm: str, base_ids: list[str]) -> list[str]:
+    """Amendment 4: the injected arm reads `inj:` ids, the twin arm the base ids themselves,
+    so the twin's readings land in — and are served free from — ceiling 1's own cache where
+    that instance was audited before."""
+    return [injected_id(i) for i in base_ids] if arm == "I" else list(base_ids)
+
+
 def install_findings_archive(path: Path) -> None:
     """Every finding's text into the archive (never the repository), as study 19 did."""
     lock = threading.Lock()
@@ -566,15 +574,23 @@ def run(run_dir: Path, budget: float, workers: int, max_passes: int, plan: bool)
         raise SystemExit("run --build first")
     population = json.loads(pop_path.read_text(encoding="utf-8"))
     base_ids = population["population_instance_ids"]
-    scope = [injected_id(i) for i in base_ids]
-    scope_set = set(scope)
-    print(f"scope: {len(scope)} injected instances", flush=True)
+    print(f"scope: {len(base_ids)} injected instances and their {len(base_ids)} twins",
+          flush=True)
 
-    have = {("holistic", f, d): explore.load_detector(("holistic", f, d), scope_set)
-            for f, d in LADDER}
+    scopes = {arm: arm_scope(arm, base_ids) for arm in ("I", "twin")}
+    have = {}
+    for arm, draw in LADDER:
+        key = ("holistic", AUDITOR_FAMILY, draw)
+        found = explore.load_detector(key, set(scopes[arm]))
+        if arm == "twin":                       # ceiling 1 audited some of these already
+            explore.EXPLORE = CEILING_CACHE
+            found.update(explore.load_detector(key, set(scopes[arm])))
+            explore.EXPLORE = INJECT
+        have[(arm, draw)] = found
     if plan:
-        for f, d in LADDER:
-            print(f"ladder {f} d{d}: {len(scope) - len(have[('holistic', f, d)])} to run")
+        for arm, draw in LADDER:
+            print(f"ladder {arm} d{draw}: {len(scopes[arm]) - len(have[(arm, draw)])} to run "
+                  f"({len(have[(arm, draw)])} already held)")
         return 0
 
     from run import load_credentials
@@ -586,8 +602,8 @@ def run(run_dir: Path, budget: float, workers: int, max_passes: int, plan: bool)
     base_solutions = load_solutions(run_dir)
     injections = json.loads((run_dir / "injected" / "injections.json").read_text(encoding="utf-8"))
 
-    instances = {}
-    solutions = {}
+    instances = dict(base_instances)
+    solutions = dict(base_solutions)
     for iid in base_ids:
         new_id = injected_id(iid)
         code = injections[iid]["code"]
@@ -598,30 +614,31 @@ def run(run_dir: Path, budget: float, workers: int, max_passes: int, plan: bool)
     scratch = run_dir / "projects"
     scratch.mkdir(parents=True, exist_ok=True)
     spend = explore.Spend(f"inject-{time.strftime('%m%d%H%M%S', time.gmtime())}-")
-    for family, draw in LADDER:
-        key = ("holistic", family, draw)
-        missing = [i for i in scope if i not in have[key]]
+    for arm, draw in LADDER:
+        key = ("holistic", AUDITOR_FAMILY, draw)
+        missing = [i for i in scopes[arm] if i not in have[(arm, draw)]]
         if not missing:
-            print(f"ladder {family} d{draw}: already complete")
+            print(f"ladder {arm} d{draw}: already complete")
             continue
         total = spend.total()
         if budget and total >= budget:
-            print(f"\nSTOP: spend ${total:.3f} reached the ${budget:.2f} cap; {family} d{draw} not run")
+            print(f"\nSTOP: spend ${total:.3f} reached the ${budget:.2f} cap; {arm} d{draw} not run")
             break
-        print(f"\nladder {family} d{draw}: {len(missing)} instances (spend so far ${total:.3f})",
+        print(f"\nladder {arm} d{draw}: {len(missing)} instances (spend so far ${total:.3f})",
               flush=True)
-        install_findings_archive(run_dir / f"findings-{family}-d{draw}.jsonl")
+        install_findings_archive(run_dir / f"findings-{arm}-d{draw}.jsonl")
         explore.run_detector(key, missing, instances=instances, problems=problems,
                              solutions=solutions, constitution=constitution, cfg_cache={},
                              scratch=scratch, spend=spend, budget_usd=budget, workers=workers,
                              property_cache_path=run_dir / "study2-inputs/properties.json",
                              max_passes=max_passes)
-        have[key] = explore.load_detector(key, scope_set)
-        print(f"  {family} d{draw}: {len(have[key])} of {len(scope)}; spend ${spend.total():.3f}",
-              flush=True)
+        have[(arm, draw)] = explore.load_detector(key, set(scopes[arm]))
+        print(f"  {arm} d{draw}: {len(have[(arm, draw)])} of {len(scopes[arm])}; "
+              f"spend ${spend.total():.3f}", flush=True)
     print(f"\nstudy-22 spend this invocation: ${spend.total():.4f}", flush=True)
-    manifest = {"study": "study22 / injection", "ladder": LADDER, "scope_n": len(scope),
-                "draws_complete": {f"{f}-d{d}": len(have[("holistic", f, d)]) for f, d in LADDER},
+    manifest = {"study": "study22 / injection", "ladder": LADDER,
+                "scope_n": {arm: len(ids) for arm, ids in scopes.items()},
+                "draws_complete": {f"{arm}-d{draw}": len(have[(arm, draw)]) for arm, draw in LADDER},
                 "spend_usd_this_invocation": round(spend.total(), 6),
                 "written_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     (INJECT / f"manifest-{manifest['written_utc'].replace(':', '')}.json").write_text(
