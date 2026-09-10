@@ -1,0 +1,19 @@
+{
+  "archive_manifest": "MANIFEST.sha256",
+  "draws": {
+    "generated_tests-d2.json": "d778186c629af251153d5608449ec1b8a60dcb449941085e6ef452cd7808036e",
+    "generated_tests-d3.json": "68eb123dfa08af19b77fcfcce0cb6fc7d2fa486c88506fc10c82d4283d12b892"
+  },
+  "inputs": {
+    "generated_tests.json": "3ead6ed719a73266ef7f4108d3ed226e944311dd8ccec471514ea5ad2fc67f85",
+    "solutions-b1.jsonl": "1fc888b3b5cafb70b4a4624c8fd33abfd8345a2d1d0e48151d9cced371b429af",
+    "solutions-b2.jsonl": "3e295551e94207836b6b1b7cdd548736daa2f6edaa4e1443aeb55350acd12454"
+  },
+  "note": "generated test text is in the archive only; records carry counts, hashes and indices",
+  "run_dir": "/Users/ericdong/Documents/Crossaudit/study-data/wt-testval-runs",
+  "study16_archive_inputs_expected": {
+    "generated_tests.json": "3ead6ed719a73266ef7f4108d3ed226e944311dd8ccec471514ea5ad2fc67f85",
+    "solutions-b1.jsonl": "1fc888b3b5cafb70b4a4624c8fd33abfd8345a2d1d0e48151d9cced371b429af",
+    "solutions-b2.jsonl": "3e295551e94207836b6b1b7cdd548736daa2f6edaa4e1443aeb55350acd12454"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "d2": {
+    "responses_identical_to_draw1": 13,
+    "tests_identical_to_a_draw1_test": 486
+  },
+  "d3": {
+    "responses_identical_to_draw1": 8,
+    "tests_identical_to_a_draw1_test": 478
+  }
+}

@@ -1,0 +1,1 @@
+{"problem_id": "HumanEval/76", "cache": "generated_tests-d3.json", "error": "ProviderDenial: all configured bench-testgen-val provider routes failed. openai:gpt-5.6-terra \u2014 provider returned non-JSON: Expecting ',' delimiter: line 5 column 27 (char 134)"}

@@ -1,0 +1,18 @@
+{
+  "by_run_id": {
+    "testgen-val-d2": {
+      "calls": 222,
+      "input": 124814,
+      "output": 90100,
+      "usd": 1.663535
+    },
+    "testgen-val-d3": {
+      "calls": 222,
+      "input": 122648,
+      "output": 91909,
+      "usd": 1.685796
+    }
+  },
+  "ledger": "/Users/ericdong/Documents/Crossaudit/study-data/wt-testval-runs/scratch/project-holistic__cross__d1/.crossaudit/usage.jsonl",
+  "read_at": "2026-09-10T23:13:50+0800"
+}

@@ -1,0 +1,918 @@
+{
+  "bootstrap": {
+    "reps": 10000,
+    "seed": 20260915,
+    "unit": "problem"
+  },
+  "decision": {
+    "H17": "KILL",
+    "best_rule": "A",
+    "per_rule": {
+      "A": "KILL",
+      "B": "KILL",
+      "Cprime": "KILL"
+    }
+  },
+  "draw2": {
+    "bootstrap_problem_cluster": [
+      0.03160389831954278,
+      0.06160008438818566
+    ],
+    "candidate_died_before_collector": 2,
+    "candidate_timeouts": 2,
+    "canonical_timeouts": 0,
+    "cost_usd_adapter_sum": 1.663535,
+    "problems_canonical_timed_out": 0,
+    "problems_with_a_wrong_test": 37,
+    "problems_with_suite": 222,
+    "rate": 0.04570970328789094,
+    "tests_per_problem": {
+      "max": 11,
+      "mean": 5.617117117117117,
+      "min": 0,
+      "zero": 1
+    },
+    "tests_total": 1247,
+    "uncompilable_total": 0,
+    "unique_classifiable": 1247,
+    "unique_wrong": 57,
+    "wilson": [
+      0.03544687801163372,
+      0.05876287014605544
+    ]
+  },
+  "draw3": {
+    "bootstrap_problem_cluster": [
+      0.03035143769968051,
+      0.058587479935794544
+    ],
+    "candidate_died_before_collector": 2,
+    "candidate_timeouts": 2,
+    "canonical_timeouts": 0,
+    "cost_usd_adapter_sum": 1.685796,
+    "problems_canonical_timed_out": 0,
+    "problems_with_a_wrong_test": 37,
+    "problems_with_suite": 222,
+    "rate": 0.04376012965964344,
+    "tests_per_problem": {
+      "max": 10,
+      "mean": 5.558558558558558,
+      "min": 0,
+      "zero": 1
+    },
+    "tests_total": 1234,
+    "uncompilable_total": 0,
+    "unique_classifiable": 1234,
+    "unique_wrong": 54,
+    "wilson": [
+      0.033692751763806636,
+      0.05665925416047933
+    ]
+  },
+  "failing_applications": {
+    "artefact_rows": 4,
+    "n": 107,
+    "right": 89,
+    "rows_clean_classifiable": 285,
+    "unclassifiable_rows": 1,
+    "wrong": 18
+  },
+  "identity": {
+    "d2": {
+      "responses_identical_to_draw1": 13,
+      "tests_identical_to_a_draw1_test": 486
+    },
+    "d3": {
+      "responses_identical_to_draw1": 8,
+      "tests_identical_to_a_draw1_test": 478
+    }
+  },
+  "kill": {
+    "retention_lt": 5,
+    "wrong_rate_gt": 0.02
+  },
+  "ledger": {
+    "by_run_id": {
+      "testgen-val-d2": {
+        "calls": 222,
+        "input": 124814,
+        "output": 90100,
+        "usd": 1.663535
+      },
+      "testgen-val-d3": {
+        "calls": 222,
+        "input": 122648,
+        "output": 91909,
+        "usd": 1.685796
+      }
+    },
+    "ledger": "/Users/ericdong/Documents/Crossaudit/study-data/wt-testval-runs/scratch/project-holistic__cross__d1/.crossaudit/usage.jsonl",
+    "read_at": "2026-09-10T23:13:50+0800"
+  },
+  "n_problems": 222,
+  "n_rows": 290,
+  "n_rows_with_all_draws": 290,
+  "prompt_mismatches": 0,
+  "rules": {
+    "A": {
+      "arm": {
+        "confirm": {
+          "C": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.02666666666666667,
+                0.14864864864864866
+              ],
+              "k": 6,
+              "n": 74,
+              "rate": 0.08108108108108109,
+              "wilson": [
+                0.03768985019382638,
+                0.16581942443557818
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.0,
+                0.0410958904109589
+              ],
+              "k": 1,
+              "n": 74,
+              "rate": 0.013513513513513514,
+              "wilson": [
+                0.002389463403456818,
+                0.07265356519843233
+              ]
+            }
+          },
+          "F": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.7692307692307693,
+                1.0
+              ],
+              "k": 14,
+              "n": 15,
+              "rate": 0.9333333333333333,
+              "wilson": [
+                0.7018347012621998,
+                0.9881331045067315
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.6428571428571429,
+                1.0
+              ],
+              "k": 13,
+              "n": 15,
+              "rate": 0.8666666666666667,
+              "wilson": [
+                0.6211801716767764,
+                0.9626387408969346
+              ]
+            }
+          },
+          "P": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.16666666666666666,
+                0.42
+              ],
+              "k": 16,
+              "n": 55,
+              "rate": 0.2909090909090909,
+              "wilson": [
+                0.18771193553959536,
+                0.42140720492754985
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.03773584905660377,
+                0.2631578947368421
+              ],
+              "k": 8,
+              "n": 55,
+              "rate": 0.14545454545454545,
+              "wilson": [
+                0.07559289147759303,
+                0.26160912931452274
+              ]
+            }
+          }
+        },
+        "explore": {
+          "C": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.0,
+                0.06666666666666667
+              ],
+              "k": 2,
+              "n": 76,
+              "rate": 0.02631578947368421,
+              "wilson": [
+                0.00724665907512833,
+                0.09096621098658073
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.0,
+                0.06666666666666667
+              ],
+              "k": 2,
+              "n": 76,
+              "rate": 0.02631578947368421,
+              "wilson": [
+                0.00724665907512833,
+                0.09096621098658073
+              ]
+            }
+          },
+          "F": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                1.0,
+                1.0
+              ],
+              "k": 15,
+              "n": 15,
+              "rate": 1.0,
+              "wilson": [
+                0.7961166989641515,
+                1.0
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.5384615384615384,
+                1.0
+              ],
+              "k": 12,
+              "n": 15,
+              "rate": 0.8,
+              "wilson": [
+                0.5481455128483065,
+                0.9295245065301844
+              ]
+            }
+          },
+          "P": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.05084745762711865,
+                0.22641509433962265
+              ],
+              "k": 7,
+              "n": 55,
+              "rate": 0.12727272727272726,
+              "wilson": [
+                0.06304210427364634,
+                0.24017027655909076
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.01694915254237288,
+                0.1509433962264151
+              ],
+              "k": 4,
+              "n": 55,
+              "rate": 0.07272727272727272,
+              "wilson": [
+                0.02864406023304053,
+                0.17259940072156052
+              ]
+            }
+          }
+        }
+      },
+      "primary": {
+        "killed": true,
+        "killed_by_retention": false,
+        "killed_by_wrong_rate": true,
+        "rate": 0.12222222222222222,
+        "retained": 5,
+        "retained_ids": [
+          "b1:Mbpp/261",
+          "b1:Mbpp/297",
+          "b1:Mbpp/589",
+          "b1:Mbpp/594",
+          "b2:Mbpp/594"
+        ],
+        "retained_of": 7,
+        "right_failing_retained": {
+          "bootstrap_problem_cluster": [
+            0.7777777777777778,
+            0.967741935483871
+          ],
+          "k": 79,
+          "n": 89,
+          "rate": 0.8876404494382022,
+          "wilson": [
+            0.8053898870598024,
+            0.93781256663344
+          ]
+        },
+        "wrong_among_kept": {
+          "bootstrap_problem_cluster": [
+            0.03614457831325301,
+            0.2262023809523808
+          ],
+          "k": 11,
+          "n": 90,
+          "rate": 0.12222222222222222,
+          "wilson": [
+            0.06963615965482382,
+            0.2057374241048897
+          ]
+        },
+        "wrong_failing_removed": {
+          "bootstrap_problem_cluster": [
+            0.14285714285714285,
+            0.7142857142857143
+          ],
+          "k": 7,
+          "n": 18,
+          "rate": 0.3888888888888889,
+          "wilson": [
+            0.2030524657216362,
+            0.613809583977621
+          ]
+        }
+      },
+      "unique_level": {
+        "all_classifiable_tests": 1188,
+        "exposed_tests": 80,
+        "kept": 1176,
+        "wrong_among_kept_all": {
+          "bootstrap_problem_cluster": [
+            0.02059283346661731,
+            0.046492461027344736
+          ],
+          "k": 39,
+          "n": 1176,
+          "rate": 0.03316326530612245,
+          "wilson": [
+            0.02435337878375688,
+            0.045013109576889844
+          ]
+        },
+        "wrong_among_kept_exposed": {
+          "bootstrap_problem_cluster": [
+            0.04411764705882353,
+            0.27586206896551724
+          ],
+          "k": 10,
+          "n": 68,
+          "rate": 0.14705882352941177,
+          "wilson": [
+            0.08188817736343271,
+            0.24997394253308772
+          ]
+        }
+      }
+    },
+    "B": {
+      "arm": {
+        "confirm": {
+          "C": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.02666666666666667,
+                0.14864864864864866
+              ],
+              "k": 6,
+              "n": 74,
+              "rate": 0.08108108108108109,
+              "wilson": [
+                0.03768985019382638,
+                0.16581942443557818
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.0,
+                0.0684931506849315
+              ],
+              "k": 2,
+              "n": 74,
+              "rate": 0.02702702702702703,
+              "wilson": [
+                0.007443352638267217,
+                0.09329292516912502
+              ]
+            }
+          },
+          "F": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.7692307692307693,
+                1.0
+              ],
+              "k": 14,
+              "n": 15,
+              "rate": 0.9333333333333333,
+              "wilson": [
+                0.7018347012621998,
+                0.9881331045067315
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.6428571428571429,
+                1.0
+              ],
+              "k": 13,
+              "n": 15,
+              "rate": 0.8666666666666667,
+              "wilson": [
+                0.6211801716767764,
+                0.9626387408969346
+              ]
+            }
+          },
+          "P": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.19298245614035087,
+                0.4666666666666667
+              ],
+              "k": 18,
+              "n": 55,
+              "rate": 0.32727272727272727,
+              "wilson": [
+                0.21813065595168937,
+                0.45896776443421317
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.09259259259259259,
+                0.35714285714285715
+              ],
+              "k": 12,
+              "n": 55,
+              "rate": 0.21818181818181817,
+              "wilson": [
+                0.12946024041123025,
+                0.34370034021840024
+              ]
+            }
+          }
+        },
+        "explore": {
+          "C": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.0,
+                0.09090909090909091
+              ],
+              "k": 3,
+              "n": 76,
+              "rate": 0.039473684210526314,
+              "wilson": [
+                0.013514635094539595,
+                0.10974787746545532
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.0,
+                0.09090909090909091
+              ],
+              "k": 3,
+              "n": 76,
+              "rate": 0.039473684210526314,
+              "wilson": [
+                0.013514635094539595,
+                0.10974787746545532
+              ]
+            }
+          },
+          "F": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                1.0,
+                1.0
+              ],
+              "k": 15,
+              "n": 15,
+              "rate": 1.0,
+              "wilson": [
+                0.7961166989641515,
+                1.0
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.6428571428571429,
+                1.0
+              ],
+              "k": 13,
+              "n": 15,
+              "rate": 0.8666666666666667,
+              "wilson": [
+                0.6211801716767764,
+                0.9626387408969346
+              ]
+            }
+          },
+          "P": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.07688679245283023,
+                0.30357142857142855
+              ],
+              "k": 10,
+              "n": 55,
+              "rate": 0.18181818181818182,
+              "wilson": [
+                0.10187670434449676,
+                0.3033045963663764
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.05172413793103448,
+                0.25925925925925924
+              ],
+              "k": 8,
+              "n": 55,
+              "rate": 0.14545454545454545,
+              "wilson": [
+                0.07559289147759303,
+                0.26160912931452274
+              ]
+            }
+          }
+        }
+      },
+      "primary": {
+        "killed": true,
+        "killed_by_retention": false,
+        "killed_by_wrong_rate": true,
+        "rate": 0.1485148514851485,
+        "retained": 6,
+        "retained_ids": [
+          "b1:HumanEval/154",
+          "b1:Mbpp/261",
+          "b1:Mbpp/297",
+          "b1:Mbpp/589",
+          "b1:Mbpp/594",
+          "b2:Mbpp/594"
+        ],
+        "retained_of": 7,
+        "right_failing_retained": {
+          "bootstrap_problem_cluster": [
+            0.9032258064516129,
+            1.0
+          ],
+          "k": 86,
+          "n": 89,
+          "rate": 0.9662921348314607,
+          "wilson": [
+            0.9055263755943858,
+            0.9884707788482102
+          ]
+        },
+        "wrong_among_kept": {
+          "bootstrap_problem_cluster": [
+            0.06451612903225806,
+            0.25510746851932253
+          ],
+          "k": 15,
+          "n": 101,
+          "rate": 0.1485148514851485,
+          "wilson": [
+            0.09211601417099889,
+            0.23067097488236532
+          ]
+        },
+        "wrong_failing_removed": {
+          "bootstrap_problem_cluster": [
+            0.0,
+            0.4
+          ],
+          "k": 3,
+          "n": 18,
+          "rate": 0.16666666666666666,
+          "wilson": [
+            0.05836576805861446,
+            0.39222038103915724
+          ]
+        }
+      },
+      "unique_level": {
+        "all_classifiable_tests": 1188,
+        "exposed_tests": 80,
+        "kept": 1183,
+        "wrong_among_kept_all": {
+          "bootstrap_problem_cluster": [
+            0.022939677145284623,
+            0.04919423240033927
+          ],
+          "k": 42,
+          "n": 1183,
+          "rate": 0.03550295857988166,
+          "wilson": [
+            0.026371866716574613,
+            0.04764093269134115
+          ]
+        },
+        "wrong_among_kept_exposed": {
+          "bootstrap_problem_cluster": [
+            0.07246376811594203,
+            0.29850746268656714
+          ],
+          "k": 13,
+          "n": 75,
+          "rate": 0.17333333333333334,
+          "wilson": [
+            0.1041914626835726,
+            0.2743081144051939
+          ]
+        }
+      }
+    },
+    "Cprime": {
+      "arm": {
+        "confirm": {
+          "C": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.02666666666666667,
+                0.14864864864864866
+              ],
+              "k": 6,
+              "n": 74,
+              "rate": 0.08108108108108109,
+              "wilson": [
+                0.03768985019382638,
+                0.16581942443557818
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.0,
+                0.0410958904109589
+              ],
+              "k": 1,
+              "n": 74,
+              "rate": 0.013513513513513514,
+              "wilson": [
+                0.002389463403456818,
+                0.07265356519843233
+              ]
+            }
+          },
+          "F": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.7692307692307693,
+                1.0
+              ],
+              "k": 14,
+              "n": 15,
+              "rate": 0.9333333333333333,
+              "wilson": [
+                0.7018347012621998,
+                0.9881331045067315
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.4666666666666667,
+                1.0
+              ],
+              "k": 11,
+              "n": 15,
+              "rate": 0.7333333333333333,
+              "wilson": [
+                0.4804956594401943,
+                0.8910254667430761
+              ]
+            }
+          },
+          "P": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.16666666666666666,
+                0.42
+              ],
+              "k": 16,
+              "n": 55,
+              "rate": 0.2909090909090909,
+              "wilson": [
+                0.18771193553959536,
+                0.42140720492754985
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.03773584905660377,
+                0.2631578947368421
+              ],
+              "k": 8,
+              "n": 55,
+              "rate": 0.14545454545454545,
+              "wilson": [
+                0.07559289147759303,
+                0.26160912931452274
+              ]
+            }
+          }
+        },
+        "explore": {
+          "C": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.0,
+                0.06666666666666667
+              ],
+              "k": 2,
+              "n": 76,
+              "rate": 0.02631578947368421,
+              "wilson": [
+                0.00724665907512833,
+                0.09096621098658073
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.0,
+                0.06666666666666667
+              ],
+              "k": 2,
+              "n": 76,
+              "rate": 0.02631578947368421,
+              "wilson": [
+                0.00724665907512833,
+                0.09096621098658073
+              ]
+            }
+          },
+          "F": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                1.0,
+                1.0
+              ],
+              "k": 15,
+              "n": 15,
+              "rate": 1.0,
+              "wilson": [
+                0.7961166989641515,
+                1.0
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.375,
+                0.9285714285714286
+              ],
+              "k": 10,
+              "n": 15,
+              "rate": 0.6666666666666666,
+              "wilson": [
+                0.41713547738519774,
+                0.8482367556028526
+              ]
+            }
+          },
+          "P": {
+            "hc_union_rule": {
+              "bootstrap_problem_cluster": [
+                0.05084745762711865,
+                0.22641509433962265
+              ],
+              "k": 7,
+              "n": 55,
+              "rate": 0.12727272727272726,
+              "wilson": [
+                0.06304210427364634,
+                0.24017027655909076
+              ]
+            },
+            "rule": {
+              "bootstrap_problem_cluster": [
+                0.01694915254237288,
+                0.1509433962264151
+              ],
+              "k": 4,
+              "n": 55,
+              "rate": 0.07272727272727272,
+              "wilson": [
+                0.02864406023304053,
+                0.17259940072156052
+              ]
+            }
+          }
+        }
+      },
+      "primary": {
+        "killed": true,
+        "killed_by_retention": false,
+        "killed_by_wrong_rate": true,
+        "rate": 0.12790697674418605,
+        "retained": 5,
+        "retained_ids": [
+          "b1:Mbpp/261",
+          "b1:Mbpp/297",
+          "b1:Mbpp/589",
+          "b1:Mbpp/594",
+          "b2:Mbpp/594"
+        ],
+        "retained_of": 7,
+        "right_failing_retained": {
+          "bootstrap_problem_cluster": [
+            0.7073170731707317,
+            0.9393939393939394
+          ],
+          "k": 75,
+          "n": 89,
+          "rate": 0.8426966292134831,
+          "wilson": [
+            0.7531121499312459,
+            0.9039219033337944
+          ]
+        },
+        "wrong_among_kept": {
+          "bootstrap_problem_cluster": [
+            0.039473684210526314,
+            0.23913808940600112
+          ],
+          "k": 11,
+          "n": 86,
+          "rate": 0.12790697674418605,
+          "wilson": [
+            0.07294621791742709,
+            0.21468778936498575
+          ]
+        },
+        "wrong_failing_removed": {
+          "bootstrap_problem_cluster": [
+            0.14285714285714285,
+            0.7142857142857143
+          ],
+          "k": 7,
+          "n": 18,
+          "rate": 0.3888888888888889,
+          "wilson": [
+            0.2030524657216362,
+            0.613809583977621
+          ]
+        }
+      },
+      "unique_level": {
+        "all_classifiable_tests": 1188,
+        "exposed_tests": 80,
+        "kept": 1174,
+        "wrong_among_kept_all": {
+          "bootstrap_problem_cluster": [
+            0.02065379602638465,
+            0.04655370355911299
+          ],
+          "k": 39,
+          "n": 1174,
+          "rate": 0.03321976149914821,
+          "wilson": [
+            0.02439502615800894,
+            0.045089247984147124
+          ]
+        },
+        "wrong_among_kept_exposed": {
+          "bootstrap_problem_cluster": [
+            0.045454545454545456,
+            0.2878787878787879
+          ],
+          "k": 10,
+          "n": 66,
+          "rate": 0.15151515151515152,
+          "wilson": [
+            0.08443636982671272,
+            0.25692904869787664
+          ]
+        }
+      }
+    }
+  },
+  "validated_only_ids": [
+    "b1:HumanEval/154",
+    "b1:Mbpp/261",
+    "b1:Mbpp/297",
+    "b1:Mbpp/589",
+    "b1:Mbpp/594",
+    "b2:Mbpp/559",
+    "b2:Mbpp/594"
+  ],
+  "wrong_test_correlation": {
+    "of_which_also_wrong_in_draw2": 23,
+    "of_which_also_wrong_in_draw3": 26,
+    "of_which_wrong_in_draw2_or_draw3": 27,
+    "problems_with_a_wrong_draw1_test": 32,
+    "problems_with_a_wrong_test_in_any_draw": 52
+  }
+}

@@ -158,3 +158,36 @@ def test_the_comparator_on_the_frozen_record_is_the_preregistered_baseline():
 def test_normalised_source_ignores_whitespace_and_quotes():
     assert tv.normalised("assert f( 1 )=='a'") == tv.normalised('assert f(1) == "a"')
     assert tv.normalised("assert f(1) == 'a'") != tv.normalised("assert f(2) == 'a'")
+
+
+# --- the results file says what the records say (§1's table, verdicts, draws, ledger) ------
+
+def test_results_headline_figures_are_the_records():
+    import json
+    import re
+    numbers = json.loads((HERE.parent / "records" / "testgen-val" / "numbers.json").read_text(encoding="utf-8"))
+    text = (HERE.parent / "RESULTS-TESTGEN-VAL.md").read_text(encoding="utf-8")
+    flat = " ".join(text.split())          # the prose wraps; the figures do not
+    for rule, label in (("A", "A — majority"), ("B", "B — any-draw"), ("Cprime", "C′ — within-draw")):
+        p = numbers["rules"][rule]["primary"]
+        b = p["wrong_among_kept"]
+        row = next(line for line in text.splitlines() if line.startswith(f"| {label}"))
+        assert f"{b['k']}/{b['n']} = {100 * b['rate']:.1f}%" in row
+        assert f"{100 * b['wilson'][0]:.1f}–{100 * b['wilson'][1]:.1f}%" in row
+        assert f"{100 * b['bootstrap_problem_cluster'][0]:.1f}–{100 * b['bootstrap_problem_cluster'][1]:.1f}%" in row
+        assert f"{p['retained']} of {p['retained_of']}" in row
+        assert ("KILL" in row) == p["killed"]
+    assert numbers["decision"]["H17"] == "KILL" and "H17 is KILLED" in flat
+    assert numbers["decision"]["best_rule"] == "A"
+    assert "best-performing rule by the preregistered order is A" in flat
+    for k in (2, 3):
+        d = numbers[f"draw{k}"]
+        assert f"**{d['unique_wrong']} wrong = {100 * d['rate']:.1f}%**" in flat
+        assert f"{d['tests_total']:,} tests" in flat
+    ledger = numbers["ledger"]["by_run_id"]
+    total = sum(v["usd"] for v in ledger.values())
+    assert f"**${total:.4f} in total**" in flat
+    for rid, v in ledger.items():
+        assert f"`{rid}` {v['calls']} calls, ${v['usd']:.4f}" in flat
+    assert numbers["prompt_mismatches"] == 0
+    assert not re.search(r"assert \w+\(", text), "no generated test text in the results file"
