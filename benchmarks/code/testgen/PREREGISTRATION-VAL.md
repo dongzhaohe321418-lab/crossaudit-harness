@@ -219,3 +219,19 @@ as §4 does for the primary, the set is **80 tests: 64 right, 16 wrong**. Nothin
 changes: not the hypothesis, the rules, the primary, its denominators (107 failing
 applications: 18 wrong, 89 right — that figure already excluded the artefacts), the kill,
 the seed, or the selection order.
+
+## Amendment 2 — during draw 2, before draw 3 started: the spend cap raised to the authorised $8
+
+Written 2026-09-10 22:51 +08:00, with draw 2 in flight and draw 3 not started
+(`generated_tests-d3.json` does not exist). At this minute 73 of 222 draw-2 calls had
+landed, at $0.577 in total — $0.0079 per call by the adapters' figure, study 16's rate —
+so the two draws project to ≈ $3.5 and §6's $5.0 cap is not expected to bind. The
+coordinator has restated that the owner's authorisation for this study is $8, not $5, and
+asked that the cap not be allowed to truncate draw 3: **§6's cap is raised from $5.0 to
+$8.0 across both draws.** The in-flight invocation was started with a $5 argument; if it
+halts there, it is relaunched with the remainder so that the ledger's total across
+invocations stays ≤ $8, and the relaunch is recorded in the results. If even $8
+truncates draw 3, the run stops at the cap, the truncation is reported, and the rules
+are computed on the problems both new draws cover (with the count stated), as §6 already
+said. Nothing else changes: not the rules, the primary, the kill, the seed, or the
+selection order.
