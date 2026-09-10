@@ -289,3 +289,27 @@ both arms reached.
 **Budget.** The twin arm roughly doubles the audit: expected total now **$25**, still under the
 **$35** cap, which does not change. Nothing else changes: not the population, the filters, the
 gate, the auditor, K, the hypotheses, the primary or the kill. No outcome has been seen.
+
+## Amendment 5 — 2026-09-11, which contrast carries which confound, fixed before any audit call
+
+No hypothesis, number, threshold or procedure changes here. This records, before any outcome is
+visible, how the two contrasts must be read, so that the reading cannot be chosen later.
+
+**H22a compares two populations that differ in two ways at once.** Population I sits on problems
+the generator solved (stratum C); ceiling 1's stratum P sits on problems it failed. So a
+difference in union recall between them is the *joint* effect of how the defect arose (injected
+and specification-determined, against naturally occurring) and of which problems the instances
+come from. H22a cannot separate those, and the results will say so in the sentence that reports
+it. It is still the primary, because the paper's headline number is ceiling 1's 30.0% and a
+reader is entitled to see the new population measured against it.
+
+**H22b has no problem-mix confound at all.** Each instance of I is compared with its own twin —
+the same problem, the same specification, the same generator, the same code but for the injected
+lines, read by the same auditor at the same K (Amendment 4). Any difference there is the
+injected defect and nothing else. H22b is therefore the internally controlled contrast, and
+where the two point in different directions, the results must report H22b as the one that
+isolates the defect.
+
+**Neither licenses the sentence "the auditor catches specification-determined defects."** Both
+measure whether the instance was blocked. Whether a block names the injected class is §5's
+adjudication, and that is a separate, secondary number with its own key.
