@@ -1,0 +1,815 @@
+{
+  "H19a": {
+    "cluster_ci95_points": [
+      -1.8181818181818181,
+      3.8095238095238098
+    ],
+    "difference_points": 0.9090909090909091,
+    "holds": false,
+    "kill_for_the_severity_inference": true
+  },
+  "arms": {
+    "B": {
+      "any": {
+        "C": {
+          "curve": [
+            0.07666666666666666,
+            0.10111111111111112,
+            0.11666666666666667,
+            0.12666666666666668
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.04276315789473684,
+              0.11577181208053691
+            ],
+            [
+              0.059602649006622516,
+              0.1476510067114094
+            ],
+            [
+              0.07,
+              0.16891891891891891
+            ],
+            [
+              0.07586206896551724,
+              0.18243243243243243
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.07666666666666666,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.07586206896551724,
+              0.18243243243243243
+            ],
+            "k": 19,
+            "n": 150,
+            "n_problems": 143,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.12666666666666668,
+            "wilson95": [
+              0.08261129487936036,
+              0.18936648758213687
+            ]
+          }
+        },
+        "P": {
+          "curve": [
+            0.20681818181818182,
+            0.2636363636363636,
+            0.30227272727272725,
+            0.33636363636363636
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.12272622053872054,
+              0.2977382193494577
+            ],
+            [
+              0.16966966966966965,
+              0.3636433138726716
+            ],
+            [
+              0.2013888888888889,
+              0.4090909090909091
+            ],
+            [
+              0.22727272727272727,
+              0.4485981308411215
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.20681818181818182,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.22727272727272727,
+              0.4485981308411215
+            ],
+            "k": 37,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.33636363636363636,
+            "wilson95": [
+              0.2549203393736219,
+              0.42885040308759537
+            ]
+          }
+        }
+      },
+      "blocker": {
+        "C": {
+          "curve": [
+            0.008333333333333333,
+            0.015555555555555557,
+            0.021666666666666667,
+            0.02666666666666667
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.0016339869281045752,
+              0.018211920529801324
+            ],
+            [
+              0.0032679738562091504,
+              0.033112582781456956
+            ],
+            [
+              0.004901960784313725,
+              0.04513944892473117
+            ],
+            [
+              0.006493506493506494,
+              0.05442176870748299
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.008333333333333333,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.006493506493506494,
+              0.05442176870748299
+            ],
+            "k": 4,
+            "n": 150,
+            "n_problems": 143,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.02666666666666667,
+            "wilson95": [
+              0.010417940822967993,
+              0.06655389051214453
+            ]
+          }
+        },
+        "P": {
+          "curve": [
+            0.011363636363636364,
+            0.01818181818181818,
+            0.022727272727272728,
+            0.02727272727272727
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.0,
+              0.029130040234409113
+            ],
+            [
+              0.0,
+              0.04205607476635514
+            ],
+            [
+              0.0,
+              0.05188679245283019
+            ],
+            [
+              0.0,
+              0.06481481481481481
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.011363636363636364,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.0,
+              0.06481481481481481
+            ],
+            "k": 3,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.02727272727272727,
+            "wilson95": [
+              0.009317969857872282,
+              0.07713084169675567
+            ]
+          }
+        }
+      }
+    },
+    "R": {
+      "any": {
+        "C": {
+          "curve": [
+            0.8133333333333334,
+            0.9177777777777775,
+            0.9483333333333334,
+            0.96
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.7684563758389261,
+              0.8562091503267973
+            ],
+            [
+              0.8806306306306305,
+              0.9506610223124926
+            ],
+            [
+              0.9128270156305193,
+              0.9771241830065359
+            ],
+            [
+              0.9261744966442953,
+              0.9868421052631579
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.8133333333333334,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.9261744966442953,
+              0.9868421052631579
+            ],
+            "k": 144,
+            "n": 150,
+            "n_problems": 143,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.96,
+            "wilson95": [
+              0.915486535783444,
+              0.9815408393979256
+            ]
+          }
+        },
+        "P": {
+          "curve": [
+            0.9,
+            0.9515151515151514,
+            0.9659090909090909,
+            0.9727272727272728
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.8425925925925926,
+              0.9486607142857143
+            ],
+            [
+              0.91131498470948,
+              0.9836309523809523
+            ],
+            [
+              0.9318181818181818,
+              0.9929906542056075
+            ],
+            [
+              0.9369369369369369,
+              1.0
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.9,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.9369369369369369,
+              1.0
+            ],
+            "k": 107,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.9727272727272728,
+            "wilson95": [
+              0.9228691583032443,
+              0.9906820301421276
+            ]
+          }
+        }
+      },
+      "blocker": {
+        "C": {
+          "curve": [
+            0.05,
+            0.07444444444444445,
+            0.09166666666666666,
+            0.10666666666666667
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.025167785234899327,
+              0.07947208007224561
+            ],
+            [
+              0.0410958904109589,
+              0.1126126126126126
+            ],
+            [
+              0.05201342281879195,
+              0.1357615894039735
+            ],
+            [
+              0.06040268456375839,
+              0.1568627450980392
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.05,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.06040268456375839,
+              0.1568627450980392
+            ],
+            "k": 16,
+            "n": 150,
+            "n_problems": 143,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.10666666666666667,
+            "wilson95": [
+              0.06673036965207342,
+              0.16624622258414684
+            ]
+          }
+        },
+        "P": {
+          "curve": [
+            0.1318181818181818,
+            0.1727272727272727,
+            0.20227272727272727,
+            0.22727272727272727
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.0659090909090909,
+              0.21171171171171171
+            ],
+            [
+              0.09393939393939393,
+              0.2636363636363636
+            ],
+            [
+              0.11383928571428571,
+              0.30045871559633025
+            ],
+            [
+              0.12962962962962962,
+              0.3333333333333333
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.1318181818181818,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.12962962962962962,
+              0.3333333333333333
+            ],
+            "k": 25,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.22727272727272727,
+            "wilson95": [
+              0.15894628523350085,
+              0.31400495220186136
+            ]
+          }
+        }
+      }
+    },
+    "S": {
+      "any": {
+        "C": {
+          "curve": [
+            0.17833333333333334,
+            0.23333333333333334,
+            0.27,
+            0.29333333333333333
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.12751677852348994,
+              0.23299319727891157
+            ],
+            [
+              0.17315912582041612,
+              0.29655172413793107
+            ],
+            [
+              0.20230263157894737,
+              0.34105960264900664
+            ],
+            [
+              0.22077922077922077,
+              0.3691275167785235
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.17833333333333334,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.22077922077922077,
+              0.3691275167785235
+            ],
+            "k": 44,
+            "n": 150,
+            "n_problems": 143,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.29333333333333333,
+            "wilson95": [
+              0.22636420924618766,
+              0.37062349175928394
+            ]
+          }
+        },
+        "P": {
+          "curve": [
+            0.32954545454545453,
+            0.4333333333333334,
+            0.4909090909090909,
+            0.5363636363636364
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.2408256880733945,
+              0.4243119266055046
+            ],
+            [
+              0.3317897628937349,
+              0.5363636363636364
+            ],
+            [
+              0.38408685064935066,
+              0.5982142857142857
+            ],
+            [
+              0.42342342342342343,
+              0.6481606606606605
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.32954545454545453,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.42342342342342343,
+              0.6481606606606605
+            ],
+            "k": 59,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.5363636363636364,
+            "wilson95": [
+              0.44352397913274194,
+              0.6267491892092099
+            ]
+          }
+        }
+      },
+      "blocker": {
+        "C": {
+          "curve": [
+            0.018333333333333333,
+            0.022222222222222223,
+            0.025,
+            0.02666666666666667
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.0016556291390728477,
+              0.04054054054054054
+            ],
+            [
+              0.0033112582781456954,
+              0.04714912280701754
+            ],
+            [
+              0.004966887417218543,
+              0.052088439542483586
+            ],
+            [
+              0.006493506493506494,
+              0.05442176870748299
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.018333333333333333,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.006493506493506494,
+              0.05442176870748299
+            ],
+            "k": 4,
+            "n": 150,
+            "n_problems": 143,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.02666666666666667,
+            "wilson95": [
+              0.010417940822967993,
+              0.06655389051214453
+            ]
+          }
+        },
+        "P": {
+          "curve": [
+            0.004545454545454545,
+            0.00909090909090909,
+            0.013636363636363636,
+            0.01818181818181818
+          ],
+          "curve_cluster_ci95": [
+            [
+              0.0,
+              0.011574074074074073
+            ],
+            [
+              0.0,
+              0.023148148148148147
+            ],
+            [
+              0.0,
+              0.034722222222222224
+            ],
+            [
+              0.0,
+              0.046296296296296294
+            ]
+          ],
+          "k_max": 4,
+          "single_draw_mean": 0.004545454545454545,
+          "union_at_kmax": {
+            "cluster_ci95": [
+              0.0,
+              0.046296296296296294
+            ],
+            "k": 2,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.01818181818181818,
+            "wilson95": [
+              0.005000354875327899,
+              0.06388016459381213
+            ]
+          }
+        }
+      }
+    }
+  },
+  "bootstrap": {
+    "reps": 10000,
+    "seed": 20260912,
+    "unit": "problem"
+  },
+  "contrasts": {
+    "B_minus_R": {
+      "any": {
+        "C": {
+          "a_only": 0,
+          "a_union": 0.12666666666666668,
+          "b_only": 125,
+          "b_union": 0.96,
+          "cluster_ci95_points": [
+            -89.1891891891892,
+            -77.18120805369128
+          ],
+          "difference_points": -83.33333333333333,
+          "k": 4,
+          "mcnemar_exact_p": 4.70197740328915e-38,
+          "n": 150,
+          "signflip": {
+            "method": "sampled, 200000 draws, seed 20260915",
+            "n_clusters": 143,
+            "n_nonzero_clusters": 118,
+            "p": 4.9999750001249995e-06
+          }
+        },
+        "P": {
+          "a_only": 1,
+          "a_union": 0.33636363636363636,
+          "b_only": 71,
+          "b_union": 0.9727272727272728,
+          "cluster_ci95_points": [
+            -75.45454545454545,
+            -51.37614678899083
+          ],
+          "difference_points": -63.63636363636363,
+          "k": 4,
+          "mcnemar_exact_p": 3.091670257478196e-20,
+          "n": 110,
+          "signflip": {
+            "method": "sampled, 200000 draws, seed 20260915",
+            "n_clusters": 56,
+            "n_nonzero_clusters": 41,
+            "p": 4.9999750001249995e-06
+          }
+        }
+      },
+      "blocker": {
+        "C": {
+          "a_only": 1,
+          "a_union": 0.02666666666666667,
+          "b_only": 13,
+          "b_union": 0.10666666666666667,
+          "cluster_ci95_points": [
+            -12.837837837837837,
+            -3.3557046979865772
+          ],
+          "difference_points": -8.0,
+          "k": 4,
+          "mcnemar_exact_p": 0.0018310546875,
+          "n": 150,
+          "signflip": {
+            "method": "exact enumeration",
+            "n_clusters": 143,
+            "n_nonzero_clusters": 14,
+            "p": 0.0018310546875
+          }
+        },
+        "P": {
+          "a_only": 1,
+          "a_union": 0.02727272727272727,
+          "b_only": 23,
+          "b_union": 0.22727272727272727,
+          "cluster_ci95_points": [
+            -30.004716981132066,
+            -10.81081081081081
+          ],
+          "difference_points": -20.0,
+          "k": 4,
+          "mcnemar_exact_p": 2.9802322387695312e-06,
+          "n": 110,
+          "signflip": {
+            "method": "exact enumeration",
+            "n_clusters": 56,
+            "n_nonzero_clusters": 16,
+            "p": 0.000274658203125
+          }
+        }
+      }
+    },
+    "B_minus_S": {
+      "any": {
+        "C": {
+          "a_only": 4,
+          "a_union": 0.12666666666666668,
+          "b_only": 29,
+          "b_union": 0.29333333333333333,
+          "cluster_ci95_points": [
+            -23.841059602649008,
+            -9.868421052631579
+          ],
+          "difference_points": -16.666666666666668,
+          "k": 4,
+          "mcnemar_exact_p": 1.0928604751825333e-05,
+          "n": 150,
+          "signflip": {
+            "method": "sampled, 200000 draws, seed 20260915",
+            "n_clusters": 143,
+            "n_nonzero_clusters": 33,
+            "p": 2.9999850000749997e-05
+          }
+        },
+        "P": {
+          "a_only": 3,
+          "a_union": 0.33636363636363636,
+          "b_only": 25,
+          "b_union": 0.5363636363636364,
+          "cluster_ci95_points": [
+            -30.275229357798167,
+            -10.0
+          ],
+          "difference_points": -20.0,
+          "k": 4,
+          "mcnemar_exact_p": 2.744048833847046e-05,
+          "n": 110,
+          "signflip": {
+            "method": "exact enumeration",
+            "n_clusters": 56,
+            "n_nonzero_clusters": 22,
+            "p": 0.0003809928894042969
+          }
+        }
+      },
+      "blocker": {
+        "C": {
+          "a_only": 2,
+          "a_union": 0.02666666666666667,
+          "b_only": 2,
+          "b_union": 0.02666666666666667,
+          "cluster_ci95_points": [
+            -2.684563758389262,
+            2.666666666666667
+          ],
+          "difference_points": 0.0,
+          "k": 4,
+          "mcnemar_exact_p": 1.0,
+          "n": 150,
+          "signflip": {
+            "method": "exact enumeration",
+            "n_clusters": 143,
+            "n_nonzero_clusters": 4,
+            "p": 1.0
+          }
+        },
+        "P": {
+          "a_only": 2,
+          "a_union": 0.02727272727272727,
+          "b_only": 1,
+          "b_union": 0.01818181818181818,
+          "cluster_ci95_points": [
+            -1.8181818181818181,
+            3.8095238095238098
+          ],
+          "difference_points": 0.9090909090909091,
+          "k": 4,
+          "mcnemar_exact_p": 1.0,
+          "n": 110,
+          "signflip": {
+            "method": "exact enumeration",
+            "n_clusters": 56,
+            "n_nonzero_clusters": 3,
+            "p": 1.0
+          }
+        }
+      }
+    },
+    "R_minus_S": {
+      "any": {
+        "C": {
+          "a_only": 101,
+          "a_union": 0.96,
+          "b_only": 1,
+          "b_union": 0.29333333333333333,
+          "cluster_ci95_points": [
+            58.50340136054422,
+            74.50980392156863
+          ],
+          "difference_points": 66.66666666666667,
+          "k": 4,
+          "mcnemar_exact_p": 4.062633661888211e-29,
+          "n": 150,
+          "signflip": {
+            "method": "sampled, 200000 draws, seed 20260915",
+            "n_clusters": 143,
+            "n_nonzero_clusters": 95,
+            "p": 4.9999750001249995e-06
+          }
+        },
+        "P": {
+          "a_only": 50,
+          "a_union": 0.9727272727272728,
+          "b_only": 2,
+          "b_union": 0.5363636363636364,
+          "cluster_ci95_points": [
+            31.428571428571427,
+            55.85585585585585
+          ],
+          "difference_points": 43.63636363636363,
+          "k": 4,
+          "mcnemar_exact_p": 6.123990203832363e-13,
+          "n": 110,
+          "signflip": {
+            "method": "sampled, 200000 draws, seed 20260915",
+            "n_clusters": 56,
+            "n_nonzero_clusters": 34,
+            "p": 4.9999750001249995e-06
+          }
+        }
+      },
+      "blocker": {
+        "C": {
+          "a_only": 13,
+          "a_union": 0.10666666666666667,
+          "b_only": 1,
+          "b_union": 0.02666666666666667,
+          "cluster_ci95_points": [
+            3.3783783783783785,
+            12.987012987012985
+          ],
+          "difference_points": 8.0,
+          "k": 4,
+          "mcnemar_exact_p": 0.0018310546875,
+          "n": 150,
+          "signflip": {
+            "method": "exact enumeration",
+            "n_clusters": 143,
+            "n_nonzero_clusters": 14,
+            "p": 0.0018310546875
+          }
+        },
+        "P": {
+          "a_only": 25,
+          "a_union": 0.22727272727272727,
+          "b_only": 2,
+          "b_union": 0.01818181818181818,
+          "cluster_ci95_points": [
+            10.81081081081081,
+            31.53153153153153
+          ],
+          "difference_points": 20.90909090909091,
+          "k": 4,
+          "mcnemar_exact_p": 5.647540092468262e-06,
+          "n": 110,
+          "signflip": {
+            "method": "exact enumeration",
+            "n_clusters": 56,
+            "n_nonzero_clusters": 18,
+            "p": 0.00041961669921875
+          }
+        }
+      }
+    }
+  },
+  "n_C": 150,
+  "n_P": 110,
+  "study": "study19 / ceiling 3b"
+}
