@@ -145,3 +145,41 @@ Boundary: `src/` and the kernel directories are untouched; nothing in `ceiling.p
 specification text, no solution text and no finding text is committed; records carry ids,
 hashes, counts and outcomes only. The injected solutions live in the run archive under
 `~/Documents/Crossaudit/study-data/wt-inject-runs/`, never in the repository.
+
+## Amendment 1 — 2026-09-11, after a ten-instance construction pilot, before any instance of I exists and before any audit call
+
+**What was run.** With §1 as written, a pilot of the first ten base instances was run to check
+that the pipeline works: 10 injector calls, $0.029, no gate calls, **no audit calls of any kind**.
+Eight replies parsed; the filters accepted **none**. The drops: F2 (the modified code broke a
+visible test) 6, F3 (the modified code did not fail the hidden suite) 2, F4 (diff too large) 1,
+F1 (the quote is not in the specification) **0**. Two replies did not parse.
+
+**Why this is not an outcome-dependent change.** Nothing about any auditor's behaviour has been
+observed. What the pilot measured is the yield of the construction, and the dominant failure —
+six of eight parsed replies broke a test that was printed in the prompt — is the injector not
+doing what it was asked, not a property of the population. Population I is still empty; the
+pilot's ten injections are discarded and those instances are rebuilt under this amendment.
+
+**What changes, and only this.**
+
+1. **Reply format.** The injector now returns a one-line JSON object with `quote`,
+   `input_class` and `witness_input` (short fields, no code inside the JSON) followed by the
+   modified solution in a single fenced Python block. The pilot's two parse failures were
+   unescaped newlines inside a JSON string; this removes that failure mode.
+2. **The prompt states the binding constraint plainly** — the modified solution must still pass
+   every test shown — and asks the injector to check each shown test against its edit before
+   answering.
+3. **Up to three attempts per base instance**, fixed here in advance. Attempt 1 is as above.
+   If the filters reject it, attempts 2 and 3 are told which *shown* tests failed and that the
+   edit must survive them; they are shown nothing about the hidden suite, and nothing about any
+   auditor. The first attempt whose filters accept is the instance's injection; a base instance
+   whose three attempts all fail is dropped and counted. The per-instance attempt count is
+   recorded and reported.
+
+Attempts 2 and 3 push the injector toward defects that survive the visible suite — which is the
+defining property of stratum P, the population I is compared against — and toward subtler edits,
+which can only lower recall on I. Both directions are conservative for H22a.
+
+**Unchanged:** the base population, the six filters and their thresholds, the two-model gate,
+the auditor, the constitution, the ladder, K, every hypothesis, the primary, the kill, the
+budget and the boundary. No outcome has been seen and none may change any of these.
