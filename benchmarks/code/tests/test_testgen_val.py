@@ -193,33 +193,67 @@ def test_results_headline_figures_are_the_records():
     assert not re.search(r"assert \w+\(", text), "no generated test text in the results file"
 
 
+def _table_rows(text: str, header_contains: str) -> dict:
+    """The rows of the one §3 table whose header names ``header_contains``, by rule.
+
+    Rows are returned as lists of stripped cells, so an assertion below compares a WHOLE
+    cell with the record's figure. A substring check over the document would pass when a
+    number moves from one rule's row to another's, which is the failure round 3 found.
+    """
+    lines = [line for line in text.splitlines()]
+    heads = [i for i, line in enumerate(lines) if line.startswith("|") and header_contains in line]
+    assert len(heads) == 1, f"expected exactly one table headed {header_contains!r}, found {len(heads)}"
+    rows = {}
+    for line in lines[heads[0] + 2:]:
+        if not line.startswith("|"):
+            break
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        rows[cells[0]] = cells[1:]
+    return rows
+
+
 def test_results_exploratory_figures_are_the_exploratory_record():
-    """§3's rates and their two intervals come from records/testgen-val/exploratory.json."""
+    """§3's tables say what records/testgen-val/exploratory.json says — cell by cell.
+
+    Each rule's count, rate and BOTH intervals are asserted inside that rule's own row,
+    and C′'s block is compared against A's in full. Verified to fail under three
+    mutations: swapping A's and B's P/C intervals, changing a denominator (10/43 →
+    99/43), and deleting an interval cell.
+    """
     import json
     record = json.loads((HERE.parent / "records" / "testgen-val" / "exploratory.json").read_text(encoding="utf-8"))
-    flat = " ".join((HERE.parent / "RESULTS-TESTGEN-VAL.md").read_text(encoding="utf-8").split())
+    text = (HERE.parent / "RESULTS-TESTGEN-VAL.md").read_text(encoding="utf-8")
+    label = {"A": "A", "B": "B", "Cprime": "C′"}
 
-    def quoted(block, both=True):
-        w = f"Wilson {100 * block['wilson'][0]:.1f}–{100 * block['wilson'][1]:.1f}%"
-        b = f"{100 * block['bootstrap_problem_cluster'][0]:.1f}–{100 * block['bootstrap_problem_cluster'][1]:.1f}%"
-        return f"{block['k']} of {block['n']}", w, b
+    def cells_of(block: dict) -> list[str]:
+        return [f"{block['k']}/{block['n']} = {100 * block['rate']:.1f}%",
+                f"{100 * block['wilson'][0]:.1f}–{100 * block['wilson'][1]:.1f}%",
+                f"{100 * block['bootstrap_problem_cluster'][0]:.1f}–{100 * block['bootstrap_problem_cluster'][1]:.1f}%"]
 
-    for rule in ("A", "B"):
+    where = _table_rows(text, "kept wrong applications")
+    for rule, name in label.items():
         entry = record["rules"][rule]
-        for key in ("wrong_among_kept_P_and_C", "corroborated_only_by_wrong_tests"):
-            block = entry[key]
-            assert f"{100 * block['rate']:.1f}%" in flat
-            _n, wilson, boot = quoted(block)
-            assert wilson.removeprefix("Wilson ") in flat, (rule, key, wilson)
-            assert boot in flat, (rule, key, boot)
-    # C′ keeps A's P-and-C figure exactly, and the results file says so rather than repeating it
-    assert record["rules"]["Cprime"]["wrong_among_kept_P_and_C"]["k"] == record["rules"]["A"]["wrong_among_kept_P_and_C"]["k"]
-    assert "C′ 6 of 33 (the same as A)" in flat
-    # B's additions over A reconcile the two counts
+        strata = ", ".join(f"{k} {v}" for k, v in entry["by_half_stratum"].items())
+        assert where[name] == [str(entry["kept_wrong_applications"]), str(entry["on_instances"]), strata], name
+
+    pc = _table_rows(text, "P and C rows only")
+    for rule, name in label.items():
+        assert pc[name] == cells_of(record["rules"][rule]["wrong_among_kept_P_and_C"]), name
+    # C′ is A's block in every column, in the record and in the file
+    assert record["rules"]["Cprime"]["wrong_among_kept_P_and_C"] == record["rules"]["A"]["wrong_among_kept_P_and_C"]
+    assert pc["C′"] == pc["A"]
+    assert "C′'s row is A's row in every column" in text
+
+    only = _table_rows(text, "corroborated only by canonical-failing tests")
+    for rule in ("A", "B"):
+        assert only[label[rule]] == cells_of(record["rules"][rule]["corroborated_only_by_wrong_tests"]), rule
+    assert "C′" not in only, "C′ consults no other draw; the quantity is undefined for it"
+    assert "corroborated_only_by_wrong_tests" not in record["rules"]["Cprime"]
+
+    # B's additions over A reconcile the two counts, and are stated
     additions = record["B_minus_A_by_half_stratum"]
     assert sum(additions.values()) == (record["rules"]["B"]["kept_wrong_applications"]
                                        - record["rules"]["A"]["kept_wrong_applications"])
-    assert "B's four additions over A are confirm-C 1, confirm-P 2 and explore-C 1" in flat
-    for half_stratum, n in additions.items():
-        half, stratum = half_stratum.split("-")
-        assert f"{half}-{stratum} {n}" in flat
+    stated = ", ".join(f"{k} {v}" for k, v in additions.items())
+    assert stated == "confirm-C 1, confirm-P 2, explore-C 1"
+    assert "B's four additions over A are confirm-C 1, confirm-P 2 and explore-C 1" in " ".join(text.split())
