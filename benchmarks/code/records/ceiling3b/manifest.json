@@ -7,11 +7,11 @@
     ],
     "clean_at_freeze": true,
     "files_this_study_added": {
-      "benchmarks/code/RESULTS-CEILING3B.md": "40c8a87f79626f814089dbb7b89304ff4dddfe76395b95a11965c62a95c63f3f",
+      "benchmarks/code/RESULTS-CEILING3B.md": "eadb1473298eeb4556a76228fddeb2e0686399570342594a930bdaeb3421c3a6",
       "benchmarks/code/ceiling3b.py": "97decf2d40428f1e4d94438bd0f0188decc26d911f7034dd5fb2a72ac4d3a3ef",
       "benchmarks/code/ceiling3b/PREREGISTRATION.md": "7a116b0fa1dcc1a2bb76ffbe9d63ba2234b9b8c9c78e980291cd55003b4fe458",
       "benchmarks/code/ceiling3b/adjudication_sheet.py": "e0b2aaa603ac096603ba868c928f5a3bc91a90e41da222324e3ae155d4474150",
-      "benchmarks/code/ceiling3b/finalise_manifest.py": "83250440ac4fcd2e8bdcff24a600009a4f5dd23e37a043bd9e0f1bbe815d4f30",
+      "benchmarks/code/ceiling3b/finalise_manifest.py": "b36d1b693487554e9a5d4adbf4c5445a7227881c8a187aec70945cd57bbaa515",
       "benchmarks/code/ceiling3b/key-h19d.jsonl": "1f6909fe2cae55d03f64135dc4758fe67b5a3ca0a2605fac3e054a8523ac700c",
       "benchmarks/code/ceiling3b/splice_tables.py": "e53fe7bdf7a0bdad476ab872fda0cabc435da8189b3be7545b8f7a2f594d0442",
       "benchmarks/code/records/ceiling3b/L1-h19d-strict.csv": "90c203b0327d7f47de1f9b7e4dff12637f223f7427537e0de4d764a860562355",
@@ -36,13 +36,17 @@
       "benchmarks/code/records/ceiling3b/cache/holistic__self-strong-R__d4.jsonl": "962807264c47d5af617202644f4f7d0963416986811ab0d2f9d329e42d1a156c",
       "benchmarks/code/records/ceiling3b/cache/holistic__self-strong-S__d1.failed.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "benchmarks/code/records/ceiling3b/cache/holistic__self-strong-S__d1.jsonl": "5e6798c99de2b984cf1920f36b7fa45d96c562e9572521cf355dbbc6d665d24e",
+      "benchmarks/code/records/ceiling3b/manifest-2026-09-10T121623Z.json": "3f4e5cb249e25814c32bcf04569bc5059013ef6d17ba93aba210107a4dda2c72",
       "benchmarks/code/records/ceiling3b/numbers.json": "fe81c8616529dc356218ca07f992900a5ee9fdfdb3d4df9961055d61e84fc37a",
-      "benchmarks/code/records/ceiling3b/tables.md": "8f5664b90d147fa7c1593f6de6ce0e46acf89978b1c39e9f8125a613b40ea212",
-      "benchmarks/code/report_ceiling3b.py": "a5692fa62eb9749e1204941086ac60c7d6bb4d89b16f196fb6d9a00cb882b2d8",
-      "benchmarks/code/tests/test_ceiling3b_report.py": "9f24dc757aa8ffce05069063942ec044326ad70e17af57e8c987b3a207f336b6"
+      "benchmarks/code/records/ceiling3b/tables.md": "cb75ec531a7dc3a4c5bafbcb6c20182af93f5263669cf1028bf1f412c817d2d4",
+      "benchmarks/code/report_ceiling3b.py": "c2d6bc9a28307e6ec1152f72b20f4bfbb13b9933d439955e95698703f49b9cc6",
+      "benchmarks/code/tests/test_ceiling3b_report.py": "cf6950a3b080d6c1598cfc8e6cbc77f65e964e1fde5c2388446b3e56e09ec2ed",
+      "benchmarks/reviews/2026-09-10-ceiling3b-r1.md": "a8d989bcd024fcb68a4e8dcaa6361c1e88962c66b08fe59a34b38f3f35571f35",
+      "benchmarks/reviews/2026-09-10-ceiling3b-r2.md": "127e037d34b9d6173ccab1ff403ae865ac10a630a200d257db90ffac2ef7f347",
+      "benchmarks/reviews/2026-09-10-ceiling3b-r3.md": "9a50d8265e63e63364d423e1666eadc7aa4f8fa19abb095b9278d1aa81e5760c"
     },
-    "frozen_commit": "20606b33e27153cd7446dc45436fb126eebd9d87",
-    "frozen_commit_subject": "study 19 round 3: title says 'no demonstrated' effect; the inventory lists all twelve Table 4 contrasts (four preregistered) and H19c's P scope; post-hoc labels at each recognition figure; \u00a74 corrects the 75-readings count, renders \u03ba, discloses the per-invocation spend counter; the manifest builder records the frozen commit and clean tree, every study file, row counts and sources, the adjudicators, and S's reused draws",
+    "frozen_commit": "36f623dc4fcac3fe79925e9d7f32b80965e44df9",
+    "frozen_commit_subject": "study 19 round 4: Table 5 renders H19d on the registered any-finding denominator (S 6/37, R 58/104, B 4/24) beside the all-P rate; 'correctly handled or only untested'; the 28 other findings said plainly; the inventory counts H19b's product-bar comparison (twenty quantities) and the test checks every named contrast; the manifest builder lists the earlier manifest and the review archives and gives S's reused draws the auditor's model, role, provider and settings; third review archived",
     "note": "manifest.json is committed in the commit after frozen_commit; every other file the study added is listed here",
     "preregistration_and_amendment_commits": [
       {
@@ -115,29 +119,69 @@
   },
   "models": {
     "S (study 18 self-strong d1, reused)": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "role": "auditor (arm S: the shipped constitution; the comparator of every S contrast)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
       "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
       "constitution_sha256": "aea1230c9c56431b16a5f14006b71a89650da7f0672aa423bbe930aff1d2bb32",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
       "ledger_calls": 263,
       "ledger_usd": 2.262858,
       "provenance": "study 18's archive (records/ceiling3/manifest and its MANIFEST.sha256); not re-run here"
     },
     "S (study 18 self-strong d2, reused)": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "role": "auditor (arm S: the shipped constitution; the comparator of every S contrast)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
       "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
       "constitution_sha256": "aea1230c9c56431b16a5f14006b71a89650da7f0672aa423bbe930aff1d2bb32",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
       "ledger_calls": 265,
       "ledger_usd": 2.271852,
       "provenance": "study 18's archive (records/ceiling3/manifest and its MANIFEST.sha256); not re-run here"
     },
     "S (study 18 self-strong d3, reused)": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "role": "auditor (arm S: the shipped constitution; the comparator of every S contrast)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
       "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
       "constitution_sha256": "aea1230c9c56431b16a5f14006b71a89650da7f0672aa423bbe930aff1d2bb32",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
       "ledger_calls": 264,
       "ledger_usd": 2.241585,
       "provenance": "study 18's archive (records/ceiling3/manifest and its MANIFEST.sha256); not re-run here"
     },
     "S (study 18 self-strong d4, reused)": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "role": "auditor (arm S: the shipped constitution; the comparator of every S contrast)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
       "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
       "constitution_sha256": "aea1230c9c56431b16a5f14006b71a89650da7f0672aa423bbe930aff1d2bb32",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
       "ledger_calls": 262,
       "ledger_usd": 2.180946,
       "provenance": "study 18's archive (records/ceiling3/manifest and its MANIFEST.sha256); not re-run here"
