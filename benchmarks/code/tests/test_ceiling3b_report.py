@@ -92,3 +92,17 @@ def test_residual_and_cost_are_bound():
     assert f"moves from {r['ceiling3_residual_n']} to {r['with_R']['n']} with R and not at all with B" in _flat()
     assert r["with_B"]["n"] == r["ceiling3_residual_n"]
     assert f"**${s['ledger_usd_total']:.2f}** from the nine project ledgers ({s['ledger_calls_total']} calls)" in t
+
+
+def test_the_strict_kappa_and_the_inventory_are_rendered():
+    """The recognition κ is a number in the prose (a template placeholder once survived here),
+    and the comparison inventory's count equals Table 4's contrast count."""
+    st = _n()["H19d"]["strict_recognition_POST_HOC"]
+    assert f"its κ ({st['kappa']:.3f}) is lower" in _flat()
+    assert "{" not in _t().split("<!-- tables:begin -->")[0].replace("{{", "")
+    assert "performs **twelve** paired contrasts" in _flat()
+    assert "Preregistered among them, four" in _flat()
+    contrasts = _n()["contrasts"]
+    leaves = [(pair, rule, pop) for pair, rules in contrasts.items() for rule, pops in rules.items()
+              for pop in pops if isinstance(pops, dict)]
+    assert len(leaves) == 12, leaves

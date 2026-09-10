@@ -1,4 +1,4 @@
-# Ceiling 3b — the Anthropic family under two changed rulebooks: the grading rule showed no BLOCKER effect, the referent rule moved this family as it moved the shipped auditor, and the adjudication says what its findings name
+# Ceiling 3b — the Anthropic family under two changed rulebooks: the grading rule showed no demonstrated BLOCKER effect, the referent rule moved this family as it moved the shipped auditor, and the adjudication says what its findings name
 
 Study 19. Preregistered at `benchmarks/code/ceiling3b/PREREGISTRATION.md` (ed75d27,
 2026-09-09 17:58 UTC, before the first call at 17:59:58; Amendment 1 — an S reading with its
@@ -171,14 +171,14 @@ produced no demonstrated BLOCKER-recall effect** (H19a: +0.9 points, cluster [-1
 fewer findings (-20.0 on the any-finding rate). The kill named for the inference fires and the
 inference is withdrawn. What the adjudication adds is narrower than "did not see" and is
 stated as two measured rates: under the shipped constitution, Sonnet's draw-1 findings
-*name* the failing class on 6 of 110 defects and *assert a defect* on 3; the other 28 of
-its 38 findings are about something else. The gap study 18 measured between "mentioned by
+*name* the failing class on 6 of 110 defects and — on the post-hoc recognition question,
+Table 5b — *assert a defect* on 3; the other 28 of its 38 findings are about something else. The gap study 18 measured between "mentioned by
 none" and "blocked by none" was therefore a gap between *returning some finding* and
 blocking, not between recognising the defect and blocking.
 
 **What moved the family is the referent rule** — the instruction to find what the visible
 tests do not exercise — which raised naming from 5.5% to 52.7%, defect-asserting findings
-from 2.7% to 24.5% of the defect population, and BLOCKER recall at K = 4 from 1.8% to
+from 2.7% to 24.5% of the defect population (post hoc, Table 5b), and BLOCKER recall at K = 4 from 1.8% to
 22.7% (+20.9 points, cluster [+10.8, +31.8]) — the lever ceiling 2 found for the shipped auditor
 (+26.8 points on flags) — at a false-positive cost of +8.0 points on C. Whether the rest of the
 near-zero rate is the rulebook's referent or the model's limit is not separated by this
@@ -188,11 +188,15 @@ call the failing class correctly handled, and 46 of 128 name something other tha
 defect. The residual across all measured families (Table 7) moves from 56 to 53 with R and
 not at all with B.
 
-**Comparison inventory.** Preregistered: H19a (B − S, BLOCKER, P: the primary), H19b (B − S
-on C; B's single-draw FP against the bar), H19c (R − S under both rules), H19d (the naming
-rate per arm). Reported beside them, not preregistered: B − R (Table 4), the recognition
-rates (Table 5b), the residual with R and B (Table 7). One primary; no correction is applied
-to the secondaries and none is claimed to clear a corrected threshold.
+**Comparison inventory.** Table 4 performs **twelve** paired contrasts: three arm pairs
+(B − S, R − S, B − R) × two flag rules (BLOCKER, any finding) × two populations (P, C).
+Preregistered among them, four: H19a (B − S, BLOCKER, P: the primary), H19b (B − S, BLOCKER,
+C — B's single-draw FP against the bar), H19c (R − S **on P**, under both rules: two
+contrasts). Not preregistered, eight: B − S under the any-finding rule on P and on C; R − S
+on C under either rule; B − R under both rules on both populations. Beside Table 4: H19d's
+three naming rates (preregistered), the three recognition rates of Table 5b (post hoc), and the
+residual with R and B (Table 7, not preregistered). One primary; no correction is applied to
+the other nineteen quantities and none is claimed to clear a corrected threshold.
 
 ## 3. Secondaries
 
@@ -204,13 +208,18 @@ applies (ledger totals are the cost table).
 
 ## 4. Deviations and limits
 
-* The cap was raised from $30 to $55 after 75 R readings had landed (Amendment 2); the
-  ladder and arms did not change.
+* The cap was raised from $30 to $55 during R draw 1 (Amendment 2); Amendment 2's own text
+  says 75 readings had landed, the ledgers say 100 unique readings over 105 calls (Amendment 3
+  corrects the record). The ladder and arms did not change. The driver's spend counter is
+  per invocation (it resets on restart), so the cumulative cap was enforced by hand across
+  the run's restarts from the ledgers, not by the driver; R and B together cost $29.98, so
+  under the $30 cap the S text reading of Amendment 1 (H19d's comparator) is the part of
+  the study that depended on the raise.
 * Arm S's BLOCKER and any-finding numbers are study 18's draws, reused; its H19d texts come
   from one extra reading (Amendment 1), so S's Table 5 row is a different draw from its
   Table 1 row — a fifth reading, not one of the four.
 * H19d's registered question is about naming; the recognition question (Table 5b) is post
-  hoc, asked after the first review, and its κ ({st['kappa']:.3f}) is lower than the naming
+  hoc, asked after the first review, and its κ (0.695) is lower than the naming
   question's. The disputed items of both are listed in `numbers.json`. L2 is a model of a
   different vendor, not a person; L1 is the author; five finding texts name the added
   rule's id, so the blinding is to metadata, not to allocation.
