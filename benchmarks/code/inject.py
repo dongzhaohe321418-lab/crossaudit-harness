@@ -65,6 +65,8 @@ def norm_ws(text: str) -> str:
 # ---------------------------------------------------------------------------------
 
 MAX_ATTEMPTS = 3                              # Amendment 1
+TARGET_I = 110                                # Amendment 2: |I| target, ceiling 1's n_P
+BUILD_SPEND_CAP = 12.0                        # Amendment 2: of the study's $35
 
 INJECTOR_SYSTEM = (
     "You introduce a single realistic defect into a working Python solution, for research on "
@@ -286,12 +288,14 @@ def build(run_dir: Path, workers: int, timeout: float, limit: int | None) -> int
     from concurrent.futures import ThreadPoolExecutor
 
     load_credentials()
+    import random
     instances = explore.load_instances()
-    audit_set = explore.load_audit_set()
-    base_ids = [i for i in audit_set if instances[i]["stratum"] == "C"]
+    audit_set = set(explore.load_audit_set())
+    frame = sorted(i for i, r in instances.items() if r["stratum"] == "C")   # Amendment 2
+    random.Random(SEED).shuffle(frame)
     if limit:
-        base_ids = base_ids[:limit]
-    print(f"base: {len(base_ids)} stratum-C instances", flush=True)
+        frame = frame[:limit]
+    print(f"frame: {len(frame)} stratum-C instances, walked in seed-{SEED} order", flush=True)
     problems = {p.problem_id: p for p in load_problems()}
     solutions = load_solutions(run_dir)
 
@@ -300,7 +304,7 @@ def build(run_dir: Path, workers: int, timeout: float, limit: int | None) -> int
     project = explore.build_project(scratch, ("holistic", AUDITOR_FAMILY, 1),
                                     study1.shipped_constitution())
     cfg = load(project / "crossaudit.yml")
-    client = CrossAuditClient(cfg=cfg, phase="inject", run_id="inject-build")
+    client = CrossAuditClient(cfg=cfg, phase="inject", run_id="inject-build", allow_custom=True)
 
     archive = run_dir / "injected"
     archive.mkdir(parents=True, exist_ok=True)
@@ -371,40 +375,15 @@ def build(run_dir: Path, workers: int, timeout: float, limit: int | None) -> int
             cache_path.write_text(json.dumps(cache, indent=1, sort_keys=True), encoding="utf-8")
         return iid, entry
 
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        for n, _ in enumerate(pool.map(inject_one, base_ids), 1):
-            if n % 25 == 0:
-                print(f"  injected {n}/{len(base_ids)}", flush=True)
-
-    # filters, then the gate on what the filters accepted
-    rows: dict[str, dict] = {}
-    for iid in base_ids:
-        entry = cache.get(iid) or {}
-        inst = instances[iid]
-        problem = problems[inst["problem_id"]]
-        base = solutions[iid]["solution"]
-        row = {"instance_id": iid, "problem_id": inst["problem_id"], "batch": inst["batch"],
-               "parsed": bool(entry.get("parsed")),
-               "n_attempts": len(entry.get("attempts") or []),
-               "accepted_attempt": entry.get("accepted_attempt"),
-               "base_solution_sha256": sha(base)}
-        if entry.get("parsed"):
-            row.update(filter_one(problem, base, entry, timeout))
-            row["modified_sha256"] = sha(entry["code"])
-        else:
-            row["accepted_by_filters"] = False
-        rows[iid] = row
-    passed = [i for i in base_ids if rows[i].get("accepted_by_filters")]
-    print(f"filters accept {len(passed)} of {len(base_ids)}", flush=True)
-
     gate_path = archive / "gate.json"
     gate_cache = json.loads(gate_path.read_text(encoding="utf-8")) if gate_path.exists() else {}
+    gate_cache = {k: v for k, v in gate_cache.items() if v and all("error" not in g for g in v)}
 
-    def gate_all(iid: str) -> tuple[str, list[dict]]:
+    def gate_all(iid: str) -> list[dict]:
         with lock:
             hit = gate_cache.get(iid)
         if hit is not None:
-            return iid, hit
+            return hit
         inst = instances[iid]
         problem = problems[inst["problem_id"]]
         base = solutions[iid]["solution"]
@@ -418,18 +397,64 @@ def build(run_dir: Path, workers: int, timeout: float, limit: int | None) -> int
         with lock:
             gate_cache[iid] = verdicts
             gate_path.write_text(json.dumps(gate_cache, indent=1, sort_keys=True), encoding="utf-8")
-        return iid, verdicts
+        return verdicts
 
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        for n, _ in enumerate(pool.map(gate_all, passed), 1):
-            if n % 25 == 0:
-                print(f"  gated {n}/{len(passed)}", flush=True)
+    def spend_so_far() -> float:
+        return (sum(float(v.get("cost_usd") or 0) for v in cache.values())
+                + sum(float(g.get("cost_usd") or 0) for vs in gate_cache.values() for g in vs))
+
+    # Amendment 2: one seeded walk; a batch at a time so the workers stay busy, stopping at
+    # the target size or the construction spend cap, whichever comes first.
+    base_ids: list[str] = []
+    population: list[str] = []
+    batch = max(workers * 4, 12)
+    for start in range(0, len(frame), batch):
+        if len(population) >= TARGET_I or spend_so_far() >= BUILD_SPEND_CAP:
+            break
+        chunk = frame[start:start + batch]
+        base_ids.extend(chunk)
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            list(pool.map(inject_one, chunk))
+        accepted_now = [i for i in chunk
+                        if (cache.get(i) or {}).get("accepted_attempt")]
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            list(pool.map(gate_all, accepted_now))
+        for iid in accepted_now:
+            vs = gate_cache.get(iid) or []
+            if vs and all(g.get("yes") for g in vs):
+                population.append(iid)
+        print(f"  walked {len(base_ids)}/{len(frame)}: filters {sum(1 for i in base_ids if (cache.get(i) or {}).get('accepted_attempt'))}, "
+              f"I {len(population)}, spend ${spend_so_far():.2f}", flush=True)
+    population = population[:TARGET_I]
+
+    rows: dict[str, dict] = {}
+    for iid in base_ids:
+        entry = cache.get(iid) or {}
+        inst = instances[iid]
+        problem = problems[inst["problem_id"]]
+        base = solutions[iid]["solution"]
+        row = {"instance_id": iid, "problem_id": inst["problem_id"], "batch": inst["batch"],
+               "parsed": bool(entry.get("parsed")),
+               "n_attempts": len(entry.get("attempts") or []),
+               "accepted_attempt": entry.get("accepted_attempt"),
+               "base_solution_sha256": sha(base)}
+        row["in_ceiling1_audit_set"] = iid in audit_set          # Amendment 2: paired subset
+        row["accepted_by_filters"] = bool(entry.get("accepted_attempt"))
+        row["attempt_filters"] = [a.get("filters") for a in (entry.get("attempts") or [])
+                                  if a.get("filters")]
+        if entry.get("accepted_attempt"):
+            row["modified_sha256"] = sha(entry["code"])
+            row["changed_lines"] = changed_lines(base, entry["code"])
+            row["branched"] = changed_line_is_branched(base, entry["code"])
+            row["quote_words"] = len((entry.get("quote") or "").split())
+        rows[iid] = row
+    passed = [i for i in base_ids if rows[i]["accepted_by_filters"]]
+    print(f"filters accept {len(passed)} of {len(base_ids)}", flush=True)
 
     for iid in passed:
         verdicts = gate_cache.get(iid) or []
         rows[iid]["gate"] = [{k: v for k, v in g.items() if k != "cost_usd"} for g in verdicts]
-        rows[iid]["in_population_I"] = bool(verdicts) and all(g.get("yes") for g in verdicts)
-    population = [i for i in base_ids if rows[i].get("in_population_I")]
+        rows[iid]["in_population_I"] = iid in set(population)
 
     INJECT.mkdir(parents=True, exist_ok=True)
     spent = sum(float(v.get("cost_usd") or 0) for v in cache.values()) + sum(
@@ -442,14 +467,20 @@ def build(run_dir: Path, workers: int, timeout: float, limit: int | None) -> int
                                               if rows[i].get("accepted_attempt") == a)
                                   for a in range(1, MAX_ATTEMPTS + 1)},
            "n_filters_accept": len(passed), "n_population_I": len(population),
-           "filter_drop_reasons": {
-               k: sum(1 for i in base_ids if rows[i].get("parsed") and not rows[i].get(k))
+           "n_frame": len(frame), "n_frame_walked": len(base_ids),
+           "target_I": TARGET_I, "build_spend_cap_usd": BUILD_SPEND_CAP,
+           "n_in_ceiling1_audit_set": sum(1 for i in population if i in audit_set),
+           # Amendment 2: per ATTEMPT, over every attempt of every base instance walked.
+           "filter_drop_reasons_per_attempt": {
+               k: sum(1 for i in base_ids for f in rows[i]["attempt_filters"] if not f.get(k))
                for k in ("F1_quote_in_spec", "F2_visible_passes", "F3_hidden_fails",
                          "F4_small_diff", "F5_runs", "F6_witness")},
+           "n_attempts_total": sum(len(rows[i]["attempt_filters"]) for i in base_ids),
            "gate_yes_by_model": {m: sum(1 for i in passed
                                         for g in (gate_cache.get(i) or [])
                                         if g["model"] == m and g.get("yes"))
                                  for m in GATE_SPECS},
+           "gate_n_judged": len(passed),
            "gate_both_yes": len(population),
            "population_instance_ids": population,
            "rows": {i: rows[i] for i in base_ids},
