@@ -35,12 +35,12 @@ CEILING4 = RECORDS / "ceiling4"
 CACHES_BEFORE = (RECORDS / "explore", RECORDS / "ceiling", RECORDS / "ceiling3", RECORDS / "ceiling3b")
 
 MODEL = explore.ROUTES["cross"]                     # openai:gpt-5.6-terra, the shipped cross auditor
-ROUTES = {"cross-R": MODEL}
+ROUTES = {"cross-R": MODEL, "cross-T": MODEL}     # cross-T: Amendment 1, the shipped constitution with texts archived
 explore.ROUTES.update(ROUTES)
 
 
 #: (route, draw): the preregistered ladder, set by budget alone (§4).
-LADDER = [("cross-R", d) for d in range(1, 9)]
+LADDER = [("cross-R", d) for d in range(1, 9)] + [("cross-T", 1)]   # Amendment 1
 
 
 def constitution_for(route: str, base: str) -> str:

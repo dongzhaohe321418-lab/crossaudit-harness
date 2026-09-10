@@ -75,3 +75,19 @@ report the K reached with K_common = min(K, 8).
 
 Unchanged: the hidden suite reaches no prompt, check or model; the audit path is the
 product's; `src/` is not touched; the generator setting is ceiling 1's cross family's.
+
+## Amendment 1 — 2026-09-10, during `cross-R` draw 1, before any result of it was read
+
+The paper's gap analysis (scratchpad memo, 2026-09-10) ranks first an adjudication of the
+SHIPPED auditor's findings — has anyone checked that `cross`'s 30.0% flag rate names the
+defects? — and the archive cannot support it: ceiling 1's harness dropped the finding
+texts before caching, and no `cross` reading with its texts exists. **Added to the end of
+this study's ladder: one reading of `cross-T`** — the shipped constitution unchanged, the
+shipped cross auditor, texts archived, 260 instances (≈ $1.5, inside the cap). It enters no
+H20 contrast (H20a–d use ceiling 1's `cross` draws as before). §4's conditional adjudication
+becomes unconditional for `cross-T`'s draw: its P findings are adjudicated with study 19's
+naming and recognition questions (L1 the author, L2 a different vendor's model, blind to
+metadata), and `cross-R`'s draw 1 is adjudicated beside it whether or not H20a is positive.
+The primary rate is "P instances with a defect-asserting finding / 110" for `cross-T`,
+with both intervals; the kill named by the memo — below 20 of 110, the headline becomes
+"flag rate 30.0%, defect-naming recall X%" — is adopted here for that rate.
