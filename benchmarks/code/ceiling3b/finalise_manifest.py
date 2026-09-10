@@ -49,7 +49,8 @@ def main() -> int:
     study_files = sorted(p for p in [*(CODE / "ceiling3b").glob("*"), CODE / "ceiling3b.py", CODE / "report_ceiling3b.py",
                                       CODE / "RESULTS-CEILING3B.md", CODE / "tests" / "test_ceiling3b_report.py",
                                       *(CODE / "records" / "ceiling3b").rglob("*")]
-                         if p.is_file() and p.name != "manifest.json" and not p.name.startswith("manifest-"))
+                         if p.is_file() and p.name != "manifest.json")
+    study_files += sorted(p for p in (REPO / "benchmarks" / "reviews").glob("*ceiling3b*") if p.is_file())
     code = {"preregistration_and_amendment_commits": [{"sha": c[0], "when_and_subject": c[1]} for c in reversed(commits)],
             "amendment_headings": [l.strip() for l in prereg.read_text(encoding="utf-8").splitlines() if l.startswith("## Amendment")],
             "frozen_commit": git("rev-parse", "HEAD"),
@@ -100,6 +101,11 @@ def main() -> int:
             cfg = (proj / "crossaudit.yml").read_text(encoding="utf-8") if (proj / "crossaudit.yml").exists() else ""
             models[f"S (study 18 self-strong d{d}, reused)"] = {
                 "config_sha256": hashlib.sha256(cfg.encode()).hexdigest(),
+                "auditor": {"role": "auditor (arm S: the shipped constitution; the comparator of every S contrast)",
+                            "vendor": "anthropic", "model": "claude-sonnet-4-6", "provider": "anthropic",
+                            "base_url": "vendor default", "reasoning_effort": "unset (product default)",
+                            "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)"},
+                "generator": "unset — the same-vendor bypass of ceiling 1's self family, confined to the harness",
                 "constitution_sha256": sha(proj / "AUDIT_RULES.md") if (proj / "AUDIT_RULES.md").exists() else None,
                 "ledger_calls": len(ev), "ledger_usd": round(sum(float(e.get("api_value_usd") or 0) for e in ev), 6),
                 "provenance": "study 18's archive (records/ceiling3/manifest and its MANIFEST.sha256); not re-run here"}

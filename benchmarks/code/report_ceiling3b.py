@@ -314,13 +314,14 @@ def render_tables(out: dict) -> str:
                 L.append(f"| {T5[arm]} | {v['yes_findings']} | {v['defect']} | {v['correct']} | {v['cannot_tell']} | {v['disputed']} | {r['k']}/{r['n']} = {_pc(r['rate'])}% | {_iv(r['wilson95'])} | {_iv(r['cluster_ci95'])} |")
         L += ["", f"### Table 5 — H19d, blinded adjudication of draw-1 findings on P instances: does the finding name the input class or behaviour on which the hidden test fails? "
               f"({h['n_items']} items; L1 the author, L2 gpt-6-astra; agreement {h['agreement'][0]}/{h['agreement'][1]}, κ = {h['kappa']:.3f}; disputed items excluded from 'yes')", "",
-              "| arm | findings | yes | no | cannot tell | disputed | P instances with a finding | of which named by some finding | named / all 110 P | Wilson | cluster |",
-              "|---|---|---|---|---|---|---|---|---|---|---|"]
+              "| arm | findings | yes | no | cannot tell | disputed | P instances with a finding | of which named by some finding | named / any-finding P rows (registered) | Wilson | cluster | named / all 110 P | Wilson | cluster |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
         T5 = dict(LABEL, S="S-text — shipped constitution, a fifth reading (Amendment 1)")
         for arm in ("S", "R", "B"):
-            v = h["by_arm"][arm]; r = v["names_rate_over_all_P"]
+            v = h["by_arm"][arm]; r = v["names_rate_over_all_P"]; g = v["P_instances_named_by_some_finding"]
             L.append(f"| {T5[arm]} | {v['findings']} | {v['findings_yes']} | {v['findings_no']} | {v['findings_cannot_tell']} | {v['findings_disputed']} "
-                     f"| {v['P_instances_with_a_finding']} | {v['P_instances_named_by_some_finding']['k'] if v['P_instances_named_by_some_finding'] else 0} "
+                     f"| {v['P_instances_with_a_finding']} | {g['k'] if g else 0} "
+                     f"| {g['k']}/{g['n']} = {_pc(g['rate'])}% | {_iv(g['wilson95'])} | {_iv(g['cluster_ci95'])} "
                      f"| {r['k']}/{r['n']} = {_pc(r['rate'])}% | {_iv(r['wilson95'])} | {_iv(r['cluster_ci95'])} |")
     sec = out.get("secondaries")
     if sec:

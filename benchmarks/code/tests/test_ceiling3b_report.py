@@ -100,8 +100,18 @@ def test_the_strict_kappa_and_the_inventory_are_rendered():
     st = _n()["H19d"]["strict_recognition_POST_HOC"]
     assert f"its κ ({st['kappa']:.3f}) is lower" in _flat()
     assert "{" not in _t().split("<!-- tables:begin -->")[0].replace("{{", "")
-    assert "performs **twelve** paired contrasts" in _flat()
-    assert "Preregistered among them, four" in _flat()
+    flat = _flat()
+    assert "performs **twelve** paired contrasts" in flat
+    assert "Preregistered among them, four" in flat
+    for named in ("B − S, BLOCKER, P: the primary", "B − S, BLOCKER, C", "R − S **on P**, under both rules: two contrasts",
+                  "B − S under the any-finding rule on P and on C", "R − S on C under either rule",
+                  "B − R under both rules on both populations", "against the fixed 6.7% product bar"):
+        assert named.replace("−", "-") in flat, named
+    assert "the other **twenty** quantities" in flat
+    h = _n()["H19d"]["by_arm"]
+    for arm in ("S", "R", "B"):
+        g = h[arm]["P_instances_named_by_some_finding"]
+        assert f"| {g['k']}/{g['n']} = " in _t(), arm      # the registered denominator is rendered
     contrasts = _n()["contrasts"]
     leaves = [(pair, rule, pop) for pair, rules in contrasts.items() for rule, pops in rules.items()
               for pop in pops if isinstance(pops, dict)]

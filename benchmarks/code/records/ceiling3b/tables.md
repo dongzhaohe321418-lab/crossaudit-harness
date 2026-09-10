@@ -62,11 +62,11 @@ Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster pe
 
 ### Table 5 — H19d, blinded adjudication of draw-1 findings on P instances: does the finding name the input class or behaviour on which the hidden test fails? (190 items; L1 the author, L2 gpt-6-astra; agreement 179/190, κ = 0.897; disputed items excluded from 'yes')
 
-| arm | findings | yes | no | cannot tell | disputed | P instances with a finding | of which named by some finding | named / all 110 P | Wilson | cluster |
-|---|---|---|---|---|---|---|---|---|---|---|
-| S-text — shipped constitution, a fifth reading (Amendment 1) | 38 | 6 | 28 | 4 | 0 | 37 | 6 | 6/110 = 5.5% | 2.5–11.4 | 0.0–12.6 |
-| R — + referent rule (CA-COVER-001) | 128 | 62 | 46 | 9 | 11 | 104 | 58 | 58/110 = 52.7% | 43.5–61.8 | 40.7–65.2 |
-| B — + grading rule (CA-GRADE-001) | 24 | 4 | 18 | 2 | 0 | 24 | 4 | 4/110 = 3.6% | 1.4–9.0 | 0.0–9.2 |
+| arm | findings | yes | no | cannot tell | disputed | P instances with a finding | of which named by some finding | named / any-finding P rows (registered) | Wilson | cluster | named / all 110 P | Wilson | cluster |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| S-text — shipped constitution, a fifth reading (Amendment 1) | 38 | 6 | 28 | 4 | 0 | 37 | 6 | 6/37 = 16.2% | 7.7–31.1 | 0.0–33.3 | 6/110 = 5.5% | 2.5–11.4 | 0.0–12.6 |
+| R — + referent rule (CA-COVER-001) | 128 | 62 | 46 | 9 | 11 | 104 | 58 | 58/104 = 55.8% | 46.2–64.9 | 43.8–68.3 | 58/110 = 52.7% | 43.5–61.8 | 40.7–65.2 |
+| B — + grading rule (CA-GRADE-001) | 24 | 4 | 18 | 2 | 0 | 24 | 4 | 4/24 = 16.7% | 6.7–35.9 | 0.0–40.0 | 4/110 = 3.6% | 1.4–9.0 | 0.0–9.2 |
 
 ### Table 6 — reply format and cost per draw, from the caches and the ledgers
 

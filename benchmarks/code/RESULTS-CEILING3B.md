@@ -89,11 +89,11 @@ Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster pe
 
 ### Table 5 — H19d, blinded adjudication of draw-1 findings on P instances: does the finding name the input class or behaviour on which the hidden test fails? (190 items; L1 the author, L2 gpt-6-astra; agreement 179/190, κ = 0.897; disputed items excluded from 'yes')
 
-| arm | findings | yes | no | cannot tell | disputed | P instances with a finding | of which named by some finding | named / all 110 P | Wilson | cluster |
-|---|---|---|---|---|---|---|---|---|---|---|
-| S-text — shipped constitution, a fifth reading (Amendment 1) | 38 | 6 | 28 | 4 | 0 | 37 | 6 | 6/110 = 5.5% | 2.5–11.4 | 0.0–12.6 |
-| R — + referent rule (CA-COVER-001) | 128 | 62 | 46 | 9 | 11 | 104 | 58 | 58/110 = 52.7% | 43.5–61.8 | 40.7–65.2 |
-| B — + grading rule (CA-GRADE-001) | 24 | 4 | 18 | 2 | 0 | 24 | 4 | 4/110 = 3.6% | 1.4–9.0 | 0.0–9.2 |
+| arm | findings | yes | no | cannot tell | disputed | P instances with a finding | of which named by some finding | named / any-finding P rows (registered) | Wilson | cluster | named / all 110 P | Wilson | cluster |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| S-text — shipped constitution, a fifth reading (Amendment 1) | 38 | 6 | 28 | 4 | 0 | 37 | 6 | 6/37 = 16.2% | 7.7–31.1 | 0.0–33.3 | 6/110 = 5.5% | 2.5–11.4 | 0.0–12.6 |
+| R — + referent rule (CA-COVER-001) | 128 | 62 | 46 | 9 | 11 | 104 | 58 | 58/104 = 55.8% | 46.2–64.9 | 43.8–68.3 | 58/110 = 52.7% | 43.5–61.8 | 40.7–65.2 |
+| B — + grading rule (CA-GRADE-001) | 24 | 4 | 18 | 2 | 0 | 24 | 4 | 4/24 = 16.7% | 6.7–35.9 | 0.0–40.0 | 4/110 = 3.6% | 1.4–9.0 | 0.0–9.2 |
 
 ### Table 6 — reply format and cost per draw, from the caches and the ledgers
 
@@ -172,7 +172,9 @@ fewer findings (-20.0 on the any-finding rate). The kill named for the inference
 inference is withdrawn. What the adjudication adds is narrower than "did not see" and is
 stated as two measured rates: under the shipped constitution, Sonnet's draw-1 findings
 *name* the failing class on 6 of 110 defects and — on the post-hoc recognition question,
-Table 5b — *assert a defect* on 3; the other 28 of its 38 findings are about something else. The gap study 18 measured between "mentioned by
+Table 5b — *assert a defect* on 3 (the registered denominator, any-finding P rows, gives 6 of 37
+named; Table 5 carries both); of its 38 findings, 28 neither name the failing class nor assert a
+defect on it. The gap study 18 measured between "mentioned by
 none" and "blocked by none" was therefore a gap between *returning some finding* and
 blocking, not between recognising the defect and blocking.
 
@@ -184,7 +186,7 @@ from 2.7% to 24.5% of the defect population (post hoc, Table 5b), and BLOCKER re
 near-zero rate is the rulebook's referent or the model's limit is not separated by this
 study: R's findings under the any-finding rule cover 97.3% of P and 96.0% of C, so the rule makes
 the model write something about nearly every increment; 24 of its 62 naming findings on P
-call the failing class correctly handled, and 46 of 128 name something other than the
+call the failing class correctly handled or only untested, and 46 of 128 name something other than the
 defect. The residual across all measured families (Table 7) moves from 56 to 53 with R and
 not at all with B.
 
@@ -194,9 +196,11 @@ Preregistered among them, four: H19a (B − S, BLOCKER, P: the primary), H19b (B
 C — B's single-draw FP against the bar), H19c (R − S **on P**, under both rules: two
 contrasts). Not preregistered, eight: B − S under the any-finding rule on P and on C; R − S
 on C under either rule; B − R under both rules on both populations. Beside Table 4: H19d's
-three naming rates (preregistered), the three recognition rates of Table 5b (post hoc), and the
-residual with R and B (Table 7, not preregistered). One primary; no correction is applied to
-the other nineteen quantities and none is claimed to clear a corrected threshold.
+three naming rates (preregistered, on the registered any-finding denominator and on all 110 P),
+H19b's second comparison — B's single-draw FP on C against the fixed 6.7% product bar
+(preregistered) —, the three recognition rates of Table 5b (post hoc), and the residual with R
+and B (Table 7, not preregistered). One primary; no correction is applied to the other
+**twenty** quantities and none is claimed to clear a corrected threshold.
 
 ## 3. Secondaries
 
