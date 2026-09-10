@@ -227,3 +227,35 @@ intervals, reported whatever it shows.
 **Unchanged:** the injector, the six filters and their thresholds, both gate models and the
 requirement that both say yes, the auditor, the constitution, the ladder, K, every hypothesis,
 the primary, the kill, the $35 cap and the boundary. No outcome has been seen.
+
+## Amendment 3 — 2026-09-11, the OpenAI credit balance is exhausted; still before any instance of I exists and before any audit call
+
+**What happened.** Every OpenAI call now returns HTTP 429 `insufficient_quota`
+(`credit_balance_exhausted`); the last OpenAI call that landed anywhere in the programme was at
+23:31 local. That is why Amendment 2's second gate model, `openai:gpt-5.6-luna`, answered
+nothing: not the harness's allowlist after all, and not the model — the account. It also stops
+the audit, whose auditor is `openai:gpt-5.6-terra`.
+
+**What changes.**
+
+1. **The second gate model becomes `anthropic:claude-opus-4-8`.** Both gates are then from one
+   vendor, which makes their judgements more correlated and the gate weaker. A weaker gate
+   admits instances whose defect is *not* specification-determined, and those can only pull
+   recall on I **down**, toward the 30.0% H22a predicts it will exceed: the change is
+   conservative for the primary, as §1's argument already covers. Neither gate model is the
+   auditor.
+2. **The OpenAI gate is not abandoned, it is deferred.** When credits return,
+   `openai:gpt-5.6-luna` is asked the same question about every instance of I, and the results
+   report, as a preregistered sensitivity: how many instances of I it would also have admitted,
+   and union recall on the subset it admits beside union recall on all of I. If that subset's
+   recall differs materially from the whole, the gate's vendor mattered and the results will say
+   so.
+3. **The audit waits.** Nothing about the auditor, the ladder, K, the hypotheses, the primary or
+   the kill changes; the construction proceeds now and the eight cross draws run when the
+   account can pay for them. If OpenAI credit never returns, the study is reported as
+   constructed-but-unaudited and nothing is claimed from it.
+
+**Unchanged:** the injector, the six filters, the requirement that **both** gates say yes, the
+frame and its seeded order, the target |I| = 110, the $12 construction cap and the $35 study
+cap, the auditor, the ladder, every hypothesis, the primary, the kill and the boundary. No
+outcome has been seen.
