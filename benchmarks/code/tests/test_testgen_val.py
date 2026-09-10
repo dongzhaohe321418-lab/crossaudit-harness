@@ -193,22 +193,30 @@ def test_results_headline_figures_are_the_records():
     assert not re.search(r"assert \w+\(", text), "no generated test text in the results file"
 
 
-def _table_rows(text: str, header_contains: str) -> dict:
-    """The rows of the one §3 table whose header names ``header_contains``, by rule.
+def _table_rows(text: str, header: list[str], known_rules: set[str]) -> dict:
+    """The rows of the one §3 table whose header row is exactly ``header``, by rule.
 
-    Rows are returned as lists of stripped cells, so an assertion below compares a WHOLE
-    cell with the record's figure. A substring check over the document would pass when a
-    number moves from one rule's row to another's, which is the failure round 3 found.
+    The whole header is matched, label by label and in order, so that swapping two
+    column HEADINGS while leaving the values in place is caught: a mislabelled interval
+    is as wrong as a wrong one. Rows come back as lists of stripped cells, so an
+    assertion below compares a WHOLE cell with the record's figure; a duplicate rule row
+    or a rule the record does not know is refused rather than silently overwritten, so a
+    wrong row displayed above a right one cannot hide behind the later row.
     """
-    lines = [line for line in text.splitlines()]
-    heads = [i for i, line in enumerate(lines) if line.startswith("|") and header_contains in line]
-    assert len(heads) == 1, f"expected exactly one table headed {header_contains!r}, found {len(heads)}"
-    rows = {}
+    lines = text.splitlines()
+    heads = [i for i, line in enumerate(lines)
+             if line.startswith("|") and [c.strip() for c in line.strip().strip("|").split("|")] == header]
+    assert len(heads) == 1, f"expected exactly one table with header {header}, found {len(heads)}"
+    rows: dict[str, list[str]] = {}
     for line in lines[heads[0] + 2:]:
         if not line.startswith("|"):
             break
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        assert len(cells) == len(header), f"row {cells[0]!r} has {len(cells)} cells, header has {len(header)}"
+        assert cells[0] in known_rules, f"unknown rule {cells[0]!r} in table {header[1]!r}"
+        assert cells[0] not in rows, f"duplicate row for rule {cells[0]!r} in table {header[1]!r}"
         rows[cells[0]] = cells[1:]
+    assert rows, f"no rows under header {header}"
     return rows
 
 
@@ -217,8 +225,10 @@ def test_results_exploratory_figures_are_the_exploratory_record():
 
     Each rule's count, rate and BOTH intervals are asserted inside that rule's own row,
     and C′'s block is compared against A's in full. Verified to fail under three
-    mutations: swapping A's and B's P/C intervals, changing a denominator (10/43 →
-    99/43), and deleting an interval cell.
+    mutations: swapping A's and B's P/C intervals; changing a denominator (10/43 →
+    99/43); deleting an interval cell; swapping the Wilson and bootstrap column HEADINGS
+    with the values left in place; inserting a wrong duplicate B row above the right one;
+    and five others (see the round-4 commit message).
     """
     import json
     record = json.loads((HERE.parent / "records" / "testgen-val" / "exploratory.json").read_text(encoding="utf-8"))
@@ -230,13 +240,15 @@ def test_results_exploratory_figures_are_the_exploratory_record():
                 f"{100 * block['wilson'][0]:.1f}–{100 * block['wilson'][1]:.1f}%",
                 f"{100 * block['bootstrap_problem_cluster'][0]:.1f}–{100 * block['bootstrap_problem_cluster'][1]:.1f}%"]
 
-    where = _table_rows(text, "kept wrong applications")
+    known = set(label.values())
+    where = _table_rows(text, ["rule", "kept wrong applications", "on instances", "by half-stratum"], known)
     for rule, name in label.items():
         entry = record["rules"][rule]
         strata = ", ".join(f"{k} {v}" for k, v in entry["by_half_stratum"].items())
         assert where[name] == [str(entry["kept_wrong_applications"]), str(entry["on_instances"]), strata], name
 
-    pc = _table_rows(text, "P and C rows only")
+    pc = _table_rows(text, ["rule", "wrong among kept, P and C rows only", "Wilson",
+                            "problem-cluster bootstrap"], known)
     for rule, name in label.items():
         assert pc[name] == cells_of(record["rules"][rule]["wrong_among_kept_P_and_C"]), name
     # C′ is A's block in every column, in the record and in the file
@@ -244,7 +256,8 @@ def test_results_exploratory_figures_are_the_exploratory_record():
     assert pc["C′"] == pc["A"]
     assert "C′'s row is A's row in every column" in text
 
-    only = _table_rows(text, "corroborated only by canonical-failing tests")
+    only = _table_rows(text, ["rule", "corroborated only by canonical-failing tests", "Wilson",
+                              "problem-cluster bootstrap"], known)
     for rule in ("A", "B"):
         assert only[label[rule]] == cells_of(record["rules"][rule]["corroborated_only_by_wrong_tests"]), rule
     assert "C′" not in only, "C′ consults no other draw; the quantity is undefined for it"
