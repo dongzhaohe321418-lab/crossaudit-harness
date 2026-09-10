@@ -350,19 +350,38 @@ def run(args) -> int:
             executed += 1
     print(f"executed {executed} instances", flush=True)
 
-    # Draw-to-draw identity at the test level (a §5 secondary), from the text, here only.
+    write_identity(d1_cache, caches)
+    return 0
+
+
+def identity_of(d1_cache: dict, caches: dict) -> dict:
+    """Draw-to-draw identity (a §5 secondary), from the text: per-problem counts, no text."""
     identity = {}
     for k in DRAWS:
-        same_tests = 0
+        per_problem = {}
         for pid, e in caches[k].items():
             d1_norm = {normalised(t) for t in d1_cache[pid]["tests"]}
-            same_tests += sum(1 for t in e["tests"] if normalised(t) in d1_norm)
-        identity[f"d{k}"] = {"tests_identical_to_a_draw1_test": same_tests,
+            per_problem[pid] = {"n_tests": len(e["tests"]),
+                                "identical_to_a_draw1_test": sum(1 for t in e["tests"] if normalised(t) in d1_norm)}
+        identity[f"d{k}"] = {"tests_identical_to_a_draw1_test": sum(v["identical_to_a_draw1_test"] for v in per_problem.values()),
                              "responses_identical_to_draw1": sum(
                                  1 for pid, e in caches[k].items()
-                                 if e["response_sha256"] == d1_cache[pid]["response_sha256"])}
-    (RECORDS / "identity.json").write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n",
+                                 if e["response_sha256"] == d1_cache[pid]["response_sha256"]),
+                             "per_problem": per_problem}
+    return identity
+
+
+def write_identity(d1_cache: dict, caches: dict) -> None:
+    (RECORDS / "identity.json").write_text(json.dumps(identity_of(d1_cache, caches), indent=2, sort_keys=True) + "\n",
                                            encoding="utf-8")
+
+
+def identity(args) -> int:
+    """Recompute identity.json from the archive's text (the run dir); records keep counts only."""
+    run_dir = Path(args.run)
+    d1_cache = json.loads((run_dir / "inputs" / "generated_tests.json").read_text(encoding="utf-8"))
+    caches = {k: json.loads((run_dir / cache_name(k)).read_text(encoding="utf-8")) for k in DRAWS}
+    write_identity(d1_cache, caches)
     return 0
 
 
@@ -435,6 +454,8 @@ def unique_level(rule: str, rows: list[dict]) -> dict:
             by_problem.setdefault(r["problem_id"], []).append(r)
     all_tests: dict[str, list[float]] = {}          # wrong among kept, over every classifiable test
     exposed: dict[str, list[float]] = {}             # wrong among kept, over tests failing somewhere
+    right_retained: dict[str, list[float]] = {}      # per right exposed test: 1 if kept somewhere
+    wrong_removed: dict[str, list[float]] = {}       # per wrong exposed test: 1 if kept nowhere
     n_all = n_kept_all = n_exposed = 0
     for pid, prs in by_problem.items():
         n1 = prs[0]["d1"]["n_tests"]
@@ -454,9 +475,15 @@ def unique_level(rule: str, rows: list[dict]) -> dict:
                 n_exposed += 1
                 if kept_somewhere:
                     exposed.setdefault(pid, []).append(1.0 if t in wrong else 0.0)
+                if t in wrong:
+                    wrong_removed.setdefault(pid, []).append(0.0 if kept_somewhere else 1.0)
+                else:
+                    right_retained.setdefault(pid, []).append(1.0 if kept_somewhere else 0.0)
     return {"all_classifiable_tests": n_all, "kept": n_kept_all,
             "wrong_among_kept_all": rate_block(all_tests),
-            "exposed_tests": n_exposed, "wrong_among_kept_exposed": rate_block(exposed)}
+            "exposed_tests": n_exposed, "wrong_among_kept_exposed": rate_block(exposed),
+            "exposed_right_retained": rate_block(right_retained),
+            "exposed_wrong_removed": rate_block(wrong_removed)}
 
 
 def arm_rates(rule: str, rows: list[dict], half: str) -> dict:
@@ -554,7 +581,14 @@ def report(args) -> int:
     for k in DRAWS:
         out[f"draw{k}"].pop("wrong_by_problem")
     if (RECORDS / "identity.json").exists():
-        out["identity"] = json.loads((RECORDS / "identity.json").read_text(encoding="utf-8"))
+        ident = json.loads((RECORDS / "identity.json").read_text(encoding="utf-8"))
+        for k in DRAWS:
+            per = ident[f"d{k}"].pop("per_problem", {})
+            if per:
+                ident[f"d{k}"]["tests_identical_rate"] = rate_block(
+                    {pid: [1.0] * v["identical_to_a_draw1_test"] + [0.0] * (v["n_tests"] - v["identical_to_a_draw1_test"])
+                     for pid, v in per.items() if v["n_tests"]})
+        out["identity"] = ident
     if LEDGER.exists():
         out["ledger"] = json.loads(LEDGER.read_text(encoding="utf-8"))
     NUMBERS.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -593,8 +627,10 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--max-passes", type=int, default=4)
     r.add_argument("--dry-run", action="store_true")
     sub.add_parser("report")
+    i = sub.add_parser("identity")
+    i.add_argument("--run", required=True)
     args = parser.parse_args(argv)
-    return run(args) if args.cmd == "run" else report(args)
+    return {"run": run, "report": report, "identity": identity}[args.cmd](args)
 
 
 if __name__ == "__main__":

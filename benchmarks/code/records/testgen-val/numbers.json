@@ -80,10 +80,36 @@
   "identity": {
     "d2": {
       "responses_identical_to_draw1": 13,
+      "tests_identical_rate": {
+        "bootstrap_problem_cluster": [
+          0.3505321360478492,
+          0.4295888924050633
+        ],
+        "k": 486,
+        "n": 1247,
+        "rate": 0.3897353648757017,
+        "wilson": [
+          0.3630453049914376,
+          0.41710269213421514
+        ]
+      },
       "tests_identical_to_a_draw1_test": 486
     },
     "d3": {
       "responses_identical_to_draw1": 8,
+      "tests_identical_rate": {
+        "bootstrap_problem_cluster": [
+          0.3510720683419803,
+          0.4233810520233922
+        ],
+        "k": 478,
+        "n": 1234,
+        "rate": 0.3873581847649919,
+        "wilson": [
+          0.3605676615132589,
+          0.41484784261369634
+        ]
+      },
       "tests_identical_to_a_draw1_test": 478
     }
   },
@@ -345,7 +371,33 @@
       },
       "unique_level": {
         "all_classifiable_tests": 1188,
+        "exposed_right_retained": {
+          "bootstrap_problem_cluster": [
+            0.8113207547169812,
+            0.971830985915493
+          ],
+          "k": 58,
+          "n": 64,
+          "rate": 0.90625,
+          "wilson": [
+            0.810171204003544,
+            0.9563217474148016
+          ]
+        },
         "exposed_tests": 80,
+        "exposed_wrong_removed": {
+          "bootstrap_problem_cluster": [
+            0.13636363636363635,
+            0.6923076923076923
+          ],
+          "k": 6,
+          "n": 16,
+          "rate": 0.375,
+          "wilson": [
+            0.18481232558863633,
+            0.6135895945449727
+          ]
+        },
         "kept": 1176,
         "wrong_among_kept_all": {
           "bootstrap_problem_cluster": [
@@ -607,7 +659,33 @@
       },
       "unique_level": {
         "all_classifiable_tests": 1188,
+        "exposed_right_retained": {
+          "bootstrap_problem_cluster": [
+            0.9122807017543859,
+            1.0
+          ],
+          "k": 62,
+          "n": 64,
+          "rate": 0.96875,
+          "wilson": [
+            0.8930270822904169,
+            0.9913878616538281
+          ]
+        },
         "exposed_tests": 80,
+        "exposed_wrong_removed": {
+          "bootstrap_problem_cluster": [
+            0.0,
+            0.42857142857142855
+          ],
+          "k": 3,
+          "n": 16,
+          "rate": 0.1875,
+          "wilson": [
+            0.06591599071428142,
+            0.4300888096197414
+          ]
+        },
         "kept": 1183,
         "wrong_among_kept_all": {
           "bootstrap_problem_cluster": [
@@ -868,7 +946,33 @@
       },
       "unique_level": {
         "all_classifiable_tests": 1188,
+        "exposed_right_retained": {
+          "bootstrap_problem_cluster": [
+            0.7636363636363637,
+            0.9506172839506173
+          ],
+          "k": 56,
+          "n": 64,
+          "rate": 0.875,
+          "wilson": [
+            0.7722543817887005,
+            0.9352775733666955
+          ]
+        },
         "exposed_tests": 80,
+        "exposed_wrong_removed": {
+          "bootstrap_problem_cluster": [
+            0.13636363636363635,
+            0.6923076923076923
+          ],
+          "k": 6,
+          "n": 16,
+          "rate": 0.375,
+          "wilson": [
+            0.18481232558863633,
+            0.6135895945449727
+          ]
+        },
         "kept": 1174,
         "wrong_among_kept_all": {
           "bootstrap_problem_cluster": [

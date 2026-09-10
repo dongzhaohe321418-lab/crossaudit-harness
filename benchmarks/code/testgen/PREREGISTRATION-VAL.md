@@ -235,3 +235,21 @@ truncates draw 3, the run stops at the cap, the truncation is reported, and the 
 are computed on the problems both new draws cover (with the count stated), as §6 already
 said. Nothing else changes: not the rules, the primary, the kill, the seed, or the
 selection order.
+
+## Amendment 3 — after the results, at the reviewer's request: three statements corrected, none of them a rule
+
+Written 2026-09-10 after `RESULTS-TESTGEN-VAL.md` and its review; the original text above
+is left as written. Nothing here changes a hypothesis, rule, outcome, kill, seed or
+selection order; the review found every number to reproduce.
+
+* **§0, "The other 1,428 applications pass."** The count is 1,430 across the 290 rows
+  (1,556 applications, counting `Mbpp/160`'s 11 and the four artefact rows' 17) and
+  1,421 within the 285 clean, classifiable rows (1,528 applications, of which 107
+  fail). Study 16's 1,545 excludes `Mbpp/160`'s row.
+* **§4, "the 2% line allows at most one wrong application kept."** One at n ≤ 99; two
+  at n = 100–107 (2 of 101 is 1.98%). Rule B's n was 101.
+* **§3, rule C "keeps no failing test."** That holds on P and C candidates, which pass
+  the visible suite. 58 of the 107 failing applications are on F-stratum candidates,
+  which fail it, and there C would keep the failing test. C's retention — over the
+  seven P instances — would still be 0 of 7, so it would be killed regardless; it stays
+  unpreregistered, and the vacuity claim is narrowed to P and C.
