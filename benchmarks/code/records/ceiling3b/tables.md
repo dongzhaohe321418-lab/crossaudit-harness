@@ -39,24 +39,32 @@ Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster pe
 
 | contrast | rule | stratum | difference | cluster 95% | Tango | grid-unconditional | one-signed | a-only / b-only | McNemar p | sign-flip p |
 |---|---|---|---|---|---|---|---|---|---|---|
-| B − S | blocker | P | +0.9 | [-1.8, +3.8] | [-3.4, +5.6] | [-6.4, +8.2] | no | 2 / 1 | 1.00e+00 | 1.00e+00 |
+| B − S | blocker | P | +0.9 | [-1.8, +4.5] | [-3.4, +5.6] | [-6.4, +8.2] | no | 2 / 1 | 1.00e+00 | 1.00e+00 |
 | B − S | blocker | C | +0.0 | [-2.7, +2.7] | [-3.6, +3.6] | [-5.7, +5.7] | no | 2 / 2 | 1.00e+00 | 1.00e+00 |
-| B − S | any | P | -20.0 | [-30.3, -10.0] | [-29.2, -11.6] | [-31.2, -7.3] | no | 3 / 25 | 2.74e-05 | 3.81e-04 |
-| B − S | any | C | -16.7 | [-23.8, -9.9] | [-24.2, -9.9] | [-25.7, -6.7] | no | 4 / 29 | 1.09e-05 | 3.00e-05 |
-| R − S | blocker | P | +20.9 | [+10.8, +31.5] | [+12.9, +29.9] | [+8.6, +31.8] | no | 25 / 2 | 5.65e-06 | 4.20e-04 |
-| R − S | blocker | C | +8.0 | [+3.4, +13.0] | [+3.7, +13.7] | [+0.3, +15.3] | no | 13 / 1 | 1.83e-03 | 1.83e-03 |
-| R − S | any | P | +43.6 | [+31.4, +55.9] | [+33.6, +53.4] | [+29.1, +55.0] | no | 50 / 2 | 6.12e-13 | 5.00e-06 |
-| R − S | any | C | +66.7 | [+58.5, +74.5] | [+58.4, +73.8] | [+55.0, +75.0] | no | 101 / 1 | 4.06e-29 | 5.00e-06 |
-| B − R | blocker | P | -20.0 | [-30.0, -10.8] | [-28.7, -12.7] | [-30.5, -8.2] | no | 1 / 23 | 2.98e-06 | 2.75e-04 |
-| B − R | blocker | C | -8.0 | [-12.8, -3.4] | [-13.7, -3.7] | [-15.3, -0.3] | no | 1 / 13 | 1.83e-03 | 1.83e-03 |
-| B − R | any | P | -63.6 | [-75.5, -51.4] | [-72.2, -53.6] | [-73.6, -49.1] | no | 1 / 71 | 3.09e-20 | 5.00e-06 |
-| B − R | any | C | -83.3 | [-89.2, -77.2] | [-88.4, -76.6] | [-89.3, -73.3] | yes | 0 / 125 | 4.70e-38 | 5.00e-06 |
+| B − S | any | P | -20.0 | [-29.7, -10.1] | [-29.2, -11.6] | [-31.2, -7.3] | no | 3 / 25 | 2.74e-05 | 3.81e-04 |
+| B − S | any | C | -16.7 | [-24.0, -9.8] | [-24.2, -9.9] | [-25.7, -6.7] | no | 4 / 29 | 1.09e-05 | 3.00e-05 |
+| R − S | blocker | P | +20.9 | [+10.8, +31.8] | [+12.9, +29.9] | [+8.6, +31.8] | no | 25 / 2 | 5.65e-06 | 4.20e-04 |
+| R − S | blocker | C | +8.0 | [+3.4, +12.7] | [+3.7, +13.7] | [+0.3, +15.3] | no | 13 / 1 | 1.83e-03 | 1.83e-03 |
+| R − S | any | P | +43.6 | [+31.5, +55.9] | [+33.6, +53.4] | [+29.1, +55.0] | no | 50 / 2 | 6.12e-13 | 5.00e-06 |
+| R − S | any | C | +66.7 | [+58.6, +74.5] | [+58.4, +73.8] | [+55.0, +75.0] | no | 101 / 1 | 4.06e-29 | 5.00e-06 |
+| B − R | blocker | P | -20.0 | [-30.0, -10.7] | [-28.7, -12.7] | [-30.5, -8.2] | no | 1 / 23 | 2.98e-06 | 2.75e-04 |
+| B − R | blocker | C | -8.0 | [-12.7, -3.4] | [-13.7, -3.7] | [-15.3, -0.3] | no | 1 / 13 | 1.83e-03 | 1.83e-03 |
+| B − R | any | P | -63.6 | [-75.0, -51.8] | [-72.2, -53.6] | [-73.6, -49.1] | no | 1 / 71 | 3.09e-20 | 5.00e-06 |
+| B − R | any | C | -83.3 | [-89.1, -77.1] | [-88.4, -76.6] | [-89.3, -73.3] | yes | 0 / 125 | 4.70e-38 | 5.00e-06 |
+
+### Table 5b — POST HOC (review round 1): of the consensus-'yes' findings, does the finding assert the code is wrong on that class? (72 items; agreement 60/72, κ = 0.695; disputed excluded from 'defect')
+
+| arm | 'yes' findings | defect | correct / untested | cannot tell | disputed | P instances with a defect-asserting finding / all 110 | Wilson | cluster |
+|---|---|---|---|---|---|---|---|---|
+| S-text — shipped constitution, a fifth reading (Amendment 1) | 6 | 3 | 1 | 0 | 2 | 3/110 = 2.7% | 0.9–7.7 | 0.0–7.3 |
+| R — + referent rule (CA-COVER-001) | 62 | 29 | 24 | 0 | 9 | 27/110 = 24.5% | 17.5–33.4 | 14.4–35.7 |
+| B — + grading rule (CA-GRADE-001) | 4 | 3 | 0 | 0 | 1 | 3/110 = 2.7% | 0.9–7.7 | 0.0–7.3 |
 
 ### Table 5 — H19d, blinded adjudication of draw-1 findings on P instances: does the finding name the input class or behaviour on which the hidden test fails? (190 items; L1 the author, L2 gpt-6-astra; agreement 179/190, κ = 0.897; disputed items excluded from 'yes')
 
 | arm | findings | yes | no | cannot tell | disputed | P instances with a finding | of which named by some finding | named / all 110 P | Wilson | cluster |
 |---|---|---|---|---|---|---|---|---|---|---|
-| S — shipped constitution (study 18's draws 1–4) | 38 | 6 | 28 | 4 | 0 | 37 | 6 | 6/110 = 5.5% | 2.5–11.4 | 0.0–12.6 |
+| S-text — shipped constitution, a fifth reading (Amendment 1) | 38 | 6 | 28 | 4 | 0 | 37 | 6 | 6/110 = 5.5% | 2.5–11.4 | 0.0–12.6 |
 | R — + referent rule (CA-COVER-001) | 128 | 62 | 46 | 9 | 11 | 104 | 58 | 58/110 = 52.7% | 43.5–61.8 | 40.7–65.2 |
 | B — + grading rule (CA-GRADE-001) | 24 | 4 | 18 | 2 | 0 | 24 | 4 | 4/110 = 3.6% | 1.4–9.0 | 0.0–9.2 |
 

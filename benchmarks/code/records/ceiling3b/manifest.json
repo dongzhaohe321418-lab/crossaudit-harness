@@ -1,0 +1,243 @@
+{
+  "code": {
+    "files_this_study_added": {
+      "benchmarks/code/ceiling3b.py": "97decf2d40428f1e4d94438bd0f0188decc26d911f7034dd5fb2a72ac4d3a3ef",
+      "benchmarks/code/ceiling3b/PREREGISTRATION.md": "2105da428caddd4baa3a86e4337799db4c150825c4898f4a1023cf32c26d94d7",
+      "benchmarks/code/ceiling3b/adjudication_sheet.py": "e0b2aaa603ac096603ba868c928f5a3bc91a90e41da222324e3ae155d4474150",
+      "benchmarks/code/ceiling3b/finalise_manifest.py": "979514f0d5dbce88f0afbb67bc86fd117d91ca96810e5b8a810d603a167cdc86",
+      "benchmarks/code/ceiling3b/key-h19d.jsonl": "1f6909fe2cae55d03f64135dc4758fe67b5a3ca0a2605fac3e054a8523ac700c",
+      "benchmarks/code/ceiling3b/splice_tables.py": "e53fe7bdf7a0bdad476ab872fda0cabc435da8189b3be7545b8f7a2f594d0442",
+      "benchmarks/code/report_ceiling3b.py": "049063c4ab96a1c8cc0cbfdeb9ab3d0145b3044fbf40922b517de7476cf8ae25"
+    },
+    "head_now": "e9374676e0c9a1dd1f95fb78a0819b32b96ff948",
+    "preregistration_and_amendment_commits": [
+      {
+        "sha": "ed75d275986a19c647a7f583996247aff51574b7",
+        "when_and_subject": "2026-09-10T01:58:38+08:00 study 19: preregistration \u2014 ceiling 3b, Sonnet 4.6 under the referent rule and under a grading rule, K=4 each, with the finding texts archived and adjudicated; committed before any model call"
+      },
+      {
+        "sha": "d77af806a0283b73bcda525a1e478d76f59c8c7a",
+        "when_and_subject": "2026-09-10T02:02:05+08:00 study 19 Amendment 1: one S reading with its texts archived, for H19d only (study 18 kept no texts); ladder extended; the blind adjudication sheet builder"
+      },
+      {
+        "sha": "d83ca18c0cadba60df141847f13d5ba250a29a9d",
+        "when_and_subject": "2026-09-10T02:10:27+08:00 study 19 Amendment 2: the cap raised from $30 to $55 on per-draw cost, disclosed as made after an interim look"
+      }
+    ],
+    "working_tree_status_now": "M benchmarks/code/report_ceiling3b.py\n?? benchmarks/code/ceiling3b/finalise_manifest.py\n?? benchmarks/code/records/ceiling3b/L1-h19d-strict.csv\n?? benchmarks/code/records/ceiling3b/manifest.json"
+  },
+  "data": {
+    "audit_set_sha256": "a52cda72f7cb243cfca53b101414f74a368cb27be275caddc3cae1b960353aeb",
+    "corpus": {
+      "humaneval_base.jsonl": {
+        "bytes": 214315,
+        "sha256": "b19293e42932e70278b8e5ed83f8c82879cf34e0d3a44cc580f060b7cdaba4f8"
+      },
+      "humaneval_plus.jsonl": {
+        "bytes": 10991704,
+        "sha256": "8778f6f31e78d1630709eb36e296fe4705466e6aa2b50dea7db67959ae0ef158"
+      },
+      "mbpp_plus.jsonl": {
+        "bytes": 4887790,
+        "sha256": "43dd5c25c4f976d6ca98f4475b08fcc2add43b6e480348a22a25d1a020fe5866"
+      }
+    },
+    "instances_sha256": "8cba02aa5fe4c1b8448ac14b772f4ef2d444536029047a97f480071d6a88d8b1",
+    "licence": "EvalPlus HumanEval+ / MBPP+ (Apache-2.0); solutions are study 2's, frozen",
+    "solutions": {
+      "solutions-b1.jsonl": "1fc888b3b5cafb70b4a4624c8fd33abfd8345a2d1d0e48151d9cced371b429af",
+      "solutions-b2.jsonl": "3e295551e94207836b6b1b7cdd548736daa2f6edaa4e1443aeb55350acd12454"
+    }
+  },
+  "environment": {
+    "packages": {
+      "crossaudit": "4.17.0",
+      "pytest": "9.1.1"
+    },
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "python": "3.13.5"
+  },
+  "models": {
+    "self-strong-B__d1": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
+      "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
+      "constitution_sha256": "25ed7a948fdc267203e35a5bec9d0b1a0b55bfe09139d13ea7e60c3b423eb080",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
+      "ledger_calls": 271,
+      "ledger_usd": 2.925921
+    },
+    "self-strong-B__d2": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
+      "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
+      "constitution_sha256": "25ed7a948fdc267203e35a5bec9d0b1a0b55bfe09139d13ea7e60c3b423eb080",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
+      "ledger_calls": 271,
+      "ledger_usd": 2.90058
+    },
+    "self-strong-B__d3": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
+      "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
+      "constitution_sha256": "25ed7a948fdc267203e35a5bec9d0b1a0b55bfe09139d13ea7e60c3b423eb080",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
+      "ledger_calls": 270,
+      "ledger_usd": 2.903421
+    },
+    "self-strong-B__d4": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
+      "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
+      "constitution_sha256": "25ed7a948fdc267203e35a5bec9d0b1a0b55bfe09139d13ea7e60c3b423eb080",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
+      "ledger_calls": 268,
+      "ledger_usd": 2.858148
+    },
+    "self-strong-R__d1": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
+      "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
+      "constitution_sha256": "65c58b55f2c2597309481a83c915bec2bbbaf586dfd2b471af271eb4fe72889a",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
+      "ledger_calls": 279,
+      "ledger_usd": 4.58754
+    },
+    "self-strong-R__d2": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
+      "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
+      "constitution_sha256": "65c58b55f2c2597309481a83c915bec2bbbaf586dfd2b471af271eb4fe72889a",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
+      "ledger_calls": 280,
+      "ledger_usd": 4.616019
+    },
+    "self-strong-R__d3": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
+      "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
+      "constitution_sha256": "65c58b55f2c2597309481a83c915bec2bbbaf586dfd2b471af271eb4fe72889a",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
+      "ledger_calls": 278,
+      "ledger_usd": 4.608957
+    },
+    "self-strong-R__d4": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
+      "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
+      "constitution_sha256": "65c58b55f2c2597309481a83c915bec2bbbaf586dfd2b471af271eb4fe72889a",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
+      "ledger_calls": 279,
+      "ledger_usd": 4.58106
+    },
+    "self-strong-S__d1": {
+      "auditor": {
+        "base_url": "vendor default",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "reasoning_effort": "unset (product default)",
+        "temperature": "adapter default for the model's capability card (0 for Sonnet 4.6)",
+        "vendor": "anthropic"
+      },
+      "config_sha256": "7e70383686cc03f927e06305f4cd85b2502130acd0289bc6e0e754aec4de8976",
+      "constitution_sha256": "aea1230c9c56431b16a5f14006b71a89650da7f0672aa423bbe930aff1d2bb32",
+      "generator": "unset \u2014 the same-vendor bypass of ceiling 1's self family, confined to the harness",
+      "ledger_calls": 264,
+      "ledger_usd": 2.225043
+    }
+  },
+  "preregistration": "benchmarks/code/ceiling3b/PREREGISTRATION.md",
+  "seeds": {
+    "bootstrap_reps": 10000,
+    "bootstrap_seed": 20260912,
+    "instance_selection": "study 2's frozen audit set (records/study2/audit_set.json); no selection seeded here",
+    "sheet_shuffle_seed": 20260912
+  },
+  "study": "study19 / ceiling 3b",
+  "time": {
+    "self-strong-B__d1": {
+      "first_call_utc": "2026-09-10T11:19:46.550000+00:00",
+      "last_call_utc": "2026-09-10T11:32:36.736000+00:00"
+    },
+    "self-strong-B__d2": {
+      "first_call_utc": "2026-09-10T11:32:41.434000+00:00",
+      "last_call_utc": "2026-09-10T11:44:07.604000+00:00"
+    },
+    "self-strong-B__d3": {
+      "first_call_utc": "2026-09-10T11:44:13.430000+00:00",
+      "last_call_utc": "2026-09-10T11:56:24.660000+00:00"
+    },
+    "self-strong-B__d4": {
+      "first_call_utc": "2026-09-10T11:56:27.493000+00:00",
+      "last_call_utc": "2026-09-10T12:08:04.642000+00:00"
+    },
+    "self-strong-R__d1": {
+      "first_call_utc": "2026-09-09T17:59:58.727000+00:00",
+      "last_call_utc": "2026-09-09T18:26:27.547000+00:00"
+    },
+    "self-strong-R__d2": {
+      "first_call_utc": "2026-09-09T18:26:48.953000+00:00",
+      "last_call_utc": "2026-09-10T10:28:28.262000+00:00"
+    },
+    "self-strong-R__d3": {
+      "first_call_utc": "2026-09-10T10:28:46.456000+00:00",
+      "last_call_utc": "2026-09-10T10:53:15.584000+00:00"
+    },
+    "self-strong-R__d4": {
+      "first_call_utc": "2026-09-10T10:53:33.467000+00:00",
+      "last_call_utc": "2026-09-10T11:19:40+00:00"
+    },
+    "self-strong-S__d1": {
+      "first_call_utc": "2026-09-10T12:08:07.251000+00:00",
+      "last_call_utc": "2026-09-10T12:16:23.130000+00:00"
+    }
+  }
+}

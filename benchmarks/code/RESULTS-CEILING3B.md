@@ -1,8 +1,14 @@
-# Ceiling 3b — the Anthropic family under two changed rulebooks: the grading rule did nothing, the referent rule did what it did for the shipped auditor, and the adjudication says why
+# Ceiling 3b — the Anthropic family under two changed rulebooks: the grading rule showed no BLOCKER effect, the referent rule moved this family as it moved the shipped auditor, and the adjudication says what its findings name
 
-Study 19. Preregistered at `benchmarks/code/ceiling3b/PREREGISTRATION.md` (ed75d27, before
-any call; Amendments 1–2 — an S reading with its texts for H19d, and the cap raised from
-$30 to $55 on the measured per-draw cost, disclosed as made after an interim look). Substrate,
+Study 19. Preregistered at `benchmarks/code/ceiling3b/PREREGISTRATION.md` (ed75d27,
+2026-09-09 17:58 UTC, before the first call at 17:59:58; Amendment 1 — an S reading with its
+texts for H19d; Amendment 2 — the cap raised from $30 to $55 at 18:10:27 UTC, after 100 R
+readings and an interim look at their cache: with realised costs the $30 cap would have
+completed R and B and about three S-text readings, so H19a did not depend on the raise and
+H19d's S row did; Amendment 3 — the corrections of record the first review required, listed
+there). The first version of this file computed the paired contrasts with study 18's
+bootstrap seed; they are restated here with the registered seed (20260912), which moves
+the intervals by tenths of a point. Substrate,
 instances and the union-of-K protocol are ceiling 1's; arm S is study 18's `self-strong`
 draws 1–4 (RESULTS-CEILING3, under review); R and B are new, K = 4 each, Sonnet 4.6 with the
 shipped constitution plus one rule (§1 of the preregistration, verbatim). Records:
@@ -60,24 +66,32 @@ Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster pe
 
 | contrast | rule | stratum | difference | cluster 95% | Tango | grid-unconditional | one-signed | a-only / b-only | McNemar p | sign-flip p |
 |---|---|---|---|---|---|---|---|---|---|---|
-| B − S | blocker | P | +0.9 | [-1.8, +3.8] | [-3.4, +5.6] | [-6.4, +8.2] | no | 2 / 1 | 1.00e+00 | 1.00e+00 |
+| B − S | blocker | P | +0.9 | [-1.8, +4.5] | [-3.4, +5.6] | [-6.4, +8.2] | no | 2 / 1 | 1.00e+00 | 1.00e+00 |
 | B − S | blocker | C | +0.0 | [-2.7, +2.7] | [-3.6, +3.6] | [-5.7, +5.7] | no | 2 / 2 | 1.00e+00 | 1.00e+00 |
-| B − S | any | P | -20.0 | [-30.3, -10.0] | [-29.2, -11.6] | [-31.2, -7.3] | no | 3 / 25 | 2.74e-05 | 3.81e-04 |
-| B − S | any | C | -16.7 | [-23.8, -9.9] | [-24.2, -9.9] | [-25.7, -6.7] | no | 4 / 29 | 1.09e-05 | 3.00e-05 |
-| R − S | blocker | P | +20.9 | [+10.8, +31.5] | [+12.9, +29.9] | [+8.6, +31.8] | no | 25 / 2 | 5.65e-06 | 4.20e-04 |
-| R − S | blocker | C | +8.0 | [+3.4, +13.0] | [+3.7, +13.7] | [+0.3, +15.3] | no | 13 / 1 | 1.83e-03 | 1.83e-03 |
-| R − S | any | P | +43.6 | [+31.4, +55.9] | [+33.6, +53.4] | [+29.1, +55.0] | no | 50 / 2 | 6.12e-13 | 5.00e-06 |
-| R − S | any | C | +66.7 | [+58.5, +74.5] | [+58.4, +73.8] | [+55.0, +75.0] | no | 101 / 1 | 4.06e-29 | 5.00e-06 |
-| B − R | blocker | P | -20.0 | [-30.0, -10.8] | [-28.7, -12.7] | [-30.5, -8.2] | no | 1 / 23 | 2.98e-06 | 2.75e-04 |
-| B − R | blocker | C | -8.0 | [-12.8, -3.4] | [-13.7, -3.7] | [-15.3, -0.3] | no | 1 / 13 | 1.83e-03 | 1.83e-03 |
-| B − R | any | P | -63.6 | [-75.5, -51.4] | [-72.2, -53.6] | [-73.6, -49.1] | no | 1 / 71 | 3.09e-20 | 5.00e-06 |
-| B − R | any | C | -83.3 | [-89.2, -77.2] | [-88.4, -76.6] | [-89.3, -73.3] | yes | 0 / 125 | 4.70e-38 | 5.00e-06 |
+| B − S | any | P | -20.0 | [-29.7, -10.1] | [-29.2, -11.6] | [-31.2, -7.3] | no | 3 / 25 | 2.74e-05 | 3.81e-04 |
+| B − S | any | C | -16.7 | [-24.0, -9.8] | [-24.2, -9.9] | [-25.7, -6.7] | no | 4 / 29 | 1.09e-05 | 3.00e-05 |
+| R − S | blocker | P | +20.9 | [+10.8, +31.8] | [+12.9, +29.9] | [+8.6, +31.8] | no | 25 / 2 | 5.65e-06 | 4.20e-04 |
+| R − S | blocker | C | +8.0 | [+3.4, +12.7] | [+3.7, +13.7] | [+0.3, +15.3] | no | 13 / 1 | 1.83e-03 | 1.83e-03 |
+| R − S | any | P | +43.6 | [+31.5, +55.9] | [+33.6, +53.4] | [+29.1, +55.0] | no | 50 / 2 | 6.12e-13 | 5.00e-06 |
+| R − S | any | C | +66.7 | [+58.6, +74.5] | [+58.4, +73.8] | [+55.0, +75.0] | no | 101 / 1 | 4.06e-29 | 5.00e-06 |
+| B − R | blocker | P | -20.0 | [-30.0, -10.7] | [-28.7, -12.7] | [-30.5, -8.2] | no | 1 / 23 | 2.98e-06 | 2.75e-04 |
+| B − R | blocker | C | -8.0 | [-12.7, -3.4] | [-13.7, -3.7] | [-15.3, -0.3] | no | 1 / 13 | 1.83e-03 | 1.83e-03 |
+| B − R | any | P | -63.6 | [-75.0, -51.8] | [-72.2, -53.6] | [-73.6, -49.1] | no | 1 / 71 | 3.09e-20 | 5.00e-06 |
+| B − R | any | C | -83.3 | [-89.1, -77.1] | [-88.4, -76.6] | [-89.3, -73.3] | yes | 0 / 125 | 4.70e-38 | 5.00e-06 |
+
+### Table 5b — POST HOC (review round 1): of the consensus-'yes' findings, does the finding assert the code is wrong on that class? (72 items; agreement 60/72, κ = 0.695; disputed excluded from 'defect')
+
+| arm | 'yes' findings | defect | correct / untested | cannot tell | disputed | P instances with a defect-asserting finding / all 110 | Wilson | cluster |
+|---|---|---|---|---|---|---|---|---|
+| S-text — shipped constitution, a fifth reading (Amendment 1) | 6 | 3 | 1 | 0 | 2 | 3/110 = 2.7% | 0.9–7.7 | 0.0–7.3 |
+| R — + referent rule (CA-COVER-001) | 62 | 29 | 24 | 0 | 9 | 27/110 = 24.5% | 17.5–33.4 | 14.4–35.7 |
+| B — + grading rule (CA-GRADE-001) | 4 | 3 | 0 | 0 | 1 | 3/110 = 2.7% | 0.9–7.7 | 0.0–7.3 |
 
 ### Table 5 — H19d, blinded adjudication of draw-1 findings on P instances: does the finding name the input class or behaviour on which the hidden test fails? (190 items; L1 the author, L2 gpt-6-astra; agreement 179/190, κ = 0.897; disputed items excluded from 'yes')
 
 | arm | findings | yes | no | cannot tell | disputed | P instances with a finding | of which named by some finding | named / all 110 P | Wilson | cluster |
 |---|---|---|---|---|---|---|---|---|---|---|
-| S — shipped constitution (study 18's draws 1–4) | 38 | 6 | 28 | 4 | 0 | 37 | 6 | 6/110 = 5.5% | 2.5–11.4 | 0.0–12.6 |
+| S-text — shipped constitution, a fifth reading (Amendment 1) | 38 | 6 | 28 | 4 | 0 | 37 | 6 | 6/110 = 5.5% | 2.5–11.4 | 0.0–12.6 |
 | R — + referent rule (CA-COVER-001) | 128 | 62 | 46 | 9 | 11 | 104 | 58 | 58/110 = 52.7% | 43.5–61.8 | 40.7–65.2 |
 | B — + grading rule (CA-GRADE-001) | 24 | 4 | 18 | 2 | 0 | 24 | 4 | 4/110 = 3.6% | 1.4–9.0 | 0.0–9.2 |
 
@@ -104,62 +118,81 @@ Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster pe
 | B | 56 | 56/110 = 50.9% | 41.7–60.1 | 39.1–62.7 | none |
 <!-- END TABLES -->
 
-* **H19a (primary) — false; the kill for the "severity policy" inference fires.** Under the
-  grading rule, union BLOCKER recall at K = 4 on P is 3/110 = 2.7% against
-  S's 2/110 = 1.8%: **B − S = +0.9 points, cluster [-1.8, +3.8]** (2 vs 1;
-  Tango [-3.4, +5.6]; grid-unconditional [-6.4, +8.2]; McNemar p = 1.00). Telling
-  the model what a BLOCKER is did not make it block. It found *less*: under the any-finding
-  rule B − S on P is -20.0 points [-30.3, -10.0].
+* **H19a (primary) — false; the kill for the "severity policy" inference fires.** Rule B told
+  the model that a finding naming an input on which the code returns a disallowed value is
+  a BLOCKER and asked it to name such inputs. Under it, union BLOCKER recall at K = 4 on P is 3/110 = 2.7% against
+  S's 2/110 = 1.8%: **B − S = +0.9 points, cluster [-1.8, +4.5]** (2 vs 1;
+  Tango [-3.4, +5.6]; grid-unconditional [-6.4, +8.2]; McNemar p = 1.00). No
+  positive BLOCKER-recall effect is demonstrated; no equivalence margin was registered, so
+  this is not a demonstration of *no* effect either. What B demonstrably did was return
+  fewer findings: under the any-finding rule B − S on P is -20.0 points [-29.7, -10.1].
 * **H19b.** B's union FP on C at K = 4 is 4/150 = 2.7% (cluster 0.6–5.4), B − S on C
   +0.0 [-2.7, +2.7]; B's single-draw FP 0.8% (cluster 0.2–1.8) is inside the
   product bar (6.7% at K = 1), and so is its recall inside nothing.
-* **H19c — the referent rule moves this family as it moved the shipped auditor.** R's union
-  BLOCKER recall is 25/110 = 22.7% (cluster 13.0–33.3): **R − S = +20.9 points, cluster
-  [+10.8, +31.5]** (25 vs 2; Tango [+12.9, +29.9]; grid-unconditional [+8.6, +31.8]; McNemar
+* **H19c — the referent rule moves this family as it moved the shipped auditor.** Rule R
+  appends ceiling 2's referent rule verbatim (find what the visible tests do not exercise).
+  R's union BLOCKER recall is 25/110 = 22.7% (cluster 13.0–33.3): **R − S = +20.9 points, cluster
+  [+10.8, +31.8]** (25 vs 2; Tango [+12.9, +29.9]; grid-unconditional [+8.6, +31.8]; McNemar
   p = 5.6e-06; sign-flip p = 4.2e-04), at a false-positive cost of R − S on C = +8.0 points
-  [+3.4, +13.0] (R's C union 16/150 = 10.7%, single draw 5.0%). Under the any-finding rule R
+  [+3.4, +12.7] (R's C union 16/150 = 10.7%, single draw 5.0%). Under the any-finding rule R
   returns a finding on nearly every instance of either stratum (P 97.3%, C 96.0% at K = 4;
-  R − S on P +43.6 [+31.4, +55.9], on C +66.7 [+58.5, +74.5]), which is why the flag rate says
+  R − S on P +43.6 [+31.5, +55.9], on C +66.7 [+58.6, +74.5]), which is why the flag rate says
   nothing by itself and H19d had to be adjudicated.
-* **H19d — the seeing question, adjudicated (Table 5).** Two blinded labellers (L1 the
-  author, L2 `gpt-6-astra` through the Codex CLI, the same sheet: specification, candidate,
-  the hidden failure's first failing inputs with expected and actual values, the finding
-  text; no arm, no severity) answered "does the finding name the input class, or the
-  behaviour, on which the hidden test fails?" for the 190 findings on P instances in draw 1
-  of S, R and B: agreement 179/190, **κ = 0.897**; the 11 disputed items count as not
-  "yes". Under the shipped constitution, Sonnet's draw-1 findings name the defect on
-  **6 of 110 P instances = 5.5%** (Wilson 2.5–11.4; cluster 0.0–12.6), although it returned
-  some finding on 37 of them: 28 of its 38 findings are about something else (most often
-  the test file's missing import, or an edge the solution handles). Under the referent rule
-  its findings name the defect on **58 of 110 = 52.7%** (Wilson 43.5–61.8; cluster
-  40.7–65.2) — 62 "yes" of 128 findings — and blocks on 13.2% at one reading; under the grading
-  rule 4 of 110 = 3.6%.
+* **H19d — what the findings name, adjudicated (Tables 5 and 5b).** Two labellers (L1 the
+  author, L2 `gpt-6-astra` through the Codex CLI), each seeing the same sheet — the
+  specification, the candidate, the hidden failure's first failing inputs with expected and
+  actual values, and the finding text; no arm, severity, stratum or instance id — answered
+  the registered question "does the finding name the input class, or the behaviour, on
+  which the hidden test fails?" The blinding is to that metadata, not to allocation: five of
+  the 190 finding texts quote the added rule's id, which tells a labeller who knows the
+  study which arm wrote them, and L1 is the author. They answered it for the 190 findings
+  on P instances in draw 1 of S (the S-text reading), R and B: agreement 179/190,
+  **κ = 0.897**; the 11 disputed items count as not "yes". **Naming** (the registered
+  question; a finding that names the failing class while asserting the code handles it
+  correctly counts as yes): under the shipped constitution Sonnet's findings name the
+  failing class on **6 of 110 P instances = 5.5%** (Wilson 2.5–11.4; cluster 0.0–12.6),
+  although it returned some finding on 37 of them — 28 of its 38 findings are about something else,
+  most often the test file's missing import; under the referent rule on **58 of 110 = 52.7%**
+  (Wilson 43.5–61.8; cluster 40.7–65.2; 62 "yes" of 128 findings); under the grading rule 4 of 110 =
+  3.6%. **Recognition** (Table 5b; a post-hoc second question the first review asked for, put to
+  both labellers on the 72 consensus-"yes" findings: does the finding assert the code is *wrong*
+  on that class? agreement 60/72, κ = 0.695; 12 disputed count as not "defect"): under the
+  shipped constitution **3 of 110 = 2.7%** (Wilson 0.9–7.7; cluster 0.0–7.3); under the
+  referent rule **27 of 110 = 24.5%** (Wilson 17.5–33.4; cluster 14.4–35.7) — 24 of R's 62
+  naming findings say the class is handled correctly or only untested; under the grading
+  rule 3 of 110 = 2.7%.
 
-## 2. What this settles
+## 2. What this settles, and what it does not
 
 Study 18 left an inference: that the Anthropic families' near-zero BLOCKER rate was "a
 severity policy, not a limit of seeing", because they returned findings on many instances.
-**The adjudication says otherwise.** Under the shipped constitution the findings are not
-about the defects: 28 of 38 name something else, and only 6 of 110 defects are named at all.
-The gap study 18 measured between "mentioned by none" and "blocked by none" was a gap
-between *returning a finding* and *blocking*, not between *seeing the defect* and
-blocking; the any-finding rule counted findings about import statements. **What made the
-family see was the referent rule** — the instruction to find what the visible tests do not
-exercise — which raised named-defect coverage from 5.5% to 52.7% and BLOCKER recall from
-1.8% to 22.7% at K = 4, exactly the lever ceiling 2 found for the shipped auditor (+26.8 points on
-flags), at a false-positive cost (+8.0 points on C) the product would have to weigh. The
-grading rule, which only said what to call a BLOCKER, changed nothing that the record can
-see. So the study-18 inference is withdrawn in the direction the kill named: the near-zero
-rate was (mostly) a limit of seeing under that rulebook, and the rulebook's referent, not
-its severity wording, is what lifts it.
+**The preregistered test of it fails: telling the model what to grade BLOCKER (rule B)
+produced no demonstrated BLOCKER-recall effect** (H19a: +0.9 points, cluster [-1.8, +4.5]) and
+fewer findings (-20.0 on the any-finding rate). The kill named for the inference fires and the
+inference is withdrawn. What the adjudication adds is narrower than "did not see" and is
+stated as two measured rates: under the shipped constitution, Sonnet's draw-1 findings
+*name* the failing class on 6 of 110 defects and *assert a defect* on 3; the other 28 of
+its 38 findings are about something else. The gap study 18 measured between "mentioned by
+none" and "blocked by none" was therefore a gap between *returning some finding* and
+blocking, not between recognising the defect and blocking.
 
-Two things the record does not settle. R's findings under the any-finding rule cover
-97.3% of P and 96.0% of C — the rule makes the model write *something* about nearly every
-increment, and 46 of its 128 draw-1 findings on P name something other than the defect; the
-10.7% C-union FP is the part of that which it grades BLOCKER. And the residual across all
-measured families (Table 7) moves from 56 to 53 with R and not at all with B: the
-referent rule reaches a few more of the defects no family had blocked, and the composition
-of what remains is ceiling 1's.
+**What moved the family is the referent rule** — the instruction to find what the visible
+tests do not exercise — which raised naming from 5.5% to 52.7%, defect-asserting findings
+from 2.7% to 24.5% of the defect population, and BLOCKER recall at K = 4 from 1.8% to
+22.7% (+20.9 points, cluster [+10.8, +31.8]) — the lever ceiling 2 found for the shipped auditor
+(+26.8 points on flags) — at a false-positive cost of +8.0 points on C. Whether the rest of the
+near-zero rate is the rulebook's referent or the model's limit is not separated by this
+study: R's findings under the any-finding rule cover 97.3% of P and 96.0% of C, so the rule makes
+the model write something about nearly every increment; 24 of its 62 naming findings on P
+call the failing class correctly handled, and 46 of 128 name something other than the
+defect. The residual across all measured families (Table 7) moves from 56 to 53 with R and
+not at all with B.
+
+**Comparison inventory.** Preregistered: H19a (B − S, BLOCKER, P: the primary), H19b (B − S
+on C; B's single-draw FP against the bar), H19c (R − S under both rules), H19d (the naming
+rate per arm). Reported beside them, not preregistered: B − R (Table 4), the recognition
+rates (Table 5b), the residual with R and B (Table 7). One primary; no correction is applied
+to the secondaries and none is claimed to clear a corrected threshold.
 
 ## 3. Secondaries
 
@@ -176,11 +209,15 @@ applies (ledger totals are the cost table).
 * Arm S's BLOCKER and any-finding numbers are study 18's draws, reused; its H19d texts come
   from one extra reading (Amendment 1), so S's Table 5 row is a different draw from its
   Table 1 row — a fifth reading, not one of the four.
-* H19d's question is about naming, not correctness of the finding's own reasoning: a
-  finding that names the failing class while asserting the code handles it correctly
-  counts as "yes" (the labellers applied that rule alike; the disputed items are listed in
-  `numbers.json`). L2 is a model of a different vendor, not a person.
+* H19d's registered question is about naming; the recognition question (Table 5b) is post
+  hoc, asked after the first review, and its κ ({st['kappa']:.3f}) is lower than the naming
+  question's. The disputed items of both are listed in `numbers.json`. L2 is a model of a
+  different vendor, not a person; L1 is the author; five finding texts name the added
+  rule's id, so the blinding is to metadata, not to allocation.
 * One substrate, one model, K = 4, one draw adjudicated; the referent rule's false-positive
   cost is measured, its product value is not.
+* The §2 manifest is `records/ceiling3b/manifest.json` (`ceiling3b/finalise_manifest.py`:
+  commits and their status, corpus and audit-set digests, models and settings per arm, seeds,
+  each arm's first and last call, environment).
 * `tests/test_ceiling3b_report.py` binds the spliced tables byte for byte and the figures of
-  §1's bullets to `numbers.json`; the prose is the reviewer's to check.
+  §1's bullets and §2's rates to `numbers.json`; the prose is the reviewer's to check.

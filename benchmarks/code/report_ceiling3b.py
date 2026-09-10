@@ -61,7 +61,30 @@ def block(draws: dict, ids: list[str], instances: dict) -> dict:
 
 
 def contrast(a: dict, b: dict, ids: list[str], instances: dict) -> dict:
-    return r3.paired_union_difference(a, b, len(a), ids, instances)
+    """Union-at-K recall of A minus B on the same instances, paired per instance, with THIS
+    study's registered seed (20260912). Round 1 of the review found the delegation to
+    study 18's helper used that module's seed (20260910); the computation is restated
+    here so the seed is the preregistration's and is visible."""
+    k = len(a)
+    da = sorted(a); db = sorted(b)
+    by_problem: dict[str, list[float]] = {}
+    ka = kb = 0
+    for i in ids:
+        fa = any(a[d].get(i) for d in da); fb = any(b[d].get(i) for d in db)
+        ka += fa; kb += fb
+        by_problem.setdefault(instances[i]["problem_id"], []).append(float(fa) - float(fb))
+    lo, hi = rc.cluster_bootstrap_ci(by_problem, BOOTSTRAP, BOOT_SEED)
+    b_only = sum(1 for i in ids if any(a[d].get(i) for d in da) and not any(b[d].get(i) for d in db))
+    c_only = sum(1 for i in ids if not any(a[d].get(i) for d in da) and any(b[d].get(i) for d in db))
+    n = len(ids)
+    return {"k": k, "n": n, "a_union": ka / n, "b_union": kb / n,
+            "difference_points": 100 * (ka - kb) / n,
+            "cluster_ci95_points": [100 * lo, 100 * hi], "cluster_seed": BOOT_SEED,
+            "tango_ci95_points": [100 * x for x in rc.tango_score_interval(b_only, c_only, n)],
+            "exact_unconditional_ci95_points": [100 * x for x in rc.exact_unconditional_interval(b_only, c_only, n)],
+            "one_signed_discordance": (b_only == 0) != (c_only == 0) and (b_only + c_only) > 0,
+            "a_only": b_only, "b_only": c_only, "mcnemar_exact_p": rc.mcnemar_exact(b_only, c_only),
+            "signflip": rc.signflip_p(by_problem)}
 
 
 def secondaries(run_dir: Path, arms: dict, P: list[str], instances: dict) -> dict:
@@ -171,6 +194,42 @@ def main() -> int:
                                 "P_instances_with_a_finding": len(ids),
                                 "P_instances_named_by_some_finding": rc.clustered_rate(names_P, ids, instances, BOOTSTRAP, BOOT_SEED) if ids else None,
                                 "names_rate_over_all_P": rc.clustered_rate(names_P, P, instances, BOOTSTRAP, BOOT_SEED)}
+        # The second question (review round 1; post hoc, labelled so): among consensus-"yes"
+        # findings, does the finding assert the code is WRONG on that class ("defect") or say it
+        # is handled correctly / only untested ("correct")? Recognition, not mention.
+        strict = {}
+        for who in ("L1", "L2"):
+            path = C3B / f"{who}-h19d-strict.csv"
+            if path.exists():
+                with path.open(encoding="utf-8") as fh:
+                    strict[who] = {row["id"]: row["label"].strip().lower() for row in csv.DictReader(fh)}
+        if strict:
+            items = sorted(set.intersection(*(set(v) for v in strict.values())))
+            st = {"n_items": len(items), "note": "post hoc (review round 1): the 'yes' items re-labelled for whether the finding asserts a defect on that class"}
+            if len(strict) == 2:
+                agree = sum(1 for i in items if strict["L1"][i] == strict["L2"][i])
+                cats = ("defect", "correct", "cannot tell")
+                po = agree / len(items) if items else 0
+                pe = sum((sum(1 for i in items if strict["L1"][i] == c) / len(items)) * (sum(1 for i in items if strict["L2"][i] == c) / len(items)) for c in cats) if items else 1
+                st["agreement"] = [agree, len(items)]; st["kappa"] = (po - pe) / (1 - pe) if pe < 1 else 1.0
+                st["disagreements"] = sorted(i for i in items if strict["L1"][i] != strict["L2"][i])
+                sgold = {i: (strict["L1"][i] if strict["L1"][i] == strict["L2"][i] else "disputed") for i in items}
+            else:
+                sgold = dict(strict["L1"]); st["note"] += "; L1 only"
+            st["by_arm"] = {}
+            for arm in ("S", "R", "B"):
+                inst: dict[str, list] = {}
+                for i in items:
+                    if key[i]["arm"] == arm:
+                        inst.setdefault(key[i]["instance"], []).append(sgold.get(i))
+                rec = {ins: any(v == "defect" for v in vals) for ins, vals in inst.items()}
+                st["by_arm"][arm] = {"yes_findings": sum(1 for i in items if key[i]["arm"] == arm),
+                                     "defect": sum(1 for i in items if key[i]["arm"] == arm and sgold.get(i) == "defect"),
+                                     "correct": sum(1 for i in items if key[i]["arm"] == arm and sgold.get(i) == "correct"),
+                                     "cannot_tell": sum(1 for i in items if key[i]["arm"] == arm and sgold.get(i) == "cannot tell"),
+                                     "disputed": sum(1 for i in items if key[i]["arm"] == arm and sgold.get(i) == "disputed"),
+                                     "recognised_rate_over_all_P": rc.clustered_rate(rec, P, instances, BOOTSTRAP, BOOT_SEED)}
+            h["strict_recognition_POST_HOC"] = st
         out["H19d"] = h
     C3B.mkdir(parents=True, exist_ok=True)
     (C3B / "numbers.json").write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -243,13 +302,24 @@ def render_tables(out: dict) -> str:
                          f"| {v['a_only']} / {v['b_only']} | {v['mcnemar_exact_p']:.2e} | {v['signflip']['p']:.2e} |")
     if "H19d" in out and "by_arm" in out["H19d"]:
         h = out["H19d"]
+        if "strict_recognition_POST_HOC" in h:
+            st = h["strict_recognition_POST_HOC"]
+            L += ["", f"### Table 5b — POST HOC (review round 1): of the consensus-'yes' findings, does the finding assert the code is wrong on that class? ({st['n_items']} items"
+                  + (f"; agreement {st['agreement'][0]}/{st['agreement'][1]}, κ = {st['kappa']:.3f}" if 'kappa' in st else "; L1 only") + "; disputed excluded from 'defect')", "",
+                  "| arm | 'yes' findings | defect | correct / untested | cannot tell | disputed | P instances with a defect-asserting finding / all 110 | Wilson | cluster |",
+                  "|---|---|---|---|---|---|---|---|---|"]
+            T5 = dict(LABEL, S="S-text — shipped constitution, a fifth reading (Amendment 1)")
+            for arm in ("S", "R", "B"):
+                v = st["by_arm"][arm]; r = v["recognised_rate_over_all_P"]
+                L.append(f"| {T5[arm]} | {v['yes_findings']} | {v['defect']} | {v['correct']} | {v['cannot_tell']} | {v['disputed']} | {r['k']}/{r['n']} = {_pc(r['rate'])}% | {_iv(r['wilson95'])} | {_iv(r['cluster_ci95'])} |")
         L += ["", f"### Table 5 — H19d, blinded adjudication of draw-1 findings on P instances: does the finding name the input class or behaviour on which the hidden test fails? "
               f"({h['n_items']} items; L1 the author, L2 gpt-6-astra; agreement {h['agreement'][0]}/{h['agreement'][1]}, κ = {h['kappa']:.3f}; disputed items excluded from 'yes')", "",
               "| arm | findings | yes | no | cannot tell | disputed | P instances with a finding | of which named by some finding | named / all 110 P | Wilson | cluster |",
               "|---|---|---|---|---|---|---|---|---|---|---|"]
+        T5 = dict(LABEL, S="S-text — shipped constitution, a fifth reading (Amendment 1)")
         for arm in ("S", "R", "B"):
             v = h["by_arm"][arm]; r = v["names_rate_over_all_P"]
-            L.append(f"| {LABEL[arm]} | {v['findings']} | {v['findings_yes']} | {v['findings_no']} | {v['findings_cannot_tell']} | {v['findings_disputed']} "
+            L.append(f"| {T5[arm]} | {v['findings']} | {v['findings_yes']} | {v['findings_no']} | {v['findings_cannot_tell']} | {v['findings_disputed']} "
                      f"| {v['P_instances_with_a_finding']} | {v['P_instances_named_by_some_finding']['k'] if v['P_instances_named_by_some_finding'] else 0} "
                      f"| {r['k']}/{r['n']} = {_pc(r['rate'])}% | {_iv(r['wilson95'])} | {_iv(r['cluster_ci95'])} |")
     sec = out.get("secondaries")

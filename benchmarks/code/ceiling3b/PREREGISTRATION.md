@@ -110,3 +110,38 @@ the author had seen the interim cache of R draw 1 (P instances run first: 17 of 
 95 blocked, 92 with a finding); it is disclosed here so the reader can weigh it, and it
 changes no arm, rule, outcome or kill. The running process, started with the old cap, is
 stopped and resumed with the new one; the loop is resumable and re-buys nothing.
+
+## Amendment 3 — 2026-09-10, after the first review; corrections of record and one post-hoc question
+
+1. **The paired contrasts' bootstrap ran with study 18's seed (20260910), not this study's
+   (20260912)**: the report delegated to study 18's helper, whose module seed applied. The
+   contrast is restated in this study's report with the registered seed; the intervals move
+   by tenths of a point and no conclusion changes; the first results file's intervals were
+   numerically wrong and are replaced.
+2. **Amendment 2's heading said 75 R readings had landed; the archive says 100 readings and
+   105 ledger calls** by its commit (2026-09-09 18:10:27 UTC). The first-75 cost it quoted is
+   right. With realised costs the original $30 cap would have completed R and B and about
+   three of the S-text readings, so H19a (B − S) did not depend on the raise; H19d's S row
+   did, and the results say so.
+3. **H19d's registered question is about naming, not recognition.** Its rule counts a
+   finding that names the failing class while asserting the code handles it correctly as
+   "yes"; the first review found 17 of R's 58 named instances rest on such findings. A
+   **second, post-hoc question** is added and labelled so: among the consensus-"yes"
+   findings, does the finding assert that the code is wrong on that class ("defect") or say
+   it is handled correctly / only untested ("correct")? Both labellers again, blind to arm,
+   κ reported; the rate "P instances with a defect-asserting finding" is reported beside
+   the registered naming rate and is the one any sentence about *recognising* a defect
+   must cite.
+4. **Blinding is to metadata, not to allocation**: the sheet carries no arm, severity,
+   stratum or instance, but five finding texts name the added rule's id (`CA-COVER-001` or
+   `CA-GRADE-001`), which reveals the arm to a labeller who knows the study; L1 is the
+   author. Stated in the results.
+5. **Table 5's S row is the S-text reading** (Amendment 1's fifth reading), not draws 1–4;
+   the label is corrected.
+6. **"The grading rule did nothing" is withdrawn as a sentence**: no equivalence margin was
+   registered, B − S spans zero, and B reduced the any-finding rate by 20 points. The
+   supported statement is that H19a failed and the kill fired: B did not produce a
+   demonstrated positive BLOCKER-recall effect. Rule B's text does instruct the model to
+   name a specific input; "only said what to call a BLOCKER" was wrong.
+7. **The §2 manifest** (`records/ceiling3b/manifest.json`, `ceiling3b/finalise_manifest.py`)
+   is written from the recorded evidence; the results carry the comparison inventory.

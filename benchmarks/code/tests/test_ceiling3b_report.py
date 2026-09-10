@@ -27,6 +27,11 @@ def _t() -> str:
     return RESULTS.read_text(encoding="utf-8").replace("−", "-")
 
 
+def _flat() -> str:
+    """The prose with soft wraps joined, for sentences that may wrap anywhere."""
+    return " ".join(_t().split())
+
+
 def _pct(x: float) -> str:
     return f"{100 * x:.1f}"
 
@@ -62,20 +67,28 @@ def test_h19a_and_the_contrasts_are_bound():
 
 def test_h19d_is_bound():
     n = _n(); t = _t(); h = n["H19d"]
-    assert f"for the {h['n_items']} findings on P instances" in t
-    assert f"agreement {h['agreement'][0]}/{h['agreement'][1]}, **κ = {h['kappa']:.3f}**; the {len(h['disagreements'])} disputed items" in t
+    assert f"for the {h['n_items']} findings on P instances" in _flat()
+    assert f"agreement {h['agreement'][0]}/{h['agreement'][1]}, **κ = {h['kappa']:.3f}**; the {len(h['disagreements'])} disputed items" in _flat()
     for arm in ("S", "R", "B"):
         v = h["by_arm"][arm]; r = v["names_rate_over_all_P"]
         assert f"{r['k']} of 110" in t and f"{_pct(r['rate'])}%" in t
     s = h["by_arm"]["S"]; rs = s["names_rate_over_all_P"]
     assert f"**{rs['k']} of 110 P instances = {_pct(rs['rate'])}%** (Wilson {_pct(rs['wilson95'][0])}–{_pct(rs['wilson95'][1])}; cluster {_pct(rs['cluster_ci95'][0])}–{_pct(rs['cluster_ci95'][1])})" in t
-    assert f"some finding on {s['P_instances_with_a_finding']} of them: {s['findings_no']} of its {s['findings']} findings" in t
+    assert f"some finding on {s['P_instances_with_a_finding']} of them — {s['findings_no']} of its {s['findings']} findings" in _flat()
     r = h["by_arm"]["R"]; rr = r["names_rate_over_all_P"]
-    assert f"**{rr['k']} of 110 = {_pct(rr['rate'])}%** (Wilson {_pct(rr['wilson95'][0])}–{_pct(rr['wilson95'][1])}; cluster\n  {_pct(rr['cluster_ci95'][0])}–{_pct(rr['cluster_ci95'][1])}) — {r['findings_yes']} \"yes\" of {r['findings']} findings" in t
+    assert f"**{rr['k']} of 110 = {_pct(rr['rate'])}%** (Wilson {_pct(rr['wilson95'][0])}–{_pct(rr['wilson95'][1])}; cluster {_pct(rr['cluster_ci95'][0])}–{_pct(rr['cluster_ci95'][1])}; {r['findings_yes']} \"yes\" of {r['findings']} findings)" in _flat()
+    st = h["strict_recognition_POST_HOC"]
+    assert f"agreement {st['agreement'][0]}/{st['agreement'][1]}, κ = {st['kappa']:.3f}; {len(st['disagreements'])} disputed count as not \"defect\"" in _flat()
+    for arm in ("S", "R", "B"):
+        v = st["by_arm"][arm]["recognised_rate_over_all_P"]
+        assert f"{v['k']} of 110 = {_pct(v['rate'])}%" in _flat()
+    sr = st["by_arm"]["R"]["recognised_rate_over_all_P"]
+    assert f"**{sr['k']} of 110 = {_pct(sr['rate'])}%** (Wilson {_pct(sr['wilson95'][0])}–{_pct(sr['wilson95'][1])}; cluster {_pct(sr['cluster_ci95'][0])}–{_pct(sr['cluster_ci95'][1])}) — {st['by_arm']['R']['correct']} of R's {st['by_arm']['R']['yes_findings']}" in _flat()
+    assert all(n["contrasts"][k][rule][stt]["cluster_seed"] == 20260912 for k in n["contrasts"] for rule in ("blocker", "any") for stt in ("P", "C"))
 
 
 def test_residual_and_cost_are_bound():
     n = _n(); t = _t(); s = n["secondaries"]; r = s["residual"]
-    assert f"moves from {r['ceiling3_residual_n']} to {r['with_R']['n']} with R and not at all with B" in t
+    assert f"moves from {r['ceiling3_residual_n']} to {r['with_R']['n']} with R and not at all with B" in _flat()
     assert r["with_B"]["n"] == r["ceiling3_residual_n"]
     assert f"**${s['ledger_usd_total']:.2f}** from the nine project ledgers ({s['ledger_calls_total']} calls)" in t
