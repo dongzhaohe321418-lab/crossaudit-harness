@@ -259,3 +259,33 @@ the audit, whose auditor is `openai:gpt-5.6-terra`.
 frame and its seeded order, the target |I| = 110, the $12 construction cap and the $35 study
 cap, the auditor, the ladder, every hypothesis, the primary, the kill and the boundary. No
 outcome has been seen.
+
+## Amendment 4 — 2026-09-11, a fully paired control; before any audit call
+
+Amendment 2 widened the frame beyond ceiling 1's audited 150, which left most of population I
+without the free paired twin §2 relied on: for those instances the false-positive comparator
+was ceiling 1's population-level 16.0%, measured on a different set of problems. A reviewer is
+right to ask whether a difference between I and that comparator is the injected defect or the
+problem mix.
+
+**Change.** The ladder gains a second arm: the **unmodified base solution** of every instance of
+I, audited by the same auditor, the same constitution, the same K = 8. For the instances that
+are in ceiling 1's audit set those readings already exist in the frozen cache and cost nothing;
+only the others are bought. Every instance of I then has its own twin — same problem, same
+specification, same generator, same code except the injected lines — measured under the same
+auditor.
+
+**What this changes in the analysis.** H22b becomes paired over all of I rather than over the
+audited subset: union recall on I against the union flag rate on the twins, by exact McNemar and
+the cluster sign-flip test, both preregistered. H22a is untouched: its comparator is still
+ceiling 1's frozen 30.0% on stratum P. The twin arm is also the honest denominator for a
+sentence the results will otherwise be tempted into — "the auditor flags the defect" — since a
+twin flagged just as often would mean the auditor flags the *problem*, not the defect.
+
+**Ladder order**, fixed here: `I` draws 1–8, then `twin` draws 1–8. If the cap stops the run
+part-way, the completed draws are reported and the paired comparison is made at the largest K
+both arms reached.
+
+**Budget.** The twin arm roughly doubles the audit: expected total now **$25**, still under the
+**$35** cap, which does not change. Nothing else changes: not the population, the filters, the
+gate, the auditor, K, the hypotheses, the primary or the kill. No outcome has been seen.
