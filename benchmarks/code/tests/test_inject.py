@@ -119,3 +119,24 @@ def test_the_ladder_and_the_models_are_the_preregistered_ones():
     assert inject.INJECTOR_SPEC == "anthropic:claude-haiku-4-5-20251001"
     assert inject.GATE_SPECS == ("anthropic:claude-sonnet-4-6", "openai:gpt-5.6-luna")
     assert inject.MIN_QUOTE_WORDS == 6 and inject.MAX_CHANGED_LINES == 4
+
+
+def test_amendment_1_reply_format_parses_json_then_a_fence():
+    reply = ('{"quote": "a b c d e f", "input_class": "negative n", "witness_input": "[-5]"}\n'
+             '```python\ndef f(n):\n    return 0\n```\n')
+    obj = inject.parse_injection(reply)
+    assert obj["code"].strip() == "def f(n):\n    return 0"
+    assert obj["quote"] == "a b c d e f" and obj["input_class"] == "negative n"
+
+
+def test_a_reply_with_json_but_no_code_block_is_rejected():
+    assert inject.parse_injection('{"quote": "a b c d e f", "input_class": "x"}') is None
+
+
+def test_the_old_format_still_reads_back():
+    body = '{"code": "def f():\\n    return 1", "quote": "a b c d e f", "input_class": "x"}'
+    assert inject.parse_injection(body)["code"].startswith("def f")
+
+
+def test_the_attempt_budget_is_the_preregistered_one():
+    assert inject.MAX_ATTEMPTS == 3
