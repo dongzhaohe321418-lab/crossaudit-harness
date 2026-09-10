@@ -208,3 +208,14 @@ have all three draws.
   preregistration, not this one.
 * H17 fails on retention → corroboration costs the recall it was meant to protect; the
   oracle-free validated union stays a research result.
+
+## Amendment 1 — before any model call: one secondary count corrected
+
+Written after the driver's data-loading was checked against the frozen record and before
+the first call. §5's unique-test-level secondary counted the draw-1 tests that fail on at
+least one candidate as "89 (73 right, 16 wrong)"; that count included the four artefact
+rows, in which every test is recorded as failed without being evaluated. Excluding them,
+as §4 does for the primary, the set is **80 tests: 64 right, 16 wrong**. Nothing else
+changes: not the hypothesis, the rules, the primary, its denominators (107 failing
+applications: 18 wrong, 89 right — that figure already excluded the artefacts), the kill,
+the seed, or the selection order.
