@@ -111,9 +111,26 @@ def main() -> int:
                 "provenance": "study 18's archive (records/ceiling3/manifest and its MANIFEST.sha256); not re-run here"}
             times[f"S (study 18 self-strong d{d}, reused)"] = {"first_call_utc": ts[0] if ts else None, "last_call_utc": ts[-1] if ts else None}
     models["adjudicators"] = {
-        "L1": {"role": "adjudicator, naming and (post hoc) recognition questions", "who": "the author (human)", "blind_to": "instance id, arm, allocation; not to finding text"},
-        "L2": {"role": "adjudicator, same questions", "model": "gpt-6-astra", "provider": "OpenAI via the Codex CLI",
-               "settings": "codex exec --sandbox read-only, model_reasoning_effort=high, default sampling", "blind_to": "the same; sees the sheet only"}}
+        "_blinding": "METADATA-BLIND, NOT ALLOCATION-BLIND. The sheet withholds the instance id, "
+                     "the arm and the stratum, but five of the 190 finding texts (and three of "
+                     "the 72 strict ones) name the added rule's id, CA-COVER-001 or "
+                     "CA-GRADE-001, so a reader of those items can infer the arm. RESULTS "
+                     "§4 says the same; this field exists so the machine-readable record "
+                     "cannot say otherwise.",
+        "L1": {"role": "adjudicator, naming and (post hoc) recognition questions",
+               "who": "the author of this study and of the paper (human)",
+               "withheld_by_the_sheet": "instance id, arm, stratum",
+               "not_blind_to": "the finding text, which names the rule id in five items; "
+                               "and, being the author, the study's design and its other results"},
+        "L2": {"role": "adjudicator, same questions", "model": "gpt-6-astra",
+               "provider": "OpenAI via the Codex CLI (not the product's provider layer)",
+               "base_url": "the Codex CLI's own OpenAI endpoint; not set by this harness and "
+                           "not recorded in any ledger here, because the CLI bills a "
+                           "subscription rather than this project's key",
+               "settings": "codex exec --sandbox read-only, model_reasoning_effort=high, "
+                           "default sampling",
+               "withheld_by_the_sheet": "instance id, arm, stratum",
+               "not_blind_to": "the finding text, which names the rule id in five items"}}
     seeds = {"bootstrap_seed": 20260912, "bootstrap_reps": 10000, "sheet_shuffle_seed": 20260912,
              "instance_selection": "study 2's frozen audit set (records/study2/audit_set.json); no selection seeded here"}
     env = {"python": sys.version.split()[0], "platform": platform.platform()}

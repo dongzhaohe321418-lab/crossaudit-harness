@@ -116,3 +116,21 @@ def test_the_strict_kappa_and_the_inventory_are_rendered():
     leaves = [(pair, rule, pop) for pair, rules in contrasts.items() for rule, pops in rules.items()
               for pop in pops if isinstance(pops, dict)]
     assert len(leaves) == 12, leaves
+
+
+def test_the_manifest_does_not_claim_a_blinding_the_study_did_not_have():
+    """Round 4: the machine-readable record said the adjudication was allocation-blind while
+    §4 said metadata-blind. A record that contradicts the prose is worse than no record.
+
+    D10 mutation: put "allocation" back into either adjudicator's withheld list, or drop L2's
+    base_url, and this goes red.
+    """
+    manifest = json.loads((CODE / "records" / "ceiling3b" / "manifest.json").read_text(encoding="utf-8"))
+    adj = manifest["models"]["adjudicators"]
+    assert "NOT ALLOCATION-BLIND" in adj["_blinding"]
+    for who in ("L1", "L2"):
+        assert "allocation" not in adj[who]["withheld_by_the_sheet"]
+        assert adj[who]["not_blind_to"]
+    assert adj["L2"]["base_url"]
+    assert "author" in adj["L1"]["who"]
+    assert "derived, not registered" in _flat()

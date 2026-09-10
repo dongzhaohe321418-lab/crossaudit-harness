@@ -196,7 +196,8 @@ Preregistered among them, four: H19a (B − S, BLOCKER, P: the primary), H19b (B
 C — B's single-draw FP against the bar), H19c (R − S **on P**, under both rules: two
 contrasts). Not preregistered, eight: B − S under the any-finding rule on P and on C; R − S
 on C under either rule; B − R under both rules on both populations. Beside Table 4: H19d's
-three naming rates (preregistered, on the registered any-finding denominator and on all 110 P),
+three naming rates on the registered denominator, any-finding P rows (preregistered), the same
+three rates on all 110 P (**derived, not registered**),
 H19b's second comparison — B's single-draw FP on C against the fixed 6.7% product bar
 (preregistered) —, the three recognition rates of Table 5b (post hoc), and the residual with R
 and B (Table 7, not preregistered). One primary; no correction is applied to the other
