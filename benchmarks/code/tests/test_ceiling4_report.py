@@ -29,7 +29,15 @@ WHAT IS BOUND HERE, and only this:
   denial count and the prompt-digest positive control; the run-history figures (the
   instances draw 5 lost, that draws 6 to 8 were denied whole, and that every draw is
   complete at 260); the two reading-level finding and BLOCKER counts behind §2's
-  any-finding claim; the seeds, the reps and the strata sizes.
+  any-finding claim; the seeds, the reps and the strata sizes. For Amendment 1's
+  adjudication: the naming agreement, its 2x2 cells, Cohen κ, both raters' yes counts and
+  the asymmetry of the 23 disagreements; the recognition concordance and that its κ is
+  undefined rather than 1; all sixteen rates (two routes x two questions x four reader
+  rules), each recomputed from the two label files and the key rather than read from
+  numbers.json; the registered primary with both intervals; the kill's threshold, its
+  verdict and that it fires under every rule and question; and the manifest's sheet, key
+  and label-file digests, both raters' identities, L2's model, endpoint and
+  subscription billing, with an assertion that the sheet itself is not in the repository.
 * **Three record-level invariants**: the repository's `records/ceiling4/` carries no
   finding, specification or solution text (ids, digests, counts and outcomes only) and
   neither do `numbers.json` and `tables.md`; the committed adjudication key carries no
@@ -45,8 +53,13 @@ WHAT IS NOT BOUND HERE:
   `tests/test_ceiling_stats.py` is their evidence and is not duplicated.
 * The readings. Whether the cache is a faithful record of the run is the archive's
   business (`run.log`, the ledgers), not this file's.
-* Amendment 1's defect-naming rate and its kill: no adjudication was run, so there is no
-  number to bind.
+* The raters' judgements. Whether L1 and L2 answered the sheet *well* is not testable here;
+  what is tested is that every rate and every agreement statistic is exactly what their two
+  committed label files imply. The low κ is bound as a number, not adjudicated as a fact.
+* Study 19's κ = 0.897, quoted in §3 for contrast: study 19's records are not on this
+  branch, so that figure is attributed, not recomputed.
+* The claim that study 19's sheet contained fewer adjacent-class findings. The results file
+  labels that as the author's reading of the two sheets, and it is not a measurement.
 
     PYTHONPATH=src python -m pytest benchmarks/code/tests/test_ceiling4_report.py -q
 """
@@ -129,7 +142,8 @@ def test_the_committed_records_carry_no_finding_or_specification_text():
     """The cache rows are ids, digests, counts and outcomes. The driver builds a row that
     also holds ``blocker_texts``; the cache writer drops it, and this asserts that it did."""
     banned = ("blocker_texts", "observation", "specification", "solution\"", "finding\"")
-    for path in glob.glob(str(CODE / "records" / "ceiling4" / "**" / "*.jsonl"), recursive=True):
+    for path in (glob.glob(str(CODE / "records" / "ceiling4" / "**" / "*.jsonl"), recursive=True)
+                 + glob.glob(str(CODE / "records" / "ceiling4" / "*.csv"))):
         body = Path(path).read_text(encoding="utf-8")
         for key in banned:
             assert key not in body, f"{path} carries {key}"
@@ -296,14 +310,14 @@ def test_cross_T_and_the_any_finding_secondary_are_bound():
     ap = ct["P_any_finding_rate"]
     assert (f"any severity on {ap['k']} of {ap['n']} = {_pct(ap['rate'])}% (cluster "
             f"{_pct(ap['cluster_ci95'][0])}–{_pct(ap['cluster_ci95'][1])})") in t
-    assert ct["amendment1_primary_rate"] is None and ct["amendment1_kill_evaluated"] is False
+    assert ct["amendment1_kill_evaluated"] is True
+    assert ct["amendment1_primary_rate"]["k"] == n["amendment1_adjudication"]["arms"]["T"]["defect_asserting"]["consensus"]["k"]
     c1 = n["families"]["cross"]["P"]
     assert (f"single-draw mean of {_pct(c1['curve'][0])}% (cluster "
             f"{_pct(c1['curve_cluster_ci95'][0][0])}–{_pct(c1['curve_cluster_ci95'][0][1])})") in t
-    # the bound that needs no adjudication: the naming rate cannot exceed the any-finding count
-    assert ap['k'] == 9 and f"at most {ap['k']} of {ap['n']}" in t
+    assert ap["k"] == 9
     prereg = (CODE / "ceiling4" / "PREREGISTRATION.md").read_text(encoding="utf-8")
-    assert "below 20 of 110" in prereg and "threshold of 20 of 110" in t
+    assert "below 20 of 110" in prereg
     fams = n["secondary_any_finding_rule"]["families"]
     for fam, name in (("cross-R", "`cross-R`"), ("cross", "`cross`")):
         u = fams[fam]["P"]["union_at_kmax"]
@@ -353,3 +367,124 @@ def test_the_seeds_and_the_reps_are_the_preregistered_ones():
     assert n["bootstrap"]["unit"] == "problem"
     assert n["k_max"] == 8 and n["n_P"] == 110 and n["n_C"] == 150
     assert n["H20b_asymptote_difference_P"]["seed"] == 20260913
+
+
+def _ratings():
+    """The two label files and the key, read here rather than taken from numbers.json."""
+    import csv as _csv
+    R = CODE / "records" / "ceiling4"
+    out = {}
+    for name in ("L1", "L2"):
+        with (R / f"{name}-amendment1.csv").open(encoding="utf-8", newline="") as h:
+            out[name] = {r["id"].strip(): (r["naming"].strip(), r["recognition"].strip())
+                         for r in _csv.DictReader(h)}
+    key = {}
+    for line in (CODE / "ceiling4" / "key-amendment1.jsonl").read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            row = json.loads(line)
+            key[row["id"]] = row
+    return out["L1"], out["L2"], key
+
+
+def test_the_adjudication_agreement_is_recomputed_and_bound():
+    """κ, the cells and the asymmetry are recomputed from the csvs, not taken on trust."""
+    import report_ceiling4 as r4
+    n = _n(); t = _t()
+    L1, L2, key = _ratings()
+    ids = sorted(key)
+    assert set(ids) == set(L1) == set(L2)
+    y = lambda r, i: r[i][0] == "yes"                                     # noqa: E731
+    a = sum(1 for i in ids if y(L1, i) and y(L2, i))
+    b = sum(1 for i in ids if y(L1, i) and not y(L2, i))
+    c = sum(1 for i in ids if not y(L1, i) and y(L2, i))
+    d = sum(1 for i in ids if not y(L1, i) and not y(L2, i))
+    nm = n["amendment1_adjudication"]["naming"]
+    assert (nm["both_yes"], nm["L1_only"], nm["L2_only"], nm["both_no"]) == (a, b, c, d)
+    assert nm["agree"] == a + d and nm["items"] == len(ids)
+    assert abs(nm["kappa"] - r4.cohen_kappa(a, b, c, d)) < 1e-12
+    assert nm["L1_yes"] == a + b and nm["L2_yes"] == a + c
+    assert nm["disagreements_L1_no_L2_yes"] == c and nm["more_inclusive_rater"] == "L2"
+    assert (f"{nm['agree']} of the {nm['items']} items, Cohen κ = {nm['kappa']:.3f}") in t
+    assert (f"L1 answered yes on {nm['L1_yes']} items and L2 on {nm['L2_yes']}, and of the "
+            f"{nm['disagreements']} disagreements {nm['disagreements_L1_no_L2_yes']} are "
+            f"L1-no/L2-yes") in t
+    # the recognition question: perfect concordance, so kappa is undefined, not 1
+    rg = n["amendment1_adjudication"]["recognition"]
+    cons = [i for i in ids if y(L1, i) and y(L2, i)]
+    assert rg["items"] == len(cons)
+    assert rg["both_defect"] == sum(1 for i in cons if L1[i][1] == "defect" and L2[i][1] == "defect")
+    assert rg["kappa"] is None
+    assert f"{rg['items']} items both raters called named, both labelled all {rg['both_defect']} \"defect\"" in t
+    assert "κ is **undefined** there rather than 1" in t
+    # the four non-defect labels the prose attributes to L2 on cross-R items only
+    non_defect = [i for i in ids if y(L2, i) and L2[i][1] != "defect"]
+    assert len(non_defect) == 4 and {key[i]["arm"] for i in non_defect} == {"R"}
+    assert "L2's four non-defect\nlabels, all of which fall on `cross-R` items" in t
+
+
+def test_the_adjudication_rates_and_amendment1_kill_are_bound():
+    n = _n(); t = _t()
+    L1, L2, key = _ratings()
+    adj = n["amendment1_adjudication"]
+
+    def hit(arm, question, rule):
+        def q(r, i):
+            named = r[i][0] == "yes"
+            return named if question == "naming" else (named and r[i][1] == "defect")
+        pick = {"consensus": lambda i: q(L1, i) and q(L2, i), "L1": lambda i: q(L1, i),
+                "L2": lambda i: q(L2, i), "either": lambda i: q(L1, i) or q(L2, i)}[rule]
+        return len({key[i]["instance"] for i in key if key[i]["arm"] == arm and pick(i)})
+
+    for arm in ("T", "R"):
+        for question in ("naming", "defect_asserting"):
+            for rule in ("consensus", "L1", "L2", "either"):
+                assert adj["arms"][arm][question][rule]["k"] == hit(arm, question, rule), (arm, question, rule)
+    prim = adj["arms"]["T"]["defect_asserting"]["consensus"]
+    assert (f"{prim['k']} of {prim['n']} = {_pct(prim['rate'])}% (Wilson {_pct(prim['wilson95'][0])}–"
+            f"{_pct(prim['wilson95'][1])}; cluster {_pct(prim['cluster_ci95'][0])}–"
+            f"{_pct(prim['cluster_ci95'][1])})") in t
+    eith = adj["arms"]["T"]["defect_asserting"]["either"]
+    assert (f"{eith['k']} of {eith['n']} = {_pct(eith['rate'])}% (Wilson {_pct(eith['wilson95'][0])}–"
+            f"{_pct(eith['wilson95'][1])}; cluster {_pct(eith['cluster_ci95'][0])}–"
+            f"{_pct(eith['cluster_ci95'][1])})") in t
+    rc26 = adj["arms"]["R"]["naming"]["consensus"]
+    assert (f"{rc26['k']} of {rc26['n']} = {_pct(rc26['rate'])}% (Wilson {_pct(rc26['wilson95'][0])}–"
+            f"{_pct(rc26['wilson95'][1])}; cluster {_pct(rc26['cluster_ci95'][0])}–"
+            f"{_pct(rc26['cluster_ci95'][1])})") in t
+    assert (f"it is {adj['arms']['R']['naming']['either']['k']} of 110 for naming and\n"
+            f"{adj['arms']['R']['defect_asserting']['either']['k']} of 110 for defect-asserting") in t
+    # the "5 to 7" span, and the denominator of one reading
+    assert f"finding\non {adj['arms']['T']['P_instances_with_a_finding']} of 110 defect instances" in t
+    assert f"asserted the actual defect on {prim['k']} to {eith['k']} of them" in t
+    # the kill
+    kill = adj["amendment1_kill"]
+    assert kill["threshold_k"] == 20 and kill["fired"] is True
+    assert kill["fired_under_every_rule_and_question"] is True
+    assert all(adj["arms"]["T"][q][r]["k"] < kill["threshold_k"]
+               for q in ("naming", "defect_asserting")
+               for r in ("consensus", "L1", "L2", "either"))
+    assert "the kill **FIRED**" in t.replace("\n", " ")
+    # the two quantities are not the same and the file must not treat them as one
+    assert adj["arms"]["R"]["naming"]["L2"]["k"] != adj["arms"]["R"]["defect_asserting"]["L2"]["k"]
+
+
+def test_the_adjudication_manifest_records_its_provenance():
+    n = _n()
+    import hashlib
+    m = n["amendment1_adjudication"]["manifest"]
+    assert len(m["sheet_sha256"]) == 64 and len(m["key_sha256"]) == 64
+    assert m["adjudication_run"] is True
+    for name in ("L1", "L2"):
+        path = CODE / "records" / "ceiling4" / f"{name}-amendment1.csv"
+        assert m["ratings"][name]["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
+        assert m["ratings"][name]["rows"] == m["items"]
+    key_path = CODE / "ceiling4" / "key-amendment1.jsonl"
+    assert m["key_sha256"] == hashlib.sha256(key_path.read_bytes()).hexdigest()
+    assert "author" in m["raters"]["L1"]["identity"]
+    assert m["raters"]["L2"]["model"] == "gpt-6-astra"
+    assert m["raters"]["L2"]["endpoint"].startswith("https://")
+    assert "subscription" in m["raters"]["L2"]["billing"]
+    assert "not in any ledger" in m["raters"]["L2"]["billing"]
+    # the sheet is never in the repository
+    assert not (CODE / "records" / "ceiling4" / "sheet-amendment1.jsonl").exists()
+    assert str(CODE) not in m["sheet_path_outside_repo"]

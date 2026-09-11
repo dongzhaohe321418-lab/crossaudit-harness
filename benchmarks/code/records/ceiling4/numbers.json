@@ -501,28 +501,396 @@
     "study18_residual_n": 56,
     "total_draws": 40
   },
-  "amendment1_adjudication_inputs": {
-    "P_instances_with_a_finding_by_arm": {
-      "R": 49,
-      "T": 9
+  "amendment1_adjudication": {
+    "amendment1_kill": {
+      "fired": true,
+      "fired_under_every_rule": true,
+      "fired_under_every_rule_and_question": true,
+      "primary_k": 5,
+      "primary_n": 110,
+      "rule": "Amendment 1 adopts the memo's kill: below 20 of 110 on cross-T's registered primary, the headline becomes 'flag rate 30.0%, defect-naming recall X%'",
+      "threshold_k": 20
     },
-    "hidden_failure_witness_kinds": {
-      "timeout": 2,
-      "vector": 48
+    "arms": {
+      "R": {
+        "P_instances_with_a_finding": 49,
+        "defect_asserting": {
+          "L1": {
+            "cluster_ci95": [
+              0.16363636363636364,
+              0.36936936936936937
+            ],
+            "items": 40,
+            "k": 29,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.2636363636363636,
+            "wilson95": [
+              0.19028324453066747,
+              0.35294116124664643
+            ]
+          },
+          "L2": {
+            "cluster_ci95": [
+              0.1875,
+              0.4036697247706422
+            ],
+            "items": 43,
+            "k": 32,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.2909090909090909,
+            "wilson95": [
+              0.21423583339556446,
+              0.38169344863821325
+            ]
+          },
+          "consensus": {
+            "cluster_ci95": [
+              0.14285714285714285,
+              0.3394495412844037
+            ],
+            "items": 33,
+            "k": 26,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.23636363636363636,
+            "wilson95": [
+              0.1667118049904755,
+              0.3238077245303747
+            ]
+          },
+          "either": {
+            "cluster_ci95": [
+              0.21100917431192662,
+              0.43119266055045874
+            ],
+            "items": 50,
+            "k": 35,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.3181818181818182,
+            "wilson95": [
+              0.2385375754259855,
+              0.4100965828642559
+            ]
+          }
+        },
+        "items": 70,
+        "naming": {
+          "L1": {
+            "cluster_ci95": [
+              0.16363636363636364,
+              0.36936936936936937
+            ],
+            "items": 40,
+            "k": 29,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.2636363636363636,
+            "wilson95": [
+              0.19028324453066747,
+              0.35294116124664643
+            ]
+          },
+          "L2": {
+            "cluster_ci95": [
+              0.21818181818181817,
+              0.4444444444444444
+            ],
+            "items": 47,
+            "k": 36,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.32727272727272727,
+            "wilson95": [
+              0.24671132610522006,
+              0.4194911242705093
+            ]
+          },
+          "consensus": {
+            "cluster_ci95": [
+              0.14285714285714285,
+              0.3394495412844037
+            ],
+            "items": 33,
+            "k": 26,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.23636363636363636,
+            "wilson95": [
+              0.1667118049904755,
+              0.3238077245303747
+            ]
+          },
+          "either": {
+            "cluster_ci95": [
+              0.24324324324324326,
+              0.4722222222222222
+            ],
+            "items": 54,
+            "k": 39,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.35454545454545455,
+            "wilson95": [
+              0.27144143085862793,
+              0.4474658957735652
+            ]
+          }
+        },
+        "route": "cross-R"
+      },
+      "T": {
+        "P_instances_with_a_finding": 9,
+        "defect_asserting": {
+          "L1": {
+            "cluster_ci95": [
+              0.009174311926605505,
+              0.08928571428571429
+            ],
+            "items": 6,
+            "k": 5,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.045454545454545456,
+            "wilson95": [
+              0.019569460659234733,
+              0.10201593506636907
+            ]
+          },
+          "L2": {
+            "cluster_ci95": [
+              0.01818181818181818,
+              0.11818181818181818
+            ],
+            "items": 8,
+            "k": 7,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.06363636363636363,
+            "wilson95": [
+              0.031164518014477616,
+              0.125557461882102
+            ]
+          },
+          "consensus": {
+            "cluster_ci95": [
+              0.009174311926605505,
+              0.08928571428571429
+            ],
+            "items": 6,
+            "k": 5,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.045454545454545456,
+            "wilson95": [
+              0.019569460659234733,
+              0.10201593506636907
+            ]
+          },
+          "either": {
+            "cluster_ci95": [
+              0.01818181818181818,
+              0.11818181818181818
+            ],
+            "items": 8,
+            "k": 7,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.06363636363636363,
+            "wilson95": [
+              0.031164518014477616,
+              0.125557461882102
+            ]
+          }
+        },
+        "items": 10,
+        "naming": {
+          "L1": {
+            "cluster_ci95": [
+              0.009174311926605505,
+              0.08928571428571429
+            ],
+            "items": 6,
+            "k": 5,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.045454545454545456,
+            "wilson95": [
+              0.019569460659234733,
+              0.10201593506636907
+            ]
+          },
+          "L2": {
+            "cluster_ci95": [
+              0.01818181818181818,
+              0.11818181818181818
+            ],
+            "items": 8,
+            "k": 7,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.06363636363636363,
+            "wilson95": [
+              0.031164518014477616,
+              0.125557461882102
+            ]
+          },
+          "consensus": {
+            "cluster_ci95": [
+              0.009174311926605505,
+              0.08928571428571429
+            ],
+            "items": 6,
+            "k": 5,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.045454545454545456,
+            "wilson95": [
+              0.019569460659234733,
+              0.10201593506636907
+            ]
+          },
+          "either": {
+            "cluster_ci95": [
+              0.01818181818181818,
+              0.11818181818181818
+            ],
+            "items": 8,
+            "k": 7,
+            "n": 110,
+            "n_problems": 56,
+            "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+            "rate": 0.06363636363636363,
+            "wilson95": [
+              0.031164518014477616,
+              0.125557461882102
+            ]
+          }
+        },
+        "route": "cross-T"
+      }
     },
-    "items": 80,
-    "items_by_arm": {
-      "R": 70,
-      "T": 10
+    "manifest": {
+      "P_instances_with_a_finding_by_arm": {
+        "R": 49,
+        "T": 9
+      },
+      "adjudication_run": true,
+      "hidden_failure_witness_kinds": {
+        "timeout": 2,
+        "vector": 48
+      },
+      "items": 80,
+      "items_by_arm": {
+        "R": 70,
+        "T": 10
+      },
+      "key_path_in_repo": "benchmarks/code/ceiling4/key-amendment1.jsonl",
+      "key_sha256": "973d27bb9174cb4a363257f0aeeaa2091b345f2391cfc67306d233ae3d3fd7a0",
+      "note": "the sheet carries specification, solution and finding text and is never committed; the key carries ids, severities and rule codes only",
+      "prepared": "Amendment 1's adjudication inputs. This script builds the sheet and stops: it calls no model and uses no network. Whether the adjudication itself has been answered is the 'adjudication_run' field, which is true once both label files are present.",
+      "questions": "study 19's: (L1 naming) does the finding name the input class, or the behaviour, on which the hidden test fails? then the recognition question; L1 the author, L2 a different vendor's model, both blind to metadata",
+      "raters": {
+        "L1": {
+          "blinding": "blind to arm, severity, stratum and instance; not blind to the study's existence, and a finding text that names the added rule's id can reveal the arm (study 19 Amendment 3.4, inherited)",
+          "identity": "the author (Zhaohe Dong)",
+          "kind": "human"
+        },
+        "L2": {
+          "billing": "subscription, through the Codex CLI; NOT this project's API key and not in any ledger of this study, so it adds nothing to the $30 cap",
+          "blinding": "blind to arm, severity, stratum and instance",
+          "endpoint": "https://chatgpt.com/backend-api/codex",
+          "endpoint_provenance": "the Codex CLI's compiled-in default, the config setting no override (study 19 round 7 recovered and recorded it); not observed on the wire here",
+          "harness": "Codex CLI",
+          "identity": "a different vendor's model",
+          "kind": "model",
+          "model": "gpt-6-astra"
+        }
+      },
+      "ratings": {
+        "L1": {
+          "path_in_repo": "benchmarks/code/records/ceiling4/L1-amendment1.csv",
+          "rows": 80,
+          "sha256": "170144b013a50491210a564901231b3c00294ff887e2d8855cb5387afabd52c2"
+        },
+        "L2": {
+          "path_in_repo": "benchmarks/code/records/ceiling4/L2-amendment1.csv",
+          "rows": 80,
+          "sha256": "28f50b6d211736d1aeb70e6f4f6237c2a8e6dbdd10d63783c0996538513d2d6d"
+        }
+      },
+      "sheet_path_outside_repo": "/Users/ericdong/Documents/Crossaudit/study-data/wt-ceiling4-adjudication/sheet-amendment1.jsonl",
+      "sheet_sha256": "8ac25c615699c40cec9a1f3461d1c0a3ff17bab4ca64c57f6b2862899af53220",
+      "shuffle_seed": 20260913
     },
-    "key_path_in_repo": "benchmarks/code/ceiling4/key-amendment1.jsonl",
-    "key_sha256": "973d27bb9174cb4a363257f0aeeaa2091b345f2391cfc67306d233ae3d3fd7a0",
-    "note": "the sheet carries specification, solution and finding text and is never committed; the key carries ids, severities and rule codes only",
-    "prepared": "Amendment 1's adjudication inputs; PREPARED ONLY \u2014 no adjudicator was run, no model was called, no network was used",
-    "questions": "study 19's: (L1 naming) does the finding name the input class, or the behaviour, on which the hidden test fails? then the recognition question; L1 the author, L2 a different vendor's model, both blind to metadata",
-    "sheet_path_outside_repo": "/Users/ericdong/Documents/Crossaudit/study-data/wt-ceiling4-adjudication/sheet-amendment1.jsonl",
-    "sheet_sha256": "8ac25c615699c40cec9a1f3461d1c0a3ff17bab4ca64c57f6b2862899af53220",
-    "shuffle_seed": 20260913
+    "naming": {
+      "L1_only": 7,
+      "L1_yes": 46,
+      "L2_only": 16,
+      "L2_yes": 55,
+      "agree": 57,
+      "agreement": 0.7125,
+      "both_no": 18,
+      "both_yes": 39,
+      "disagreements": 23,
+      "disagreements_L1_no_L2_yes": 16,
+      "disagreements_L1_yes_L2_no": 7,
+      "items": 80,
+      "kappa": 0.39072847682119216,
+      "labels_used": {
+        "L1": [
+          "no",
+          "yes"
+        ],
+        "L2": [
+          "no",
+          "yes"
+        ]
+      },
+      "more_inclusive_rater": "L2"
+    },
+    "note": "naming and defect-asserting are different quantities and are reported separately; the registered primary of Amendment 1 is the defect-asserting one",
+    "primary_rule": "consensus, defect-asserting: a disputed item counts as NOT named, which is the preregistered direction",
+    "recognition": {
+      "L1_only": 0,
+      "L2_only": 0,
+      "agree": 39,
+      "agreement": 1.0,
+      "both_defect": 39,
+      "items": 39,
+      "kappa": null,
+      "kappa_note": "kappa is undefined where both raters gave every item the same label: expected agreement is 1 and there is no marginal variation to correct for. That is perfect concordance, not kappa = 1.",
+      "label_counts": {
+        "L1": {
+          "defect": 46
+        },
+        "L2": {
+          "cannot-tell": 3,
+          "correct": 1,
+          "defect": 51
+        }
+      },
+      "neither": 0,
+      "scope": "the consensus naming-yes items, as study 19 asks it"
+    },
+    "run": true
   },
   "amendment1_cross_T": {
     "C_any_finding_rate": {
@@ -585,10 +953,34 @@
         0.1482179177889003
       ]
     },
-    "amendment1_kill_evaluated": false,
-    "amendment1_primary_rate": null,
+    "amendment1_kill": {
+      "fired": true,
+      "fired_under_every_rule": true,
+      "fired_under_every_rule_and_question": true,
+      "primary_k": 5,
+      "primary_n": 110,
+      "rule": "Amendment 1 adopts the memo's kill: below 20 of 110 on cross-T's registered primary, the headline becomes 'flag rate 30.0%, defect-naming recall X%'",
+      "threshold_k": 20
+    },
+    "amendment1_kill_evaluated": true,
+    "amendment1_primary_rate": {
+      "cluster_ci95": [
+        0.009174311926605505,
+        0.08928571428571429
+      ],
+      "items": 6,
+      "k": 5,
+      "n": 110,
+      "n_problems": 56,
+      "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+      "rate": 0.045454545454545456,
+      "wilson95": [
+        0.019569460659234733,
+        0.10201593506636907
+      ]
+    },
     "k_max": 1,
-    "note": "amendment1_primary_rate is the defect-NAMING rate and requires the adjudication of the archived texts, which this analysis does not run; the kill it names (below 20 of 110) is therefore not evaluated here"
+    "note": "amendment1_primary_rate is the registered defect-NAMING rate: P instances with a finding that names the failing class AND asserts the code is wrong on it, under the consensus rule. It rests on ONE reading of cross-T and says nothing about the naming content of cross's eight-reading union."
   },
   "bootstrap": {
     "exchange_reps": 2000,

@@ -15,7 +15,8 @@ Two routes were run through the product's provider broker on ceiling 1's scope o
 archived. Records: `records/ceiling4/cache/` (one row per reading: ids, digests, counts and
 outcomes, no text), `records/ceiling4/numbers.json` and `records/ceiling4/tables.md` (both
 written by `report_ceiling4.py --run`; the tables below are that file, spliced verbatim by
-`ceiling4/splice_tables.py`), and the archive
+`ceiling4/splice_tables.py`), the two adjudication label files
+`records/ceiling4/L1-amendment1.csv` and `L2-amendment1.csv`, and the archive
 `~/Documents/Crossaudit/study-data/wt-ceiling4-runs/` (the per-arm ledgers, `run.log`, and
 `findings-cross-R-d*.jsonl` and `findings-cross-T-d1.jsonl`, which carry the finding texts
 and are never committed).
@@ -231,7 +232,7 @@ Residual rate with `cross-R` added: 32/110 = 29.1% (Wilson 21.4–38.2; cluster 
   rule does not buy more of, and it does not recover the false-positive rate either.
 * **Reply format**: not a factor. Every reading is one accepted reply.
 
-## 3. Amendment 1 — the shipped auditor's own findings, and what is prepared but not run
+## 3. Amendment 1 — the shipped auditor's own findings, adjudicated
 
 `cross-T` is one reading of the shipped constitution with texts archived, added so the
 paper's first-ranked gap — has anyone checked that `cross`'s flag rate names the defects? —
@@ -246,31 +247,108 @@ It returned a finding of
 any severity on 9 of 110 = 8.2% (cluster 3.6–14.2)
 of P instances, the same set.
 
-**The adjudication is prepared and not run.** Amendment 1's primary rate is a *defect-naming*
-rate, "P instances with a defect-asserting finding over 110", and the kill it adopts from the
-memo is a threshold on that rate. Both are properties of an adjudication of the archived
-texts, which this analysis does not perform: no model was called and no network was used, so
-`amendment1_primary_rate` is null in `numbers.json` and the kill is recorded as not
-evaluated. `ceiling4/adjudication_sheet.py` builds the blind sheet — study 19's questions,
-every finding of any severity on a P instance in `cross-T` draw 1 and in `cross-R` draw 1,
-each shown with the specification, the candidate solution and the hidden failure recovered
-model-free by re-running the hidden suite in `execute.py`'s sandbox, and no arm, severity or
-stratum. The sheet is written outside the repository because it quotes model output,
-specifications and solutions; only the key and the manifest of counts and digests are
-committed.
+The adjudication Amendment 1 registers **has been run**. The 80 blind sheet items — every
+finding of any severity on a P instance in `cross-T` draw 1 and in `cross-R` draw 1 — were
+answered by both raters: L1 the author, L2 `gpt-6-astra` through the Codex CLI, billed to a
+subscription and not to this project's API key, so L2 enters no ledger of this study and
+nothing of the $30 cap. `ceiling4/adjudication_sheet.py` built the sheet; the sheet stays
+outside the repository because it quotes specifications, solutions and finding texts, and
+`ceiling4/adjudication-manifest.json` carries the sheet's sha256, the key's, both label
+files' sha256s, both raters' identities, L2's model, harness and endpoint, and the note that
+L2 was subscription-billed. The returned labels are committed at
+`records/ceiling4/L1-amendment1.csv` and `records/ceiling4/L2-amendment1.csv`.
 
-One bound does not need the adjudication. The naming rate cannot exceed the count of P
-instances on which `cross-T` returned any finding at all, and that count is 9. Whatever L1
-and L2 decide, Amendment 1's rate is
-at most 9 of 110, which is below the memo's threshold of 20 of 110.
-The adjudication remains necessary to say what the rate *is*, and to compare `cross-T` with
-`cross-R`; it is not necessary to know which side of that threshold the shipped auditor falls
-on, on this one reading.
+**Read Table 9 before Table 10.** Every rate in Table 10 is built on the two raters' answers,
+and those answers agree less well than study 19's did.
+
+<!-- BEGIN TABLE9 (records/ceiling4/tables.md) -->
+### Table 9 — Amendment 1's adjudication: the two raters against each other, over 80 blind sheet items
+
+| question | scope | both yes | L1 only | L2 only | both no | agreement | Cohen κ |
+|---|---|---|---|---|---|---|---|
+| naming (study 19's registered question) | all 80 items | 39 | 7 | 16 | 18 | 57/80 = 71.2% | **0.391** |
+| recognition, "defect" (registered HERE by Amendment 1) | the 39 consensus naming-yes items | 39 | 0 | 0 | 0 | 39/39 = 100.0% | undefined |
+
+L1 answered yes on 46 items, L2 on 55; of the 23 disagreements 16 are L1-no/L2-yes and 7 are L1-yes/L2-no, so L2 is the more inclusive rater. kappa is undefined where both raters gave every item the same label: expected agreement is 1 and there is no marginal variation to correct for. That is perfect concordance, not kappa = 1.
+<!-- END TABLE9 -->
+
+The two raters agree on
+57 of the 80 items, Cohen κ = 0.391
+on the naming question. That is weak agreement, and it is far below the κ = 0.897 study 19
+reported for the same question with the same two rater roles — that figure is quoted from
+study 19 and is not recomputed here, since study 19's records are not on this branch. A rate
+built on a κ of 0.391 is a rate two careful readers would not have produced the same way, and
+the numbers below should be read with that in front of them, not behind them.
+
+The disagreement is **asymmetric**, not noise in both directions.
+L1 answered yes on 46 items and L2 on 55, and of the 23 disagreements 16 are L1-no/L2-yes,
+so L2 is the more inclusive rater. The reason is a property of these findings rather than of
+the raters: many of them name an input class *adjacent* to the hidden failing class — "the
+visible tests never construct X", where X is near to, but not the same as, the class on which
+the hidden suite actually fails. Where a finding names a neighbouring class, "does this name
+the class on which the hidden test fails" stops having an obvious answer, and two careful
+readers can answer it differently in good faith. Study 19's sheet presented fewer such cases,
+which is the most likely reason its κ was higher; that comparison is the author's reading of
+the two sheets and not a measurement.
+
+The recognition question is not where the trouble is. On the
+39 items both raters called named, both labelled all 39 "defect" — perfect concordance,
+and κ is **undefined** there rather than 1, because with no marginal variation there is no
+expected agreement to correct for. So the naming question carries the whole disagreement, and
+the defect-asserting rate differs from the naming rate only through L2's four non-defect
+labels, all of which fall on `cross-R` items.
+
+<!-- BEGIN TABLE10 (records/ceiling4/tables.md) -->
+### Table 10 — P instances named, and P instances with a defect-asserting finding, under each reader rule (rate over all 110 P instances; Wilson; problem-cluster bootstrap)
+
+| route | question | rule | instances | rate | Wilson | cluster |
+|---|---|---|---|---|---|---|
+| `cross-T` | names the failing class | consensus | 5 of 110 | 4.5% | 2.0–10.2 | 0.9–8.9 |
+| `cross-T` | names the failing class | L1 | 5 of 110 | 4.5% | 2.0–10.2 | 0.9–8.9 |
+| `cross-T` | names the failing class | L2 | 7 of 110 | 6.4% | 3.1–12.6 | 1.8–11.8 |
+| `cross-T` | names the failing class | either | 7 of 110 | 6.4% | 3.1–12.6 | 1.8–11.8 |
+| `cross-T` | **asserts it is a defect** | consensus **(registered primary)** | 5 of 110 | 4.5% | 2.0–10.2 | 0.9–8.9 |
+| `cross-T` | **asserts it is a defect** | L1 | 5 of 110 | 4.5% | 2.0–10.2 | 0.9–8.9 |
+| `cross-T` | **asserts it is a defect** | L2 | 7 of 110 | 6.4% | 3.1–12.6 | 1.8–11.8 |
+| `cross-T` | **asserts it is a defect** | either | 7 of 110 | 6.4% | 3.1–12.6 | 1.8–11.8 |
+| `cross-R` | names the failing class | consensus | 26 of 110 | 23.6% | 16.7–32.4 | 14.3–33.9 |
+| `cross-R` | names the failing class | L1 | 29 of 110 | 26.4% | 19.0–35.3 | 16.4–36.9 |
+| `cross-R` | names the failing class | L2 | 36 of 110 | 32.7% | 24.7–41.9 | 21.8–44.4 |
+| `cross-R` | names the failing class | either | 39 of 110 | 35.5% | 27.1–44.7 | 24.3–47.2 |
+| `cross-R` | **asserts it is a defect** | consensus | 26 of 110 | 23.6% | 16.7–32.4 | 14.3–33.9 |
+| `cross-R` | **asserts it is a defect** | L1 | 29 of 110 | 26.4% | 19.0–35.3 | 16.4–36.9 |
+| `cross-R` | **asserts it is a defect** | L2 | 32 of 110 | 29.1% | 21.4–38.2 | 18.8–40.4 |
+| `cross-R` | **asserts it is a defect** | either | 35 of 110 | 31.8% | 23.9–41.0 | 21.1–43.1 |
+
+Denominators: `cross-T`'s one reading returned a finding on 9 of the 110 P instances (10 findings) and `cross-R`'s draw 1 on 49 (70 findings); the rates above are over all 110 either way. The consensus rule counts a disputed item as NOT named, which is the preregistered direction.
+<!-- END TABLE10 -->
+
+<!-- BEGIN KILL-A (records/ceiling4/tables.md) -->
+**Amendment 1's kill.** Amendment 1 adopts the memo's kill: below 20 of 110 on cross-T's registered primary, the headline becomes 'flag rate 30.0%, defect-naming recall X%'. `cross-T`'s registered primary is 5 of 110, below 20, so the kill **FIRED** — and it fires under every one of the eight ways of reading that rate (two questions by four reader rules): the count runs from 5 to 7 of 110, every one below 20. The verdict therefore does not rest on the raters' disagreement, even though the point estimate does.
+<!-- END KILL-A -->
+
+**What this establishes, exactly.** On **one** reading, the shipped auditor returned a finding
+on 9 of 110 defect instances and asserted the actual defect on 5 to 7 of them:
+5 of 110 = 4.5% (Wilson 2.0–10.2; cluster 0.9–8.9)
+under the preregistered consensus rule, and
+7 of 110 = 6.4% (Wilson 3.1–12.6; cluster 1.8–11.8)
+if either rater's yes is allowed. It does **not** establish a naming rate for the 30.0%
+union at eight readings, and the two must not be set beside each other as if they were the
+same kind of number: that union is eight draws and this is one, its readings' texts were
+never kept by ceiling 1's harness, and nothing here licenses carrying 4.5% onto it or scaling
+it up by the number of draws. What would make them comparable is adjudicating the texts of
+eight `cross-T` readings, which has not been run.
+
+`cross-R` draw 1 is adjudicated beside it, as Amendment 1 directs. Under consensus it names
+the failing class on
+26 of 110 = 23.6% (Wilson 16.7–32.4; cluster 14.3–33.9)
+and asserts a defect on the same 26; by either rater's yes it is 39 of 110 for naming and
+35 of 110 for defect-asserting. This too is one draw, and it is not the K = 8 union of §1.
 
 ## 4. Cost, run history, deviations, limits
 
-<!-- BEGIN TABLE9 (records/ceiling4/tables.md) -->
-### Table 9 — reply format, provider denials and ledger cost, per draw
+<!-- BEGIN TABLE11 (records/ceiling4/tables.md) -->
+### Table 11 — reply format, provider denials and ledger cost, per draw
 
 | draw | readings | prompt digest = study 2's base | malformed after repair | repair re-asks (ledger calls − readings) | replies > 300 output tokens | denied attempts retried (rows / distinct instances) | ledger $ |
 |---|---|---|---|---|---|---|---|
@@ -283,7 +361,7 @@ on, on this one reading.
 | `cross-R-d7` | 260 | 0 | 0 | 0 | 193 | 2080 / 260 | 1.9684 |
 | `cross-R-d8` | 260 | 0 | 0 | 0 | 193 | 2080 / 260 | 2.0904 |
 | `cross-T-d1` | 260 | 260 | 0 | 0 | 35 | 0 / 0 | 1.5926 |
-<!-- END TABLE9 -->
+<!-- END TABLE11 -->
 
 <!-- BEGIN COST (records/ceiling4/tables.md) -->
 Total from the 9 project ledgers: **$19.84** over 2,340 calls for 2,340 readings, against the $30 cap. Note: the per-row cost_usd stamped into the cache is unreliable where a draw needed several passes (study 18's finding, inherited); the ledgers are the cost of record.
@@ -311,14 +389,24 @@ Total from the 9 project ledgers: **$19.84** over 2,340 calls for 2,340 readings
   contains no partial draw; every one of the nine draws is complete at 260 of 260. The retried
   readings were taken in the later invocation, after an interval this design does not control
   for.
-* **Deviation, stated plainly**: Amendment 1 makes the adjudication **unconditional** — its
-  `cross-T` draw is to be adjudicated with study 19's naming and recognition questions, and
-  `cross-R` draw 1 beside it whether or not H20a is positive. H20a is positive and the
-  adjudication has not been run. This analysis was carried out under an instruction to make
-  no model call, and the adjudication needs a model for L2 and a reader for L1, so the inputs
-  are built and the questions are left open. Amendment 1's registered primary rate is
-  therefore not reported, and the study's §4 obligation is outstanding, not discharged.
-  Nothing else in the preregistration is unmet.
+* **Amendment 1's obligation is discharged.** An earlier version of this file reported the
+  adjudication as prepared but not run, because the analysis was first carried out under an
+  instruction to make no model call. Both raters have since answered the sheet, the registered
+  primary rate is reported in §3 and Amendment 1's kill is evaluated and fires. L2's spend is
+  not in this study's ledgers: it ran through the Codex CLI against a subscription, so the
+  cost figures in this section are unchanged by it. Nothing else in the preregistration is
+  unmet.
+* **The registered status of the two adjudication questions differs, and is not relabelled
+  here.** Naming is study 19's registered question. Recognition — "does the finding assert
+  the code is wrong on that class, or only that it is untested?" — is **post-hoc in study
+  19** and is **registered in this study** by Amendment 1, whose primary rate is "P instances
+  with a defect-asserting finding over 110". Both are reported, and the kill is evaluated on
+  the registered primary, which is the defect-asserting one.
+* **The low κ is a limit on §3 and is reported as one**, not as a caveat at the end: the
+  naming question's κ = 0.391 is stated above Table 10 rather than below it, and every rate
+  is given under all four reader rules so a reader can see which conclusions survive the
+  disagreement. `cross-T`'s kill verdict survives all of them; the point estimates do not
+  survive unchanged, and the spread between rules is the honest width on them.
 * **Reading choices where the preregistration is silent**, all resolved before the numbers
   were read and all visible in `numbers.json`. "Single-draw false-positive rate" (§2 H20c)
   is reported as the mean over the eight draws with its cluster interval, which is what

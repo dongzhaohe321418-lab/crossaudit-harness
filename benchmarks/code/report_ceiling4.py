@@ -33,7 +33,9 @@ from the archive's committed usage.jsonl files.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
+import math
 import random
 import sys
 from pathlib import Path
@@ -71,6 +73,17 @@ CACHES = (RECORDS / "explore", RECORDS / "ceiling", RECORDS / "ceiling3",
 #: The product's false-positive constraint (explore/PREREGISTRATION.md §5), quoted by
 #: ceiling 4 §2 H20c as "the product bar (6.7%)".
 FP_CONSTRAINT = 0.067
+
+#: Amendment 1's adjudication: the blind sheet's key (in the repo, no text) and the two
+#: raters' returned labels. One row per sheet id, ``id,naming,recognition``; ``recognition``
+#: is empty wherever ``naming`` is not ``yes``, which is study 19's protocol.
+ADJ_KEY = HERE / "ceiling4" / "key-amendment1.jsonl"
+ADJ_MANIFEST = HERE / "ceiling4" / "adjudication-manifest.json"
+RATINGS = {"L1": CEILING4 / "L1-amendment1.csv", "L2": CEILING4 / "L2-amendment1.csv"}
+ARM_ROUTE = {"T": "cross-T", "R": "cross-R"}
+
+#: Amendment 1's kill, from the memo it adopts: below 20 of 110 on the registered primary.
+AMENDMENT1_KILL_THRESHOLD = 20
 
 #: ceiling 1's frozen K = 8 cluster interval for ``cross`` on P, as the preregistration
 #: writes it in the kill rule. Quoted from the preregistration, not recomputed: the kill
@@ -307,6 +320,153 @@ def residual_block(draws: dict, P: list[str], instances: dict) -> dict:
                 "the same instances, not re-derived here"}
 
 
+def cohen_kappa(a: int, b: int, c: int, d: int) -> float | None:
+    """Cohen's kappa for a 2x2 agreement table, or None where it is undefined.
+
+    ``a`` both yes, ``b`` first yes only, ``c`` second yes only, ``d`` both no. Kappa is
+    undefined when the expected agreement is 1 — which happens when both raters give the
+    same label to every item, so there is no marginal variation to correct for. Returning
+    None there, and saying so, is the honest form: a perfect-concordance table is not
+    kappa = 1, it is a table kappa cannot speak about.
+    """
+    n = a + b + c + d
+    if not n:
+        return None
+    p_o = (a + d) / n
+    p1, p2 = (a + b) / n, (a + c) / n
+    p_e = p1 * p2 + (1 - p1) * (1 - p2)
+    if math.isclose(p_e, 1.0):
+        return None
+    return (p_o - p_e) / (1 - p_e)
+
+
+def load_ratings() -> dict[str, dict[str, tuple[str, str]]]:
+    """rater -> sheet id -> (naming, recognition), from the committed csvs."""
+    out: dict[str, dict[str, tuple[str, str]]] = {}
+    for name, path in RATINGS.items():
+        if not path.exists():
+            return {}
+        rows: dict[str, tuple[str, str]] = {}
+        with path.open(encoding="utf-8", newline="") as handle:
+            for row in csv.DictReader(handle):
+                rows[row["id"].strip()] = (row["naming"].strip(), row["recognition"].strip())
+        out[name] = rows
+    return out
+
+
+def adjudication_block(P: list[str], instances: dict) -> dict:
+    """Amendment 1, answered: the naming question, the recognition question, and the rates.
+
+    Two questions, and they are not the same quantity, which is the thing most easily got
+    wrong when both are in one table:
+
+    * **naming** — study 19's REGISTERED question: does the finding name the input class,
+      or the behaviour, on which the hidden test fails?
+    * **defect-asserting** — naming yes AND the recognition label ``defect``, i.e. the
+      finding says the code is WRONG on that class rather than that it is handled correctly
+      or merely untested. This is post-hoc in study 19; ceiling 4 Amendment 1 REGISTERS it,
+      and it is Amendment 1's primary rate, so it is the one the kill is evaluated on.
+
+    Four reader rules for each, because kappa on the naming question is low and a verdict
+    that survives the disagreement is worth more than one that does not: consensus (the
+    preregistered rule — a disputed item counts as not named), L1 alone, L2 alone, either.
+    Every rate is over the 110 P instances, with Wilson and the problem-cluster bootstrap.
+    """
+    ratings = load_ratings()
+    if not ratings:
+        return {"note": "no rater csv; the adjudication has not been answered"}
+    key = {}
+    for line in ADJ_KEY.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            row = json.loads(line)
+            key[row["id"]] = row
+    L1, L2 = ratings["L1"], ratings["L2"]
+    ids = sorted(key)
+    if not (set(ids) == set(L1) == set(L2)):
+        return {"note": "AUTHOR_INPUT_NEEDED: the label files and the key do not cover the same ids"}
+
+    yes = lambda r, i: r[i][0] == "yes"                                   # noqa: E731
+    a = sum(1 for i in ids if yes(L1, i) and yes(L2, i))
+    b = sum(1 for i in ids if yes(L1, i) and not yes(L2, i))
+    c = sum(1 for i in ids if not yes(L1, i) and yes(L2, i))
+    d = sum(1 for i in ids if not yes(L1, i) and not yes(L2, i))
+    naming = {"items": len(ids), "both_yes": a, "L1_only": b, "L2_only": c, "both_no": d,
+              "agree": a + d, "agreement": (a + d) / len(ids),
+              "kappa": cohen_kappa(a, b, c, d),
+              "L1_yes": a + b, "L2_yes": a + c, "disagreements": b + c,
+              "disagreements_L1_no_L2_yes": c, "disagreements_L1_yes_L2_no": b,
+              "more_inclusive_rater": "L2" if (a + c) > (a + b) else ("L1" if (a + b) > (a + c) else "neither"),
+              "labels_used": {"L1": sorted({L1[i][0] for i in ids}), "L2": sorted({L2[i][0] for i in ids})}}
+
+    consensus_yes = [i for i in ids if yes(L1, i) and yes(L2, i)]
+    dd = sum(1 for i in consensus_yes if L1[i][1] == "defect" and L2[i][1] == "defect")
+    dn = sum(1 for i in consensus_yes if L1[i][1] == "defect" and L2[i][1] != "defect")
+    nd = sum(1 for i in consensus_yes if L1[i][1] != "defect" and L2[i][1] == "defect")
+    nn = len(consensus_yes) - dd - dn - nd
+    recognition = {
+        "scope": "the consensus naming-yes items, as study 19 asks it",
+        "items": len(consensus_yes), "both_defect": dd, "L1_only": dn, "L2_only": nd,
+        "neither": nn, "agree": dd + nn,
+        "agreement": ((dd + nn) / len(consensus_yes)) if consensus_yes else None,
+        "kappa": cohen_kappa(dd, dn, nd, nn),
+        "kappa_note": "kappa is undefined where both raters gave every item the same label: "
+                      "expected agreement is 1 and there is no marginal variation to correct "
+                      "for. That is perfect concordance, not kappa = 1.",
+        "label_counts": {"L1": _counts(L1[i][1] for i in ids if yes(L1, i)),
+                         "L2": _counts(L2[i][1] for i in ids if yes(L2, i))}}
+
+    rules = {
+        "consensus": lambda i, q: _q(L1, i, q) and _q(L2, i, q),
+        "L1": lambda i, q: _q(L1, i, q),
+        "L2": lambda i, q: _q(L2, i, q),
+        "either": lambda i, q: _q(L1, i, q) or _q(L2, i, q)}
+    arms: dict[str, dict] = {}
+    for arm, route in ARM_ROUTE.items():
+        arm_ids = [i for i in ids if key[i]["arm"] == arm]
+        entry: dict = {"route": route, "items": len(arm_ids),
+                       "P_instances_with_a_finding": len({key[i]["instance"] for i in arm_ids}),
+                       "naming": {}, "defect_asserting": {}}
+        for question in ("naming", "defect_asserting"):
+            for rule, test in rules.items():
+                hit = {key[i]["instance"] for i in arm_ids if test(i, question)}
+                entry[question][rule] = rc.clustered_rate({i: (i in hit) for i in P}, P,
+                                                          instances, BOOTSTRAP, BOOT_SEED)
+                entry[question][rule]["items"] = sum(1 for i in arm_ids if test(i, question))
+        arms[arm] = entry
+
+    primary = arms["T"]["defect_asserting"]["consensus"]
+    kill = {"rule": f"Amendment 1 adopts the memo's kill: below {AMENDMENT1_KILL_THRESHOLD} "
+                    f"of 110 on cross-T's registered primary, the headline becomes "
+                    f"'flag rate 30.0%, defect-naming recall X%'",
+            "threshold_k": AMENDMENT1_KILL_THRESHOLD,
+            "primary_k": primary["k"], "primary_n": primary["n"],
+            "fired": primary["k"] < AMENDMENT1_KILL_THRESHOLD,
+            "fired_under_every_rule": all(arms["T"]["defect_asserting"][r]["k"] < AMENDMENT1_KILL_THRESHOLD
+                                          for r in rules),
+            "fired_under_every_rule_and_question": all(
+                arms["T"][q][r]["k"] < AMENDMENT1_KILL_THRESHOLD for q in ("naming", "defect_asserting")
+                for r in rules)}
+    manifest = json.loads(ADJ_MANIFEST.read_text(encoding="utf-8")) if ADJ_MANIFEST.exists() else {}
+    return {"run": True, "naming": naming, "recognition": recognition, "arms": arms,
+            "amendment1_kill": kill, "manifest": manifest,
+            "primary_rule": "consensus, defect-asserting: a disputed item counts as NOT named, "
+                            "which is the preregistered direction",
+            "note": "naming and defect-asserting are different quantities and are reported "
+                    "separately; the registered primary of Amendment 1 is the defect-asserting one"}
+
+
+def _counts(values) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for v in values:
+        out[v or "(empty)"] = out.get(v or "(empty)", 0) + 1
+    return dict(sorted(out.items()))
+
+
+def _q(rater: dict, i: str, question: str) -> bool:
+    named = rater[i][0] == "yes"
+    return named if question == "naming" else (named and rater[i][1] == "defect")
+
+
 def cross_t_block(draws: dict, any_draws: dict, P: list[str], C: list[str],
                   instances: dict) -> dict:
     """Amendment 1: the shipped constitution, one reading, texts archived.
@@ -337,8 +497,6 @@ def cross_t_block(draws: dict, any_draws: dict, P: list[str], C: list[str],
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="study 20 / ceiling 4 analysis")
     ap.add_argument("--run", default="", help="the read-only run archive, for the ledgers")
-    ap.add_argument("--adjudication-manifest", default="",
-                    help="a manifest written by ceiling4/adjudication_sheet.py (ids and counts only)")
     args = ap.parse_args(argv)
     run_dir = Path(args.run).expanduser() if args.run else None
 
@@ -465,12 +623,18 @@ def main(argv: list[str] | None = None) -> int:
 
     # ---- Amendment 1 --------------------------------------------------------------
     out["amendment1_cross_T"] = cross_t_block(draws, any_draws, P, C, instances)
-    if args.adjudication_manifest:
-        out["amendment1_adjudication_inputs"] = json.loads(
-            Path(args.adjudication_manifest).expanduser().read_text(encoding="utf-8"))
-    else:
-        out["amendment1_adjudication_inputs"] = {
-            "note": "pass --adjudication-manifest <path written by ceiling4/adjudication_sheet.py>"}
+    out["amendment1_adjudication"] = adjudication_block(P, instances)
+    adj = out["amendment1_adjudication"]
+    if adj.get("run"):
+        prim = adj["arms"]["T"]["defect_asserting"]["consensus"]
+        out["amendment1_cross_T"]["amendment1_primary_rate"] = prim
+        out["amendment1_cross_T"]["amendment1_kill_evaluated"] = True
+        out["amendment1_cross_T"]["amendment1_kill"] = adj["amendment1_kill"]
+        out["amendment1_cross_T"]["note"] = (
+            "amendment1_primary_rate is the registered defect-NAMING rate: P instances with a "
+            "finding that names the failing class AND asserts the code is wrong on it, under "
+            "the consensus rule. It rests on ONE reading of cross-T and says nothing about the "
+            "naming content of cross's eight-reading union.")
 
     CEILING4.mkdir(parents=True, exist_ok=True)
     (CEILING4 / "numbers.json").write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -511,6 +675,21 @@ def main(argv: list[str] | None = None) -> int:
         print(f"cross-T: P flag {p['k']}/{p['n']} = {100*p['rate']:.1f}% "
               f"Wilson [{100*p['wilson95'][0]:.1f}, {100*p['wilson95'][1]:.1f}] "
               f"cluster [{100*p['cluster_ci95'][0]:.1f}, {100*p['cluster_ci95'][1]:.1f}]")
+    if adj.get("run"):
+        nm, rg, k = adj["naming"], adj["recognition"], adj["amendment1_kill"]
+        print(f"adjudication naming: agree {nm['agree']}/{nm['items']} = {100*nm['agreement']:.1f}%  "
+              f"kappa {nm['kappa']:.3f}  (L1 yes {nm['L1_yes']}, L2 yes {nm['L2_yes']}; "
+              f"{nm['disagreements']} disagreements, {nm['disagreements_L1_no_L2_yes']} L1-no/L2-yes)")
+        print(f"  recognition on the {rg['items']} consensus-yes items: agree {rg['agree']}/{rg['items']}"
+              f"  kappa {'undefined' if rg['kappa'] is None else format(rg['kappa'], '.3f')}")
+        for arm in ("T", "R"):
+            e = adj["arms"][arm]
+            for q in ("naming", "defect_asserting"):
+                print(f"  {e['route']:8s} {q:16s} " + "  ".join(
+                    f"{r} {e[q][r]['k']}" for r in ("consensus", "L1", "L2", "either")))
+        print(f"  Amendment 1 kill (< {k['threshold_k']} of 110 on cross-T's registered primary, "
+              f"{k['primary_k']}): {'FIRED' if k['fired'] else 'did not fire'}; "
+              f"fires under every rule and question: {k['fired_under_every_rule_and_question']}")
     print(f"cost: ${out['cost']['ledger_usd_total']} over {out['cost']['ledger_calls_total']} calls")
     return 0
 
@@ -527,7 +706,8 @@ LABELS = {"cross": "`cross` (shipped constitution, ceiling 1)",
 #: Every generated block, in the order it is rendered. The results file must carry exactly
 #: these marker pairs and no table-like content outside them (study 17's lesson, round 5).
 BLOCK_NAMES = ("PREAMBLE", "TABLE1", "TABLE2", "KILL", "TABLE3", "TABLE4", "ASYMPTOTE-DIFF",
-               "TABLE5", "TABLE6", "TABLE7", "TABLE8", "TABLE9", "COST")
+               "TABLE5", "TABLE6", "TABLE7", "TABLE8", "TABLE9", "TABLE10", "KILL-A",
+               "TABLE11", "COST")
 
 BEGIN = "<!-- BEGIN {name} (records/ceiling4/tables.md) -->"
 END = "<!-- END {name} -->"
@@ -723,8 +903,8 @@ def _table8(out: dict) -> list[str]:
     return lines
 
 
-def _table9(out: dict) -> list[str]:
-    lines = ["### Table 9 — reply format, provider denials and ledger cost, per draw", "",
+def _table11(out: dict) -> list[str]:
+    lines = ["### Table 11 — reply format, provider denials and ledger cost, per draw", "",
              "| draw | readings | prompt digest = study 2's base | malformed after repair "
              "| repair re-asks (ledger calls − readings) | replies > 300 output tokens "
              "| denied attempts retried (rows / distinct instances) | ledger $ |",
@@ -742,6 +922,82 @@ def _table9(out: dict) -> list[str]:
     return lines
 
 
+def _adj(out: dict) -> dict:
+    return out["amendment1_adjudication"]
+
+
+def _table9(out: dict) -> list[str]:
+    """Table 9 — the two raters against each other, before any rate built on them."""
+    a = _adj(out)
+    if not a.get("run"):
+        return ["### Table 9 — Amendment 1's adjudication", "",
+                "The adjudication has not been answered; there is nothing to tabulate."]
+    nm, rg = a["naming"], a["recognition"]
+    k = "undefined" if rg["kappa"] is None else f"{rg['kappa']:.3f}"
+    return ["### Table 9 — Amendment 1's adjudication: the two raters against each other, over "
+            f"{nm['items']} blind sheet items", "",
+            "| question | scope | both yes | L1 only | L2 only | both no | agreement | Cohen κ |",
+            "|---|---|---|---|---|---|---|---|",
+            f"| naming (study 19's registered question) | all {nm['items']} items | {nm['both_yes']} "
+            f"| {nm['L1_only']} | {nm['L2_only']} | {nm['both_no']} "
+            f"| {nm['agree']}/{nm['items']} = {_pc(nm['agreement'])}% | **{nm['kappa']:.3f}** |",
+            f"| recognition, \"defect\" (registered HERE by Amendment 1) | the {rg['items']} "
+            f"consensus naming-yes items | {rg['both_defect']} | {rg['L1_only']} | {rg['L2_only']} "
+            f"| {rg['neither']} | {rg['agree']}/{rg['items']} = {_pc(rg['agreement'])}% | {k} |",
+            "",
+            f"L1 answered yes on {nm['L1_yes']} items, L2 on {nm['L2_yes']}; of the "
+            f"{nm['disagreements']} disagreements {nm['disagreements_L1_no_L2_yes']} are "
+            f"L1-no/L2-yes and {nm['disagreements_L1_yes_L2_no']} are L1-yes/L2-no, so "
+            f"{nm['more_inclusive_rater']} is the more inclusive rater. {rg['kappa_note']}"]
+
+
+def _table10(out: dict) -> list[str]:
+    """Table 10 — the rates, under every reader rule, because κ on naming is low."""
+    a = _adj(out)
+    if not a.get("run"):
+        return ["### Table 10 — Amendment 1's rates", "", "Not answered."]
+    lines = ["### Table 10 — P instances named, and P instances with a defect-asserting finding, "
+             "under each reader rule (rate over all 110 P instances; Wilson; problem-cluster bootstrap)", "",
+             "| route | question | rule | instances | rate | Wilson | cluster |",
+             "|---|---|---|---|---|---|---|"]
+    labels = {"naming": "names the failing class", "defect_asserting": "**asserts it is a defect**"}
+    for arm in ("T", "R"):
+        e = a["arms"][arm]
+        for question in ("naming", "defect_asserting"):
+            for rule in ("consensus", "L1", "L2", "either"):
+                v = e[question][rule]
+                star = " **(registered primary)**" if (arm == "T" and question == "defect_asserting"
+                                                       and rule == "consensus") else ""
+                lines.append(f"| `{e['route']}` | {labels[question]} | {rule}{star} | {v['k']} of {v['n']} "
+                             f"| {_pc(v['rate'])}% | {_iv(v['wilson95'])} | {_iv(v['cluster_ci95'])} |")
+    t, r = a["arms"]["T"], a["arms"]["R"]
+    lines += ["", f"Denominators: `cross-T`'s one reading returned a finding on "
+              f"{t['P_instances_with_a_finding']} of the 110 P instances ({t['items']} findings) and "
+              f"`cross-R`'s draw 1 on {r['P_instances_with_a_finding']} ({r['items']} findings); the "
+              f"rates above are over all 110 either way. The consensus rule counts a disputed item as "
+              f"NOT named, which is the preregistered direction."]
+    return lines
+
+
+def _kill_a(out: dict) -> list[str]:
+    a = _adj(out)
+    if not a.get("run"):
+        return ["**Amendment 1's kill** is not evaluated: the adjudication has not been answered."]
+    k = a["amendment1_kill"]
+    t = a["arms"]["T"]
+    span = sorted({t[q][r]["k"] for q in ("naming", "defect_asserting")
+                   for r in ("consensus", "L1", "L2", "either")})
+    every = ("and it fires under every one of the eight ways of reading that rate "
+             "(two questions by four reader rules): the count runs from "
+             f"{span[0]} to {span[-1]} of 110, every one below {k['threshold_k']}"
+             if k["fired_under_every_rule_and_question"] else
+             "but NOT under every reader rule; the rules that do not fire it are in Table 10")
+    return [f"**Amendment 1's kill.** {k['rule']}. `cross-T`'s registered primary is "
+            f"{k['primary_k']} of {k['primary_n']}, below {k['threshold_k']}, so the kill "
+            f"**{'FIRED' if k['fired'] else 'did not fire'}** — {every}. The verdict therefore does "
+            f"not rest on the raters' disagreement, even though the point estimate does."]
+
+
 def _cost(out: dict) -> list[str]:
     cost = out["cost"]
     if cost["ledger_usd_total"] is None:
@@ -755,7 +1011,8 @@ def _cost(out: dict) -> list[str]:
 RENDERERS = {"PREAMBLE": _preamble, "TABLE1": _table1, "TABLE2": _table2, "KILL": _kill,
              "TABLE3": _table3, "TABLE4": _table4, "ASYMPTOTE-DIFF": _asymptote_diff,
              "TABLE5": _table5, "TABLE6": _table6, "TABLE7": _table7, "TABLE8": _table8,
-             "TABLE9": _table9, "COST": _cost}
+             "TABLE9": _table9, "TABLE10": _table10, "KILL-A": _kill_a,
+             "TABLE11": _table11, "COST": _cost}
 
 
 def render_tables(out: dict) -> str:

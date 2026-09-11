@@ -99,7 +99,47 @@ Residual rate with `cross-R` added: 32/110 = 29.1% (Wilson 21.4–38.2; cluster 
 <!-- END TABLE8 -->
 
 <!-- BEGIN TABLE9 (records/ceiling4/tables.md) -->
-### Table 9 — reply format, provider denials and ledger cost, per draw
+### Table 9 — Amendment 1's adjudication: the two raters against each other, over 80 blind sheet items
+
+| question | scope | both yes | L1 only | L2 only | both no | agreement | Cohen κ |
+|---|---|---|---|---|---|---|---|
+| naming (study 19's registered question) | all 80 items | 39 | 7 | 16 | 18 | 57/80 = 71.2% | **0.391** |
+| recognition, "defect" (registered HERE by Amendment 1) | the 39 consensus naming-yes items | 39 | 0 | 0 | 0 | 39/39 = 100.0% | undefined |
+
+L1 answered yes on 46 items, L2 on 55; of the 23 disagreements 16 are L1-no/L2-yes and 7 are L1-yes/L2-no, so L2 is the more inclusive rater. kappa is undefined where both raters gave every item the same label: expected agreement is 1 and there is no marginal variation to correct for. That is perfect concordance, not kappa = 1.
+<!-- END TABLE9 -->
+
+<!-- BEGIN TABLE10 (records/ceiling4/tables.md) -->
+### Table 10 — P instances named, and P instances with a defect-asserting finding, under each reader rule (rate over all 110 P instances; Wilson; problem-cluster bootstrap)
+
+| route | question | rule | instances | rate | Wilson | cluster |
+|---|---|---|---|---|---|---|
+| `cross-T` | names the failing class | consensus | 5 of 110 | 4.5% | 2.0–10.2 | 0.9–8.9 |
+| `cross-T` | names the failing class | L1 | 5 of 110 | 4.5% | 2.0–10.2 | 0.9–8.9 |
+| `cross-T` | names the failing class | L2 | 7 of 110 | 6.4% | 3.1–12.6 | 1.8–11.8 |
+| `cross-T` | names the failing class | either | 7 of 110 | 6.4% | 3.1–12.6 | 1.8–11.8 |
+| `cross-T` | **asserts it is a defect** | consensus **(registered primary)** | 5 of 110 | 4.5% | 2.0–10.2 | 0.9–8.9 |
+| `cross-T` | **asserts it is a defect** | L1 | 5 of 110 | 4.5% | 2.0–10.2 | 0.9–8.9 |
+| `cross-T` | **asserts it is a defect** | L2 | 7 of 110 | 6.4% | 3.1–12.6 | 1.8–11.8 |
+| `cross-T` | **asserts it is a defect** | either | 7 of 110 | 6.4% | 3.1–12.6 | 1.8–11.8 |
+| `cross-R` | names the failing class | consensus | 26 of 110 | 23.6% | 16.7–32.4 | 14.3–33.9 |
+| `cross-R` | names the failing class | L1 | 29 of 110 | 26.4% | 19.0–35.3 | 16.4–36.9 |
+| `cross-R` | names the failing class | L2 | 36 of 110 | 32.7% | 24.7–41.9 | 21.8–44.4 |
+| `cross-R` | names the failing class | either | 39 of 110 | 35.5% | 27.1–44.7 | 24.3–47.2 |
+| `cross-R` | **asserts it is a defect** | consensus | 26 of 110 | 23.6% | 16.7–32.4 | 14.3–33.9 |
+| `cross-R` | **asserts it is a defect** | L1 | 29 of 110 | 26.4% | 19.0–35.3 | 16.4–36.9 |
+| `cross-R` | **asserts it is a defect** | L2 | 32 of 110 | 29.1% | 21.4–38.2 | 18.8–40.4 |
+| `cross-R` | **asserts it is a defect** | either | 35 of 110 | 31.8% | 23.9–41.0 | 21.1–43.1 |
+
+Denominators: `cross-T`'s one reading returned a finding on 9 of the 110 P instances (10 findings) and `cross-R`'s draw 1 on 49 (70 findings); the rates above are over all 110 either way. The consensus rule counts a disputed item as NOT named, which is the preregistered direction.
+<!-- END TABLE10 -->
+
+<!-- BEGIN KILL-A (records/ceiling4/tables.md) -->
+**Amendment 1's kill.** Amendment 1 adopts the memo's kill: below 20 of 110 on cross-T's registered primary, the headline becomes 'flag rate 30.0%, defect-naming recall X%'. `cross-T`'s registered primary is 5 of 110, below 20, so the kill **FIRED** — and it fires under every one of the eight ways of reading that rate (two questions by four reader rules): the count runs from 5 to 7 of 110, every one below 20. The verdict therefore does not rest on the raters' disagreement, even though the point estimate does.
+<!-- END KILL-A -->
+
+<!-- BEGIN TABLE11 (records/ceiling4/tables.md) -->
+### Table 11 — reply format, provider denials and ledger cost, per draw
 
 | draw | readings | prompt digest = study 2's base | malformed after repair | repair re-asks (ledger calls − readings) | replies > 300 output tokens | denied attempts retried (rows / distinct instances) | ledger $ |
 |---|---|---|---|---|---|---|---|
@@ -112,7 +152,7 @@ Residual rate with `cross-R` added: 32/110 = 29.1% (Wilson 21.4–38.2; cluster 
 | `cross-R-d7` | 260 | 0 | 0 | 0 | 193 | 2080 / 260 | 1.9684 |
 | `cross-R-d8` | 260 | 0 | 0 | 0 | 193 | 2080 / 260 | 2.0904 |
 | `cross-T-d1` | 260 | 260 | 0 | 0 | 35 | 0 / 0 | 1.5926 |
-<!-- END TABLE9 -->
+<!-- END TABLE11 -->
 
 <!-- BEGIN COST (records/ceiling4/tables.md) -->
 Total from the 9 project ledgers: **$19.84** over 2,340 calls for 2,340 readings, against the $30 cap. Note: the per-row cost_usd stamped into the cache is unreliable where a draw needed several passes (study 18's finding, inherited); the ledgers are the cost of record.
