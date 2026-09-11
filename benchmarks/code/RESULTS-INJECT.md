@@ -31,6 +31,45 @@ prose settles the question. Population I is 92 instances over 54 problems, built
 specification determines, the same auditor, the same constitution and the same eight readings
 reach 90 of 92, against 33 of 110 on the natural residual.
 
+**That 90 of 92 is a property of the gate-accepted population, not of specification-determined
+defects in general, and Amendment 6 measured the difference rather than arguing about it.**
+An earlier draft of this section argued that the filters and the gate could only err by admitting
+instances they should have refused, so any failure mode would depress recall and none could
+manufacture the effect. That argument is false. The gate asks whether the specification settles
+the behaviour on an `input_class` the injector itself names, and no filter ever checked that the
+named class is the one the edit actually breaks, so the gate refuses plainly determined boundary
+edits: `b1:Mbpp/223` changes `count > n/2` to `count >= n/2` against a specification that says
+"occurs more than n/2 times", and both gate models voted no. Edits of that kind are the subtlest
+in the population and the hardest to see, so the gate plausibly selects for detectability in the
+direction that *raises* recall.
+
+Amendment 6 therefore preregistered, with no threshold and as a magnitude to report rather than a
+hypothesis to accept, an audit of **40 of the 189 instances the six filters accepted and the gate
+then refused**, drawn by `random.Random(20260916)`, under the same auditor and the same K = 8.
+
+| population | n (problems) | union recall at K = 8 | 95% cluster CI |
+|---|---:|---|---|
+| I — filters accepted **and** both gates agreed | 92 (54) | **90 of 92** = 97.8% | — |
+| gate-**rejected** sample — filters accepted, a gate refused | 40 (35) | **31 of 40** = 77.5% (Wilson [62.5, 87.7]) | [62.2, 90.5] |
+| **all filter-accepted, stratified over both strata** | 281 | **84.2%** | **[73.8, 93.1]** |
+| ceiling 1's stratum P — the natural residual | 110 (56) | 33 of 110 = 30.0% | [20.0, 40.7] |
+
+Recall on the gate-rejected sample is **materially lower** than on I, 77.5% against 97.8%, so
+under Amendment 6's stated reading rule **the gate is part of the effect** and the 90 of 92 may
+not be quoted as a figure for specification-determined defects at large. It is quoted here only as
+what the auditor achieves on the population both gates accepted.
+
+What survives, and what this study should lead with, is the stratified figure over every instance
+the six mechanical filters accepted regardless of the gate's vote: **84.2% [73.8, 93.1] against
+the natural residual's 30.0% [20.0, 40.7]**. The gate inflates the headline by about 14 points; it
+does not create the contrast. Even the instances the gate refused are audited at more than twice
+the rate of the natural residual.
+
+Two limits on the stratified figure. It still conditions on the six filters, which is a weaker
+condition than the gate but not no condition. And the two strata are pooled by population weight
+with the rejected stratum estimated from 40 of 189, so its contribution carries sampling error the
+interval above includes and the point estimate hides.
+
 The internally controlled contrast is stronger still, and it is the one with no problem-mix
 confound: every instance of I was audited again without the injected lines.
 

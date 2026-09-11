@@ -1,0 +1,134 @@
+{
+  "draws_complete": {
+    "I-d1": 92,
+    "I-d2": 92,
+    "I-d3": 92,
+    "I-d4": 92,
+    "I-d5": 92,
+    "I-d6": 92,
+    "I-d7": 92,
+    "I-d8": 92,
+    "rejected-d1": 40,
+    "rejected-d2": 40,
+    "rejected-d3": 40,
+    "rejected-d4": 40,
+    "rejected-d5": 40,
+    "rejected-d6": 40,
+    "rejected-d7": 40,
+    "rejected-d8": 40,
+    "twin-d1": 92,
+    "twin-d2": 92,
+    "twin-d3": 92,
+    "twin-d4": 92,
+    "twin-d5": 92,
+    "twin-d6": 92,
+    "twin-d7": 92,
+    "twin-d8": 92
+  },
+  "ladder": [
+    [
+      "I",
+      1
+    ],
+    [
+      "I",
+      2
+    ],
+    [
+      "I",
+      3
+    ],
+    [
+      "I",
+      4
+    ],
+    [
+      "I",
+      5
+    ],
+    [
+      "I",
+      6
+    ],
+    [
+      "I",
+      7
+    ],
+    [
+      "I",
+      8
+    ],
+    [
+      "twin",
+      1
+    ],
+    [
+      "twin",
+      2
+    ],
+    [
+      "twin",
+      3
+    ],
+    [
+      "twin",
+      4
+    ],
+    [
+      "twin",
+      5
+    ],
+    [
+      "twin",
+      6
+    ],
+    [
+      "twin",
+      7
+    ],
+    [
+      "twin",
+      8
+    ],
+    [
+      "rejected",
+      1
+    ],
+    [
+      "rejected",
+      2
+    ],
+    [
+      "rejected",
+      3
+    ],
+    [
+      "rejected",
+      4
+    ],
+    [
+      "rejected",
+      5
+    ],
+    [
+      "rejected",
+      6
+    ],
+    [
+      "rejected",
+      7
+    ],
+    [
+      "rejected",
+      8
+    ]
+  ],
+  "scope_n": {
+    "I": 92,
+    "rejected": 40,
+    "twin": 92
+  },
+  "spend_usd_this_invocation": 1.896519,
+  "study": "study22 / injection",
+  "written_utc": "2026-09-11T17:25:16Z"
+}
