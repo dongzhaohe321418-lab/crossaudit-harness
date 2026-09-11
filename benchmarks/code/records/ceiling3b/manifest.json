@@ -7,7 +7,7 @@
     ],
     "clean_at_freeze": true,
     "files_this_study_added": {
-      "benchmarks/code/RESULTS-CEILING3B.md": "5e3bd83a9528f8dbe6ab7f1362d3c7a502bae33c661553cdd955c264b111b43b",
+      "benchmarks/code/RESULTS-CEILING3B.md": "8cec07b8ffe956c96f43e379c70666f2a97f359f041540a76143f9df0dc3f6a0",
       "benchmarks/code/ceiling3b.py": "97decf2d40428f1e4d94438bd0f0188decc26d911f7034dd5fb2a72ac4d3a3ef",
       "benchmarks/code/ceiling3b/PREREGISTRATION.md": "7a116b0fa1dcc1a2bb76ffbe9d63ba2234b9b8c9c78e980291cd55003b4fe458",
       "benchmarks/code/ceiling3b/adjudication_sheet.py": "e0b2aaa603ac096603ba868c928f5a3bc91a90e41da222324e3ae155d4474150",
@@ -37,18 +37,19 @@
       "benchmarks/code/records/ceiling3b/cache/holistic__self-strong-S__d1.failed.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "benchmarks/code/records/ceiling3b/cache/holistic__self-strong-S__d1.jsonl": "5e6798c99de2b984cf1920f36b7fa45d96c562e9572521cf355dbbc6d665d24e",
       "benchmarks/code/records/ceiling3b/manifest-2026-09-10T121623Z.json": "3f4e5cb249e25814c32bcf04569bc5059013ef6d17ba93aba210107a4dda2c72",
-      "benchmarks/code/records/ceiling3b/numbers.json": "fe81c8616529dc356218ca07f992900a5ee9fdfdb3d4df9961055d61e84fc37a",
-      "benchmarks/code/records/ceiling3b/tables.md": "cb75ec531a7dc3a4c5bafbcb6c20182af93f5263669cf1028bf1f412c817d2d4",
-      "benchmarks/code/report_ceiling3b.py": "c2d6bc9a28307e6ec1152f72b20f4bfbb13b9933d439955e95698703f49b9cc6",
-      "benchmarks/code/tests/test_ceiling3b_report.py": "be7ef42d3996b4d97f249b8f691d69f6f7d308930c7c56a459a73bf94370d474",
+      "benchmarks/code/records/ceiling3b/numbers.json": "abe36bfae24eae836e79fe2f0f01e56adbe3021f4e321459e6fd68c5d4664b3f",
+      "benchmarks/code/records/ceiling3b/tables.md": "4e7e411531e9b0125c95e54c26aead07ab345336c2a268ff723c41f718e32243",
+      "benchmarks/code/report_ceiling3b.py": "1a3490f31841079866ceb0fe79631c0302a721cd380c986dafb6f27a9a4c6e09",
+      "benchmarks/code/tests/test_ceiling3b_report.py": "8ad0c6ee43b3a6a498465bb1a131cd5def4aab571e004d55a2eb254db77be47b",
       "benchmarks/reviews/2026-09-10-ceiling3b-r1.md": "a8d989bcd024fcb68a4e8dcaa6361c1e88962c66b08fe59a34b38f3f35571f35",
       "benchmarks/reviews/2026-09-10-ceiling3b-r2.md": "127e037d34b9d6173ccab1ff403ae865ac10a630a200d257db90ffac2ef7f347",
       "benchmarks/reviews/2026-09-10-ceiling3b-r3.md": "9a50d8265e63e63364d423e1666eadc7aa4f8fa19abb095b9278d1aa81e5760c",
       "benchmarks/reviews/2026-09-11-ceiling3b-r4.md": "4a90c987b734922941de27fad16689efec062c1a4619ab1ffcea5a0fd301b4a7",
-      "benchmarks/reviews/2026-09-11-ceiling3b-r5.md": "b9edfa9e096ed9f7f0d6068d952960e00cf87e95e62757b6d9403a3246dfb2bf"
+      "benchmarks/reviews/2026-09-11-ceiling3b-r5.md": "b9edfa9e096ed9f7f0d6068d952960e00cf87e95e62757b6d9403a3246dfb2bf",
+      "benchmarks/reviews/2026-09-11-ceiling3b-r6.md": "f78736efb402ae2a6e52ed2c2373097002f2ed363a5127e604d5d7439e2a1f92"
     },
-    "frozen_commit": "f2c1d291fadfad1837963a29965b9196920ca065",
-    "frozen_commit_subject": "study 19 round 7: L2's endpoint recovered rather than declared missing \u2014 https://chatgpt.com/backend-api/codex, the CLI's compiled-in default since the config sets no override, with the binary path, its sha256, the CLI version and the command to re-derive it, and the caveat that it was not observed on the wire; the J0168 counterfactual's other four moved quantities corrected and recomputed by the test",
+    "frozen_commit": "e2faa549bf3e218e6b5426e94403901d106683eb",
+    "frozen_commit_subject": "study 19 round 8: Table 5b is named after the question that was actually asked \u2014 the prompt counts a finding that says the class raises 'even if it grades it non-blocking or says the spec is silent', so the quantity is 'the finding reports a failure on that class', not 'asserts a defect'; renamed in the prose, the caption, the table header and the records key, with the reviewer's narrower count (22 of 110, five instances resting only on findings that disclaim a requirement) reported as the reviewer's and not adopted as an estimate",
     "note": "manifest.json is committed in the commit after frozen_commit; every other file the study added is listed here",
     "preregistration_and_amendment_commits": [
       {
