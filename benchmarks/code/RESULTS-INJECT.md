@@ -70,6 +70,16 @@ condition than the gate but not no condition. And the two strata are pooled by p
 with the rejected stratum estimated from 40 of 189, so its contribution carries sampling error the
 interval above includes and the point estimate hides.
 
+**Duplication in population I, and why the cluster interval absorbs it.** |I| is 92 instances but
+only **59 distinct programmes**: 33 groups of byte-identical `modified_sha256` cover 66 of the 92.
+An interval that treats the 92 as independent is therefore too narrow by more than the usual
+problem-recurrence margin, and **every Wilson figure in this study is to be read with that in
+mind**. The primary intervals are not affected: **no duplicate group spans more than one
+`problem_id`** (checked directly: 0 of 33), and the primary is a percentile bootstrap over whole
+problem clusters, 54 of them, so byte-identical instances always resample together. Problem
+clustering is here at least as conservative as programme clustering. The gate-rejected sample
+carries no duplication at all: 40 instances, 40 distinct programmes, 35 problems.
+
 The internally controlled contrast is stronger still, and it is the one with no problem-mix
 confound: every instance of I was audited again without the injected lines.
 
