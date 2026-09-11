@@ -44,13 +44,15 @@ REGISTERED_HEADINGS = [
     "### Table 5 — substrate 2 against substrate 1 at K = 8",
     "## 4. H23c — the auditor is not better here, it is louder",
     "### Table 6 — recall bought per false-positive point, both substrates",
-    "## 5. H23d — the same-vendor arm has no usable K",
+    "## 5. H23d — the same-vendor arm flags more of everything, and the sign flips",
+    "### Table 7 — the same-vendor arm beside the cross-vendor arm, substrate 2",
+    "### Table 8 — H23d, same-vendor minus cross-vendor at K = 8, paired",
     "## 6. H23e — not run",
     "## 7. What this does and does not establish",
     "## 8. Deviations from the preregistration, and interruptions",
     "## 9. The comparison inventory",
     "## 10. Cost",
-    "### Table 7 — cost, from the run's usage ledgers",
+    "### Table 9 — cost, from the run's usage ledgers",
 ]
 
 #: Which registered heading each table block must sit under.
@@ -61,7 +63,9 @@ BLOCK_HEADING = {
     "T4": "### Table 4 — union recall and union false positives at every K, substrate 2",
     "T5": "### Table 5 — substrate 2 against substrate 1 at K = 8",
     "T6": "### Table 6 — recall bought per false-positive point, both substrates",
-    "T7": "### Table 7 — cost, from the run's usage ledgers",
+    "T7": "### Table 7 — the same-vendor arm beside the cross-vendor arm, substrate 2",
+    "T8": "### Table 8 — H23d, same-vendor minus cross-vendor at K = 8, paired",
+    "T9": "### Table 9 — cost, from the run's usage ledgers",
 }
 
 
@@ -275,43 +279,80 @@ def test_the_matched_false_positive_limit_is_stated():
 # H23d and H23e — what was not computed, and why
 # ---------------------------------------------------------------------------------
 
-def test_the_self_arm_is_reported_as_not_evaluable():
+def test_h23d_is_computed_as_registered_and_its_sign_is_bound():
     n, t = _n(), _t()
-    d = n["H23d_self_arm"]
-    assert d["computed_at_registered_K"] is False and d["registered_K"] == 8
-    assert d["usable_K"] < d["registered_K"]
-    assert "**H23d is not computed.**" in t
-    r = d["readings_by_draw"]
-    assert f"Draw 1 covers all {r['1']} frozen instances. Draw 2 covers {r['2']}." in t
-    lo, hi = min(r[str(k)] for k in range(3, 9)), max(r[str(k)] for k in range(3, 9))
-    assert f"**Draws 3 to 8 cover between {lo} and {hi}**" in t
-    assert all(d["C_read_by_draw"][str(k)] == 0 for k in range(3, 9))
-    assert "not one of them read a single stratum-C instance" in t
-    assert f"**{d['instances_with_all_8_self_readings']}** instances carry all eight" in t
-    dn = d["recorded_denials_by_draw"]
-    assert (f"between **{min(dn.values()):,} and {max(dn.values()):,}** provider denials "
-            "per `self` draw") in t
+    d = n["H23d_self_minus_cross_K8"]
+    assert d["computed_at_registered_K"] is True and d["registered_K"] == 8
+    assert d["paired"] is True and n["coverage"]["all_draws_complete"] is True
+    P, C = d["P"], d["C"]
+    sp = n["self_family_curve"]["P"]["union_at_kmax"]
+    cp = n["H23b_curve"]["P"]["union_at_kmax"]
+    assert (f"union recall is **{_pct(sp['rate'])}% {_iv(sp['cluster_ci95'])}**, Wilson "
+            f"{_iv(sp['wilson95'])}, against the cross-vendor arm's "
+            f"**{_pct(cp['rate'])}% {_iv(cp['cluster_ci95'])}** on the same "
+            f"{P['n']} instances") in t
+    assert (f"**+{P['difference_points']:.1f} points, problem-cluster "
+            f"[{P['cluster_ci95_points'][0]:.1f}, {P['cluster_ci95_points'][1]:.1f}]** "
+            f"({P['a_only']} instances flagged only by `self`, {P['b_only']} only by "
+            f"`cross`; exact McNemar p = {P['mcnemar_exact_p']:.5f}; cluster sign-flip "
+            f"p = {P['signflip']['p']:.5f}; Tango "
+            f"[{P['tango_ci95_points'][0]:.1f}, {P['tango_ci95_points'][1]:.1f}] and "
+            f"grid-unconditional [{P['exact_unconditional_ci95_points'][0]:.1f}, "
+            f"{P['exact_unconditional_ci95_points'][1]:.1f}]") in t
+    # the sign, against substrate 1's frozen comparator
+    assert d["sign_matches_substrate1"] is False and d["P_excludes_zero"] is True
+    assert "**The sign is the opposite of substrate 1's.**" in t
+    assert (f"Ceiling 1 measured {d['substrate1_comparator_points']:.1f} points "
+            f"[{d['substrate1_comparator_ci95_points'][0]:.1f}, "
+            f"{d['substrate1_comparator_ci95_points'][1]:.1f}] for the same contrast") in t
+    # the false-positive side
+    sc = n["self_family_curve"]["C"]["union_at_kmax"]
+    cc = n["H23b_curve"]["C"]["union_at_kmax"]
+    assert (f"false-positive rate is **{_pct(sc['rate'])}% {_iv(sc['cluster_ci95'])}**, "
+            f"Wilson {_iv(sc['wilson95'])}, against the cross-vendor arm's "
+            f"**{_pct(cc['rate'])}% {_iv(cc['cluster_ci95'])}**: "
+            f"**+{C['difference_points']:.1f} points "
+            f"[{C['cluster_ci95_points'][0]:.1f}, {C['cluster_ci95_points'][1]:.1f}]** "
+            f"({C['a_only']} vs {C['b_only']} discordant; McNemar p = "
+            f"{C['mcnemar_exact_p']:.5f}; sign-flip p = {C['signflip']['p']:.5f})") in t
+    assert d["costs_more_than_it_gains"] is True
+    assert (f"**{d['false_positives_bought_per_recall_point']:.2f} false-positive points "
+            "for every recall point**") in t
 
 
-def test_the_single_reading_secondary_is_labelled_not_preregistered():
+def test_the_same_vendor_arms_verdict_never_splits_across_draws():
+    """The union-of-K machinery degenerates for this family and the report says so."""
     n, t = _n(), _t()
-    s = n["SECONDARY_self_minus_cross_single_reading_NOT_H23d"]
-    assert s["label"].startswith("NOT PREREGISTERED AT THIS K")
-    assert s["K"] == n["H23d_self_arm"]["usable_K"]
-    P, C = s["strata"]["P"], s["strata"]["C"]
-    cp = n["H23b_curve"]["P"]["curve_cluster_ci95"][0]
-    cc = n["H23b_curve"]["C"]["curve_cluster_ci95"][0]
-    assert (f"flags **{_pct(P['self_union_at_K'])}% of P {_iv(P['self_wilson95'])} Wilson** "
-            f"against the cross-vendor auditor's mean single reading of "
-            f"{_pct(P['cross_mean_single_draw'])}% {_iv(cp)}, a paired difference of "
-            f"**+{P['difference_points']:.1f} points "
-            f"[{P['cluster_ci95_points'][0]:.1f}, {P['cluster_ci95_points'][1]:.1f}]**") in t
-    assert (f"**{_pct(C['self_union_at_K'])}% of C {_iv(C['self_wilson95'])} Wilson** "
-            f"against {_pct(C['cross_mean_single_draw'])}% {_iv(cc)}, a paired difference "
-            f"of **+{C['difference_points']:.1f} points "
-            f"[{C['cluster_ci95_points'][0]:.1f}, {C['cluster_ci95_points'][1]:.1f}]**") in t
-    assert "**not preregistered at this K**" in t
-    assert "Secondary, **not preregistered at this K**" in t
+    ag = n["draw_agreement"]
+    assert ag["self"]["instances_whose_flag_splits_across_draws"] == 0
+    assert ag["cross"]["instances_whose_flag_splits_across_draws"] > 0
+    assert (f"identical on all eight draws for **every one of the "
+            f"{ag['self']['n_instances']} instances**: not a single instance splits, where "
+            f"the cross-vendor arm splits on "
+            f"**{ag['cross']['instances_whose_flag_splits_across_draws']}** of "
+            f"{ag['cross']['n_instances']}") in t
+    # not a caching artefact: the replies differ even where the verdict does not
+    differing = (ag["self"]["n_instances"]
+                 - ag["self"]["instances_with_one_finding_digest_across_all_draws"])
+    assert (f"returned differing finding digests across draws on {differing} of the "
+            f"{ag['self']['n_instances']} instances") in t
+    assert ag["self"]["readings_flagged_by_checks"] == 0
+    assert ag["cross"]["readings_flagged_by_checks"] == 0
+    assert "the deterministic checks layer flagged nothing" in t
+    # the registered gain ratio cannot be computed for this family, and the report says so
+    se = n["self_family_exchange"]
+    assert se["registered_gain_ratio_is_undefined"] is True
+    assert "**Ceiling 1's registered gain ratio is undefined for this arm.**" in t
+    lv = se["ratios"]["POST_HOC_level_ratio_by_k"]
+    k1 = se["level_ratio_ci95_K1"]
+    assert len(set(round(x, 9) for x in lv)) == 1
+    assert (f"a flat **{lv[0]:.2f} [{k1[0]:.2f}, {k1[1]:.2f}]** at every K") in t
+    assert se["level_ratio_below_cross_on_substrate2_at_every_k"] is True
+    assert se["level_ratio_below_substrate1_cross_at_every_k"] is True
+    sP = n["self_family_curve"]["P"]
+    assert sP["flattening_gain_last_step_points"] == 0.0
+    assert (f"last-step gain of {sP['flattening_gain_last_step_points']:.2f} points "
+            f"[0.00, 0.00]") in t
 
 
 def test_h23e_is_reported_as_not_run():
@@ -369,12 +410,24 @@ def test_the_deviations_are_bound():
             "none") in t
     assert n["substrate1_frozen"]["recomputation_matches_frozen"] is True
     assert "**H23e was not run**" in t
+    # the self ladder's interruption: the first read's counts and the denial range
+    first = n["coverage"]["self_first_read_INCOMPLETE"]
+    by = first["readings_by_draw"]
+    assert (f"At {first['read_utc']} its eight draws held "
+            + ", ".join(str(by[str(k)]) for k in range(1, 8))
+            + f" and {by['8']} readings of {n['coverage']['scope_n']} required") in t
+    dn = n["H23d_self_minus_cross_K8"]["recorded_denials_by_draw"]
+    assert (f"**{min(dn.values()):,} to {max(dn.values()):,}** provider denials per "
+            "`self` draw") in t
+    assert n["coverage"]["all_draws_complete"] is True
+    assert "every draw now covers all 250" in t
+    assert ("**No point estimate of H23a, H23b or H23c changed when the arm completed**") in t
 
 
 def test_the_comparison_inventory_matches_the_record():
     n, t = _n(), _t()
-    assert len(n["comparison_inventory"]) == 7
-    for i in range(1, 8):
+    assert len(n["comparison_inventory"]) == 9
+    for i in range(1, 10):
         assert f" {i}. " in t
 
 
@@ -386,18 +439,21 @@ def test_no_binding_matches_more_than_once():
     P, C = n["H23b_curve"]["P"], n["H23b_curve"]["C"]
     a = n["H23a_primary_recall_sub2_minus_sub1_P_K8"]
     fp = n["H23c_false_positives"]["sub2_minus_sub1_C_K8"]
-    s = n["SECONDARY_self_minus_cross_single_reading_NOT_H23d"]["strata"]
+    d = n["H23d_self_minus_cross_K8"]
     once = [
         f"**+{a['difference_points']:.1f} points, 95% two-sample problem-cluster bootstrap",
         f"**+{fp['difference_points']:.1f} points "
         f"[{fp['cluster_ci95_points'][0]:.1f}, {fp['cluster_ci95_points'][1]:.1f}]**",
         f"flags **{a['a']['k']} of {a['a']['n']}** stratum-P instances",
         f"flag **{fp['a']['k']} of {fp['a']['n']}** correct solutions",
-        f"**{_pct(s['P']['self_union_at_K'])}% of P {_iv(s['P']['self_wilson95'])} Wilson**",
-        f"**{_pct(s['C']['self_union_at_K'])}% of C {_iv(s['C']['self_wilson95'])} Wilson**",
+        f"**+{d['P']['difference_points']:.1f} points, problem-cluster",
+        f"**+{d['C']['difference_points']:.1f} points "
+        f"[{d['C']['cluster_ci95_points'][0]:.1f}, {d['C']['cluster_ci95_points'][1]:.1f}]**",
+        "**The sign is the opposite of substrate 1's.**",
+        "**Ceiling 1's registered gain ratio is undefined for this arm.**",
         f"**{P['flattening_gain_last_step_points']:.2f} points",
         f"last step on C gains **{C['flattening_gain_last_step_points']:.2f} points",
-        "**H23d is not computed.**",
+        "**H23d is answered as registered**",
         "**The residual has not been classified under study 21's rubric on this substrate.**",
     ]
     for anchor in once:

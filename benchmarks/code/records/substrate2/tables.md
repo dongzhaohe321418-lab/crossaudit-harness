@@ -22,18 +22,20 @@ Two batches over 300 tasks. The audit set was drawn by `random.Random(20260917)`
 | generation cost | $1.83 (600 calls) |
 <!-- END T2 -->
 <!-- BEGIN T3 (records/substrate2/tables.md) -->
-The frozen audit set is 250 instances (100 P, 150 C). Read once at 2026-09-11T10:18:26Z; the `self` cache was still being filled.
+The frozen audit set is 250 instances (100 P, 150 C). Both ladders are complete: every draw of both families covers all 250. A denial is a call that never produced a reading; it is not in the usage ledger and cost nothing. The last column is what the `self` ladder had reached at 2026-09-11T10:18:26Z, when the first version of this report was written and H23d was not yet evaluable.
 
-| draw | `cross` readings | `self` readings | `self` P missing | `self` C missing |
-|---:|---:|---:|---:|---:|
-| 1 | 250 / 250 ✓ | 250 / 250 | 0 | 0 |
-| 2 | 250 / 250 ✓ | 228 / 250 | 0 | 22 |
-| 3 | 250 / 250 ✓ | 24 / 250 | 76 | 150 |
-| 4 | 250 / 250 ✓ | 31 / 250 | 69 | 150 |
-| 5 | 250 / 250 ✓ | 23 / 250 | 77 | 150 |
-| 6 | 250 / 250 ✓ | 38 / 250 | 62 | 150 |
-| 7 | 250 / 250 ✓ | 60 / 250 | 40 | 150 |
-| 8 | 250 / 250 ✓ | 82 / 250 | 18 | 150 |
+| draw | `cross` readings | `cross` denials | `self` readings | `self` denials | `self` readings at the first read |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 250 / 250 ✓ | 0 | 250 / 250 ✓ | 2,087 | 250 |
+| 2 | 250 / 250 ✓ | 0 | 250 / 250 ✓ | 1,340 | 228 |
+| 3 | 250 / 250 ✓ | 0 | 250 / 250 ✓ | 1,438 | 24 |
+| 4 | 250 / 250 ✓ | 0 | 250 / 250 ✓ | 1,425 | 31 |
+| 5 | 250 / 250 ✓ | 0 | 250 / 250 ✓ | 1,428 | 23 |
+| 6 | 250 / 250 ✓ | 0 | 250 / 250 ✓ | 1,353 | 38 |
+| 7 | 250 / 250 ✓ | 0 | 250 / 250 ✓ | 1,291 | 60 |
+| 8 | 250 / 250 ✓ | 999 | 250 / 250 ✓ | 1,290 | 82 |
+
+**Draw-to-draw agreement.** Over the 250 audited instances, the cross-vendor arm's flag splits across its eight draws on **103** of them; the same-vendor arm's splits on **0**. Every flag in both families came from the model (0 readings were flagged by the deterministic checks layer). The same-vendor arm returned one identical set of finding digests across all eight draws on 219 instances, the cross-vendor arm on 96; no finding text was archived or read.
 <!-- END T3 -->
 <!-- BEGIN T4 (records/substrate2/tables.md) -->
 Unit of analysis: the instance. n = 100 stratum-P instances from 51 problems (recall) and 150 stratum-C instances from 121 problems (false positives), the same instances at every K. The union rate at K is averaged over all C(8, K) subsets of the eight draws, exactly. Intervals are 10,000-resample problem-cluster percentile bootstraps, seed 20260917. The **registered** gain ratio is ceiling 1's own column — recall gained over K = 1 divided by false positives gained over K = 1. The **level** ratio is recall at K divided by the false-positive rate paid at K; it is post hoc and is not in the preregistration.
@@ -77,13 +79,39 @@ The level ratio is POST HOC — the preregistration's H23c names ceiling 1's reg
 Substrate 2's level ratio is lower than substrate 1's at **every** K, and so is the registered gain ratio (**every** K). Substrate 2's cheapest reading already costs 31.8% false positives at K = 1, above substrate 1's dearest 16.0% at K = 8: the two measured false-positive ranges do **not** overlap.
 <!-- END T6 -->
 <!-- BEGIN T7 (records/substrate2/tables.md) -->
-Summed from the per-project `usage.jsonl` ledgers in the run archive as of 2026-09-11T10:18:49Z. Refused calls that never reached a model are not in the ledgers and cost nothing, and the `self` row grows while that arm keeps retrying.
+The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the same 100 P and 150 C instances at the same K = 8. Its curve does not move with K because its flag does not split across draws (Table 3), so **ceiling 1's registered gain ratio is undefined for it**: that ratio divides by the false-positive gain from K = 1, and that gain is exactly zero. Only the post-hoc level ratio can be quoted, and it is 1.14 [0.98, 1.31] at K = 1 and 1.14 [0.98, 1.31] at K = 8.
+
+| K | `self` recall on P [95% cluster CI] | `self` FP on C [95% cluster CI] | `self` level ratio | `cross` recall on P | `cross` FP on C | `cross` level ratio |
+|---:|---|---|---:|---:|---:|---:|
+| 1 | 88.0% [78.0, 96.0] | 77.3% [69.3, 84.9] | 1.14 | 49.5% | 31.8% | 1.55 |
+| 2 | 88.0% [78.0, 96.0] | 77.3% [69.3, 84.9] | 1.14 | 58.9% | 39.9% | 1.48 |
+| 3 | 88.0% [78.0, 96.0] | 77.3% [69.3, 84.9] | 1.14 | 63.5% | 44.8% | 1.42 |
+| 4 | 88.0% [78.0, 96.0] | 77.3% [69.3, 84.9] | 1.14 | 66.4% | 48.2% | 1.38 |
+| 5 | 88.0% [78.0, 96.0] | 77.3% [69.3, 84.9] | 1.14 | 68.2% | 50.6% | 1.35 |
+| 6 | 88.0% [78.0, 96.0] | 77.3% [69.3, 84.9] | 1.14 | 69.5% | 52.5% | 1.33 |
+| 7 | 88.0% [78.0, 96.0] | 77.3% [69.3, 84.9] | 1.14 | 70.4% | 54.0% | 1.30 |
+| 8 | 88.0% [78.0, 96.0] | 77.3% [69.3, 84.9] | 1.14 | 71.0% | 55.3% | 1.28 |
+
+Last-step gain on P 0.00 points, on C 0.00 points. Both meet ceiling 1's bar trivially: a curve that never rises has flattened by arithmetic, not by saturation, and the exponential fit is not quoted for this family.
+<!-- END T7 -->
+<!-- BEGIN T8 (records/substrate2/tables.md) -->
+Paired: the same instances are read by both arms, so this is ceiling 1's paired contrast, computed by `report_ceiling3.paired_union_difference` unchanged under seed 20260917. The cluster bootstrap is the primary interval; Tango and the grid-unconditional interval ignore clustering and are labelled so; the sign-flip test is ceiling 1's frozen implementation and carries its own seed. `a vs b` counts instances only one arm flagged.
+
+| stratum | `self` at K = 8 | `cross` at K = 8 | self - cross [95% cluster CI] | discordant a vs b | McNemar p | sign-flip p | Tango | grid-unconditional |
+|---|---:|---:|---|---:|---:|---:|---|---|
+| P (recall) | 88.0% | 71.0% | **+17.0** [2.0, 32.0] | 26 vs 9 | 0.00599 | 0.04210 | [5.7, 28.2] | [2.0, 30.5] |
+| C (false positives) | 77.3% | 55.3% | **+22.0** [11.2, 32.7] | 46 vs 13 | 0.00002 | 0.00015 | [12.4, 31.4] | [10.0, 33.0] |
+
+Substrate 1's frozen comparator is -12.7 points [-25.0, -0.9] on P. The sign here is **the opposite**. The same-vendor arm buys 17.0 points of recall and pays 22.0 points of false positives for it — 1.29 false-positive points per recall point, so it costs **more than it gains**.
+<!-- END T8 -->
+<!-- BEGIN T9 (records/substrate2/tables.md) -->
+Summed from the per-project `usage.jsonl` ledgers in the run archive as of 2026-09-11T11:16:55Z. Refused calls that never reached a model are not in the ledgers and cost nothing.
 
 | | calls | USD |
 |---|---:|---:|
 | generation (`claude-haiku-4-5`) | 600 | $1.83 |
-| audit, `cross` (`openai:gpt-5.6-terra`), 8 complete draws | 2,000 | $18.31 |
-| audit, `self` (`claude-haiku-4-5`), incomplete | 746 | $3.03 |
-| **audit total** | **2,746** | **$21.34** |
-| **study total** | **3,346** | **$23.17** (cap $60) |
-<!-- END T7 -->
+| audit, `cross` (`openai:gpt-5.6-terra`), 8 draws | 2,000 | $18.31 |
+| audit, `self` (`claude-haiku-4-5`), 8 draws | 2,000 | $8.10 |
+| **audit total** | **4,000** | **$26.41** |
+| **study total** | **4,600** | **$28.23** (cap $60) |
+<!-- END T9 -->

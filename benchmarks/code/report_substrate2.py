@@ -39,6 +39,12 @@ BOOT_SEED = 20260917
 BOOTSTRAP = 10_000
 K_MAX = 8
 
+#: ``report_ceiling3.paired_union_difference`` is reused unchanged for H23d, but it reads
+#: its own study's seed from a module constant. Study 23's registered seed is bound here,
+#: in this process only; no file of ceiling 1 or ceiling 3 is modified.
+r3.BOOT_SEED = BOOT_SEED
+r3.BOOTSTRAP = BOOTSTRAP
+
 #: Substrate 1's descriptive medians, as quoted in ceiling 1's preregistration §0.
 S1_MEDIAN_SPEC_WORDS = 41
 S1_MEDIAN_SOLUTION_LINES = 6
@@ -78,12 +84,13 @@ def denials(family: str, draw: int) -> int:
 
 
 def freeze_self_coverage(draws: dict, instances: dict, P: list[str], C: list[str]) -> dict:
-    """The `self` arm's coverage, read ONCE and committed.
+    """The `self` arm's coverage, read once the arm was complete and committed.
 
-    The Anthropic route refused most of this arm under load and a run may still be filling
-    the cache, so a report that re-read it would not reproduce. The first run writes this
-    file; every later run reads it. The cache is the authority for what was read; this file
-    is the authority for *when* the reading was counted.
+    The Anthropic route refused most of this arm under load, and the first version of this
+    report was written while the cache was still filling; that incomplete read is kept
+    beside this one in ``self_coverage_first_read.json`` and is quoted in the deviations.
+    The cache is the authority for what was read; this file is the authority for when the
+    reading was counted.
     """
     path = SUB2 / "self_coverage.json"
     if path.exists():
@@ -115,6 +122,44 @@ def freeze_self_coverage(draws: dict, instances: dict, P: list[str], C: list[str
 # ---------------------------------------------------------------------------------
 # statistics — every interval is a problem-cluster percentile bootstrap, seed 20260917
 # ---------------------------------------------------------------------------------
+
+def draw_agreement(family: str, ids: list[str]) -> dict:
+    """How much a family's verdict moves between draws, and how much its reply moves.
+
+    The union-of-K curve only rises when draws disagree, so a family whose flag never
+    splits has a flat curve by construction and unioning its readings buys nothing. Read
+    from the committed cache rows: ``flagged``, ``flagged_by_model``, ``flagged_by_checks``
+    and the finding DIGESTS — never any finding text.
+    """
+    rows: dict[int, dict[str, dict]] = {}
+    for draw in range(1, K_MAX + 1):
+        path = SUB2 / "cache" / f"holistic__{family}__d{draw}.jsonl"
+        rows[draw] = {}
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                r = json.loads(line)
+                if r["instance_id"] in set(ids):
+                    rows[draw][r["instance_id"]] = r
+    draws = range(1, K_MAX + 1)
+    split = sum(1 for i in ids if len({bool(rows[d][i]["flagged"]) for d in draws}) > 1)
+    same_digest = sum(1 for i in ids
+                      if len({tuple(rows[d][i].get("finding_sha256") or []) for d in draws}) == 1)
+    by_checks = sum(1 for i in ids for d in draws if rows[d][i].get("flagged_by_checks"))
+    by_model = sum(1 for i in ids for d in draws if rows[d][i].get("flagged_by_model"))
+    blockers: dict[str, int] = {}
+    for i in ids:
+        for d in draws:
+            k = str(int(rows[d][i].get("model_blockers") or 0))
+            blockers[k] = blockers.get(k, 0) + 1
+    return {"n_instances": len(ids), "k_max": K_MAX,
+            "instances_whose_flag_splits_across_draws": split,
+            "instances_whose_flag_never_splits": len(ids) - split,
+            "instances_with_one_finding_digest_across_all_draws": same_digest,
+            "readings_flagged_by_checks": by_checks,
+            "readings_flagged_by_model": by_model,
+            "model_blockers_histogram": blockers,
+            "note": "a family with 0 split instances has a union curve flat in K"}
+
 
 def ks_by_problem(draws: dict[int, dict[str, bool]], ids: list[str],
                   instances: dict, k_max: int) -> dict[str, list[int]]:
@@ -325,6 +370,7 @@ def build(run_dir: Path) -> dict:
     }
 
     # --- the ladder's coverage --------------------------------------------------------
+    first = SUB2 / "self_coverage_first_read.json"
     out["coverage"] = {
         "scope_n": len(scope), "scope_P": len(P2), "scope_C": len(C2),
         "cross": {str(d): {"readings": len(draws2["cross"][d]),
@@ -333,12 +379,27 @@ def build(run_dir: Path) -> dict:
                   for d in range(1, K_MAX + 1)},
         "self": freeze_self_coverage(draws2, instances2, P2, C2),
     }
+    out["coverage"]["self_first_read_INCOMPLETE"] = (
+        {"read_utc": json.loads(first.read_text(encoding="utf-8"))["read_utc"],
+         "readings_by_draw": {d: v["readings"] for d, v in
+                              json.loads(first.read_text(encoding="utf-8"))["per_draw"].items()},
+         "note": "the first version of this report was written at this timestamp, while "
+                 "the arm was still filling; H23d was not evaluable then"}
+        if first.exists() else None)
+    out["coverage"]["all_draws_complete"] = all(
+        len(draws2[f][d]) == len(scope) for f in ("cross", "self") for d in range(1, K_MAX + 1))
 
     # --- H23b: the curve, the fit, the flattening bar ---------------------------------
     blockP = stratum_block(draws2["cross"], P2, instances2, K_MAX)
     blockC = stratum_block(draws2["cross"], C2, instances2, K_MAX)
     out["H23b_curve"] = {"P": {k: v for k, v in blockP.items() if k != "ks_by_problem"},
                          "C": {k: v for k, v in blockC.items() if k != "ks_by_problem"}}
+    selfP = stratum_block(draws2["self"], P2, instances2, K_MAX)
+    selfC = stratum_block(draws2["self"], C2, instances2, K_MAX)
+    out["self_family_curve"] = {"P": {k: v for k, v in selfP.items() if k != "ks_by_problem"},
+                                "C": {k: v for k, v in selfC.items() if k != "ks_by_problem"}}
+    out["draw_agreement"] = {"cross": draw_agreement("cross", P2 + C2),
+                             "self": draw_agreement("self", P2 + C2)}
 
     # --- substrate 1's frozen comparator, read only -----------------------------------
     inst1 = rc.load_instances()
@@ -413,72 +474,63 @@ def build(run_dir: Path) -> dict:
                 "substrate matches the other's false-positive rate",
     }
 
-    # --- H23d -------------------------------------------------------------------------
+    # --- H23d (registered, K = 8) -----------------------------------------------------
+    # The same 100 P instances (and the same 150 C instances) are read by both arms, so
+    # this contrast IS paired: report_ceiling3's reviewed paired_union_difference is
+    # reused unchanged, under study 23's registered seed.
     cov = out["coverage"]["self"]["per_draw"]
-    usable = [d for d in range(1, K_MAX + 1)
-              if all(cov[str(x)]["P_missing"] == 0 and cov[str(x)]["C_missing"] == 0
-                     for x in range(1, d + 1))]
-    self_flags = {int(d): v for d, v in out["coverage"]["self"]["flags"].items()}
-    usable_k = max(usable) if usable else 0
-    out["H23d_self_arm"] = {
-        "usable_K": usable_k,
-        "rule": "a K is usable when draws 1..K each cover the whole frozen audit set "
-                "(100 P and 150 C instances), which is what the preregistered contrast "
-                "against substrate 1's -12.7 points [-25.0, -0.9] is defined on",
-        "readings_by_draw": {d: cov[d]["readings"] for d in cov},
-        "P_missing_by_draw": {d: cov[d]["P_missing"] for d in cov},
-        "C_missing_by_draw": {d: cov[d]["C_missing"] for d in cov},
-        "C_readings_total": sum(cov[d]["C_read"] for d in cov),
-        "C_read_by_draw": {d: cov[d]["C_read"] for d in cov},
+    complete = all(cov[str(d)]["P_missing"] == 0 and cov[str(d)]["C_missing"] == 0
+                   for d in range(1, K_MAX + 1))
+    out["H23d_self_minus_cross_K8"] = {
+        "registered_K": K_MAX, "computed_at_registered_K": complete,
+        "paired": True,
+        "method": "union-at-K recall of `self` minus `cross` on the SAME instances; "
+                  "problem-cluster percentile bootstrap, exact McNemar and the cluster "
+                  "sign-flip test, all as ceiling 1 defines them",
+        "substrate1_comparator_points": -12.7,
+        "substrate1_comparator_ci95_points": [-25.0, -0.9],
+        "P": r3.paired_union_difference(draws2["self"], draws2["cross"], K_MAX, P2, instances2),
+        "C": r3.paired_union_difference(draws2["self"], draws2["cross"], K_MAX, C2, instances2),
+        "coverage_by_draw": {d: cov[d]["readings"] for d in cov},
         "recorded_denials_by_draw": {d: cov[d]["recorded_denials"] for d in cov},
-        "instances_with_all_8_self_readings": cov["8"]["prefix_common_instances"],
-        "registered_K": K_MAX,
-        "computed_at_registered_K": False,
-        "why_not": (
-            f"the largest usable K is {usable_k}, not {K_MAX}. Draws 2..8 are short "
-            f"between {min(cov[str(d)]['P_missing'] + cov[str(d)]['C_missing'] for d in range(2, 9))} "
-            f"and {max(cov[str(d)]['P_missing'] + cov[str(d)]['C_missing'] for d in range(2, 9))} "
-            f"of 250 instances. The registered contrast is a PAIRED union at K = {K_MAX} on "
-            f"the frozen set; the {cov['8']['prefix_common_instances']} instances that "
-            f"carry all {K_MAX} self readings are the ones the Anthropic route happened to "
-            "answer under load, which is not a random subset of P, so a union computed on "
-            "them would estimate a different population from the one H23d names."),
     }
-    if usable_k >= 1:
-        # NOT H23d. H23d is the K = 8 union difference against substrate 1's -12.7 points
-        # [-25.0, -0.9]. This is the SINGLE-READING difference at the only K whose self
-        # draws cover the whole frozen audit set, computed because it is available and
-        # because it answers, on C, whether the same-vendor auditor is also louder here.
-        # Paired — the same instances — so the cluster sign-flip test applies.
-        sd = {d: self_flags[d] for d in range(1, usable_k + 1)}
-        block = {}
-        for label, ids in (("P", P2), ("C", C2)):
-            by_problem: dict[str, list[float]] = {}
-            ka, kb = 0, 0.0
-            for i in ids:
-                fa = any(sd[d].get(i) for d in sd)
-                fb = sum(1 for d in range(1, K_MAX + 1) if draws2["cross"][d].get(i)) / K_MAX
-                ka += int(fa)
-                kb += fb
-                by_problem.setdefault(instances2[i]["problem_id"], []).append(float(fa) - fb)
-            lo, hi = rc.cluster_bootstrap_ci(by_problem, BOOTSTRAP, BOOT_SEED)
-            block[label] = {
-                "self_union_at_K": ka / len(ids), "self_count": ka, "n": len(ids),
-                "self_wilson95": list(rc.wilson(ka, len(ids))),
-                "cross_mean_single_draw": kb / len(ids),
-                "difference_points": 100 * (ka - kb) / len(ids),
-                "cluster_ci95_points": [100 * lo, 100 * hi],
-                "signflip": rc.signflip_p(by_problem),
-            }
-        out["SECONDARY_self_minus_cross_single_reading_NOT_H23d"] = {
-            "K": usable_k, "strata": block,
-            "comparator": "cross's MEAN single-draw rate over its eight draws, which is "
-                          "ceiling 1's K = 1 point; paired per instance",
-            "label": "NOT PREREGISTERED AT THIS K. H23d is the K = 8 union difference and "
-                     "it is not evaluable; this is the single-reading contrast at the only "
-                     "K whose self draws cover the whole frozen audit set, frozen at the "
-                     "timestamp in coverage.self.read_utc while that arm was still filling.",
-        }
+    h = out["H23d_self_minus_cross_K8"]
+    h["sign_matches_substrate1"] = bool(
+        (h["P"]["difference_points"] > 0) == (h["substrate1_comparator_points"] > 0))
+    h["P_excludes_zero"] = bool(h["P"]["cluster_ci95_points"][0] > 0
+                                or h["P"]["cluster_ci95_points"][1] < 0)
+    h["C_excludes_zero"] = bool(h["C"]["cluster_ci95_points"][0] > 0
+                                or h["C"]["cluster_ci95_points"][1] < 0)
+    # The exchange the same-vendor arm offers over the cross-vendor arm at K = 8: does it
+    # pay more in false positives than it gains in recall?
+    h["false_positives_bought_per_recall_point"] = (
+        h["C"]["difference_points"] / h["P"]["difference_points"]
+        if h["P"]["difference_points"] else None)
+    h["costs_more_than_it_gains"] = bool(
+        h["C"]["difference_points"] > h["P"]["difference_points"])
+
+    # --- the same-vendor arm's own exchange ratios ------------------------------------
+    ratios_self = exchange_ratios(selfP["curve"], selfC["curve"])
+    out["self_family_exchange"] = {
+        "ratios": ratios_self,
+        "level_ratio_ci95_K1": ratio_cluster_ci(selfP["ks_by_problem"], selfC["ks_by_problem"],
+                                                1, K_MAX, BOOTSTRAP, BOOT_SEED),
+        "level_ratio_ci95_K8": ratio_cluster_ci(selfP["ks_by_problem"], selfC["ks_by_problem"],
+                                                8, K_MAX, BOOTSTRAP, BOOT_SEED),
+        "registered_gain_ratio_is_undefined": all(
+            x is None for x in ratios_self["registered_gain_ratio_by_k"][1:]),
+        "why_undefined": "the registered gain ratio divides by the false-positive gain "
+                         "from K = 1 to K, and the same-vendor arm's false-positive rate "
+                         "does not move with K: its flag never splits across draws",
+        "level_ratio_below_cross_on_substrate2_at_every_k": all(
+            a is not None and b is not None and a < b
+            for a, b in zip(ratios_self["POST_HOC_level_ratio_by_k"],
+                            ratios2["POST_HOC_level_ratio_by_k"])),
+        "level_ratio_below_substrate1_cross_at_every_k": all(
+            a is not None and b is not None and a < b
+            for a, b in zip(ratios_self["POST_HOC_level_ratio_by_k"],
+                            ratios1["POST_HOC_level_ratio_by_k"])),
+    }
 
     out["cost"] = ledger_costs(run_dir)
     out["H23e_residual"] = {
@@ -493,8 +545,9 @@ def build(run_dir: Path) -> dict:
         "H23c: recall bought per false-positive point, POST-HOC level ratio, both substrates",
         "H23b: the union curve at K = 1..8 on P and on C, with per-K cluster intervals",
         "H23b: the constrained fit and ceiling 1's flattening bar, on P and on C",
-        "SECONDARY, not preregistered at this K: self minus cross at a single reading, on "
-        "P and on C, at the only K whose self draws cover the frozen audit set",
+        "H23d: same-vendor minus cross-vendor union recall at K = 8 on P, paired",
+        "H23d: same-vendor minus cross-vendor union false positives at K = 8 on C, paired",
+        "H23d: the same-vendor arm's own curve, fit and exchange ratios on P and on C",
     ]
     return out
 
@@ -524,7 +577,9 @@ TABLE_HEADINGS = [
     "### Table 4 — union recall and union false positives at every K, substrate 2",
     "### Table 5 — substrate 2 against substrate 1 at K = 8",
     "### Table 6 — recall bought per false-positive point, both substrates",
-    "### Table 7 — cost, from the run's usage ledgers",
+    "### Table 7 — the same-vendor arm beside the cross-vendor arm, substrate 2",
+    "### Table 8 — H23d, same-vendor minus cross-vendor at K = 8, paired",
+    "### Table 9 — cost, from the run's usage ledgers",
 ]
 TABLE_KEYS = [f"T{i}" for i in range(1, len(TABLE_HEADINGS) + 1)]
 
@@ -578,19 +633,40 @@ def render_tables(n: dict) -> dict[str, str]:
     ])
 
     cov, self_cov = n["coverage"], n["coverage"]["self"]["per_draw"]
-    rows = ["| draw | `cross` readings | `self` readings | `self` P missing | `self` C missing |",
-            "|---:|---:|---:|---:|---:|"]
+    ag = n["draw_agreement"]
+    first = cov["self_first_read_INCOMPLETE"]
+    rows = ["| draw | `cross` readings | `cross` denials | `self` readings | `self` denials "
+            "| `self` readings at the first read |",
+            "|---:|---:|---:|---:|---:|---:|"]
     for d in range(1, K_MAX + 1):
-        c = cov["cross"][str(d)]
-        sd = self_cov[str(d)]
+        c, sd = cov["cross"][str(d)], self_cov[str(d)]
         rows.append(f"| {d} | {c['readings']} / {cov['scope_n']}"
-                    f"{' ✓' if c['complete'] else ''} | {sd['readings']} / {cov['scope_n']} | "
-                    f"{sd['P_missing']} | {sd['C_missing']} |")
+                    f"{' ✓' if c['complete'] else ''} | {c['recorded_denials']:,} | "
+                    f"{sd['readings']} / {cov['scope_n']}"
+                    f"{' ✓' if sd['readings'] == cov['scope_n'] else ''} | "
+                    f"{sd['recorded_denials']:,} | {first['readings_by_draw'][str(d)]} |")
     t["T3"] = "\n".join([
         f"The frozen audit set is {cov['scope_n']} instances ({cov['scope_P']} P, "
-        f"{cov['scope_C']} C). Read once at "
-        f"{n['coverage']['self']['read_utc']}; the `self` cache was still being filled.",
+        f"{cov['scope_C']} C). Both ladders are complete: every draw of both families "
+        f"covers all {cov['scope_n']}. A denial is a call that never produced a reading; "
+        f"it is not in the usage ledger and cost nothing. The last column is what the "
+        f"`self` ladder had reached at {first['read_utc']}, when the first version of this "
+        f"report was written and H23d was not yet evaluable.",
         "", *rows, "",
+        f"**Draw-to-draw agreement.** Over the {ag['cross']['n_instances']} audited "
+        f"instances, the cross-vendor arm's flag splits across its eight draws on "
+        f"**{ag['cross']['instances_whose_flag_splits_across_draws']}** of them; the "
+        f"same-vendor arm's splits on "
+        f"**{ag['self']['instances_whose_flag_splits_across_draws']}**. Every flag in "
+        f"both families came from the model "
+        f"({ag['self']['readings_flagged_by_checks'] + ag['cross']['readings_flagged_by_checks']} "
+        f"readings were flagged by the deterministic checks layer). The same-vendor arm "
+        f"returned one identical set of finding digests across all eight draws on "
+        f"{ag['self']['instances_with_one_finding_digest_across_all_draws']} instances, "
+        f"the cross-vendor arm on "
+        f"{ag['cross']['instances_with_one_finding_digest_across_all_draws']}; no finding "
+        f"text was archived or read.",
+        "",
     ])
 
     P, C = n["H23b_curve"]["P"], n["H23b_curve"]["C"]
@@ -683,19 +759,86 @@ def render_tables(n: dict) -> dict[str, str]:
         "",
     ])
 
-    c = n["cost"]
+    sP, sC = n["self_family_curve"]["P"], n["self_family_curve"]["C"]
+    se = n["self_family_exchange"]
+    rows = ["| K | `self` recall on P [95% cluster CI] | `self` FP on C [95% cluster CI] | "
+            "`self` level ratio | `cross` recall on P | `cross` FP on C | `cross` level ratio |",
+            "|---:|---|---|---:|---:|---:|---:|"]
+    for i in range(K_MAX):
+        rows.append(f"| {i + 1} | {_p(sP['curve'][i])} {_iv(sP['curve_cluster_ci95'][i])} | "
+                    f"{_p(sC['curve'][i])} {_iv(sC['curve_cluster_ci95'][i])} | "
+                    f"{_r(se['ratios']['POST_HOC_level_ratio_by_k'][i])} | "
+                    f"{_p(P['curve'][i])} | {_p(C['curve'][i])} | "
+                    f"{_r(r2['POST_HOC_level_ratio_by_k'][i])} |")
+    k1, k8 = se["level_ratio_ci95_K1"], se["level_ratio_ci95_K8"]
     t["T7"] = "\n".join([
+        f"The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the "
+        f"same {sP['n_instances']} P and {sC['n_instances']} C instances at the same K = "
+        f"{K_MAX}. Its curve does not move with K because its flag does not split across "
+        f"draws (Table 3), so **ceiling 1's registered gain ratio is undefined for it**: "
+        f"that ratio divides by the false-positive gain from K = 1, and that gain is "
+        f"exactly zero. Only the post-hoc level ratio can be quoted, and it is "
+        f"{se['ratios']['POST_HOC_level_ratio_by_k'][0]:.2f} "
+        f"[{k1[0]:.2f}, {k1[1]:.2f}] at K = 1 and "
+        f"{se['ratios']['POST_HOC_level_ratio_by_k'][-1]:.2f} [{k8[0]:.2f}, {k8[1]:.2f}] "
+        f"at K = {K_MAX}.",
+        "", *rows, "",
+        f"Last-step gain on P {sP['flattening_gain_last_step_points']:.2f} points, on C "
+        f"{sC['flattening_gain_last_step_points']:.2f} points. Both meet ceiling 1's bar "
+        f"trivially: a curve that never rises has flattened by arithmetic, not by "
+        f"saturation, and the exponential fit is not quoted for this family.",
+        "",
+    ])
+
+    d = n["H23d_self_minus_cross_K8"]
+    def _row(label: str, blk: dict) -> str:
+        return (f"| {label} | {_p(blk['a_union'])} | {_p(blk['b_union'])} | "
+                f"**{blk['difference_points']:+.1f}** "
+                f"[{blk['cluster_ci95_points'][0]:.1f}, {blk['cluster_ci95_points'][1]:.1f}] | "
+                f"{blk['a_only']} vs {blk['b_only']} | {blk['mcnemar_exact_p']:.5f} | "
+                f"{blk['signflip']['p']:.5f} | "
+                f"[{blk['tango_ci95_points'][0]:.1f}, {blk['tango_ci95_points'][1]:.1f}] | "
+                f"[{blk['exact_unconditional_ci95_points'][0]:.1f}, "
+                f"{blk['exact_unconditional_ci95_points'][1]:.1f}] |")
+    t["T8"] = "\n".join([
+        f"Paired: the same instances are read by both arms, so this is ceiling 1's paired "
+        f"contrast, computed by `report_ceiling3.paired_union_difference` unchanged under "
+        f"seed {n['bootstrap_seed']}. The cluster bootstrap is the primary interval; Tango "
+        f"and the grid-unconditional interval ignore clustering and are labelled so; the "
+        f"sign-flip test is ceiling 1's frozen implementation and carries its own seed. "
+        f"`a vs b` counts instances only one arm flagged.",
+        "",
+        "| stratum | `self` at K = 8 | `cross` at K = 8 | self - cross [95% cluster CI] | "
+        "discordant a vs b | McNemar p | sign-flip p | Tango | grid-unconditional |",
+        "|---|---:|---:|---|---:|---:|---:|---|---|",
+        _row("P (recall)", d["P"]),
+        _row("C (false positives)", d["C"]),
+        "",
+        f"Substrate 1's frozen comparator is {d['substrate1_comparator_points']:.1f} points "
+        f"[{d['substrate1_comparator_ci95_points'][0]:.1f}, "
+        f"{d['substrate1_comparator_ci95_points'][1]:.1f}] on P. The sign here is "
+        f"**{'the same' if d['sign_matches_substrate1'] else 'the opposite'}**. The "
+        f"same-vendor arm buys {d['P']['difference_points']:.1f} points of recall and pays "
+        f"{d['C']['difference_points']:.1f} points of false positives for it — "
+        f"{d['false_positives_bought_per_recall_point']:.2f} false-positive points per "
+        f"recall point, so it costs "
+        f"**{'more than it gains' if d['costs_more_than_it_gains'] else 'less than it gains'}**.",
+        "",
+    ])
+
+    c = n["cost"]
+    t["T9"] = "\n".join([
         "Summed from the per-project `usage.jsonl` ledgers in the run archive as of "
         f"{n['cost']['read_utc']}. Refused calls that never reached a model are not in the "
-        "ledgers and cost nothing, and the `self` row grows while that arm keeps retrying.",
+        "ledgers and cost nothing.",
         "",
         "| | calls | USD |",
         "|---|---:|---:|",
         f"| generation (`claude-haiku-4-5`) | {c['generation']['calls']} | "
         f"${c['generation']['usd']:.2f} |",
-        f"| audit, `cross` (`openai:gpt-5.6-terra`), 8 complete draws | "
+        f"| audit, `cross` (`openai:gpt-5.6-terra`), 8 draws | "
         f"{c['audit_cross']['calls']:,} | ${c['audit_cross']['usd']:.2f} |",
-        f"| audit, `self` (`claude-haiku-4-5`), incomplete | {c['audit_self']['calls']} | "
+        f"| audit, `self` (`claude-haiku-4-5`), 8 draws | {c['audit_self']['calls']:,} | "
         f"${c['audit_self']['usd']:.2f} |",
         f"| **audit total** | **{c['audit_total']['calls']:,}** | "
         f"**${c['audit_total']['usd']:.2f}** |",
