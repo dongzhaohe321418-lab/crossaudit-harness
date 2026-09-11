@@ -1,0 +1,27 @@
+{
+  "accuracy": 0.9671052631578947,
+  "by_truth": {
+    "EDITED": {
+      "n": 69,
+      "said_edited": 65
+    },
+    "ONEPASS": {
+      "n": 83,
+      "said_edited": 1
+    }
+  },
+  "correct": 147,
+  "covers_chance": false,
+  "n_answered": 152,
+  "n_injected": 92,
+  "n_natural": 92,
+  "n_unparsed": 32,
+  "prober": "anthropic:claude-opus-4-8",
+  "seed": 20260916,
+  "spend_usd": 0.633535,
+  "wilson95": [
+    0.9253133567048134,
+    0.9858690787944612
+  ],
+  "written_utc": "2026-09-11T05:10:29Z"
+}

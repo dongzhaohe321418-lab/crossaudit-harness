@@ -1,0 +1,301 @@
+{
+  "H22a_primary": {
+    "a": {
+      "k": 90,
+      "n": 92,
+      "n_problems": 54,
+      "rate": 0.9782608695652174,
+      "wilson95": [
+        0.9241650601730417,
+        0.9940179587711463
+      ]
+    },
+    "b": {
+      "k": 33,
+      "n": 110,
+      "n_problems": 56,
+      "rate": 0.3,
+      "wilson95": [
+        0.22229896444649316,
+        0.39119860967277237
+      ]
+    },
+    "cluster_ci95_points": [
+      56.31103415526559,
+      78.85885885885887
+    ],
+    "difference_points": 67.82608695652175,
+    "note": "two-sample: the populations are different instances, so each one's problems are resampled independently (\u00a73); this difference carries the problem-mix confound Amendment 5 fixes in advance",
+    "paired": false
+  },
+  "H22b_paired": {
+    "cluster_ci95_points": [
+      77.27272727272727,
+      93.25842696629213
+    ],
+    "difference_points": 85.8695652173913,
+    "injected": {
+      "k": 90,
+      "rate": 0.9782608695652174,
+      "wilson95": [
+        0.9241650601730417,
+        0.9940179587711463
+      ]
+    },
+    "injected_only": 79,
+    "mcnemar_exact_p": 3.308722450212111e-24,
+    "n": 92,
+    "one_signed_discordance": true,
+    "paired": true,
+    "signflip": {
+      "method": "sampled, 200000 draws, seed 20260915",
+      "n_clusters": 54,
+      "n_nonzero_clusters": 49,
+      "p": 4.9999750001249995e-06
+    },
+    "tango_ci95_points": [
+      77.3114197991407,
+      91.5523066216734
+    ],
+    "twin": {
+      "k": 11,
+      "rate": 0.11956521739130435,
+      "wilson95": [
+        0.06809134808816239,
+        0.20153579593350626
+      ]
+    },
+    "twin_only": 0
+  },
+  "H22c_single_draw": {
+    "a": {
+      "k": 86,
+      "n": 92,
+      "n_problems": 54,
+      "rate": 0.9347826086956522,
+      "wilson95": [
+        0.8649420387269413,
+        0.9697697966768659
+      ]
+    },
+    "b": {
+      "k": 16,
+      "n": 110,
+      "n_problems": 56,
+      "rate": 0.14545454545454545,
+      "wilson95": [
+        0.09155921975527695,
+        0.22327738891069396
+      ]
+    },
+    "cluster_ci95_points": [
+      69.02676931560012,
+      87.79144606822524
+    ],
+    "difference_points": 78.93280632411069,
+    "note": "two-sample: the populations are different instances, so each one's problems are resampled independently (\u00a73); this difference carries the problem-mix confound Amendment 5 fixes in advance",
+    "paired": false
+  },
+  "H22d_curve": {
+    "asymptote_is_extrapolation": false,
+    "curve": [
+      0.9442934782608695,
+      0.9650621118012421,
+      0.9703027950310559,
+      0.9736024844720497,
+      0.9759316770186335,
+      0.9774844720496895,
+      0.9782608695652174,
+      0.9782608695652174
+    ],
+    "curve_ci95": null,
+    "fit": {
+      "A": 0.9743461016778993,
+      "max_resid": 0.00832378120573285,
+      "r2": 0.8602307700725591,
+      "sse": 0.00012924245707431677,
+      "tau": 0.2889183391780209
+    },
+    "flattening_bar_met": true,
+    "k_max": 8,
+    "last_step_gain_points": 0.0
+  },
+  "bootstrap_reps": 10000,
+  "comparator_ceiling1_cross_P": {
+    "cluster_ci95": [
+      0.2,
+      0.4074074074074074
+    ],
+    "k": 33,
+    "n": 110,
+    "rate": 0.3,
+    "wilson95": [
+      0.22229896444649316,
+      0.39119860967277237
+    ]
+  },
+  "detectability_probe": {
+    "accuracy": 0.9671052631578947,
+    "accuracy_bounds_if_unanswered_counted": {
+      "all_unanswered_right": 0.9728260869565217,
+      "all_unanswered_wrong": 0.7989130434782609,
+      "n_total_items": 184,
+      "note": "the unanswered items skew toward injected ones, so the answered-only accuracy may overstate separability among the hard cases"
+    },
+    "by_truth": {
+      "EDITED": {
+        "n": 69,
+        "said_edited": 65
+      },
+      "ONEPASS": {
+        "n": 83,
+        "said_edited": 1
+      }
+    },
+    "correct": 147,
+    "covers_chance": false,
+    "n_answered": 152,
+    "n_injected": 92,
+    "n_natural": 92,
+    "n_unparsed": 32,
+    "prober": "anthropic:claude-opus-4-8",
+    "seed": 20260916,
+    "spend_usd": 0.633535,
+    "wilson95": [
+      0.9253133567048134,
+      0.9858690787944612
+    ],
+    "written_utc": "2026-09-11T05:10:29Z"
+  },
+  "draws": {
+    "I_complete": 8,
+    "k_common": 8,
+    "twin_complete": 8
+  },
+  "kill": {
+    "fires": false,
+    "rule": "H22a's interval includes zero \u2192 study 21's post-hoc split does not replicate prospectively"
+  },
+  "population": {
+    "construction_spend_usd": 9.58276,
+    "n": 92,
+    "n_problems": 54,
+    "n_with_ceiling1_twin": 10
+  },
+  "recall_by_probe_verdict_POST_HOC": {
+    "POST_HOC": true,
+    "auditor_misses": [
+      "inj:b1:Mbpp/404",
+      "inj:b2:Mbpp/404"
+    ],
+    "by_probe_verdict": {
+      "?": {
+        "caught": 23,
+        "n": 23
+      },
+      "EDITED": {
+        "caught": 63,
+        "n": 65
+      },
+      "ONEPASS": {
+        "caught": 4,
+        "n": 4
+      }
+    },
+    "note": "asked after \u00a74.1's probe and the audit were both in hand",
+    "probe_verdict_of_the_misses": [
+      "EDITED",
+      "EDITED"
+    ]
+  },
+  "secondaries": {
+    "branched": {
+      "name": "the changed line sits under a conditional",
+      "no": {
+        "cluster_ci95": [
+          0.8983050847457628,
+          1.0
+        ],
+        "k": 60,
+        "n": 62,
+        "n_problems": 35,
+        "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+        "rate": 0.967741935483871,
+        "wilson95": [
+          0.8897953040501456,
+          0.9911086285001833
+        ]
+      },
+      "yes": {
+        "cluster_ci95": [
+          1.0,
+          1.0
+        ],
+        "k": 30,
+        "n": 30,
+        "n_problems": 19,
+        "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+        "rate": 1.0,
+        "wilson95": [
+          0.8864866068260312,
+          0.9999999999999999
+        ]
+      }
+    },
+    "diff_size": {
+      "median_changed_lines": 2,
+      "name": "more than 2 changed lines",
+      "no": {
+        "cluster_ci95": [
+          0.9210526315789473,
+          1.0
+        ],
+        "k": 77,
+        "n": 79,
+        "n_problems": 46,
+        "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+        "rate": 0.9746835443037974,
+        "wilson95": [
+          0.9123141537110886,
+          0.9930296326934152
+        ]
+      },
+      "yes": {
+        "cluster_ci95": [
+          1.0,
+          1.0
+        ],
+        "k": 13,
+        "n": 13,
+        "n_problems": 9,
+        "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+        "rate": 1.0,
+        "wilson95": [
+          0.7719046276458016,
+          0.9999999999999999
+        ]
+      }
+    },
+    "problem_also_in_P": {
+      "name": "the problem also contributes a stratum-P instance",
+      "no": {
+        "cluster_ci95": [
+          0.9318181818181818,
+          1.0
+        ],
+        "k": 90,
+        "n": 92,
+        "n_problems": 54,
+        "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+        "rate": 0.9782608695652174,
+        "wilson95": [
+          0.9241650601730417,
+          0.9940179587711463
+        ]
+      },
+      "yes": null
+    }
+  },
+  "seed": 20260916,
+  "study": "study22 / injection"
+}
