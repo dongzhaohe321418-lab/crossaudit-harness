@@ -313,3 +313,47 @@ isolates the defect.
 **Neither licenses the sentence "the auditor catches specification-determined defects."** Both
 measure whether the instance was blocked. Whether a block names the injected class is §5's
 adjudication, and that is a separate, secondary number with its own key.
+
+## Amendment 6 — 2026-09-12, after an internal hostile review, before the added arm is run
+
+An internal review (Claude, same vendor as the author, run before the cross-vendor gate) found
+that §1's conservativeness argument is **false**, and gave counterexamples from the archive. The
+argument claimed the construction "can only fail by admitting an instance whose defect is not
+specification-determined". It fails in the other direction too, and that direction inflates the
+primary:
+
+* The gate rejects instances whose defect the specification settles plainly. `b1:Mbpp/223` changes
+  `count > n/2` to `count >= n/2` against a specification that says *"occurs more than n/2
+  times"*, and **both** gates said no; `b1:Mbpp/409`, `b1:Mbpp/224` and `b1:HumanEval/5` are the
+  same shape. The mechanism is visible: the gate is asked whether the specification settles the
+  question *on the injector's own `input_class` string*, and F6 checks only that a witness exists,
+  never that `input_class` names the class the edit actually breaks.
+* The rejections are concentrated on boundary-shift edits, which are the subtlest in the pool and
+  the ones an auditor is least likely to flag. What survives is enriched for edits that announce
+  themselves.
+* Amendment 1's retry loop amplifies it: attempts 2 and 3 are told to make the defect fire only on
+  other inputs, and 37% of accepted injections came from a retry.
+
+**The added arm.** A random sample of **40** of the 189 instances that passed the six filters and
+were then rejected by the gate, drawn by `random.Random(20260916)` from the sorted ids, audited by
+the same auditor, the same constitution and the same K = 8. Outcome: union recall on that sample,
+with both intervals, reported beside 90 of 92.
+
+**What it decides.** If recall on the rejected sample is close to recall on I, the gate is not
+selecting for detectability and §1's headline survives with the conservativeness argument replaced
+by this measurement. If it is materially lower, the gate is part of the effect, and the results
+must say that the 90 of 92 is a property of the gate-accepted population rather than of
+specification-determined defects in general. **No threshold is set here, because the quantity is a
+magnitude to report, not a hypothesis to accept or reject**; the difference and its interval are
+reported whatever they are, and §1's claim is written to match.
+
+**Also corrected by this amendment, without new data.** Amendment 5 said of the paired twin
+contrast: "Any difference there is the injected defect and nothing else." That is false. The twin
+differs from its instance by the **edit**, which carries both the specification-violating semantics
+and whatever surface salience the edit has; §4.1's probe shows that salience is detectable. The
+paired contrast isolates the **edit**, not the defect, and controls the problem, not the salience.
+Every sentence resting on A5's claim is rewritten.
+
+**Budget.** 40 instances × 8 draws ≈ $3.5, taking the study to about $20 of its $35 cap. Nothing
+else changes: not the population, the filters, the gate, the auditor, K, the hypotheses, the
+primary or the kill.
