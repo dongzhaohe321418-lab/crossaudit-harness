@@ -551,6 +551,7 @@ def install_findings_archive(path: Path) -> None:
         model_findings = ((outcome.model_reply or {}).get("findings") or [])
         dcl_findings = outcome.dcl.get("findings", [])
         blockers = [f for f in model_findings if f.get("severity") == "BLOCKER"]
+        dcl_blockers = [f for f in dcl_findings if f.get("severity") == "BLOCKER"]
         with lock:
             with open(path, "a", encoding="utf-8") as fh:
                 fh.write(json.dumps({"instance_id": inst["instance_id"], "arm": arm,

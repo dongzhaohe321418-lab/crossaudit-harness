@@ -140,3 +140,79 @@ def test_the_old_format_still_reads_back():
 
 def test_the_attempt_budget_is_the_preregistered_one():
     assert inject.MAX_ATTEMPTS == 3
+
+
+def test_the_findings_archive_wrapper_runs_end_to_end_without_a_model(tmp_path, monkeypatch):
+    """The audit's own wrapper, exercised with a fake reply instead of an API call.
+
+    This exists because the first audit attempt died on its first instance with a NameError
+    in this wrapper — `dcl_blockers` was used and never bound — after the population was
+    already frozen. Nothing was spent, but nothing would have been learned either. A wrapper
+    that stands between the study and every reading has to be reachable by a test.
+
+    D10 mutation: delete the `dcl_blockers` line, or any other binding the row needs, and
+    this goes red naming it.
+    """
+    import types
+    import audit2
+
+    class _Problem:
+        problem_id = "Mbpp/1"
+        spec = "spec"
+
+        def visible_tests_text(self):
+            return "assert f(1) == 1"
+
+    outcome = types.SimpleNamespace(
+        verdict="BLOCK",
+        model_reply={"findings": [{"severity": "BLOCKER", "title": "t", "body": "b"},
+                                  {"severity": "ADVISORY", "title": "u", "body": "c"}]},
+        dcl={"findings": [{"severity": "BLOCKER", "id": "CA-X-001"}]})
+    monkeypatch.setattr("crossaudit.auditor.run.run_audit",
+                        lambda **kwargs: outcome, raising=False)
+    original = audit2.holistic_one
+    try:
+        archive = tmp_path / "findings.jsonl"
+        inject.install_findings_archive(archive)
+        inst = {"instance_id": "inj:b1:Mbpp/1", "batch": "b1", "problem_id": "Mbpp/1",
+                "stratum": "P", "solution_sha256": "0" * 64}
+        row = audit2.holistic_one(None, _Problem(), "def f(x): return x", inst,
+                                  "constitution", "run-1", "I__d1")
+        assert row["ok"] is True and row["error"] == ""
+        assert row["flagged"] is True
+        assert row["n_findings"] == 2 and row["n_blockers"] == 1
+        assert row["n_dcl_findings"] == 1 and row["n_dcl_blockers"] == 1
+        assert row["instance_id"] == "inj:b1:Mbpp/1"
+        written = [line for line in archive.read_text(encoding="utf-8").splitlines() if line.strip()]
+        assert len(written) == 1
+        import json as _json
+        assert _json.loads(written[0])["instance_id"] == "inj:b1:Mbpp/1"
+    finally:
+        audit2.holistic_one = original
+
+
+def test_the_wrapper_records_a_failure_instead_of_raising(tmp_path, monkeypatch):
+    """A provider error must become a row, not an exception that stops the ladder."""
+    import audit2
+
+    class _Problem:
+        problem_id = "Mbpp/1"
+        spec = "spec"
+
+        def visible_tests_text(self):
+            return "assert f(1) == 1"
+
+    def _boom(**kwargs):
+        raise RuntimeError("provider said no")
+
+    monkeypatch.setattr("crossaudit.auditor.run.run_audit", _boom, raising=False)
+    original = audit2.holistic_one
+    try:
+        inject.install_findings_archive(tmp_path / "findings.jsonl")
+        inst = {"instance_id": "inj:b1:Mbpp/1", "batch": "b1", "problem_id": "Mbpp/1",
+                "stratum": "P", "solution_sha256": "0" * 64}
+        row = audit2.holistic_one(None, _Problem(), "def f(x): return x", inst,
+                                  "constitution", "run-1", "I__d1")
+        assert row["ok"] is False and "provider said no" in row["error"]
+    finally:
+        audit2.holistic_one = original
