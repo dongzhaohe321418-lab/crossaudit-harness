@@ -262,17 +262,96 @@ def test_the_false_positives_and_both_exchange_ratios_are_bound():
     assert "This is **post hoc**: it is not in the preregistration" in t
 
 
-def test_the_matched_false_positive_limit_is_stated():
+def test_the_matched_false_positive_limit_names_its_family_in_both_directions():
+    """The claim is true within the cross-vendor family and false pooled. Both answers
+    must be in the prose, each attached to its scope, and neither may be stated bare."""
     n, t = _n(), _t()
     m = n["H23c_false_positives"]["matched_fp_comparison"]
-    C = n["H23b_curve"]["C"]
-    assert m["sub2_min_exceeds_sub1_max"] is True and m["overlap_exists"] is False
-    assert (f"*single* reading already costs **{_pct(m['sub2_min_fp_rate'])}% "
-            f"{_iv(C['curve_cluster_ci95'][0])}** false positives, which is above substrate "
-            f"1's *eight*-reading **{_pct(m['sub1_max_fp_rate'])}% "
-            f"{_iv(n['substrate1_frozen']['C_cluster_ci95'])}**") in t
-    assert ("There is therefore no K at which the two substrates can be compared at a "
-            "matched false-positive rate within the measured range**") in t
+    co = m["cross_family_only_REGISTERED_COMPARISON"]
+    po = m["pooled_all_families"]
+
+    # within the cross-vendor family: the intervals miss, and the gap is quoted
+    assert co["intervals_overlap"] is False and co["point_estimates_disjoint"] is True
+    assert co["sub1_dearest"]["family"] == "cross" and co["sub2_cheapest"]["family"] == "cross"
+    assert (f"*single* cross-vendor reading already costs "
+            f"**{_pct(co['sub2_cheapest']['rate'])}% "
+            f"{_iv(co['sub2_cheapest']['cluster_ci95'])}** false positives, above substrate "
+            f"1's *eight*-reading cross-vendor **{_pct(co['sub1_dearest']['rate'])}% "
+            f"{_iv(co['sub1_dearest']['cluster_ci95'])}**; those two intervals do not meet, "
+            f"and {co['interval_gap_points']:.1f} points separate them") in t
+    assert ("**Within the cross-vendor family there is therefore no K at which the two "
+            "substrates can be compared at a matched false-positive rate**") in t
+
+    # pooled: the intervals DO meet, and the report says so in its own voice
+    assert po["intervals_overlap"] is True
+    assert po["sub1_dearest"]["family"] == "self"
+    assert (f"Substrate 1's dearest reading anywhere is its same-vendor family at K = "
+            f"{po['sub1_dearest']['K']}, **{_pct(po['sub1_dearest']['rate'])}% "
+            f"{_iv(po['sub1_dearest']['cluster_ci95'])}**, whose upper bound reaches "
+            f"**{po['interval_overlap_points']:.1f} points** into substrate 2's cheapest "
+            f"interval of {_iv(po['sub2_cheapest']['cluster_ci95'])}") in t
+    assert "a matched false-positive rate **cannot be ruled out**" in t
+
+    # the bare, unscoped form of the claim must not appear anywhere
+    bare = ["no K at which the two substrates can be compared at a matched false-positive "
+            "rate within the measured range",
+            "The two measured false-positive ranges do not overlap at any K",
+            "the two measured false-positive ranges do **not** overlap."]
+    for phrase in bare:
+        assert phrase not in t, f"unscoped non-overlap claim survives: {phrase!r}"
+
+    # every remaining assertion of non-overlap carries a family word nearby
+    for hit in re.finditer(r"do not meet|do not overlap|non-overlap|cannot be ruled out", t):
+        window = t[max(0, hit.start() - 400):hit.end() + 400]
+        assert ("cross-vendor" in window or "same-vendor" in window
+                or "pooled" in window or "family" in window), (
+            f"non-overlap assertion with no family named: {window[:200]!r}")
+
+
+def test_the_correction_is_recorded_in_the_deviations():
+    n, t = _n(), _t()
+    m = n["H23c_false_positives"]["matched_fp_comparison"]
+    assert m["CORRECTION"].startswith("an earlier version of this report asserted "
+                                      "non-overlap without naming a family")
+    po = m["pooled_all_families"]
+    assert ("**An earlier version of this report overstated the matched-false-positive "
+            "claim, and a figure review caught it.**") in t
+    assert 'not overlap "at any K", naming no auditor family' in t
+    assert (f"substrate 1's same-vendor family at K = {po['sub1_dearest']['K']} is "
+            f"{_pct(po['sub1_dearest']['rate'])}% {_iv(po['sub1_dearest']['cluster_ci95'])} "
+            f"and substrate 2's cheapest cross-vendor reading is "
+            f"{_pct(po['sub2_cheapest']['rate'])}% {_iv(po['sub2_cheapest']['cluster_ci95'])}, "
+            "and those two intervals overlap") in t
+    co = m["cross_family_only_REGISTERED_COMPARISON"]
+    s1c, s2c = co["sub1_dearest"], co["sub2_cheapest"]
+    assert (f"The claim is now made only for the cross-vendor family - "
+            f"{_pct(s1c['rate'])}% {_iv(s1c['cluster_ci95'])} against "
+            f"{_pct(s2c['rate'])}% {_iv(s2c['cluster_ci95'])}, which do not meet") in t
+    assert "No point estimate changed; what changed is the scope the sentence claims." in t
+    # the version header records the correction rather than presenting this as the first pass
+    assert "**Third version.**" in t
+    assert "**No point estimate has changed across any version.**" in t
+
+
+def test_substrate_1s_pooled_maximum_is_read_from_the_frozen_record():
+    """The pooled answer turns on substrate 1's same-vendor family, which this study never
+    re-ran: it must come from ceiling 1's committed numbers, unmodified."""
+    n = _n()
+    frozen = json.loads((CODE / "records" / "ceiling" / "numbers.json").read_text(encoding="utf-8"))
+    fams = frozen["ceiling1"]["families"]
+    po = n["H23c_false_positives"]["matched_fp_comparison"]["pooled_all_families"]
+    dearest = max(fams, key=lambda f: fams[f]["C"]["curve"][-1])
+    assert po["sub1_dearest"]["family"] == dearest
+    assert po["sub1_dearest"]["rate"] == fams[dearest]["C"]["curve"][-1]
+    assert po["sub1_dearest"]["cluster_ci95"] == fams[dearest]["C"]["union_at_kmax_block"]["cluster_ci95"]
+    # the second bootstrap stream ceiling 1 carries for the same point changes nothing material
+    alt = po["sensitivity_using_ceiling1_per_K_curve_ci95"]
+    assert alt["sub1_dearest_cluster_ci95"] == fams[dearest]["C"]["curve_ci95"][-1]
+    assert abs(alt["interval_overlap_points"] - po["interval_overlap_points"]) <= 0.5
+    # substrate 2's cheapest really is its cheapest, over both families and every K
+    lowest = min(v["curve"][k] for v in (n["H23b_curve"]["C"], n["self_family_curve"]["C"])
+                 for k in range(8))
+    assert abs(po["sub2_cheapest"]["rate"] - lowest) < 1e-9
 
 
 # ---------------------------------------------------------------------------------
@@ -486,3 +565,51 @@ def test_the_audit_set_redraws_from_the_registered_seed():
     assert len(committed["instance_ids"]) == n["coverage"]["scope_n"]
     assert ("redrawing it from the committed `instances.jsonl` with the registered seed "
             f"{n['strata']['seed']} reproduces all {n['coverage']['scope_n']} ids exactly") in _t()
+
+
+#: The only figures in this report's prose that may appear without an interval. Each is a
+#: DISTANCE BETWEEN two intervals that are quoted in the same sentence, not an estimate of
+#: its own, and the prose says so where it appears. Nothing may be added here without that
+#: declaration also appearing in the text — `test_every_prose_rate_is_bound_or_declared`
+#: checks both halves.
+DECLARED_WITHOUT_INTERVAL = [
+    "2.6 and 6.3 points",
+    "6.3-point overlap",
+    "2.6-point separation",
+]
+DECLARATION = "distances between"
+
+
+def test_every_prose_rate_is_bound_or_declared():
+    """EXPERIMENT_RECORD §9: a rate quoted without its interval is a defect. Ceiling 1's
+    round-5 review added the other half — a figure is either bound to an interval or
+    explicitly declared, with a reason, as owing none. Both halves are enforced here over
+    the prose, with the generated table blocks excluded (their figures are Table-bound)."""
+    raw = _raw()
+    for key in rs2.TABLE_KEYS:
+        b, e = rs2.begin(key), rs2.end(key)
+        raw = raw[:raw.index(b)] + raw[raw.index(e) + len(e):]
+    text = re.sub(r"\s+", " ", raw.replace("−", "-"))
+    unbound = []
+    for m in re.finditer(r"[-+\d.,]+\s*(?:%|points|percentage points|-point)", text):
+        near = text[max(0, m.start() - 70):m.end() + 80]
+        if re.search(r"\[\s*[-\d.]+,\s*[-\d.]+\s*\]", near):
+            continue
+        unbound.append((m.group(0).strip(), text[max(0, m.start() - 40):m.end() + 120]))
+    for figure, context in unbound:
+        assert any(d in context for d in DECLARED_WITHOUT_INTERVAL), (
+            f"rate with no interval and no declaration: {figure!r} in {context!r}")
+        assert DECLARATION in context, (
+            f"{figure!r} is exempt but its sentence does not say why: {context!r}")
+    # the declarations are real: each names a distance between intervals that ARE quoted
+    for declared in DECLARED_WITHOUT_INTERVAL:
+        assert text.count(declared) == 1, f"{declared!r} is not unique"
+        i = text.index(declared)
+        assert len(re.findall(r"\[\s*[-\d.]+,\s*[-\d.]+\s*\]",
+                              text[max(0, i - 420):i + 420])) >= 2, (
+            f"{declared!r} claims to be a distance between intervals but none are near it")
+    # and the numbers they name are the records'
+    m = _n()["H23c_false_positives"]["matched_fp_comparison"]
+    assert f"{m['pooled_all_families']['interval_overlap_points']:.1f}-point overlap" in text
+    assert (f"{m['cross_family_only_REGISTERED_COMPARISON']['interval_gap_points']:.1f}"
+            "-point separation") in text

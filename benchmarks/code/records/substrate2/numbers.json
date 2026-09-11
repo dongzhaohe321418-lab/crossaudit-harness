@@ -231,13 +231,63 @@
  },
  "H23c_false_positives": {
   "matched_fp_comparison": {
-   "note": "the measured false-positive ranges do not overlap, so no K on either substrate matches the other's false-positive rate",
-   "overlap_exists": false,
-   "sub1_max_fp_at_K": 8,
-   "sub1_max_fp_rate": 0.16,
-   "sub2_min_exceeds_sub1_max": true,
-   "sub2_min_fp_at_K": 1,
-   "sub2_min_fp_rate": 0.318333
+   "CORRECTION": "an earlier version of this report asserted non-overlap without naming a family. That is true of the point estimates and of the cross-vendor comparison with intervals, and false once every family is pooled and the intervals are admitted.",
+   "cross_family_only_REGISTERED_COMPARISON": {
+    "interval_gap_points": 2.6,
+    "interval_overlap_points": null,
+    "intervals_overlap": false,
+    "point_estimates_disjoint": true,
+    "sub1_dearest": {
+     "K": 8,
+     "cluster_ci95": [
+      0.10135135135135136,
+      0.22297297297297297
+     ],
+     "family": "cross",
+     "rate": 0.16
+    },
+    "sub2_cheapest": {
+     "K": 1,
+     "cluster_ci95": [
+      0.24911358173076925,
+      0.3904112368795588
+     ],
+     "family": "cross",
+     "rate": 0.318333
+    }
+   },
+   "pooled_all_families": {
+    "interval_gap_points": null,
+    "interval_overlap_points": 6.3,
+    "intervals_overlap": true,
+    "point_estimates_disjoint": true,
+    "sensitivity_using_ceiling1_per_K_curve_ci95": {
+     "interval_overlap_points": 6.4,
+     "note": "ceiling 1 carries two bootstrap streams for this point; the difference between them does not change the answer, only its second decimal",
+     "sub1_dearest_cluster_ci95": [
+      0.17307692307692307,
+      0.3129251700680272
+     ]
+    },
+    "sub1_dearest": {
+     "K": 8,
+     "cluster_ci95": [
+      0.17218543046357615,
+      0.3125
+     ],
+     "family": "self",
+     "rate": 0.24
+    },
+    "sub2_cheapest": {
+     "K": 1,
+     "cluster_ci95": [
+      0.24911358173076925,
+      0.3904112368795588
+     ],
+     "family": "cross",
+     "rate": 0.318333
+    }
+   }
   },
   "sub2_minus_sub1_C_K8": {
    "a": {
@@ -3066,5 +3116,5 @@
   "source": "records/ceiling/numbers.json, families.cross (unmodified)"
  },
  "unit_of_analysis": "instance (batch, problem_id); every interval resamples problem clusters",
- "written_utc": "2026-09-11T11:20:52Z"
+ "written_utc": "2026-09-11T15:13:59Z"
 }

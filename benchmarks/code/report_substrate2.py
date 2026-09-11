@@ -321,6 +321,75 @@ def ledger_costs(run_dir: Path) -> dict:
 # the report
 # ---------------------------------------------------------------------------------
 
+def matched_fp(sub2_cross_C: dict, sub2_self_C: dict, sub1_families: dict) -> dict:
+    """Can any reading count place the two substrates at the same false-positive rate?
+
+    Answered under two named scopes, because they answer differently:
+
+    * ``cross_family_only`` is the comparison this study actually draws — substrate 1's
+      frozen comparator is the cross-vendor auditor and so is substrate 2's primary. Here
+      substrate 1's dearest reading and substrate 2's cheapest have intervals that do not
+      meet, so the claim holds with uncertainty admitted.
+    * ``pooled_all_families`` admits every family measured on either substrate. Substrate
+      1's same-vendor family at K = 8 is dearer than its cross-vendor family, and its
+      interval reaches into substrate 2's cheapest interval. The claim does NOT hold
+      pooled, and the overlap is stated rather than left for a reader to find.
+
+    Substrate 1's rates and intervals are read unmodified from ``records/ceiling``. The
+    interval used for each family's K_max point is ``union_at_kmax_block.cluster_ci95`` —
+    the one ceiling 1's own Table 1 quotes. Ceiling 1 also carries a per-K ``curve_ci95``
+    for the same point from a second bootstrap stream; where the two differ the other
+    answer is recorded beside this one rather than silently preferred.
+    """
+    def entry(family: str, k: int, rate: float, ci: list) -> dict:
+        return {"family": family, "K": k, "rate": rate, "cluster_ci95": list(ci)}
+
+    s2_min = entry("cross", 1, sub2_cross_C["curve"][0],
+                   sub2_cross_C["curve_cluster_ci95"][0])
+    # substrate 2 pooled: the same-vendor family is far dearer, so the cheapest is unchanged
+    s2_pooled_min = min(
+        [s2_min,
+         entry("self", 1, sub2_self_C["curve"][0], sub2_self_C["curve_cluster_ci95"][0])],
+        key=lambda e: e["rate"])
+
+    def s1_entry(family: str) -> dict:
+        f = sub1_families[family]["C"]
+        return entry(family, sub1_families[family]["k_max"], f["curve"][-1],
+                     f["union_at_kmax_block"]["cluster_ci95"])
+
+    s1_cross = s1_entry("cross")
+    s1_pooled_max = max((s1_entry(f) for f in sub1_families), key=lambda e: e["rate"])
+
+    def verdict(s1: dict, s2: dict) -> dict:
+        overlap = 100 * (s1["cluster_ci95"][1] - s2["cluster_ci95"][0])
+        return {
+            "sub1_dearest": s1, "sub2_cheapest": s2,
+            "point_estimates_disjoint": bool(s2["rate"] > s1["rate"]),
+            "intervals_overlap": bool(overlap > 0),
+            "interval_overlap_points": round(overlap, 1) if overlap > 0 else None,
+            "interval_gap_points": round(-overlap, 1) if overlap <= 0 else None,
+        }
+
+    cross_only = verdict(s1_cross, s2_min)
+    pooled = verdict(s1_pooled_max, s2_pooled_min)
+    alt = sub1_families[s1_pooled_max["family"]]["C"]["curve_ci95"][-1]
+    pooled["sensitivity_using_ceiling1_per_K_curve_ci95"] = {
+        "sub1_dearest_cluster_ci95": list(alt),
+        "interval_overlap_points": round(100 * (alt[1] - pooled["sub2_cheapest"]
+                                                ["cluster_ci95"][0]), 1),
+        "note": "ceiling 1 carries two bootstrap streams for this point; the difference "
+                "between them does not change the answer, only its second decimal",
+    }
+    return {
+        "cross_family_only_REGISTERED_COMPARISON": cross_only,
+        "pooled_all_families": pooled,
+        "CORRECTION": "an earlier version of this report asserted non-overlap without "
+                      "naming a family. That is true of the point estimates and of the "
+                      "cross-vendor comparison with intervals, and false once every "
+                      "family is pooled and the intervals are admitted.",
+    }
+
+
 def build(run_dir: Path) -> dict:
     frame = json.loads((SUB2 / "frame.json").read_text(encoding="utf-8"))
     instances2 = load_instances(SUB2 / "instances.jsonl")
@@ -462,17 +531,13 @@ def build(run_dir: Path) -> dict:
         "substrate2_level_ratio_lower_at_every_k": lower_at_every_k,
         "substrate2_registered_gain_ratio_lower_at_every_k": lower_at_every_k_registered,
     }
-    # The matched-false-positive question: is there ANY K at which the two substrates pay
-    # the same false-positive rate? Substrate 2's cheapest reading is compared with
-    # substrate 1's dearest.
-    out["H23c_false_positives"]["matched_fp_comparison"] = {
-        "sub2_min_fp_rate": blockC["curve"][0], "sub2_min_fp_at_K": 1,
-        "sub1_max_fp_rate": curve1C[-1], "sub1_max_fp_at_K": K_MAX,
-        "sub2_min_exceeds_sub1_max": blockC["curve"][0] > curve1C[-1],
-        "overlap_exists": not (blockC["curve"][0] > curve1C[-1]),
-        "note": "the measured false-positive ranges do not overlap, so no K on either "
-                "substrate matches the other's false-positive rate",
-    }
+    # The matched-false-positive question: is there ANY reading count at which the two
+    # substrates pay the same false-positive rate? An earlier version of this report
+    # answered "no" from the POINT ESTIMATES alone. That is an overstatement once the
+    # intervals are admitted and both auditor families are pooled, so the question is
+    # answered here twice, under a named scope each time, from the frozen records.
+    out["H23c_false_positives"]["matched_fp_comparison"] = matched_fp(
+        blockC, selfC, frozen["ceiling1"]["families"])
 
     # --- H23d (registered, K = 8) -----------------------------------------------------
     # The same 100 P instances (and the same 150 C instances) are read by both arms, so
@@ -733,6 +798,8 @@ def render_tables(n: dict) -> dict[str, str]:
     h = n["H23c_false_positives"]
     r1 = h["substrate1"]
     m = h["matched_fp_comparison"]
+    co = m["cross_family_only_REGISTERED_COMPARISON"]
+    po = m["pooled_all_families"]
     rows = ["| K | substrate 1 recall | substrate 1 FP | substrate 1 level ratio | "
             "substrate 2 recall | substrate 2 FP | substrate 2 level ratio |",
             "|---:|---:|---:|---:|---:|---:|---:|"]
@@ -751,11 +818,33 @@ def render_tables(n: dict) -> dict[str, str]:
         f"Substrate 2's level ratio is lower than substrate 1's at "
         f"**{'every' if h['substrate2_level_ratio_lower_at_every_k'] else 'not every'}** K, "
         f"and so is the registered gain ratio "
-        f"(**{'every' if h['substrate2_registered_gain_ratio_lower_at_every_k'] else 'not every'}** K). "
-        f"Substrate 2's cheapest reading already costs {_p(m['sub2_min_fp_rate'])} false "
-        f"positives at K = {m['sub2_min_fp_at_K']}, above substrate 1's dearest "
-        f"{_p(m['sub1_max_fp_rate'])} at K = {m['sub1_max_fp_at_K']}: the two measured "
-        f"false-positive ranges do **not** overlap.",
+        f"(**{'every' if h['substrate2_registered_gain_ratio_lower_at_every_k'] else 'not every'}** K).",
+        "",
+        f"**Can any reading count put the two substrates at the same false-positive rate?** "
+        f"The answer depends on which auditor families are admitted, so it is given twice.",
+        "",
+        f"**Within the cross-vendor family** — the comparison this study draws, since "
+        f"substrate 1's frozen comparator and substrate 2's primary are both the shipped "
+        f"cross-vendor auditor — **no**. Substrate 2's cheapest reading costs "
+        f"{_p(co['sub2_cheapest']['rate'])} {_iv(co['sub2_cheapest']['cluster_ci95'])} at "
+        f"K = {co['sub2_cheapest']['K']}, and substrate 1's dearest costs "
+        f"{_p(co['sub1_dearest']['rate'])} {_iv(co['sub1_dearest']['cluster_ci95'])} at "
+        f"K = {co['sub1_dearest']['K']}. Those intervals do not meet: "
+        f"{co['interval_gap_points']:.1f} points separate them.",
+        "",
+        f"**Pooling every family measured on either substrate** — **yes, narrowly**. "
+        f"Substrate 1's dearest reading anywhere is its `{po['sub1_dearest']['family']}` "
+        f"family at K = {po['sub1_dearest']['K']}, {_p(po['sub1_dearest']['rate'])} "
+        f"{_iv(po['sub1_dearest']['cluster_ci95'])}, and its upper bound reaches "
+        f"{po['interval_overlap_points']:.1f} points into substrate 2's cheapest interval "
+        f"of {_iv(po['sub2_cheapest']['cluster_ci95'])}. The point estimates are still "
+        f"disjoint ({_p(po['sub1_dearest']['rate'])} against "
+        f"{_p(po['sub2_cheapest']['rate'])}), but the intervals overlap, so a matched "
+        f"false-positive rate cannot be ruled out pooled. Substrate 1's interval here is "
+        f"the one ceiling 1's own Table 1 quotes; its second bootstrap stream for the same "
+        f"point gives an overlap of "
+        f"{po['sensitivity_using_ceiling1_per_K_curve_ci95']['interval_overlap_points']:.1f} "
+        f"points instead.",
         "",
     ])
 

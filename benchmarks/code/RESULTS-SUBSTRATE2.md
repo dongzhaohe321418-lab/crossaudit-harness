@@ -1,12 +1,15 @@
 # Study 23 — the measured ceiling is an operating point, not a constant
 
-> **First version.** Preregistered at `benchmarks/code/substrate2/PREREGISTRATION.md`,
+> **Third version.** Preregistered at `benchmarks/code/substrate2/PREREGISTRATION.md`,
 > committed before any model call of this study. Ceiling 1's protocol was repeated
-> unchanged on a second substrate. **Second version:** the first was written while the
-> same-vendor ladder was still filling and reported H23d as not evaluable; the run
-> completed afterwards and H23d is now answered as registered, at K = 8 on the full frozen
-> set. No point estimate of H23a, H23b or H23c changed. **H23e was not run** (§6). No
-> cross-vendor review has read this, so nothing here is approved for quotation.
+> unchanged on a second substrate. The **second version** answered H23d as registered: the
+> first was written while the same-vendor ladder was still filling and reported H23d as not
+> evaluable, and the run completed afterwards. The **third** narrowed the
+> matched-false-positive claim to the cross-vendor family after a figure review found that
+> the unscoped form rested on point estimates and fails once every family and its interval
+> is admitted (§8). **No point estimate has changed across any version.** **H23e was not
+> run** (§6). No cross-vendor review has read this, so nothing here is approved for
+> quotation.
 
 ## The sentence the preregistration requires
 
@@ -20,9 +23,11 @@ came out higher. It did.
 
 That sentence is true and it is not the finding. The auditor is not *better* on the harder
 substrate. It is **louder**: it flags more of everything, its recall per false-positive
-point is lower at every reading count, and on correct code it flags so much more that there
-is no K at which the two substrates can be compared at the same false-positive rate. §7 says
-what that leaves standing.
+point is lower at every reading count, and on correct code it flags so much more that
+**within the cross-vendor family** — the comparison this study draws — no reading count on
+either substrate puts the two at the same false-positive rate. Pooling in the same-vendor
+family the intervals do meet, narrowly; §4 gives both answers. §7 says what that leaves
+standing.
 
 ## 1. What was run
 
@@ -165,13 +170,24 @@ both definitions of that quantity:
   the form a reader can weigh against a fixed operating cost. Substrate 1 runs 2.37 down to
   1.88; substrate 2 runs **1.55 [1.12, 2.12]** down to **1.28 [1.01, 1.61]**.
 
-**The honest limit on this comparison.** Substrate 2's *single* reading already costs
-**31.8% [24.9, 39.0]** false positives, which is above substrate 1's *eight*-reading
-**16.0% [10.1, 22.3]**. The two measured false-positive ranges do not overlap at any K.
-**There is therefore no K at which the two substrates can be compared at a matched
-false-positive rate within the measured range**, and every recall comparison in this report
-— H23a's +41.0 points [24.8, 56.1] included — compares two different operating points, not
-two detection abilities. Matching the rate would take readings this study did not buy: a
+**The honest limit on this comparison, stated for a named family.** Substrate 2's
+*single* cross-vendor reading already costs **31.8% [24.9, 39.0]** false positives, above
+substrate 1's *eight*-reading cross-vendor **16.0% [10.1, 22.3]**; those two intervals do
+not meet, and 2.6 points separate them. **Within the cross-vendor family there is
+therefore no K at which the two substrates can be compared at a matched false-positive
+rate**, which is the comparison that matters here, because substrate 1's frozen comparator
+and substrate 2's primary are both the shipped cross-vendor auditor.
+
+**Pooled across families the claim does not survive, and it is stated rather than left to
+be found.** Substrate 1's dearest reading anywhere is its same-vendor family at K = 8,
+**24.0% [17.2, 31.2]**, whose upper bound reaches **6.3 points** into substrate 2's
+cheapest interval of [24.9, 39.0]. The point estimates are still disjoint (24.0% [17.2,
+31.2] against 31.8% [24.9, 39.0]), but a matched false-positive rate **cannot be ruled
+out** once every family and its uncertainty are admitted. Table 6 carries both answers.
+
+Either way, every recall comparison in this report — H23a's +41.0 points [24.8, 56.1]
+included — compares two different operating points, not two detection abilities. Bringing
+the cross-vendor rates onto common ground would take readings this study did not buy: a
 stricter flag rule, or a different auditor, on substrate 2.
 
 ### Table 6 — recall bought per false-positive point, both substrates
@@ -189,7 +205,13 @@ The level ratio is POST HOC — the preregistration's H23c names ceiling 1's reg
 | 7 | 28.1% | 14.9% | 1.88 | 70.4% | 54.0% | 1.30 |
 | 8 | 30.0% | 16.0% | 1.88 | 71.0% | 55.3% | 1.28 |
 
-Substrate 2's level ratio is lower than substrate 1's at **every** K, and so is the registered gain ratio (**every** K). Substrate 2's cheapest reading already costs 31.8% false positives at K = 1, above substrate 1's dearest 16.0% at K = 8: the two measured false-positive ranges do **not** overlap.
+Substrate 2's level ratio is lower than substrate 1's at **every** K, and so is the registered gain ratio (**every** K).
+
+**Can any reading count put the two substrates at the same false-positive rate?** The answer depends on which auditor families are admitted, so it is given twice.
+
+**Within the cross-vendor family** — the comparison this study draws, since substrate 1's frozen comparator and substrate 2's primary are both the shipped cross-vendor auditor — **no**. Substrate 2's cheapest reading costs 31.8% [24.9, 39.0] at K = 1, and substrate 1's dearest costs 16.0% [10.1, 22.3] at K = 8. Those intervals do not meet: 2.6 points separate them.
+
+**Pooling every family measured on either substrate** — **yes, narrowly**. Substrate 1's dearest reading anywhere is its `self` family at K = 8, 24.0% [17.2, 31.2], and its upper bound reaches 6.3 points into substrate 2's cheapest interval of [24.9, 39.0]. The point estimates are still disjoint (24.0% against 31.8%), but the intervals overlap, so a matched false-positive rate cannot be ruled out pooled. Substrate 1's interval here is the one ceiling 1's own Table 1 quotes; its second bootstrap stream for the same point gives an overlap of 6.4 points instead.
 <!-- END T6 -->
 
 ## 5. H23d — the same-vendor arm flags more of everything, and the sign flips
@@ -308,6 +330,15 @@ times saturates on both substrates; on this one it saturates by the eighth readi
 substrate 1 it had not. What does not carry over is the level of either curve, or the
 distance between them.
 
+**The non-overlap claim is a within-family claim.** "No reading count puts the two
+substrates at the same false-positive rate" holds for the cross-vendor family: 16.0%
+[10.1, 22.3] against 31.8% [24.9, 39.0], two intervals that do not meet. It does not hold
+pooled: substrate 1's same-vendor family at K = 8 is 24.0% [17.2, 31.2] against the same
+31.8% [24.9, 39.0], two intervals that do meet. The separation in the first case and the
+overlap in the second — 2.6 and 6.3 points — are distances between those quoted intervals,
+not estimates with intervals of their own. Quoted without its family the claim is an
+overstatement, and §8 records that an earlier version of this report made it that way.
+
 **Limits.** One generator, one auditor route, one flag rule ("at least one BLOCKER"), K = 8.
 The 100 P instances come from 51 problems and the 150 C instances from 121, which is why
 every interval here is a problem-cluster bootstrap and why the Wilson intervals beside them
@@ -354,6 +385,17 @@ an isolated variable.
   git until this commit.** §2 asks for both. Its provenance is checkable without the
   earlier commit: redrawing it from the committed `instances.jsonl` with the
   registered seed 20260917 reproduces all 250 ids exactly, and a test asserts that.
+* **An earlier version of this report overstated the matched-false-positive claim, and a
+  figure review caught it.** It asserted that the two substrates' false-positive ranges do
+  not overlap "at any K", naming no auditor family. That rests on the **point estimates**.
+  Once the intervals are admitted and both families are pooled it is false: substrate 1's
+  same-vendor family at K = 8 is 24.0% [17.2, 31.2] and substrate 2's cheapest cross-vendor
+  reading is 31.8% [24.9, 39.0], and those two intervals overlap. The claim is now made
+  only for the cross-vendor family — 16.0% [10.1, 22.3] against 31.8% [24.9, 39.0], which
+  do not meet — and the pooled overlap is stated beside it in §4, §7 and Table 6. The
+  6.3-point overlap and the 2.6-point separation are distances between quoted intervals,
+  not estimates carrying intervals of their own. No point estimate changed; what changed is
+  the scope the sentence claims.
 * **H23e was not run** (§6). It is in the preregistration and it is not in this report.
 
 ## 9. The comparison inventory

@@ -76,7 +76,13 @@ The level ratio is POST HOC — the preregistration's H23c names ceiling 1's reg
 | 7 | 28.1% | 14.9% | 1.88 | 70.4% | 54.0% | 1.30 |
 | 8 | 30.0% | 16.0% | 1.88 | 71.0% | 55.3% | 1.28 |
 
-Substrate 2's level ratio is lower than substrate 1's at **every** K, and so is the registered gain ratio (**every** K). Substrate 2's cheapest reading already costs 31.8% false positives at K = 1, above substrate 1's dearest 16.0% at K = 8: the two measured false-positive ranges do **not** overlap.
+Substrate 2's level ratio is lower than substrate 1's at **every** K, and so is the registered gain ratio (**every** K).
+
+**Can any reading count put the two substrates at the same false-positive rate?** The answer depends on which auditor families are admitted, so it is given twice.
+
+**Within the cross-vendor family** — the comparison this study draws, since substrate 1's frozen comparator and substrate 2's primary are both the shipped cross-vendor auditor — **no**. Substrate 2's cheapest reading costs 31.8% [24.9, 39.0] at K = 1, and substrate 1's dearest costs 16.0% [10.1, 22.3] at K = 8. Those intervals do not meet: 2.6 points separate them.
+
+**Pooling every family measured on either substrate** — **yes, narrowly**. Substrate 1's dearest reading anywhere is its `self` family at K = 8, 24.0% [17.2, 31.2], and its upper bound reaches 6.3 points into substrate 2's cheapest interval of [24.9, 39.0]. The point estimates are still disjoint (24.0% against 31.8%), but the intervals overlap, so a matched false-positive rate cannot be ruled out pooled. Substrate 1's interval here is the one ceiling 1's own Table 1 quotes; its second bootstrap stream for the same point gives an overlap of 6.4 points instead.
 <!-- END T6 -->
 <!-- BEGIN T7 (records/substrate2/tables.md) -->
 The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the same 100 P and 150 C instances at the same K = 8. Its curve does not move with K because its flag does not split across draws (Table 3), so **ceiling 1's registered gain ratio is undefined for it**: that ratio divides by the false-positive gain from K = 1, and that gain is exactly zero. Only the post-hoc level ratio can be quoted, and it is 1.14 [0.98, 1.31] at K = 1 and 1.14 [0.98, 1.31] at K = 8.
