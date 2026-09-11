@@ -196,34 +196,71 @@ def _splice():
     return mod
 
 
+FENCE_RE = __import__("re").compile(r"^\s*(`{3,}|~{3,})")
+HEADING_RE = __import__("re").compile(r"^#{1,6}\s")
+RAW_HTML_RE = __import__("re").compile(r"<[a-zA-Z]")
+
+
 def _scan(text: str) -> list[dict]:
     """Every line with the state a renderer would be in: fence, blockquote, block membership.
 
-    Round 6 retired the "does the line start with a pipe" check: a table renders from a
-    pipeline without leading pipes, from a blockquote, from HTML, and an intact block
-    stops being a table when fenced. What the scan below supports is a stronger claim —
-    outside the generated blocks the document contains no table-like construct AT ALL, and
-    no marker sits anywhere a renderer would treat as code or as a quotation.
+    Rounds 6 and 7 retired two weaker readings in turn — "does the line start with a
+    pipe", then "is there a fence at all". What the scan supports now is the claim the
+    document needs: outside the generated blocks there is no table-like construct, no raw
+    HTML, and no HTML comment that is not a registered marker; fences are exactly three
+    backticks or three tildes and every opener is closed; and no marker sits where a
+    renderer would treat it as code or as a quotation.
     """
     scanned, fence, in_block = [], None, None
     for number, line in enumerate(text.splitlines(), start=1):
-        stripped = line.strip()
-        opener = stripped[:3] if stripped[:3] in ("```", "~~~") else None
-        if opener and fence is None:
-            fence = opener
-            fenced = True                      # the fence line itself belongs to the fence
-        elif opener and stripped.startswith(fence):
-            fenced, fence = True, None
+        match = FENCE_RE.match(line)
+        if match:
+            run = match.group(1)
+            assert len(run) == 3, (f"line {number}: a fence of {len(run)} {run[0]!r} characters; "
+                                   f"only exactly three are allowed, so a long fence cannot "
+                                   f"swallow the document past a short closer")
+            if fence is None:
+                fence, fenced = run[0], True
+            else:
+                assert run[0] == fence, f"line {number}: a {run[0]!r} fence closes a {fence!r} fence"
+                fenced, fence = True, None
         else:
             fenced = fence is not None
         if line.startswith("<!-- BEGIN TABLE "):
             in_block = line[len("<!-- BEGIN TABLE "):line.index(" (")]
         scanned.append({"n": number, "text": line, "fenced": fenced,
-                        "quoted": line.lstrip().startswith(">"), "block": in_block})
+                        "quoted": line.lstrip().startswith(">"), "block": in_block,
+                        "heading": line if HEADING_RE.match(line) else None})
         if line.startswith("<!-- END TABLE "):
             in_block = None
     assert fence is None, "the results file leaves a code fence open"
     return scanned
+
+
+def test_the_only_html_comments_are_the_registered_markers():
+    """(1) An unmatched `<!--` anywhere can comment a heading out; none may exist."""
+    mod = _splice()
+    allowed = set()
+    for name, _, _ in mod.REGISTRY:
+        allowed.update(mod.markers(name))
+    stray = [(line["n"], line["text"][:70]) for line in _scan(RESULTS.read_text(encoding="utf-8"))
+             if ("<!--" in line["text"] or "-->" in line["text"]) and line["text"] not in allowed]
+    assert not stray, f"HTML comments that are not registered markers: {stray[:4]}"
+
+
+def test_the_file_contains_no_raw_html():
+    """(2) No raw HTML element outside a fence — a wrapper changes what renders."""
+    raw = [(line["n"], line["text"][:70]) for line in _scan(RESULTS.read_text(encoding="utf-8"))
+           if not line["fenced"] and RAW_HTML_RE.search(line["text"])]
+    assert not raw, f"raw HTML in the results file: {raw[:4]}"
+
+
+def test_the_headings_are_the_registered_headings_in_order():
+    """(3) The set and order of headings is registered; a tab-separated one still counts."""
+    mod = _splice()
+    seen = [line["heading"] for line in _scan(RESULTS.read_text(encoding="utf-8")) if line["heading"]]
+    assert seen == list(mod.HEADINGS), (
+        f"headings are {seen}, registered {list(mod.HEADINGS)}")
 
 
 def test_the_tables_are_spliced_verbatim():

@@ -38,6 +38,19 @@ REGISTRY = (
      "applications:"),
 )
 
+#: Every heading the results file may carry, in order. A heading is any line matching
+#: ``^#{1,6}\s`` — a tab counts, so a heading cannot be smuggled past the check by writing
+#: ``##\ttitle``, and a sub-heading cannot be inserted to put a table under a caption the
+#: registry does not know. Round 7.
+HEADINGS = (
+    "# Study 17 — recognising a wrong generated test without the canonical solution: results",
+    "## 1. The preregistered decision",
+    "## 2. Secondaries, as preregistered",
+    "## 3. Exploratory, post hoc, not preregistered (`testgen/exploratory_val.py`)",
+    "## 4. What the preregistration said would follow, and what follows",
+    "## 5. Deviations and disclosed limits",
+)
+
 
 def sections(tables: str) -> dict[str, str]:
     """``tables.md`` split on its ``<!-- TABLE name -->`` lines, in order."""

@@ -204,6 +204,13 @@ study: what this study adds to it is that the wrong-test rate replicates (3.8%, 
 
 ## 5. Deviations and disclosed limits
 
+A note on this file's history, recorded at the reviewer's request and carrying no claim
+about the result: **every figure here has reproduced unchanged since review round 1**.
+Rounds 2 and 3 corrected statements the numbers did not support, and rounds 3 to 7 were
+about something else entirely — whether the document could be edited to mislead a reader
+while its records stayed honest. That is a property of the medium, not of the study; the
+records, not the prose, are what the harness writes and what the tests hold this file to.
+
 * **Primary redefined before the run, stated in the preregistration §4.** The brief
   defined (i) over the 1,188 unique tests; the frozen record shows 29 of the 45 wrong
   tests never fail on any candidate, so that quantity has a 2.4% floor above the 2% kill
@@ -245,7 +252,7 @@ study: what this study adds to it is that the wrong-test rate replicates (3.8%, 
   new draws' tests are AST-identical to a draw-1 test) was not preregistered and is not
   evaluated here.
 * The suite of this study and study 16's (`test_testgen_val.py`, `test_testgen.py`,
-  `test_architectures.py`) is green on the run host: 43 tests at this commit, 38 at the
+  `test_architectures.py`) is green on the run host: 46 tests at this commit, 38 at the
   round-3 one. The independent reviewer could run 35 of those 38 — three need a writable
   temporary directory for the executor's subprocess and were skipped in that environment
   — so full-suite green is certified on the run host and on hosts that allow it, not
@@ -258,19 +265,26 @@ study: what this study adds to it is that the wrong-test rate replicates (3.8%, 
 * `tests/test_testgen_val.py` binds every table byte for byte — the spliced blocks
   against `records/testgen-val/tables.md`, and `tables.md` against what `render_tables`
   rebuilds from `numbers.json` and `exploratory.json` — and holds the document to a fixed
-  skeleton besides: outside the generated blocks it contains no table-like construct at
-  all — no pipe character, no HTML table element, nothing quoted or fenced — each block appears
-  exactly once and in the registered order, under the registered section heading and
-  after the registered line of prose, and no marker sits inside a fence or a blockquote.
-  What renders is therefore a function of the records plus that skeleton. Rounds 3–6 of
+  skeleton besides. Outside the generated blocks the file contains no table-like
+  construct at all — no pipe character, no raw HTML, nothing quoted or fenced. Each block
+  appears exactly once and in the registered order, under the registered section heading
+  and after the registered line of prose, and no marker sits inside a fence or a
+  blockquote. The only HTML comments the file may carry are the registered markers
+  themselves, so a stray opener cannot comment a heading out; the headings are registered
+  in set and order and are recognised by a pattern that counts a tab, so none can be
+  smuggled in or renamed; and a fence must be exactly three backticks or three tildes
+  with a matching closer, so a long fence cannot swallow the document past a short one.
+  What renders is therefore a function of the records plus that skeleton. Rounds 3–7 of
   the review each found a way past the weaker check that preceded it — a moved figure, a
   mislabelled column, a duplicate row, a broken delimiter row, a table hidden in a
   comment, a pipeless or HTML or blockquoted table beside the real one, an intact block
-  fenced so it renders as code, two intact blocks exchanged; the round-6 commit lists the
-  thirty-one mutations the current test was checked against, all of which it rejects.
+  fenced so it renders as code, two intact blocks exchanged, a comment opened before a
+  heading, an oversized fence, an inline element wrapping a block, a heading written with
+  a tab; the round-7 commit lists the forty-six mutations the current test was checked
+  against — the reviewers' thirty-seven and nine of my own — all of which it rejects.
   The invariant has a price, paid here rather than hidden: this file cannot quote a pipe
-  character or name an HTML table tag in its prose, and the wording above was changed
-  when the check caught the sentence describing it.
+  character, write raw HTML or open an HTML comment in its prose, and the wording above
+  was changed twice when the checks caught the sentences describing them.
   The prose figures — the verdicts, the draw wrong-test counts, the ledger totals, §3's
   statements about the record — are bound to `numbers.json` and `exploratory.json` as
   strings; every other figure in this file is checked by the reader.
