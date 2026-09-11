@@ -15,7 +15,11 @@ stratum. The question per item is study 19's: does the finding name the input cl
 behaviour, on which the hidden test fails? yes / no / cannot tell.
 
 **This script prepares the inputs and stops.** It runs no adjudicator, asks no model and
-touches no network; L1 and L2 are not invoked here.
+touches no network; L1 and L2 are not invoked here. Their returned labels live beside the
+records at ``records/ceiling4/L1-amendment1.csv`` and ``L2-amendment1.csv`` (one row per
+sheet id: ``id,naming,recognition``) and are digested into the manifest this writes, so the
+manifest is the single provenance record for the adjudication: the sheet, the key, both
+label files, who each rater was, what L2 ran on, and how L2 was billed.
 
 The sheet quotes model output and the benchmark's specifications and solutions, so it is
 written to ``--out``, which must be outside the repository (the script refuses otherwise).
@@ -42,8 +46,32 @@ import residual_dump  # noqa: E402
 from corpus import load_problems  # noqa: E402
 
 REPO = HERE.parent.parent.parent
+RECORDS4 = HERE.parent / "records" / "ceiling4"
 SEED = 20260913
 ARMS = {"cross-T": "T", "cross-R": "R"}
+
+#: Who answered the sheet, and on what. Recorded because the blinding is to metadata and
+#: not to allocation (study 19 Amendment 3.4: a finding text can name the added rule's id
+#: and so reveal the arm to a labeller who knows the study, and L1 is the author), and
+#: because L2's spend must be attributable.
+RATERS = {
+    "L1": {"identity": "the author (Zhaohe Dong)", "kind": "human",
+           "blinding": "blind to arm, severity, stratum and instance; not blind to the "
+                       "study's existence, and a finding text that names the added rule's "
+                       "id can reveal the arm (study 19 Amendment 3.4, inherited)"},
+    "L2": {"identity": "a different vendor's model", "kind": "model",
+           "model": "gpt-6-astra", "harness": "Codex CLI",
+           "endpoint": "https://chatgpt.com/backend-api/codex",
+           "endpoint_provenance": "the Codex CLI's compiled-in default, the config setting "
+                                  "no override (study 19 round 7 recovered and recorded it); "
+                                  "not observed on the wire here",
+           "billing": "subscription, through the Codex CLI; NOT this project's API key and "
+                      "not in any ledger of this study, so it adds nothing to the $30 cap",
+           "blinding": "blind to arm, severity, stratum and instance"},
+}
+
+#: The returned label files, digested into the manifest.
+RATINGS = {"L1": "L1-amendment1.csv", "L2": "L2-amendment1.csv"}
 
 
 def sha256_file(path: Path) -> str:
@@ -120,8 +148,10 @@ def main(argv: list[str] | None = None) -> int:
     for w in witnesses.values():
         witness_kinds[w.get("kind", "vector")] = witness_kinds.get(w.get("kind", "vector"), 0) + 1
     manifest = {
-        "prepared": "Amendment 1's adjudication inputs; PREPARED ONLY — no adjudicator was run, "
-                    "no model was called, no network was used",
+        "prepared": "Amendment 1's adjudication inputs. This script builds the sheet and stops: "
+                    "it calls no model and uses no network. Whether the adjudication itself has "
+                    "been answered is the 'adjudication_run' field, which is true once both "
+                    "label files are present.",
         "questions": "study 19's: (L1 naming) does the finding name the input class, or the "
                      "behaviour, on which the hidden test fails? then the recognition question; "
                      "L1 the author, L2 a different vendor's model, both blind to metadata",
@@ -130,6 +160,13 @@ def main(argv: list[str] | None = None) -> int:
         "key_path_in_repo": str(key_path.relative_to(REPO)),
         "key_sha256": sha256_file(key_path),
         "shuffle_seed": SEED,
+        "raters": RATERS,
+        "ratings": {name: {"path_in_repo": str((RECORDS4 / f).relative_to(REPO)),
+                           "sha256": sha256_file(RECORDS4 / f),
+                           "rows": len([l for l in (RECORDS4 / f).read_text(encoding="utf-8").splitlines()
+                                        if l.strip()]) - 1}
+                    for name, f in RATINGS.items() if (RECORDS4 / f).exists()},
+        "adjudication_run": all((RECORDS4 / f).exists() for f in RATINGS.values()),
         "items": len(sheet), "items_by_arm": by_arm,
         "P_instances_with_a_finding_by_arm": instances_by_arm,
         "hidden_failure_witness_kinds": dict(sorted(witness_kinds.items())),

@@ -3,6 +3,7 @@
     "R": 49,
     "T": 9
   },
+  "adjudication_run": true,
   "hidden_failure_witness_kinds": {
     "timeout": 2,
     "vector": 48
@@ -15,8 +16,37 @@
   "key_path_in_repo": "benchmarks/code/ceiling4/key-amendment1.jsonl",
   "key_sha256": "973d27bb9174cb4a363257f0aeeaa2091b345f2391cfc67306d233ae3d3fd7a0",
   "note": "the sheet carries specification, solution and finding text and is never committed; the key carries ids, severities and rule codes only",
-  "prepared": "Amendment 1's adjudication inputs; PREPARED ONLY \u2014 no adjudicator was run, no model was called, no network was used",
+  "prepared": "Amendment 1's adjudication inputs. This script builds the sheet and stops: it calls no model and uses no network. Whether the adjudication itself has been answered is the 'adjudication_run' field, which is true once both label files are present.",
   "questions": "study 19's: (L1 naming) does the finding name the input class, or the behaviour, on which the hidden test fails? then the recognition question; L1 the author, L2 a different vendor's model, both blind to metadata",
+  "raters": {
+    "L1": {
+      "blinding": "blind to arm, severity, stratum and instance; not blind to the study's existence, and a finding text that names the added rule's id can reveal the arm (study 19 Amendment 3.4, inherited)",
+      "identity": "the author (Zhaohe Dong)",
+      "kind": "human"
+    },
+    "L2": {
+      "billing": "subscription, through the Codex CLI; NOT this project's API key and not in any ledger of this study, so it adds nothing to the $30 cap",
+      "blinding": "blind to arm, severity, stratum and instance",
+      "endpoint": "https://chatgpt.com/backend-api/codex",
+      "endpoint_provenance": "the Codex CLI's compiled-in default, the config setting no override (study 19 round 7 recovered and recorded it); not observed on the wire here",
+      "harness": "Codex CLI",
+      "identity": "a different vendor's model",
+      "kind": "model",
+      "model": "gpt-6-astra"
+    }
+  },
+  "ratings": {
+    "L1": {
+      "path_in_repo": "benchmarks/code/records/ceiling4/L1-amendment1.csv",
+      "rows": 80,
+      "sha256": "170144b013a50491210a564901231b3c00294ff887e2d8855cb5387afabd52c2"
+    },
+    "L2": {
+      "path_in_repo": "benchmarks/code/records/ceiling4/L2-amendment1.csv",
+      "rows": 80,
+      "sha256": "28f50b6d211736d1aeb70e6f4f6237c2a8e6dbdd10d63783c0996538513d2d6d"
+    }
+  },
   "sheet_path_outside_repo": "/Users/ericdong/Documents/Crossaudit/study-data/wt-ceiling4-adjudication/sheet-amendment1.jsonl",
   "sheet_sha256": "8ac25c615699c40cec9a1f3461d1c0a3ff17bab4ca64c57f6b2862899af53220",
   "shuffle_seed": 20260913
