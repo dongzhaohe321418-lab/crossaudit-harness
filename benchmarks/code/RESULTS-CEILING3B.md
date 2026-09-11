@@ -223,6 +223,14 @@ applies (ledger totals are the cost table).
 * Arm S's BLOCKER and any-finding numbers are study 18's draws, reused; its H19d texts come
   from one extra reading (Amendment 1), so S's Table 5 row is a different draw from its
   Table 1 row — a fifth reading, not one of the four.
+* An independent reviewer (round 5) disputes one first-pass adjudication, `J0168` on arm R:
+  its hidden witness carries negative integers and `False` while the finding discusses only
+  `n = 0`, and the reviewer would not count that as naming the witnessed class without an
+  explicit ruling that a shared missing-guard is behavioural identity enough. Both labellers
+  had marked it naming-yes, which is what carried it into the strict pass. The item is not
+  relabelled after the fact; the sensitivity is reported instead: dropping it takes R's
+  post-hoc recognition from 27 of 110 to **26 of 110**, because the instance's other R
+  finding, `J0040`, is disputed and counts as not-defect. No other quantity moves.
 * H19d's registered question is about naming; the recognition question (Table 5b) is post
   hoc, asked after the first review, and its κ (0.695) is lower than the naming
   question's. The disputed items of both are listed in `numbers.json`. L2 is a model of a

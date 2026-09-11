@@ -131,6 +131,34 @@ def test_the_manifest_does_not_claim_a_blinding_the_study_did_not_have():
     for who in ("L1", "L2"):
         assert "allocation" not in adj[who]["withheld_by_the_sheet"]
         assert adj[who]["not_blind_to"]
-    assert adj["L2"]["base_url"]
+    # Round 5: a prose excuse in `base_url` satisfied a mere non-emptiness check. The value
+    # must be null and the missing-ness declared, or this fails.
+    assert adj["L2"]["base_url"] is None
+    assert adj["L2"]["base_url_status"].startswith("MISSING")
+    assert "auth.json" in adj["L2"]["base_url_why"]
     assert "author" in adj["L1"]["who"]
     assert "derived, not registered" in _flat()
+
+
+def test_the_disputed_adjudication_sensitivity_is_recomputed_not_asserted():
+    """Round 5 disputed one first-pass item (J0168, arm R). The results quote the sensitivity;
+    this recomputes it from the frozen labels rather than trusting the sentence.
+
+    D10 mutation: change 26 to 25 in the results, or relabel J0168 in either strict csv.
+    """
+    import csv
+    key = {json.loads(line)["id"]: json.loads(line)
+           for line in (CODE / "ceiling3b" / "key-h19d.jsonl").read_text(encoding="utf-8").splitlines()
+           if line.strip()}
+    def labels(name):
+        with open(CODE / "records" / "ceiling3b" / name, encoding="utf-8") as fh:
+            return {r["id"]: r["label"] for r in csv.DictReader(fh)}
+    l1, l2 = labels("L1-h19d-strict.csv"), labels("L2-h19d-strict.csv")
+    consensus = {i: (l1[i] if l1[i] == l2[i] else "disputed") for i in l1}
+    arm_r = [i for i in consensus if key[i]["arm"] == "R"]
+    with_it = len({key[i]["instance"] for i in arm_r if consensus[i] == "defect"})
+    without = len({key[i]["instance"] for i in arm_r
+                   if consensus[i] == "defect" and i != "J0168"})
+    assert with_it == 27, with_it
+    assert f"from 27 of 110 to **{without} of 110**" in _flat()
+    assert consensus["J0168"] == "defect"

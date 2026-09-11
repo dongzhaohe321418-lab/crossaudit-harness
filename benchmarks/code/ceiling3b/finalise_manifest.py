@@ -124,9 +124,20 @@ def main() -> int:
                                "and, being the author, the study's design and its other results"},
         "L2": {"role": "adjudicator, same questions", "model": "gpt-6-astra",
                "provider": "OpenAI via the Codex CLI (not the product's provider layer)",
-               "base_url": "the Codex CLI's own OpenAI endpoint; not set by this harness and "
-                           "not recorded in any ledger here, because the CLI bills a "
-                           "subscription rather than this project's key",
+               # EXPERIMENT_RECORD §2 requires a base URL for every model. This one is
+               # MISSING, and the record says so in the field itself rather than putting an
+               # excuse where a URL belongs: `base_url` is null, and the next two fields say
+               # what is known and why the value cannot be recovered. A test asserts the null
+               # and the declaration together, so prose can never satisfy this again.
+               "base_url": None,
+               "base_url_status": "MISSING — required by EXPERIMENT_RECORD §2 and not recorded",
+               "base_url_why": "the adjudicator ran through the Codex CLI (codex-cli 0.153.4), "
+                               "which writes no endpoint to any local record this study may "
+                               "read; ~/.codex/config.toml sets neither base_url nor "
+                               "model_provider, so the CLI's built-in default for the "
+                               "account's authentication mode applied, and ~/.codex/auth.json "
+                               "is out of bounds under this project's rules. The call cannot "
+                               "be reconstructed from this record alone.",
                "settings": "codex exec --sandbox read-only, model_reasoning_effort=high, "
                            "default sampling",
                "withheld_by_the_sheet": "instance id, arm, stratum",
