@@ -7,11 +7,11 @@
     ],
     "clean_at_freeze": true,
     "files_this_study_added": {
-      "benchmarks/code/RESULTS-CEILING3B.md": "1fb51ac5b68687f38b1a81bbf4213518d311cef8b04b738209ab1993cd91755b",
+      "benchmarks/code/RESULTS-CEILING3B.md": "5e3bd83a9528f8dbe6ab7f1362d3c7a502bae33c661553cdd955c264b111b43b",
       "benchmarks/code/ceiling3b.py": "97decf2d40428f1e4d94438bd0f0188decc26d911f7034dd5fb2a72ac4d3a3ef",
       "benchmarks/code/ceiling3b/PREREGISTRATION.md": "7a116b0fa1dcc1a2bb76ffbe9d63ba2234b9b8c9c78e980291cd55003b4fe458",
       "benchmarks/code/ceiling3b/adjudication_sheet.py": "e0b2aaa603ac096603ba868c928f5a3bc91a90e41da222324e3ae155d4474150",
-      "benchmarks/code/ceiling3b/finalise_manifest.py": "c91281b074cd3e1eda084583ead48f455f79eef6aaad78a3e0d24d3b822cb95c",
+      "benchmarks/code/ceiling3b/finalise_manifest.py": "25b238b8079a401476fe7ba0e89eaa4d816beeb405829de4238c1b224f3c5cd9",
       "benchmarks/code/ceiling3b/key-h19d.jsonl": "1f6909fe2cae55d03f64135dc4758fe67b5a3ca0a2605fac3e054a8523ac700c",
       "benchmarks/code/ceiling3b/splice_tables.py": "e53fe7bdf7a0bdad476ab872fda0cabc435da8189b3be7545b8f7a2f594d0442",
       "benchmarks/code/records/ceiling3b/L1-h19d-strict.csv": "90c203b0327d7f47de1f9b7e4dff12637f223f7427537e0de4d764a860562355",
@@ -40,14 +40,15 @@
       "benchmarks/code/records/ceiling3b/numbers.json": "fe81c8616529dc356218ca07f992900a5ee9fdfdb3d4df9961055d61e84fc37a",
       "benchmarks/code/records/ceiling3b/tables.md": "cb75ec531a7dc3a4c5bafbcb6c20182af93f5263669cf1028bf1f412c817d2d4",
       "benchmarks/code/report_ceiling3b.py": "c2d6bc9a28307e6ec1152f72b20f4bfbb13b9933d439955e95698703f49b9cc6",
-      "benchmarks/code/tests/test_ceiling3b_report.py": "174edb245e99283deeed17741ca0634e6286be8cbb325cfd3bd12721660bf2e4",
+      "benchmarks/code/tests/test_ceiling3b_report.py": "be7ef42d3996b4d97f249b8f691d69f6f7d308930c7c56a459a73bf94370d474",
       "benchmarks/reviews/2026-09-10-ceiling3b-r1.md": "a8d989bcd024fcb68a4e8dcaa6361c1e88962c66b08fe59a34b38f3f35571f35",
       "benchmarks/reviews/2026-09-10-ceiling3b-r2.md": "127e037d34b9d6173ccab1ff403ae865ac10a630a200d257db90ffac2ef7f347",
       "benchmarks/reviews/2026-09-10-ceiling3b-r3.md": "9a50d8265e63e63364d423e1666eadc7aa4f8fa19abb095b9278d1aa81e5760c",
-      "benchmarks/reviews/2026-09-11-ceiling3b-r4.md": "4a90c987b734922941de27fad16689efec062c1a4619ab1ffcea5a0fd301b4a7"
+      "benchmarks/reviews/2026-09-11-ceiling3b-r4.md": "4a90c987b734922941de27fad16689efec062c1a4619ab1ffcea5a0fd301b4a7",
+      "benchmarks/reviews/2026-09-11-ceiling3b-r5.md": "b9edfa9e096ed9f7f0d6068d952960e00cf87e95e62757b6d9403a3246dfb2bf"
     },
-    "frozen_commit": "d6a0043433a63ef7e47bf23393a965e06c5852ec",
-    "frozen_commit_subject": "study 19 round 6: L2's base_url is null and declared MISSING with why, so a prose excuse can no longer satisfy the record (the test asserts the null and the declaration); the reviewer's disputed adjudication J0168 is not relabelled but its sensitivity is reported \u2014 R's post-hoc recognition 27 of 110 becomes 26 without it \u2014 and recomputed by a test",
+    "frozen_commit": "f2c1d291fadfad1837963a29965b9196920ca065",
+    "frozen_commit_subject": "study 19 round 7: L2's endpoint recovered rather than declared missing \u2014 https://chatgpt.com/backend-api/codex, the CLI's compiled-in default since the config sets no override, with the binary path, its sha256, the CLI version and the command to re-derive it, and the caveat that it was not observed on the wire; the J0168 counterfactual's other four moved quantities corrected and recomputed by the test",
     "note": "manifest.json is committed in the commit after frozen_commit; every other file the study added is listed here",
     "preregistration_and_amendment_commits": [
       {
@@ -200,9 +201,16 @@
         "withheld_by_the_sheet": "instance id, arm, stratum"
       },
       "L2": {
-        "base_url": null,
-        "base_url_status": "MISSING \u2014 required by EXPERIMENT_RECORD \u00a72 and not recorded",
-        "base_url_why": "the adjudicator ran through the Codex CLI (codex-cli 0.153.4), which writes no endpoint to any local record this study may read; ~/.codex/config.toml sets neither base_url nor model_provider, so the CLI's built-in default for the account's authentication mode applied, and ~/.codex/auth.json is out of bounds under this project's rules. The call cannot be reconstructed from this record alone.",
+        "base_url": "https://chatgpt.com/backend-api/codex",
+        "base_url_provenance": {
+          "binary": "/opt/homebrew/Caskroom/codex/0.153.4/bin/codex",
+          "binary_sha256": "b973d440acac501fd2594a43e7ca9ce41e0a65b9dfb28d0d7a7837c99e1261e3",
+          "caveat": "the path is the CLI's default for its ChatGPT-subscription authentication mode; the request was not captured on the wire, so this is the endpoint the binary and the configuration together determine, not an observed one",
+          "cli_version": "codex-cli 0.153.4",
+          "config_overrides": "~/.codex/config.toml sets neither base_url nor model_provider, so the compiled-in default applied",
+          "how": "recovered from the CLI binary's string table, since the CLI writes no endpoint to any local record and ~/.codex/auth.json is out of bounds under this project's rules",
+          "reproduce": "strings -a <binary> | grep -Eo '/backend-api/codex[a-z0-9_/-]*'"
+        },
         "model": "gpt-6-astra",
         "not_blind_to": "the finding text, which names the rule id in five items",
         "provider": "OpenAI via the Codex CLI (not the product's provider layer)",
