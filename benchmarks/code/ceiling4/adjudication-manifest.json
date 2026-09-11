@@ -1,0 +1,23 @@
+{
+  "P_instances_with_a_finding_by_arm": {
+    "R": 49,
+    "T": 9
+  },
+  "hidden_failure_witness_kinds": {
+    "timeout": 2,
+    "vector": 48
+  },
+  "items": 80,
+  "items_by_arm": {
+    "R": 70,
+    "T": 10
+  },
+  "key_path_in_repo": "benchmarks/code/ceiling4/key-amendment1.jsonl",
+  "key_sha256": "973d27bb9174cb4a363257f0aeeaa2091b345f2391cfc67306d233ae3d3fd7a0",
+  "note": "the sheet carries specification, solution and finding text and is never committed; the key carries ids, severities and rule codes only",
+  "prepared": "Amendment 1's adjudication inputs; PREPARED ONLY \u2014 no adjudicator was run, no model was called, no network was used",
+  "questions": "study 19's: (L1 naming) does the finding name the input class, or the behaviour, on which the hidden test fails? then the recognition question; L1 the author, L2 a different vendor's model, both blind to metadata",
+  "sheet_path_outside_repo": "/Users/ericdong/Documents/Crossaudit/study-data/wt-ceiling4-adjudication/sheet-amendment1.jsonl",
+  "sheet_sha256": "8ac25c615699c40cec9a1f3461d1c0a3ff17bab4ca64c57f6b2862899af53220",
+  "shuffle_seed": 20260913
+}
