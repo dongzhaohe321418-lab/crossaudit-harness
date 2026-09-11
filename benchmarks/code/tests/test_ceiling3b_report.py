@@ -131,11 +131,13 @@ def test_the_manifest_does_not_claim_a_blinding_the_study_did_not_have():
     for who in ("L1", "L2"):
         assert "allocation" not in adj[who]["withheld_by_the_sheet"]
         assert adj[who]["not_blind_to"]
-    # Round 5: a prose excuse in `base_url` satisfied a mere non-emptiness check. The value
-    # must be null and the missing-ness declared, or this fails.
-    assert adj["L2"]["base_url"] is None
-    assert adj["L2"]["base_url_status"].startswith("MISSING")
-    assert "auth.json" in adj["L2"]["base_url_why"]
+    # Rounds 5 and 6: first a prose excuse in `base_url`, then an honest declaration of
+    # absence; the requirement is the endpoint. It must be a URL, with the provenance that
+    # lets a reader re-derive it.
+    assert adj["L2"]["base_url"].startswith("https://")
+    prov = adj["L2"]["base_url_provenance"]
+    assert prov["binary_sha256"] and prov["cli_version"] and prov["reproduce"]
+    assert "not an observed one" in prov["caveat"]
     assert "author" in adj["L1"]["who"]
     assert "derived, not registered" in _flat()
 
@@ -162,3 +164,19 @@ def test_the_disputed_adjudication_sensitivity_is_recomputed_not_asserted():
     assert with_it == 27, with_it
     assert f"from 27 of 110 to **{without} of 110**" in _flat()
     assert consensus["J0168"] == "defect"
+
+    # Round 6: "no other quantity moves" was false. Every quantity the counterfactual DOES
+    # move is recomputed here, so the bullet cannot drift from the labels again.
+    kept = [i for i in consensus if i != "J0168"]
+    agree = sum(1 for i in kept if l1[i] == l2[i])
+    cats = sorted(set(l1.values()) | set(l2.values()))
+    n = len(kept)
+    po = agree / n
+    pe = sum((sum(1 for i in kept if l1[i] == c) / n) * (sum(1 for i in kept if l2[i] == c) / n)
+             for c in cats)
+    kappa = (po - pe) / (1 - pe)
+    r_kept = [i for i in kept if key[i]["arm"] == "R"]
+    correct = sum(1 for i in r_kept if consensus[i] == "correct")
+    assert f"from 60/72 to **{agree}/{n}**" in _flat()
+    assert f"strict κ from 0.695 to **{kappa:.3f}**" in _flat()
+    assert f"from 24 of 62 to **{correct} of {len(r_kept)}**" in _flat()

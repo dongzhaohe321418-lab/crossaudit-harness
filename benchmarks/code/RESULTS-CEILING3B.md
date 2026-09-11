@@ -230,7 +230,11 @@ applies (ledger totals are the cost table).
   had marked it naming-yes, which is what carried it into the strict pass. The item is not
   relabelled after the fact; the sensitivity is reported instead: dropping it takes R's
   post-hoc recognition from 27 of 110 to **26 of 110**, because the instance's other R
-  finding, `J0040`, is disputed and counts as not-defect. No other quantity moves.
+  finding, `J0040`, is disputed and counts as not-defect. Round 6 corrected an earlier version
+  of this bullet that said no other quantity moves: dropping the item also takes strict
+  agreement from 60/72 to **59/71**, strict κ from 0.695 to **0.692**, R's strict composition
+  from 24 of 62 to **24 of 61**, and the complementary first-pass count from 46 of 128 to
+  **47 of 128**. H19a and the BLOCKER contrasts are untouched.
 * H19d's registered question is about naming; the recognition question (Table 5b) is post
   hoc, asked after the first review, and its κ (0.695) is lower than the naming
   question's. The disputed items of both are listed in `numbers.json`. L2 is a model of a

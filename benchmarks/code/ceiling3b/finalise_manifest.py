@@ -124,20 +124,28 @@ def main() -> int:
                                "and, being the author, the study's design and its other results"},
         "L2": {"role": "adjudicator, same questions", "model": "gpt-6-astra",
                "provider": "OpenAI via the Codex CLI (not the product's provider layer)",
-               # EXPERIMENT_RECORD §2 requires a base URL for every model. This one is
-               # MISSING, and the record says so in the field itself rather than putting an
-               # excuse where a URL belongs: `base_url` is null, and the next two fields say
-               # what is known and why the value cannot be recovered. A test asserts the null
-               # and the declaration together, so prose can never satisfy this again.
-               "base_url": None,
-               "base_url_status": "MISSING — required by EXPERIMENT_RECORD §2 and not recorded",
-               "base_url_why": "the adjudicator ran through the Codex CLI (codex-cli 0.153.4), "
-                               "which writes no endpoint to any local record this study may "
-                               "read; ~/.codex/config.toml sets neither base_url nor "
-                               "model_provider, so the CLI's built-in default for the "
-                               "account's authentication mode applied, and ~/.codex/auth.json "
-                               "is out of bounds under this project's rules. The call cannot "
-                               "be reconstructed from this record alone.",
+               # EXPERIMENT_RECORD §2 requires a base URL for every model. Rounds 5 and 6
+               # rejected first a prose excuse and then an honest declaration of absence, both
+               # rightly: the requirement is the endpoint, not an apology for not having it.
+               # It is recoverable. `~/.codex/config.toml` sets neither `base_url` nor
+               # `model_provider`, so the CLI's compiled-in default applied, and that default
+               # is a literal in the binary. `base_url_provenance` says how to check it.
+               "base_url": "https://chatgpt.com/backend-api/codex",
+               "base_url_provenance": {
+                   "how": "recovered from the CLI binary's string table, since the CLI writes "
+                          "no endpoint to any local record and ~/.codex/auth.json is out of "
+                          "bounds under this project's rules",
+                   "binary": "/opt/homebrew/Caskroom/codex/0.153.4/bin/codex",
+                   "binary_sha256": "b973d440acac501fd2594a43e7ca9ce41e0a65b9dfb28d0d7a7837c99e1261e3",
+                   "cli_version": "codex-cli 0.153.4",
+                   "config_overrides": "~/.codex/config.toml sets neither base_url nor "
+                                       "model_provider, so the compiled-in default applied",
+                   "reproduce": "strings -a <binary> | grep -Eo '/backend-api/codex[a-z0-9_/-]*'",
+                   "caveat": "the path is the CLI's default for its ChatGPT-subscription "
+                             "authentication mode; the request was not captured on the wire, "
+                             "so this is the endpoint the binary and the configuration "
+                             "together determine, not an observed one",
+               },
                "settings": "codex exec --sandbox read-only, model_reasoning_effort=high, "
                            "default sampling",
                "withheld_by_the_sheet": "instance id, arm, stratum",
