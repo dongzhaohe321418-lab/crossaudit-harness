@@ -144,7 +144,7 @@
     ],
     "kappa": 0.8973830215544755,
     "n_items": 190,
-    "strict_recognition_POST_HOC": {
+    "strict_reports_a_failure_POST_HOC": {
       "agreement": [
         60,
         72

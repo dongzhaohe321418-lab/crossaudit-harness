@@ -77,7 +77,7 @@ def test_h19d_is_bound():
     assert f"some finding on {s['P_instances_with_a_finding']} of them — {s['findings_no']} of its {s['findings']} findings" in _flat()
     r = h["by_arm"]["R"]; rr = r["names_rate_over_all_P"]
     assert f"**{rr['k']} of 110 = {_pct(rr['rate'])}%** (Wilson {_pct(rr['wilson95'][0])}–{_pct(rr['wilson95'][1])}; cluster {_pct(rr['cluster_ci95'][0])}–{_pct(rr['cluster_ci95'][1])}; {r['findings_yes']} \"yes\" of {r['findings']} findings)" in _flat()
-    st = h["strict_recognition_POST_HOC"]
+    st = h["strict_reports_a_failure_POST_HOC"]
     assert f"agreement {st['agreement'][0]}/{st['agreement'][1]}, κ = {st['kappa']:.3f}; {len(st['disagreements'])} disputed count as not \"defect\"" in _flat()
     for arm in ("S", "R", "B"):
         v = st["by_arm"][arm]["recognised_rate_over_all_P"]
@@ -97,7 +97,7 @@ def test_residual_and_cost_are_bound():
 def test_the_strict_kappa_and_the_inventory_are_rendered():
     """The recognition κ is a number in the prose (a template placeholder once survived here),
     and the comparison inventory's count equals Table 4's contrast count."""
-    st = _n()["H19d"]["strict_recognition_POST_HOC"]
+    st = _n()["H19d"]["strict_reports_a_failure_POST_HOC"]
     assert f"its κ ({st['kappa']:.3f}) is lower" in _flat()
     assert "{" not in _t().split("<!-- tables:begin -->")[0].replace("{{", "")
     flat = _flat()

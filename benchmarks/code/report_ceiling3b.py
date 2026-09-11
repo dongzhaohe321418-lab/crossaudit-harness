@@ -229,7 +229,7 @@ def main() -> int:
                                      "cannot_tell": sum(1 for i in items if key[i]["arm"] == arm and sgold.get(i) == "cannot tell"),
                                      "disputed": sum(1 for i in items if key[i]["arm"] == arm and sgold.get(i) == "disputed"),
                                      "recognised_rate_over_all_P": rc.clustered_rate(rec, P, instances, BOOTSTRAP, BOOT_SEED)}
-            h["strict_recognition_POST_HOC"] = st
+            h["strict_reports_a_failure_POST_HOC"] = st
         out["H19d"] = h
     C3B.mkdir(parents=True, exist_ok=True)
     (C3B / "numbers.json").write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -302,11 +302,11 @@ def render_tables(out: dict) -> str:
                          f"| {v['a_only']} / {v['b_only']} | {v['mcnemar_exact_p']:.2e} | {v['signflip']['p']:.2e} |")
     if "H19d" in out and "by_arm" in out["H19d"]:
         h = out["H19d"]
-        if "strict_recognition_POST_HOC" in h:
-            st = h["strict_recognition_POST_HOC"]
-            L += ["", f"### Table 5b — POST HOC (review round 1): of the consensus-'yes' findings, does the finding assert the code is wrong on that class? ({st['n_items']} items"
+        if "strict_reports_a_failure_POST_HOC" in h:
+            st = h["strict_reports_a_failure_POST_HOC"]
+            L += ["", f"### Table 5b — POST HOC (review round 1): of the consensus-'yes' findings, does the finding REPORT A FAILURE on that class — say it raises or returns the wrong value there, even where the finding grades that non-blocking or says the specification is silent? ({st['n_items']} items"
                   + (f"; agreement {st['agreement'][0]}/{st['agreement'][1]}, κ = {st['kappa']:.3f}" if 'kappa' in st else "; L1 only") + "; disputed excluded from 'defect')", "",
-                  "| arm | 'yes' findings | defect | correct / untested | cannot tell | disputed | P instances with a defect-asserting finding / all 110 | Wilson | cluster |",
+                  "| arm | 'yes' findings | reports a failure | correct / untested | cannot tell | disputed | P instances with a finding that reports a failure / all 110 | Wilson | cluster |",
                   "|---|---|---|---|---|---|---|---|---|"]
             T5 = dict(LABEL, S="S-text — shipped constitution, a fifth reading (Amendment 1)")
             for arm in ("S", "R", "B"):

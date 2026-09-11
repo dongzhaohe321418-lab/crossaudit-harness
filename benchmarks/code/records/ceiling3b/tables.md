@@ -52,9 +52,9 @@ Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster pe
 | B − R | any | P | -63.6 | [-75.0, -51.8] | [-72.2, -53.6] | [-73.6, -49.1] | no | 1 / 71 | 3.09e-20 | 5.00e-06 |
 | B − R | any | C | -83.3 | [-89.1, -77.1] | [-88.4, -76.6] | [-89.3, -73.3] | yes | 0 / 125 | 4.70e-38 | 5.00e-06 |
 
-### Table 5b — POST HOC (review round 1): of the consensus-'yes' findings, does the finding assert the code is wrong on that class? (72 items; agreement 60/72, κ = 0.695; disputed excluded from 'defect')
+### Table 5b — POST HOC (review round 1): of the consensus-'yes' findings, does the finding REPORT A FAILURE on that class — say it raises or returns the wrong value there, even where the finding grades that non-blocking or says the specification is silent? (72 items; agreement 60/72, κ = 0.695; disputed excluded from 'defect')
 
-| arm | 'yes' findings | defect | correct / untested | cannot tell | disputed | P instances with a defect-asserting finding / all 110 | Wilson | cluster |
+| arm | 'yes' findings | reports a failure | correct / untested | cannot tell | disputed | P instances with a finding that reports a failure / all 110 | Wilson | cluster |
 |---|---|---|---|---|---|---|---|---|
 | S-text — shipped constitution, a fifth reading (Amendment 1) | 6 | 3 | 1 | 0 | 2 | 3/110 = 2.7% | 0.9–7.7 | 0.0–7.3 |
 | R — + referent rule (CA-COVER-001) | 62 | 29 | 24 | 0 | 9 | 27/110 = 24.5% | 17.5–33.4 | 14.4–35.7 |

@@ -79,9 +79,9 @@ Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster pe
 | B − R | any | P | -63.6 | [-75.0, -51.8] | [-72.2, -53.6] | [-73.6, -49.1] | no | 1 / 71 | 3.09e-20 | 5.00e-06 |
 | B − R | any | C | -83.3 | [-89.1, -77.1] | [-88.4, -76.6] | [-89.3, -73.3] | yes | 0 / 125 | 4.70e-38 | 5.00e-06 |
 
-### Table 5b — POST HOC (review round 1): of the consensus-'yes' findings, does the finding assert the code is wrong on that class? (72 items; agreement 60/72, κ = 0.695; disputed excluded from 'defect')
+### Table 5b — POST HOC (review round 1): of the consensus-'yes' findings, does the finding REPORT A FAILURE on that class — say it raises or returns the wrong value there, even where the finding grades that non-blocking or says the specification is silent? (72 items; agreement 60/72, κ = 0.695; disputed excluded from 'defect')
 
-| arm | 'yes' findings | defect | correct / untested | cannot tell | disputed | P instances with a defect-asserting finding / all 110 | Wilson | cluster |
+| arm | 'yes' findings | reports a failure | correct / untested | cannot tell | disputed | P instances with a finding that reports a failure / all 110 | Wilson | cluster |
 |---|---|---|---|---|---|---|---|---|
 | S-text — shipped constitution, a fifth reading (Amendment 1) | 6 | 3 | 1 | 0 | 2 | 3/110 = 2.7% | 0.9–7.7 | 0.0–7.3 |
 | R — + referent rule (CA-COVER-001) | 62 | 29 | 24 | 0 | 9 | 27/110 = 24.5% | 17.5–33.4 | 14.4–35.7 |
@@ -171,16 +171,16 @@ produced no demonstrated BLOCKER-recall effect** (H19a: +0.9 points, cluster [-1
 fewer findings (-20.0 on the any-finding rate). The kill named for the inference fires and the
 inference is withdrawn. What the adjudication adds is narrower than "did not see" and is
 stated as two measured rates: under the shipped constitution, Sonnet's draw-1 findings
-*name* the failing class on 6 of 110 defects and — on the post-hoc recognition question,
-Table 5b — *assert a defect* on 3 (the registered denominator, any-finding P rows, gives 6 of 37
+*name* the failing class on 6 of 110 defects and — on the post-hoc second question, Table 5b —
+*report a failure* on that class on 3 (the registered denominator, any-finding P rows, gives 6 of 37
 named; Table 5 carries both); of its 38 findings, 28 neither name the failing class nor assert a
 defect on it. The gap study 18 measured between "mentioned by
 none" and "blocked by none" was therefore a gap between *returning some finding* and
 blocking, not between recognising the defect and blocking.
 
 **What moved the family is the referent rule** — the instruction to find what the visible
-tests do not exercise — which raised naming from 5.5% to 52.7%, defect-asserting findings
-from 2.7% to 24.5% of the defect population (post hoc, Table 5b), and BLOCKER recall at K = 4 from 1.8% to
+tests do not exercise — which raised naming from 5.5% to 52.7%, findings that report a failure
+on the class from 2.7% to 24.5% of the defect population (post hoc, Table 5b), and BLOCKER recall at K = 4 from 1.8% to
 22.7% (+20.9 points, cluster [+10.8, +31.8]) — the lever ceiling 2 found for the shipped auditor
 (+26.8 points on flags) — at a false-positive cost of +8.0 points on C. Whether the rest of the
 near-zero rate is the rulebook's referent or the model's limit is not separated by this
@@ -199,7 +199,7 @@ on C under either rule; B − R under both rules on both populations. Beside Tab
 three naming rates on the registered denominator, any-finding P rows (preregistered), the same
 three rates on all 110 P (**derived, not registered**),
 H19b's second comparison — B's single-draw FP on C against the fixed 6.7% product bar
-(preregistered) —, the three recognition rates of Table 5b (post hoc), and the residual with R
+(preregistered) —, the three reports-a-failure rates of Table 5b (post hoc), and the residual with R
 and B (Table 7, not preregistered). One primary; no correction is applied to the other
 **twenty** quantities and none is claimed to clear a corrected threshold.
 
@@ -229,13 +229,26 @@ applies (ledger totals are the cost table).
   explicit ruling that a shared missing-guard is behavioural identity enough. Both labellers
   had marked it naming-yes, which is what carried it into the strict pass. The item is not
   relabelled after the fact; the sensitivity is reported instead: dropping it takes R's
-  post-hoc recognition from 27 of 110 to **26 of 110**, because the instance's other R
+  post-hoc reports-a-failure count from 27 of 110 to **26 of 110**, because the instance's other R
   finding, `J0040`, is disputed and counts as not-defect. Round 6 corrected an earlier version
   of this bullet that said no other quantity moves: dropping the item also takes strict
   agreement from 60/72 to **59/71**, strict κ from 0.695 to **0.692**, R's strict composition
   from 24 of 62 to **24 of 61**, and the complementary first-pass count from 46 of 128 to
   **47 of 128**. H19a and the BLOCKER contrasts are untouched.
-* H19d's registered question is about naming; the recognition question (Table 5b) is post
+* **Table 5b measures what its question asked, which is narrower than "asserts a defect".**
+  The seventh review found the claim and the instrument apart, and it is right. The strict
+  question put to both raters counts a finding as `defect` when it says the class raises or
+  returns the wrong value *"even if it grades it non-blocking or says the spec is silent"* —
+  those words are in the prompt. So the quantity is **the finding reports a failure on that
+  class**, not the finding asserts the code is wrong there, and it is named that way throughout
+  this file now. The reviewer checked what the difference costs: five of R's 27 instances rest
+  only on findings that expressly disclaim a requirement (`J0031`, `J0073`, `J0089`, `J0091`,
+  `J0130` — float behaviour "not specified", an empty input that raises where handling it "is
+  not explicitly required", and so on), so a stricter reading gives 22 of 110. That count is the
+  reviewer's, reported here because it is the honest bound on the narrower claim; this study
+  does not adopt it as an estimate, because doing so would mean relabelling items after seeing
+  them. The registered naming result is untouched.
+* H19d's registered question is about naming; the second question (Table 5b) is post
   hoc, asked after the first review, and its κ (0.695) is lower than the naming
   question's. The disputed items of both are listed in `numbers.json`. L2 is a model of a
   different vendor, not a person; L1 is the author; five finding texts name the added
