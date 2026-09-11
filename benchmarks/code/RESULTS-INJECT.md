@@ -160,7 +160,8 @@ as all wrong or all right. Those 32 skew toward injected items, so the answered-
 flatters the separation. Artificiality is therefore **not** bounded, and a reader is entitled to
 ask how much of §1's gap is salience rather than specification-determinedness.
 
-One post-hoc observation bears on that, and it points the other way:
+One post-hoc cross-tabulation was computed on that question. It turns out to carry no
+information, and it is kept here with that verdict rather than deleted:
 
 <!-- BEGIN TABLE xtab (records/inject/tables.md) -->
 POST HOC: asked after the probe and the audit were both in hand.
@@ -175,15 +176,17 @@ The auditor's only misses were `b1:Mbpp/404`, `b2:Mbpp/404`, which the probe cal
 <!-- END TABLE xtab -->
 
 The auditor caught every injected defect the probe judged natural, and its only two misses were
-items the probe judged artificial. If the auditor were riding the same signal the probe uses,
-the misses should sit in the natural-looking group and the natural-looking group should be
-caught least. Neither holds. This is **post hoc**, and with four instances in one cell and two
-misses in total it has almost no power; it is reported because it is the evidence that exists,
-not because it settles anything.
+items the probe judged artificial. An earlier draft read that as pointing against the salience
+explanation. **It does not, and the arithmetic says so.** With 2 misses over 92 instances and only
+4 instances in the natural-looking cell, the chance that either miss lands in that cell even if
+the auditor were riding exactly the signal the probe uses is about 11%; the expected number of
+misses there is 0.12. Fisher's exact test on the table gives **p = 1.0**. Observing an empty cell
+is what both hypotheses predict, so the table separates them not at all. It is **post hoc** and it
+is **not evidence in either direction**, and no sentence in this study may lean on it.
 
 The honest summary of §1 and §3 together: the gap is real, large, and measured against a frozen
 comparator and a paired control, and part of it may be salience that this study cannot separate
-out. Separating it needs a population of natural defects independently known to be
+out and has no evidence against. Separating it needs a population of natural defects independently known to be
 specification-determined, which is what study 23's second substrate and a human rater would
 supply.
 
