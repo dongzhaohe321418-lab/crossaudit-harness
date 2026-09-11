@@ -1,0 +1,95 @@
+{
+  "audit_cross": {
+    "calls": 2000,
+    "usd": 18.3076
+  },
+  "audit_self": {
+    "calls": 746,
+    "usd": 3.0323
+  },
+  "audit_total": {
+    "calls": 2746,
+    "usd": 21.3399
+  },
+  "cap_usd": 60.0,
+  "generation": {
+    "calls": 600,
+    "usd": 1.8258
+  },
+  "projects": {
+    "holistic__cross__d1": {
+      "calls": 250,
+      "usd": 2.993419
+    },
+    "holistic__cross__d2": {
+      "calls": 250,
+      "usd": 2.087377
+    },
+    "holistic__cross__d3": {
+      "calls": 250,
+      "usd": 2.135107
+    },
+    "holistic__cross__d4": {
+      "calls": 250,
+      "usd": 2.079682
+    },
+    "holistic__cross__d5": {
+      "calls": 250,
+      "usd": 2.091397
+    },
+    "holistic__cross__d6": {
+      "calls": 250,
+      "usd": 2.141677
+    },
+    "holistic__cross__d7": {
+      "calls": 250,
+      "usd": 2.173342
+    },
+    "holistic__cross__d8": {
+      "calls": 250,
+      "usd": 2.605596
+    },
+    "holistic__self__d1": {
+      "calls": 250,
+      "usd": 1.008872
+    },
+    "holistic__self__d2": {
+      "calls": 238,
+      "usd": 0.960637
+    },
+    "holistic__self__d3": {
+      "calls": 24,
+      "usd": 0.098823
+    },
+    "holistic__self__d4": {
+      "calls": 31,
+      "usd": 0.127479
+    },
+    "holistic__self__d5": {
+      "calls": 23,
+      "usd": 0.095963
+    },
+    "holistic__self__d6": {
+      "calls": 38,
+      "usd": 0.155928
+    },
+    "holistic__self__d7": {
+      "calls": 60,
+      "usd": 0.24771
+    },
+    "holistic__self__d8": {
+      "calls": 82,
+      "usd": 0.336866
+    },
+    "holistic__substrate2-gen__d0": {
+      "calls": 600,
+      "usd": 1.825752
+    }
+  },
+  "read_utc": "2026-09-11T10:18:49Z",
+  "run_dir": "/Users/ericdong/Documents/Crossaudit/study-data/wt-sub2-runs",
+  "study_total": {
+    "calls": 3346,
+    "usd": 23.1656
+  }
+}
