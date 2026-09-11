@@ -47,7 +47,9 @@ GATE_SPECS = ("anthropic:claude-sonnet-4-6", "anthropic:claude-opus-4-8")   # Am
 PROBE_SPEC = "anthropic:claude-opus-4-8"
 AUDITOR_FAMILY = "cross"                      # openai:gpt-5.6-terra, ceiling 1's shipped cross
 #: Amendment 4: the injected arm, then the unmodified twin of every instance of I.
-LADDER = ([("I", d) for d in range(1, 9)] + [("twin", d) for d in range(1, 9)])
+LADDER = ([("I", d) for d in range(1, 9)] + [("twin", d) for d in range(1, 9)]
+          + [("rejected", d) for d in range(1, 9)])      # Amendment 6
+N_REJECTED_SAMPLE = 40                                    # Amendment 6
 MIN_QUOTE_WORDS = 6                           # F1
 MAX_CHANGED_LINES = 4                         # F4
 SEED = 20260916
@@ -516,11 +518,23 @@ def injected_id(iid: str) -> str:
     return f"inj:{iid}"
 
 
+def rejected_sample(population: dict) -> list[str]:
+    """Amendment 6: 40 of the instances the six filters accepted and the gate then refused."""
+    import random
+    rows = population["rows"]
+    pool = sorted(i for i, r in rows.items()
+                  if r.get("accepted_by_filters") and not r.get("in_population_I"))
+    rng = random.Random(SEED)
+    return sorted(rng.sample(pool, min(N_REJECTED_SAMPLE, len(pool))))
+
+
 def arm_scope(arm: str, base_ids: list[str]) -> list[str]:
     """Amendment 4: the injected arm reads `inj:` ids, the twin arm the base ids themselves,
     so the twin's readings land in — and are served free from — ceiling 1's own cache where
     that instance was audited before."""
-    return [injected_id(i) for i in base_ids] if arm == "I" else list(base_ids)
+    if arm == "twin":
+        return list(base_ids)
+    return [injected_id(i) for i in base_ids]
 
 
 def install_findings_archive(path: Path) -> None:
@@ -578,7 +592,12 @@ def run(run_dir: Path, budget: float, workers: int, max_passes: int, plan: bool)
     print(f"scope: {len(base_ids)} injected instances and their {len(base_ids)} twins",
           flush=True)
 
-    scopes = {arm: arm_scope(arm, base_ids) for arm in ("I", "twin")}
+    rejected = rejected_sample(population)
+    scopes = {"I": arm_scope("I", base_ids), "twin": arm_scope("twin", base_ids),
+              "rejected": arm_scope("rejected", rejected)}
+    print(f"Amendment 6: {len(rejected)} gate-rejected instances sampled from "
+          f"{sum(1 for r in population['rows'].values() if r.get('accepted_by_filters') and not r.get('in_population_I'))}",
+          flush=True)
     have = {}
     for arm, draw in LADDER:
         key = ("holistic", AUDITOR_FAMILY, draw)
@@ -605,9 +624,12 @@ def run(run_dir: Path, budget: float, workers: int, max_passes: int, plan: bool)
 
     instances = dict(base_instances)
     solutions = dict(base_solutions)
-    for iid in base_ids:
+    for iid in list(base_ids) + list(rejected):
         new_id = injected_id(iid)
-        code = injections[iid]["code"]
+        entry = injections[iid]
+        code = entry.get("code") or entry.get("last_code")
+        if not code:
+            continue
         instances[new_id] = {**base_instances[iid], "instance_id": new_id, "stratum": "P",
                              "solution_sha256": sha(code)}
         solutions[new_id] = {"solution": code}
