@@ -245,7 +245,7 @@ study: what this study adds to it is that the wrong-test rate replicates (3.8%, 
   new draws' tests are AST-identical to a draw-1 test) was not preregistered and is not
   evaluated here.
 * The suite of this study and study 16's (`test_testgen_val.py`, `test_testgen.py`,
-  `test_architectures.py`) is green on the run host: 41 tests at this commit, 38 at the
+  `test_architectures.py`) is green on the run host: 43 tests at this commit, 38 at the
   round-3 one. The independent reviewer could run 35 of those 38 — three need a writable
   temporary directory for the executor's subprocess and were skipped in that environment
   — so full-suite green is certified on the run host and on hosts that allow it, not
@@ -257,11 +257,20 @@ study: what this study adds to it is that the wrong-test rate replicates (3.8%, 
   exercise it on synthetic sets alone.
 * `tests/test_testgen_val.py` binds every table byte for byte — the spliced blocks
   against `records/testgen-val/tables.md`, and `tables.md` against what `render_tables`
-  rebuilds from `numbers.json` and `exploratory.json` — and refuses a table row outside
-  the generated blocks. Rounds 3–5 of the review each found a way past the markdown-table
-  parser this test used to be (a moved figure, a mislabelled column, a duplicate row, a
-  broken delimiter row, a table hidden in a comment); the byte comparison ends that class
-  of defect, and the round-5 commit lists the sixteen mutations it was checked against.
+  rebuilds from `numbers.json` and `exploratory.json` — and holds the document to a fixed
+  skeleton besides: outside the generated blocks it contains no table-like construct at
+  all — no pipe character, no HTML table element, nothing quoted or fenced — each block appears
+  exactly once and in the registered order, under the registered section heading and
+  after the registered line of prose, and no marker sits inside a fence or a blockquote.
+  What renders is therefore a function of the records plus that skeleton. Rounds 3–6 of
+  the review each found a way past the weaker check that preceded it — a moved figure, a
+  mislabelled column, a duplicate row, a broken delimiter row, a table hidden in a
+  comment, a pipeless or HTML or blockquoted table beside the real one, an intact block
+  fenced so it renders as code, two intact blocks exchanged; the round-6 commit lists the
+  thirty-one mutations the current test was checked against, all of which it rejects.
+  The invariant has a price, paid here rather than hidden: this file cannot quote a pipe
+  character or name an HTML table tag in its prose, and the wording above was changed
+  when the check caught the sentence describing it.
   The prose figures — the verdicts, the draw wrong-test counts, the ledger totals, §3's
   statements about the record — are bound to `numbers.json` and `exploratory.json` as
   strings; every other figure in this file is checked by the reader.

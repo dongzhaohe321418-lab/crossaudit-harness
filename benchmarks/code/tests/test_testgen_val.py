@@ -196,33 +196,94 @@ def _splice():
     return mod
 
 
-def test_the_tables_are_spliced_verbatim():
-    """Every §1–§3 table in the results file is `records/testgen-val/tables.md`, byte for byte.
+def _scan(text: str) -> list[dict]:
+    """Every line with the state a renderer would be in: fence, blockquote, block membership.
 
-    Round 5 of the review retired the markdown-table parser these assertions used to be:
-    a reader can always be fooled by a table that renders differently from how it parses
-    (a duplicate row, a shifted pipe, a broken delimiter row, a table hidden in a
-    comment). Comparing bytes cannot be fooled — any byte that differs, anywhere in the
-    marked block, fails — and a table outside the marked blocks is refused outright.
+    Round 6 retired the "does the line start with a pipe" check: a table renders from a
+    pipeline without leading pipes, from a blockquote, from HTML, and an intact block
+    stops being a table when fenced. What the scan below supports is a stronger claim —
+    outside the generated blocks the document contains no table-like construct AT ALL, and
+    no marker sits anywhere a renderer would treat as code or as a quotation.
     """
+    scanned, fence, in_block = [], None, None
+    for number, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        opener = stripped[:3] if stripped[:3] in ("```", "~~~") else None
+        if opener and fence is None:
+            fence = opener
+            fenced = True                      # the fence line itself belongs to the fence
+        elif opener and stripped.startswith(fence):
+            fenced, fence = True, None
+        else:
+            fenced = fence is not None
+        if line.startswith("<!-- BEGIN TABLE "):
+            in_block = line[len("<!-- BEGIN TABLE "):line.index(" (")]
+        scanned.append({"n": number, "text": line, "fenced": fenced,
+                        "quoted": line.lstrip().startswith(">"), "block": in_block})
+        if line.startswith("<!-- END TABLE "):
+            in_block = None
+    assert fence is None, "the results file leaves a code fence open"
+    return scanned
+
+
+def test_the_tables_are_spliced_verbatim():
+    """Every table in the results file is `records/testgen-val/tables.md`, byte for byte."""
     mod = _splice()
     text = RESULTS.read_text(encoding="utf-8")
     parts = mod.sections(TABLES.read_text(encoding="utf-8"))
     assert parts, "tables.md has no <!-- TABLE name --> sections"
-    remaining = text
     for name, body in parts.items():
         begin, end = mod.markers(name)
         assert text.count(begin) == 1 and text.count(end) == 1, f"marker pair for {name!r} is not unique"
         a, b = text.index(begin) + len(begin), text.index(end)
         assert a < b, f"markers for {name!r} are out of order"
         assert text[a:b] == "\n" + body, f"the {name!r} table is not tables.md verbatim"
-        remaining = remaining.replace(text[text.index(begin):b + len(end)], "")
-    # the results file declares no table the record does not carry, and none is left loose
-    declared = {line[len("<!-- BEGIN TABLE "):line.index(" (")] for line in text.splitlines()
-                if line.startswith("<!-- BEGIN TABLE ")}
-    assert declared == set(parts), f"markers {declared} do not match tables.md sections {set(parts)}"
-    loose = [line for line in remaining.splitlines() if line.strip().startswith("|")]
-    assert not loose, f"table rows outside the generated blocks: {loose[:3]}"
+
+
+def test_no_table_like_construct_exists_outside_the_generated_blocks():
+    """(1) Outside the blocks: no pipe, no HTML table, no quoted or fenced table."""
+    text = RESULTS.read_text(encoding="utf-8")
+    offenders = []
+    for line in _scan(text):
+        if line["block"] is not None:
+            continue
+        low = line["text"].lower()
+        if "|" in line["text"] or any(tag in low for tag in ("<table", "<tr", "<td", "<th")):
+            offenders.append((line["n"], line["text"][:70]))
+    assert not offenders, f"table-like content outside the generated blocks: {offenders[:4]}"
+
+
+def test_the_generated_blocks_are_unique_ordered_and_placed_under_their_headings():
+    """(2) Each block appears once, in the registered order, under its registered heading,
+    after its registered anchor line; (3) no marker sits in a fence or a blockquote."""
+    mod = _splice()
+    text = RESULTS.read_text(encoding="utf-8")
+    registry = mod.REGISTRY
+    parts = mod.sections(TABLES.read_text(encoding="utf-8"))
+    assert [name for name, _, _ in registry] == list(parts), "registry and tables.md disagree"
+
+    scanned = _scan(text)
+    seen, heading, anchor = [], None, None
+    for line in scanned:
+        raw = line["text"]
+        if raw.startswith("## "):
+            heading = raw
+        if raw.startswith("<!-- BEGIN TABLE ") or raw.startswith("<!-- END TABLE "):
+            assert not line["fenced"], f"a marker sits inside a code fence at line {line['n']}"
+            assert not line["quoted"], f"a marker sits inside a blockquote at line {line['n']}"
+        if raw.startswith("<!-- BEGIN TABLE "):
+            seen.append((raw[len("<!-- BEGIN TABLE "):raw.index(" (")], heading, anchor))
+        if line["block"] is None and raw.strip() and not raw.startswith("<!-- END TABLE "):
+            anchor = raw                      # the last non-blank prose line before a marker
+
+    assert [name for name, _, _ in seen] == [name for name, _, _ in registry], (
+        f"blocks appear as {[n for n, _, _ in seen]}, registered order is {[n for n, _, _ in registry]}")
+    for (name, heading_seen, anchor_seen), (_, heading_want, anchor_want) in zip(seen, registry):
+        assert heading_seen == heading_want, f"{name}: under {heading_seen!r}, registered {heading_want!r}"
+        assert anchor_seen == anchor_want, f"{name}: preceded by {anchor_seen!r}, registered {anchor_want!r}"
+    for name, _, _ in registry:
+        begin, end = mod.markers(name)
+        assert text.count(begin) == 1 and text.count(end) == 1, f"{name}: markers are not unique"
 
 
 def test_render_tables_reproduces_the_tables_file():

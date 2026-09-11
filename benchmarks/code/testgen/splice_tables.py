@@ -20,6 +20,24 @@ sys.path.insert(0, str(CODE))
 TABLES = CODE / "records" / "testgen-val" / "tables.md"
 RESULTS = CODE / "RESULTS-TESTGEN-VAL.md"
 
+#: The skeleton: which table goes where, in order — its name in ``tables.md``, the section
+#: heading it belongs under, and the last non-blank line of prose before its BEGIN marker.
+#: The tests hold the results file to this, so a block cannot be moved to another section,
+#: reordered, duplicated or dropped without failing, and what renders is a function of the
+#: records plus this fixed placement.
+REGISTRY = (
+    ("primary", "## 1. The preregistered decision",
+     "also fails on the canonical solution), 89 right."),
+    ("arm", "## 2. Secondaries, as preregistered",
+     "  draw-1 timeout), reported and not decided on:"),
+    ("where", "## 3. Exploratory, post hoc, not preregistered (`testgen/exploratory_val.py`)",
+     "also fails the canonical solution):"),
+    ("pc", "## 3. Exploratory, post hoc, not preregistered (`testgen/exploratory_val.py`)",
+     "fails the visible suite, corroboration is trivial: broken code fails correct tests too."),
+    ("corroboration", "## 3. Exploratory, post hoc, not preregistered (`testgen/exploratory_val.py`)",
+     "applications:"),
+)
+
 
 def sections(tables: str) -> dict[str, str]:
     """``tables.md`` split on its ``<!-- TABLE name -->`` lines, in order."""
@@ -47,6 +65,7 @@ def markers(name: str) -> tuple[str, str]:
 def main() -> int:
     text = RESULTS.read_text(encoding="utf-8")
     parts = sections(TABLES.read_text(encoding="utf-8"))
+    assert list(parts) == [name for name, _, _ in REGISTRY], "tables.md sections do not match the registry"
     for name, body in parts.items():
         begin, end = markers(name)
         assert text.count(begin) == 1 and text.count(end) == 1, f"marker pair for {name!r} is not unique"
