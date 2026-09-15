@@ -91,3 +91,70 @@ metadata), and `cross-R`'s draw 1 is adjudicated beside it whether or not H20a i
 The primary rate is "P instances with a defect-asserting finding / 110" for `cross-T`,
 with both intervals; the kill named by the memo — below 20 of 110, the headline becomes
 "flag rate 30.0%, defect-naming recall X%" — is adopted here for that rate.
+
+## Amendment 2 — the first review's corrections: a ceiling claim withdrawn, a kill explained, a provenance loss recorded
+
+**Written 2026-09-16, after the first cross-vendor review, which refused quotation.**
+
+**1. The headline claimed a ceiling and the evidence is a flag coverage.** The title said the
+referent rule "raises the shipped auditor's ceiling". H20a establishes higher **union BLOCKER
+coverage at K = 8**; H20b establishes a positive difference between the two **registered fitted
+asymptotes**, conditional on the single-exponential form. Neither resolves the true saturation
+difference. Three reasons, two of them in this study's own numbers:
+
+* `cross` never flattened, so one of H20b's two terms is an extrapolation;
+* heterogeneous low-probability detection imitates a ceiling at this budget — an instance found
+  with probability 0.02 per reading survives all eight readings about 85% of the time, so a curve
+  can flatten because the remainder is *rare* rather than *unreachable*;
+* this study's own secondary estimator contradicts the ceiling reading. The ZIBB fit puts the
+  non-inflated share at essentially 1.0 for **both** families (`cross` π = 0.99999999999;
+  `cross-R` π = 0.99999999990, cluster [0.658, 1.0]), finding no evidence of a never-detectable
+  class in either arm.
+
+The title now says **union flag coverage at K = 8**, and H20b's bullet carries the three reasons.
+H20a's positive result and the registered kill verdict stand unchanged.
+
+**2. The kill fires for a more basic reason than the raters' disagreement, and the block now says
+so.** Only **9 of 110** instances drew any finding at all on `cross-T`, so the largest
+defect-asserting count available **under perfect adjudication** was 9, already below the threshold
+of 20. The kill's robustness is therefore arithmetic, not a property of the labelling. The
+generated block also repeated the memo's prescribed headline — "flag rate 30.0%, defect-naming
+recall X%" — without the warning §3 gives, so it now carries it: the flag rate is a union over
+eight readings, the naming rate is one reading, the eight readings' texts were never archived, and
+no naming rate may be inferred for them by scaling this one. The matched observation inside the
+single reading is **9 flagged against 5 adjudicated as asserting the defect**.
+
+**3. Two prose statements were wrong and one was too definite.**
+
+* "The raw union at K = 8 is more conservative still" is **false for `cross-R`**, whose raw union
+  of 60.91% exceeds its own fitted 58.62%. It holds for `cross` (30.00% against 31.50%). Corrected.
+* "No text was adjudicated" contradicted §3, which adjudicates one `cross-T` reading and one
+  `cross-R` draw. It meant *no text from the eight-reading unions*, and now says that.
+* Attributing the raters' disagreement to a property of the findings "rather than of the raters"
+  claimed more than the labels support; the reviewer's item-level re-reading finds judgments that
+  are inconsistent within each rater too. Softened to what the items do show.
+
+**4. A provenance loss, recorded rather than repaired.** The review noted that L2's raw reply,
+prompt, launcher and execution log existed only under the session's temporary
+`scratchpad/c4-adjud/`, outside the durable archive, and that the manifest omits the reasoning
+effort the execution log recorded as high. **Between the review and this amendment that temporary
+directory was reclaimed, and those four artefacts are gone.** They cannot be reconstructed.
+
+What survives is enough to reproduce every number and not enough to audit how L2 produced its
+labels: the adjudication sheet (`sheet-amendment1.jsonl`, 80 items with their hashes), the
+manifest, and both raters' label files (`L1-amendment1.csv`, `L2-amendment1.csv`) in the
+repository. The reviewer independently reproduced the rates from these.
+
+This is a real gap and it is permanent. It is recorded here, and the run manifests' failure to
+meet `EXPERIMENT_RECORD.md` §2 — no frozen-code or clean-tree record, no source digests, no
+dataset provenance linkage, no sampling settings, endpoints, per-arm UTC bounds or environment —
+is recorded with it. **The lesson generalises past this study: an artefact that lives only in a
+session scratchpad is not archived, and this programme has now lost one that way.**
+
+The results now bound the interruption and distinguish the two kinds. The two run manifests are
+**12:47:51** apart, which is what this repository can establish. The review's figure for the gap
+*within draw 5*, 12:40:09, **we could not reproduce**: the cache rows carry `wall_s` and `run_id`
+but no clock time, so a within-draw gap is not recoverable from the committed records. That is a
+second provenance gap, recorded as one. And the operator-reported balance exhaustion is now
+separated from the HTTP 429 denials counted in the `.failed.jsonl` files, since no record here
+attributes any individual denial to billing.

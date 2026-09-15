@@ -1,4 +1,4 @@
-# Ceiling 4 — the referent rule raises the shipped auditor's ceiling, and charges for it on the clean stratum
+# Ceiling 4 — the referent rule raises the shipped auditor's union flag coverage at K = 8, and charges for it on the clean stratum
 
 Study 20. Preregistered at `benchmarks/code/ceiling4/PREREGISTRATION.md` (8174337), committed
 before any model call, with the driver `ceiling4.py` (a32d5b0) committed before the first
@@ -107,8 +107,22 @@ Flag = at least one BLOCKER finding, ceiling 1's rule. Union of K readings.
 A(`cross-R`) − A(`cross`) on P, the constrained fit refitted inside every one of the 10,000 problem-cluster resamples: **+27.1 points, cluster [10.9, 39.0]** (10,000 resamples fitted). Method: the constrained fit of ceiling 1 §1.2, refitted inside each resample; A is bounded to [0, 1] inside the objective, so an interval that reaches 100.0 has reached the constraint, not a measurement.
 <!-- END ASYMPTOTE-DIFF -->
 
-* **H20b (the ceiling, not the slope): the two families fall on opposite sides of ceiling 1's
-  flattening bar, so their asymptotes are not comparable in kind.** `cross-R` passes the
+* **H20b (the fitted asymptotes, not the slope): the two families fall on opposite sides of
+  ceiling 1's flattening bar, so their asymptotes are not comparable in kind.**
+
+  **What H20b does and does not establish.** It establishes a positive difference between the
+  two *registered fitted asymptotes*, conditional on the single-exponential form. It does
+  **not** establish a difference in the true ceiling, and this report may not say it does.
+  Three reasons, the first two of which are in this section's own numbers. `cross` has not
+  flattened, so one of the two terms is an extrapolation. Heterogeneous low-probability
+  detection can look like a ceiling over eight readings: an instance found with probability
+  0.02 per reading is missed by all eight about 85% of the time, so a curve can flatten
+  because the remaining instances are *rare*, not because they are *unreachable*. And this
+  study's own secondary estimator says there is no ceiling at all — the ZIBB fit puts the
+  non-inflated share at essentially 1.0 for **both** families (`cross` π = 0.99999999999,
+  `cross-R` π = 0.99999999990, cluster [0.658, 1.0]), that is, it finds no evidence of a
+  never-detectable class in either arm. Whatever the referent rule moves, it is not shown to
+  be a limit. `cross-R` passes the
   registered bar — its K = 7 to K = 8
   gain 0.57 points, cluster [0.11, 1.04],
   is at most 1.0 point — so
@@ -138,8 +152,11 @@ A(`cross-R`) − A(`cross`) on P, the constrained fit refitted inside every one 
   and
   π = 100.0% (cluster 65.8–100.0) for `cross-R`,
   which is the upward instability §1.2 predicted in advance and which ceiling 1 and study 18
-  also recorded. Where the two estimators disagree §1.2 says to prefer the conservative one;
-  that is the saturation fit here, and the raw union at K = 8 is more conservative still.
+  also recorded. Where the two estimators disagree §1.2 says to prefer the conservative one.
+  **Round 1 of review found the sentence that used to stand here numerically false**: it said
+  the raw union at K = 8 is more conservative still, which holds for `cross` (30.00% against a
+  fitted 31.50%) but **not** for `cross-R`, whose raw union of **60.91% exceeds its own fit of
+  58.62%**. For `cross-R` the fit is the conservative estimator and the raw union is not.
 * **H20c (the cost): the rule is expensive on the clean stratum.** Union false positives on
   C at K = 8: **+20.7 points, cluster [12.8, 28.8]**
   (36 vs 5; McNemar p = 7.8e-07; sign-flip p = 5.0e-06; Tango [13.1, 28.7]; grid-unconditional [10.0, 30.1]),
@@ -224,8 +241,11 @@ Residual rate with `cross-R` added: 32/110 = 29.1% (Wilson 21.4–38.2; cluster 
   671 of the 2,080 `cross-R` readings returned at least one finding and 664 returned at
   least one BLOCKER.
   So on this arm the looser rule adds almost nothing, unlike study 18's Anthropic families
-  where the gap between the two rules was the whole story. No text was adjudicated, so
-  neither rate is shown to name a defect.
+  where the gap between the two rules was the whole story. **No text from these eight-reading
+  unions was adjudicated**, so neither rate is shown to name a defect. (§3 adjudicates a
+  different thing: the texts of a single `cross-T` reading and a single `cross-R` draw. The
+  sentence that stood here said "no text was adjudicated", which contradicted §3 and is
+  corrected.)
 * **`mixed`** (Table 7): at every matched total, a mixture of `cross` and `cross-R` readings
   sits above `cross` alone and below `cross-R` alone, on both strata. Spending half the
   readings on the shipped constitution buys nothing here that spending all of them on the
@@ -282,8 +302,12 @@ the numbers below should be read with that in front of them, not behind them.
 
 The disagreement is **asymmetric**, not noise in both directions.
 L1 answered yes on 46 items and L2 on 55, and of the 23 disagreements 16 are L1-no/L2-yes,
-so L2 is the more inclusive rater. The reason is a property of these findings rather than of
-the raters: many of them name an input class *adjacent* to the hidden failing class — "the
+so L2 is the more inclusive rater. A property of these findings is part of the reason, though
+**not demonstrably the whole of it**: the first review re-read the items and found judgments
+that are inconsistent within each rater as well, so the sentence that used to attribute the
+disagreement to the findings "rather than" the raters claimed more than the labels support.
+What the items do show is that many of them name an input class *adjacent* to the hidden
+failing class — "the
 visible tests never construct X", where X is near to, but not the same as, the class on which
 the hidden suite actually fails. Where a finding names a neighbouring class, "does this name
 the class on which the hidden test fails" stops having an obvious answer, and two careful
@@ -324,7 +348,7 @@ Denominators: `cross-T`'s one reading returned a finding on 9 of the 110 P insta
 <!-- END TABLE10 -->
 
 <!-- BEGIN KILL-A (records/ceiling4/tables.md) -->
-**Amendment 1's kill.** Amendment 1 adopts the memo's kill: below 20 of 110 on cross-T's registered primary, the headline becomes 'flag rate 30.0%, defect-naming recall X%'. `cross-T`'s registered primary is 5 of 110, below 20, so the kill **FIRED** — and it fires under every one of the eight ways of reading that rate (two questions by four reader rules): the count runs from 5 to 7 of 110, every one below 20. The verdict therefore does not rest on the raters' disagreement, even though the point estimate does.
+**Amendment 1's kill.** Amendment 1 adopts the memo's kill: below 20 of 110 on cross-T's registered primary, the headline becomes 'flag rate 30.0%, defect-naming recall X%'. `cross-T`'s registered primary is 5 of 110, below 20, so the kill **FIRED** — and it fires under every one of the eight ways of reading that rate (two questions by four reader rules): the count runs from 5 to 7 of 110, every one below 20. The verdict therefore does not rest on the raters' disagreement, even though the point estimate does. **It does not rest on the adjudication at all**: only 9 of 110 instances drew any finding on this arm, so the largest defect-asserting count available under perfect adjudication was 9, already below 20. **The headline the kill prescribes juxtaposes two different quantities and must carry that warning wherever it is quoted**: the flag rate is a union over eight readings and the defect-naming rate is one reading whose texts were adjudicated; the eight readings' texts were never archived, so no naming rate exists for them and none may be inferred by scaling this one. The matched comparison inside this single reading is 9 instances flagged against 5 adjudicated as asserting the defect.
 <!-- END KILL-A -->
 
 **What this establishes, exactly.** On **one** reading, the shipped auditor returned a finding
@@ -388,7 +412,21 @@ Total from the 9 project ledgers: **$19.84** over 2,340 calls for 2,340 readings
   draws 5 to 8 and ran `cross-T`. A denial spends nothing and lands no reading, so the record
   contains no partial draw; every one of the nine draws is complete at 260 of 260. The retried
   readings were taken in the later invocation, after an interval this design does not control
-  for.
+  for. **How long an interval, from this repository's records: the two run manifests are
+  12:47:51 apart** (2026-09-10T16:08:25Z and 2026-09-11T04:56:16Z). The first review reports the
+  gap *within draw 5* as 12:40:09; **we could not reproduce that figure**, because the cache rows
+  carry no per-reading timestamp — they record `wall_s` and `run_id` but no clock time — so the
+  within-draw gap cannot be recovered from the committed records at all. That is a second
+  provenance gap and it is recorded as one (Amendment 2). What the records do support is that
+  draw 5's readings were split across the two invocations and that the manifests bound the split
+  at about thirteen hours.
+
+  **Two different interruptions are described in this study and must not be conflated.** The
+  denials counted above are HTTP 429 rate-limiting recorded in the `.failed.jsonl` files, which
+  is what the numbers in this bullet come from. Separately, the operator reported that the
+  account's balance was exhausted during this period; **no record in this study attributes any
+  particular denial to billing rather than to rate limiting**, so the balance report is context
+  for why the run was resumed later and is not evidence about any individual denial.
 * **Amendment 1's obligation is discharged.** An earlier version of this file reported the
   adjudication as prepared but not run, because the analysis was first carried out under an
   instruction to make no model call. Both raters have since answered the sheet, the registered

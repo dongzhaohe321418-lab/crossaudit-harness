@@ -992,10 +992,27 @@ def _kill_a(out: dict) -> list[str]:
              f"{span[0]} to {span[-1]} of 110, every one below {k['threshold_k']}"
              if k["fired_under_every_rule_and_question"] else
              "but NOT under every reader rule; the rules that do not fire it are in Table 10")
+    # Review round 1 (2026-09-15): the kill fires for a more basic reason than rater
+    # disagreement, and the block must say so. Only `any` P instances drew ANY finding on this
+    # arm, so the largest defect-asserting count arithmetically available was `any`, already
+    # below the threshold. Round 1 also required the block to stop repeating the memo's
+    # headline unqualified: the two rates in it are not the same kind of quantity.
+    any_k = out["amendment1_cross_T"]["P_any_finding_rate"]["k"]
     return [f"**Amendment 1's kill.** {k['rule']}. `cross-T`'s registered primary is "
             f"{k['primary_k']} of {k['primary_n']}, below {k['threshold_k']}, so the kill "
             f"**{'FIRED' if k['fired'] else 'did not fire'}** — {every}. The verdict therefore does "
-            f"not rest on the raters' disagreement, even though the point estimate does."]
+            f"not rest on the raters' disagreement, even though the point estimate does. "
+            f"**It does not rest on the adjudication at all**: only {any_k} of "
+            f"{k['primary_n']} instances drew any finding on this arm, so the largest "
+            f"defect-asserting count available under perfect adjudication was {any_k}, "
+            f"already below {k['threshold_k']}. "
+            f"**The headline the kill prescribes juxtaposes two different quantities and must "
+            f"carry that warning wherever it is quoted**: the flag rate is a union over eight "
+            f"readings and the defect-naming rate is one reading whose texts were adjudicated; "
+            f"the eight readings' texts were never archived, so no naming rate exists for them "
+            f"and none may be inferred by scaling this one. The matched comparison inside this "
+            f"single reading is {any_k} instances flagged against {k['primary_k']} adjudicated "
+            f"as asserting the defect."]
 
 
 def _cost(out: dict) -> list[str]:
