@@ -357,3 +357,61 @@ Every sentence resting on A5's claim is rewritten.
 **Budget.** 40 instances × 8 draws ≈ $3.5, taking the study to about $20 of its $35 cap. Nothing
 else changes: not the population, the filters, the gate, the auditor, K, the hypotheses, the
 primary or the kill.
+
+## Amendment 7 — F6 was implemented weaker than registered, and the headline claim is withdrawn
+
+**Written 2026-09-16, after the first cross-vendor review, which refused quotation twice.**
+
+**1. F6 does not do what this preregistration says it does.** The table above registers F6 as
+"`witness_input` is recorded **and the first failing hidden input is recovered by the same witness
+path study 21 used**". The implementation is one expression:
+
+```python
+out["F6_witness"] = bool(obj.get("witness_input"))
+```
+
+It checks that the injector wrote a non-empty string. It never recovers the failing input, never
+executes the witness, and never connects the quote, the named class, the witness and the actual
+hidden failure. Amendment 6 noticed half of this — that F6 never validates `input_class` — but
+left the registered description standing and kept calling the six filters mechanical guarantees of
+specification entailment. **They are not. No filter in this study establishes that the
+specification entails the modified code is wrong.** F1 establishes that six words were copied from
+the specification; F2, F3 and F5 establish an execution profile; F4 establishes a small diff.
+
+**2. The headline is withdrawn, and no replacement is offered.** This study reported
+97.8% on the gate-accepted population, then, under Amendment 6, 84.2% stratified over all 281
+filter-accepted instances. Neither figure supports the claim the study was built to test:
+
+* 97.8% conditions on a gate that Amendment 6's own measurement showed selects for detectability
+  (77.5% on the instances it refused);
+* 84.2% removes that gate, but the remaining filters do not establish specification entailment, so
+  **its denominator is not "defects the specification determines"** — it is "small injected edits
+  that survived a sparse visible suite and failed a hidden one".
+
+The review's alternative account survives every contrast this study reports, including the paired
+twin arm and the rejected arm: start from problems the generator solved, demand a tiny edit that
+survives the visible tests, and retry until the hidden suite fails; this concentrates the pool into
+conspicuous exceptions and contradictions of unchanged documentation. Removing the edit removes
+those cues too, so the twin contrast cannot separate the two accounts. The preregistered probe
+already measured the consequence — the edits are separable from natural code at 96.7% — and that
+is the same phenomenon seen from the other side.
+
+**Concretely, the pool contains edits that announce themselves.** Seven instances in the archive
+carry a comment naming the bug, one of them literally `DEFECT: should be +`, and **both gates
+accepted it**. Only one of the seven reached population I, and it was flagged in 8 of 8 readings;
+removing it moves the gate-accepted figure from 90 of 92 to 89 of 91, which is 97.8% either way.
+So self-announcement does **not** explain the effect. It does show that nothing in the
+construction was looking for conspicuousness, which is exactly what the probe then found.
+
+**3. What this study may still say.** It may report, descriptively, that the shipped auditor blocks
+small injected edits at a far higher rate than it blocks the natural residual, **and that those
+edits are separable from natural code at 96.7%, so the comparison is between populations that
+differ in more than specification-determinedness**. It may not be quoted as a prospective test of
+study 21's post-hoc split, and **C4 does not gain its prospective test from this work**.
+
+**4. What would make the test.** A population whose specification-determinedness is established by
+something other than the injector's own assertion: either natural defects independently labelled
+by a party that did not build the population, or injected defects whose witness is executed and
+whose named class is verified against the actual first failing hidden input — that is, F6 as it
+was registered, plus a conspicuousness control that the probe scores before the audit rather than
+after.

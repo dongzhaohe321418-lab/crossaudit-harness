@@ -1,3 +1,19 @@
+> # The headline is WITHDRAWN (Amendment 7, 2026-09-16)
+>
+> Two independent cross-vendor reviews refused quotation. Neither figure this study reported
+> survives: 97.8% conditions on a gate that selects for detectability, and 84.2% removes that gate
+> but keeps filters that **do not establish specification entailment at all**. F6 was implemented
+> as `bool(obj.get("witness_input"))` while this study registered it as recovering the first
+> failing hidden input; nothing here connects the quote, the named class, the witness and the
+> actual failure.
+>
+> What the study may still report is descriptive: the auditor blocks small injected edits far more
+> often than the natural residual, **and those edits are separable from natural code at 96.7%**, so
+> the two populations differ in more than specification-determinedness. **This is not a
+> prospective test of study 21's split, and C4 does not gain one from this work.**
+>
+> The numbers below are left unedited. Read them with the banner.
+
 # Study 22 — the ceiling on defects the specification determines
 
 Preregistered at `inject/PREREGISTRATION.md` before the first model call, with five
