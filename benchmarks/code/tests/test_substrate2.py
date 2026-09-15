@@ -74,13 +74,21 @@ def test_the_two_programs_select_the_registered_methods(tasks):
         assert repr(method) not in visible
 
 
-def test_the_visible_text_is_exactly_the_selected_methods(tasks):
-    for task in tasks[:40]:
-        text = task.visible_tests_text()
-        shown = {node.name for node in ast.walk(ast.parse("class T:\n" + "\n".join(
-            "    " + line for line in text.splitlines()) or "    pass"))
-            if isinstance(node, ast.FunctionDef)}
-        assert shown == {m.split(".", 1)[1] for m in task._visible}, task.problem_id
+def test_the_visible_text_is_exactly_the_selected_methods_SUPERSEDED():
+    """Withdrawn by Amendment 7, and kept named so the failure mode stays on the record.
+
+    This test used to assert the visible text contained exactly the selected methods.
+    It passed throughout, and it hid the defect it was meant to guard, because it made
+    the text parseable ITSELF:
+
+        ast.parse("class T:\n" + "\n".join("    " + line for line in text.splitlines()))
+
+    It manufactured the class header that the real consumers -- the auditor prompt and
+    the generator prompt -- never received. What shipped to the models began at an
+    indented `def` and did not parse on any of the 300 tasks. A test that accommodates
+    the bug cannot catch it. Replaced by `test_what_the_auditor_is_shown_is_valid_python`,
+    which parses the text as the model receives it, and by the split test below it.
+    """
 
 
 def test_the_frame_record_matches_the_corpus(frame, tasks):
@@ -101,3 +109,39 @@ def test_this_substrate_is_harder_than_substrate_1_by_the_two_recorded_measures(
     lines = statistics.median(e["canonical_lines"] for e in frame["frame"])
     assert words > 2 * 41, words
     assert lines > 4 * 6, lines
+
+
+def test_what_the_auditor_is_shown_is_valid_python(tasks):
+    """Amendment 7's guard. The text the auditor and the generator are shown must PARSE.
+
+    This test did not exist, and its absence is why the defect below survived to the
+    first cross-vendor review. `visible_tests_text` sliced the selected methods out of
+    their class and returned them verbatim, so every file began at an indented `def`:
+    300 of 300 tasks raised IndentationError, while scoring executed the intact class.
+    The auditor was shown invalid Python on every task of this substrate, which can
+    raise recall and false positives together.
+
+    Mutation: drop the class header from `visible_tests_text` and this goes red on the
+    first task rather than on none.
+    """
+    import ast
+    for task in tasks:
+        text = task.visible_tests_text()
+        ast.parse(text)          # raises for the caller to see, with the task in the id
+
+
+def test_the_visible_suite_shows_every_visible_method_and_no_hidden_one(tasks):
+    """The other half: parseable is not enough, it must be the registered split.
+
+    Every method in `_visible` appears; no test method of the hidden suite that is not
+    also visible appears. Non-test members (setUp, tearDown, helpers) may appear, and
+    must, because 142 of the 301 classes define them and the selected methods call them.
+    """
+    import ast
+    for task in tasks:
+        tree = ast.parse(task.visible_tests_text())
+        names = {n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+        visible = {m.split(".", 1)[1] for m in task._visible}
+        hidden = {m.split(".", 1)[1] for m in task._methods}
+        assert visible <= names, (task.problem_id, sorted(visible - names))
+        assert not (names & hidden) - visible, (task.problem_id, sorted((names & hidden) - visible))

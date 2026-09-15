@@ -110,3 +110,52 @@ Boundary: `src/` and the kernel directories are untouched; ceiling 1's files are
 BigCodeBench is Apache-2.0, so its text may be redistributed, but this study keeps the corpus
 out of the repository anyway and commits ids, hashes, counts and outcomes only — the same rule
 substrate 1 follows. Solutions and model replies live in the run archive.
+
+---
+
+## Amendment 1 — the visible suite shown to the models did not parse; the audit is void
+
+**Written 2026-09-15, after the first cross-vendor review and before any re-run.**
+
+The review found, and re-running the extraction confirms, that `Task.visible_tests_text()` sliced
+the selected test methods out of their enclosing class and returned them verbatim. The text
+therefore began at an indented `def` and **failed `ast.parse` on 300 of the 300 tasks**, while
+scoring executed the intact class through `unittest.main(argv=...)`. On 142 of the 301 classes the
+selected methods also call `setUp`, `tearDown` or helpers that the slice omitted.
+
+`visible_tests_text()` feeds the **auditor** prompt (`audit.py`, `TESTS_PATH`) and the
+**generator** prompt (`testgen.py`, `audit2.py`). Both were shown syntactically invalid Python on
+every task of this substrate.
+
+**Why this is not a cosmetic defect.** An auditor shown a broken test file can return a finding
+about the file rather than about the candidate. That raises the flag rate on **both** strata, so
+it inflates recall (H23a) and false positives (H23c) together and is not removable by any analysis
+of the existing records: the finding texts were not archived, so no reading can be classified after
+the fact. It also confounds the cross-substrate comparison that the paper's second caution rests
+on, because substrate 1's `visible_tests_text()` returns valid top-level asserts.
+
+**What this amendment fixes.**
+
+1. `visible_tests_text()` now emits a module that parses: the test file's own prologue, the class
+   header, the class's non-test members, and the selected test methods. No test method outside
+   `_visible` appears, so the registered split is unchanged and the hidden suite stays hidden.
+   Verified across all 300 tasks: 300 parse, 0 visible methods missing, 0 hidden methods leaked.
+2. Two tests pin the contract: the text the models are shown must parse, and it must contain every
+   visible method and no hidden one.
+3. `test_the_visible_text_is_exactly_the_selected_methods` is **withdrawn**. It passed throughout
+   and concealed the defect, because it wrapped the text in `class T:` and re-indented every line
+   before parsing — the test manufactured the header the real consumers never received. It is kept
+   under a `_SUPERSEDED` name with that explanation rather than deleted.
+
+**What this amendment does NOT do, and what it costs.** It does not repair the run. Every number
+in `RESULTS-SUBSTRATE2.md` was produced by models reading the broken text, so the 250 instances ×
+8 draws × 2 auditor families are **void as evidence for the registered hypotheses** and none of
+them may be quoted. H23a to H23e must be re-run against the corrected text before this study
+reports anything. The frame, the seeded split, the strata and the generation of candidates are
+unaffected as *definitions*, but the candidates were themselves written by a generator reading the
+broken text, so the defect population must be regenerated too rather than reused.
+
+**The direction of the bias is not known in advance.** A broken test file could make the auditor
+more suspicious (raising both rates) or could waste its attention (lowering recall). We register
+now, before the re-run, that we will report the re-run's numbers whichever way they move, and will
+publish the comparison against the void run rather than quietly replacing it.

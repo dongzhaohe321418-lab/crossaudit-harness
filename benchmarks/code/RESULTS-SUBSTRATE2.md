@@ -1,3 +1,15 @@
+> # VOID — do not quote any number in this file
+>
+> The first cross-vendor review (2026-09-15) refused quotation, and one of its findings is
+> confirmed: the visible-test text shown to **both** the auditor and the generator was sliced out
+> of its test class without the class header, so it failed to parse on **300 of 300** tasks, while
+> scoring executed the intact class. Every reading below was produced by a model reading invalid
+> Python. The finding texts were not archived, so no reading can be reclassified after the fact.
+>
+> Amendment 1 (`substrate2/PREREGISTRATION.md`) records the repair and requires the study to be
+> re-run before it reports anything. The numbers are kept here, unedited, so the re-run can be
+> compared against them.
+
 # Study 23 — the measured ceiling is an operating point, not a constant
 
 > **Third version.** Preregistered at `benchmarks/code/substrate2/PREREGISTRATION.md`,

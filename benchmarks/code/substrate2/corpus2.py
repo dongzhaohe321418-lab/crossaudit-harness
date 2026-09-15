@@ -100,22 +100,49 @@ class Task:
         return []
 
     def visible_tests_text(self) -> str:
-        """The visible suite as the author sees it: the selected methods' source, verbatim.
+        """The visible suite as the developer sees it: a module that PARSES.
 
-        The auditor is shown these and only these. Producing them needs the test class's
-        source, which is why this returns text sliced from it rather than the method names.
+        The auditor and the generator are shown these and only these. Until
+        Amendment 7 this sliced the selected methods' source out of the class and
+        returned it verbatim, so the text began at an indented ``def`` and was not
+        valid Python -- 300 of 300 tasks failed ``ast.parse``, while scoring
+        executed the intact class. It now emits the module's own prologue, the
+        class header, the class's non-test members (``setUp``, ``tearDown`` and any
+        helper the selected methods call) and the selected test methods. No test
+        method outside ``_visible`` appears, so the hidden suite is still hidden.
         """
         tree = ast.parse(self._test)
-        wanted = {m.split(".", 1)[1] for m in self._visible}
         lines = self._test.splitlines()
+        wanted = {m.split(".", 1)[1] for m in self._visible}
+        hidden = {m.split(".", 1)[1] for m in self._methods}
+
+        def src(node) -> list[str]:
+            first = min([node.lineno] + [d.lineno for d in getattr(node, "decorator_list", [])])
+            return lines[first - 1:node.end_lineno]
+
+        target = next((n for n in tree.body
+                       if isinstance(n, ast.ClassDef)
+                       and any(isinstance(c, ast.FunctionDef) and c.name in wanted
+                               for c in n.body)), None)
+        if target is None:
+            return ""
+
         out: list[str] = []
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef):
-                for child in node.body:
-                    if isinstance(child, ast.FunctionDef) and child.name in wanted:
-                        start = min([child.lineno] + [d.lineno for d in child.decorator_list]) - 1
-                        out.extend(lines[start:child.end_lineno])
-                        out.append("")
+        for node in tree.body:                      # prologue: imports and module-level code,
+            if not isinstance(node, ast.ClassDef):  # never another test class
+                out.extend(src(node))
+        if out:
+            out.append("")
+
+        head = min([target.lineno] + [d.lineno for d in target.decorator_list]) - 1
+        out.extend(lines[head:target.body[0].lineno - 1])
+        for child in target.body:
+            if isinstance(child, ast.FunctionDef):
+                if child.name in wanted or child.name not in hidden:
+                    out.extend(src(child))
+                    out.append("")
+            else:                                   # class-level constants the tests read
+                out.extend(src(child))
         return "\n".join(out).rstrip() + "\n"
 
 
