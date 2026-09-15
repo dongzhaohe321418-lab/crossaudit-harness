@@ -154,9 +154,12 @@ Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster pe
   although it returned some finding on 37 of them — 28 of its 38 findings are about something else,
   most often the test file's missing import; under the referent rule on **58 of 110 = 52.7%**
   (Wilson 43.5–61.8; cluster 40.7–65.2; 62 "yes" of 128 findings); under the grading rule 4 of 110 =
-  3.6%. **Recognition** (Table 5b; a post-hoc second question the first review asked for, put to
-  both labellers on the 72 consensus-"yes" findings: does the finding assert the code is *wrong*
-  on that class? agreement 60/72, κ = 0.695; 12 disputed count as not "defect"): under the
+  3.6%. **Reports a failure on the named class** (Table 5b; a post-hoc second question the
+  first review asked for, put to both labellers on the 72 consensus-"yes" findings: does the
+  finding say the class raises or returns the wrong value, *even if it grades that non-blocking
+  or says the spec is silent*? agreement 60/72, κ = 0.695; 12 disputed count as not reporting a
+  failure). **This is broader than asserting a defect and may not be quoted as defect
+  recognition**: under the
   shipped constitution **3 of 110 = 2.7%** (Wilson 0.9–7.7; cluster 0.0–7.3); under the
   referent rule **27 of 110 = 24.5%** (Wilson 17.5–33.4; cluster 14.4–35.7) — 24 of R's 62
   naming findings say the class is handled correctly or only untested; under the grading
@@ -235,13 +238,19 @@ applies (ledger totals are the cost table).
   agreement from 60/72 to **59/71**, strict κ from 0.695 to **0.692**, R's strict composition
   from 24 of 62 to **24 of 61**, and the complementary first-pass count from 46 of 128 to
   **47 of 128**. H19a and the BLOCKER contrasts are untouched.
-* **Table 5b measures what its question asked, which is narrower than "asserts a defect".**
+* **Table 5b measures what its question asked, which is BROADER than "asserts a defect".**
   The seventh review found the claim and the instrument apart, and it is right. The strict
   question put to both raters counts a finding as `defect` when it says the class raises or
   returns the wrong value *"even if it grades it non-blocking or says the spec is silent"* —
-  those words are in the prompt. So the quantity is **the finding reports a failure on that
-  class**, not the finding asserts the code is wrong there, and it is named that way throughout
-  this file now. The reviewer checked what the difference costs: five of R's 27 instances rest
+  those words are in the prompt. Those words ADMIT findings that disclaim the requirement, so the
+  criterion takes in more than defect assertion, not less. An earlier version of this bullet said
+  "narrower", which had the direction backwards; the eighth review caught it. So the quantity is
+  **the finding reports a failure on that class**, not the finding asserts the code is wrong
+  there. The eighth review also found the rename incomplete — Results §1, the report's comment and
+  generated note, `numbers.json`'s three nested keys, the round-2 manifest entry and Amendment 3
+  all still carried the withdrawn wording after the caption and headers had been changed. The
+  first three are corrected at this commit; the last two are historical records and are corrected
+  by Amendment 4 rather than rewritten. The reviewer checked what the difference costs: five of R's 27 instances rest
   only on findings that expressly disclaim a requirement (`J0031`, `J0073`, `J0089`, `J0091`,
   `J0130` — float behaviour "not specified", an empty input that raises where handling it "is
   not explicitly required", and so on), so a stricter reading gives 22 of 110. That count is the

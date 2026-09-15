@@ -67,25 +67,3 @@ Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster pe
 | S-text — shipped constitution, a fifth reading (Amendment 1) | 38 | 6 | 28 | 4 | 0 | 37 | 6 | 6/37 = 16.2% | 7.7–31.1 | 0.0–33.3 | 6/110 = 5.5% | 2.5–11.4 | 0.0–12.6 |
 | R — + referent rule (CA-COVER-001) | 128 | 62 | 46 | 9 | 11 | 104 | 58 | 58/104 = 55.8% | 46.2–64.9 | 43.8–68.3 | 58/110 = 52.7% | 43.5–61.8 | 40.7–65.2 |
 | B — + grading rule (CA-GRADE-001) | 24 | 4 | 18 | 2 | 0 | 24 | 4 | 4/24 = 16.7% | 6.7–35.9 | 0.0–40.0 | 4/110 = 3.6% | 1.4–9.0 | 0.0–9.2 |
-
-### Table 6 — reply format and cost per draw, from the caches and the ledgers
-
-| draw | readings | malformed | ledger calls | extra calls | replies > 300 output tokens | findings | BLOCKER findings | BLOCKER share | ledger USD |
-|---|---|---|---|---|---|---|---|---|---|
-| R-d1 | 260 | 2 | 279 | 19 | 236 | 255 | 28 | 11.0% | $4.59 |
-| R-d2 | 260 | 2 | 280 | 20 | 237 | 236 | 23 | 9.7% | $4.62 |
-| R-d3 | 260 | 2 | 278 | 18 | 240 | 243 | 23 | 9.5% | $4.61 |
-| R-d4 | 260 | 3 | 279 | 19 | 235 | 245 | 22 | 9.0% | $4.58 |
-| B-d1 | 260 | 0 | 271 | 11 | 130 | 38 | 1 | 2.6% | $2.93 |
-| B-d2 | 260 | 0 | 271 | 11 | 131 | 35 | 3 | 8.6% | $2.90 |
-| B-d3 | 260 | 0 | 270 | 10 | 127 | 36 | 6 | 16.7% | $2.90 |
-| B-d4 | 260 | 0 | 268 | 8 | 131 | 37 | 3 | 8.1% | $2.86 |
-| S-text-d1 | 260 | 0 | 264 | 4 | 68 | 61 | 2 | 3.3% | $2.23 |
-| **total** | | | 2460 | | | | | | **$32.21** |
-
-### Table 7 — the residual: P instances blocked by no measured family (ceiling 3's five families: 56) when an arm is added
-
-| added arm | residual n | rate | Wilson | cluster | instances that left, by ceiling 1's category |
-|---|---|---|---|---|---|
-| R | 53 | 53/110 = 48.2% | 39.1–57.4 | 36.4–59.8 | spec-misreading 1, unexercised-edge 2 |
-| B | 56 | 56/110 = 50.9% | 41.7–60.1 | 39.1–62.7 | none |

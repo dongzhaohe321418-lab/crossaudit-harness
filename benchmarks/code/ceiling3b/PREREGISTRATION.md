@@ -145,3 +145,46 @@ stopped and resumed with the new one; the loop is resumable and re-buys nothing.
    name a specific input; "only said what to call a BLOCKER" was wrong.
 7. **The §2 manifest** (`records/ceiling3b/manifest.json`, `ceiling3b/finalise_manifest.py`)
    is written from the recorded evidence; the results carry the comparison inventory.
+
+## Amendment 4 — the round-8 rename, completed, and Amendment 3's wording corrected
+
+**Written 2026-09-15, after the eighth review, which refused quotation for this reason.**
+
+Round 7 found the claim and the instrument apart: Table 5b was described as measuring whether a
+finding **asserts a defect**, while the question actually put to both raters counts a finding when
+it says the class raises or returns the wrong value *"even if it grades it non-blocking or says
+the spec is silent"*. Round 7's fix renamed the caption, the table header, §2's positive claims
+and the outer JSON key. **The eighth review found the rename incomplete**, and it is right:
+
+* Results §1 still called the quantity "Recognition" and asked whether the finding "assert[s] the
+  code is *wrong*";
+* `report_ceiling3b.py`'s comment and its generated `note` kept the withdrawn definition;
+* `numbers.json` carried that note and three nested `recognised_rate_over_all_P` keys;
+* the round-2 manifest entry describes L1's role as answering "recognition questions";
+* **Amendment 3 promises a "defect-asserting finding" rate.**
+
+It also found a direction error §4 had introduced while making the repair: that bullet called the
+instrument *narrower* than "asserts a defect". It is **broader**. The words "even if it grades it
+non-blocking or says the spec is silent" **admit** findings that disclaim the requirement, so the
+criterion takes in more than defect assertion, not less. Stating it as narrower made the quantity
+sound more conservative than it is, which is the flattering direction, and no review before the
+eighth caught it.
+
+**What this amendment does.** The quantity is named **"reports a failure on the named class"** in
+Results §1 and §4, in the report's comment, in the generated note, and in the JSON keys, which
+become `reports_failure_rate_over_all_P`. Regenerating `numbers.json` changes no value: the rates
+stay 3 of 110, 27 of 110 and 3 of 110.
+
+**What this amendment does not do.** It does not rewrite the round-2 manifest entry or Amendment 3.
+Those are historical records of what was believed and promised at the time, and editing them would
+destroy the evidence that the claim moved. They are corrected here, in place, by this amendment:
+wherever Amendment 3 or the round-2 manifest says "defect-asserting" or "recognition" of this
+quantity, read **"reports a failure on the named class"**, and note that it is broader than defect
+assertion.
+
+**What may and may not be said.** The quantity may be reported as a failure-reporting rate with its
+interval. It may **not** be quoted as defect recognition, and it may not be used to support a claim
+about whether the auditor identified the defect — that would need a further adjudication, which has
+not been run. The reviewer's stricter sensitivity, 22 of 110 after removing five instances resting
+only on findings that expressly disclaim a requirement, is reported as the reviewer's and is not
+adopted as this study's estimate.

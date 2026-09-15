@@ -195,8 +195,13 @@ def main() -> int:
                                 "P_instances_named_by_some_finding": rc.clustered_rate(names_P, ids, instances, BOOTSTRAP, BOOT_SEED) if ids else None,
                                 "names_rate_over_all_P": rc.clustered_rate(names_P, P, instances, BOOTSTRAP, BOOT_SEED)}
         # The second question (review round 1; post hoc, labelled so): among consensus-"yes"
-        # findings, does the finding assert the code is WRONG on that class ("defect") or say it
-        # is handled correctly / only untested ("correct")? Recognition, not mention.
+        # findings, does the finding REPORT A FAILURE on that class -- the class raises or returns
+        # the wrong value -- or say it is handled correctly / only untested ("correct")?
+        # Round 8 renamed this: the label is "reports a failure on the named class", NOT "asserts
+        # a defect" and not "recognition". The prompt admits a finding "even if it grades it
+        # non-blocking or says the spec is silent", so the criterion is BROADER than defect
+        # assertion, not narrower. Round 8 found the rename left behind here and in the note,
+        # the keys and Results section 1.
         strict = {}
         for who in ("L1", "L2"):
             path = C3B / f"{who}-h19d-strict.csv"
@@ -205,7 +210,7 @@ def main() -> int:
                     strict[who] = {row["id"]: row["label"].strip().lower() for row in csv.DictReader(fh)}
         if strict:
             items = sorted(set.intersection(*(set(v) for v in strict.values())))
-            st = {"n_items": len(items), "note": "post hoc (review round 1): the 'yes' items re-labelled for whether the finding asserts a defect on that class"}
+            st = {"n_items": len(items), "note": "post hoc (review round 1): the 'yes' items re-labelled for whether the finding REPORTS A FAILURE on that class. The prompt admits an item even if the finding grades it non-blocking or says the spec is silent, so this is broader than asserting a defect and must not be quoted as defect recognition (renamed at round 8; round 2's manifest entry and Amendment 3 use the withdrawn wording and are corrected in place by Amendment 4, not rewritten)"}
             if len(strict) == 2:
                 agree = sum(1 for i in items if strict["L1"][i] == strict["L2"][i])
                 cats = ("defect", "correct", "cannot tell")
@@ -228,7 +233,7 @@ def main() -> int:
                                      "correct": sum(1 for i in items if key[i]["arm"] == arm and sgold.get(i) == "correct"),
                                      "cannot_tell": sum(1 for i in items if key[i]["arm"] == arm and sgold.get(i) == "cannot tell"),
                                      "disputed": sum(1 for i in items if key[i]["arm"] == arm and sgold.get(i) == "disputed"),
-                                     "recognised_rate_over_all_P": rc.clustered_rate(rec, P, instances, BOOTSTRAP, BOOT_SEED)}
+                                     "reports_failure_rate_over_all_P": rc.clustered_rate(rec, P, instances, BOOTSTRAP, BOOT_SEED)}
             h["strict_reports_a_failure_POST_HOC"] = st
         out["H19d"] = h
     C3B.mkdir(parents=True, exist_ok=True)
@@ -310,7 +315,7 @@ def render_tables(out: dict) -> str:
                   "|---|---|---|---|---|---|---|---|---|"]
             T5 = dict(LABEL, S="S-text — shipped constitution, a fifth reading (Amendment 1)")
             for arm in ("S", "R", "B"):
-                v = st["by_arm"][arm]; r = v["recognised_rate_over_all_P"]
+                v = st["by_arm"][arm]; r = v["reports_failure_rate_over_all_P"]
                 L.append(f"| {T5[arm]} | {v['yes_findings']} | {v['defect']} | {v['correct']} | {v['cannot_tell']} | {v['disputed']} | {r['k']}/{r['n']} = {_pc(r['rate'])}% | {_iv(r['wilson95'])} | {_iv(r['cluster_ci95'])} |")
         L += ["", f"### Table 5 — H19d, blinded adjudication of draw-1 findings on P instances: does the finding name the input class or behaviour on which the hidden test fails? "
               f"({h['n_items']} items; L1 the author, L2 gpt-6-astra; agreement {h['agreement'][0]}/{h['agreement'][1]}, κ = {h['kappa']:.3f}; disputed items excluded from 'yes')", "",
