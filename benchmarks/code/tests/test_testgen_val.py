@@ -205,11 +205,19 @@ def _scan(text: str) -> list[dict]:
     """Every line with the state a renderer would be in: fence, blockquote, block membership.
 
     Rounds 6 and 7 retired two weaker readings in turn — "does the line start with a
-    pipe", then "is there a fence at all". What the scan supports now is the claim the
-    document needs: outside the generated blocks there is no table-like construct, no raw
-    HTML, and no HTML comment that is not a registered marker; fences are exactly three
-    backticks or three tildes and every opener is closed; and no marker sits where a
-    renderer would treat it as code or as a quotation.
+    pipe", then "is there a fence at all". What the scan supports is narrower than the
+    document once claimed: outside the generated blocks there is no table-like construct,
+    no raw HTML, and no HTML comment that is not a registered marker; fences are exactly
+    three backticks or three tildes and every opener is closed.
+
+    It is NOT renderer-equivalent state, and it does not establish that no marker renders
+    as code. Round 9 ran nineteen document mutations and nine survived every one of these
+    checks while changing what renders — a three-backtick "closer" carrying trailing text
+    leaves the whole document inside a fence and renders zero tables instead of five;
+    processing-instruction and CDATA wrappers cut the rendered tables from five to two;
+    fenced or setext headings move or remove a registered heading. The class is open and
+    this scan does not close it. Per round 9's own recommendation we stop hardening here:
+    the records are authoritative and the Markdown is a convenience.
     """
     scanned, fence, in_block = [], None, None
     for number, line in enumerate(text.splitlines(), start=1):

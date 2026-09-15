@@ -23,8 +23,11 @@ RESULTS = CODE / "RESULTS-TESTGEN-VAL.md"
 #: The skeleton: which table goes where, in order — its name in ``tables.md``, the section
 #: heading it belongs under, and the last non-blank line of prose before its BEGIN marker.
 #: The tests hold the results file to this, so a block cannot be moved to another section,
-#: reordered, duplicated or dropped without failing, and what renders is a function of the
-#: records plus this fixed placement.
+#: reordered, duplicated or dropped without failing. They do NOT make what renders a function
+#: of the records: round 9 found nine document mutations that leave all five generated blocks
+#: byte-identical and still change the rendered document, one of which leaves it entirely
+#: inside a code fence and renders zero tables. That guarantee is withdrawn (Results section 5);
+#: the records are authoritative and this Markdown is a convenience.
 REGISTRY = (
     ("primary", "## 1. The preregistered decision",
      "also fails on the canonical solution), 89 right."),

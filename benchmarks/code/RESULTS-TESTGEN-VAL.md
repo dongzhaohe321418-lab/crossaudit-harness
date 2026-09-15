@@ -261,15 +261,19 @@ a reader while its records stayed honest.
   proof that a rule cannot reach the oracle. What holds behaviourally is narrower:
   `keep` takes the three failure-index sets and nothing else, and the rule tests
   exercise it on synthetic sets alone.
-* **The records are authoritative; this rendered Markdown is a convenience.** That is
-  the claim the tests establish, and it is narrower than the one this section made
-  through round 7. What `tests/test_testgen_val.py` proves is a chain: `numbers.json` and
-  `exploratory.json` reconstruct deterministically from the archived run by re-running
-  `testgen_val.py report` and `testgen/exploratory_val.py` over the frozen rows;
-  `records/testgen-val/tables.md` is reproduced byte for byte from those two records by
-  `render_tables`; and each table block in this file equals its `tables.md` section byte
-  for byte. A reader who wants the figures should read the records, which the harness
-  writes, and may treat the Markdown as a presentation of them.
+* **The records are authoritative; this rendered Markdown is a convenience.** Round 9
+  refused quotation because the previous wording here — introduced by round 8's own repair —
+  said the tests prove a chain beginning with `numbers.json` and `exploratory.json`
+  reconstructing from the archived run. **They do not.** `tests/test_testgen_val.py` never
+  invokes `testgen_val.py report` or `testgen/exploratory_val.py` and never compares a
+  reconstructed record; the reviewer demonstrated this by emptying `rows.jsonl` and by
+  setting A's retained numerator to `999`, under each of which **all 43 runnable tests still
+  passed**. What is true is two separate things, and they carry different weight. *Independent
+  replay* — the reviewer's, and round 3's before it — reproduced the records byte for byte from
+  the archive. *The automated tests* compare the generated tables against `tables.md` and check
+  selected prose strings; they do not test reconstruction at all. A reader who wants the figures
+  should read the records, which the harness writes, and may treat the Markdown as a
+  presentation of them.
 * **The document checks raise the cost of a misleading edit; they do not close the
   class.** Nine structural checks hold this file to a registered skeleton — no
   table-like construct outside the generated blocks, blocks unique and in registered
