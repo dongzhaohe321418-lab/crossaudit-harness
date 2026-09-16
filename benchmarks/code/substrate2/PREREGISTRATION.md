@@ -159,3 +159,59 @@ broken text, so the defect population must be regenerated too rather than reused
 more suspicious (raising both rates) or could waste its attention (lowering recall). We register
 now, before the re-run, that we will report the re-run's numbers whichever way they move, and will
 publish the comparison against the void run rather than quietly replacing it.
+
+## Amendment 2 — the re-run: what is frozen before the first model call
+
+**Written and committed 2026-09-16, before any model call of the re-run.** Amendment 1 voided the
+original run and required a re-run. This amendment fixes what that re-run may and may not do, so
+that nothing below is chosen after seeing a result.
+
+**Frozen inputs.**
+
+* The frame is **unchanged**: the same 300 tasks, the same `frame.json`, the same split rule
+  (`seed = 20260917`, `n_visible = 2`, `min_methods = 3`). The defect in Amendment 1 was in how the
+  visible methods were *rendered for the models*, not in which methods were selected, so the frame
+  needs no reselection and gets none.
+* The corpus file is `bigcodebench.jsonl`,
+  sha256 `6f3442384e576147f71875242068ce217885e0f761603cfb62175736e0331abd`.
+* **The corrected visible text is frozen by digest.** Over the 300 frame tasks in frame order, the
+  sha256 of `problem_id` + NUL + `visible_tests_text()` is
+  **`2c47fb410167fc6e2054d6fad0b62e42e0716d62c5225807a16344b895bba128`**, and all 300 parse. The
+  re-run must reproduce this digest before it spends anything; if it does not, the run stops and
+  the discrepancy is reported rather than absorbed.
+* Generation seed, audit seed, ladder, strata caps and K are ceiling 1's and the original run's,
+  unchanged: `SEED = 20260917`, `MAX_P = 200`, `N_C = 150`,
+  `LADDER = cross d1..d8 then self d1..d8`.
+
+**Budget and stopping rule.** The cap stays **$60**. The original run spent $28.23 ($1.83
+generation, $18.31 `cross`, $8.10 `self`). The re-run is expected to cost slightly more because the
+corrected visible text is longer — it now carries the module prologue, the class header and the
+fixtures — so more input tokens per call. **If spend reaches $45 the run halts and reports what it
+has**, rather than continuing toward the cap.
+
+**How the two runs are reported.** This is fixed now because it is the decision most open to being
+made favourably after the fact:
+
+1. The re-run's numbers are the study's numbers. The void run's numbers are **not** replaced or
+   deleted; `RESULTS-SUBSTRATE2.md` keeps them under its VOID banner.
+2. **Both are reported side by side, whichever way they move**, with the difference stated for
+   H23a (recall at K = 8), H23c (false positives at K = 8) and the self arm's draw-to-draw
+   agreement. We commit to this before knowing the sign.
+3. The comparison is **descriptive and post hoc**. The two runs differ in exactly one respect we
+   intended and possibly others we did not, so no p value, interval or hypothesis test is attached
+   to the difference between them, and it may not be described as an estimate of "the effect of
+   showing a model broken tests". It is one run against one run.
+4. If the re-run's numbers are close to the void run's, that does **not** retroactively validate
+   the void run. The reason the original is void is that the input was not what the study said it
+   was, and that is independent of where the numbers land.
+
+**What still will not be established.** The re-run does not address the second finding of the
+first review: the flat `self` curve remains confounded, because that route is sent `temperature 0`
+while `cross` is sent no sampling parameter. **No claim that the flatness is an operating-point
+effect rather than a sampling effect may be made from this re-run**, and the phrase is barred from
+the results unless a temperature-matched arm is added. That arm is not in this budget.
+
+**Registered kill.** If the corrected visible text fails to reproduce the digest above, or if any
+task's visible text fails to parse at run time, the run halts before spending and reports the
+failure. There is no outcome-dependent kill on the rates themselves: this is a re-measurement of a
+voided run, not a test of a new hypothesis.
