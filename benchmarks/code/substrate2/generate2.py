@@ -135,7 +135,24 @@ def main(argv: list[str] | None = None) -> int:
             return {"instance_id": f"{batch}:{task.problem_id}", "batch": batch,
                     "problem_id": task.problem_id, "stratum": stratum,
                     "solution_sha256": row.get("solution_sha256", ""),
-                    "visible": visible.as_dict(), "hidden": hidden.as_dict()}
+                    "visible": _outcome(visible), "hidden": _outcome(hidden)}
+
+        def _outcome(result) -> dict:
+            """Outcome fields only. The first review found the committed instances.jsonl
+            carrying corpus text: `error` holds the interpreter traceback, which quotes the
+            test's own source lines and the expected/actual values, 118 times across 600 rows.
+            BigCodeBench is Apache-2.0, but this study's own boundary is ids, hashes, counts and
+            outcomes, and a traceback is none of those. The error is replaced by its first line
+            (the exception type and message, no source echo) and its digest, so a failure stays
+            identifiable and the archive keeps the full text."""
+            import hashlib
+            d = result.as_dict()
+            err = d.get("error") or ""
+            if err:
+                first = err.strip().splitlines()[-1][:200] if err.strip() else ""
+                d["error"] = first
+                d["error_sha256"] = hashlib.sha256(err.encode("utf-8")).hexdigest()
+            return d
 
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
             for n, row in enumerate(pool.map(score, tasks), 1):
