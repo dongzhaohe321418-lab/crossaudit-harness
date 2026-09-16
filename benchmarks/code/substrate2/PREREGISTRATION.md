@@ -215,3 +215,50 @@ the results unless a temperature-matched arm is added. That arm is not in this b
 task's visible text fails to parse at run time, the run halts before spending and reports the
 failure. There is no outcome-dependent kill on the rates themselves: this is a re-measurement of a
 voided run, not a test of a new hypothesis.
+
+## Amendment 3 — the resume artefacts now carry the generation they belong to
+
+**Written 2026-09-16, after the re-run's audit exposed the root cause, before the incremental audit.**
+
+**What happened.** The re-run changed `--run` to a fresh run directory, which correctly invalidated
+the candidate solutions, and audited a scope frozen from the *voided* generation. Of that scope's
+250 ids, under the new candidates 92 were still P, 152 were C and **6 were F** — instances that
+fail their own visible suite and must never be audited.
+
+**The root cause is a boundary mismatch, not a forgotten file.** The pipeline keeps run-scoped
+artefacts in two places:
+
+| artefact | lives in | invalidated by a new `--run`? |
+|---|---|---|
+| candidate solutions | `run_dir/solutions/` | **yes** |
+| audit readings | `records/substrate2/cache/` | **no** |
+| frozen scope | `records/substrate2/audit_set.json` | **no** |
+
+The last two sit in `records/`, which is committed **for provenance** so a reviewer can recompute
+every number, and their only reuse condition was `if path.exists()`. So the switch that starts a
+re-run cannot reach the two artefacts that most need invalidating. Quarantining `cache/` by hand
+made `--plan` go from "0 to run" to a full ladder, which looked like the path was clear and was
+precisely why the second artefact went unexamined.
+
+**Why the registered gate did not catch it.** `verify_frame.py` checks the visible-test digest,
+because that is where the *previous* failure was. A gate shaped like the last accident does not
+stop the next one.
+
+**What is added.** `audit_set.json` now records `generation_sha256`, a digest over every
+instance's id, stratum and `solution_sha256`. On every run the audit driver recomputes it and
+**refuses** a scope frozen from a different generation, or one predating this amendment that
+cannot prove which generation it belongs to. The cache is checked the same way: a cached reading
+whose `solution_sha256` differs from the instance's now halts the run. Both refusals are tested,
+by restoring the quarantined file and by planting a wrong digest; both exit non-zero with the two
+digests named.
+
+**Note on what the guard would NOT have caught, and why the check is the one chosen.** All 4,000
+readings of 2026-09-16 *did* match their candidates — the auditor read the right code; only the
+scope around it was stale. So "the solutions match" is not evidence that a resume is sound, and the
+scope digest, not the per-reading check, is the load-bearing half.
+
+**Cost of the repair.** Re-freezing from the new generation gives 249 instances (99 P, 150 C), of
+which **147 were already audited and are reused**; 102 remain, at 16 arms, about **$9**. The 103
+readings now out of scope stay bought and unused. We do not keep them by choosing the C sample to
+match what was already purchased: that would be selecting a sample after seeing which of it was
+paid for. Total study spend stays under the $45 halt registered in Amendment 2.

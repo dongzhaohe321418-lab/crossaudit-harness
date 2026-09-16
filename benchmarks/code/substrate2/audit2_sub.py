@@ -14,6 +14,7 @@ untouched; no corpus text and no finding text is committed.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import random
 import sys
@@ -45,11 +46,51 @@ def load_instances() -> dict[str, dict]:
     return rows
 
 
+def generation_digest(instances: dict[str, dict]) -> str:
+    """Which generation of candidates this scope and these readings belong to.
+
+    Amendment 3's guard. `audit_set.json` and `cache/` live in `records/`, which is committed for
+    provenance, while the thing that invalidates them -- a new generation -- is selected by
+    `--run`, which points at the run directory. So changing the run directory correctly
+    invalidated the solutions and did nothing to the audit set or the cache, and both were reused
+    across generations by existence alone. The re-run of 2026-09-16 audited a scope frozen from
+    the voided generation: of its 250 ids, 92 were still P under the new candidates, 152 were C
+    and 6 were F, which fail their own visible suite and must never be audited.
+
+    The digest covers exactly what a reading depends on: which instance, which stratum it is in,
+    and which solution text the auditor is shown.
+    """
+    payload = "\n".join(
+        f"{iid}\t{row['stratum']}\t{row.get('solution_sha256', '')}"
+        for iid, row in sorted(instances.items()))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def freeze_audit_set(instances: dict[str, dict]) -> dict:
-    """§2's scope, drawn once by seed and committed before the first audit call."""
+    """§2's scope, drawn once by seed and committed before the first audit call.
+
+    Amendment 3: the frozen file records the generation it was drawn from, and a scope drawn
+    from a different generation is refused rather than reused.
+    """
     path = RECORDS / "audit_set.json"
+    current = generation_digest(instances)
     if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
+        frozen = json.loads(path.read_text(encoding="utf-8"))
+        was = frozen.get("generation_sha256")
+        if was is None:
+            raise SystemExit(
+                f"HALT: {path} predates Amendment 3 and records no generation digest, so it "
+                f"cannot be shown to belong to these candidates. Move it aside deliberately "
+                f"(see records/substrate2/cache-void-2026-09-11/README.md) and let it redraw.")
+        if was != current:
+            raise SystemExit(
+                f"HALT: {path} was frozen from a different generation of candidates.\n"
+                f"  frozen from: {was}\n"
+                f"  present now: {current}\n"
+                f"Re-using it would audit a scope whose strata no longer hold. Move it aside and "
+                f"let it redraw, and move `cache/` with it -- the readings in it belong to the "
+                f"same superseded generation.")
+        return frozen
     rng = random.Random(SEED)
     by_stratum: dict[str, list[str]] = {}
     for iid, row in instances.items():
@@ -59,6 +100,7 @@ def freeze_audit_set(instances: dict[str, dict]) -> dict:
         ids = sorted(by_stratum.get(stratum, []))
         chosen[stratum] = sorted(rng.sample(ids, cap)) if len(ids) > cap else ids
     out = {"seed": SEED, "caps": {"P": MAX_P, "C": N_C},
+           "generation_sha256": current,          # Amendment 3
            "population": {s: len(v) for s, v in sorted(by_stratum.items())},
            "audited": {s: len(v) for s, v in chosen.items()},
            "instance_ids": sorted(chosen["P"] + chosen["C"]),
@@ -88,6 +130,22 @@ def main(argv: list[str] | None = None) -> int:
 
     have = {("holistic", f, d): explore.load_detector(("holistic", f, d), scope_set)
             for f, d in LADDER}
+
+    # Amendment 3, the cache half of the same guard. A cached reading records the
+    # solution_sha256 it was taken against; a reading of a superseded candidate must not be
+    # counted as a reading of this one. This is checked rather than assumed because the readings
+    # of 2026-09-16 DID match their candidates -- the auditor read the right code -- while the
+    # scope around them did not, so matching solutions are not evidence that a resume is sound.
+    stale = [f"{f} d{d}: {iid}"
+             for (kind, f, d), rows in have.items()
+             for iid, row in rows.items()
+             if row.get("solution_sha256")
+             and row["solution_sha256"] != instances.get(iid, {}).get("solution_sha256")]
+    if stale:
+        raise SystemExit(
+            f"HALT: {len(stale)} cached readings were taken against a different candidate than "
+            f"the one now in instances.jsonl, e.g. {stale[:3]}. Move `cache/` aside; those "
+            f"readings belong to a superseded generation.")
     if args.plan:
         for f, d in LADDER:
             print(f"ladder {f} d{d}: {len(scope) - len(have[('holistic', f, d)])} to run")
