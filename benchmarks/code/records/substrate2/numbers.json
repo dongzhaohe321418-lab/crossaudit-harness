@@ -491,97 +491,97 @@
  ],
  "cost": {
   "audit_cross": {
-   "calls": 2000,
-   "usd": 18.3076
+   "calls": 2610,
+   "usd": 23.1108
   },
   "audit_self": {
-   "calls": 2000,
-   "usd": 8.1004
+   "calls": 2861,
+   "usd": 12.1404
   },
   "audit_total": {
-   "calls": 4000,
-   "usd": 26.408
+   "calls": 5471,
+   "usd": 35.2512
   },
   "cap_usd": 60.0,
   "generation": {
    "calls": 600,
-   "usd": 1.8258
+   "usd": 1.9054
   },
   "projects": {
    "holistic__cross__d1": {
-    "calls": 250,
-    "usd": 2.993419
+    "calls": 352,
+    "usd": 4.207185
    },
    "holistic__cross__d2": {
-    "calls": 250,
-    "usd": 2.087377
+    "calls": 352,
+    "usd": 2.770282
    },
    "holistic__cross__d3": {
-    "calls": 250,
-    "usd": 2.135107
+    "calls": 352,
+    "usd": 2.814037
    },
    "holistic__cross__d4": {
-    "calls": 250,
-    "usd": 2.079682
+    "calls": 352,
+    "usd": 2.798872
    },
    "holistic__cross__d5": {
-    "calls": 250,
-    "usd": 2.091397
+    "calls": 352,
+    "usd": 2.749913
    },
    "holistic__cross__d6": {
-    "calls": 250,
-    "usd": 2.141677
+    "calls": 352,
+    "usd": 2.718443
    },
    "holistic__cross__d7": {
-    "calls": 250,
-    "usd": 2.173342
+    "calls": 249,
+    "usd": 2.329112
    },
    "holistic__cross__d8": {
-    "calls": 250,
-    "usd": 2.605596
+    "calls": 249,
+    "usd": 2.722966
    },
    "holistic__self__d1": {
-    "calls": 250,
-    "usd": 1.008872
+    "calls": 357,
+    "usd": 1.513709
    },
    "holistic__self__d2": {
-    "calls": 250,
-    "usd": 1.013757
+    "calls": 357,
+    "usd": 1.510533
    },
    "holistic__self__d3": {
-    "calls": 250,
-    "usd": 1.013617
+    "calls": 357,
+    "usd": 1.514683
    },
    "holistic__self__d4": {
-    "calls": 250,
-    "usd": 1.013852
+    "calls": 359,
+    "usd": 1.515684
    },
    "holistic__self__d5": {
-    "calls": 250,
-    "usd": 1.011802
+    "calls": 359,
+    "usd": 1.521251
    },
    "holistic__self__d6": {
-    "calls": 250,
-    "usd": 1.011882
+    "calls": 357,
+    "usd": 1.518038
    },
    "holistic__self__d7": {
-    "calls": 250,
-    "usd": 1.012842
+    "calls": 357,
+    "usd": 1.519173
    },
    "holistic__self__d8": {
-    "calls": 250,
-    "usd": 1.013752
+    "calls": 358,
+    "usd": 1.52728
    },
    "holistic__substrate2-gen__d0": {
     "calls": 600,
-    "usd": 1.825752
+    "usd": 1.905435
    }
   },
-  "read_utc": "2026-09-11T11:16:55Z",
-  "run_dir": "/Users/ericdong/Documents/Crossaudit/study-data/wt-sub2-runs",
+  "read_utc": "2026-09-17T12:42:53Z",
+  "run_dir": "/Users/ericdong/Documents/Crossaudit/study-data/wt-sub2-rerun",
   "study_total": {
-   "calls": 4600,
-   "usd": 28.2337
+   "calls": 6071,
+   "usd": 37.1566
   }
  },
  "coverage": {
@@ -3116,5 +3116,5 @@
   "source": "records/ceiling/numbers.json, families.cross (unmodified)"
  },
  "unit_of_analysis": "instance (batch, problem_id); every interval resamples problem clusters",
- "written_utc": "2026-09-17T12:38:30Z"
+ "written_utc": "2026-09-17T12:41:59Z"
 }

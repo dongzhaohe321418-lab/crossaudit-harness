@@ -19,7 +19,7 @@ Two batches over 300 tasks. The audit set was drawn by `random.Random(20260917)`
 | stratum F (fails visible) | 40 |
 | P instances audited | 99 (cap 200; the whole population, no draw needed) |
 | C instances audited | 150 (cap 150) |
-| generation cost | $1.83 (600 calls) |
+| generation cost | $1.91 (600 calls) |
 <!-- END T2 -->
 <!-- BEGIN T3 (records/substrate2/tables.md) -->
 The frozen audit set is 249 instances (99 P, 150 C). Both ladders are complete: every draw of both families covers all 249. A denial is a call that never produced a reading; it is not in the usage ledger and cost nothing. The last column is what the `self` ladder had reached at 2026-09-11T10:18:26Z, when the first version of this report was written and H23d was not yet evaluable.
@@ -111,13 +111,13 @@ Paired: the same instances are read by both arms, so this is ceiling 1's paired 
 Substrate 1's frozen comparator is -12.7 points [-25.0, -0.9] on P. The sign here is **the opposite**. The same-vendor arm buys 4.0 points of recall and pays 23.3 points of false positives for it — 5.77 false-positive points per recall point, so it costs **more than it gains**.
 <!-- END T8 -->
 <!-- BEGIN T9 (records/substrate2/tables.md) -->
-Summed from the per-project `usage.jsonl` ledgers in the run archive as of 2026-09-11T11:16:55Z. Refused calls that never reached a model are not in the ledgers and cost nothing.
+Summed from the per-project `usage.jsonl` ledgers in the run archive as of 2026-09-17T12:42:53Z. Refused calls that never reached a model are not in the ledgers and cost nothing.
 
 | | calls | USD |
 |---|---:|---:|
-| generation (`claude-haiku-4-5`) | 600 | $1.83 |
-| audit, `cross` (`openai:gpt-5.6-terra`), 8 draws | 2,000 | $18.31 |
-| audit, `self` (`claude-haiku-4-5`), 8 draws | 2,000 | $8.10 |
-| **audit total** | **4,000** | **$26.41** |
-| **study total** | **4,600** | **$28.23** (cap $60) |
+| generation (`claude-haiku-4-5`) | 600 | $1.91 |
+| audit, `cross` (`openai:gpt-5.6-terra`), 8 draws | 2,610 | $23.11 |
+| audit, `self` (`claude-haiku-4-5`), 8 draws | 2,861 | $12.14 |
+| **audit total** | **5,471** | **$35.25** |
+| **study total** | **6,071** | **$37.16** (cap $60) |
 <!-- END T9 -->

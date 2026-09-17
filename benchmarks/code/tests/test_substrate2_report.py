@@ -217,9 +217,16 @@ def test_the_curve_the_fit_and_the_flattening_bar_are_bound():
     assert (f"asymptote of **{_pct(f['A'])}% {_iv(f['A_ci95_cluster'])}** with tau = "
             f"{f['tau']:.2f} and r² = {f['r2']:.3f}") in t
     g = P["flattening_gain_last_step_cluster_ci95_points"]
+    # The verdict is READ from the data, not asserted. The first version of this test
+    # hardcoded "the bar is met" and asserted flattened_by_ceiling1_bar is True, because
+    # that is what the voided run found -- the one curve in this programme that appeared to
+    # saturate. With the visible tests corrected the last-step gain is 1.52 points and the
+    # bar is missed, and a test that encodes a finding cannot notice that. Same shape as the
+    # superseded visible-text test: a check that agrees with the author checks nothing.
+    met = P["flattened_by_ceiling1_bar"]
     assert (f"**{P['flattening_gain_last_step_points']:.2f} points "
-            f"[{g[0]:.2f}, {g[1]:.2f}]**: **the bar is met**") in t
-    assert P["flattened_by_ceiling1_bar"] is True
+            f"[{g[0]:.2f}, {g[1]:.2f}]**: "
+            f"**the bar is {'met' if met else 'NOT met'}**") in t
     gc = C["flattening_gain_last_step_cluster_ci95_points"]
     assert (f"last step on C gains **{C['flattening_gain_last_step_points']:.2f} points "
             f"[{gc[0]:.2f}, {gc[1]:.2f}]**") in t
@@ -399,22 +406,25 @@ def test_h23d_is_computed_as_registered_and_its_sign_is_bound():
             "for every recall point**") in t
 
 
-def test_the_same_vendor_arms_verdict_never_splits_across_draws():
-    """The union-of-K machinery degenerates for this family and the report says so."""
+def test_the_same_vendor_arms_draw_agreement_is_reported_as_measured():
+    """How much the same-vendor arm's verdict moves across draws, READ from the data.
+
+    This test used to assert `self` splits on exactly 0 instances and required the prose to
+    say "identical on all eight draws for every one of the 250 instances". That was the
+    voided run's finding, and hardcoding it meant the test could not notice when the finding
+    changed -- which it did: with the visible tests corrected the arm splits on 12 of 249.
+    A test that encodes a result checks nothing about the next run. Both counts now come
+    from `numbers.json`, and only the invariant that `cross` moves more than `self` is
+    asserted as a claim.
+    """
     n, t = _n(), _t()
     ag = n["draw_agreement"]
-    assert ag["self"]["instances_whose_flag_splits_across_draws"] == 0
-    assert ag["cross"]["instances_whose_flag_splits_across_draws"] > 0
-    assert (f"identical on all eight draws for **every one of the "
-            f"{ag['self']['n_instances']} instances**: not a single instance splits, where "
-            f"the cross-vendor arm splits on "
-            f"**{ag['cross']['instances_whose_flag_splits_across_draws']}** of "
-            f"{ag['cross']['n_instances']}") in t
-    # not a caching artefact: the replies differ even where the verdict does not
-    differing = (ag["self"]["n_instances"]
-                 - ag["self"]["instances_with_one_finding_digest_across_all_draws"])
-    assert (f"returned differing finding digests across draws on {differing} of the "
-            f"{ag['self']['n_instances']} instances") in t
+    sp_self = ag["self"]["instances_whose_flag_splits_across_draws"]
+    sp_cross = ag["cross"]["instances_whose_flag_splits_across_draws"]
+    assert sp_cross > sp_self, (sp_cross, sp_self)
+    assert (f"splits its verdict across the eight draws on **{sp_self} of "
+            f"{ag['self']['n_instances']}** instances, where the cross-vendor arm splits on "
+            f"**{sp_cross}**") in t
     assert ag["self"]["readings_flagged_by_checks"] == 0
     assert ag["cross"]["readings_flagged_by_checks"] == 0
     assert "the deterministic checks layer flagged nothing" in t
@@ -598,6 +608,10 @@ DECLARED_WITHOUT_INTERVAL = [
     "2.6 and 6.3 points",
     "6.3-point overlap",
     "2.6-point separation",
+    # The re-run reversed the direction: the two cross-vendor intervals now OVERLAP where
+    # the voided run had them disjoint, so both distances appear in the same sentence.
+    "2.6 points apart",
+    "overlap by 3.5 points",
 ]
 DECLARATION = "distances between"
 

@@ -32,3 +32,19 @@ numbers. `numbers.json` was not regenerated and still describes the void run.
 This is the same failure mode as the cache above — a stale artefact silently reused on resume —
 and it was missed on the first pass precisely because quarantining the cache *looked* like it had
 cleared the way.
+
+## `cost.json` is here too — the third instance of the same trap
+
+`ledger_costs()` freezes the per-project spend to `records/substrate2/cost.json` on first read
+and **reuses the file if it exists**. This copy was frozen 2026-09-16 00:19 from the **voided**
+run: cross \$18.31, self \$8.10, generation \$1.83, total \$26.41.
+
+The re-run's real spend is different — generation \$1.91, self \$3.69, cross about \$8.28 — so
+regenerating the report with this file in place reported the voided run's costs as the re-run's.
+Nothing about the rates was wrong; the provenance was.
+
+That makes three artefacts of this class found in one study: the readings cache, `audit_set.json`,
+and now `cost.json`. All three live in `records/` because it is committed for provenance, and all
+three were reused by existence alone. Amendment 3's generation digest guards the first two; this
+one was caught by reading the numbers and noticing the cost did not match what the run actually
+spent.

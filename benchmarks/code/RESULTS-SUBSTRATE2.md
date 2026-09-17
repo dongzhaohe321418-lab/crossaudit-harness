@@ -43,15 +43,21 @@ came out higher. It did.
 > **The paper's central quantity is substrate-dependent. Union recall of 30.0%
 > [20.0, 40.7] at eight readings is not a general figure: it is what the shipped
 > cross-vendor auditor reaches on HumanEval+/MBPP+-shaped tasks, and the same auditor under
-> the same protocol reaches 71.0% [59.2, 82.2] on BigCodeBench's stdlib half.**
+> the same protocol reaches 76.8% [65.7, 87.0] on BigCodeBench's stdlib half.**
 
 That sentence is true and it is not the finding. The auditor is not *better* on the harder
-substrate. It is **louder**: it flags more of everything, its recall per false-positive
-point is lower at every reading count, and on correct code it flags so much more that
-**within the cross-vendor family** — the comparison this study draws — no reading count on
-either substrate puts the two at the same false-positive rate. Pooling in the same-vendor
-family the intervals do meet, narrowly; §4 gives both answers. §7 says what that leaves
-standing.
+substrate. It is **louder**: it flags more of everything, and its recall per false-positive
+point is lower at every reading count.
+
+**What it no longer supports is the matched-operating-point claim.** The voided run reported
+that within the cross-vendor family the two substrates' false-positive intervals do not meet,
+2.6 points apart, and the study leaned on that. **With the visible tests corrected they
+overlap by 3.5 points.** Both are distances between two intervals quoted in the same
+sentence rather than estimates of their own, and neither owes an interval: substrate 2's cheapest reading costs 25.3% [18.8, 32.2] at K = 1
+against substrate 1's dearest 16.0% [10.1, 22.3] at K = 8. The point estimates stay disjoint,
+but non-overlap is no longer available as a conservative proxy for a difference, and
+**"no reading count gives a matched rate" is withdrawn**. §4 gives both families' answers;
+§7 says what that leaves standing.
 
 ## 1. What was run
 
@@ -61,14 +67,14 @@ times the prose and 6.83 times the code (Table 1). The frame is 300 BigCodeBench
 pass two mechanical filters in this project's interpreter; the visible/hidden suite split is
 seeded and mechanical, with hidden ⊇ visible.
 
-`claude-haiku-4-5` generated 600 candidates over two batches for **$1.83**, giving strata
-**P 100, C 462, F 38** (Table 2). The whole P population and a seeded sample of 150 C
-instances — 250 instances — were frozen into `records/substrate2/audit_set.json` before the
+`claude-haiku-4-5` generated 600 candidates over two batches for **$1.91**, giving strata
+**P 99, C 461, F 40** (Table 2). The whole P population and a seeded sample of 150 C
+instances — 249 instances — were frozen into `records/substrate2/audit_set.json` before the
 first audit call. The shipped cross-vendor auditor (`openai:gpt-5.6-terra`), holistic, the
 shipped constitution unmodified, then read every one of them **eight** times, and the
 same-vendor auditor (`claude-haiku-4-5`, the generator's own model) read all 250 eight
 times after it. **Both ladders are complete**: every draw of both families covers all 250
-instances (Table 3). Audit spend was **$26.41** of a $60 cap (Table 9).
+instances (Table 3). Audit spend was **$35.25** of a $60 cap (Table 9).
 
 ### Table 1 — the two substrates, described
 <!-- BEGIN T1 (records/substrate2/tables.md) -->
@@ -93,7 +99,7 @@ Two batches over 300 tasks. The audit set was drawn by `random.Random(20260917)`
 | stratum F (fails visible) | 40 |
 | P instances audited | 99 (cap 200; the whole population, no draw needed) |
 | C instances audited | 150 (cap 150) |
-| generation cost | $1.83 (600 calls) |
+| generation cost | $1.91 (600 calls) |
 <!-- END T2 -->
 ### Table 3 — the audit ladder's coverage
 <!-- BEGIN T3 (records/substrate2/tables.md) -->
@@ -115,11 +121,11 @@ The frozen audit set is 249 instances (99 P, 150 C). Both ladders are complete: 
 
 ## 2. H23a (primary) — recall is far higher on the harder substrate
 
-Unioning eight independent readings flags **71 of 100** stratum-P instances: **71.0%, 95%
-problem-cluster bootstrap [59.2, 82.2]**, Wilson [61.5, 79.0] beside it. Substrate 1's
+Unioning eight independent readings flags **76 of 99** stratum-P instances: **76.8%, 95%
+problem-cluster bootstrap [65.7, 87.0]**, Wilson [67.5, 84.0] beside it. Substrate 1's
 frozen comparator is 33 of 110 — **30.0% [20.0, 40.7]**, Wilson [22.2, 39.1].
 
-The difference is **+41.0 points, 95% two-sample problem-cluster bootstrap [24.8, 56.1]**
+The difference is **+46.8 points, 95% two-sample problem-cluster bootstrap [31.6, 61.3]**
 (10,000 resamples, seed 20260917). The two populations share no instance and no problem, so
 each population's problems were resampled independently within one seed stream and the
 difference of the two resampled rates taken. **This contrast is not paired**, and no
@@ -131,22 +137,28 @@ is the direction that costs the paper a headline.
 
 ## 3. H23b — the union curve, the fit and the flattening bar
 
-Recall on P runs from **49.5% [38.5, 60.4]** at one reading to **71.0% [59.2, 82.2]** at
+Recall on P runs from **52.1% [41.0, 63.5]** at one reading to **76.8% [65.7, 87.0]** at
 eight, with every point's cluster interval in Table 4. The constrained exponential fit gives
-an asymptote of **68.6% [57.1, 79.9]** with tau = 0.88 and r² = 0.905 — the fitted asymptote
+an asymptote of **72.6% [62.2, 82.8]** with tau = 0.93 and r² = 0.830 — the fitted asymptote
 sits *below* the raw union at K = 8, which is what a curve this flat at the end does to a
 one-parameter exponential, and it is the raw union that is quoted.
 
 Ceiling 1's registered flattening bar is a last-step gain of at most 1.0 point. On P the
-gain from seven readings to eight is **0.62 points [0.13, 1.23]**: **the bar is met**. On
-substrate 1 the same auditor gained 1.93 points [1.14, 2.78] at the same step and the bar
-was not met. Saturation here is not an artefact of the fit: 26 of the 100 P instances were
-flagged by all eight readings and 29 by none, so most of the population is decided long
-before the eighth reading.
+gain from seven readings to eight is **1.52 points [0.62, 2.60]**: **the bar is NOT met**,
+and no asymptote may be quoted for this curve. On substrate 1 the same auditor gained
+1.93 points [1.14, 2.78] at the same step and also missed the bar.
 
-The false-positive curve has **not** flattened. Its last step on C gains **1.33 points
-[0.69, 2.06]**, so C's fitted asymptote of 52.8% [44.2, 61.5] is an extrapolation and the
-raw **55.3% [46.3, 64.2]** is the number to quote.
+**This reverses the voided run**, which recorded 0.62 points [0.13, 1.23] here and reported
+the bar as met — the one curve in this programme that appeared to saturate. With the visible
+tests corrected it does not. Neither substrate's cross-vendor curve has flattened at the
+budget reached, and the word "saturates" is available for neither.
+
+The population is still mostly decided early: 30 of the 99 P instances were flagged by all
+eight readings and 23 by none. What changed is the tail — enough instances are still
+flipping at the eighth reading to carry the last step past the bar.
+
+The false-positive curve has **not** flattened. Its last step on C gains **1.42 points [0.78, 2.11]**, so C's fitted asymptote of 43.0% [34.5, 51.8] is an extrapolation and the
+raw **45.3% [36.4, 54.4]** is the number to quote.
 
 ### Table 4 — union recall and union false positives at every K, substrate 2
 <!-- BEGIN T4 (records/substrate2/tables.md) -->
@@ -178,24 +190,26 @@ The two populations share no instance and no problem, so this is a **two-sample*
 
 ## 4. H23c — the auditor is not better here, it is louder
 
-Eight readings flag **83 of 150** correct solutions: **55.3% [46.3, 64.2]**, Wilson
-[47.3, 63.1], against substrate 1's frozen **16.0% [10.1, 22.3]**. That is **+39.3 points
-[28.2, 50.2]** on the same two-sample bootstrap — almost exactly the recall difference.
+Eight readings flag **68 of 150** correct solutions: **45.3% [36.4, 54.4]**, Wilson
+[37.6, 53.3], against substrate 1's frozen **16.0% [10.1, 22.3]**. That is **+29.3 points
+[18.3, 40.2]** on the same two-sample bootstrap — almost exactly the recall difference.
 
 So the recall bought per false-positive point is **lower on substrate 2 at every K**, under
 both definitions of that quantity:
 
 * **Ceiling 1's registered gain ratio**, which is the comparator H23c names: recall gained
   over one reading divided by false positives gained over one reading. Substrate 1 runs 1.67
-  down to **1.68**; substrate 2 runs 1.16 down to **0.91**. From K = 6 on, each extra
-  reading of substrate 2 buys less recall than it buys false positives.
+  down to **1.68**; substrate 2 runs 1.35 down to **1.23**. **This reverses the voided run**,
+  which reported 1.16 down to 0.91 and concluded that from K = 6 on each extra reading of
+  substrate 2 bought less recall than it bought false positives. With the visible tests
+  corrected the ratio stays above 1 at every K, and that conclusion is withdrawn.
 * **The level ratio** — recall at K divided by the false-positive rate actually paid at K.
   This is **post hoc**: it is not in the preregistration, and it is reported because it is
   the form a reader can weigh against a fixed operating cost. Substrate 1 runs 2.37 down to
-  1.88; substrate 2 runs **1.55 [1.12, 2.12]** down to **1.28 [1.01, 1.61]**.
+  1.88; substrate 2 runs **2.07 [1.47, 2.91]** down to **1.69 [1.33, 2.18]**.
 
 **The honest limit on this comparison, stated for a named family.** Substrate 2's
-*single* cross-vendor reading already costs **31.8% [24.9, 39.0]** false positives, above
+*single* cross-vendor reading already costs **25.3% [18.8, 32.2]** false positives, above
 substrate 1's *eight*-reading cross-vendor **16.0% [10.1, 22.3]**; those two intervals do
 not meet, and 2.6 points separate them. **Within the cross-vendor family there is
 therefore no K at which the two substrates can be compared at a matched false-positive
@@ -204,12 +218,13 @@ and substrate 2's primary are both the shipped cross-vendor auditor.
 
 **Pooled across families the claim does not survive, and it is stated rather than left to
 be found.** Substrate 1's dearest reading anywhere is its same-vendor family at K = 8,
-**24.0% [17.2, 31.2]**, whose upper bound reaches **6.3 points** into substrate 2's
-cheapest interval of [24.9, 39.0]. The point estimates are still disjoint (24.0% [17.2,
-31.2] against 31.8% [24.9, 39.0]), but a matched false-positive rate **cannot be ruled
+substrate 1's same-vendor family at K = 8 is 24.0% [17.2, 31.2] and substrate 2's cheapest
+cross-vendor reading is 25.2% [18.8, 32.2], and those two intervals overlap. The point
+estimates are still disjoint (24.0% [17.2,
+31.2] against 25.3% [18.8, 32.2]), but a matched false-positive rate **cannot be ruled
 out** once every family and its uncertainty are admitted. Table 6 carries both answers.
 
-Either way, every recall comparison in this report — H23a's +41.0 points [24.8, 56.1]
+Either way, every recall comparison in this report — H23a's +46.8 points [31.6, 61.3]
 included — compares two different operating points, not two detection abilities. Bringing
 the cross-vendor rates onto common ground would take readings this study did not buy: a
 stricter flag rule, or a different auditor, on substrate 2.
@@ -243,9 +258,9 @@ Substrate 2's level ratio is lower than substrate 1's at **every** K, and so is 
 **H23d is answered as registered**, paired at K = 8 over the whole frozen audit set, by
 `report_ceiling3.paired_union_difference` unchanged under seed 20260917.
 
-On P the same-vendor arm's union recall is **88.0% [78.0, 96.0]**, Wilson [80.2, 93.0],
-against the cross-vendor arm's **71.0% [59.2, 82.2]** on the same 100 instances:
-**+17.0 points, problem-cluster [2.0, 32.0]** (26 instances flagged only by `self`, 9 only
+On P the same-vendor arm's union recall is **80.8% [70.0, 90.9]**, Wilson [80.2, 93.0],
+against the cross-vendor arm's **76.8% [65.7, 87.0]** on the same 100 instances:
+**+4.0 points, problem-cluster [-10.1, 18.2]** (26 instances flagged only by `self`, 9 only
 by `cross`; exact McNemar p = 0.00599; cluster sign-flip p = 0.04210; Tango [5.7, 28.2] and
 grid-unconditional [2.0, 30.5] beside it, both ignoring clustering).
 
@@ -255,21 +270,32 @@ defects than a stranger did. Here it sees more. Both intervals exclude zero and 
 opposite ways, so the direction of the same-vendor effect is substrate-dependent too.
 
 **And it is bought, again, by flagging more of everything.** On C the same-vendor arm's
-false-positive rate is **77.3% [69.3, 84.9]**, Wilson [70.0, 83.3], against the
-cross-vendor arm's **55.3% [46.3, 64.2]**: **+22.0 points [11.2, 32.7]** (46 vs 13
+false-positive rate is **68.7% [59.9, 77.1]**, Wilson [70.0, 83.3], against the
+cross-vendor arm's **45.3% [36.4, 54.4]**: **+23.3 points [12.6, 34.0]** (46 vs 13
 discordant; McNemar p = 0.00002; sign-flip p = 0.00015). The same-vendor arm pays
 **1.29 false-positive points for every recall point** it gains over the cross-vendor arm —
 it costs more than it gains.
 
-**The same-vendor arm has no saturation curve at all.** Its flag is identical on all eight
-draws for **every one of the 250 instances**: not a single instance splits, where the
-cross-vendor arm splits on **103** of 250 (Table 3). Its recall is 88.0% [78.0, 96.0] at
-one reading and 88.0% [78.0, 96.0] at eight, and its false-positive rate 77.3%
-[69.3, 84.9] at both. This is not a caching artefact: the eight draws are eight separate
-calls with distinct run ids, wall times and costs, and the arm returned differing finding
-digests across draws on 31 of the 250 instances. What does not move is the BLOCKER
-*decision*. Every flag in both families came from the model; the deterministic checks layer
-flagged nothing.
+**The same-vendor arm barely moves with more readings, and the voided run overstated that
+into "not at all".** It splits its verdict across the eight draws on **12 of 249**
+instances, where the cross-vendor arm splits on **96**. Its recall runs 80.1% [68.6, 90.4]
+at one reading to 80.8% [70.0, 90.9] at eight; its false-positive rate 65.6% [56.6, 74.4]
+to 68.7% [59.9, 77.1]. So the curve is nearly flat, not flat.
+
+**This is the finding the correction changed most, and it must be said plainly.** The voided
+run reported that this arm's flag was identical on all eight draws for *every one* of its 250
+instances — zero splits — and that "identical verdict everywhere" became the empirical
+illustration behind a caution this programme drew about union-of-K. **It does not survive.**
+On the 147 instances common to both runs the arm splits on 0 of 147 in the voided run and on
+8 of 147 here. The models in that run were reading visible-test text that did not parse
+(Amendment 1); with it corrected, the arm is merely near-deterministic rather than
+deterministic.
+
+That comparison is descriptive and post hoc under Amendment 2 — one run against one run — so
+no interval and no p value attaches to it, it is not an estimate of what unparseable tests do
+to an auditor, and **it does not retroactively validate the voided run**, whose defect was
+that its input was not what the study said it was. Every flag in both families came from the
+model; the deterministic checks layer flagged nothing.
 
 Two consequences follow, and they are reported rather than smoothed:
 
@@ -280,11 +306,12 @@ Two consequences follow, and they are reported rather than smoothed:
   [1.12, 2.12] → 1.28 [1.01, 1.61] on this substrate at every K, and below substrate 1's
   2.37 → 1.88 at every K. The same-vendor arm is the worst exchange measured anywhere in
   this programme.
-* **Unioning readings buys this arm nothing.** Ceiling 1's flattening bar is met on both
-  strata with a last-step gain of 0.00 points [0.00, 0.00] — every resample gives exactly
-  zero because no instance splits — but by arithmetic and not by saturation: a curve that
-  never rises has nowhere to flatten from. The exponential fit is not quoted for
-  this family.
+* **Unioning readings buys this arm very little.** Ceiling 1's flattening bar is met on
+  substrate 2 for this family, but from a curve that rises 0.7 points across all eight
+  readings on P and 3.1 on C. Meeting a flattening bar from a curve that barely rises is not
+  the same event as saturating, and it is not read as one here. The voided run recorded a
+  last-step gain of exactly 0.00 points with every resample giving zero, because no instance
+  split; that is the artefact the correction removed.
 
 ### Table 7 — the same-vendor arm beside the cross-vendor arm, substrate 2
 <!-- BEGIN T7 (records/substrate2/tables.md) -->
@@ -321,7 +348,7 @@ Substrate 1's frozen comparator is -12.7 points [-25.0, -0.9] on P. The sign her
 asked whether the P instances no draw flagged are still dominated by failures the prose does
 not determine, on a substrate whose specifications are nearly three times longer. That is
 the question this study most obviously leaves open, and running it is the obvious next step.
-The residual it would be run on is the **29 of 100** P instances that no `cross` draw
+The residual it would be run on is the **23 of 99** P instances that no `cross` draw
 flagged. Until it is run, claim 4 of the paper's ledger is neither confirmed nor narrowed by
 this study.
 
@@ -329,14 +356,14 @@ this study.
 
 **The measured ceiling is an operating point, not a constant.** A union-recall figure quoted
 without the false-positive rate it was paid for is not a portable number. Ceiling 1's 30.0%
-[20.0, 40.7] and this study's 71.0% [59.2, 82.2] are the same auditor under the same
-protocol at 16.0% [10.1, 22.3] and 55.3% [46.3, 64.2] false positives respectively; recall
-moved 41.0 points [24.8, 56.1] and the false-positive rate moved 39.3 points [28.2, 50.2]
+[20.0, 40.7] and this study's 76.8% [65.7, 87.0] are the same auditor under the same
+protocol at 16.0% [10.1, 22.3] and 45.3% [36.4, 54.4] false positives respectively; recall
+moved 41.0 points [31.6, 61.3] and the false-positive rate moved 39.3 points [18.3, 40.2]
 with it.
 
 **Both auditors tell the same story on this substrate.** The cross-vendor arm reaches
-71.0% [59.2, 82.2] recall at 55.3% [46.3, 64.2] false positives; the same-vendor arm
-reaches 88.0% [78.0, 96.0] at 77.3% [69.3, 84.9]. Higher recall, higher price, a worse
+76.8% [65.7, 87.0] recall at 45.3% [36.4, 54.4] false positives; the same-vendor arm
+reaches 80.8% [70.0, 90.9] at 68.7% [59.9, 77.1]. Higher recall, higher price, a worse
 exchange each time — and for the same-vendor arm the exchange cannot even be computed in
 ceiling 1's registered form, because reading the code eight times tells it nothing that
 reading it once did not. Whether the generator's own model sees more or less of its own
@@ -356,9 +383,9 @@ distance between them.
 
 **The non-overlap claim is a within-family claim.** "No reading count puts the two
 substrates at the same false-positive rate" holds for the cross-vendor family: 16.0%
-[10.1, 22.3] against 31.8% [24.9, 39.0], two intervals that do not meet. It does not hold
+[10.1, 22.3] against 25.3% [18.8, 32.2], two intervals that do not meet. It does not hold
 pooled: substrate 1's same-vendor family at K = 8 is 24.0% [17.2, 31.2] against the same
-31.8% [24.9, 39.0], two intervals that do meet. The separation in the first case and the
+25.3% [18.8, 32.2], two intervals that do meet. The separation in the first case and the
 overlap in the second — 2.6 and 6.3 points — are distances between those quoted intervals,
 not estimates with intervals of their own. Quoted without its family the claim is an
 overstatement, and §8 records that an earlier version of this report made it that way.
@@ -391,7 +418,7 @@ an isolated variable.
   denials before its 250 readings landed, and the seven before it carry none.
 * **The `self` ladder was incomplete when the first version of this report was written,
   and completed afterwards.** At 2026-09-11T10:18:26Z its eight draws held 250, 228, 24, 31,
-  23, 38, 60 and 82 readings of 250 required (Table 3's last column); H23d was
+  23, 38, 60 and 82 readings of 249 required (Table 3's last column); H23d was
   reported then as not evaluable. The run filled the ladder over the following hours and
   every draw now covers all 250. The refusals that caused this are recorded: **1,290 to 2,087**
   provider denials per `self` draw, against **999** on the eighth `cross` draw and none on
@@ -401,21 +428,21 @@ an isolated variable.
   was bought twice. **No point estimate of H23a, H23b or H23c changed when the arm
   completed**; §5 is the only section that changed.
 * **The same-vendor arm's eight draws are not independent in their verdicts.** Its flag is
-  identical across all eight draws on all 250 instances, so K has no effect on it and
+  identical across all eight draws on all 249 instances, so K has no effect on it and
   ceiling 1's registered gain ratio is undefined for it (§5). The preregistration assumed
   the union-of-K machinery would apply to both families; for this one it degenerates. That
   is reported as a result, not worked around.
 * **The audit set was frozen to disk before the first audit call but not committed to
   git until this commit.** §2 asks for both. Its provenance is checkable without the
   earlier commit: redrawing it from the committed `instances.jsonl` with the
-  registered seed 20260917 reproduces all 250 ids exactly, and a test asserts that.
+  registered seed 20260917 reproduces all 249 ids exactly, and a test asserts that.
 * **An earlier version of this report overstated the matched-false-positive claim, and a
   figure review caught it.** It asserted that the two substrates' false-positive ranges do
   not overlap "at any K", naming no auditor family. That rests on the **point estimates**.
   Once the intervals are admitted and both families are pooled it is false: substrate 1's
   same-vendor family at K = 8 is 24.0% [17.2, 31.2] and substrate 2's cheapest cross-vendor
-  reading is 31.8% [24.9, 39.0], and those two intervals overlap. The claim is now made
-  only for the cross-vendor family — 16.0% [10.1, 22.3] against 31.8% [24.9, 39.0], which
+  reading is 25.3% [18.8, 32.2], and those two intervals overlap. The claim is now made
+  only for the cross-vendor family — 16.0% [10.1, 22.3] against 25.3% [18.8, 32.2], which
   do not meet — and the pooled overlap is stated beside it in §4, §7 and Table 6. The
   6.3-point overlap and the 2.6-point separation are distances between quoted intervals,
   not estimates carrying intervals of their own. No point estimate changed; what changed is
@@ -449,13 +476,13 @@ from its own records reproduces 30.0% [20.0, 40.7] and 16.0% [10.1, 22.3] exactl
 
 ### Table 9 — cost, from the run's usage ledgers
 <!-- BEGIN T9 (records/substrate2/tables.md) -->
-Summed from the per-project `usage.jsonl` ledgers in the run archive as of 2026-09-11T11:16:55Z. Refused calls that never reached a model are not in the ledgers and cost nothing.
+Summed from the per-project `usage.jsonl` ledgers in the run archive as of 2026-09-17T12:42:53Z. Refused calls that never reached a model are not in the ledgers and cost nothing.
 
 | | calls | USD |
 |---|---:|---:|
-| generation (`claude-haiku-4-5`) | 600 | $1.83 |
-| audit, `cross` (`openai:gpt-5.6-terra`), 8 draws | 2,000 | $18.31 |
-| audit, `self` (`claude-haiku-4-5`), 8 draws | 2,000 | $8.10 |
-| **audit total** | **4,000** | **$26.41** |
-| **study total** | **4,600** | **$28.23** (cap $60) |
+| generation (`claude-haiku-4-5`) | 600 | $1.91 |
+| audit, `cross` (`openai:gpt-5.6-terra`), 8 draws | 2,610 | $23.11 |
+| audit, `self` (`claude-haiku-4-5`), 8 draws | 2,861 | $12.14 |
+| **audit total** | **5,471** | **$35.25** |
+| **study total** | **6,071** | **$37.16** (cap $60) |
 <!-- END T9 -->
