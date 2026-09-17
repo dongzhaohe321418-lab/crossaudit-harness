@@ -3116,5 +3116,5 @@
   "source": "records/ceiling/numbers.json, families.cross (unmodified)"
  },
  "unit_of_analysis": "instance (batch, problem_id); every interval resamples problem clusters",
- "written_utc": "2026-09-17T12:41:59Z"
+ "written_utc": "2026-09-17T14:51:55Z"
 }

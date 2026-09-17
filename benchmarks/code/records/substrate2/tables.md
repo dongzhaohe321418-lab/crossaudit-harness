@@ -85,7 +85,7 @@ Substrate 2's level ratio is lower than substrate 1's at **every** K, and so is 
 **Pooling every family measured on either substrate** — **yes, narrowly**. Substrate 1's dearest reading anywhere is its `self` family at K = 8, 24.0% [17.2, 31.2], and its upper bound reaches 12.5 points into substrate 2's cheapest interval of [18.8, 32.2]. The point estimates are still disjoint (24.0% against 25.2%), but the intervals overlap, so a matched false-positive rate cannot be ruled out pooled. Substrate 1's interval here is the one ceiling 1's own Table 1 quotes; its second bootstrap stream for the same point gives an overlap of 12.5 points instead.
 <!-- END T6 -->
 <!-- BEGIN T7 (records/substrate2/tables.md) -->
-The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the same 99 P and 150 C instances at the same K = 8. Its curve does not move with K because its flag does not split across draws (Table 3), so **ceiling 1's registered gain ratio is undefined for it**: that ratio divides by the false-positive gain from K = 1, and that gain is exactly zero. Only the post-hoc level ratio can be quoted, and it is 1.22 [1.00, 1.48] at K = 1 and 1.18 [0.97, 1.42] at K = 8.
+The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the same 99 P and 150 C instances at the same K = 8. Its flag splits across draws on 12 of 249 instances (Table 3), so ceiling 1's registered gain ratio is computable here: it runs 0.32 at K = 2 down to 0.25 at K = 8. The post-hoc level ratio is 1.22 [1.00, 1.48] at K = 1 and 1.18 [0.97, 1.42] at K = 8.
 
 | K | `self` recall on P [95% cluster CI] | `self` FP on C [95% cluster CI] | `self` level ratio | `cross` recall on P | `cross` FP on C | `cross` level ratio |
 |---:|---|---|---:|---:|---:|---:|
@@ -98,7 +98,7 @@ The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the s
 | 7 | 80.8% [70.0, 90.9] | 68.5% [59.6, 77.0] | 1.18 | 75.3% | 43.9% | 1.71 |
 | 8 | 80.8% [70.0, 90.9] | 68.7% [59.9, 77.1] | 1.18 | 76.8% | 45.3% | 1.69 |
 
-Last-step gain on P 0.00 points, on C 0.17 points. Both meet ceiling 1's bar trivially: a curve that never rises has flattened by arithmetic, not by saturation, and the exponential fit is not quoted for this family.
+Last-step gain on P 0.00 points, on C 0.17 points. Both meet ceiling 1's bar, but from a curve that barely rises, which is a weaker event than saturating and is not read as one; the exponential fit is not quoted for this family.
 <!-- END T7 -->
 <!-- BEGIN T8 (records/substrate2/tables.md) -->
 Paired: the same instances are read by both arms, so this is ceiling 1's paired contrast, computed by `report_ceiling3.paired_union_difference` unchanged under seed 20260917. The cluster bootstrap is the primary interval; Tango and the grid-unconditional interval ignore clustering and are labelled so; the sign-flip test is ceiling 1's frozen implementation and carries its own seed. `a vs b` counts instances only one arm flagged.

@@ -460,10 +460,13 @@ def test_the_same_vendor_arms_draw_agreement_is_reported_as_measured():
                 f"down to **{lv[-1]:.2f}**") in t
     assert se["level_ratio_below_cross_on_substrate2_at_every_k"] is True
     assert se["level_ratio_below_substrate1_cross_at_every_k"] is True
+    # Eighth hardcoded finding in this file: the last-step gain was asserted to be exactly
+    # 0.00 because the voided run's arm never split. It moves now, so the figure is read and
+    # only its presence beside an interval is required.
     sP = n["self_family_curve"]["P"]
-    assert sP["flattening_gain_last_step_points"] == 0.0
-    assert (f"last-step gain of {sP['flattening_gain_last_step_points']:.2f} points "
-            f"[0.00, 0.00]") in t
+    g = sP["flattening_gain_last_step_cluster_ci95_points"]
+    assert (f"{sP['flattening_gain_last_step_points']:.2f} points "
+            f"[{g[0]:.2f}, {g[1]:.2f}]") in t
 
 
 def test_h23e_is_reported_as_not_run():
@@ -513,12 +516,16 @@ def test_the_deviations_are_bound():
             f'{_iv(s1["C_cluster_ci95"])}') in t
     assert (f"reproduces {_pct(s1['P_union_at_kmax'])}% {_iv(s1['P_cluster_ci95'])} and "
             f"{_pct(s1['C_union_at_kmax'])}% {_iv(s1['C_cluster_ci95'])} exactly") in t
+    # The voided run was rate-limited only on its last draw, so this asserted denials on
+    # draw 8 and none elsewhere. The re-run met about 23 hours of HTTP 429 and every draw
+    # carries denials. What must hold either way: every draw is COMPLETE despite them, since
+    # a denied call lands no reading and costs nothing.
     cross = n["coverage"]["cross"]
-    assert cross["8"]["recorded_denials"] > 0
-    assert all(cross[str(k)]["recorded_denials"] == 0 for k in range(1, 8))
-    assert (f"carries **{cross['8']['recorded_denials']}** recorded provider denials before "
-            f"its {cross['8']['readings']} readings landed, and the seven before it carry "
-            "none") in t
+    assert all(cross[str(k)]["complete"] for k in range(1, 9))
+    assert all(cross[str(k)]["readings"] == cross["1"]["readings"] for k in range(1, 9))
+    total_denials = sum(cross[str(k)]["recorded_denials"] for k in range(1, 9))
+    assert (f"**{total_denials}** recorded provider denials across the eight cross-vendor "
+            f"draws, and every draw still landed its {cross['8']['readings']} readings") in t
     assert n["substrate1_frozen"]["recomputation_matches_frozen"] is True
     assert "**H23e was not run**" in t
     # the self ladder's interruption: the first read's counts and the denial range
@@ -560,8 +567,14 @@ def test_no_binding_matches_more_than_once():
         f"**+{d['P']['difference_points']:.1f} points, problem-cluster",
         f"**+{d['C']['difference_points']:.1f} points "
         f"[{d['C']['cluster_ci95_points'][0]:.1f}, {d['C']['cluster_ci95_points'][1]:.1f}]**",
-        "**The sign is the opposite of substrate 1's.**",
-        "**Ceiling 1's registered gain ratio is undefined for this arm.**",
+        # Two anchors depend on how the run came out, so they are chosen from the data
+        # rather than listed. Hardcoding them was how this file pinned the voided run's
+        # findings; see the branch comments in the H23d and draw-agreement tests.
+        ("**The sign is the opposite of substrate 1's.**" if d["P_excludes_zero"]
+         else "**The interval spans zero.**"),
+        ("**Ceiling 1's registered gain ratio is undefined for this arm.**"
+         if n["self_family_exchange"]["registered_gain_ratio_is_undefined"]
+         else "**Ceiling 1's registered gain ratio is computable for this arm, and it is poor.**"),
         f"**{P['flattening_gain_last_step_points']:.2f} points",
         f"last step on C gains **{C['flattening_gain_last_step_points']:.2f} points",
         "**H23d is answered as registered**",
@@ -627,12 +640,13 @@ def test_the_audit_set_redraws_from_the_registered_seed():
 #: declaration also appearing in the text — `test_every_prose_rate_is_bound_or_declared`
 #: checks both halves.
 DECLARED_WITHOUT_INTERVAL = [
-    "2.6 and 6.3 points",
-    "6.3-point overlap",
+    "2.6 and 12.5 points",
+    "12.5-point overlap",
     "2.6-point separation",
     # The re-run reversed the direction: the two cross-vendor intervals now OVERLAP where
     # the voided run had them disjoint, so both distances appear in the same sentence.
     "2.6 points apart",
+    "intervals by 2.6 points",
     "overlap by 3.5 points",
 ]
 DECLARATION = "distances between"
@@ -669,5 +683,11 @@ def test_every_prose_rate_is_bound_or_declared():
     # and the numbers they name are the records'
     m = _n()["H23c_false_positives"]["matched_fp_comparison"]
     assert f"{m['pooled_all_families']['interval_overlap_points']:.1f}-point overlap" in text
-    assert (f"{m['cross_family_only_REGISTERED_COMPARISON']['interval_gap_points']:.1f}"
-            "-point separation") in text
+    # Only meaningful while the cross-vendor intervals are disjoint. The re-run has them
+    # overlapping, so interval_gap_points is null and the prose names the voided run's
+    # 2.6-point separation historically instead.
+    co = m["cross_family_only_REGISTERED_COMPARISON"]
+    if co["interval_gap_points"] is not None:
+        assert f"{co['interval_gap_points']:.1f}-point separation" in text
+    else:
+        assert "2.6-point separation" in text

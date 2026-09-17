@@ -212,11 +212,11 @@ both definitions of that quantity:
 **The honest limit on this comparison, stated for a named family.** Substrate 2's
 *single* cross-vendor reading already costs **25.3% [18.8, 32.2]** false positives, above
 substrate 1's *eight*-reading cross-vendor **16.0% [10.1, 22.3]**; those two intervals do
-**do** meet — they overlap by 3.5 points. **The claim is now made only for the cross-vendor
+**do** meet, overlapping by 3.5 points. **The claim is now made only for the cross-vendor
 family - 16.0% [10.1, 22.3] against 25.2% [18.8, 32.2], which do not meet** at the point
 estimates while their intervals do, so a matched rate cannot be ruled out. The voided run
-had them 2.6 points asunder — a cross-vendor comparison, and one of the distances between
-quoted intervals that owe no interval of their own — and concluded there is no K at which the two substrates can be compared at a
+separated these two cross-vendor intervals by 2.6 points — distances between quoted
+intervals, owing no interval of their own — and concluded there is no K at which the two substrates can be compared at a
 matched false-positive rate; **that conclusion is withdrawn.**
 
 **Pooled across families the claim does not survive, and it is stated rather than left to
@@ -322,7 +322,7 @@ Two consequences follow, and they are reported rather than smoothed:
 
 ### Table 7 — the same-vendor arm beside the cross-vendor arm, substrate 2
 <!-- BEGIN T7 (records/substrate2/tables.md) -->
-The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the same 99 P and 150 C instances at the same K = 8. Its curve moves very little with K, and its flag splits across draws on only 12 of 249 instances (Table 3). Ceiling 1's registered gain ratio is computable and runs 0.32 at K = 2 to 0.25 at K = 8; the post-hoc level ratio is 1.22 [1.00, 1.48] at K = 1 and 1.18 [0.97, 1.42] at K = 8.
+The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the same 99 P and 150 C instances at the same K = 8. Its flag splits across draws on 12 of 249 instances (Table 3), so ceiling 1's registered gain ratio is computable here: it runs 0.32 at K = 2 down to 0.25 at K = 8. The post-hoc level ratio is 1.22 [1.00, 1.48] at K = 1 and 1.18 [0.97, 1.42] at K = 8.
 
 | K | `self` recall on P [95% cluster CI] | `self` FP on C [95% cluster CI] | `self` level ratio | `cross` recall on P | `cross` FP on C | `cross` level ratio |
 |---:|---|---|---:|---:|---:|---:|
@@ -335,7 +335,7 @@ The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the s
 | 7 | 80.8% [70.0, 90.9] | 68.5% [59.6, 77.0] | 1.18 | 75.3% | 43.9% | 1.71 |
 | 8 | 80.8% [70.0, 90.9] | 68.7% [59.9, 77.1] | 1.18 | 76.8% | 45.3% | 1.69 |
 
-Last-step gain on P 0.00 points, on C 0.17 points. Both meet ceiling 1's bar trivially: a curve that never rises has flattened by arithmetic, not by saturation, and the exponential fit is not quoted for this family.
+Last-step gain on P 0.00 points, on C 0.17 points. Both meet ceiling 1's bar, but from a curve that barely rises, which is a weaker event than saturating and is not read as one; the exponential fit is not quoted for this family.
 <!-- END T7 -->
 ### Table 8 — H23d, same-vendor minus cross-vendor at K = 8, paired
 <!-- BEGIN T8 (records/substrate2/tables.md) -->
@@ -393,7 +393,7 @@ substrates at the same false-positive rate" holds for the cross-vendor family: 1
 [10.1, 22.3] against 25.3% [18.8, 32.2], two intervals that do not meet. It does not hold
 pooled: substrate 1's same-vendor family at K = 8 is 24.0% [17.2, 31.2] against the same
 25.3% [18.8, 32.2], two intervals that do meet. The separation in the first case and the
-overlap in the second — 2.6 and 6.3 points — are distances between those quoted intervals,
+overlap in the second — 2.6 and 12.5 points — are distances between those quoted intervals,
 not estimates with intervals of their own. Quoted without its family the claim is an
 overstatement, and §8 records that an earlier version of this report made it that way.
 
@@ -405,6 +405,8 @@ test style and suite size all move together — so "length" is a label for the c
 an isolated variable.
 
 ## 8. Deviations from the preregistration, and interruptions
+
+**Rate limiting, and what it did not change.** The re-run met about 23 hours of HTTP 429 on the cross-vendor route: **73285** recorded provider denials across the eight cross-vendor draws, and every draw still landed its 249 readings. A denied call lands no reading and is not billed, so the denials cost wall clock and nothing else. They are not evenly spread — the voided run was rate-limited only on its last draw — so any comparison of per-draw timing between the two runs is not like for like.
 
 * **The frame is 300 tasks, not the 289 the preregistration names.** §1 recorded 326 tasks
   passing filter S1 and 289 of those passing S2, measured before that file was written. In
@@ -451,7 +453,7 @@ an isolated variable.
   reading is 25.3% [18.8, 32.2], and those two intervals overlap. The claim is now made
   only for the cross-vendor family — 16.0% [10.1, 22.3] against 25.3% [18.8, 32.2], which
   do not meet — and the pooled overlap is stated beside it in §4, §7 and Table 6. The
-  6.3-point overlap and the 2.6-point separation are distances between quoted intervals,
+  12.5-point overlap and the 2.6-point separation are distances between quoted intervals,
   not estimates carrying intervals of their own. No point estimate changed; what changed is
   the scope the sentence claims.
 * **H23e was not run** (§6). It is in the preregistration and it is not in this report.

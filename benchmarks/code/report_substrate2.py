@@ -657,6 +657,11 @@ def end(key: str) -> str:
     return f"<!-- END {key} -->"
 
 
+def _n_splits(n: dict, family: str) -> int:
+    """How many instances this family's flag splits on, from the draw-agreement record."""
+    return n["draw_agreement"][family]["instances_whose_flag_splits_across_draws"]
+
+
 def render_tables(n: dict) -> dict[str, str]:
     s, st = n["substrate"], n["strata"]
     t: dict[str, str] = {}
@@ -877,21 +882,46 @@ def render_tables(n: dict) -> dict[str, str]:
                     f"{_r(r2['POST_HOC_level_ratio_by_k'][i])} |")
     k1, k8 = se["level_ratio_ci95_K1"], se["level_ratio_ci95_K8"]
     t["T7"] = "\n".join([
-        f"The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the "
-        f"same {sP['n_instances']} P and {sC['n_instances']} C instances at the same K = "
-        f"{K_MAX}. Its curve does not move with K because its flag does not split across "
-        f"draws (Table 3), so **ceiling 1's registered gain ratio is undefined for it**: "
-        f"that ratio divides by the false-positive gain from K = 1, and that gain is "
-        f"exactly zero. Only the post-hoc level ratio can be quoted, and it is "
-        f"{se['ratios']['POST_HOC_level_ratio_by_k'][0]:.2f} "
-        f"[{k1[0]:.2f}, {k1[1]:.2f}] at K = 1 and "
-        f"{se['ratios']['POST_HOC_level_ratio_by_k'][-1]:.2f} [{k8[0]:.2f}, {k8[1]:.2f}] "
-        f"at K = {K_MAX}.",
+        # Whether this arm's registered gain ratio exists depends on whether its union moves
+        # at all, so both readings are rendered from the data. The voided run's arm never
+        # split, the K = 1 false-positive gain was exactly zero, and the ratio was undefined
+        # -- an absence of data that the text then reported as a property of the auditor.
+        (f"The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the "
+         f"same {sP['n_instances']} P and {sC['n_instances']} C instances at the same K = "
+         f"{K_MAX}. Its curve does not move with K because its flag does not split across "
+         f"draws (Table 3), so **ceiling 1's registered gain ratio is undefined for it**: "
+         f"that ratio divides by the false-positive gain from K = 1, and that gain is "
+         f"exactly zero. Only the post-hoc level ratio can be quoted, and it is "
+         f"{se['ratios']['POST_HOC_level_ratio_by_k'][0]:.2f} "
+         f"[{k1[0]:.2f}, {k1[1]:.2f}] at K = 1 and "
+         f"{se['ratios']['POST_HOC_level_ratio_by_k'][-1]:.2f} [{k8[0]:.2f}, {k8[1]:.2f}] "
+         f"at K = {K_MAX}."
+         if se["registered_gain_ratio_is_undefined"] else
+         f"The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the "
+         f"same {sP['n_instances']} P and {sC['n_instances']} C instances at the same K = "
+         f"{K_MAX}. Its flag splits across draws on "
+         f"{_n_splits(n, 'self')} of {sP['n_instances'] + sC['n_instances']} instances "
+         f"(Table 3), so ceiling 1's registered gain ratio is computable here: it runs "
+         f"{se['ratios']['registered_gain_ratio_by_k'][1]:.2f} at K = 2 down to "
+         f"{se['ratios']['registered_gain_ratio_by_k'][-1]:.2f} at K = {K_MAX}. The "
+         f"post-hoc level ratio is "
+         f"{se['ratios']['POST_HOC_level_ratio_by_k'][0]:.2f} "
+         f"[{k1[0]:.2f}, {k1[1]:.2f}] at K = 1 and "
+         f"{se['ratios']['POST_HOC_level_ratio_by_k'][-1]:.2f} [{k8[0]:.2f}, {k8[1]:.2f}] "
+         f"at K = {K_MAX}."),
         "", *rows, "",
-        f"Last-step gain on P {sP['flattening_gain_last_step_points']:.2f} points, on C "
-        f"{sC['flattening_gain_last_step_points']:.2f} points. Both meet ceiling 1's bar "
-        f"trivially: a curve that never rises has flattened by arithmetic, not by "
-        f"saturation, and the exponential fit is not quoted for this family.",
+        # "Trivially" was true only while the arm never split and both gains were exactly
+        # zero. Read the gains and say which case this run is.
+        (f"Last-step gain on P {sP['flattening_gain_last_step_points']:.2f} points, on C "
+         f"{sC['flattening_gain_last_step_points']:.2f} points. Both meet ceiling 1's bar "
+         f"trivially: a curve that never rises has flattened by arithmetic, not by "
+         f"saturation, and the exponential fit is not quoted for this family."
+         if (sP["flattening_gain_last_step_points"] == 0
+             and sC["flattening_gain_last_step_points"] == 0) else
+         f"Last-step gain on P {sP['flattening_gain_last_step_points']:.2f} points, on C "
+         f"{sC['flattening_gain_last_step_points']:.2f} points. Both meet ceiling 1's bar, "
+         f"but from a curve that barely rises, which is a weaker event than saturating and "
+         f"is not read as one; the exponential fit is not quoted for this family."),
         "",
     ])
 
