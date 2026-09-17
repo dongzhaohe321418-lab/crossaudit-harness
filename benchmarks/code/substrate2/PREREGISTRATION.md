@@ -262,3 +262,60 @@ which **147 were already audited and are reused**; 102 remain, at 16 arms, about
 readings now out of scope stay bought and unused. We do not keep them by choosing the C sample to
 match what was already purchased: that would be selecting a sample after seeing which of it was
 paid for. Total study spend stays under the $45 halt registered in Amendment 2.
+
+## Amendment 4 — the re-run halts incomplete: the self family is done, the cross family was never reachable
+
+**Written 2026-09-17, after ten supervised attempts bought nothing.**
+
+**State.** Against the re-frozen scope of 249 instances (99 P, 150 C):
+
+| family | arms | readings | spend |
+|---|---|---|---|
+| `self` (`claude-haiku-4-5`) | 8 of 8 | **249 of 249 each** | $3.693 |
+| `cross` (`openai:gpt-5.6-terra`) | 0 of 8 | **0 bought** | $0.000 |
+
+Study total **$27.85** against the $45 halt registered in Amendment 2. The halt was never
+approached, because the blocker cost nothing: a denied call is not billed.
+
+**Why the cross family is empty.** The OpenAI route returned HTTP 429 continuously from
+2026-09-16 15:37 to at least 2026-09-17 14:25, **about 23 hours**, across ten supervised attempts
+spanning a full night and a working morning.
+
+It is rate limiting and not billing, and that is checked rather than assumed on every attempt:
+**no failure row carries `insufficient_quota`, and none carries 401 or 403.** The distinction is
+one this programme can make from experience — study 22's Amendment 3 recorded a real credit
+exhaustion, and those rows *did* carry `insufficient_quota`.
+
+**A detail about the denials worth keeping.** In the final attempt's first arm, 6,945 of 7,038
+rows are the harness's own circuit breaker reporting all routes cooling down, and only **93** are
+provider 429s. The retry loop spends almost all of its time failing against its own breaker rather
+than testing the API, so a short retry interval mostly re-opens the breaker without learning
+anything. The supervisor's interval was lengthened from 15 to 60 minutes and its concurrency
+dropped from 3 to 1 for that reason; neither changed the outcome, which is itself evidence that we
+were not the cause of the throttling.
+
+**What may and may not be concluded.**
+
+* **H23a, H23b, H23c and H23e are not answered by this re-run.** All of them are about the shipped
+  cross-vendor auditor, and it produced no readings. The self family alone cannot stand in for it.
+* **The void run stays void.** Amendment 1's reason — the models were shown visible-test text that
+  did not parse — is independent of whether a replacement run succeeded.
+* **One comparison is available and is reported as descriptive and post hoc**, under Amendment 2's
+  rule that forbids attaching a p value or interval to a one-run-against-one-run difference.
+  Restricted to the 147 instances present in both runs and in the current scope, the same-vendor
+  arm's verdict **splits across the eight draws on 0 of 147 in the void run and on 8 of 147 in the
+  re-run**, and the two runs' K = 8 union verdicts differ on **40 of 147**. This is one run against
+  one run; it is not an estimate of the effect of showing a model unparseable tests, and it does
+  not retroactively validate the void run. What it does establish is that the "identical verdict on
+  every instance across every draw" phenomenon the void run reported **does not survive** the
+  correction — which matters, because that phenomenon was the empirical illustration behind the
+  paper's second caution. The caution's empirical half had already been withdrawn on 2026-09-12 for
+  an unrelated reason (the temperature-0 confound); this is a second, independent reason it was
+  right to withdraw it.
+
+**Registered stopping decision.** The re-run halts here rather than continuing on a different
+route. The cross-vendor auditor could be reached today through a Codex CLI subscription, which we
+verified is live and can serve the same model name. **We do not use it.** That path wraps the model
+in a different agent harness with its own system prompt and tool loop, so the readings would not be
+comparable with ceiling 1's frozen 30.0% comparator, which is the whole point of the contrast. A
+different API key on a different account would be comparable, and is the owner's decision to make.

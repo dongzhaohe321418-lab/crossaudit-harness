@@ -10,6 +10,18 @@
 > re-run before it reports anything. The numbers are kept here, unedited, so the re-run can be
 > compared against them.
 
+> **Re-run status, 2026-09-17 (Amendment 4).** The replacement run is **incomplete and cannot
+> answer this study's hypotheses.** Its same-vendor family is finished (8 arms, 249 of 249 each,
+> $3.69); its cross-vendor family bought **nothing**, because the OpenAI route returned HTTP 429
+> continuously for about 23 hours across ten supervised attempts. That is rate limiting, not
+> billing: no denial row carries `insufficient_quota`, 401 or 403. Every hypothesis here is about
+> the cross-vendor auditor, so none of them is re-answered.
+>
+> One descriptive, post-hoc comparison is available and is stated in Amendment 4: on the 147
+> instances common to both runs, the same-vendor arm's verdict splits across the eight draws on
+> **0 of 147 in this void run and on 8 of 147 in the re-run**. The "identical verdict everywhere"
+> phenomenon reported below **does not survive** the correction.
+
 # Study 23 — the measured ceiling is an operating point, not a constant
 
 > **Third version.** Preregistered at `benchmarks/code/substrate2/PREREGISTRATION.md`,
