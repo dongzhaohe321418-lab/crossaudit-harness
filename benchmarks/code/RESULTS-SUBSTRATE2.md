@@ -50,11 +50,12 @@ substrate. It is **louder**: it flags more of everything, and its recall per fal
 point is lower at every reading count.
 
 **What it no longer supports is the matched-operating-point claim.** The voided run reported
-that within the cross-vendor family the two substrates' false-positive intervals do not meet,
-2.6 points apart, and the study leaned on that. **With the visible tests corrected they
-overlap by 3.5 points.** Both are distances between two intervals quoted in the same
-sentence rather than estimates of their own, and neither owes an interval: substrate 2's cheapest reading costs 25.3% [18.8, 32.2] at K = 1
-against substrate 1's dearest 16.0% [10.1, 22.3] at K = 8. The point estimates stay disjoint,
+that the two substrates' **cross-vendor** false-positive intervals do not meet — a
+cross-vendor comparison, 2.6 points apart (distances between quoted intervals) — and the
+study leaned on that. **With the visible tests corrected they
+overlap by 3.5 points** (distances between quoted intervals): substrate 2's cheapest
+reading costs 25.3% [18.8, 32.2] at K = 1 against substrate 1's dearest 16.0% [10.1, 22.3]
+at K = 8. The point estimates stay disjoint,
 but non-overlap is no longer available as a conservative proxy for a difference, and
 **"no reading count gives a matched rate" is withdrawn**. §4 gives both families' answers;
 §7 says what that leaves standing.
@@ -211,10 +212,12 @@ both definitions of that quantity:
 **The honest limit on this comparison, stated for a named family.** Substrate 2's
 *single* cross-vendor reading already costs **25.3% [18.8, 32.2]** false positives, above
 substrate 1's *eight*-reading cross-vendor **16.0% [10.1, 22.3]**; those two intervals do
-not meet, and 2.6 points separate them. **Within the cross-vendor family there is
-therefore no K at which the two substrates can be compared at a matched false-positive
-rate**, which is the comparison that matters here, because substrate 1's frozen comparator
-and substrate 2's primary are both the shipped cross-vendor auditor.
+**do** meet — they overlap by 3.5 points. **The claim is now made only for the cross-vendor
+family - 16.0% [10.1, 22.3] against 25.2% [18.8, 32.2], which do not meet** at the point
+estimates while their intervals do, so a matched rate cannot be ruled out. The voided run
+had them 2.6 points asunder — a cross-vendor comparison, and one of the distances between
+quoted intervals that owe no interval of their own — and concluded there is no K at which the two substrates can be compared at a
+matched false-positive rate; **that conclusion is withdrawn.**
 
 **Pooled across families the claim does not survive, and it is stated rather than left to
 be found.** Substrate 1's dearest reading anywhere is its same-vendor family at K = 8,
@@ -258,11 +261,12 @@ Substrate 2's level ratio is lower than substrate 1's at **every** K, and so is 
 **H23d is answered as registered**, paired at K = 8 over the whole frozen audit set, by
 `report_ceiling3.paired_union_difference` unchanged under seed 20260917.
 
-On P the same-vendor arm's union recall is **80.8% [70.0, 90.9]**, Wilson [80.2, 93.0],
-against the cross-vendor arm's **76.8% [65.7, 87.0]** on the same 100 instances:
-**+4.0 points, problem-cluster [-10.1, 18.2]** (26 instances flagged only by `self`, 9 only
-by `cross`; exact McNemar p = 0.00599; cluster sign-flip p = 0.04210; Tango [5.7, 28.2] and
-grid-unconditional [2.0, 30.5] beside it, both ignoring clustering).
+On P the same-vendor arm's union recall is **80.8% [70.0, 90.9]**, Wilson [72.0, 87.4],
+against the cross-vendor arm's **76.8% [65.7, 87.0]** on the same 99 instances:
+**+4.0 points, problem-cluster [-10.1, 18.2]** (16 instances flagged only by `self`, 12 only by `cross`; exact McNemar p = 0.57159; cluster sign-flip p = 0.67572; Tango [-6.7, 14.8] and grid-unconditional [-9.6, 17.7] beside it, both ignoring clustering). **The interval spans zero.** The voided run reported
++17.0 points [2.0, 32.0] here and read it as a sign reversal against substrate 1; with the
+visible tests corrected the same-vendor arm is not shown to differ from the cross-vendor one
+on recall at all, and that reading is withdrawn.
 
 **The sign is the opposite of substrate 1's.** Ceiling 1 measured −12.7 points
 [−25.0, −0.9] for the same contrast — the generator's own model saw *less* of its own
@@ -270,10 +274,8 @@ defects than a stranger did. Here it sees more. Both intervals exclude zero and 
 opposite ways, so the direction of the same-vendor effect is substrate-dependent too.
 
 **And it is bought, again, by flagging more of everything.** On C the same-vendor arm's
-false-positive rate is **68.7% [59.9, 77.1]**, Wilson [70.0, 83.3], against the
-cross-vendor arm's **45.3% [36.4, 54.4]**: **+23.3 points [12.6, 34.0]** (46 vs 13
-discordant; McNemar p = 0.00002; sign-flip p = 0.00015). The same-vendor arm pays
-**1.29 false-positive points for every recall point** it gains over the cross-vendor arm —
+false-positive rate is **68.7% [59.9, 77.1]**, Wilson [60.9, 75.5], against the cross-vendor arm's **45.3% [36.4, 54.4]**: **+23.3 points [12.6, 34.0]** (48 vs 13 discordant; McNemar p = 0.00001; sign-flip p = 0.00015). The same-vendor arm pays
+**5.77 false-positive points for every recall point** it gains over the cross-vendor arm —
 it costs more than it gains.
 
 **The same-vendor arm barely moves with more readings, and the voided run overstated that
@@ -299,23 +301,28 @@ model; the deterministic checks layer flagged nothing.
 
 Two consequences follow, and they are reported rather than smoothed:
 
-* **Ceiling 1's registered gain ratio is undefined for this arm.** It divides the recall
-  gained over one reading by the false positives gained over one reading, and for the
-  same-vendor arm that denominator is exactly zero. Only the post-hoc level ratio can be
-  quoted: a flat **1.14 [0.98, 1.31]** at every K, below the cross-vendor arm's 1.55
-  [1.12, 2.12] → 1.28 [1.01, 1.61] on this substrate at every K, and below substrate 1's
-  2.37 → 1.88 at every K. The same-vendor arm is the worst exchange measured anywhere in
-  this programme.
+* **Ceiling 1's registered gain ratio is computable for this arm, and it is poor.** It
+  divides the recall gained over one reading by the false positives gained over one reading,
+  and runs **0.32** at K = 2 down to **0.25** at K = 8 — every extra reading of this arm buys
+  about four false-positive points per recall point. The post-hoc level ratio runs
+  **1.22 [1.00, 1.48]** at K = 1 down to **1.18** at K = 8, below the cross-vendor arm's
+  2.07 → 1.69 on this substrate at every K, and below substrate 1's 2.37 → 1.88.
+  The same-vendor arm is still the worst exchange measured anywhere in this programme.
+
+  **The voided run could not compute this ratio at all**, because the arm never split and the
+  denominator was exactly zero. That it is now computable is itself a consequence of the
+  correction.
 * **Unioning readings buys this arm very little.** Ceiling 1's flattening bar is met on
-  substrate 2 for this family, but from a curve that rises 0.7 points across all eight
-  readings on P and 3.1 on C. Meeting a flattening bar from a curve that barely rises is not
+  substrate 2 for this family, but from a curve that barely rises: on P it runs
+  80.1% [68.6, 90.4] at one reading to 80.8% [70.0, 90.9] at eight, and on C 65.6%
+  [56.6, 74.4] to 68.7% [59.9, 77.1]. Meeting a flattening bar from a curve that barely rises is not
   the same event as saturating, and it is not read as one here. The voided run recorded a
-  last-step gain of exactly 0.00 points with every resample giving zero, because no instance
-  split; that is the artefact the correction removed.
+  last-step gain of exactly 0.00 points [0.00, 0.00] — every resample gave zero because no
+  instance split — and that is the artefact the correction removed.
 
 ### Table 7 — the same-vendor arm beside the cross-vendor arm, substrate 2
 <!-- BEGIN T7 (records/substrate2/tables.md) -->
-The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the same 99 P and 150 C instances at the same K = 8. Its curve does not move with K because its flag does not split across draws (Table 3), so **ceiling 1's registered gain ratio is undefined for it**: that ratio divides by the false-positive gain from K = 1, and that gain is exactly zero. Only the post-hoc level ratio can be quoted, and it is 1.22 [1.00, 1.48] at K = 1 and 1.18 [0.97, 1.42] at K = 8.
+The same-vendor arm is `claude-haiku-4-5`, the generator's own model, over the same 99 P and 150 C instances at the same K = 8. Its curve moves very little with K, and its flag splits across draws on only 12 of 249 instances (Table 3). Ceiling 1's registered gain ratio is computable and runs 0.32 at K = 2 to 0.25 at K = 8; the post-hoc level ratio is 1.22 [1.00, 1.48] at K = 1 and 1.18 [0.97, 1.42] at K = 8.
 
 | K | `self` recall on P [95% cluster CI] | `self` FP on C [95% cluster CI] | `self` level ratio | `cross` recall on P | `cross` FP on C | `cross` level ratio |
 |---:|---|---|---:|---:|---:|---:|

@@ -277,26 +277,30 @@ def test_the_matched_false_positive_limit_names_its_family_in_both_directions():
     co = m["cross_family_only_REGISTERED_COMPARISON"]
     po = m["pooled_all_families"]
 
-    # within the cross-vendor family: the intervals miss, and the gap is quoted
-    assert co["intervals_overlap"] is False and co["point_estimates_disjoint"] is True
+    # Within the cross-vendor family. Whether the two intervals meet is READ from the data,
+    # not asserted: the first version of this test hardcoded `intervals_overlap is False`
+    # and required the prose to say the intervals "do not meet". That was the voided run's
+    # finding and it reversed -- the corrected run has them overlapping by 3.5 points -- so
+    # the test could not have noticed. Third test in this file of that shape.
     assert co["sub1_dearest"]["family"] == "cross" and co["sub2_cheapest"]["family"] == "cross"
-    assert (f"*single* cross-vendor reading already costs "
-            f"**{_pct(co['sub2_cheapest']['rate'])}% "
-            f"{_iv(co['sub2_cheapest']['cluster_ci95'])}** false positives, above substrate "
-            f"1's *eight*-reading cross-vendor **{_pct(co['sub1_dearest']['rate'])}% "
-            f"{_iv(co['sub1_dearest']['cluster_ci95'])}**; those two intervals do not meet, "
-            f"and {co['interval_gap_points']:.1f} points separate them") in t
-    assert ("**Within the cross-vendor family there is therefore no K at which the two "
-            "substrates can be compared at a matched false-positive rate**") in t
+    assert co["point_estimates_disjoint"] is True
+    if not co["intervals_overlap"]:
+        assert (f"those two intervals do not meet, "
+                f"and {co['interval_gap_points']:.1f} points separate them") in t
+        assert ("**Within the cross-vendor family there is therefore no K at which the two "
+                "substrates can be compared at a matched false-positive rate**") in t
+    else:
+        assert "**that conclusion is withdrawn.**" in t
+        assert f"overlap by {co['interval_overlap_points']:.1f} points" in t
 
     # pooled: the intervals DO meet, and the report says so in its own voice
     assert po["intervals_overlap"] is True
     assert po["sub1_dearest"]["family"] == "self"
-    assert (f"Substrate 1's dearest reading anywhere is its same-vendor family at K = "
-            f"{po['sub1_dearest']['K']}, **{_pct(po['sub1_dearest']['rate'])}% "
-            f"{_iv(po['sub1_dearest']['cluster_ci95'])}**, whose upper bound reaches "
-            f"**{po['interval_overlap_points']:.1f} points** into substrate 2's cheapest "
-            f"interval of {_iv(po['sub2_cheapest']['cluster_ci95'])}") in t
+    assert (f"substrate 1's same-vendor family at K = {po['sub1_dearest']['K']} is "
+            f"{_pct(po['sub1_dearest']['rate'])}% {_iv(po['sub1_dearest']['cluster_ci95'])} "
+            f"and substrate 2's cheapest cross-vendor reading is "
+            f"{_pct(po['sub2_cheapest']['rate'])}% "
+            f"{_iv(po['sub2_cheapest']['cluster_ci95'])}, and those two intervals overlap") in t
     assert "a matched false-positive rate **cannot be ruled out**" in t
 
     # the bare, unscoped form of the claim must not appear anywhere
@@ -386,8 +390,17 @@ def test_h23d_is_computed_as_registered_and_its_sign_is_bound():
             f"grid-unconditional [{P['exact_unconditional_ci95_points'][0]:.1f}, "
             f"{P['exact_unconditional_ci95_points'][1]:.1f}]") in t
     # the sign, against substrate 1's frozen comparator
-    assert d["sign_matches_substrate1"] is False and d["P_excludes_zero"] is True
-    assert "**The sign is the opposite of substrate 1's.**" in t
+    # FOURTH test in this file that hardcoded a finding. It asserted P_excludes_zero is
+    # True and required the prose to say the sign is opposite substrate 1's -- the voided
+    # run's +17.0 [2.0, 32.0]. The corrected run gives +4.0 [-10.1, 18.2], which spans zero,
+    # so there is no sign to be opposite. Read from the data; assert only that the report
+    # says whichever is true.
+    assert d["sign_matches_substrate1"] is False
+    if d["P_excludes_zero"]:
+        assert "**The sign is the opposite of substrate 1's.**" in t
+    else:
+        assert "**The interval spans zero.**" in t
+        assert "that reading is withdrawn" in t
     assert (f"Ceiling 1 measured {d['substrate1_comparator_points']:.1f} points "
             f"[{d['substrate1_comparator_ci95_points'][0]:.1f}, "
             f"{d['substrate1_comparator_ci95_points'][1]:.1f}] for the same contrast") in t
@@ -428,14 +441,23 @@ def test_the_same_vendor_arms_draw_agreement_is_reported_as_measured():
     assert ag["self"]["readings_flagged_by_checks"] == 0
     assert ag["cross"]["readings_flagged_by_checks"] == 0
     assert "the deterministic checks layer flagged nothing" in t
-    # the registered gain ratio cannot be computed for this family, and the report says so
+    # Whether the registered gain ratio can be computed depends on whether this arm's union
+    # moves at all, so it is read, not asserted. In the voided run the arm never split, the
+    # denominator was exactly zero and the ratio was undefined; with the visible tests
+    # corrected the arm does move and the ratio exists. Same for the level ratio, which was
+    # constant across K only because the curve was flat.
     se = n["self_family_exchange"]
-    assert se["registered_gain_ratio_is_undefined"] is True
-    assert "**Ceiling 1's registered gain ratio is undefined for this arm.**" in t
     lv = se["ratios"]["POST_HOC_level_ratio_by_k"]
     k1 = se["level_ratio_ci95_K1"]
-    assert len(set(round(x, 9) for x in lv)) == 1
-    assert (f"a flat **{lv[0]:.2f} [{k1[0]:.2f}, {k1[1]:.2f}]** at every K") in t
+    if se["registered_gain_ratio_is_undefined"]:
+        assert "**Ceiling 1's registered gain ratio is undefined for this arm.**" in t
+        assert len(set(round(x, 9) for x in lv)) == 1
+        assert (f"a flat **{lv[0]:.2f} [{k1[0]:.2f}, {k1[1]:.2f}]** at every K") in t
+    else:
+        g = se["ratios"]["registered_gain_ratio_by_k"]
+        assert (f"**{g[1]:.2f}** at K = 2 down to **{g[-1]:.2f}** at K = 8") in t
+        assert (f"level ratio runs **{lv[0]:.2f} [{k1[0]:.2f}, {k1[1]:.2f}]** at K = 1 "
+                f"down to **{lv[-1]:.2f}**") in t
     assert se["level_ratio_below_cross_on_substrate2_at_every_k"] is True
     assert se["level_ratio_below_substrate1_cross_at_every_k"] is True
     sP = n["self_family_curve"]["P"]
