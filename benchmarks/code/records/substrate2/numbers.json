@@ -1,13 +1,13 @@
 {
  "H23a_primary_recall_sub2_minus_sub1_P_K8": {
   "a": {
-   "k": 71,
-   "n": 100,
+   "k": 76,
+   "n": 99,
    "n_problems": 51,
-   "rate": 0.71,
+   "rate": 0.7676767676767676,
    "wilson95": [
-    0.6146110882442888,
-    0.7898516425087772
+    0.6754474972079758,
+    0.8399088640082377
    ]
   },
   "b": {
@@ -21,10 +21,10 @@
    ]
   },
   "cluster_ci95_points": [
-   24.765658525311988,
-   56.064466530750934
+   31.555653795295886,
+   61.31195672319525
   ],
-  "difference_points": 41.0,
+  "difference_points": 46.76767676767676,
   "direction": "substrate 2 higher",
   "excludes_zero": true,
   "falsification_clause": "PREREGISTRATION \u00a74: the interval excludes zero and substrate 2's recall is HIGHER, so the paper must say its central quantity is substrate-dependent and that 30.0% is not a general figure",
@@ -37,194 +37,194 @@
   "C": {
    "asymptote_is_extrapolation": true,
    "counts_k": {
-    "0": 67,
-    "1": 16,
-    "2": 9,
-    "3": 9,
-    "4": 12,
-    "5": 4,
-    "6": 3,
-    "7": 5,
-    "8": 25
+    "0": 82,
+    "1": 17,
+    "2": 5,
+    "3": 11,
+    "4": 4,
+    "5": 1,
+    "6": 6,
+    "7": 6,
+    "8": 18
    },
    "curve": [
-    0.318333,
-    0.399048,
-    0.448333,
-    0.481714,
-    0.505833,
-    0.524524,
-    0.54,
-    0.553333
+    0.2525,
+    0.316429,
+    0.355476,
+    0.383905,
+    0.405952,
+    0.42381,
+    0.439167,
+    0.453333
    ],
    "curve_cluster_ci95": [
     [
-     0.24911358173076925,
-     0.3904112368795588
+     0.1879032258064516,
+     0.32189598442116574
     ],
     [
-     0.3223687322611164,
-     0.47611163670766316
+     0.24322862706726525,
+     0.39432588682781644
     ],
     [
-     0.3662459001457726,
-     0.5291545189504374
+     0.27825497287522605,
+     0.43727210289710283
     ],
     [
-     0.39665321191767866,
-     0.5646673794358508
+     0.30344215055461254,
+     0.4676100218331264
     ],
     [
-     0.4196413789025544,
-     0.5908547842730205
+     0.3234498191681735,
+     0.49101450143815906
     ],
     [
-     0.4370737110633727,
-     0.6109035087719296
+     0.3384418396065939,
+     0.5110487565681862
     ],
     [
-     0.4512987012987013,
-     0.6282894736842105
+     0.35181973276447615,
+     0.5277799893842887
     ],
     [
-     0.46258503401360546,
-     0.6423841059602649
+     0.36423738860273075,
+     0.5436241610738255
     ]
    ],
-   "draw1_mean_rate": 0.31833333333333336,
+   "draw1_mean_rate": 0.2525,
    "fit": {
-    "A": 0.5280572946355405,
+    "A": 0.42958887769967163,
     "A_ci95_cluster": [
-     0.4417041606476413,
-     0.614813741316978
+     0.3454287424574493,
+     0.5176839393736833
     ],
-    "max_resid": 0.03768115522669219,
-    "r2": 0.9173078227126931,
+    "max_resid": 0.03496738650145048,
+    "r2": 0.9034547209648703,
     "raw_kmax_ci95_cluster": [
-     0.46258503401360546,
-     0.6423841059602649
+     0.36423738860273075,
+     0.5436241610738255
     ],
-    "tau": 1.3189520961691632
+    "tau": 1.4164767079877998
    },
    "flattened_by_ceiling1_bar": false,
    "flattening_gain_last_step_cluster_ci95_points": [
-    0.6895370807746827,
-    2.055921052631582
+    0.78125,
+    2.1103896103896123
    ],
-   "flattening_gain_last_step_points": 1.3333333333333308,
+   "flattening_gain_last_step_points": 1.416666666666666,
    "k_max": 8,
    "n_instances": 150,
-   "n_problems": 121,
+   "n_problems": 117,
    "union_at_kmax": {
     "cluster_ci95": [
-     0.46258503401360546,
-     0.6423841059602649
+     0.36423738860273075,
+     0.5436241610738255
     ],
-    "k": 83,
+    "k": 68,
     "n": 150,
-    "n_problems": 121,
+    "n_problems": 117,
     "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
-    "rate": 0.5533333333333333,
+    "rate": 0.4533333333333333,
     "wilson95": [
-     0.47343118434916653,
-     0.6305719895849053
+     0.375824986079277,
+     0.5331722367284102
     ]
    }
   },
   "P": {
-   "asymptote_is_extrapolation": false,
+   "asymptote_is_extrapolation": true,
    "counts_k": {
-    "0": 29,
-    "1": 5,
-    "2": 7,
-    "3": 8,
-    "4": 5,
-    "5": 4,
-    "6": 7,
-    "7": 9,
-    "8": 26
+    "0": 23,
+    "1": 12,
+    "2": 6,
+    "3": 7,
+    "4": 3,
+    "5": 3,
+    "6": 4,
+    "7": 11,
+    "8": 30
    },
    "curve": [
-    0.495,
-    0.588929,
-    0.635179,
-    0.663571,
-    0.682321,
-    0.695,
-    0.70375,
-    0.71
+    0.521465,
+    0.607864,
+    0.654942,
+    0.6886,
+    0.714466,
+    0.735209,
+    0.752525,
+    0.767677
    ],
    "curve_cluster_ci95": [
     [
-     0.3851010101010101,
-     0.60375
+     0.4099948453608247,
+     0.634806348281887
     ],
     [
-     0.47357142857142875,
-     0.7010746994342293
+     0.4954031117397456,
+     0.7195924949637821
     ],
     [
-     0.5164285714285713,
-     0.749098570571343
+     0.543239740203012,
+     0.762859962406015
     ],
     [
-     0.5438535714285715,
-     0.7779349363507779
+     0.5788628279883382,
+     0.7946618244298658
     ],
     [
-     0.5631313131313131,
-     0.7968545462739554
+     0.6057277156287058,
+     0.8186685522381397
     ],
     [
-     0.5757053571428572,
-     0.8090379008746355
+     0.6270209138745706,
+     0.837857843137255
     ],
     [
-     0.5853861386138614,
-     0.8168316831683168
+     0.6437453589108911,
+     0.8550568121971771
     ],
     [
-     0.5918367346938775,
-     0.8217821782178217
+     0.6565656565656566,
+     0.87
     ]
    ],
-   "draw1_mean_rate": 0.495,
+   "draw1_mean_rate": 0.5214646464646465,
    "fit": {
-    "A": 0.6864024326194028,
+    "A": 0.7260230392128236,
     "A_ci95_cluster": [
-     0.5708491564504564,
-     0.7994272164709734
+     0.6221825809916736,
+     0.8277973498094279
     ],
-    "max_resid": 0.028792004957433504,
-    "r2": 0.9052193791642772,
+    "max_resid": 0.04256958532998556,
+    "r2": 0.8303300085140632,
     "raw_kmax_ci95_cluster": [
-     0.5918367346938775,
-     0.8217821782178217
+     0.6565656565656566,
+     0.87
     ],
-    "tau": 0.8769411848573074
+    "tau": 0.9267022764073103
    },
-   "flattened_by_ceiling1_bar": true,
+   "flattened_by_ceiling1_bar": false,
    "flattening_gain_last_step_cluster_ci95_points": [
-    0.12626262626262985,
-    1.225490196078427
+    0.6188118811881194,
+    2.5990099009901013
    ],
-   "flattening_gain_last_step_points": 0.6249999999999978,
+   "flattening_gain_last_step_points": 1.5151515151515138,
    "k_max": 8,
-   "n_instances": 100,
+   "n_instances": 99,
    "n_problems": 51,
    "union_at_kmax": {
     "cluster_ci95": [
-     0.5918367346938775,
-     0.8217821782178217
+     0.6565656565656566,
+     0.87
     ],
-    "k": 71,
-    "n": 100,
+    "k": 76,
+    "n": 99,
     "n_problems": 51,
     "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
-    "rate": 0.71,
+    "rate": 0.7676767676767676,
     "wilson95": [
-     0.6146110882442888,
-     0.7898516425087772
+     0.6754474972079758,
+     0.8399088640082377
     ]
    }
   }
@@ -233,9 +233,9 @@
   "matched_fp_comparison": {
    "CORRECTION": "an earlier version of this report asserted non-overlap without naming a family. That is true of the point estimates and of the cross-vendor comparison with intervals, and false once every family is pooled and the intervals are admitted.",
    "cross_family_only_REGISTERED_COMPARISON": {
-    "interval_gap_points": 2.6,
-    "interval_overlap_points": null,
-    "intervals_overlap": false,
+    "interval_gap_points": null,
+    "interval_overlap_points": 3.5,
+    "intervals_overlap": true,
     "point_estimates_disjoint": true,
     "sub1_dearest": {
      "K": 8,
@@ -249,20 +249,20 @@
     "sub2_cheapest": {
      "K": 1,
      "cluster_ci95": [
-      0.24911358173076925,
-      0.3904112368795588
+      0.1879032258064516,
+      0.32189598442116574
      ],
      "family": "cross",
-     "rate": 0.318333
+     "rate": 0.2525
     }
    },
    "pooled_all_families": {
     "interval_gap_points": null,
-    "interval_overlap_points": 6.3,
+    "interval_overlap_points": 12.5,
     "intervals_overlap": true,
     "point_estimates_disjoint": true,
     "sensitivity_using_ceiling1_per_K_curve_ci95": {
-     "interval_overlap_points": 6.4,
+     "interval_overlap_points": 12.5,
      "note": "ceiling 1 carries two bootstrap streams for this point; the difference between them does not change the answer, only its second decimal",
      "sub1_dearest_cluster_ci95": [
       0.17307692307692307,
@@ -281,23 +281,23 @@
     "sub2_cheapest": {
      "K": 1,
      "cluster_ci95": [
-      0.24911358173076925,
-      0.3904112368795588
+      0.1879032258064516,
+      0.32189598442116574
      ],
      "family": "cross",
-     "rate": 0.318333
+     "rate": 0.2525
     }
    }
   },
   "sub2_minus_sub1_C_K8": {
    "a": {
-    "k": 83,
+    "k": 68,
     "n": 150,
-    "n_problems": 121,
-    "rate": 0.5533333333333333,
+    "n_problems": 117,
+    "rate": 0.4533333333333333,
     "wilson95": [
-     0.47343118434916653,
-     0.6305719895849053
+     0.375824986079277,
+     0.5331722367284102
     ]
    },
    "b": {
@@ -311,10 +311,10 @@
     ]
    },
    "cluster_ci95_points": [
-    28.212590575405827,
-    50.20700167191083
+    18.313402272613498,
+    40.22207707491464
    ],
-   "difference_points": 39.33333333333333,
+   "difference_points": 29.333333333333332,
    "excludes_zero": true,
    "method": "two-sample problem-cluster percentile bootstrap; the populations are different instances from different corpora, resampled independently",
    "paired": false,
@@ -345,34 +345,34 @@
   },
   "substrate2": {
    "POST_HOC_level_ratio_by_k": [
-    1.5549754502360738,
-    1.4758349872697019,
-    1.416757187180065,
-    1.37752068654845,
-    1.348905666494673,
-    1.3250108669955998,
-    1.3032407407407407,
-    1.2831333030923513
+    2.065207920792079,
+    1.9210122965973406,
+    1.8424366201937683,
+    1.7936729138719214,
+    1.7599765489516004,
+    1.7347608598192585,
+    1.7135281111741092,
+    1.6934063922105826
    ],
    "registered_gain_ratio_by_k": [
     null,
-    1.1637118255590657,
-    1.0783000000000005,
-    1.0317662396484293,
-    0.9990453333333331,
-    0.9699744411734748,
-    0.9417279071760791,
-    0.9148936170212765
+    1.3514836772043983,
+    1.2961952299564952,
+    1.2719074616643204,
+    1.257728801188646,
+    1.2477029945712452,
+    1.2378192181799679,
+    1.2259539019981782
    ]
   },
   "substrate2_level_ratio_ci95_K1": [
-   1.1246441098162652,
-   2.1164026067604955,
+   1.470565634983133,
+   2.909070564686856,
    0
   ],
   "substrate2_level_ratio_ci95_K8": [
-   1.0112731877838947,
-   1.6136363636363638,
+   1.3312489615828023,
+   2.183946576765489,
    0
   ],
   "substrate2_level_ratio_lower_at_every_k": true,
@@ -380,65 +380,65 @@
  },
  "H23d_self_minus_cross_K8": {
   "C": {
-   "a_only": 46,
-   "a_union": 0.7733333333333333,
+   "a_only": 48,
+   "a_union": 0.6866666666666666,
    "b_only": 13,
-   "b_union": 0.5533333333333333,
+   "b_union": 0.4533333333333333,
    "cluster_ci95_points": [
-    11.18421052631579,
-    32.69230769230769
+    12.582781456953644,
+    34.01360544217687
    ],
-   "difference_points": 22.0,
+   "difference_points": 23.333333333333332,
    "exact_unconditional_ci95_points": [
-    10.000007033348085,
-    32.99999701976776
+    11.333339015642801,
+    34.33332979679108
    ],
    "k": 8,
-   "mcnemar_exact_p": 1.9167786796225883e-05,
+   "mcnemar_exact_p": 7.665168380445453e-06,
    "n": 150,
    "one_signed_discordance": false,
    "signflip": {
     "method": "sampled, 200000 draws, seed 20260915",
-    "n_clusters": 121,
-    "n_nonzero_clusters": 50,
-    "p": 0.00014999925000374999
+    "n_clusters": 117,
+    "n_nonzero_clusters": 49,
+    "p": 0.00015499922500387497
    },
    "tango_ci95_points": [
-    12.438924721220607,
-    31.370082714841885
+    13.654730068122866,
+    32.77017574879984
    ]
   },
   "C_excludes_zero": true,
   "P": {
-   "a_only": 26,
-   "a_union": 0.88,
-   "b_only": 9,
-   "b_union": 0.71,
+   "a_only": 16,
+   "a_union": 0.8080808080808081,
+   "b_only": 12,
+   "b_union": 0.7676767676767676,
    "cluster_ci95_points": [
-    2.0,
-    31.958762886597935
+    -10.1010101010101,
+    18.181818181818183
    ],
-   "difference_points": 17.0,
+   "difference_points": 4.040404040404041,
    "exact_unconditional_ci95_points": [
-    2.0000008940696734,
-    30.49999856948852
+    -9.595956525417288,
+    17.676763703124692
    ],
    "k": 8,
-   "mcnemar_exact_p": 0.0059881205670535564,
-   "n": 100,
+   "mcnemar_exact_p": 0.5715881884098053,
+   "n": 99,
    "one_signed_discordance": false,
    "signflip": {
     "method": "exact enumeration",
     "n_clusters": 51,
-    "n_nonzero_clusters": 21,
-    "p": 0.0420989990234375
+    "n_nonzero_clusters": 17,
+    "p": 0.67572021484375
    },
    "tango_ci95_points": [
-    5.672254024441043,
-    28.218834692215424
+    -6.664049151121684,
+    14.781592840418622
    ]
   },
-  "P_excludes_zero": true,
+  "P_excludes_zero": false,
   "computed_at_registered_K": true,
   "costs_more_than_it_gains": true,
   "coverage_by_draw": {
@@ -451,7 +451,7 @@
    "7": 250,
    "8": 250
   },
-  "false_positives_bought_per_recall_point": 1.2941176470588236,
+  "false_positives_bought_per_recall_point": 5.7749999999999995,
   "method": "union-at-K recall of `self` minus `cross` on the SAME instances; problem-cluster percentile bootstrap, exact McNemar and the cluster sign-flip test, all as ceiling 1 defines them",
   "paired": true,
   "recorded_denials_by_draw": {
@@ -589,48 +589,48 @@
   "cross": {
    "1": {
     "complete": true,
-    "readings": 250,
-    "recorded_denials": 0
+    "readings": 249,
+    "recorded_denials": 7344
    },
    "2": {
     "complete": true,
-    "readings": 250,
-    "recorded_denials": 0
+    "readings": 249,
+    "recorded_denials": 7242
    },
    "3": {
     "complete": true,
-    "readings": 250,
-    "recorded_denials": 0
+    "readings": 249,
+    "recorded_denials": 6732
    },
    "4": {
     "complete": true,
-    "readings": 250,
-    "recorded_denials": 0
+    "readings": 249,
+    "recorded_denials": 6732
    },
    "5": {
     "complete": true,
-    "readings": 250,
-    "recorded_denials": 0
+    "readings": 249,
+    "recorded_denials": 6732
    },
    "6": {
     "complete": true,
-    "readings": 250,
-    "recorded_denials": 0
+    "readings": 249,
+    "recorded_denials": 6732
    },
    "7": {
     "complete": true,
-    "readings": 250,
-    "recorded_denials": 0
+    "readings": 249,
+    "recorded_denials": 13837
    },
    "8": {
     "complete": true,
-    "readings": 250,
-    "recorded_denials": 999
+    "readings": 249,
+    "recorded_denials": 17934
    }
   },
   "scope_C": 150,
-  "scope_P": 100,
-  "scope_n": 250,
+  "scope_P": 99,
+  "scope_n": 249,
   "self": {
    "flags": {
     "1": {
@@ -2746,36 +2746,36 @@
  },
  "draw_agreement": {
   "cross": {
-   "instances_whose_flag_never_splits": 147,
-   "instances_whose_flag_splits_across_draws": 103,
-   "instances_with_one_finding_digest_across_all_draws": 96,
+   "instances_whose_flag_never_splits": 153,
+   "instances_whose_flag_splits_across_draws": 96,
+   "instances_with_one_finding_digest_across_all_draws": 105,
    "k_max": 8,
    "model_blockers_histogram": {
-    "0": 1222,
-    "1": 470,
-    "2": 276,
-    "3": 31,
+    "0": 1276,
+    "1": 449,
+    "2": 240,
+    "3": 26,
     "4": 1
    },
-   "n_instances": 250,
+   "n_instances": 249,
    "note": "a family with 0 split instances has a union curve flat in K",
    "readings_flagged_by_checks": 0,
-   "readings_flagged_by_model": 778
+   "readings_flagged_by_model": 716
   },
   "self": {
-   "instances_whose_flag_never_splits": 250,
-   "instances_whose_flag_splits_across_draws": 0,
-   "instances_with_one_finding_digest_across_all_draws": 219,
+   "instances_whose_flag_never_splits": 237,
+   "instances_whose_flag_splits_across_draws": 12,
+   "instances_with_one_finding_digest_across_all_draws": 144,
    "k_max": 8,
    "model_blockers_histogram": {
-    "0": 368,
-    "2": 1510,
-    "3": 122
+    "0": 571,
+    "2": 1314,
+    "3": 107
    },
-   "n_instances": 250,
+   "n_instances": 249,
    "note": "a family with 0 split instances has a union curve flat in K",
    "readings_flagged_by_checks": 0,
-   "readings_flagged_by_model": 1632
+   "readings_flagged_by_model": 1421
   }
  },
  "preregistration": "benchmarks/code/substrate2/PREREGISTRATION.md",
@@ -2783,171 +2783,171 @@
   "C": {
    "asymptote_is_extrapolation": false,
    "counts_k": {
-    "0": 34,
-    "1": 0,
-    "2": 0,
+    "0": 47,
+    "1": 2,
+    "2": 2,
     "3": 0,
     "4": 0,
-    "5": 0,
-    "6": 0,
-    "7": 0,
-    "8": 116
+    "5": 1,
+    "6": 3,
+    "7": 2,
+    "8": 93
    },
    "curve": [
-    0.773333,
-    0.773333,
-    0.773333,
-    0.773333,
-    0.773333,
-    0.773333,
-    0.773333,
-    0.773333
+    0.655833,
+    0.668095,
+    0.673452,
+    0.677143,
+    0.680238,
+    0.682857,
+    0.685,
+    0.686667
    ],
    "curve_cluster_ci95": [
     [
-     0.6928104575163399,
-     0.8493150684931506
+     0.5660828025477707,
+     0.7413528789850358
     ],
     [
-     0.6928104575163399,
-     0.8493150684931506
+     0.5783310620300752,
+     0.7537348272642389
     ],
     [
-     0.6928104575163399,
-     0.8493150684931506
+     0.5844827586206897,
+     0.7585945282130709
     ],
     [
-     0.6928104575163399,
-     0.8493150684931506
+     0.5884530036336465,
+     0.7622385337152188
     ],
     [
-     0.6928104575163399,
-     0.8493150684931506
+     0.5914143803216652,
+     0.7652907219934953
     ],
     [
-     0.6928104575163399,
-     0.8493150684931506
+     0.5944993006855251,
+     0.7676122904518948
     ],
     [
-     0.6928104575163399,
-     0.8493150684931506
+     0.596473451482103,
+     0.7696078431372549
     ],
     [
-     0.6928104575163399,
-     0.8493150684931506
+     0.5986394557823129,
+     0.7708435457516338
     ]
    ],
-   "draw1_mean_rate": 0.7733333333333333,
+   "draw1_mean_rate": 0.6558333333333334,
    "fit": {
-    "A": 0.7733333333333333,
+    "A": 0.6792992447847558,
     "A_ci95_cluster": [
-     0.6928104575163399,
-     0.8493150684931506
+     0.590831059197575,
+     0.7641393016888135
     ],
-    "max_resid": 1.1102230246251565e-16,
-    "r2": null,
+    "max_resid": 0.0103400291974457,
+    "r2": 0.6656163123083818,
     "raw_kmax_ci95_cluster": [
-     0.6928104575163399,
-     0.8493150684931506
+     0.5986394557823129,
+     0.7708435457516338
     ],
-    "tau": 0.026716574831277103
+    "tau": 0.2999728386982714
    },
    "flattened_by_ceiling1_bar": true,
    "flattening_gain_last_step_cluster_ci95_points": [
     0.0,
-    0.0
+    0.4222972972973027
    ],
-   "flattening_gain_last_step_points": 0.0,
+   "flattening_gain_last_step_points": 0.1666666666666594,
    "k_max": 8,
    "n_instances": 150,
-   "n_problems": 121,
+   "n_problems": 117,
    "union_at_kmax": {
     "cluster_ci95": [
-     0.6928104575163399,
-     0.8493150684931506
+     0.5986394557823129,
+     0.7708435457516338
     ],
-    "k": 116,
+    "k": 103,
     "n": 150,
-    "n_problems": 121,
+    "n_problems": 117,
     "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
-    "rate": 0.7733333333333333,
+    "rate": 0.6866666666666666,
     "wilson95": [
-     0.6999980606806022,
-     0.8330182057315159
+     0.6085602497894558,
+     0.7554508589797957
     ]
    }
   },
   "P": {
    "asymptote_is_extrapolation": false,
    "counts_k": {
-    "0": 12,
+    "0": 19,
     "1": 0,
     "2": 0,
-    "3": 0,
+    "3": 1,
     "4": 0,
     "5": 0,
     "6": 0,
-    "7": 0,
-    "8": 88
+    "7": 1,
+    "8": 78
    },
    "curve": [
-    0.88,
-    0.88,
-    0.88,
-    0.88,
-    0.88,
-    0.88,
-    0.88,
-    0.88
+    0.800505,
+    0.804473,
+    0.806277,
+    0.807359,
+    0.8079,
+    0.808081,
+    0.808081,
+    0.808081
    ],
    "curve_cluster_ci95": [
     [
-     0.78,
-     0.9603960396039604
+     0.6924877577319588,
+     0.9
     ],
     [
-     0.78,
-     0.9603960396039604
+     0.6962481962481964,
+     0.9045189504373178
     ],
     [
-     0.78,
-     0.9603960396039604
+     0.696969696969697,
+     0.9064285714285714
     ],
     [
-     0.78,
-     0.9603960396039604
+     0.6985714285714286,
+     0.9076479076479077
     ],
     [
-     0.78,
-     0.9603960396039604
+     0.6996428571428572,
+     0.9087301587301588
     ],
     [
-     0.78,
-     0.9603960396039604
+     0.7,
+     0.9090909090909091
     ],
     [
-     0.78,
-     0.9603960396039604
+     0.7,
+     0.9090909090909091
     ],
     [
-     0.78,
-     0.9603960396039604
+     0.7,
+     0.9090909090909091
     ]
    ],
-   "draw1_mean_rate": 0.88,
+   "draw1_mean_rate": 0.8005050505050505,
    "fit": {
-    "A": 0.88,
+    "A": 0.8071933718704339,
     "A_ci95_cluster": [
-     0.78,
-     0.9603960396039604
+     0.6982710653006506,
+     0.9073390042152876
     ],
-    "max_resid": 1.1102230246251565e-16,
-    "r2": null,
+    "max_resid": 0.002663906569378094,
+    "r2": 0.7838875437900605,
     "raw_kmax_ci95_cluster": [
-     0.78,
-     0.9603960396039604
+     0.7,
+     0.9090909090909091
     ],
-    "tau": 0.026716574831277103
+    "tau": 0.2089187620508382
    },
    "flattened_by_ceiling1_bar": true,
    "flattening_gain_last_step_cluster_ci95_points": [
@@ -2956,21 +2956,21 @@
    ],
    "flattening_gain_last_step_points": 0.0,
    "k_max": 8,
-   "n_instances": 100,
+   "n_instances": 99,
    "n_problems": 51,
    "union_at_kmax": {
     "cluster_ci95": [
-     0.78,
-     0.9603960396039604
+     0.7,
+     0.9090909090909091
     ],
-    "k": 88,
-    "n": 100,
+    "k": 80,
+    "n": 99,
     "n_problems": 51,
     "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
-    "rate": 0.88,
+    "rate": 0.8080808080808081,
     "wilson95": [
-     0.8018790057328857,
-     0.9300059356298052
+     0.7195963938569909,
+     0.8735496067880852
     ]
    }
   }
@@ -2979,45 +2979,45 @@
   "level_ratio_below_cross_on_substrate2_at_every_k": true,
   "level_ratio_below_substrate1_cross_at_every_k": true,
   "level_ratio_ci95_K1": [
-   0.9783810702498821,
-   1.31053476706894,
+   1.0047211116404975,
+   1.4802574125581762,
    0
   ],
   "level_ratio_ci95_K8": [
-   0.9783810702498821,
-   1.31053476706894,
+   0.9720061555181082,
+   1.4159098539804476,
    0
   ],
   "ratios": {
    "POST_HOC_level_ratio_by_k": [
-    1.1379315249704849,
-    1.1379315249704849,
-    1.1379315249704849,
-    1.1379315249704849,
-    1.1379315249704849,
-    1.1379315249704849,
-    1.1379315249704849,
-    1.1379315249704849
+    1.2205927423597167,
+    1.2041296522201184,
+    1.1972300921223784,
+    1.1923020691345845,
+    1.187672549901652,
+    1.1833824651427751,
+    1.179680291970803,
+    1.1768164190211559
    ],
    "registered_gain_ratio_by_k": [
     null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null
+    0.32360137008644374,
+    0.3276008854077974,
+    0.32163303613327127,
+    0.3030116779348464,
+    0.2803433984606281,
+    0.2597456029073958,
+    0.2457027956152306
    ]
   },
-  "registered_gain_ratio_is_undefined": true,
+  "registered_gain_ratio_is_undefined": false,
   "why_undefined": "the registered gain ratio divides by the false-positive gain from K = 1 to K, and the same-vendor arm's false-positive rate does not move with K: its flag never splits across draws"
  },
  "strata": {
   "P_was_capped": false,
   "audited": {
    "C": 150,
-   "P": 100
+   "P": 99
   },
   "caps": {
    "C": 150,
@@ -3025,9 +3025,9 @@
   },
   "n_candidates": 600,
   "population": {
-   "C": 462,
-   "F": 38,
-   "P": 100
+   "C": 461,
+   "F": 40,
+   "P": 99
   },
   "seed": 20260917
  },
@@ -3116,5 +3116,5 @@
   "source": "records/ceiling/numbers.json, families.cross (unmodified)"
  },
  "unit_of_analysis": "instance (batch, problem_id); every interval resamples problem clusters",
- "written_utc": "2026-09-11T15:13:59Z"
+ "written_utc": "2026-09-17T12:38:30Z"
 }

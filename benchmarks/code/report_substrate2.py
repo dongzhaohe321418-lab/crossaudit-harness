@@ -823,14 +823,30 @@ def render_tables(n: dict) -> dict[str, str]:
         f"**Can any reading count put the two substrates at the same false-positive rate?** "
         f"The answer depends on which auditor families are admitted, so it is given twice.",
         "",
-        f"**Within the cross-vendor family** — the comparison this study draws, since "
-        f"substrate 1's frozen comparator and substrate 2's primary are both the shipped "
-        f"cross-vendor auditor — **no**. Substrate 2's cheapest reading costs "
-        f"{_p(co['sub2_cheapest']['rate'])} {_iv(co['sub2_cheapest']['cluster_ci95'])} at "
-        f"K = {co['sub2_cheapest']['K']}, and substrate 1's dearest costs "
-        f"{_p(co['sub1_dearest']['rate'])} {_iv(co['sub1_dearest']['cluster_ci95'])} at "
-        f"K = {co['sub1_dearest']['K']}. Those intervals do not meet: "
-        f"{co['interval_gap_points']:.1f} points separate them.",
+        # The corrected re-run reversed this. In the voided run the two cross-vendor
+        # intervals were disjoint and the sentence read "no"; with the visible tests fixed
+        # they overlap, so the branch below had never been exercised and crashed on a null
+        # gap. Both outcomes are now rendered from the data rather than assumed.
+        (f"**Within the cross-vendor family** — the comparison this study draws, since "
+         f"substrate 1's frozen comparator and substrate 2's primary are both the shipped "
+         f"cross-vendor auditor — **no**. Substrate 2's cheapest reading costs "
+         f"{_p(co['sub2_cheapest']['rate'])} {_iv(co['sub2_cheapest']['cluster_ci95'])} at "
+         f"K = {co['sub2_cheapest']['K']}, and substrate 1's dearest costs "
+         f"{_p(co['sub1_dearest']['rate'])} {_iv(co['sub1_dearest']['cluster_ci95'])} at "
+         f"K = {co['sub1_dearest']['K']}. Those intervals do not meet: "
+         f"{co['interval_gap_points']:.1f} points separate them."
+         if not co["intervals_overlap"] else
+         f"**Within the cross-vendor family** — the comparison this study draws, since "
+         f"substrate 1's frozen comparator and substrate 2's primary are both the shipped "
+         f"cross-vendor auditor — **a matched rate CANNOT be ruled out**. Substrate 2's "
+         f"cheapest reading costs {_p(co['sub2_cheapest']['rate'])} "
+         f"{_iv(co['sub2_cheapest']['cluster_ci95'])} at K = {co['sub2_cheapest']['K']}, and "
+         f"substrate 1's dearest costs {_p(co['sub1_dearest']['rate'])} "
+         f"{_iv(co['sub1_dearest']['cluster_ci95'])} at K = {co['sub1_dearest']['K']}. The "
+         f"point estimates are disjoint, but **the intervals overlap by "
+         f"{co['interval_overlap_points']:.1f} points**, so non-overlap is not available as "
+         f"a conservative proxy here. The voided run reported these intervals as disjoint; "
+         f"that finding does not survive the correction of the visible tests."),
         "",
         f"**Pooling every family measured on either substrate** — **yes, narrowly**. "
         f"Substrate 1's dearest reading anywhere is its `{po['sub1_dearest']['family']}` "
