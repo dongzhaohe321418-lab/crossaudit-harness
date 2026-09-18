@@ -1,0 +1,90 @@
+{
+  "draws_complete": {
+    "cross-d1": 252,
+    "cross-d2": 252,
+    "cross-d3": 252,
+    "cross-d4": 252,
+    "cross-d5": 207,
+    "cross-d6": 124,
+    "cross-d7": 47,
+    "cross-d8": 63,
+    "self-d1": 252,
+    "self-d2": 252,
+    "self-d3": 252,
+    "self-d4": 252,
+    "self-d5": 186,
+    "self-d6": 225,
+    "self-d7": 182,
+    "self-d8": 248
+  },
+  "ladder": [
+    [
+      "cross",
+      1
+    ],
+    [
+      "cross",
+      2
+    ],
+    [
+      "cross",
+      3
+    ],
+    [
+      "cross",
+      4
+    ],
+    [
+      "cross",
+      5
+    ],
+    [
+      "cross",
+      6
+    ],
+    [
+      "cross",
+      7
+    ],
+    [
+      "cross",
+      8
+    ],
+    [
+      "self",
+      1
+    ],
+    [
+      "self",
+      2
+    ],
+    [
+      "self",
+      3
+    ],
+    [
+      "self",
+      4
+    ],
+    [
+      "self",
+      5
+    ],
+    [
+      "self",
+      6
+    ],
+    [
+      "self",
+      7
+    ],
+    [
+      "self",
+      8
+    ]
+  ],
+  "scope_n": 252,
+  "spend_usd_this_invocation": 21.188923,
+  "study": "study23 / substrate 2",
+  "written_utc": "2026-09-18T13:53:44Z"
+}

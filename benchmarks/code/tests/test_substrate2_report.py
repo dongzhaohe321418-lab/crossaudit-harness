@@ -340,10 +340,19 @@ def test_the_correction_is_recorded_in_the_deviations():
     assert (f"The claim is now made only for the cross-vendor family - "
             f"{_pct(s1c['rate'])}% {_iv(s1c['cluster_ci95'])} against "
             f"{_pct(s2c['rate'])}% {_iv(s2c['cluster_ci95'])}, which do not meet") in t
-    assert "No point estimate changed; what changed is the scope the sentence claims." in t
+    # This used to demand "No point estimate changed", which held only within the run the
+    # figure review was made against. Across runs every point estimate changes; what the
+    # review changed, and what must still be recorded, is the scope the sentence claims.
+    assert ("What that review changed is the scope the sentence claims, and it is "
+            "kept") in t
     # the version header records the correction rather than presenting this as the first pass
-    assert "**Third version.**" in t
-    assert "**No point estimate has changed across any version.**" in t
+    # The version marker names which write of this report the reader is holding; it moves
+    # with the document. It is bound so a rewrite cannot silently keep an older label.
+    assert "**Fourth version, and the first on a clean extraction.**" in t
+    # This used to demand "No point estimate has changed across any version", which was a
+    # fact about three versions of one voided run, not a property of the report. A version
+    # written on a fresh extraction changes every point estimate, and must say so.
+    assert ("every number below is the third run's and none is carried over") in t
 
 
 def test_substrate_1s_pooled_maximum_is_read_from_the_frozen_record():
@@ -530,18 +539,26 @@ def test_the_deviations_are_bound():
             f"draws, and every draw still landed its {cross['8']['readings']} readings") in t
     assert n["substrate1_frozen"]["recomputation_matches_frozen"] is True
     assert "**H23e was not run**" in t
-    # the self ladder's interruption: the first read's counts and the denial range
+    # The `self` ladder's interruption, where there was one. This block used to assume it:
+    # it asserted the first incomplete read existed, named 250 instances, and demanded the
+    # sentence about point estimates surviving the arm's completion. All three were facts
+    # about one run, not properties of a report, and a run whose ladder was complete when it
+    # was first written has no such history to state.
     first = n["coverage"]["self_first_read_INCOMPLETE"]
-    by = first["readings_by_draw"]
-    assert (f"At {first['read_utc']} its eight draws held "
-            + ", ".join(str(by[str(k)]) for k in range(1, 8))
-            + f" and {by['8']} readings of {n['coverage']['scope_n']} required") in t
+    if first is not None:
+        by = first["readings_by_draw"]
+        assert (f"At {first['read_utc']} its eight draws held "
+                + ", ".join(str(by[str(k)]) for k in range(1, 8))
+                + f" and {by['8']} readings of {n['coverage']['scope_n']} required") in t
+        assert ("**No point estimate of H23a, H23b or H23c changed when the arm "
+                "completed**") in t
+    else:
+        assert ("Both ladders were complete before this report was first written") in t
     dn = n["H23d_self_minus_cross_K8"]["recorded_denials_by_draw"]
     assert (f"**{min(dn.values()):,} to {max(dn.values()):,}** provider denials per "
             "`self` draw") in t
     assert n["coverage"]["all_draws_complete"] is True
-    assert "every draw now covers all 250" in t
-    assert ("**No point estimate of H23a, H23b or H23c changed when the arm completed**") in t
+    assert f"every draw now covers all {n['coverage']['scope_n']}" in t
 
 
 def test_the_comparison_inventory_matches_the_record():
@@ -642,14 +659,14 @@ def test_the_audit_set_redraws_from_the_registered_seed():
 #: declaration also appearing in the text — `test_every_prose_rate_is_bound_or_declared`
 #: checks both halves.
 DECLARED_WITHOUT_INTERVAL = [
-    "3.5 and 12.5 points",
-    "12.5-point overlap",
-    "2.6-point separation",
-    # The re-run reversed the direction: the two cross-vendor intervals now OVERLAP where
-    # the voided run had them disjoint, so both distances appear in the same sentence.
-    "2.6 points apart",
+    # This list held the voided re-run's distances. The quantity it describes has moved on
+    # every extraction -- the cross-vendor intervals were 2.6 points apart, then overlapping
+    # by 3.5, and on the clean run 3.2 points apart -- so the entries are the distances the
+    # current report quotes, and the two historical ones it quotes beside them.
+    "3.2-point separation",
+    "5.7-point overlap",
     "intervals by 2.6 points",
-    "overlap by 3.5 points",
+    "overlapped them by 3.5 points",
 ]
 DECLARATION = "distances between"
 
@@ -685,14 +702,14 @@ def test_every_prose_rate_is_bound_or_declared():
     # and the numbers they name are the records'
     m = _n()["H23c_false_positives"]["matched_fp_comparison"]
     assert f"{m['pooled_all_families']['interval_overlap_points']:.1f}-point overlap" in text
-    # Only meaningful while the cross-vendor intervals are disjoint. The re-run has them
-    # overlapping, so interval_gap_points is null and the prose names the voided run's
-    # 2.6-point separation historically instead.
+    # Meaningful only while the cross-vendor intervals are disjoint. They were, then were
+    # not, and on the clean run are again, so both branches stay live: whichever holds, the
+    # prose must name the distance the record carries and not a remembered one.
     co = m["cross_family_only_REGISTERED_COMPARISON"]
     if co["interval_gap_points"] is not None:
         assert f"{co['interval_gap_points']:.1f}-point separation" in text
     else:
-        assert "2.6-point separation" in text
+        assert f"{co['interval_overlap_points']:.1f}-point overlap" in text
 
 
 def test_short_ladder_halts_and_complete_ladder_passes():

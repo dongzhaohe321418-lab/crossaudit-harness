@@ -93,8 +93,24 @@ def freeze_self_coverage(draws: dict, instances: dict, P: list[str], C: list[str
     reading was counted.
     """
     path = SUB2 / "self_coverage.json"
+    # Amendment 3's guard, applied to this file too. `records/` is committed for provenance
+    # while the thing that invalidates its contents -- a new generation of candidates -- is
+    # selected by `--run`. This file is returned whenever it exists, so a committed one would
+    # have been reused across generations by existence alone, silently reporting an earlier
+    # run's `self` flags as this run's. That is the fault that voided run 1, in a new place.
+    # It is stamped with the generation it was read from and refused when they differ.
+    generation = json.loads((SUB2 / "audit_set.json").read_text(
+        encoding="utf-8"))["generation_sha256"]
     if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
+        held = json.loads(path.read_text(encoding="utf-8"))
+        if held.get("generation_sha256") == generation:
+            return held
+        raise SystemExit(
+            f"HALT: {path.name} was read from generation "
+            f"{str(held.get('generation_sha256'))[:16]}..., and this scope is frozen from "
+            f"{generation[:16]}....\n"
+            "  Reusing it would report an earlier generation's `self` readings as this run's.\n"
+            "  Delete the file to re-read the coverage from the current cache.")
     per_draw, common, flags = {}, None, {}
     for draw in range(1, K_MAX + 1):
         got = set(draws["self"][draw])
@@ -110,6 +126,7 @@ def freeze_self_coverage(draws: dict, instances: dict, P: list[str], C: list[str
         }
         flags[str(draw)] = {i: bool(v) for i, v in sorted(draws["self"][draw].items())}
     out = {"read_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+           "generation_sha256": generation,
            "scope_P": len(P), "scope_C": len(C),
            "per_draw": per_draw,
            "flags": flags,
@@ -755,23 +772,36 @@ def render_tables(n: dict) -> dict[str, str]:
     cov, self_cov = n["coverage"], n["coverage"]["self"]["per_draw"]
     ag = n["draw_agreement"]
     first = cov["self_first_read_INCOMPLETE"]
-    rows = ["| draw | `cross` readings | `cross` denials | `self` readings | `self` denials "
-            "| `self` readings at the first read |",
-            "|---:|---:|---:|---:|---:|---:|"]
+    # The last column exists only where a report was first written while the `self` ladder was
+    # still filling. A run whose ladder was complete at the first write has no such history and
+    # must not grow an empty column implying one.
+    head = ["| draw | `cross` readings | `cross` denials | `self` readings | `self` denials |",
+            "|---:|---:|---:|---:|---:|"]
+    if first is not None:
+        head = ["| draw | `cross` readings | `cross` denials | `self` readings | `self` denials "
+                "| `self` readings at the first read |",
+                "|---:|---:|---:|---:|---:|---:|"]
+    rows = list(head)
     for d in range(1, K_MAX + 1):
         c, sd = cov["cross"][str(d)], self_cov[str(d)]
-        rows.append(f"| {d} | {c['readings']} / {cov['scope_n']}"
-                    f"{' ✓' if c['complete'] else ''} | {c['recorded_denials']:,} | "
-                    f"{sd['readings']} / {cov['scope_n']}"
-                    f"{' ✓' if sd['readings'] == cov['scope_n'] else ''} | "
-                    f"{sd['recorded_denials']:,} | {first['readings_by_draw'][str(d)]} |")
+        row = (f"| {d} | {c['readings']} / {cov['scope_n']}"
+               f"{' ✓' if c['complete'] else ''} | {c['recorded_denials']:,} | "
+               f"{sd['readings']} / {cov['scope_n']}"
+               f"{' ✓' if sd['readings'] == cov['scope_n'] else ''} | "
+               f"{sd['recorded_denials']:,} |")
+        if first is not None:
+            row += f" {first['readings_by_draw'][str(d)]} |"
+        rows.append(row)
     t["T3"] = "\n".join([
         f"The frozen audit set is {cov['scope_n']} instances ({cov['scope_P']} P, "
         f"{cov['scope_C']} C). Both ladders are complete: every draw of both families "
         f"covers all {cov['scope_n']}. A denial is a call that never produced a reading; "
-        f"it is not in the usage ledger and cost nothing. The last column is what the "
-        f"`self` ladder had reached at {first['read_utc']}, when the first version of this "
-        f"report was written and H23d was not yet evaluable.",
+        f"it is not in the usage ledger and cost nothing."
+        + (f" The last column is what the `self` ladder had reached at {first['read_utc']}, "
+           f"when the first version of this report was written and H23d was not yet evaluable."
+           if first is not None else
+           " Both ladders were complete when this report was first written, so there is no "
+           "earlier, shorter read to record."),
         "", *rows, "",
         f"**Draw-to-draw agreement.** Over the {ag['cross']['n_instances']} audited "
         f"instances, the cross-vendor arm's flag splits across its eight draws on "

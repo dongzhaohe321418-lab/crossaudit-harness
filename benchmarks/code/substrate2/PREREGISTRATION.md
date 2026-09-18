@@ -462,3 +462,45 @@ clean extraction or it does not.
 Neither outcome is more welcome than the other in how it will be written. This sentence exists
 because the three previous corrections in this study each moved a number in the direction that
 made the work look better, and this one is registered before the direction is known.
+
+## Outcome of the third run — recorded 2026-09-19, and NOT a change to Amendment 8
+
+The third run completed on a clean extraction. All three of Amendment 8's gates passed before
+any spending: execution equivalence on all 300 frame tasks, every displayed method AST-identical
+to the scored one at digest `5c21539e...`, and the driver's own guards. Both ladders are
+complete: 8 draws x 252 instances for each family, none short. Spend: generation $1.907, audit
+$27.659, total $29.566 against the registered $45 cap and $40 halt.
+
+**Five of the six reversals reproduced. One did not.**
+
+| # | the reversal, as Amendment 8 named it | run 1 (void) | run 2 (void) | run 3 | reproduced |
+|---|---|---|---|---|---|
+| 1 | the overlapping false-positive intervals | apart, gap 2.6 | overlap 3.5 | apart, gap 3.2 | **no** |
+| 2 | the same-vendor arm splitting | 0 of 250 | 12 of 249 | 22 of 252 | yes |
+| 3 | the gain ratio staying above 1 | 1.16 to 0.91 | 1.35 to 1.23 | 1.21 to 1.17 | yes |
+| 4 | the flattening bar being missed | 0.62, met | 1.52, missed | 1.47, missed | yes |
+| 5 | H23d spanning zero | +17.0 [2.0, 32.0] | +4.0 [-10.1, 18.2] | +6.9 [-4.9, 18.6] | yes |
+| 6 | the same-vendor gain ratio becoming computable | undefined | 0.32 to 0.25 | 0.66 to 0.36 | yes |
+
+Item 1 is the registered cross-vendor-family comparison, not the pooled one. Across three runs it
+has been apart, overlapping, and apart again.
+
+**How this is being read.** Amendment 8 states the criterion over the set: the six "are
+unconfirmed. This run either reproduces them on a clean extraction or it does not." Five of six
+is a case it did not anticipate. The looser reading -- judge each reversal on its own -- would
+license five findings, and it is being declined, because the five that reproduced are the ones
+favourable to this work and adopting a reading after seeing which way the numbers fell is the
+exact failure this study has already made three times. **The strict reading applies: the set was
+not reproduced, so the registered consequence follows** -- run 2 joins run 1 as void, the study
+has consumed three runs and about $82 without a quotable number, that is reported as found, no
+fourth run is authorised, and the paper continues to carry no substrate-2 figure.
+
+**What this does not say.** Run 3 is not void. Its gates passed, its ladders are complete, and
+its numbers are internally consistent; they are reported in full. What it lacks is the licence
+Amendment 8 conditioned on reproducing the six, and -- as for every number in this programme --
+an independent cross-vendor review ending quotable.
+
+**Left open, deliberately.** Whether a 5-of-6 outcome should license the five is a question of
+how to read a criterion that turned out not to be binary. It belongs to the owner and to review,
+not to the author of the run that would benefit. It is recorded here unresolved rather than
+settled in the direction that helps.
