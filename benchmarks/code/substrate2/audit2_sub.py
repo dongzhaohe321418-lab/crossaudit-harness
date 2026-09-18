@@ -126,6 +126,18 @@ def main(argv: list[str] | None = None) -> int:
     audit_set = freeze_audit_set(instances)
     scope = audit_set["instance_ids"]
     scope_set = set(scope)
+
+    # The preregistration says an instance that fails its own visible suite must never be
+    # audited. Nothing enforced it: the first re-run of 2026-09-17 audited a scope frozen from
+    # a superseded generation in which 6 of its 250 ids had become stratum F, and the driver
+    # ran them without complaint. A registered invariant with no check that can fail is not
+    # enforced, it is merely stated.
+    wrong = sorted(i for i in scope if instances.get(i, {}).get("stratum") not in ("P", "C"))
+    if wrong:
+        raise SystemExit(
+            f"HALT: {len(wrong)} instances in the audit set are not in stratum P or C, e.g. "
+            f"{wrong[:5]}. An instance that fails its own visible suite must never be audited "
+            f"(PREREGISTRATION section 2). Re-freeze the scope from the current generation.")
     print(f"population {audit_set['population']}; audited {audit_set['audited']}", flush=True)
 
     have = {("holistic", f, d): explore.load_detector(("holistic", f, d), scope_set)

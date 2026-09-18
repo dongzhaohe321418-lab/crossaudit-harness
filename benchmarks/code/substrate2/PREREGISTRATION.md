@@ -367,3 +367,51 @@ defect that the gate written for the *previous* defect could not see. Parse-leve
 a semantic divergence; digest-level checking froze it. A gate must test the property the study
 actually depends on — here, that the models see the scored suite — and not the property whose
 absence caused the last failure.
+
+## Amendment 7 — three gates, each proved able to fail, before any third run
+
+**Written 2026-09-18, before the third run is launched.**
+
+Two runs of this study were voided by the same fault in different costumes: the text shown to
+the models was not the suite the scorer executed. Every gate written so far **inspected** that
+text — does it parse, does its digest match, does its AST equal the intact class. Each was
+written in the aftermath of one accident and could not see the next one. This amendment adds
+the gate that tests the property the study actually depends on, and it fixes two registered
+invariants that had no check capable of failing.
+
+**1. Execution equivalence (`verify_execution.py`).** For every frame task, the visible suite
+is assembled twice against the benchmark's own canonical solution — once from
+`visible_program()`, which is what the scorer runs, and once from `visible_tests_text()`, which
+is what the auditor and the generator are shown — and both are executed. The outcomes must
+agree. Behaviour is settled by running, not by reading.
+
+*Proved able to fail.* Restoring each voided extraction in turn:
+
+| restored defect | gate result |
+|---|---|
+| Amendment 1's (methods with no class header) | HALT, many tasks `scored passed=True, shown passed=False` |
+| Amendment 5's (hidden decorators re-attached) | HALT on `BigCodeBench/1102` |
+
+**Both real accidents are caught by it, and neither was caught by any earlier gate.**
+Current state: **300 of 300 agree, 0 divergent**.
+
+**2. The cache guard was vacuous and is now real.** It tested `row["solution_sha256"]` on rows
+returned by `explore.load_detector()`, which yields only
+`{flagged, cost_usd, source, cost_reconstructed}` — the key is never present, so the guard
+passed on every run without comparing anything. It now reads the cache files directly.
+*Proved able to fail:* a planted wrong digest makes `--plan` exit 1 naming the instance.
+
+**3. A registered invariant that was never enforced.** Section 2 says an instance failing its
+own visible suite must never be audited. Nothing checked it, and the first re-run audited a
+scope in which 6 of 250 ids had become stratum F. The driver now refuses a scope containing
+anything outside P and C. *Proved able to fail:* planting one F instance makes `--plan` exit 1.
+
+**The rule this amendment adopts for the rest of the study.** A registered invariant is not
+enforced by being stated. It is enforced by a check that **can fail**, and a check is not
+believed until a planted violation has made it fail. Both halves are required: the cache guard
+above was written in good faith, looked correct, and tested a field that does not exist.
+
+**Why `visible_program` and `visible_tests_text` keep diverging.** They are two independent code
+paths with nothing binding them together, and both accidents live in that gap. The execution
+gate is what binds them; it should be run before generation and before audit, not only on
+demand.
