@@ -415,3 +415,50 @@ above was written in good faith, looked correct, and tested a field that does no
 paths with nothing binding them together, and both accidents live in that gap. The execution
 gate is what binds them; it should be run before generation and before audit, not only on
 demand.
+
+## Amendment 8 — the third run: budget, gates, and what counts as a result
+
+**Written and committed 2026-09-18, before the third run's first model call.**
+
+**Spend to date, stated plainly.** \$37.16: generation \$1.91, audit \$35.25 (cross \$23.11,
+self \$12.14). Of that, **\$22.25 bought readings on a scope frozen from a superseded
+generation** and is unusable, and the remainder bought the run that Amendment 6 voided. **The
+study has spent \$37.16 and holds no quotable number.** Amendment 2's \$45 halt was registered
+for a single re-run and is now spent; this amendment sets the third run's own budget rather
+than quietly continuing under the old one.
+
+**Registered budget.** Generation is expected at about \$1.9 and the audit at about \$35, so
+**the cap for this run is \$45 with a halt at \$40**, and the study total will be about \$82.
+If the audit reaches \$40 the run stops and reports what it has. No further run is authorised
+by this amendment; a fourth would need its own.
+
+**Gates that must pass before anything is spent**, in this order, each proved able to fail by a
+planted violation (Amendment 7):
+
+1. `verify_execution.py` — the displayed suite and the scored suite must agree on the canonical
+   solution for all 300 frame tasks.
+2. `verify_frame.py` — every displayed method AST-identical to the scored one, and the digest
+   equal to Amendment 6's `5c21539e…`.
+3. The audit driver's own guards — no stratum-F instance in scope, no cached reading whose
+   `solution_sha256` disagrees with the current generation.
+
+**Why the candidates are regenerated and not reused.** `visible_tests_text()` feeds the
+generator prompt as well as the auditor's. The voided run's candidates were written by a model
+reading decorator-corrupted tests on 26 tasks, so the defect population itself is contaminated
+and is rebuilt.
+
+**What counts as a result, fixed before the numbers exist.** The six reversals the voided run
+produced — the overlapping false-positive intervals, the same-vendor arm splitting, the gain
+ratio staying above 1, the flattening bar being missed, H23d spanning zero, and the same-vendor
+gain ratio becoming computable — are **unconfirmed**. This run either reproduces them on a
+clean extraction or it does not.
+
+* If it **reproduces** them, they stand, and the voided runs are reported as the path to them.
+* If it **does not**, the second run joins the first as void, and this study will have consumed
+  three runs and roughly \$82 without a quotable number. **That outcome is reported as found**,
+  with no further run attempted under this amendment, and the paper continues to carry no
+  substrate-2 figure.
+
+Neither outcome is more welcome than the other in how it will be written. This sentence exists
+because the three previous corrections in this study each moved a number in the direction that
+made the work look better, and this one is registered before the direction is known.
