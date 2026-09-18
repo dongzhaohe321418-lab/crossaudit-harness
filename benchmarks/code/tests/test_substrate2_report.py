@@ -18,6 +18,8 @@ from __future__ import annotations
 import json
 import re
 import sys
+
+import pytest
 from pathlib import Path
 
 CODE = Path(__file__).resolve().parent.parent
@@ -691,3 +693,33 @@ def test_every_prose_rate_is_bound_or_declared():
         assert f"{co['interval_gap_points']:.1f}-point separation" in text
     else:
         assert "2.6-point separation" in text
+
+
+def test_short_ladder_halts_and_complete_ladder_passes():
+    """The guard must fire, not merely exist.
+
+    Study 23 run 3 lost most of draws 5-8 of the `cross` arm to an unstable local proxy.
+    `counts_per_instance` reads flags with `.get(i)`, so those unbought readings would have
+    been scored as clean reads: recall at high K understated, last-step gain shrunk, and
+    ceiling 1's flattening bar met by readings that do not exist. Both directions are
+    asserted here so the gate cannot pass by being unreachable.
+    """
+    R = rs2
+
+    scope = {f"i{n}" for n in range(252)}
+    full = {i: False for i in scope}
+
+    def ladder(cross_counts, self_counts):
+        return {"cross": {d: dict(list(full.items())[:cross_counts[d - 1]])
+                          for d in range(1, R.K_MAX + 1)},
+                "self": {d: dict(list(full.items())[:self_counts[d - 1]])
+                         for d in range(1, R.K_MAX + 1)}}
+
+    R.assert_ladder_complete(ladder([252] * 8, [252] * 8), scope, {})
+
+    with pytest.raises(SystemExit) as caught:
+        R.assert_ladder_complete(
+            ladder([252, 252, 252, 252, 207, 124, 47, 63], [252] * 8), scope, {})
+    message = str(caught.value)
+    assert "d5=207" in message and "d8=63" in message
+    assert "self" not in message.split("scope =")[1].split("Missing")[0]

@@ -398,6 +398,47 @@ def matched_fp(sub2_cross_C: dict, sub2_self_C: dict, sub1_families: dict) -> di
     }
 
 
+def assert_ladder_complete(draws: dict, scope: set[str], coverage: dict) -> None:
+    """Fail closed when a family's ladder is short.
+
+    ``counts_per_instance`` reads a flag with ``draws[d].get(i)``, so an instance that was
+    never read in draw d is counted exactly like one the auditor read and passed. The union
+    curve is a function of those counts, so a short ladder understates recall at high K,
+    shrinks the last-step gain, and makes ceiling 1's flattening bar easier to meet -- it
+    manufactures a quotable asymptote out of readings that were never bought. Every error
+    this study has had so far moved a number in the flattering direction; this one would too.
+
+    An arm that is genuinely short may proceed only against ``ladder_exemption.json``, which
+    must name the family and state the per-draw readings that were actually obtained. The
+    stated counts must equal the observed counts, so the file cannot be written ahead of a
+    shortfall whose size is not yet known, and it goes stale the moment the cache changes.
+    """
+    short = {f: {d: len(draws[f][d]) for d in range(1, K_MAX + 1)
+                 if len(draws[f][d]) != len(scope)}
+             for f in ("cross", "self")}
+    short = {f: v for f, v in short.items() if v}
+    if not short:
+        return
+    path = SUB2 / "ladder_exemption.json"
+    if path.exists():
+        claimed = json.loads(path.read_text(encoding="utf-8")).get("readings_by_draw", {})
+        observed = {f: {str(d): n for d, n in v.items()} for f, v in short.items()}
+        if claimed == observed:
+            coverage["ladder_exemption"] = {
+                "families": sorted(short), "readings_by_draw": observed,
+                "note": "short ladder admitted by a committed exemption; the missing "
+                        "readings are still counted as clean reads by the union curve, "
+                        "so no number from an exempted family is quotable"}
+            return
+    raise SystemExit(
+        "HALT: the ladder is short and no matching exemption is committed.\n"
+        f"  scope = {len(scope)} instances; K_MAX = {K_MAX}\n"
+        + "".join(f"  {f}: " + ", ".join(f"d{d}={n}" for d, n in sorted(v.items())) + "\n"
+                  for f, v in sorted(short.items()))
+        + "  Missing readings are scored as clean reads, which flatters the flattening bar.\n"
+        + f"  Finish the ladder, or commit {path} stating these exact counts.")
+
+
 def build(run_dir: Path) -> dict:
     frame = json.loads((SUB2 / "frame.json").read_text(encoding="utf-8"))
     instances2 = load_instances(SUB2 / "instances.jsonl")
@@ -465,6 +506,7 @@ def build(run_dir: Path) -> dict:
         if first.exists() else None)
     out["coverage"]["all_draws_complete"] = all(
         len(draws2[f][d]) == len(scope) for f in ("cross", "self") for d in range(1, K_MAX + 1))
+    assert_ladder_complete(draws2, scope, out["coverage"])
 
     # --- H23b: the curve, the fit, the flattening bar ---------------------------------
     blockP = stratum_block(draws2["cross"], P2, instances2, K_MAX)
