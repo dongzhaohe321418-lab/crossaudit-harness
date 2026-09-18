@@ -15,7 +15,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from report_ceiling import cluster_bootstrap_ci, wilson  # noqa: E402
+from report_ceiling import cluster_bootstrap_ci, percentile, wilson  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 RECORDS = HERE / "records" / "rerate"
@@ -104,6 +104,62 @@ def oracle_clean_recall(flagged: set[str], ambiguous: set[str], p_instances: lis
             "wilson": [100 * wl, 100 * wh], "seed": seed}
 
 
+def shared_cluster_difference(a: set[str], b: set[str], hit: dict[str, int],
+                              reps: int, seed: int) -> dict:
+    """Share in A minus share in B, where A and B hold different instances but share problems.
+
+    NOT preregistered. Amendment 1 registered that both consensus-ambiguous shares would be
+    reported; it did not register their difference. This is the control reading the two shares
+    invite -- are the instances the auditors missed more often specification-ambiguous than the
+    ones they caught? -- and it is labelled post hoc wherever it appears.
+
+    Substrate 2's `two_sample_cluster_difference` resamples its two populations independently,
+    which it may because the two substrates there share no problem. That does not hold here: 11
+    of the 56 problems contribute instances to both the residual and the flagged group, so
+    resampling the groups independently would break exactly the clustering the bootstrap exists
+    to respect. The union of problems is drawn once per replicate and each drawn problem
+    contributes whatever instances it holds in each group. A replicate that leaves either group
+    empty carries no difference and is redrawn; the count of redraws is reported, because a
+    large one would mean the interval is being read off a reshaped population.
+    """
+    by_a: dict[str, list[int]] = {}
+    by_b: dict[str, list[int]] = {}
+    for i in sorted(a):
+        by_a.setdefault(problem_of(i), []).append(hit[i])
+    for i in sorted(b):
+        by_b.setdefault(problem_of(i), []).append(hit[i])
+    problems = sorted(set(by_a) | set(by_b))
+    import random
+    rng = random.Random(seed)
+    stats, redraws = [], 0
+    while len(stats) < reps:
+        drawn = [problems[rng.randrange(len(problems))] for _ in range(len(problems))]
+        da = [v for q in drawn for v in by_a.get(q, ())]
+        db = [v for q in drawn for v in by_b.get(q, ())]
+        if not da or not db:
+            redraws += 1
+            continue
+        stats.append(sum(da) / len(da) - sum(db) / len(db))
+    ka, na = sum(hit[i] for i in a), len(a)
+    kb, nb = sum(hit[i] for i in b), len(b)
+    lo, hi = percentile(stats, 0.025), percentile(stats, 0.975)
+    return {
+        "preregistered": False,
+        "a": {"k": ka, "n": na, "share": 100 * ka / na, "problems": len(by_a),
+              "wilson95": [100 * x for x in wilson(ka, na)]},
+        "b": {"k": kb, "n": nb, "share": 100 * kb / nb, "problems": len(by_b),
+              "wilson95": [100 * x for x in wilson(kb, nb)]},
+        "difference_points": 100 * (ka / na - kb / nb),
+        "cluster_ci95_points": [100 * lo, 100 * hi],
+        "excludes_zero": bool(lo > 0 or hi < 0),
+        "shared_problems": len(set(by_a) & set(by_b)),
+        "problems": len(problems), "reps": reps, "seed": seed, "redraws": redraws,
+        "method": "problem-cluster percentile bootstrap over the UNION of both groups' "
+                  "problems; the groups are disjoint instance sets that share problems, so "
+                  "they are resampled together and not independently",
+    }
+
+
 def build() -> dict:
     inst_l1, inst_l2 = read_sheet("key.jsonl", "L1.csv", "L2.csv")
     f_l1, f_l2 = read_sheet("key-flagged.jsonl", "L1-flagged.csv", "L2-flagged.csv")
@@ -155,6 +211,16 @@ def build() -> dict:
         "ambiguous": amb, "edge": edge,
         "fires": amb >= KILL_AMBIGUOUS_AT_LEAST or edge < KILL_EDGE_BELOW,
     }
+    # Post hoc. The two registered shares invite one question they were not registered to
+    # answer: is an instance the auditors MISSED more often specification-ambiguous than one
+    # they CAUGHT? The comparison is residual (57) against flagged (53) -- disjoint, and
+    # together the 110 P instances. It is NOT sheet_68 against flagged: that sheet is 57
+    # residual plus 11 flagged instances (Amendment 2), so it contains part of the group it
+    # would be compared with.
+    out["ambiguous_share_residual_minus_flagged_POST_HOC"] = shared_cluster_difference(
+        residual, flagged,
+        {i: int(consensus[i] == "ambiguous-oracle") for i in residual | flagged},
+        BOOT_REPS, BOOT_SEED + 50)
     amb_f = out["populations"]["flagged_P"]["consensus"]["ambiguous-oracle"]["count"]
     ambiguous = {i for i in l1 if consensus[i] == "ambiguous-oracle" and (i in residual or i in flagged)}
     sec = oracle_clean_recall(flagged, ambiguous, sorted(residual | flagged), BOOT_SEED + 10)
@@ -293,6 +359,25 @@ def render_tables(n: dict) -> str:
         if cat in bcr:
             b = bcr[cat]
             lines.append(f"| `{cat}` | {b['n']} | {b['count']} | {fmt(b)} |")
+    c = n["ambiguous_share_residual_minus_flagged_POST_HOC"]
+    lines += ["", "### Table 6 — POST HOC: consensus `ambiguous-oracle` share, missed against caught", "",
+              "Not preregistered. Amendment 1 registered that both shares would be reported; it did not "
+              "register their difference. The two groups are disjoint and together are the 110 P instances. "
+              f"{c['shared_problems']} of the {c['problems']} problems contribute instances to both, so the "
+              "bootstrap resamples the union of problems rather than each group independently "
+              f"(seed {c['seed']}, {c['reps']:,} resamples, {c['redraws']} replicates redrawn for an empty group).", "",
+              "| group | n (problems) | consensus `ambiguous-oracle` | share (Wilson) |", "|---|---:|---:|---|",
+              f"| residual — missed by every family | {c['a']['n']} ({c['a']['problems']}) | {c['a']['k']} | "
+              f"**{c['a']['share']:.1f}%** (Wilson [{c['a']['wilson95'][0]:.1f}, {c['a']['wilson95'][1]:.1f}]) |",
+              f"| flagged — caught by at least one | {c['b']['n']} ({c['b']['problems']}) | {c['b']['k']} | "
+              f"**{c['b']['share']:.1f}%** (Wilson [{c['b']['wilson95'][0]:.1f}, {c['b']['wilson95'][1]:.1f}]) |",
+              f"| **difference** | | | **{c['difference_points']:+.1f} points** "
+              f"[{c['cluster_ci95_points'][0]:.1f}, {c['cluster_ci95_points'][1]:.1f}] |", "",
+              "The comparison is NOT `sheet_68` against `flagged_P`: that sheet is 57 residual plus 11 "
+              "flagged instances (Amendment 2), so it contains part of the group it would be compared with.",
+              "", "Being post hoc, this is a description of these 110 instances and not a test. It says "
+              "what the two registered shares already imply -- what the auditors missed was more often "
+              "specification-ambiguous than what they caught -- and nothing about why."]
     return "\n".join(lines) + "\n"
 
 

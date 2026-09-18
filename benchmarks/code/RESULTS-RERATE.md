@@ -109,6 +109,20 @@ The first sheets carried the instance id and L2's second prompt named the sheet 
 | `unexercised-edge` | 25 | 23 | **23 of 25** (92.0% [75.0, 100.0]; Wilson [75.0, 97.8]) |
 | `other` | 2 | 0 | **0 of 2** — quoted as a count, not a rate |
 | `disputed` | 8 | 2 | **2 of 8** — quoted as a count, not a rate |
+
+### Table 6 — POST HOC: consensus `ambiguous-oracle` share, missed against caught
+
+Not preregistered. Amendment 1 registered that both shares would be reported; it did not register their difference. The two groups are disjoint and together are the 110 P instances. 11 of the 56 problems contribute instances to both, so the bootstrap resamples the union of problems rather than each group independently (seed 20260964, 10,000 resamples, 0 replicates redrawn for an empty group).
+
+| group | n (problems) | consensus `ambiguous-oracle` | share (Wilson) |
+|---|---:|---:|---|
+| residual — missed by every family | 57 (34) | 44 | **77.2%** (Wilson [64.8, 86.2]) |
+| flagged — caught by at least one | 53 (33) | 24 | **45.3%** (Wilson [32.7, 58.5]) |
+| **difference** | | | **+31.9 points** [9.6, 53.4] |
+
+The comparison is NOT `sheet_68` against `flagged_P`: that sheet is 57 residual plus 11 flagged instances (Amendment 2), so it contains part of the group it would be compared with.
+
+Being post hoc, this is a description of these 110 instances and not a test. It says what the two registered shares already imply -- what the auditors missed was more often specification-ambiguous than what they caught -- and nothing about why.
 <!-- tables:end -->
 
 The preregistered kill for the sentence "the residual is mostly unexercised edge" fires on both
@@ -138,6 +152,23 @@ timeout rows of the post-hoc split at the same counts (the disputed row goes fro
 identity and status information was removed — not evidence that the information had no effect,
 since the pass also changed the presentation, the order and the model's sampling — and it says
 nothing about L1's.
+
+Table 6 is the control the two registered shares invite and were not registered to supply: the
+instances every family missed are consensus `ambiguous-oracle` 44 of 57, the instances at least
+one family caught are 24 of 53 — a difference of +31.9 points [9.6, 53.4], an interval that
+excludes zero. It is post hoc, so it is a description of these 110 instances and not a test, and
+the interval is quoted for shape rather than as a decision rule. The comparison is the residual
+against the flagged, not the 68-instance sheet against the flagged: that sheet is 57 residual
+plus 11 flagged instances, so it contains part of the group it would be compared with, and the
++22.4 points such a comparison yields is an artefact of the overlap. Eleven of the 56 problems
+contribute instances to both groups, so the bootstrap resamples the union of problems; resampling
+the two groups independently, as the two-substrate contrast elsewhere in this programme may,
+would break the clustering it exists to respect.
+
+What the table does not say is why. A defect that survives every reading being more often
+oracle-ambiguous is consistent with the reading that what limits these auditors is the
+specification rather than the reading — and equally consistent with ambiguous instances simply
+being harder in ways that have nothing to do with the oracle. Nothing here separates the two.
 
 What the two raters were agreeing on, in shape: hidden inputs outside the class the
 specification names (unsorted arrays for a function specified over sorted ones; dates not in the

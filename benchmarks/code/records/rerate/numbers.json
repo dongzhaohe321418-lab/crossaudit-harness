@@ -9,6 +9,41 @@
     "kappa": 0.9334170854271356,
     "n": 53
   },
+  "ambiguous_share_residual_minus_flagged_POST_HOC": {
+    "a": {
+      "k": 44,
+      "n": 57,
+      "problems": 34,
+      "share": 77.19298245614036,
+      "wilson95": [
+        64.7939889543265,
+        86.1581095010378
+      ]
+    },
+    "b": {
+      "k": 24,
+      "n": 53,
+      "problems": 33,
+      "share": 45.283018867924525,
+      "wilson95": [
+        32.65757915292224,
+        58.54602451289419
+      ]
+    },
+    "cluster_ci95_points": [
+      9.623238463663991,
+      53.41228978242707
+    ],
+    "difference_points": 31.909963588215817,
+    "excludes_zero": true,
+    "method": "problem-cluster percentile bootstrap over the UNION of both groups' problems; the groups are disjoint instance sets that share problems, so they are resampled together and not independently",
+    "preregistered": false,
+    "problems": 56,
+    "redraws": 0,
+    "reps": 10000,
+    "seed": 20260964,
+    "shared_problems": 11
+  },
   "categories": [
     "timeout",
     "ambiguous-oracle",

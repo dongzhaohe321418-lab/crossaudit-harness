@@ -84,3 +84,17 @@ The first sheets carried the instance id and L2's second prompt named the sheet 
 | `unexercised-edge` | 25 | 23 | **23 of 25** (92.0% [75.0, 100.0]; Wilson [75.0, 97.8]) |
 | `other` | 2 | 0 | **0 of 2** — quoted as a count, not a rate |
 | `disputed` | 8 | 2 | **2 of 8** — quoted as a count, not a rate |
+
+### Table 6 — POST HOC: consensus `ambiguous-oracle` share, missed against caught
+
+Not preregistered. Amendment 1 registered that both shares would be reported; it did not register their difference. The two groups are disjoint and together are the 110 P instances. 11 of the 56 problems contribute instances to both, so the bootstrap resamples the union of problems rather than each group independently (seed 20260964, 10,000 resamples, 0 replicates redrawn for an empty group).
+
+| group | n (problems) | consensus `ambiguous-oracle` | share (Wilson) |
+|---|---:|---:|---|
+| residual — missed by every family | 57 (34) | 44 | **77.2%** (Wilson [64.8, 86.2]) |
+| flagged — caught by at least one | 53 (33) | 24 | **45.3%** (Wilson [32.7, 58.5]) |
+| **difference** | | | **+31.9 points** [9.6, 53.4] |
+
+The comparison is NOT `sheet_68` against `flagged_P`: that sheet is 57 residual plus 11 flagged instances (Amendment 2), so it contains part of the group it would be compared with.
+
+Being post hoc, this is a description of these 110 instances and not a test. It says what the two registered shares already imply -- what the auditors missed was more often specification-ambiguous than what they caught -- and nothing about why.
