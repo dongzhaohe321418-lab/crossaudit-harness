@@ -319,3 +319,51 @@ verified is live and can serve the same model name. **We do not use it.** That p
 in a different agent harness with its own system prompt and tool loop, so the readings would not be
 comparable with ceiling 1's frozen 30.0% comparator, which is the whole point of the contrast. A
 different API key on a different account would be comparable, and is the owner's decision to make.
+
+## Amendment 6 — the correction had its own extraction defect; the re-run is void in turn
+
+**Written 2026-09-18, after the cross-vendor review of the re-run refused quotation.**
+
+**What the review found, and it is right.** Amendment 1's repair sliced the "class header" as
+`lines[head : target.body[0].lineno - 1]` — up to the first member's `def` line. When that member
+carried decorators, the decorators stayed inside the "header" and the member was then emitted
+again with them. A hidden method's `@patch` stack was therefore re-attached to whichever visible
+method came first.
+
+Verified independently here: **26 of the 300 frame tasks have altered method ASTs, all of them
+gaining decorators**. The reviewer executed one — `BigCodeBench/12` — and the displayed test
+raised `TypeError: test_script_does_not_exist() takes 2 positional arguments but 5 were given`
+while the intact test passed.
+
+**Why Amendment 2's gate did not catch it.** That gate asked two questions: does every displayed
+file parse, and does its digest match. Both answers stayed correct. All 300 parsed, no hidden
+test *name* appeared, and the digest faithfully froze the defective text — **which is what a
+digest does.** A hash pins whatever it is given; it cannot tell a correct extraction from a wrong
+one. The gate was shaped like the previous accident (unparseable text) and could not see this one.
+
+**The fix and the stronger gate.** The header now ends at the first line of the first member
+*including* its decorators, so it contains the `class` statement and its own decorators only.
+`verify_frame.py` gains a **semantic check**: every displayed method's AST must be identical to
+the same method in the intact class, and no displayed method may be absent from it. This compares
+the objects rather than the syntax. Current state: 300 of 300 parse, **0 altered ASTs, 0 hidden
+methods shown**. The digest is re-frozen at
+`5c21539e7c3a4bcb03a92284ed06c0a52a609d75dad9bfe8d7c0257b2dcd89f2`.
+
+**The consequence, stated plainly: the re-run of 2026-09-17 is void in turn.** Its models — both
+auditor and generator — were shown decorator-corrupted tests on 26 tasks covering 24 audited
+instances (12 P, 12 C). That is a smaller defect than the one Amendment 1 voided, and it is still
+a defect of the same kind: the text shown was not the text scored. **No number from that run may
+be quoted**, including the six reversals it produced, which must now be re-established rather
+than carried forward.
+
+**What this costs and what it buys.** Another full re-run at roughly \$37. Registered before it
+starts, so it cannot be chosen afterwards: **the six reversals are treated as unconfirmed until
+the corrected run reproduces them.** If the third run agrees with the second, the reversals stand
+on a clean extraction; if it does not, the second run joins the first as void and this study will
+have consumed three runs without a quotable number, which is the outcome the record will carry.
+
+**The pattern worth naming.** Two successive repairs of this one function each introduced a new
+defect that the gate written for the *previous* defect could not see. Parse-level checking missed
+a semantic divergence; digest-level checking froze it. A gate must test the property the study
+actually depends on — here, that the models see the scored suite — and not the property whose
+absence caused the last failure.

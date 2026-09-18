@@ -640,7 +640,7 @@ def test_the_audit_set_redraws_from_the_registered_seed():
 #: declaration also appearing in the text — `test_every_prose_rate_is_bound_or_declared`
 #: checks both halves.
 DECLARED_WITHOUT_INTERVAL = [
-    "2.6 and 12.5 points",
+    "3.5 and 12.5 points",
     "12.5-point overlap",
     "2.6-point separation",
     # The re-run reversed the direction: the two cross-vendor intervals now OVERLAP where

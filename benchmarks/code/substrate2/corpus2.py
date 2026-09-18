@@ -134,8 +134,18 @@ class Task:
         if out:
             out.append("")
 
+        # The class header is the `class` statement and its own decorators ONLY. Slicing to
+        # the first member's line (Amendment 5) kept that member's decorators inside the
+        # "header", so a hidden method's @patch stack was re-attached to whichever visible
+        # method came first -- 26 tasks, verified. The displayed test then took extra mock
+        # arguments and raised TypeError at run time while still parsing cleanly, so the
+        # parse gate could not see it. End the header at the class statement's own last line.
         head = min([target.lineno] + [d.lineno for d in target.decorator_list]) - 1
-        out.extend(lines[head:target.body[0].lineno - 1])
+        header_end = target.body[0].lineno - 1
+        for child in target.body:
+            first = min([child.lineno] + [d.lineno for d in getattr(child, "decorator_list", [])])
+            header_end = min(header_end, first - 1)
+        out.extend(lines[head:header_end])
         for child in target.body:
             if isinstance(child, ast.FunctionDef):
                 if child.name in wanted or child.name not in hidden:

@@ -48,3 +48,20 @@ and now `cost.json`. All three live in `records/` because it is committed for pr
 three were reused by existence alone. Amendment 3's generation digest guards the first two; this
 one was caught by reading the numbers and noticing the cost did not match what the run actually
 spent.
+
+## `self_coverage.json` and `self_coverage_first_read.json` — the fourth and fifth of the class
+
+Both frozen 2026-09-16 00:19, the same moment as `cost.json`, and both from the **voided**
+generation: they carry 250 instances where the current scope is 249, and the voided run's denial
+counts with them. Like the others they are reused by existence alone, so the report was reading a
+superseded snapshot back as if it described the run that had just finished.
+
+`self_coverage_first_read.json` is the worse of the two, because the state it records — the
+first-read coverage of an arm that has since been re-run — **cannot be reconstructed**. It is kept
+here as history, not restored.
+
+That makes five artefacts of this class in one study: the readings cache, `audit_set.json`,
+`cost.json`, and these two. Every one lives in `records/` because that directory is committed for
+provenance, and every one is reused on existence rather than on belonging to the current
+generation. **Provenance and run-scoping want opposite things from the same directory, and the
+code only ever satisfied the first.**

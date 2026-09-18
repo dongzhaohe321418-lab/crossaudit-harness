@@ -288,9 +288,17 @@ def ledger_costs(run_dir: Path) -> dict:
     retrying while this report was written, so its ledger grows and a later read would not
     reproduce. The archive itself is never committed (it holds solutions and replies).
     """
+    # Freeze-on-first-read is reuse by EXISTENCE, which is how five artefacts in this study
+    # came to be read back from a superseded generation -- this file among them, which made a
+    # regeneration report the voided run's spend. The frozen copy now records the archive it
+    # came from, and a copy belonging to a different archive is recomputed rather than trusted.
     frozen = SUB2 / "cost.json"
     if frozen.exists():
-        return json.loads(frozen.read_text(encoding="utf-8"))
+        cached = json.loads(frozen.read_text(encoding="utf-8"))
+        if cached.get("run_dir") == str(run_dir):
+            return cached
+        print(f"  cost.json was frozen from {cached.get('run_dir')!r}, not {str(run_dir)!r}; "
+              f"recomputing", flush=True)
     out: dict = {"run_dir": str(run_dir), "projects": {},
                  "read_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     if not run_dir.exists():

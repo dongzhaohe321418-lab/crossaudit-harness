@@ -268,10 +268,12 @@ against the cross-vendor arm's **76.8% [65.7, 87.0]** on the same 99 instances:
 visible tests corrected the same-vendor arm is not shown to differ from the cross-vendor one
 on recall at all, and that reading is withdrawn.
 
-**The sign is the opposite of substrate 1's.** Ceiling 1 measured −12.7 points
-[−25.0, −0.9] for the same contrast — the generator's own model saw *less* of its own
-defects than a stranger did. Here it sees more. Both intervals exclude zero and they point
-opposite ways, so the direction of the same-vendor effect is substrate-dependent too.
+**No sign reversal is established.** Ceiling 1 measured −12.7 points [−25.0, −0.9] for the
+same contrast — the generator's own model saw *less* of its own defects than a stranger did.
+The voided run measured +17.0 [2.0, 32.0] here and read the pair as a substrate-dependent
+reversal. **This run measures +4.0 [−10.1, 18.2], which includes zero**, so the same-vendor
+arm is not shown to differ from the cross-vendor one on recall at all and there is no sign
+to be opposite. The substrate-dependence claim is withdrawn, not restated.
 
 **And it is bought, again, by flagging more of everything.** On C the same-vendor arm's
 false-positive rate is **68.7% [59.9, 77.1]**, Wilson [60.9, 75.5], against the cross-vendor arm's **45.3% [36.4, 54.4]**: **+23.3 points [12.6, 34.0]** (48 vs 13 discordant; McNemar p = 0.00001; sign-flip p = 0.00015). The same-vendor arm pays
@@ -365,7 +367,7 @@ this study.
 without the false-positive rate it was paid for is not a portable number. Ceiling 1's 30.0%
 [20.0, 40.7] and this study's 76.8% [65.7, 87.0] are the same auditor under the same
 protocol at 16.0% [10.1, 22.3] and 45.3% [36.4, 54.4] false positives respectively; recall
-moved 41.0 points [31.6, 61.3] and the false-positive rate moved 39.3 points [18.3, 40.2]
+moved 46.8 points [31.6, 61.3] and the false-positive rate moved 29.3 points [18.3, 40.2]
 with it.
 
 **Both auditors tell the same story on this substrate.** The cross-vendor arm reaches
@@ -384,16 +386,20 @@ Substrate 1 is short functions. Neither was selected on any audit outcome; neith
 to resemble any particular production codebase.
 
 **What carries over from ceiling 1 is the shape, not the level.** Reading the same code more
-times saturates on both substrates; on this one it saturates by the eighth reading, where on
-substrate 1 it had not. What does not carry over is the level of either curve, or the
-distance between them.
+times shows diminishing returns on both substrates, and **on neither does the curve flatten by
+the registered bar**: substrate 1 gains 1.93 points [1.14, 2.78] at the last step and this one
+gains 1.52 [0.62, 2.60], both above the 1.0-point bar. The voided run recorded 0.62 points here
+and reported the bar as met; that was the one curve in this programme that appeared to saturate,
+and it does not. What does not carry over is the level of either curve, or the distance between
+them.
 
-**The non-overlap claim is a within-family claim.** "No reading count puts the two
-substrates at the same false-positive rate" holds for the cross-vendor family: 16.0%
-[10.1, 22.3] against 25.3% [18.8, 32.2], two intervals that do not meet. It does not hold
-pooled: substrate 1's same-vendor family at K = 8 is 24.0% [17.2, 31.2] against the same
-25.3% [18.8, 32.2], two intervals that do meet. The separation in the first case and the
-overlap in the second — 2.6 and 12.5 points — are distances between those quoted intervals,
+**The non-overlap claim is withdrawn in both directions.** "No reading count puts the two
+substrates at the same false-positive rate" was made for the cross-vendor family on the voided
+run, where 16.0% [10.1, 22.3] and 31.8% [24.9, 39.0] did not meet. **On this run they do**:
+16.0% [10.1, 22.3] against 25.2% [18.8, 32.2], overlapping. Pooled it also fails, as it did
+before: substrate 1's same-vendor family at K = 8 is 24.0% [17.2, 31.2] against the same
+25.2% [18.8, 32.2]. The overlaps — 3.5 and 12.5 points — are distances between those quoted
+intervals,
 not estimates with intervals of their own. Quoted without its family the claim is an
 overstatement, and §8 records that an earlier version of this report made it that way.
 

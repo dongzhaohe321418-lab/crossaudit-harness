@@ -136,11 +136,27 @@ def main(argv: list[str] | None = None) -> int:
     # counted as a reading of this one. This is checked rather than assumed because the readings
     # of 2026-09-16 DID match their candidates -- the auditor read the right code -- while the
     # scope around them did not, so matching solutions are not evidence that a resume is sound.
-    stale = [f"{f} d{d}: {iid}"
-             for (kind, f, d), rows in have.items()
-             for iid, row in rows.items()
-             if row.get("solution_sha256")
-             and row["solution_sha256"] != instances.get(iid, {}).get("solution_sha256")]
+    # Read the cache files directly. `explore.load_detector` returns only
+    # {flagged, cost_usd, source, cost_reconstructed} -- it DROPS solution_sha256 -- so the
+    # first version of this guard tested a key that is never present and passed vacuously
+    # every time. The cross-vendor review found it by planting a wrong digest and watching
+    # --plan report every arm complete. A guard that cannot fail is not a guard.
+    stale = []
+    for family, draw in LADDER:
+        path = RECORDS / "cache" / f"holistic__{family}__d{draw}.jsonl"
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            iid = row.get("instance_id")
+            if iid not in scope_set:
+                continue
+            recorded = row.get("solution_sha256")
+            current = instances.get(iid, {}).get("solution_sha256")
+            if recorded and current and recorded != current:
+                stale.append(f"{family} d{draw}: {iid}")
     if stale:
         raise SystemExit(
             f"HALT: {len(stale)} cached readings were taken against a different candidate than "
