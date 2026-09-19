@@ -202,7 +202,7 @@ RAW_HTML_RE = __import__("re").compile(r"<[a-zA-Z]")
 
 
 def _scan(text: str) -> list[dict]:
-    """Every line with the state a renderer would be in: fence, blockquote, block membership.
+    """Every SOURCE line with the scanner's own state: fence, blockquote, block membership.
 
     Rounds 6 and 7 retired two weaker readings in turn — "does the line start with a
     pipe", then "is there a fence at all". What the scan supports is narrower than the
@@ -300,7 +300,13 @@ def test_no_table_like_construct_exists_outside_the_generated_blocks():
 
 def test_the_generated_blocks_are_unique_ordered_and_placed_under_their_headings():
     """(2) Each block appears once, in the registered order, under its registered heading,
-    after its registered anchor line; (3) no marker sits in a fence or a blockquote."""
+    after its registered anchor line; (3) no marker sits in a fence or a blockquote AS THIS
+    SCANNER READS THEM.
+
+    Round 10 narrowed (3). The scanner's fence and blockquote state is its own, not a
+    renderer's: round 9 found nine mutations that changed what renders while every check
+    here passed. This asserts placement among recognised source lines and marked blocks,
+    and nothing about the rendered document."""
     mod = _splice()
     text = RESULTS.read_text(encoding="utf-8")
     registry = mod.REGISTRY

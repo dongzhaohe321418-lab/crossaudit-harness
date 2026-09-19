@@ -3,8 +3,14 @@
 The results file holds a marker pair per table; this script replaces what lies between
 each pair with that table's section from ``tables.md``, which ``testgen_val.py report``
 renders from the records. The prose is written by hand, the tables never are — the test
-compares both directions byte for byte, so a figure edited in the results file, or a
-table added, dropped or duplicated there, fails.
+compares both directions byte for byte, so a figure edited INSIDE a generated block, or a
+block added, dropped or duplicated, fails.
+
+Round 10 corrected this sentence. It used to say "a figure edited in the results file"
+fails, and the reviewer disproved it by changing "A 79" to "A 999" in section 1's prose
+and watching every test pass. What is protected is the contents of the marked blocks; a
+figure written by hand in the prose is checked only where a test names that exact string.
+The records are the authority and the rendered file is a convenience.
 
     python benchmarks/code/testgen/splice_tables.py
 """
@@ -41,10 +47,12 @@ REGISTRY = (
      "applications:"),
 )
 
-#: Every heading the results file may carry, in order. A heading is any line matching
-#: ``^#{1,6}\s`` — a tab counts, so a heading cannot be smuggled past the check by writing
-#: ``##\ttitle``, and a sub-heading cannot be inserted to put a table under a caption the
-#: registry does not know. Round 7.
+#: Every heading the results file may carry, in order. A heading is any SOURCE line
+#: matching ``^#{1,6}\s`` — a tab counts, so ``##\ttitle`` is seen. The set and the order
+#: are registered, so a recognised heading line cannot be added, dropped or reordered.
+#: This is a check on source lines, not on what a renderer displays: round 9 found nine
+#: mutations that changed the rendered document while every check here passed. Round 7,
+#: narrowed in round 10.
 HEADINGS = (
     "# Study 17 — recognising a wrong generated test without the canonical solution: results",
     "## 1. The preregistered decision",

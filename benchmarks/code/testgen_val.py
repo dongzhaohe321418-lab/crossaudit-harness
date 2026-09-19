@@ -639,9 +639,10 @@ def render_tables(numbers: dict, exploratory: dict) -> str:
 
     The results file embeds these between per-table markers and `testgen/splice_tables.py`
     puts them there; the test compares the spliced blocks with this output byte for byte,
-    so a figure cannot be edited in the prose file and survive. Nothing here reads the
-    results file, and nothing computes: every cell comes from ``numbers.json`` or
-    ``exploratory.json``.
+    so a figure cannot be edited INSIDE a generated block and survive. A figure written by
+    hand in the surrounding prose is not covered — round 10's reviewer changed one and
+    every test passed. Nothing here reads the results file, and nothing computes: every
+    cell comes from ``numbers.json`` or ``exploratory.json``.
     """
     out = [TABLES_HEADER, ""]
 
