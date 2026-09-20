@@ -1,3 +1,5 @@
+> **WITHDRAWN INTERPRETATION.** Population I is NOT established to be "defects the specification determines". The six construction filters do not establish specification entailment: F6 was registered as recovering the first failing hidden input and is implemented as a truthiness check on `witness_input`, and F2 to F5 each accept cases their registered wording excludes (RESULTS-INJECT.md §5). Both headline figures -- 97.8% and 84.2% -- are withdrawn, and this study gives claim C4 no prospective test. The counts below are reproducible and are kept as descriptive observations about small injected edits; the population label is not.
+
 <!-- TABLE primary -->
 
 | population | n (problems) | union recall at K = 8 | 95% cluster CI |
@@ -5,6 +7,16 @@
 | I — defects the specification determines, injected | 92 (54) | **90 of 92** | — |
 | ceiling 1's stratum P — the natural residual | 110 (56) | **33 of 110** = 30.0% (Wilson [22.2, 39.1]) | [20.0, 40.7] |
 | **difference (two-sample, not paired)** | | **+67.8 points** | **[+56.3, +78.9]** |
+
+<!-- TABLE rejected -->
+
+Amendment 6's gate-rejected arm: the six filters accepted these instances and a gate then refused them. Same auditor, same K. Round 2 of the review moved this table out of hand-written prose and into the records, where it can be regenerated; the counts and the Wilson interval reproduce the hand-computed ones exactly, and the cluster interval differs in the first decimal because the hand-computed version's bootstrap seed was never recorded.
+
+| population | n (problems) | union recall at K = 8 | 95% cluster CI |
+|---|---:|---|---|
+| gate-**rejected** sample | 40 (35) | **31 of 40** = 77.5% (Wilson [62.5, 87.7]) | [62.5, 90.7] |
+
+The instances the gate discarded are caught nearly as often as the ones it kept. **That is why Amendment 3's "the gate is conservative" is withdrawn**: the gate selects on detectability, so conditioning on it cannot be assumed to lower recall. This observation survives the withdrawal of both headline figures.
 
 <!-- TABLE paired -->
 
@@ -31,7 +43,7 @@ Discordant pairs: 79 where only the injected instance was flagged, 0 where only 
 | 7 | 97.8% |
 | 8 | 97.8% |
 
-Last-step gain 0.00 points; the preregistered flattening bar (at most 1.0) is met, so the fitted asymptote 97.4% is quotable.
+Last-step gain 0.00 points; the preregistered flattening bar (at most 1.0) is met, so the fitted asymptote 97.4% would be quotable on the flattening bar alone, but is NOT quotable: the bar speaks to the shape of the curve, not to what the population is.
 Single reading, I against the natural residual: +78.9 points [+69.0, +87.8].
 
 <!-- TABLE probe -->

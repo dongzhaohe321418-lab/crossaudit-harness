@@ -278,6 +278,53 @@ as the thing found wanting. It belongs in the record as evidence, not as an
 embarrassment: a same-vendor reviewer sharing the authors' assumptions did not
 see the assumption. A reviewer that did not share it did.
 
+## Study 22 (injection) — both headline figures withdrawn, 2026-09-16 and 2026-09-20
+
+**97.8% and 84.2% are withdrawn. The study gives claim C4 no prospective test.** It was built
+to test prospectively what study 21 found post hoc, on a population where
+"specification-determined" would be fixed by construction. The construction does not deliver
+that property.
+
+Two cross-vendor reviews refused quotation, and the author's own check of the implementation
+went further than either asked. F6 was registered as recording the witness **and** recovering
+the first failing hidden input by study 21's witness path; it is `bool(obj.get("witness_input"))`
+— a truthiness check that never recovers, never executes, and never connects the quote, the
+named class, the witness and the failure. Study 21's `witness_for` exists and is never called.
+F2 to F5 each accept cases their registered wording excludes, demonstrated by counterexample in
+round 2 (`RESULTS-INJECT.md` §5). No filter in this study establishes specification entailment,
+and **no repair of F6 alone would have**: recovering the input and executing a witness shows the
+edit changes behaviour on an exercised input, not that the specification entails the expected
+value there.
+
+So 97.8% conditions on a gate that its own measurement shows selects for detectability — the 40
+instances the gate refused are caught 31 times in 40 — and 84.2% removes that gate but leaves a
+denominator of "small injected edits that survived a sparse visible suite and failed a hidden
+one". Neither is a recall of "defects the specification determines".
+
+**Three corrections to the withdrawal itself**, all from round 2 and none in the direction that
+would have made the self-criticism cleaner. F6 is a truthiness check, not a "non-empty string
+check": 102 of the 281 recorded witnesses are lists, not strings. Amendment 7 implied F6 *as
+registered* would have sufficed; it would not. And the withdrawal had not reached the executable
+machinery — `numbers.json` and `tables.md` are standalone artefacts and carried the withdrawn
+population label with nothing to mark it, the splice registry still required a withdrawn
+sentence as an anchor, and four preregistration passages still argued the conservativeness case.
+All now carry the withdrawal, emitted by the generator so a regeneration cannot drop it.
+
+**What survives, as description rather than as a test.** The auditor blocks these injected edits
+far more often than the natural residual; the edits the gate refused are blocked at more than
+twice the natural rate, which is what killed the conservativeness argument; and a probe
+separates these edits from natural code at 96.7% on the items it answered — between 79.9% and
+97.3% once the unanswered items are counted at either extreme, and the record notes those skew
+toward the injected ones — so the two populations differ in more than the property this study
+meant to isolate.
+
+**What would give C4 its prospective test**: a population whose specification-determinedness is
+established by someone other than the injector.
+
+Found: the reviews of 2026-09-15 and 2026-09-20, plus the author's own reading of `inject.py`
+between them. Reproduced from the archive before acceptance — the 179/102 witness split, the
+31-of-40 gate-rejected recall and the filter counterexamples were each recomputed here.
+
 ## Standing
 
 Withdrawal is not retraction of the line of work. Every number here was produced

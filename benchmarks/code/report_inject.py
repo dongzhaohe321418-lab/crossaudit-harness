@@ -250,6 +250,56 @@ def build() -> dict:
                          "replicate prospectively",
                  "fires": h22a["cluster_ci95_points"][0] <= 0 <= h22a["cluster_ci95_points"][1]},
     }
+    # Round 2: numbers.json stands alone. It carried H22a_primary, kill.fires false and a
+    # prospective-replication interpretation with nothing to say they are withdrawn, so a
+    # reader or a later script meeting only this file would take them at face value.
+    # Amendment 6's gate-rejected arm, wired into the record at round 2 of the review.
+    # Its eight draws have been in the archive and in inject.LADDER since Amendment 6, and
+    # its numbers were hand-written into the results file rather than generated -- which is
+    # why the "no table outside a generated block" test had been failing since then, unrun.
+    # The 77.5% is also the observation that survives the withdrawal: the gate refuses
+    # instances the auditor still catches four times in five, so the gate selects for
+    # detectability and Amendment 3's conservativeness argument is false.
+    # The sample is drawn by inject.rejected_sample, not re-derived here: an earlier draft of
+    # this block filtered the rows itself and got 27 instances and 7.4% where the registered
+    # seed gives 40 and 77.5%. The registered draw is the one the readings were bought on.
+    import inject as _inject  # noqa: PLC0415
+    # The cache keys the injected variants with an "inj:" prefix, as it does for arm I.
+    rejected_ids = [f"inj:{i}" for i in _inject.rejected_sample(population)]
+    arm_rej = load_arm("rejected", rejected_ids)
+    scope_rej = [i for i in rejected_ids if i in arm_rej.get(1, {})]
+    flags_rej = union_flags(arm_rej, scope_rej, K_MAX)
+    out["secondary_gate_rejected_AMENDMENT_6"] = {
+        "label": "the 40 gate-rejected instances Amendment 6 sampled: filters accepted them "
+                 "and a gate refused them. Union recall at K = 8 by the same auditor.",
+        "ids_sampled": len(scope_rej),
+        "union": rc.clustered_rate(flags_rej, scope_rej,
+                                   {i: {"problem_id": i.split(":", 2)[-1]}
+                                    for i in scope_rej},
+                                   BOOTSTRAP, BOOT_SEED + 70) if scope_rej else None,
+        "reading": "this rate is the reason Amendment 3's 'the gate is conservative' is "
+                   "withdrawn: the instances the gate threw away are caught nearly as often "
+                   "as the ones it kept, so the gate is selecting on detectability.",
+    }
+
+    out["WITHDRAWN"] = {
+        "what": ["H22a_primary's population label", "the 97.8% headline",
+                 "the 84.2% headline", "any prospective test of claim C4",
+                 "kill.fires, which is computed on the withdrawn denominator"],
+        "why": "the six construction filters do not establish specification entailment. F6 is "
+               "registered as recovering the first failing hidden input and implemented as a "
+               "truthiness check on `witness_input` (179 of 281 witnesses are strings, 102 are "
+               "lists, and none is executed); F2 to F5 each accept cases their registered "
+               "wording excludes. Population I is therefore 'small injected edits that survived "
+               "a sparse visible suite and failed a hidden one', not 'defects the specification "
+               "determines'.",
+        "what_survives": "the counts and the curves, as descriptive observations about small "
+                         "injected edits, together with the 96.7% separability probe that says "
+                         "those edits differ from natural code in more than the property this "
+                         "study meant to isolate",
+        "recorded": "Amendment 7 (2026-09-16); completed after the second cross-vendor review "
+                    "(2026-09-20), which found the withdrawal had not reached this file",
+    }
     return out
 
 
@@ -299,8 +349,25 @@ def _rate(block: dict) -> str:
             f"(Wilson {_iv([100 * x for x in block['wilson95']])})")
 
 
+#: Round 2 of the cross-vendor review: the withdrawal reached the results file's banner and
+#: stopped there. `tables.md` and `numbers.json` are standalone artefacts -- a reader opening
+#: either meets the primary table labelled "defects the specification determines" with no sign
+#: that the label is withdrawn. The notice is emitted by the generator so it cannot be lost in
+#: a regeneration, and so it travels with the record rather than with the prose.
+WITHDRAWAL = (
+    "> **WITHDRAWN INTERPRETATION.** Population I is NOT established to be \"defects the "
+    "specification determines\". The six construction filters do not establish specification "
+    "entailment: F6 was registered as recovering the first failing hidden input and is "
+    "implemented as a truthiness check on `witness_input`, and F2 to F5 each accept cases "
+    "their registered wording excludes (RESULTS-INJECT.md §5). Both headline figures -- 97.8% "
+    "and 84.2% -- are withdrawn, and this study gives claim C4 no prospective test. The counts "
+    "below are reproducible and are kept as descriptive observations about small injected "
+    "edits; the population label is not."
+)
+
+
 def render_tables(n: dict) -> str:
-    L: list[str] = []
+    L: list[str] = [WITHDRAWAL, ""]
     a, b, c, d = n["H22a_primary"], n["H22b_paired"], n["H22c_single_draw"], n["H22d_curve"]
     cmp_ = n["comparator_ceiling1_cross_P"]
 
@@ -313,6 +380,27 @@ def render_tables(n: dict) -> str:
           f"| {_rate(a['b'])} | {_iv([100 * x for x in cmp_['cluster_ci95']])} |",
           f"| **difference (two-sample, not paired)** | | **{a['difference_points']:+.1f} points** "
           f"| **{_iv(a['cluster_ci95_points'], signed=True)}** |", ""]
+
+    rej = n.get("secondary_gate_rejected_AMENDMENT_6")
+    if rej and rej.get("union"):
+        u = rej["union"]
+        L += ["<!-- TABLE rejected -->", "",
+              "Amendment 6's gate-rejected arm: the six filters accepted these instances and a "
+              "gate then refused them. Same auditor, same K. Round 2 of the review moved this "
+              "table out of hand-written prose and into the records, where it can be "
+              "regenerated; the counts and the Wilson interval reproduce the hand-computed "
+              "ones exactly, and the cluster interval differs in the first decimal because the "
+              "hand-computed version's bootstrap seed was never recorded.", "",
+              "| population | n (problems) | union recall at K = 8 | 95% cluster CI |",
+              "|---|---:|---|---|",
+              f"| gate-**rejected** sample | {u['n']} ({u['n_problems']}) | "
+              f"**{u['k']} of {u['n']}** = {_pct(u['rate'])}% "
+              f"(Wilson {_iv([100 * x for x in u['wilson95']])}) | "
+              f"{_iv([100 * x for x in u['cluster_ci95']])} |", "",
+              "The instances the gate discarded are caught nearly as often as the ones it kept. "
+              "**That is why Amendment 3's \"the gate is conservative\" is withdrawn**: the gate "
+              "selects on detectability, so conditioning on it cannot be assumed to lower "
+              "recall. This observation survives the withdrawal of both headline figures.", ""]
 
     L += ["<!-- TABLE paired -->", "",
           "Each injected instance against its own unmodified twin: same problem, same "
@@ -339,7 +427,12 @@ def render_tables(n: dict) -> str:
           f"Last-step gain {d['last_step_gain_points']:.2f} points; the preregistered flattening "
           f"bar (at most 1.0) is {'met' if d['flattening_bar_met'] else 'not met'}, so the fitted "
           f"asymptote {_pct(d['fit']['A'])}% "
-          + ("is quotable" if d["flattening_bar_met"] else "is an extrapolation and the raw union "
+          # Round 2: "is quotable" is a licence this study cannot grant. Meeting the flattening
+          # bar says the curve stopped rising; it says nothing about the population the curve
+          # is over, and that population's label is withdrawn.
+          + ("would be quotable on the flattening bar alone, but is NOT quotable: the bar "
+             "speaks to the shape of the curve, not to what the population is"
+             if d["flattening_bar_met"] else "is an extrapolation and the raw union "
              f"at K = {d['k_max']} is the number to quote") + ".",
           f"Single reading, I against the natural residual: {c['difference_points']:+.1f} points "
           f"{_iv(c['cluster_ci95_points'], signed=True)}.", ""]

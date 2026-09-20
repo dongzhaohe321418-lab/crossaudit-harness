@@ -23,14 +23,20 @@ RESULTS = CODE / "RESULTS-INJECT.md"
 REGISTRY = (
     ("primary", "## 1. What was measured",
      "910 stratum-C instances in one seeded order; 281 passed the filters and 92 passed both gates."),
+    ("rejected", "## 1. What was measured",
+     "then refused**, drawn by `random.Random(20260916)`, under the same auditor and the same K = 8."),
     ("paired", "## 1. What was measured",
      "confound: every instance of I was audited again without the injected lines."),
     ("curve", "## 1. What was measured",
      "And the reading barely needs repeating:"),
     ("probe", "## 3. The limitation that matters most: the defects are detectably artificial",
      "ask whether it was written in one pass or written and then edited."),
+    # Round 2: this anchor still demanded "it points the other way", the sentence commit
+    # 60babd8 replaced when it found the cross-tab carries no information. The registry is
+    # executable machinery, so a stale anchor here is a surviving endorsement of a withdrawn
+    # reading -- and the test that would have caught it had been failing, unrun, since then.
     ("xtab", "## 3. The limitation that matters most: the defects are detectably artificial",
-     "One post-hoc observation bears on that, and it points the other way:"),
+     "information, and it is kept here with that verdict rather than deleted:"),
     ("splits", "## 4. The other preregistered secondaries", "## 4. The other preregistered secondaries"),
 )
 

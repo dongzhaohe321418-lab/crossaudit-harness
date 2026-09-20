@@ -5,7 +5,12 @@
 > but keeps filters that **do not establish specification entailment at all**. F6 was implemented
 > as `bool(obj.get("witness_input"))` while this study registered it as recovering the first
 > failing hidden input; nothing here connects the quote, the named class, the witness and the
-> actual failure.
+> actual failure. §5 sets out what each of the six filters does check, which round 2 of the
+> review established is less than four of them claim — and corrects two things this banner
+> said in its first version: F6 is a **truthiness** check, not a non-empty *string* check (102
+> of the 281 recorded witnesses are lists, not strings), and F6 as **registered** would not
+> have been enough either, since recovering the failing input and executing a witness still
+> does not show that the specification entails the hidden suite's expected value.
 >
 > What the study may still report is descriptive: the auditor blocks small injected edits far more
 > often than the natural residual, **and those edits are separable from natural code at 96.7%**, so
@@ -28,11 +33,14 @@ which contrast carries which confound. Tables in this file are generated from
 Ceiling 1 measured the shipped cross-vendor auditor at 33 of 110 = 30.0% [20.0, 40.7] union
 recall at eight independent readings, on the defects an ordinary generation run left behind.
 Study 21 then found, **post hoc**, that most of that residual is failure the specification's
-prose does not determine. This study tests that prospectively on a population where
-"specification-determined" is fixed by construction: a defect is injected into a solution that
-passes every test, and the instance is admitted only if the injector quoted the specification
-verbatim, six mechanical filters accept, and two models that are not the auditor both agree the
-prose settles the question. Population I is 92 instances over 54 problems, built by walking all
+prose does not determine. This study set out to test that prospectively on a population where
+"specification-determined" would be fixed by construction: a defect is injected into a solution
+that passes every test, and the instance is admitted only if the injector quoted the
+specification verbatim, six mechanical filters accept, and two models that are not the auditor
+both agree the prose settles the question. **That construction does not deliver the property**
+(§5): the filters are textual and executional, none of them tests entailment, and the gate
+selects on detectability rather than on the specification. The paragraphs below describe what
+was built and measured; the label "specification-determined" is withdrawn from it. Population I is 92 instances over 54 problems, built by walking all
 910 stratum-C instances in one seeded order; 281 passed the filters and 92 passed both gates.
 
 <!-- BEGIN TABLE primary (records/inject/tables.md) -->
@@ -63,30 +71,47 @@ Amendment 6 therefore preregistered, with no threshold and as a magnitude to rep
 hypothesis to accept, an audit of **40 of the 189 instances the six filters accepted and the gate
 then refused**, drawn by `random.Random(20260916)`, under the same auditor and the same K = 8.
 
+<!-- BEGIN TABLE rejected (records/inject/tables.md) -->
+Amendment 6's gate-rejected arm: the six filters accepted these instances and a gate then refused them. Same auditor, same K. Round 2 of the review moved this table out of hand-written prose and into the records, where it can be regenerated; the counts and the Wilson interval reproduce the hand-computed ones exactly, and the cluster interval differs in the first decimal because the hand-computed version's bootstrap seed was never recorded.
+
 | population | n (problems) | union recall at K = 8 | 95% cluster CI |
 |---|---:|---|---|
-| I — filters accepted **and** both gates agreed | 92 (54) | **90 of 92** = 97.8% | — |
-| gate-**rejected** sample — filters accepted, a gate refused | 40 (35) | **31 of 40** = 77.5% (Wilson [62.5, 87.7]) | [62.2, 90.5] |
-| **all filter-accepted, stratified over both strata** | 281 | **84.2%** | **[73.8, 93.1]** |
-| ceiling 1's stratum P — the natural residual | 110 (56) | 33 of 110 = 30.0% | [20.0, 40.7] |
+| gate-**rejected** sample | 40 (35) | **31 of 40** = 77.5% (Wilson [62.5, 87.7]) | [62.5, 90.7] |
+
+The instances the gate discarded are caught nearly as often as the ones it kept. **That is why Amendment 3's "the gate is conservative" is withdrawn**: the gate selects on detectability, so conditioning on it cannot be assumed to lower recall. This observation survives the withdrawal of both headline figures.
+<!-- END TABLE rejected -->
+
+The 84.2% that stood in this table — the filter-accepted population stratified over both
+strata — **is withdrawn** and is not restated here. It was never in `numbers.json`: it was
+computed once and written into this file by hand, which is also why its interval could not be
+reproduced. Its denominator is "small injected edits that survived a sparse visible suite and
+failed a hidden one", not "defects the specification determines", so the figure has no
+population to be a recall *of*. The 97.8% on population I is withdrawn for the same reason and
+is quoted only where the record labels it withdrawn.
 
 Recall on the gate-rejected sample is **materially lower** than on I, 77.5% against 97.8%, so
 under Amendment 6's stated reading rule **the gate is part of the effect** and the 90 of 92 may
 not be quoted as a figure for specification-determined defects at large. It is quoted here only as
 what the auditor achieves on the population both gates accepted.
 
-What survives, and what this study should lead with, is the stratified figure over every instance
-the six mechanical filters accepted regardless of the gate's vote: **84.2% [73.8, 93.1] against
-the natural residual's 30.0% [20.0, 40.7]**. The gate inflates the headline by about 14 points; it
-does not create the contrast. Even the instances the gate refused are audited at more than twice
-the rate of the natural residual.
+An earlier version of this section said that what survives, and what the study should lead
+with, is the stratified figure over every instance the six filters accepted regardless of the
+gate's vote — 84.2% against the natural residual's 30.0%. **That is withdrawn.** Dropping the
+gate removes the selection on detectability but leaves a denominator of "small injected edits
+that survived a sparse visible suite and failed a hidden one", which is not the population the
+comparison needs; a recall figure needs a population to be a recall *of*. What remains true, and
+is descriptive rather than a test of anything, is that the auditor blocks these injected edits
+far more often than the natural residual, and that even the edits the gate refused are blocked
+at more than twice the natural rate — which is the observation that killed the gate's
+conservativeness argument, not a measurement of detecting specification-determined defects.
 
 Two limits on the stratified figure. It still conditions on the six filters, which is a weaker
 condition than the gate but not no condition. And the two strata are pooled by population weight
 with the rejected stratum estimated from 40 of 189, so its contribution carries sampling error the
 interval above includes and the point estimate hides.
 
-**Duplication in population I, and why the cluster interval absorbs it.** |I| is 92 instances but
+**Duplication in population I, and why the cluster interval absorbs it.** Population I holds
+92 instances but
 only **59 distinct programmes**: 33 groups of byte-identical `modified_sha256` cover 66 of the 92.
 An interval that treats the 92 as independent is therefore too narrow by more than the usual
 problem-recurrence margin, and **every Wilson figure in this study is to be read with that in
@@ -111,9 +136,11 @@ Each injected instance against its own unmodified twin: same problem, same speci
 Discordant pairs: 79 where only the injected instance was flagged, 0 where only the twin was. Exact McNemar p = 3.31e-24; cluster sign-flip p = 5.00e-06. Every discordant pair points one way, so the percentile bootstrap's bound is an artefact and the Tango interval [+77.3, +91.6] is the one to read (ceiling 1 Amendment 5).
 <!-- END TABLE paired -->
 
-**The auditor is responding to the defect, not to the problem.** The same code without the
+**The auditor is responding to the edit, not to the problem.** The same code without the
 injected lines is flagged 11 times in 92; with them, 90 times. Seventy-nine discordant pairs
-point one way and none the other.
+point one way and none the other. Round 2 narrowed this heading: the twin contrast identifies a
+response to **the edit, including whatever cues the edit carries**, and §3's separability probe
+shows those cues are there. It does not identify a response to a defect as such.
 
 And the reading barely needs repeating:
 
@@ -129,7 +156,7 @@ And the reading barely needs repeating:
 | 7 | 97.8% |
 | 8 | 97.8% |
 
-Last-step gain 0.00 points; the preregistered flattening bar (at most 1.0) is met, so the fitted asymptote 97.4% is quotable.
+Last-step gain 0.00 points; the preregistered flattening bar (at most 1.0) is met, so the fitted asymptote 97.4% would be quotable on the flattening bar alone, but is NOT quotable: the bar speaks to the shape of the curve, not to what the population is.
 Single reading, I against the natural residual: +78.9 points [+69.0, +87.8].
 <!-- END TABLE curve -->
 
@@ -225,6 +252,48 @@ where the generator succeeded, and stratum P is where it failed, so the two popu
 almost no problems. That is the problem-mix confound Amendment 5 fixed in advance, visible in
 the data, and it is exactly why H22b exists.
 
+## 5. What the six filters check, and what they were registered to check
+
+Round 2 of the cross-vendor review exercised each filter against the real implementation. The
+gaps below are **implementation gaps demonstrated by counterexample**, not measurements of how
+often they bite in the archived population; nobody has counted that, and this section does not
+claim to.
+
+* **F1** was registered as: the quote appears in the specification, whitespace-normalised, at
+  least six words. It implements exactly that textual check and establishes nothing semantic.
+* **F2** was registered as: every visible test passes. A binary suite can report success after
+  a `SystemExit(0)` raised before any assertion completes.
+* **F3** was registered as: the hidden failure is an assertion or an exception, not a timeout.
+  It accepts any non-timeout non-pass — an `os._exit(2)` candidate passed all six filters with
+  neither an assertion nor an exception.
+* **F4** was registered as: the edit adds no import. It compares **sets of module names**, so
+  `from math import cos` beside an existing `import math` passes.
+* **F5** was registered as: compiles and completes at least one visible test. It checks only
+  that no visible test timed out and that the text `"SyntaxError"` is absent; it stayed true
+  after an immediate `ZeroDivisionError`, and the early-exit case above passed F2 and F5
+  without completing a test.
+* **F6** was registered as: records the witness **and** recovers the first failing hidden input
+  by study 21's witness path. It is `bool(obj.get("witness_input"))`, a truthiness check.
+  Study 21's `witness_for` exists and is never called here. Of the 281 recorded witnesses,
+  **179 are strings and 102 are lists**; F6 validates neither type nor argument structure, and
+  nothing is executed.
+
+**Two corrections to this study's own account of its failure**, both from round 2 and both
+against the direction that would have made the self-criticism cleaner:
+
+* Amendment 7 called F6 "a non-empty string check". It is not: it is a truthiness check, and
+  102 of the 281 witnesses are not strings at all.
+* Amendment 7 implied that F6 *as registered* would have established specification entailment.
+  It would not. Recovering the first failing hidden input and executing a witness shows that
+  the edit changes behaviour on an input the hidden suite exercises. It does not show that the
+  **specification** entails the value the hidden suite expects there, which is the property
+  population I was supposed to have.
+
+So the conclusion stands and its grounds are wider than Amendment 7 gave: **no filter in this
+study establishes specification entailment, and no repair of F6 alone would have.** What would
+is a population whose specification-determinedness is established by someone other than the
+injector.
+
 ## 5. What was not run
 
 The naming adjudication of §5 of the preregistration — does a blocking finding name the injected
@@ -234,8 +303,10 @@ needs the two-rater protocol and that has not been run. Until it is, every numbe
 **blocking**, not about naming, and no sentence may say otherwise.
 
 The OpenAI gate deferred by Amendment 3 has not been re-run either; both gates are Anthropic
-models, which makes them more correlated and the gate weaker, which §1 of the preregistration
-argues is conservative for the primary.
+models, which makes them more correlated and the gate weaker. §1 of the preregistration argues
+that this is conservative for the primary; **that argument is withdrawn** (Amendment 6 and §5).
+A weaker gate is not a conservative one here, because the gate selects on detectability rather
+than on what the specification determines: the instances it refused are caught 31 times in 40.
 
 ## 6. Cost
 

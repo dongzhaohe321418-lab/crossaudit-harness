@@ -61,7 +61,10 @@ a disclosed limitation, not a hidden one. The gate's agreement rate and the per-
 reported.
 
 **Why an imperfect filter is conservative.** The filters and the gate can only fail by admitting
-an instance whose defect is *not* specification-determined. Such an instance behaves like a
+an instance whose defect is *not* specification-determined.
+
+> **SUPERSEDED — 2026-09-20, round 2 of the cross-vendor review.** This argument is **false**. The filters can also fail by *excluding* instances whose defect IS specification-determined, and the gate demonstrably does: the 40 it refused are caught 31 times in 40. A filter that selects on detectability is not conservative in either direction. See RESULTS-INJECT.md §5 for what each filter actually checks. This paragraph is kept as written because it records what was believed and promised when the readings were bought; the correction is here beside it, not in its place.
+ Such an instance behaves like a
 stratum-P instance and can only pull recall on I **down**, toward the 30.0% this study predicts
 it will exceed. No failure mode of the construction manufactures the predicted effect. The
 opposite threat — that injected defects are easier to see because they are injected — is real
@@ -180,6 +183,9 @@ Attempts 2 and 3 push the injector toward defects that survive the visible suite
 defining property of stratum P, the population I is compared against — and toward subtler edits,
 which can only lower recall on I. Both directions are conservative for H22a.
 
+> **SUPERSEDED — 2026-09-20, round 2 of the cross-vendor review.** Amendment 1's "can only lower recall" rests on §1's conservativeness argument and falls with it. This paragraph is kept as written because it records what was believed and promised when the readings were bought; the correction is here beside it, not in its place.
+
+
 **Unchanged:** the base population, the six filters and their thresholds, the two-model gate,
 the auditor, the constitution, the ladder, K, every hypothesis, the primary, the kill, the
 budget and the boundary. No outcome has been seen and none may change any of these.
@@ -244,6 +250,9 @@ the audit, whose auditor is `openai:gpt-5.6-terra`.
    recall on I **down**, toward the 30.0% H22a predicts it will exceed: the change is
    conservative for the primary, as §1's argument already covers. Neither gate model is the
    auditor.
+
+> **SUPERSEDED — 2026-09-20, round 2 of the cross-vendor review.** Amendment 3's conservative-gate claim is withdrawn. A weaker, more correlated gate is not a conservative one when the gate selects on detectability. This paragraph is kept as written because it records what was believed and promised when the readings were bought; the correction is here beside it, not in its place.
+
 2. **The OpenAI gate is not abandoned, it is deferred.** When credits return,
    `openai:gpt-5.6-luna` is asked the same question about every instance of I, and the results
    report, as a preregistered sensitivity: how many instances of I it would also have admitted,
@@ -306,7 +315,11 @@ reader is entitled to see the new population measured against it.
 **H22b has no problem-mix confound at all.** Each instance of I is compared with its own twin —
 the same problem, the same specification, the same generator, the same code but for the injected
 lines, read by the same auditor at the same K (Amendment 4). Any difference there is the
-injected defect and nothing else. H22b is therefore the internally controlled contrast, and
+injected defect and nothing else.
+
+> **SUPERSEDED — 2026-09-20, round 2 of the cross-vendor review.** Amendment 5's "the injected defect and nothing else" is false: removing the edit also removes the cues that make it conspicuous, which §3's separability probe measures at 96.7%. The twin contrast identifies a response to the edit, cues included. This paragraph is kept as written because it records what was believed and promised when the readings were bought; the correction is here beside it, not in its place.
+
+H22b is therefore the internally controlled contrast, and
 where the two point in different directions, the results must report H22b as the one that
 isolates the defect.
 

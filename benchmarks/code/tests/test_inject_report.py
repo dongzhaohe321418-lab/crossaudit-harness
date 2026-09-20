@@ -143,7 +143,11 @@ def test_the_post_hoc_cross_tab_is_labelled_and_quoted_from_the_records():
     natural = x["by_probe_verdict"]["ONEPASS"]
     assert natural["n"] == natural["caught"], "the prose says every natural-looking one was caught"
     assert "caught every injected defect the probe judged natural" in FLAT
-    assert f"with {natural['n']} instances in one cell" in FLAT.replace("four", str(natural["n"]))
+    # Round 2: commit 60babd8 rewrote this sentence to say which cell, and the assertion kept
+    # asking for "in one cell". The prose is the more precise of the two, so the binding
+    # follows it rather than the other way round.
+    assert (f"{natural['n']} instances in the natural-looking cell"
+            in FLAT.replace("four", str(natural["n"])))
     assert "**post hoc**" in TEXT
 
 

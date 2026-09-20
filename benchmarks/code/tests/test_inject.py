@@ -115,7 +115,17 @@ def test_a_quote_shorter_than_six_words_is_rejected(mbpp_problem):
 
 
 def test_the_ladder_and_the_models_are_the_preregistered_ones():
-    assert inject.LADDER == [("I", d) for d in range(1, 9)] + [("twin", d) for d in range(1, 9)]
+    """The ladder is I and twin as preregistered, plus Amendment 6's gate-rejected arm.
+
+    This assertion named only the first two, and Amendment 6 added the third and wired it
+    into inject.LADDER without updating it -- so the check that pins the ladder to the
+    registration had been failing, unrun, from that commit until round 2 of the review.
+    The arm is part of the registration: Amendment 6 preregistered it with no threshold, as
+    a magnitude to report, precisely to measure what the gate was selecting for.
+    """
+    assert inject.LADDER == ([("I", d) for d in range(1, 9)]
+                             + [("twin", d) for d in range(1, 9)]
+                             + [("rejected", d) for d in range(1, 9)])
     assert inject.INJECTOR_SPEC == "anthropic:claude-haiku-4-5-20251001"
     assert inject.GATE_SPECS == ("anthropic:claude-sonnet-4-6", "anthropic:claude-opus-4-8")
     assert inject.MIN_QUOTE_WORDS == 6 and inject.MAX_CHANGED_LINES == 4
