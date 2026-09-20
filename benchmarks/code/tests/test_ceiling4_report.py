@@ -352,7 +352,10 @@ def test_cost_format_and_the_prompt_digest_control_are_bound():
     assert f"all {r_rows:,} `cross-R` readings carry a prompt digest" in t
     assert f"all {t_rows} `cross-T` readings carry the same digest" in t
     denials = sum(v["provider_denial_rows_before_completion"] for v in fmt.values())
-    assert f"{denials:,} provider denials" in t
+    # Round 3: the prose said "provider denials", which 6,903 of these rows are not -- they are
+    # this client's circuit breaker refusing on its own. The record's field name says what the
+    # count is, and the binding follows it.
+    assert f"{denials:,} failed-attempt rows" in t
     d5 = fmt["cross-R-d5"]["provider_denial_instances_before_completion"]
     assert f"draw 5 lost {d5} instances" in t
     assert all(fmt[f"cross-R-d{d}"]["provider_denial_instances_before_completion"] == 260

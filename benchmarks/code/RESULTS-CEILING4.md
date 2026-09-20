@@ -248,12 +248,6 @@ Residual rate with `cross-R` added: 32/110 = 29.1% (Wilson 21.4–38.2; cluster 
   adjudicated draw 1 contributes to that union. The generator carried the same claim and so
   regenerated it unchanged; it is fixed there too.
 
-  **The adjudicated results in §3 rest on labels whose production can no longer be audited.**
-  L2's raw reply, prompt, launcher and execution log lived only under a session scratchpad and
-  were destroyed before the first review's finding could be repaired. The sheet, key and
-  label-file hashes verify and every number reproduces from the labels; how L2 produced them
-  does not. That caveat is repeated here, beside the results it qualifies, rather than left in
-  Amendment 2 where a reader of §3 would not meet it.
 * **`mixed`** (Table 7): at every matched total, a mixture of `cross` and `cross-R` readings
   sits above `cross` alone and below `cross-R` alone, on both strata. Spending half the
   readings on the shipped constitution buys nothing here that spending all of them on the
@@ -261,6 +255,17 @@ Residual rate with `cross-R` added: 32/110 = 29.1% (Wilson 21.4–38.2; cluster 
 * **Reply format**: not a factor. Every reading is one accepted reply.
 
 ## 3. Amendment 1 — the shipped auditor's own findings, adjudicated
+
+> **These results rest on labels whose production can no longer be audited.** L2's raw reply,
+> prompt, launcher and execution log lived only under a session scratchpad and were destroyed
+> between the review that flagged them and the repair. The sheet, key and label-file hashes
+> verify and every number below reproduces from the labels; **how L2 produced them does not.**
+> Round 3 of the review judged that this permits qualified quotation — it does not invalidate
+> arithmetic reproducible from the labels, the archived flags or the kill's upper bound — while
+> not satisfying the provenance standard this study set, which disclosure cannot restore. Every
+> figure in this section is therefore **conditional on the surviving labels** rather than on an
+> independently verifiable adjudication, and must not be set directly against the eight-reading
+> union of 30.0%.
 
 `cross-T` is one reading of the shipped constitution with texts archived, added so the
 paper's first-ranked gap — has anyone checked that `cross`'s flag rate names the defects? —
@@ -308,10 +313,12 @@ study 19 and is not recomputed here, since study 19's records are not on this br
 built on a κ of 0.391 is a rate two careful readers would not have produced the same way, and
 the numbers below should be read with that in front of them, not behind them.
 
-The disagreement is **asymmetric**, not noise in both directions.
+The disagreement is **asymmetric**.
 L1 answered yes on 46 items and L2 on 55, and of the 23 disagreements 16 are L1-no/L2-yes,
-so L2 is the more inclusive rater. A property of these findings is part of the reason, though
-**not demonstrably the whole of it**: the first review re-read the items and found judgments
+so L2 is the more inclusive rater. That is a description of
+the labels and nothing more. **What causes the asymmetry is not established here.** A property
+of these findings is one interpretation, offered as such — round 3 read the items and found
+ambiguity and inconsistent application by both raters, which is another — the first review re-read the items and found judgments
 that are inconsistent within each rater as well, so the sentence that used to attribute the
 disagreement to the findings "rather than" the raters claimed more than the labels support.
 What the items do show is that many of them name an input class *adjacent* to the hidden
@@ -416,12 +423,18 @@ Total from the 9 project ledgers: **$19.84** over 2,340 calls for 2,340 readings
 * **Run history**: the ladder was run in two invocations of the same resumable loop. In the
   first, the provider rate-limited the run: draw 5 lost 95 instances and draws 6, 7 and 8 were
   denied outright, exhausting the eight passes with the breaker cooling between them, for
-  7,000 provider denials recorded in the `.failed.jsonl` files. Those 7,000 rows are **96 HTTP
-  429 responses, 6,903 circuit-breaker refusals and one TLS failure** — round 2 corrected this,
-  which had said 7,000 rate-limit responses. Only 96 calls were refused by the provider; the
-  breaker then declined 6,903 more on its own, so the denial count measures this client's
+  7,000 failed-attempt rows recorded in the `.failed.jsonl` files. Those 7,000 rows are **96
+  rows containing HTTP 429 errors, 6,903 circuit-breaker refusals and one TLS failure**. The 96
+  rows carry **106** recorded 429 occurrences between them — 88 rows with one, 6 with two, 2
+  with three — because the provider retry code can meet the limit more than once inside a single
+  attempt. Rounds 2 and 3 both corrected this line: it first said 7,000 rate-limit responses, and
+  the round-2 repair then said 96 responses, which confused rows with responses. So at most 96
+  attempts met the provider's limit; the breaker declined 6,903 more on its own, and the denial
+  count measures this client's
   reaction to rate limiting far more than it measures the rate limiting. A second invocation completed
-  draws 5 to 8 and ran `cross-T`. A denial spends nothing and lands no reading, so the record
+  draws 5 to 8 and ran `cross-T`. These attempts produced no accepted reading and no recorded
+  usage charge — round 3 narrowed "a denial spends nothing", which the TLS failure does not
+  support — so the record
   contains no partial draw; every one of the nine draws is complete at 260 of 260. The retried
   readings were taken in the later invocation, after an interval this design does not control
   for. **How long an interval: the gap within draw 5 is 12:40:09.384**, from the last completion
@@ -485,7 +498,10 @@ Total from the 9 project ledgers: **$19.84** over 2,340 calls for 2,340 readings
 * **Limits**: one substrate, one auditor model, one reasoning setting (the product default for
   the auditor role), one constitution difference. `cross-R` measures the referent rule as
   `loop.REFERENT_RULE` writes it, appended to the shipped constitution, and nothing about
-  instructions in general. The hidden suite reached no prompt, check or model. The large
+  instructions in general. No hidden test reached the auditor's prompt, its checks or its
+  model — round 3 asked for this to be said as the auditor's input boundary, since the
+  adjudication sheet does carry hidden-failure witnesses and a reader could otherwise take
+  the sentence to cover the whole study. The large
   false-positive cost of H20c means the recall gain of H20a is not by itself a case for
   shipping the rule; the two hypotheses are reported together for that reason. `cross-T` is a
   single reading and carries a single reading's uncertainty.

@@ -107,9 +107,10 @@ difference. Three reasons, two of them in this study's own numbers:
   with probability 0.02 per reading survives all eight readings about 85% of the time, so a curve
   can flatten because the remainder is *rare* rather than *unreachable*;
 * this study's own secondary estimator contradicts the ceiling reading. The ZIBB fit puts the
-  non-inflated share at essentially 1.0 for **both** families (`cross` π = 0.99999999999;
-  `cross-R` π = 0.99999999990, cluster [0.658, 1.0]), finding no evidence of a never-detectable
-  class in either arm.
+  non-inflated share at essentially 1.0 for **both** families (`cross` π = 0.9999999999989448;
+  `cross-R` π = 0.9999999999896982 on P, cluster [0.658, 1.0]), finding no evidence of a
+  never-detectable class in either arm. (Round 3: the shortened decimals written here first were
+  not the stored values.)
 
 The title now says **union flag coverage at K = 8**, and H20b's bullet carries the three reasons.
 H20a's positive result and the registered kill verdict stand unchanged.
@@ -129,7 +130,11 @@ single reading is **9 flagged against 5 adjudicated as asserting the defect**.
 * "The raw union at K = 8 is more conservative still" is **false for `cross-R`**, whose raw union
   of 60.91% exceeds its own fitted 58.62%. It holds for `cross` (30.00% against 31.50%). Corrected.
 * "No text was adjudicated" contradicted §3, which adjudicates one `cross-T` reading and one
-  `cross-R` draw. It meant *no text from the eight-reading unions*, and now says that.
+  `cross-R` draw. It meant *no text from the eight-reading unions*, and was changed to say that.
+  **Round 3: that replacement is false too**, because the adjudicated `cross-R` draw 1
+  contributes to its own eight-reading union. What holds, and what the report and the generator
+  now say, is: neither complete eight-reading union was adjudicated; `cross-R` draw 1 and the
+  separate `cross-T` reading were.
 * Attributing the raters' disagreement to a property of the findings "rather than of the raters"
   claimed more than the labels support; the reviewer's item-level re-reading finds judgments that
   are inconsistent within each rater too. Softened to what the items do show.
@@ -152,9 +157,17 @@ is recorded with it. **The lesson generalises past this study: an artefact that 
 session scratchpad is not archived, and this programme has now lost one that way.**
 
 The results now bound the interruption and distinguish the two kinds. The two run manifests are
-**12:47:51** apart, which is what this repository can establish. The review's figure for the gap
-*within draw 5*, 12:40:09, **we could not reproduce**: the cache rows carry `wall_s` and `run_id`
-but no clock time, so a within-draw gap is not recoverable from the committed records. That is a
-second provenance gap, recorded as one. And the operator-reported balance exhaustion is now
+**12:47:51** apart, which is the distance between two end-of-invocation records.
+
+> **WITHDRAWN — round 3 of the cross-vendor review, 2026-09-20.** The paragraph as first written
+> said the review's figure for the gap *within draw 5*, 12:40:09, could not be reproduced,
+> because the cache rows carry `wall_s` and `run_id` but no clock time — and recorded that as a
+> **second provenance gap**. **There is no second gap.** The claim rested on the committed cache
+> and never consulted the archive, whose usage ledger carries `t` in epoch milliseconds: rows 165
+> and 166 of `project-holistic__cross-R__d5` give 2026-09-10T15:31:49.682Z and
+> 2026-09-11T04:11:59.066Z, **12:40:09.384** apart. Reproduced twice, by the reviewer and by this
+> study, before the withdrawal. The paragraph is kept as written because it records what was
+> believed; this notice is the correction. Only the L2 artefact loss below is a real provenance
+> gap. And the operator-reported balance exhaustion is now
 separated from the HTTP 429 denials counted in the `.failed.jsonl` files, since no record here
 attributes any individual denial to billing.
