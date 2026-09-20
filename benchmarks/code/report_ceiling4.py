@@ -587,9 +587,13 @@ def main(argv: list[str] | None = None) -> int:
     out["secondary_mixed_cross_crossR_C"] = mixed_block(draws, C, instances)
     any_draws = r3.load_any_finding(set(scope))
     out["secondary_any_finding_rule"] = {
+        # Round 2: "no text was adjudicated" was false for cross-R, whose adjudicated draw 1
+        # contributes to this union, and survived a byte-identical regeneration because the
+        # stale sentence lives here rather than in the results file.
         "label": "PREREGISTERED secondary (ceiling 4 §3): a FLAG rate — an instance on "
                  "which the model returned some finding at any severity — not a "
-                 "defect-naming rate; no text was adjudicated",
+                 "defect-naming rate. Neither complete eight-reading union was "
+                 "adjudicated; cross-R draw 1 and the separate cross-T reading were",
         "families": {}}
     for fam in FAMILIES + (CROSS_T,):
         complete = sorted(k for k in any_draws.get(fam, {}) if isinstance(k, int))

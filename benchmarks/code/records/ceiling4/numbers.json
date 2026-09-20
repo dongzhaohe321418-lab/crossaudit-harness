@@ -1780,7 +1780,7 @@
         "k_max": 1
       }
     },
-    "label": "PREREGISTERED secondary (ceiling 4 \u00a73): a FLAG rate \u2014 an instance on which the model returned some finding at any severity \u2014 not a defect-naming rate; no text was adjudicated"
+    "label": "PREREGISTERED secondary (ceiling 4 \u00a73): a FLAG rate \u2014 an instance on which the model returned some finding at any severity \u2014 not a defect-naming rate. Neither complete eight-reading union was adjudicated; cross-R draw 1 and the separate cross-T reading were"
   },
   "secondary_mixed_cross_crossR_C": {
     "cluster_reps": 2000,

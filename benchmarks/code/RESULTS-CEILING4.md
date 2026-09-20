@@ -119,8 +119,8 @@ A(`cross-R`) − A(`cross`) on P, the constrained fit refitted inside every one 
   0.02 per reading is missed by all eight about 85% of the time, so a curve can flatten
   because the remaining instances are *rare*, not because they are *unreachable*. And this
   study's own secondary estimator says there is no ceiling at all — the ZIBB fit puts the
-  non-inflated share at essentially 1.0 for **both** families (`cross` π = 0.99999999999,
-  `cross-R` π = 0.99999999990, cluster [0.658, 1.0]), that is, it finds no evidence of a
+  non-inflated share at essentially 1.0 for **both** families (`cross` π = 0.9999999999989448,
+  `cross-R` π = 0.9999999999896982 on P, cluster [0.658, 1.0]), that is, it finds no evidence of a
   never-detectable class in either arm. Whatever the referent rule moves, it is not shown to
   be a limit. `cross-R` passes the
   registered bar — its K = 7 to K = 8
@@ -241,11 +241,19 @@ Residual rate with `cross-R` added: 32/110 = 29.1% (Wilson 21.4–38.2; cluster 
   671 of the 2,080 `cross-R` readings returned at least one finding and 664 returned at
   least one BLOCKER.
   So on this arm the looser rule adds almost nothing, unlike study 18's Anthropic families
-  where the gap between the two rules was the whole story. **No text from these eight-reading
-  unions was adjudicated**, so neither rate is shown to name a defect. (§3 adjudicates a
-  different thing: the texts of a single `cross-T` reading and a single `cross-R` draw. The
-  sentence that stood here said "no text was adjudicated", which contradicted §3 and is
-  corrected.)
+  where the gap between the two rules was the whole story. **Neither complete eight-reading
+  union was adjudicated; `cross-R` draw 1 and the separate `cross-T` reading were**, so neither
+  rate is shown to name a defect. Round 2 corrected this again: the previous wording, "no text
+  from these eight-reading unions was adjudicated", is literally false for `cross-R`, whose
+  adjudicated draw 1 contributes to that union. The generator carried the same claim and so
+  regenerated it unchanged; it is fixed there too.
+
+  **The adjudicated results in §3 rest on labels whose production can no longer be audited.**
+  L2's raw reply, prompt, launcher and execution log lived only under a session scratchpad and
+  were destroyed before the first review's finding could be repaired. The sheet, key and
+  label-file hashes verify and every number reproduces from the labels; how L2 produced them
+  does not. That caveat is repeated here, beside the results it qualifies, rather than left in
+  Amendment 2 where a reader of §3 would not meet it.
 * **`mixed`** (Table 7): at every matched total, a mixture of `cross` and `cross-R` readings
   sits above `cross` alone and below `cross-R` alone, on both strata. Spending half the
   readings on the shipped constitution buys nothing here that spending all of them on the
@@ -408,16 +416,27 @@ Total from the 9 project ledgers: **$19.84** over 2,340 calls for 2,340 readings
 * **Run history**: the ladder was run in two invocations of the same resumable loop. In the
   first, the provider rate-limited the run: draw 5 lost 95 instances and draws 6, 7 and 8 were
   denied outright, exhausting the eight passes with the breaker cooling between them, for
-  7,000 provider denials recorded in the `.failed.jsonl` files. A second invocation completed
+  7,000 provider denials recorded in the `.failed.jsonl` files. Those 7,000 rows are **96 HTTP
+  429 responses, 6,903 circuit-breaker refusals and one TLS failure** — round 2 corrected this,
+  which had said 7,000 rate-limit responses. Only 96 calls were refused by the provider; the
+  breaker then declined 6,903 more on its own, so the denial count measures this client's
+  reaction to rate limiting far more than it measures the rate limiting. A second invocation completed
   draws 5 to 8 and ran `cross-T`. A denial spends nothing and lands no reading, so the record
   contains no partial draw; every one of the nine draws is complete at 260 of 260. The retried
   readings were taken in the later invocation, after an interval this design does not control
-  for. **How long an interval, from this repository's records: the two run manifests are
-  12:47:51 apart** (2026-09-10T16:08:25Z and 2026-09-11T04:56:16Z). The first review reports the
-  gap *within draw 5* as 12:40:09; **we could not reproduce that figure**, because the cache rows
-  carry no per-reading timestamp — they record `wall_s` and `run_id` but no clock time — so the
-  within-draw gap cannot be recovered from the committed records at all. That is a second
-  provenance gap and it is recorded as one (Amendment 2). What the records do support is that
+  for. **How long an interval: the gap within draw 5 is 12:40:09.384**, from the last completion
+  before the interruption at 2026-09-10T15:31:49.682Z to the first after resumption at
+  2026-09-11T04:11:59.066Z (archive `projects/project-holistic__cross-R__d5/.crossaudit/
+  usage.jsonl`, rows 165 and 166, field `t`, epoch milliseconds). The two run manifests are
+  12:47:51 apart (2026-09-10T16:08:25Z and 2026-09-11T04:56:16Z), which is the separation of two
+  end-of-invocation records and not the interruption itself.
+
+  **Amendment 2 recorded this as a second permanent provenance gap. That was wrong and is
+  withdrawn.** The claim rested on the committed cache rows, which carry `wall_s` and `run_id`
+  but no clock time; the archived usage ledger carries `t` and was not consulted. Round 2 found
+  it there and this study reproduced it before withdrawing the claim. Worth stating in its own
+  right: this is the one error in this programme so far that made the work look **worse** than
+  it is, by recording a loss that had not occurred. What the records do support is that
   draw 5's readings were split across the two invocations and that the manifests bound the split
   at about thirteen hours.
 
