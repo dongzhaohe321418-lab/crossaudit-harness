@@ -155,8 +155,9 @@ Discordant pairs: 79 where only the injected instance was flagged, 0 where only 
 **The auditor is responding to the edit, not to the problem.** The same code without the
 injected lines is flagged 11 times in 92; with them, 90 times. Seventy-nine discordant pairs
 point one way and none the other. Round 2 narrowed this heading: the twin contrast identifies a
-response to **the edit, including whatever cues the edit carries**, and §3's separability probe
-shows those cues are there. It does not identify a response to a defect as such.
+response to **the edit, including whatever the edit carries with it**, and §3's probe shows the
+two sets are separable by *something* it does not identify. It does not identify a response to a
+defect as such, and it does not establish that the separating feature is a cue in the edit.
 
 And the reading barely needs repeating:
 
@@ -205,7 +206,9 @@ unreplicated, and this work does not move it in either direction.
 
 The preregistration anticipated that an injected defect might be easier to see for reasons
 having nothing to do with the specification, and fixed a measurement for it in advance: show a
-frontier model that is neither the auditor nor a gate each solution with its specification, and
+frontier model — the preregistration asked for one that is neither the auditor nor a gate, and
+the implemented probe **departed from that**: it runs `claude-opus-4-8`, one of the two gate
+models — each solution with its specification, and
 ask whether it was written in one pass or written and then edited.
 
 <!-- BEGIN TABLE probe (records/inject/tables.md) -->
@@ -255,14 +258,22 @@ The auditor's only misses were `b1:Mbpp/404`, `b2:Mbpp/404`, which the probe cal
 
 The auditor caught every injected defect the probe judged natural, and its only two misses were
 items the probe judged artificial. An earlier draft read that as pointing against the salience
-explanation. **It does not, and the arithmetic says so.** With 2 misses over 92 instances and only
-4 instances in the natural-looking cell, the chance that either miss lands in that cell even if
-the auditor were riding exactly the signal the probe uses is **8.55%**, and the expected number
-of misses there is **0.087**. Round 4 corrected the figures that stood here, about 11% and 0.12:
-those use 69 as the denominator — the injected items the probe actually answered — where the
-sentence says 92. Fisher's exact test on the table gives **p = 1.0**. Observing an empty cell
-is what both hypotheses predict, so the table separates them not at all. It is **post hoc** and it
-is **not evidence in either direction**, and no sentence in this study may lean on it.
+explanation. **It does not, and the table is too small to say anything either way.** Place 2 misses
+uniformly at random among the 92 instances, with only 4 instances in the natural-looking cell:
+the chance that either lands there is **8.55%** (1 − C(88,2)/C(92,2)), and the expected number
+of misses there is **0.087** (2 × 4/92). Round 5 requires three qualifications on that calculation, and they matter
+more than the figures do. It is a **uniform-placement** calculation, not a probability derived
+from any model of the auditor following the probe's signal — no such model is specified here.
+It is **not cluster-aware**, and that is not incidental: the two misses are `inj:b1:Mbpp/404`
+and `inj:b2:Mbpp/404`, **the two instances of one problem**, so they are not two independent
+draws. And round 4's earlier 11% and 0.12 used 69 as the denominator — the injected items the
+probe answered — in a sentence that says 92.
+
+Fisher's exact test on the table gives **p = 1.0**. What that supports is that **this table does
+not distinguish the proposed explanations** — not the stronger readings that stood here: that
+both hypotheses predict an empty cell, or that the table contains no information. It is
+**post hoc**, it is far too small to separate anything, and no sentence in this study may lean
+on it.
 
 The honest summary of §1 and §3 together: the gap is real, large, and measured against a frozen
 comparator and a paired control, and part of it may be salience that this study cannot separate

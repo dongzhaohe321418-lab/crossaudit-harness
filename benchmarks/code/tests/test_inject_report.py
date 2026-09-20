@@ -19,6 +19,7 @@ from a blockquote, from HTML, and an intact block stops being a table when fence
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -31,6 +32,22 @@ TABLES = HERE / "records" / "inject" / "tables.md"
 NUMBERS = json.loads((HERE / "records" / "inject" / "numbers.json").read_text(encoding="utf-8"))
 TEXT = RESULTS.read_text(encoding="utf-8")
 FLAT = " ".join(TEXT.split())
+RESULTS_TEXT = TEXT
+
+
+def _visible(text: str) -> str:
+    """The document with HTML comments removed, flattened.
+
+    Round 5 defeated the withdrawal binding by leaving the required sentence in an HTML
+    comment and displaying its reversal beside it. A sentence a reader cannot see is not a
+    sentence the report makes, so every check on the withdrawal reads this rather than the
+    source. The generated-table markers are HTML comments too, and stripping them is
+    harmless here: no withdrawal passage lives inside one.
+    """
+    return " ".join(re.sub(r"<!--.*?-->", " ", text, flags=re.S).split())
+
+
+VISIBLE = _visible(TEXT)
 
 
 def _splice():
@@ -127,26 +144,83 @@ def test_the_primary_and_the_paired_contrast_are_the_records():
     assert "the kill does not fire" in FLAT
     assert "WITHDRAWN" in NUMBERS
 
-    # Round 4: the previous version of this block bound ONE withdrawal sentence and the
-    # reviewer defeated it by replacing a different one -- they swapped the section-2
-    # conclusion for an explicit C4 endorsement and every test still passed. A binding that
-    # protects one sentence of a withdrawal protects none of it.
+    # WITHDRAWAL_PASSAGES and this block have now failed twice under attack, and how they
+    # failed is the useful part.
     #
-    # Every load-bearing withdrawal sentence is bound here, so removing or reversing any one
-    # of them is red. Verified by replacing each in turn before this was committed.
-    for sentence in (
-        # the primary's denominator, and the kill that is computed on it
-        "the kill is computed on that same denominator",
-        '"defects the specification determines" is not a description of the 92',
-        # section 1's curve conclusion
-        "That conclusion is withdrawn",
-        # section 2's conclusion, which is the study's reason for existing
-        "What this licenses about C4 is nothing, and that is the finding",
-        "the study therefore contradicts nothing" .capitalize()[:31],
-        # the filters
-        "no filter in this study establishes specification entailment" .capitalize()[:44],
-    ):
-        assert sentence.lower() in FLAT.lower(), sentence
+    # Round 3 bound ONE sentence of a withdrawal that lives in six; the reviewer replaced a
+    # different one with an explicit C4 endorsement and every test passed. Round 4 bound all
+    # six -- and wrote two of them as `"...".capitalize()[:31]` and `[:44]`, truncations added
+    # so the strings would match, which cut off "nothing" and "entailment": exactly the words
+    # that carry the meaning. Five fresh attacks then passed, including one that left the
+    # required sentence intact inside an HTML comment and displayed its reversal.
+    #
+    # So: complete passages, no truncation, and checked against the VISIBLE document rather
+    # than the source, since a match inside a comment is not a sentence a reader meets.
+    #
+    # What this establishes is narrow and worth stating: these passages cannot be removed or
+    # reversed without going red. It does NOT establish that no contradictory prose can be
+    # written elsewhere in the document, and no sentence here may claim that it does.
+    for passage in WITHDRAWAL_PASSAGES:
+        assert passage.lower() in VISIBLE.lower(), f"withdrawal passage missing: {passage}"
+
+
+#: The complete, load-bearing sentences of the C4 withdrawal, each quoted whole. Round 5's
+#: five successful attacks are kept as regression cases in the test below; every one of them
+#: reverses a conclusion while leaving some fragment of its sentence in place, which is why
+#: fragments are not bound here.
+WITHDRAWAL_PASSAGES = (
+    "the kill is computed on that same denominator, so its not firing licenses nothing either",
+    '"defects the specification determines" is not a description of the 92',
+    "**That conclusion is withdrawn**",
+    "**What this licenses about C4 is nothing, and that is the finding.**",
+    # The whole of section 2's withdrawal, not its opening. Round 5's fourth attack reversed
+    # the subordinate clause -- "which §5 shows no filter establishes" became "which all six
+    # filters establish" -- and passed, because only the sentence before it was bound.
+    "It was the study's reason for existing, and it requires population I to be "
+    "specification-determined defects, which §5 shows no filter establishes. The study "
+    "therefore contradicts nothing: claim C4 keeps exactly the status study 21 gave it, post "
+    "hoc and unreplicated, and this work does not move it in either direction.",
+    "**no filter in this study establishes specification entailment, and no repair of F6 "
+    "alone would have.**",
+)
+
+#: Round 5's attacks, verbatim. Each replaces a passage above with prose that reverses it;
+#: each passed the round-4 binding. They are kept so a later edit cannot reintroduce the hole.
+ROUND5_ATTACKS = (
+    ("licenses nothing either", "licenses a prospective confirmation of C4"),
+    ("The study therefore contradicts nothing",
+     "The study therefore contradicts the claim that C4 is unreplicated: C4 is now "
+     "prospectively confirmed"),
+    ("establishes specification entailment",
+     "establishes specification ambiguity; together the filters establish entailment"),
+    ("which §5 shows no filter establishes", "which all six filters establish"),
+)
+
+
+def test_the_withdrawal_survives_round_5s_attacks():
+    """Each of round 5's reversals must turn this suite red.
+
+    The fifth review ran five mutations against round 4's binding and all five passed. Four
+    of them are text substitutions and are replayed here; the fifth hid the required sentence
+    in an HTML comment, which `VISIBLE` now strips, and is covered by the check below.
+    """
+    # The attacks are applied to the VISIBLE document, because the passages they target are
+    # line-wrapped in the source and a reversal would be written the same way.
+    for old, new in ROUND5_ATTACKS:
+        assert old in VISIBLE, f"attack no longer applies, rewrite it: {old}"
+        mutated = VISIBLE.replace(old, new, 1)
+        assert any(pas.lower() not in mutated.lower() for pas in WITHDRAWAL_PASSAGES), (
+            f"round 5's attack still passes: {old!r} -> {new!r}")
+
+    # Round 5's fifth attack: leave the required sentence in an HTML comment and display its
+    # reversal beside it. It passed because the binding read the source. Checking the visible
+    # document is what closes it, and this asserts that closure directly.
+    target = WITHDRAWAL_PASSAGES[3]
+    hidden = TEXT.replace(target, f"<!-- {target} -->\n**The study confirms C4 "
+                                  "prospectively.**", 1)
+    assert target.lower() in " ".join(hidden.split()).lower(), "the attack should leave the source intact"
+    assert target.lower() not in _visible(hidden).lower(), (
+        "a withdrawal sentence hidden in an HTML comment still counts as present")
 
 
 def test_the_curve_ends_are_the_records():

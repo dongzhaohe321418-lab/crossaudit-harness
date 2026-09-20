@@ -367,6 +367,8 @@ and whatever surface salience the edit has; §4.1's probe shows that salience is
 paired contrast isolates the **edit**, not the defect, and controls the problem, not the salience.
 Every sentence resting on A5's claim is rewritten.
 
+> **CORRECTED — round 5 of the cross-vendor review, 2026-09-21.** "§4.1's probe shows that salience is detectable" claims more than the probe can. It separates the injected set from the natural one at 96.7% on the items it answered; **what feature it separates them by is not identified.** Its two arms share no problem, so the difference may be between task sets; it is shown the specification as well as the code; and its model is one of the two gate models. The paragraph is kept as written because it records what was believed.
+
 **Budget.** 40 instances × 8 draws ≈ $3.5, taking the study to about $20 of its $35 cap. Nothing
 else changes: not the population, the filters, the gate, the auditor, K, the hypotheses, the
 primary or the kill.
