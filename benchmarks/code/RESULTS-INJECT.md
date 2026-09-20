@@ -46,14 +46,17 @@ was built and measured; the label "specification-determined" is withdrawn from i
 <!-- BEGIN TABLE primary (records/inject/tables.md) -->
 | population | n (problems) | union recall at K = 8 | 95% cluster CI |
 |---|---:|---|---|
-| I — defects the specification determines, injected | 92 (54) | **90 of 92** | — |
+| I — injected edits accepted by the filters and both gates (**NOT established as specification-determined**) | 92 (54) | **90 of 92** | — |
 | ceiling 1's stratum P — the natural residual | 110 (56) | **33 of 110** = 30.0% (Wilson [22.2, 39.1]) | [20.0, 40.7] |
 | **difference (two-sample, not paired)** | | **+67.8 points** | **[+56.3, +78.9]** |
 <!-- END TABLE primary -->
 
-**H22a, the preregistered primary, is positive and the kill does not fire.** On defects the
-specification determines, the same auditor, the same constitution and the same eight readings
-reach 90 of 92, against 33 of 110 on the natural residual.
+**H22a, the preregistered primary, is positive on its own terms and the kill does not fire —
+and both statements are WITHDRAWN as evidence, because the denominator is not what H22a says it
+is.** On the gate-accepted injected population, the same auditor, the same constitution and the
+same eight readings reach 90 of 92, against 33 of 110 on the natural residual. The counts are
+reproducible; "defects the specification determines" is not a description of the 92 (§5), and
+the kill is computed on that same denominator, so its not firing licenses nothing either.
 
 **That 90 of 92 is a property of the gate-accepted population, not of specification-determined
 defects in general, and Amendment 6 measured the difference rather than arguing about it.**
@@ -72,21 +75,28 @@ hypothesis to accept, an audit of **40 of the 189 instances the six filters acce
 then refused**, drawn by `random.Random(20260916)`, under the same auditor and the same K = 8.
 
 <!-- BEGIN TABLE rejected (records/inject/tables.md) -->
-Amendment 6's gate-rejected arm: the six filters accepted these instances and a gate then refused them. Same auditor, same K. Round 2 of the review moved this table out of hand-written prose and into the records, where it can be regenerated; the counts and the Wilson interval reproduce the hand-computed ones exactly, and the cluster interval differs in the first decimal because the hand-computed version's bootstrap seed was never recorded.
+Amendment 6's gate-rejected arm: the six filters accepted these instances and a gate then refused them. Same auditor, same K. Round 2 of the review moved this table out of hand-written prose and into the records, where it can be regenerated. Every figure reproduces the hand-computed one exactly, at the registered seed 20260916. Round 2 of this report claimed the published cluster interval could not be reproduced because its seed was never recorded; that was wrong on both counts, and round 3 disproved it by reproducing the interval from the seed the registration names.
 
 | population | n (problems) | union recall at K = 8 | 95% cluster CI |
 |---|---:|---|---|
-| gate-**rejected** sample | 40 (35) | **31 of 40** = 77.5% (Wilson [62.5, 87.7]) | [62.5, 90.7] |
+| gate-**rejected** sample | 40 (35 problems, 35 distinct programmes) | **31 of 40** = 77.5% (Wilson [62.5, 87.7]) | [62.2, 90.5] |
 
 The instances the gate discarded are caught nearly as often as the ones it kept. **That is why Amendment 3's "the gate is conservative" is withdrawn**: the gate selects on detectability, so conditioning on it cannot be assumed to lower recall. This observation survives the withdrawal of both headline figures.
 <!-- END TABLE rejected -->
 
 The 84.2% that stood in this table — the filter-accepted population stratified over both
-strata — **is withdrawn** and is not restated here. It was never in `numbers.json`: it was
-computed once and written into this file by hand, which is also why its interval could not be
-reproduced. Its denominator is "small injected edits that survived a sparse visible suite and
-failed a hidden one", not "defects the specification determines", so the figure has no
-population to be a recall *of*. The 97.8% on population I is withdrawn for the same reason and
+strata — **is withdrawn**, and the reason is its denominator, not its arithmetic. It is
+"small injected edits that survived a sparse visible suite and failed a hidden one", not
+"defects the specification determines", so the figure has no population to be a recall *of*.
+Round 2 of this report added a second reason, that the figure had been hand-computed and its
+interval could not be reproduced. **That was wrong.** Round 3 reproduced both the estimate
+(84.15%) and its interval [73.8, 93.1] from the registered seed 20260916; being absent from
+`numbers.json` is a provenance weakness, not irreproducibility. Two further limits on it, from
+round 3 and stated here rather than left implicit: the weighted estimator is appropriate only
+for the 281 filter-accepted edits under the stated protocol, and its bootstrap is not a
+validated finite-population interval — 40 of 189 were sampled without replacement, I was
+measured in full, and one problem crosses the sampled strata — so its coverage is uncalibrated
+under `EXPERIMENT_RECORD.md` §10. The 97.8% on population I is withdrawn for the same reason and
 is quoted only where the record labels it withdrawn.
 
 Recall on the gate-rejected sample is **materially lower** than on I, 77.5% against 97.8%, so
@@ -161,8 +171,13 @@ Single reading, I against the natural residual: +78.9 points [+69.0, +87.8].
 <!-- END TABLE curve -->
 
 One reading catches 94.4%; eight catch 97.8%. On the natural residual the same auditor climbs
-from 10.7% to 30.0% over the same eight readings. **Whatever the 30.0% ceiling is, it is not
-the auditor's ability to see a defect that the specification settles.**
+from 10.7% to 30.0% over the same eight readings. An earlier version concluded from this that
+whatever the 30.0% ceiling is, it is not the auditor's ability to see a defect the specification
+settles. **That conclusion is withdrawn**: it needs the 92 to be specification-determined
+defects, and nothing in this construction establishes that. What the contrast shows is that the
+auditor blocks these injected edits far more often than the natural residual — and §3 shows the
+edits are separable from natural code, so the difference is not isolated to the property this
+study meant to test.
 
 ## 2. The finding this study was built to be able to contradict, and did not
 
@@ -172,10 +187,12 @@ two models that are not the auditor, and compared against a frozen number that w
 2026-09-06. The direction survives, and the size of the gap is larger than study 21's post-hoc
 split suggested.
 
-What this licenses is narrow and worth stating exactly: **the measured audit ceiling is not a
-limit on detecting specification-determined defects.** It does not license "the auditor catches
-specification-determined defects" as a general claim — see §3 — and it says nothing about
-whether the natural residual is beyond reach for some other reason.
+**What this licenses is nothing, and that is the finding.** The sentence that stood here —
+"the measured audit ceiling is not a limit on detecting specification-determined defects" — is
+**withdrawn**. It was the study's reason for existing, and it requires population I to be
+specification-determined defects, which §5 shows no filter establishes. The study therefore
+contradicts nothing: claim C4 keeps exactly the status study 21 gave it, post hoc and
+unreplicated, and this work does not move it in either direction.
 
 ## 3. The limitation that matters most: the defects are detectably artificial
 
@@ -187,7 +204,7 @@ ask whether it was written in one pass or written and then edited.
 <!-- BEGIN TABLE probe (records/inject/tables.md) -->
 | quantity | value |
 |---|---|
-| prober | `anthropic:claude-opus-4-8` — not the auditor, not a gate |
+| prober | `anthropic:claude-opus-4-8` — not the auditor, but **one of the two gate models**, so this probe is not independent of the gate |
 | items | 92 injected, 92 natural |
 | answered | 152; unparsed 32 |
 | accuracy on the answered | **96.7%** (Wilson [92.5, 98.6]) |
@@ -197,11 +214,22 @@ ask whether it was written in one pass or written and then edited.
 | natural called edited | 1 of 83 |
 <!-- END TABLE probe -->
 
-**It can tell.** The interval does not cover chance under any reading: 96.7% among the items it
-answered, and between 79.9% and 97.3% over all 184 if the 32 it would not classify are counted
-as all wrong or all right. Those 32 skew toward injected items, so the answered-only figure
-flatters the separation. Artificiality is therefore **not** bounded, and a reader is entitled to
-ask how much of §1's gap is salience rather than specification-determinedness.
+**It can tell the two sets apart.** The interval does not cover chance under any reading: 96.7%
+among the items it answered, and between 79.9% and 97.3% over all 184 if the 32 it would not
+classify are counted as all wrong or all right. Those 32 skew toward injected items, so the
+answered-only figure flatters the separation; the archived `?` values record unparsed
+classifications, which are not necessarily refusals. Artificiality is therefore **not** bounded,
+and a reader is entitled to ask how much of §1's gap is salience rather than
+specification-determinedness.
+
+**Three limits on this probe, from round 3, and they matter more than the accuracy does.** Its
+model is `anthropic:claude-opus-4-8`, which is **one of the two gate models** — so the check on
+the gate's population was run by a model that had already gated it, and it is not an independent
+reading. Its injected and natural arms **share no problem at all**, so what it separates may be
+two task sets rather than edited from unedited code. And it is shown the specification as well as
+the code, so it is not restricted to surface salience. What survives is that the two populations
+are separable by *something*; **which something is not identified**, and "edit salience" is one
+candidate among several rather than the measured quantity.
 
 One post-hoc cross-tabulation was computed on that question. It turns out to carry no
 information, and it is kept here with that verdict rather than deleted:

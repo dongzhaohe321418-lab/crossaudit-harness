@@ -276,7 +276,12 @@ def build() -> dict:
         "union": rc.clustered_rate(flags_rej, scope_rej,
                                    {i: {"problem_id": i.split(":", 2)[-1]}
                                     for i in scope_rej},
-                                   BOOTSTRAP, BOOT_SEED + 70) if scope_rej else None,
+                                   # Round 3: this was BOOT_SEED + 70, which moved the
+                                   # interval to [62.5, 90.7] and prompted the claim that the
+                                   # published [62.2, 90.5] could not be reproduced. It
+                                   # reproduces exactly at BOOT_SEED, which is 20260916 and is
+                                   # the seed the registration names. The offset was mine.
+                                   BOOTSTRAP, BOOT_SEED) if scope_rej else None,
         "reading": "this rate is the reason Amendment 3's 'the gate is conservative' is "
                    "withdrawn: the instances the gate threw away are caught nearly as often "
                    "as the ones it kept, so the gate is selecting on detectability.",
@@ -310,6 +315,13 @@ def main() -> int:
                                          encoding="utf-8")
     (INJECT / "tables.md").write_text(render_tables(out), encoding="utf-8")
     a, b = out["H22a_primary"], out["H22b_paired"]
+    # Round 3: a reader consuming only this CLI output met the headline and "kill fires:
+    # False" with nothing to say either is withdrawn. The notice goes first, because the
+    # lines below are the ones that get pasted into a message.
+    print("*** WITHDRAWN: population I is NOT established to be 'defects the specification "
+          "determines'; no filter tests entailment (RESULTS-INJECT.md section 5). The counts "
+          "below reproduce and are descriptive only; H22a's denominator, both headline "
+          "figures and the kill's verdict are withdrawn. ***")
     print(f"K_common {out['draws']['k_common']}; |I| {out['population']['n']}")
     print(f"H22a  I {a['a']['k']}/{a['a']['n']} = {100*a['a']['rate']:.1f}%  vs  "
           f"ceiling 1 cross on P {a['b']['k']}/{a['b']['n']} = {100*a['b']['rate']:.1f}%  "
@@ -374,7 +386,10 @@ def render_tables(n: dict) -> str:
     L += ["<!-- TABLE primary -->", "",
           f"| population | n (problems) | union recall at K = {d['k_max']} | 95% cluster CI |",
           "|---|---:|---|---|",
-          f"| I — defects the specification determines, injected | {a['a']['n']} ({a['a']['n_problems']}) "
+          # Round 3: the row itself asserted the withdrawn label, so an extracted table carried
+          # it without the banner above. The row now names what the population actually is.
+          f"| I — injected edits accepted by the filters and both gates "
+          f"(**NOT established as specification-determined**) | {a['a']['n']} ({a['a']['n_problems']}) "
           f"| {_rate(a['a'])} | — |",
           f"| ceiling 1's stratum P — the natural residual | {a['b']['n']} ({a['b']['n_problems']}) "
           f"| {_rate(a['b'])} | {_iv([100 * x for x in cmp_['cluster_ci95']])} |",
@@ -388,12 +403,18 @@ def render_tables(n: dict) -> str:
               "Amendment 6's gate-rejected arm: the six filters accepted these instances and a "
               "gate then refused them. Same auditor, same K. Round 2 of the review moved this "
               "table out of hand-written prose and into the records, where it can be "
-              "regenerated; the counts and the Wilson interval reproduce the hand-computed "
-              "ones exactly, and the cluster interval differs in the first decimal because the "
-              "hand-computed version's bootstrap seed was never recorded.", "",
+              "regenerated. Every figure reproduces the hand-computed one exactly, at the "
+              "registered seed 20260916. Round 2 of this report claimed the published cluster "
+              "interval could not be reproduced because its seed was never recorded; that was "
+              "wrong on both counts, and round 3 disproved it by reproducing the interval from "
+              "the seed the registration names.", "",
               "| population | n (problems) | union recall at K = 8 | 95% cluster CI |",
               "|---|---:|---|---|",
-              f"| gate-**rejected** sample | {u['n']} ({u['n_problems']}) | "
+              # Round 3: 40 readings over 35 DISTINCT programmes -- five byte-identical pairs
+              # (HumanEval/43 with Mbpp/140, /266, /569, /95), all inside their own problem
+              # clusters, so the cluster interval already absorbs them. The row says both.
+              f"| gate-**rejected** sample | {u['n']} ({u['n_problems']} problems, 35 distinct "
+              f"programmes) | "
               f"**{u['k']} of {u['n']}** = {_pct(u['rate'])}% "
               f"(Wilson {_iv([100 * x for x in u['wilson95']])}) | "
               f"{_iv([100 * x for x in u['cluster_ci95']])} |", "",
@@ -442,7 +463,11 @@ def render_tables(n: dict) -> str:
         bounds = p["accuracy_bounds_if_unanswered_counted"]
         L += ["<!-- TABLE probe -->", "",
               "| quantity | value |", "|---|---|",
-              f"| prober | `{p['prober']}` — not the auditor, not a gate |",
+              # Round 3: "not a gate" is false. PROBE_SPEC is anthropic:claude-opus-4-8, which
+              # is one of the two GATE_SPECS, so the probe that was meant to check the gate's
+              # population for conspicuousness was run by a model that had already gated it.
+              f"| prober | `{p['prober']}` — not the auditor, but **one of the two gate "
+              f"models**, so this probe is not independent of the gate |",
               f"| items | {p['n_injected']} injected, {p['n_natural']} natural |",
               f"| answered | {p['n_answered']}; unparsed {p['n_unparsed']} |",
               f"| accuracy on the answered | **{_pct(p['accuracy'])}%** "

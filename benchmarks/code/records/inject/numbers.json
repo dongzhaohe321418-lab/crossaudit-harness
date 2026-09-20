@@ -314,8 +314,8 @@
     "reading": "this rate is the reason Amendment 3's 'the gate is conservative' is withdrawn: the instances the gate threw away are caught nearly as often as the ones it kept, so the gate is selecting on detectability.",
     "union": {
       "cluster_ci95": [
-        0.625,
-        0.9069767441860465
+        0.6222222222222222,
+        0.9047619047619048
       ],
       "k": 31,
       "n": 40,

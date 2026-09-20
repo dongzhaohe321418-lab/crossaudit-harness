@@ -118,7 +118,15 @@ def test_the_primary_and_the_paired_contrast_are_the_records():
     assert f"reach {a['a']['k']} of {a['a']['n']}, against {a['b']['k']} of {a['b']['n']}" in FLAT
     assert f"flagged {b['twin']['k']} times in {b['n']}; with them, {b['injected']['k']} times" in FLAT
     assert f"{b['injected_only']} discordant pairs" in FLAT.replace("Seventy-nine", "79")
-    assert NUMBERS["kill"]["fires"] is False and "the kill does not fire" in FLAT
+    # Round 3: this required the prose to say "the kill does not fire" -- so the binding
+    # DEMANDED the withdrawn reading, and would have gone red if the report stopped asserting
+    # it. The kill is computed on H22a's denominator, and that denominator is withdrawn, so
+    # what must be bound is both halves: the computed value, and the fact that it licenses
+    # nothing.
+    assert NUMBERS["kill"]["fires"] is False
+    assert "the kill does not fire" in FLAT
+    assert "the kill is computed on that same denominator" in FLAT
+    assert "WITHDRAWN" in NUMBERS
 
 
 def test_the_curve_ends_are_the_records():

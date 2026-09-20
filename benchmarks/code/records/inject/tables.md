@@ -4,17 +4,17 @@
 
 | population | n (problems) | union recall at K = 8 | 95% cluster CI |
 |---|---:|---|---|
-| I — defects the specification determines, injected | 92 (54) | **90 of 92** | — |
+| I — injected edits accepted by the filters and both gates (**NOT established as specification-determined**) | 92 (54) | **90 of 92** | — |
 | ceiling 1's stratum P — the natural residual | 110 (56) | **33 of 110** = 30.0% (Wilson [22.2, 39.1]) | [20.0, 40.7] |
 | **difference (two-sample, not paired)** | | **+67.8 points** | **[+56.3, +78.9]** |
 
 <!-- TABLE rejected -->
 
-Amendment 6's gate-rejected arm: the six filters accepted these instances and a gate then refused them. Same auditor, same K. Round 2 of the review moved this table out of hand-written prose and into the records, where it can be regenerated; the counts and the Wilson interval reproduce the hand-computed ones exactly, and the cluster interval differs in the first decimal because the hand-computed version's bootstrap seed was never recorded.
+Amendment 6's gate-rejected arm: the six filters accepted these instances and a gate then refused them. Same auditor, same K. Round 2 of the review moved this table out of hand-written prose and into the records, where it can be regenerated. Every figure reproduces the hand-computed one exactly, at the registered seed 20260916. Round 2 of this report claimed the published cluster interval could not be reproduced because its seed was never recorded; that was wrong on both counts, and round 3 disproved it by reproducing the interval from the seed the registration names.
 
 | population | n (problems) | union recall at K = 8 | 95% cluster CI |
 |---|---:|---|---|
-| gate-**rejected** sample | 40 (35) | **31 of 40** = 77.5% (Wilson [62.5, 87.7]) | [62.5, 90.7] |
+| gate-**rejected** sample | 40 (35 problems, 35 distinct programmes) | **31 of 40** = 77.5% (Wilson [62.5, 87.7]) | [62.2, 90.5] |
 
 The instances the gate discarded are caught nearly as often as the ones it kept. **That is why Amendment 3's "the gate is conservative" is withdrawn**: the gate selects on detectability, so conditioning on it cannot be assumed to lower recall. This observation survives the withdrawal of both headline figures.
 
@@ -50,7 +50,7 @@ Single reading, I against the natural residual: +78.9 points [+69.0, +87.8].
 
 | quantity | value |
 |---|---|
-| prober | `anthropic:claude-opus-4-8` — not the auditor, not a gate |
+| prober | `anthropic:claude-opus-4-8` — not the auditor, but **one of the two gate models**, so this probe is not independent of the gate |
 | items | 92 injected, 92 natural |
 | answered | 152; unparsed 32 |
 | accuracy on the answered | **96.7%** (Wilson [92.5, 98.6]) |

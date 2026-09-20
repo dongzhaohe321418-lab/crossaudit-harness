@@ -310,13 +310,24 @@ population label with nothing to mark it, the splice registry still required a w
 sentence as an anchor, and four preregistration passages still argued the conservativeness case.
 All now carry the withdrawal, emitted by the generator so a regeneration cannot drop it.
 
-**What survives, as description rather than as a test.** The auditor blocks these injected edits
-far more often than the natural residual; the edits the gate refused are blocked at more than
-twice the natural rate, which is what killed the conservativeness argument; and a probe
-separates these edits from natural code at 96.7% on the items it answered — between 79.9% and
-97.3% once the unanswered items are counted at either extreme, and the record notes those skew
-toward the injected ones — so the two populations differ in more than the property this study
-meant to isolate.
+**What survives, as description rather than as a test.** Round 3 of the review found the earlier
+"nothing remains quotable" withdrew too much, and it is right: the study is evidence about this
+construction process and these archived auditor responses, which is narrow but not nothing. The
+auditor blocks these injected edits far more often than the natural residual (90 of 92 against
+11 of 92 twins; 79 discordant pairs one way and none the other); the edits the gate refused are
+blocked 31 times in 40, which is what killed the conservativeness argument; and a probe separates
+the two sets at 96.7% on the items it answered, between 79.9% and 97.3% once the 32 unparsed are
+counted at either extreme. **None of that identifies what the auditor is responding to.** The
+paired contrast isolates the edit, cues included, and naming was never adjudicated.
+
+**Three corrections round 3 made to this entry's own first version**, each verified here before
+acceptance. The self-announcing count is **19** archived instances by a defined case-insensitive
+search for added `BUG`/`DEFECT` comments, not seven; only `b2:Mbpp/643` is in I, and removing it
+gives 89 of 91. The probe's model is **one of the two gate models**, so it is not the independent
+check it was described as, and its two arms share no problem, so it may be separating task sets
+rather than edited code. And the claim that the published intervals could not be reproduced was
+false: they reproduce exactly at the registered seed 20260916, which is `BOOT_SEED`; a later
+`+ 70` offset in the regeneration, not the original computation, was what moved them.
 
 **What would give C4 its prospective test**: a population whose specification-determinedness is
 established by someone other than the injector.

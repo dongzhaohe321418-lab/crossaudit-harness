@@ -385,7 +385,18 @@ out["F6_witness"] = bool(obj.get("witness_input"))
 
 It checks that the injector wrote a non-empty string. It never recovers the failing input, never
 executes the witness, and never connects the quote, the named class, the witness and the actual
-hidden failure. Amendment 6 noticed half of this — that F6 never validates `input_class` — but
+hidden failure.
+
+> **CORRECTED IN PLACE — round 3 of the cross-vendor review, 2026-09-20.** Two things in this
+> paragraph and the one below it are wrong, and both make the self-criticism cleaner than the
+> truth. **F6 is a truthiness check, not a non-empty *string* check**: of the 281 recorded
+> witnesses, 179 are strings and **102 are lists**, and F6 validates neither type nor argument
+> structure. And **F6 as registered would not have established entailment either** — recovering
+> the first failing hidden input and executing the witness shows the edit changes behaviour on
+> an input the hidden suite exercises, not that the *specification* entails the value expected
+> there. So the proposed replacement test below is not the repair it is described as. The
+> paragraph is kept as written because it records what was believed; `RESULTS-INJECT.md` §5 sets
+> out what all six filters actually check. Amendment 6 noticed half of this — that F6 never validates `input_class` — but
 left the registered description standing and kept calling the six filters mechanical guarantees of
 specification entailment. **They are not. No filter in this study establishes that the
 specification entails the modified code is wrong.** F1 establishes that six words were copied from
@@ -409,12 +420,21 @@ those cues too, so the twin contrast cannot separate the two accounts. The prere
 already measured the consequence — the edits are separable from natural code at 96.7% — and that
 is the same phenomenon seen from the other side.
 
-**Concretely, the pool contains edits that announce themselves.** Seven instances in the archive
-carry a comment naming the bug, one of them literally `DEFECT: should be +`, and **both gates
-accepted it**. Only one of the seven reached population I, and it was flagged in 8 of 8 readings;
-removing it moves the gate-accepted figure from 90 of 92 to 89 of 91, which is 97.8% either way.
-So self-announcement does **not** explain the effect. It does show that nothing in the
-construction was looking for conspicuousness, which is exactly what the probe then found.
+**Concretely, the pool contains edits that announce themselves.** A case-insensitive search for
+added comments naming `BUG` or `DEFECT`, checked against the bases across `code` and `last_code`,
+finds **19** archived instances, one of them literally `DEFECT: should be +`, and **both gates
+accepted it**. Only one of the 19, `b2:Mbpp/643`, reached population I, and it was flagged in 8
+of 8 readings; removing it moves the gate-accepted figure from 90 of 92 to 89 of 91, 97.8% either
+way. So self-announcement does **not** explain the effect.
+
+> **CORRECTED — round 3, 2026-09-20.** This paragraph said **seven** instances. The count is
+> **19** by the search just described, which round 3 defined and this study reproduced. Nineteen
+> is a reproducible lower bound on self-announcing edits, not an exhaustive measure of
+> conspicuousness. The paragraph also concluded that "nothing in the construction was looking for
+> conspicuousness"; that is **too broad**. The injector prompt explicitly prohibits markers,
+> comments and obviously deliberate edits. What is true, and is the point, is that **no
+> acceptance check enforced that instruction** — the prohibition was written and never tested,
+> which is the same shape as F6.
 
 **3. What this study may still say.** It may report, descriptively, that the shipped auditor blocks
 small injected edits at a far higher rate than it blocks the natural residual, **and that those
