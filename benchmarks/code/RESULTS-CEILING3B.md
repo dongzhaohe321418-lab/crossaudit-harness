@@ -182,10 +182,14 @@ none" and "blocked by none" was therefore a gap between *returning some finding*
 blocking, not between recognising the defect and blocking.
 
 **What moved the family is the referent rule** — the instruction to find what the visible
-tests do not exercise — which raised naming from 5.5% to 52.7%, findings that report a failure
-on the class from 2.7% to 24.5% of the defect population (post hoc, Table 5b), and BLOCKER recall at K = 4 from 1.8% to
+tests do not exercise — which raised naming from 5.5% (Wilson 2.5–11.4; cluster 0.0–12.6) to
+52.7% (Wilson 43.5–61.8; cluster 40.7–65.2), findings that report a failure on the class from
+2.7% (Wilson 0.9–7.7; cluster 0.0–7.3) to 24.5% (Wilson 17.5–33.4; cluster 14.4–35.7) of the
+defect population (post hoc, Table 5b), and BLOCKER recall at K = 4 from 1.8% to
 22.7% (+20.9 points, cluster [+10.8, +31.8]) — the lever ceiling 2 found for the shipped auditor
-(+26.8 points on flags) — at a false-positive cost of +8.0 points on C. Whether the rest of the
+(+26.8 points, cluster [13.6, 40.4]) — at a false-positive cost of +8.0 points on C
+(cluster [+3.4, +12.7]). Round 9 added these intervals; the rates were quoted bare, which
+EXPERIMENT_RECORD §9 counts as a defect whatever the rate says. Whether the rest of the
 near-zero rate is the rulebook's referent or the model's limit is not separated by this
 study: R's findings under the any-finding rule cover 97.3% of P and 96.0% of C, so the rule makes
 the model write something about nearly every increment; 24 of its 62 naming findings on P
@@ -202,8 +206,10 @@ on C under either rule; B − R under both rules on both populations. Beside Tab
 three naming rates on the registered denominator, any-finding P rows (preregistered), the same
 three rates on all 110 P (**derived, not registered**),
 H19b's second comparison — B's single-draw FP on C against the fixed 6.7% product bar
-(preregistered) —, the three reports-a-failure rates of Table 5b (post hoc), and the residual with R
-and B (Table 7, not preregistered). One primary; no correction is applied to the other
+(preregistered) —, the three reports-a-failure rates of Table 5b (post hoc), and the residual
+with B (Table 7, **preregistered**: §3 asks whether the 56 shrinks under B across all families
+and which categories leave it) beside the residual with R (Table 7, not preregistered).
+Round 9 corrected this line, which had called both residual analyses unregistered. One primary; no correction is applied to the other
 **twenty** quantities and none is claimed to clear a corrected threshold.
 
 ## 3. Secondaries

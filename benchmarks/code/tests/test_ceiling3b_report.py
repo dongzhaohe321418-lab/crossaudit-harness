@@ -66,6 +66,15 @@ def test_h19a_and_the_contrasts_are_bound():
 
 
 def test_h19d_is_bound():
+    """Round 9: this test was the last executable consumer still on the withdrawn name.
+
+    Amendment 4 renamed the quantity everywhere a reader meets it -- prose, generator,
+    generated note, JSON keys -- and left this file reading `recognised_rate_over_all_P`,
+    so the rename was reported as complete while the binding that enforces it still asked
+    for the old key. The key is `reports_failure_rate_over_all_P`: the instrument admits a
+    finding even when it grades the class non-blocking or says the specification is silent,
+    so it is BROADER than asserting a defect and must never be bound as recognition.
+    """
     n = _n(); t = _t(); h = n["H19d"]
     assert f"for the {h['n_items']} findings on P instances" in _flat()
     assert f"agreement {h['agreement'][0]}/{h['agreement'][1]}, **κ = {h['kappa']:.3f}**; the {len(h['disagreements'])} disputed items" in _flat()
@@ -78,11 +87,16 @@ def test_h19d_is_bound():
     r = h["by_arm"]["R"]; rr = r["names_rate_over_all_P"]
     assert f"**{rr['k']} of 110 = {_pct(rr['rate'])}%** (Wilson {_pct(rr['wilson95'][0])}–{_pct(rr['wilson95'][1])}; cluster {_pct(rr['cluster_ci95'][0])}–{_pct(rr['cluster_ci95'][1])}; {r['findings_yes']} \"yes\" of {r['findings']} findings)" in _flat()
     st = h["strict_reports_a_failure_POST_HOC"]
-    assert f"agreement {st['agreement'][0]}/{st['agreement'][1]}, κ = {st['kappa']:.3f}; {len(st['disagreements'])} disputed count as not \"defect\"" in _flat()
+    # Amendment 4 renamed this in the prose to "not reporting a failure" and left the
+    # assertion on the withdrawn word, so the binding asked for text the report no longer
+    # contained. The phrase is bound here because it is the one that says which way a
+    # disputed item falls.
+    assert f"agreement {st['agreement'][0]}/{st['agreement'][1]}, κ = {st['kappa']:.3f}; {len(st['disagreements'])} disputed count as not reporting a failure" in _flat()
+    assert "broader than asserting a defect and may not be quoted as defect recognition" in _flat()
     for arm in ("S", "R", "B"):
-        v = st["by_arm"][arm]["recognised_rate_over_all_P"]
+        v = st["by_arm"][arm]["reports_failure_rate_over_all_P"]
         assert f"{v['k']} of 110 = {_pct(v['rate'])}%" in _flat()
-    sr = st["by_arm"]["R"]["recognised_rate_over_all_P"]
+    sr = st["by_arm"]["R"]["reports_failure_rate_over_all_P"]
     assert f"**{sr['k']} of 110 = {_pct(sr['rate'])}%** (Wilson {_pct(sr['wilson95'][0])}–{_pct(sr['wilson95'][1])}; cluster {_pct(sr['cluster_ci95'][0])}–{_pct(sr['cluster_ci95'][1])}) — {st['by_arm']['R']['correct']} of R's {st['by_arm']['R']['yes_findings']}" in _flat()
     assert all(n["contrasts"][k][rule][stt]["cluster_seed"] == 20260912 for k in n["contrasts"] for rule in ("blocker", "any") for stt in ("P", "C"))
 
@@ -95,7 +109,7 @@ def test_residual_and_cost_are_bound():
 
 
 def test_the_strict_kappa_and_the_inventory_are_rendered():
-    """The recognition κ is a number in the prose (a template placeholder once survived here),
+    """The failure-reporting κ is a number in the prose (a template placeholder once survived here),
     and the comparison inventory's count equals Table 4's contrast count."""
     st = _n()["H19d"]["strict_reports_a_failure_POST_HOC"]
     assert f"its κ ({st['kappa']:.3f}) is lower" in _flat()

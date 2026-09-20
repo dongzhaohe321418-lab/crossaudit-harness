@@ -117,7 +117,7 @@ def main() -> int:
                      "CA-GRADE-001, so a reader of those items can infer the arm. RESULTS "
                      "§4 says the same; this field exists so the machine-readable record "
                      "cannot say otherwise.",
-        "L1": {"role": "adjudicator, naming and (post hoc) recognition questions",
+        "L1": {"role": "adjudicator, naming and (post hoc) failure-reporting questions",
                "who": "the author of this study and of the paper (human)",
                "withheld_by_the_sheet": "instance id, arm, stratum",
                "not_blind_to": "the finding text, which names the rule id in five items; "

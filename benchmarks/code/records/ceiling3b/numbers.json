@@ -1165,5 +1165,154 @@
   },
   "n_C": 150,
   "n_P": 110,
+  "secondaries": {
+    "ledger_calls_total": 2460,
+    "ledger_usd_total": 32.2066,
+    "per_draw": {
+      "B-d1": {
+        "blocker_share_of_findings": 0.02631578947368421,
+        "blockers_total": 1,
+        "extra_calls": 11,
+        "findings_total": 38,
+        "invalid_reason_nonempty": 0,
+        "ledger_calls": 271,
+        "ledger_usd": 2.9259,
+        "replies_over_300_output_tokens": 130,
+        "rows": 260
+      },
+      "B-d2": {
+        "blocker_share_of_findings": 0.08571428571428572,
+        "blockers_total": 3,
+        "extra_calls": 11,
+        "findings_total": 35,
+        "invalid_reason_nonempty": 0,
+        "ledger_calls": 271,
+        "ledger_usd": 2.9006,
+        "replies_over_300_output_tokens": 131,
+        "rows": 260
+      },
+      "B-d3": {
+        "blocker_share_of_findings": 0.16666666666666666,
+        "blockers_total": 6,
+        "extra_calls": 10,
+        "findings_total": 36,
+        "invalid_reason_nonempty": 0,
+        "ledger_calls": 270,
+        "ledger_usd": 2.9034,
+        "replies_over_300_output_tokens": 127,
+        "rows": 260
+      },
+      "B-d4": {
+        "blocker_share_of_findings": 0.08108108108108109,
+        "blockers_total": 3,
+        "extra_calls": 8,
+        "findings_total": 37,
+        "invalid_reason_nonempty": 0,
+        "ledger_calls": 268,
+        "ledger_usd": 2.8581,
+        "replies_over_300_output_tokens": 131,
+        "rows": 260
+      },
+      "R-d1": {
+        "blocker_share_of_findings": 0.10980392156862745,
+        "blockers_total": 28,
+        "extra_calls": 19,
+        "findings_total": 255,
+        "invalid_reason_nonempty": 2,
+        "ledger_calls": 279,
+        "ledger_usd": 4.5875,
+        "replies_over_300_output_tokens": 236,
+        "rows": 260
+      },
+      "R-d2": {
+        "blocker_share_of_findings": 0.09745762711864407,
+        "blockers_total": 23,
+        "extra_calls": 20,
+        "findings_total": 236,
+        "invalid_reason_nonempty": 2,
+        "ledger_calls": 280,
+        "ledger_usd": 4.616,
+        "replies_over_300_output_tokens": 237,
+        "rows": 260
+      },
+      "R-d3": {
+        "blocker_share_of_findings": 0.09465020576131687,
+        "blockers_total": 23,
+        "extra_calls": 18,
+        "findings_total": 243,
+        "invalid_reason_nonempty": 2,
+        "ledger_calls": 278,
+        "ledger_usd": 4.609,
+        "replies_over_300_output_tokens": 240,
+        "rows": 260
+      },
+      "R-d4": {
+        "blocker_share_of_findings": 0.08979591836734693,
+        "blockers_total": 22,
+        "extra_calls": 19,
+        "findings_total": 245,
+        "invalid_reason_nonempty": 3,
+        "ledger_calls": 279,
+        "ledger_usd": 4.5811,
+        "replies_over_300_output_tokens": 235,
+        "rows": 260
+      },
+      "S-text-d1": {
+        "blocker_share_of_findings": 0.03278688524590164,
+        "blockers_total": 2,
+        "extra_calls": 4,
+        "findings_total": 61,
+        "invalid_reason_nonempty": 0,
+        "ledger_calls": 264,
+        "ledger_usd": 2.225,
+        "replies_over_300_output_tokens": 68,
+        "rows": 260
+      }
+    },
+    "residual": {
+      "ceiling3_residual_n": 56,
+      "with_B": {
+        "left_by_category": {},
+        "n": 56,
+        "rate": {
+          "cluster_ci95": [
+            0.39090909090909093,
+            0.6272727272727273
+          ],
+          "k": 56,
+          "n": 110,
+          "n_problems": 56,
+          "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+          "rate": 0.509090909090909,
+          "wilson95": [
+            0.4169512043871188,
+            0.600617087698369
+          ]
+        }
+      },
+      "with_R": {
+        "left_by_category": {
+          "spec-misreading": 1,
+          "unexercised-edge": 2
+        },
+        "n": 53,
+        "rate": {
+          "cluster_ci95": [
+            0.36363636363636365,
+            0.5982142857142857
+          ],
+          "k": 53,
+          "n": 110,
+          "n_problems": 56,
+          "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+          "rate": 0.4818181818181818,
+          "wilson95": [
+            0.39064279126942547,
+            0.5742206245595985
+          ]
+        }
+      }
+    }
+  },
   "study": "study19 / ceiling 3b"
 }
