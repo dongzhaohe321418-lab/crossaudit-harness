@@ -3,15 +3,16 @@
     "amendment_headings": [
       "## Amendment 1 \u2014 2026-09-10, during arm R draw 1; before any arm-S text reading",
       "## Amendment 2 \u2014 2026-09-10, during arm R draw 1 (75 of 260 readings landed); the cap",
-      "## Amendment 3 \u2014 2026-09-10, after the first review; corrections of record and one post-hoc question"
+      "## Amendment 3 \u2014 2026-09-10, after the first review; corrections of record and one post-hoc question",
+      "## Amendment 4 \u2014 the round-8 rename, completed, and Amendment 3's wording corrected"
     ],
     "clean_at_freeze": true,
     "files_this_study_added": {
-      "benchmarks/code/RESULTS-CEILING3B.md": "8cec07b8ffe956c96f43e379c70666f2a97f359f041540a76143f9df0dc3f6a0",
+      "benchmarks/code/RESULTS-CEILING3B.md": "b136ec591b0fecdba47e1fb68f4ba88f3b67b22d4111b8dc298cebab210fd586",
       "benchmarks/code/ceiling3b.py": "97decf2d40428f1e4d94438bd0f0188decc26d911f7034dd5fb2a72ac4d3a3ef",
-      "benchmarks/code/ceiling3b/PREREGISTRATION.md": "7a116b0fa1dcc1a2bb76ffbe9d63ba2234b9b8c9c78e980291cd55003b4fe458",
+      "benchmarks/code/ceiling3b/PREREGISTRATION.md": "5d8151e165a8c5c88468639e64dee0b71f9b04652d370201a1afcb9e73f94a7e",
       "benchmarks/code/ceiling3b/adjudication_sheet.py": "e0b2aaa603ac096603ba868c928f5a3bc91a90e41da222324e3ae155d4474150",
-      "benchmarks/code/ceiling3b/finalise_manifest.py": "25b238b8079a401476fe7ba0e89eaa4d816beeb405829de4238c1b224f3c5cd9",
+      "benchmarks/code/ceiling3b/finalise_manifest.py": "a463615444f9237cdd6886f1bc54f21f891844bfbbbaf86916751550be93ae00",
       "benchmarks/code/ceiling3b/key-h19d.jsonl": "1f6909fe2cae55d03f64135dc4758fe67b5a3ca0a2605fac3e054a8523ac700c",
       "benchmarks/code/ceiling3b/splice_tables.py": "e53fe7bdf7a0bdad476ab872fda0cabc435da8189b3be7545b8f7a2f594d0442",
       "benchmarks/code/records/ceiling3b/L1-h19d-strict.csv": "90c203b0327d7f47de1f9b7e4dff12637f223f7427537e0de4d764a860562355",
@@ -37,19 +38,20 @@
       "benchmarks/code/records/ceiling3b/cache/holistic__self-strong-S__d1.failed.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "benchmarks/code/records/ceiling3b/cache/holistic__self-strong-S__d1.jsonl": "5e6798c99de2b984cf1920f36b7fa45d96c562e9572521cf355dbbc6d665d24e",
       "benchmarks/code/records/ceiling3b/manifest-2026-09-10T121623Z.json": "3f4e5cb249e25814c32bcf04569bc5059013ef6d17ba93aba210107a4dda2c72",
-      "benchmarks/code/records/ceiling3b/numbers.json": "abe36bfae24eae836e79fe2f0f01e56adbe3021f4e321459e6fd68c5d4664b3f",
+      "benchmarks/code/records/ceiling3b/numbers.json": "88beb237d038d45cef231fa4fe26c8a4db373628a91f45c09197d400bb963440",
       "benchmarks/code/records/ceiling3b/tables.md": "4e7e411531e9b0125c95e54c26aead07ab345336c2a268ff723c41f718e32243",
-      "benchmarks/code/report_ceiling3b.py": "1a3490f31841079866ceb0fe79631c0302a721cd380c986dafb6f27a9a4c6e09",
-      "benchmarks/code/tests/test_ceiling3b_report.py": "8ad0c6ee43b3a6a498465bb1a131cd5def4aab571e004d55a2eb254db77be47b",
+      "benchmarks/code/report_ceiling3b.py": "5fc6df100466e6cfbe73c6af20167770c7c0285f9b2c0d0ca59fee7d358afb10",
+      "benchmarks/code/tests/test_ceiling3b_report.py": "fdc863cfea0e0149680730cea466c1f30b9ab37303133b1a87bcb90900d76b26",
       "benchmarks/reviews/2026-09-10-ceiling3b-r1.md": "a8d989bcd024fcb68a4e8dcaa6361c1e88962c66b08fe59a34b38f3f35571f35",
       "benchmarks/reviews/2026-09-10-ceiling3b-r2.md": "127e037d34b9d6173ccab1ff403ae865ac10a630a200d257db90ffac2ef7f347",
       "benchmarks/reviews/2026-09-10-ceiling3b-r3.md": "9a50d8265e63e63364d423e1666eadc7aa4f8fa19abb095b9278d1aa81e5760c",
       "benchmarks/reviews/2026-09-11-ceiling3b-r4.md": "4a90c987b734922941de27fad16689efec062c1a4619ab1ffcea5a0fd301b4a7",
       "benchmarks/reviews/2026-09-11-ceiling3b-r5.md": "b9edfa9e096ed9f7f0d6068d952960e00cf87e95e62757b6d9403a3246dfb2bf",
-      "benchmarks/reviews/2026-09-11-ceiling3b-r6.md": "f78736efb402ae2a6e52ed2c2373097002f2ed363a5127e604d5d7439e2a1f92"
+      "benchmarks/reviews/2026-09-11-ceiling3b-r6.md": "f78736efb402ae2a6e52ed2c2373097002f2ed363a5127e604d5d7439e2a1f92",
+      "benchmarks/reviews/2026-09-11-ceiling3b-r7.md": "e0a113f6d4e40d88cee51da31e99c9c61f069f71fd90bc13efbdb588404db635"
     },
-    "frozen_commit": "e2faa549bf3e218e6b5426e94403901d106683eb",
-    "frozen_commit_subject": "study 19 round 8: Table 5b is named after the question that was actually asked \u2014 the prompt counts a finding that says the class raises 'even if it grades it non-blocking or says the spec is silent', so the quantity is 'the finding reports a failure on that class', not 'asserts a defect'; renamed in the prose, the caption, the table header and the records key, with the reviewer's narrower count (22 of 110, five instances resting only on findings that disclaim a requirement) reported as the reviewer's and not adopted as an estimate",
+    "frozen_commit": "b0888bad651972f38341fac789441b8b7a23dd2f",
+    "frozen_commit_subject": "study 19 round 9: Amendment 4's own regeneration had deleted measured outputs",
     "note": "manifest.json is committed in the commit after frozen_commit; every other file the study added is listed here",
     "preregistration_and_amendment_commits": [
       {
@@ -67,6 +69,10 @@
       {
         "sha": "19efbfea3939726808c32dd58210a02d00940a3f",
         "when_and_subject": "2026-09-10T21:56:31+08:00 study 19 round 2: contrasts restated with the registered seed (20260912); the post-hoc recognition question put to both labellers (\u03ba = 0.695) \u2014 defect-asserting findings cover 3/110 P under the shipped constitution, 27/110 under the referent rule, 3/110 under the grading rule \u2014 beside the registered naming rates; \u00a72 narrowed to what the adjudications measure; 'the grading rule did nothing' withdrawn; Amendment 2's count corrected and H19d's dependence on the cap raise stated; Table 5's S row labelled as the fifth reading; blinding qualified; the \u00a72 manifest; a comparison inventory; Amendment 3; round-1 review archived (gpt-5.6-sol, not quotable)"
+      },
+      {
+        "sha": "62bd280511a348c8f29c9298cb564d999e5d9ea7",
+        "when_and_subject": "2026-09-15T22:34:01+08:00 study 19 Amendment 4: the round-7 rename finished, and a direction error corrected"
       }
     ],
     "working_tree_status_at_freeze": ""
@@ -197,7 +203,7 @@
     "adjudicators": {
       "L1": {
         "not_blind_to": "the finding text, which names the rule id in five items; and, being the author, the study's design and its other results",
-        "role": "adjudicator, naming and (post hoc) recognition questions",
+        "role": "adjudicator, naming and (post hoc) failure-reporting questions",
         "who": "the author of this study and of the paper (human)",
         "withheld_by_the_sheet": "instance id, arm, stratum"
       },
