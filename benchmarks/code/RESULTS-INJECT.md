@@ -150,7 +150,7 @@ Each injected instance against its own unmodified twin: same problem, same speci
 | unmodified twin | 11 of 92 | [6.8, 20.2] |
 | **difference (paired)** | **+85.9 points** | **cluster [+77.3, +93.3]** |
 
-Discordant pairs: 79 where only the injected instance was flagged, 0 where only the twin was. Exact McNemar p = 3.31e-24; cluster sign-flip p = 5.00e-06. Every discordant pair points one way, so the percentile bootstrap's bound is an artefact and the Tango interval [+77.3, +91.6] is the one to read (ceiling 1 Amendment 5).
+Discordant pairs: 79 where only the injected instance was flagged, 0 where only the twin was. Exact McNemar p = 3.31e-24; cluster sign-flip p = 5.00e-06. Every discordant pair points one way, so the percentile bootstrap's bound is an artefact and the Tango interval [+77.3, +91.6] is reported beside it as an INDEPENDENCE-BASED sensitivity calculation: it is computed on the discordant counts alone and accounts for neither the problem clusters nor the duplicated programmes. The cluster interval remains the primary one, and its coverage under this design has not been calibrated (ceiling 1 Amendment 5).
 <!-- END TABLE paired -->
 
 **The auditor is responding to the edit, not to the problem.** The same code without the

@@ -21,6 +21,8 @@ from __future__ import annotations
 import json
 import re
 import sys
+
+import pytest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]
@@ -48,13 +50,11 @@ def _visible(text: str) -> str:
 
 
 def _rendered(text: str) -> str | None:
-    """The document as a reader sees it, via pandoc. None when pandoc is absent.
+    """Pandoc's normalised plain text. None when pandoc is absent; raises when it fails.
 
-    Round 6's attack works because a passage can be present in the source and absent from the
-    rendering. The only honest check on "what the report says" is what it renders to, so this
-    shells out to a real CommonMark renderer. It returns None rather than falling back
-    silently: a check that quietly weakens itself when a tool is missing is how the last three
-    bindings came to claim more than they delivered.
+    Round 7: absence and failure were conflated here, and a renderer that exits non-zero was
+    reported as "pandoc is not installed". They are different facts and only one of them is
+    the environment's fault.
     """
     import shutil
     import subprocess
@@ -62,7 +62,9 @@ def _rendered(text: str) -> str | None:
         return None
     out = subprocess.run(["pandoc", "-f", "commonmark", "-t", "plain"],
                          input=text, capture_output=True, text=True)
-    return " ".join(out.stdout.split()) if out.returncode == 0 else None
+    if out.returncode != 0:
+        raise RuntimeError(f"pandoc failed ({out.returncode}): {out.stderr.strip()[:200]}")
+    return " ".join(out.stdout.split())
 
 
 VISIBLE = _visible(TEXT)
@@ -179,16 +181,28 @@ def test_the_primary_and_the_paired_contrast_are_the_records():
     # What this establishes is narrow and worth stating: these passages cannot be removed or
     # reversed without going red. It does NOT establish that no contradictory prose can be
     # written elsewhere in the document, and no sentence here may claim that it does.
-    # The check reads the RENDERED document, because round 6's attack put a withdrawal
-    # sentence in a Markdown link reference definition: present in the source, absent from
-    # what a reader sees, 27 tests green. Comment-stripping is not rendering.
+    # WHAT THIS CHECK ESTABLISHES, in the seventh reviewer's words, after four rounds of it
+    # claiming more:
     #
-    # If pandoc is not installed the rendered check cannot run, and the test says so rather
-    # than passing on the weaker one. The three previous versions of this binding all claimed
-    # more than they delivered; a silent fallback is the same error in a new place.
+    #   "These selected strings must occur in Pandoc's normalized plain-text output. This
+    #    does not establish visibility, assertion status, or consistency of the document's
+    #    conclusions."
+    #
+    # The semantic guarantee is ABANDONED, not patched again. Rounds 3 to 6 each closed the
+    # hole they were shown and each claimed the guarantee back: one sentence of six; six with
+    # two truncated before the decisive word; comment-stripping called "visible"; plain-text
+    # rendering called "what a reader sees". Round 7 then hid the withdrawal in
+    # `<span hidden>` and struck it out with `<del>` -- pandoc's plain output contains both
+    # sentences, so both passed, while the HTML hides one and strikes the other. Reproduced
+    # here. Arbitrary prose cannot acquire that guarantee from substring matching, and a
+    # browser check would catch particular visibility failures without establishing meaning.
+    #
+    # What remains is a regression check worth keeping: these exact passages must still be
+    # there. It catches deletion, reversal, truncation, HTML comments and link reference
+    # definitions -- every attack through round 6 -- and it does not catch presentation.
     if RENDERED is None:
-        pytest.skip("pandoc is not installed; the rendered-document check cannot run, and "
-                    "the source-level check is not a substitute for it")
+        pytest.skip("pandoc is absent, so the plain-text regression check cannot run; the "
+                    "source-level check is a weaker thing and is not substituted for it")
     # pandoc's plain output carries no emphasis markers, so both sides are compared with
     # asterisks removed. The words are what is bound; the bolding is not.
     def plain(t: str) -> str:
@@ -233,6 +247,31 @@ ROUND5_ATTACKS = (
      "establishes specification ambiguity; together the filters establish entailment"),
     ("which §5 shows no filter establishes", "which all six filters establish"),
 )
+
+
+def test_the_absent_pandoc_path_skips_rather_than_raising():
+    """Round 7: the skip path called `pytest.skip` in a module that never imported pytest.
+
+    It failed closed -- NameError, not a silent pass -- but the behaviour the comment claimed
+    was not the behaviour the code had, which is the same fault as the bindings above in a
+    smaller place. This exercises the path rather than asserting it in prose.
+    """
+    assert "pytest" in globals(), "the skip path needs pytest imported"
+    with pytest.raises(pytest.skip.Exception):
+        pytest.skip("the skip path is reachable")
+
+
+def test_a_failing_renderer_is_reported_as_a_failure_not_an_absence():
+    """A non-zero pandoc exit must raise, not be reported as "pandoc is not installed"."""
+    import subprocess
+    real = subprocess.run
+    try:
+        subprocess.run = lambda *a, **k: type("R", (), {"returncode": 3, "stdout": "",
+                                                        "stderr": "boom"})()
+        with pytest.raises(RuntimeError, match="pandoc failed"):
+            _rendered("x")
+    finally:
+        subprocess.run = real
 
 
 def test_the_withdrawal_survives_round_5s_attacks():

@@ -419,9 +419,17 @@ twin arm and the rejected arm: start from problems the generator solved, demand 
 survives the visible tests, and retry until the hidden suite fails; this concentrates the pool into
 conspicuous exceptions and contradictions of unchanged documentation. Removing the edit removes
 those cues too, so the twin contrast cannot separate the two accounts. The preregistered probe
-already measured a consequence — the two sets are separable at 96.7% on the answered items, by
-some feature the probe does not identify — and that
-is the same phenomenon seen from the other side.
+already measured a classification result — the two sets are separable at 96.7% on the answered
+items, by some feature the probe does not identify.
+
+> **CORRECTED — round 7, 2026-09-21.** This paragraph called that result a *consequence* of the
+> construction mechanism and "the same phenomenon seen from the other side". **It is neither.**
+> The proposed mechanism — retrying until the hidden suite fails, which would concentrate the
+> pool into conspicuous edits — **remains compatible with the observations, and the probe
+> neither identifies nor verifies it.** The two arms differ in task composition, which could
+> produce the classification result on its own. Adding "by some feature the probe does not
+> identify" did not repair the causal connection asserted around it; this notice withdraws the
+> connection.
 
 **Concretely, the pool contains edits that announce themselves.** A case-insensitive search for
 added comments naming `BUG` or `DEFECT`, checked against the bases across `code` and `last_code`,

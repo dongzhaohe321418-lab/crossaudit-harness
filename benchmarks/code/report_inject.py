@@ -441,7 +441,17 @@ def render_tables(n: dict) -> str:
           f"cluster sign-flip p = {b['signflip'].get('p', float('nan')):.2e}. "
           + ("Every discordant pair points one way, so the percentile bootstrap's bound is an "
              "artefact and the Tango interval "
-             f"{_iv(b['tango_ci95_points'], signed=True)} is the one to read (ceiling 1 Amendment 5)."
+             # Round 7: "the one to read" promotes an independence-based interval past its
+             # scope. Tango is computed on (79, 0, 92) and knows nothing of the 54 problem
+             # clusters or the duplicated programmes; ceiling 1's Amendment 5 says its own
+             # coverage exercises used independent instances and did not validate the
+             # clustered design. The cluster interval stays primary, with its limitation
+             # disclosed, and Tango is labelled what it is.
+             f"{_iv(b['tango_ci95_points'], signed=True)} is reported beside it as an "
+             "INDEPENDENCE-BASED sensitivity calculation: it is computed on the discordant "
+             "counts alone and accounts for neither the problem clusters nor the duplicated "
+             "programmes. The cluster interval remains the primary one, and its coverage "
+             "under this design has not been calibrated (ceiling 1 Amendment 5)."
              if b["one_signed_discordance"] else ""), ""]
 
     L += ["<!-- TABLE curve -->", "",
