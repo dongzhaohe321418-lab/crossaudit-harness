@@ -24,7 +24,7 @@
 
 # Study 22 — the ceiling on defects the specification determines
 
-Preregistered at `inject/PREREGISTRATION.md` before the first model call, with five
+Preregistered at `inject/PREREGISTRATION.md` before the first model call, with seven
 amendments, each committed before the step it governs: two construction pilots, the OpenAI
 credit failure that changed a gate model, the paired twin arm, and a note fixing in advance
 which contrast carries which confound. Tables in this file are generated from
@@ -284,9 +284,13 @@ on it.
 
 The honest summary of §1 and §3 together: the gap is real, large, and measured against a frozen
 comparator and a paired control, and part of it may be salience that this study cannot separate
-out and has no evidence against. Separating it needs a population of natural defects independently known to be
-specification-determined, which is what study 23's second substrate and a human rater would
-supply.
+out and has no evidence against. Separating it needs a population of natural defects
+independently known to be specification-determined, **under the conditions §6 sets out**: an
+independent party validating the actual violation and the specification-entailing expected
+behaviour, on a fixed, blinded protocol. Round 8 removed the assurance that stood here — that
+study 23's second substrate and a human rater would supply it. **Neither would, on its own.** A
+second substrate does not remove task composition or construction confounding, and independence
+without a fixed blinded protocol does not establish entailment.
 
 ## 4. The other preregistered secondaries
 

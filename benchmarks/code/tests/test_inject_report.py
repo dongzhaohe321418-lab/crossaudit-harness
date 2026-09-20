@@ -71,6 +71,19 @@ VISIBLE = _visible(TEXT)
 RENDERED = _rendered(TEXT)
 
 
+def _require_rendered() -> str:
+    """The rendered document, or a skip naming why the check could not run.
+
+    Factored out at round 8 so the skip path is reachable from a test rather than only from
+    module import time, which is what made the previous "skip path test" a tautology.
+    """
+    rendered = _rendered(TEXT)
+    if rendered is None:
+        pytest.skip("pandoc is absent, so the plain-text regression check cannot run; the "
+                    "source-level check is a weaker thing and is not substituted for it")
+    return rendered
+
+
 def _splice():
     import importlib.util
     spec = importlib.util.spec_from_file_location(
@@ -200,15 +213,13 @@ def test_the_primary_and_the_paired_contrast_are_the_records():
     # What remains is a regression check worth keeping: these exact passages must still be
     # there. It catches deletion, reversal, truncation, HTML comments and link reference
     # definitions -- every attack through round 6 -- and it does not catch presentation.
-    if RENDERED is None:
-        pytest.skip("pandoc is absent, so the plain-text regression check cannot run; the "
-                    "source-level check is a weaker thing and is not substituted for it")
+    _require_rendered()
     # pandoc's plain output carries no emphasis markers, so both sides are compared with
     # asterisks removed. The words are what is bound; the bolding is not.
     def plain(t: str) -> str:
         return " ".join(t.replace("*", "").split()).lower()
 
-    rendered = plain(RENDERED)
+    rendered = plain(_require_rendered())
     for passage in WITHDRAWAL_PASSAGES:
         assert plain(passage) in rendered, f"withdrawal passage missing: {passage}"
 
@@ -249,29 +260,43 @@ ROUND5_ATTACKS = (
 )
 
 
-def test_the_absent_pandoc_path_skips_rather_than_raising():
-    """Round 7: the skip path called `pytest.skip` in a module that never imported pytest.
+def test_the_absent_pandoc_path_returns_none_and_skips(monkeypatch):
+    """Round 8: the previous version of this asserted that `pytest.skip` raises.
 
-    It failed closed -- NameError, not a silent pass -- but the behaviour the comment claimed
-    was not the behaviour the code had, which is the same fault as the bindings above in a
-    smaller place. This exercises the path rather than asserting it in prose.
+    That tests pytest. It never called `_rendered`, never touched the report check, and so
+    said nothing about the path it was named for -- while the renderer-failure test below
+    depended on pandoc actually being installed, so with pandoc absent the suite gave
+    1 failed, 11 passed, 1 skipped. Reproduced before fixing.
+
+    This mocks discovery absent and exercises the real path in both places.
     """
-    assert "pytest" in globals(), "the skip path needs pytest imported"
-    with pytest.raises(pytest.skip.Exception):
-        pytest.skip("the skip path is reachable")
+    import shutil
+    real_which = shutil.which
+    monkeypatch.setattr(shutil, "which",
+                        lambda n, *a, **k: None if n == "pandoc" else real_which(n, *a, **k))
+    assert _rendered("hello") is None, "absent pandoc must give None, not a weaker rendering"
+
+    with pytest.raises(pytest.skip.Exception) as caught:
+        _require_rendered()
+    assert "pandoc is absent" in str(caught.value)
 
 
-def test_a_failing_renderer_is_reported_as_a_failure_not_an_absence():
-    """A non-zero pandoc exit must raise, not be reported as "pandoc is not installed"."""
+def test_a_failing_renderer_raises_with_its_stderr(monkeypatch):
+    """A non-zero pandoc exit must raise and carry its error, not be reported as absence.
+
+    Round 8: this used to leave discovery alone, so it only ran where pandoc happens to be
+    installed. Discovery is mocked present here, so the failure path is what is tested.
+    """
+    import shutil
     import subprocess
-    real = subprocess.run
-    try:
-        subprocess.run = lambda *a, **k: type("R", (), {"returncode": 3, "stdout": "",
-                                                        "stderr": "boom"})()
-        with pytest.raises(RuntimeError, match="pandoc failed"):
-            _rendered("x")
-    finally:
-        subprocess.run = real
+    monkeypatch.setattr(shutil, "which", lambda n, *a, **k: "/usr/bin/pandoc")
+    monkeypatch.setattr(subprocess, "run",
+                        lambda *a, **k: type("R", (), {"returncode": 3, "stdout": "",
+                                                       "stderr": "pandoc: boom"})())
+    with pytest.raises(RuntimeError) as caught:
+        _rendered("x")
+    assert "pandoc failed (3)" in str(caught.value)
+    assert "boom" in str(caught.value), "the renderer's own error must survive"
 
 
 def test_the_withdrawal_survives_round_5s_attacks():
