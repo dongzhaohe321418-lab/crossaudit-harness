@@ -317,7 +317,7 @@ the same problem, the same specification, the same generator, the same code but 
 lines, read by the same auditor at the same K (Amendment 4). Any difference there is the
 injected defect and nothing else.
 
-> **SUPERSEDED — 2026-09-20, round 2 of the cross-vendor review.** Amendment 5's "the injected defect and nothing else" is false: removing the edit also removes the cues that make it conspicuous, which §3's separability probe measures at 96.7%. The twin contrast identifies a response to the edit, cues included. This paragraph is kept as written because it records what was believed and promised when the readings were bought; the correction is here beside it, not in its place.
+> **SUPERSEDED — 2026-09-20, round 2 of the cross-vendor review.** Amendment 5's "the injected defect and nothing else" is false: removing the edit also removes whatever else distinguishes it. §3's probe separates the two sets at 96.7% on the items it answered, but it does not establish that the distinguishing feature is conspicuousness: its model is one of the two gate models, its arms share no problem, and it sees the specification as well as the code (round 4 corrected this notice, which had called the probe a measurement of conspicuousness). The twin contrast identifies a response to the edit, cues included. This paragraph is kept as written because it records what was believed and promised when the readings were bought; the correction is here beside it, not in its place.
 
 H22b is therefore the internally controlled contrast, and
 where the two point in different directions, the results must report H22b as the one that
@@ -417,7 +417,8 @@ twin arm and the rejected arm: start from problems the generator solved, demand 
 survives the visible tests, and retry until the hidden suite fails; this concentrates the pool into
 conspicuous exceptions and contradictions of unchanged documentation. Removing the edit removes
 those cues too, so the twin contrast cannot separate the two accounts. The preregistered probe
-already measured the consequence — the edits are separable from natural code at 96.7% — and that
+already measured a consequence — the two sets are separable at 96.7% on the answered items, by
+some feature the probe does not identify — and that
 is the same phenomenon seen from the other side.
 
 **Concretely, the pool contains edits that announce themselves.** A case-insensitive search for

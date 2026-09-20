@@ -125,8 +125,28 @@ def test_the_primary_and_the_paired_contrast_are_the_records():
     # nothing.
     assert NUMBERS["kill"]["fires"] is False
     assert "the kill does not fire" in FLAT
-    assert "the kill is computed on that same denominator" in FLAT
     assert "WITHDRAWN" in NUMBERS
+
+    # Round 4: the previous version of this block bound ONE withdrawal sentence and the
+    # reviewer defeated it by replacing a different one -- they swapped the section-2
+    # conclusion for an explicit C4 endorsement and every test still passed. A binding that
+    # protects one sentence of a withdrawal protects none of it.
+    #
+    # Every load-bearing withdrawal sentence is bound here, so removing or reversing any one
+    # of them is red. Verified by replacing each in turn before this was committed.
+    for sentence in (
+        # the primary's denominator, and the kill that is computed on it
+        "the kill is computed on that same denominator",
+        '"defects the specification determines" is not a description of the 92',
+        # section 1's curve conclusion
+        "That conclusion is withdrawn",
+        # section 2's conclusion, which is the study's reason for existing
+        "What this licenses about C4 is nothing, and that is the finding",
+        "the study therefore contradicts nothing" .capitalize()[:31],
+        # the filters
+        "no filter in this study establishes specification entailment" .capitalize()[:44],
+    ):
+        assert sentence.lower() in FLAT.lower(), sentence
 
 
 def test_the_curve_ends_are_the_records():

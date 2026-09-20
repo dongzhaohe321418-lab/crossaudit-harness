@@ -39,7 +39,8 @@ that passes every test, and the instance is admitted only if the injector quoted
 specification verbatim, six mechanical filters accept, and two models that are not the auditor
 both agree the prose settles the question. **That construction does not deliver the property**
 (§5): the filters are textual and executional, none of them tests entailment, and the gate
-selects on detectability rather than on the specification. The paragraphs below describe what
+is associated with detectability, and conditioning on it cannot be assumed to lower recall. The
+paragraphs below describe what
 was built and measured; the label "specification-determined" is withdrawn from it. Population I is 92 instances over 54 problems, built by walking all
 910 stratum-C instances in one seeded order; 281 passed the filters and 92 passed both gates.
 
@@ -87,7 +88,9 @@ The instances the gate discarded are caught nearly as often as the ones it kept.
 The 84.2% that stood in this table — the filter-accepted population stratified over both
 strata — **is withdrawn**, and the reason is its denominator, not its arithmetic. It is
 "small injected edits that survived a sparse visible suite and failed a hidden one", not
-"defects the specification determines", so the figure has no population to be a recall *of*.
+"defects the specification determines", so it lacks the **semantic** denominator C4 needs. Its
+population is well defined — the 281 filter-accepted edits — and round 4 corrected the earlier
+"no population to be a recall of", which withdrew more than the evidence requires.
 Round 2 of this report added a second reason, that the figure had been hand-computed and its
 interval could not be reproduced. **That was wrong.** Round 3 reproduced both the estimate
 (84.15%) and its interval [73.8, 93.1] from the registered seed 20260916; being absent from
@@ -129,7 +132,10 @@ mind**. The primary intervals are not affected: **no duplicate group spans more 
 `problem_id`** (checked directly: 0 of 33), and the primary is a percentile bootstrap over whole
 problem clusters, 54 of them, so byte-identical instances always resample together. Problem
 clustering is here at least as conservative as programme clustering. The gate-rejected sample
-carries no duplication at all: 40 instances, 40 distinct programmes, 35 problems.
+carries duplication of its own: 40 readings over **35 distinct programmes** across 35 problems,
+five byte-identical pairs, each pair inside its own problem cluster so the cluster interval
+already absorbs it. An earlier version of this line said 40 distinct programmes and "no
+duplication at all", contradicting the generated table beside it.
 
 The internally controlled contrast is stronger still, and it is the one with no problem-mix
 confound: every instance of I was audited again without the injected lines.
@@ -187,7 +193,8 @@ two models that are not the auditor, and compared against a frozen number that w
 2026-09-06. The direction survives, and the size of the gap is larger than study 21's post-hoc
 split suggested.
 
-**What this licenses is nothing, and that is the finding.** The sentence that stood here —
+**What this licenses about C4 is nothing, and that is the finding.** The sentence that stood
+here —
 "the measured audit ceiling is not a limit on detecting specification-determined defects" — is
 **withdrawn**. It was the study's reason for existing, and it requires population I to be
 specification-determined defects, which §5 shows no filter establishes. The study therefore
@@ -250,8 +257,10 @@ The auditor caught every injected defect the probe judged natural, and its only 
 items the probe judged artificial. An earlier draft read that as pointing against the salience
 explanation. **It does not, and the arithmetic says so.** With 2 misses over 92 instances and only
 4 instances in the natural-looking cell, the chance that either miss lands in that cell even if
-the auditor were riding exactly the signal the probe uses is about 11%; the expected number of
-misses there is 0.12. Fisher's exact test on the table gives **p = 1.0**. Observing an empty cell
+the auditor were riding exactly the signal the probe uses is **8.55%**, and the expected number
+of misses there is **0.087**. Round 4 corrected the figures that stood here, about 11% and 0.12:
+those use 69 as the denominator — the injected items the probe actually answered — where the
+sentence says 92. Fisher's exact test on the table gives **p = 1.0**. Observing an empty cell
 is what both hypotheses predict, so the table separates them not at all. It is **post hoc** and it
 is **not evidence in either direction**, and no sentence in this study may lean on it.
 
@@ -333,11 +342,16 @@ needs the two-rater protocol and that has not been run. Until it is, every numbe
 The OpenAI gate deferred by Amendment 3 has not been re-run either; both gates are Anthropic
 models, which makes them more correlated and the gate weaker. §1 of the preregistration argues
 that this is conservative for the primary; **that argument is withdrawn** (Amendment 6 and §5).
-A weaker gate is not a conservative one here, because the gate selects on detectability rather
-than on what the specification determines: the instances it refused are caught 31 times in 40.
+A weaker gate is not a conservative one here: the instances it refused are caught 31 times in
+40, so gate acceptance is associated with detectability. That is an association, not a finding
+that specification judgements played no part — round 4 narrowed this, and the same overstatement
+stood in §1.
 
 ## 6. Cost
 
 Construction $9.58 (injection and both gates, 2,135 injector attempts over 910 base instances),
 audit $6.26 (sixteen draws; 10 twin instances came free from ceiling 1's frozen cache), probe
-$0.63. **Total $16.47** against a preregistered cap of $35.
+$0.63 — **$16.47** — plus Amendment 6's gate-rejected arm at **$1.90** (320 readings, derived
+here from the cached per-reading costs), for a **total of $18.37** against a preregistered cap
+of $35. Round 4 found the rejected arm missing from this section: it was added to the ladder and
+never to the ledger.

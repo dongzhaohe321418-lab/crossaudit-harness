@@ -5,8 +5,13 @@ from a natural one, from the code and the specification alone?
 
 The preregistration wrote this for 150 of each; population I came out at 92, so the probe
 uses all 92 injected solutions and 92 of ceiling 1's 110 natural stratum-P solutions, drawn
-by the study's seed. The prober is `claude-opus-4-8` — not the auditor, not a gate. Its
-accuracy and interval are reported whatever they are; this probe gates nothing.
+by the study's seed. The prober is `claude-opus-4-8` — not the auditor, but **one of the two
+gate models**, so this probe is not independent of the gate whose population it is checking
+(round 3 of the review; the docstring said "not a gate", which is false). Two further limits:
+its two arms share no problem at all, so what it separates may be two task sets rather than
+edited from unedited code, and it is shown the specification as well as the code. Its accuracy
+and interval are reported whatever they are; this probe gates nothing, and it does not identify
+edit salience.
 """
 
 from __future__ import annotations

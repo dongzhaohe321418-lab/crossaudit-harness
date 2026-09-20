@@ -313,11 +313,15 @@ All now carry the withdrawal, emitted by the generator so a regeneration cannot 
 **What survives, as description rather than as a test.** Round 3 of the review found the earlier
 "nothing remains quotable" withdrew too much, and it is right: the study is evidence about this
 construction process and these archived auditor responses, which is narrow but not nothing. The
-auditor blocks these injected edits far more often than the natural residual (90 of 92 against
-11 of 92 twins; 79 discordant pairs one way and none the other); the edits the gate refused are
-blocked 31 times in 40, which is what killed the conservativeness argument; and a probe separates
-the two sets at 96.7% on the items it answered, between 79.9% and 97.3% once the 32 unparsed are
-counted at either extreme. **None of that identifies what the auditor is responding to.** The
+auditor blocks these injected edits far more often than the natural residual — **90 of 92
+against 33 of 110** — and far more often than their own unmodified twins — **90 of 92 against
+11 of 92**, 79 discordant pairs one way and none the other. Round 4 caught this entry conflating
+the two: the twins are the unmodified controls, the natural residual is ceiling 1's stratum P,
+and they answer different questions. The edits the gate refused are blocked 31 times in 40,
+which is what killed the conservativeness argument; and a probe separates the two sets at 96.7%
+on the items it answered, between 79.9% and 97.3% once the 32 unparsed are counted at either
+extreme — by some feature the probe does not identify, since its model is one of the two gate
+models and its arms share no problem. **None of that identifies what the auditor is responding to.** The
 paired contrast isolates the edit, cues included, and naming was never adjudicated.
 
 **Three corrections round 3 made to this entry's own first version**, each verified here before
