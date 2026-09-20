@@ -44,7 +44,10 @@ def _visible(text: str) -> str:
     one in a Markdown link reference definition -- `[x]: / "the sentence"` -- which this does
     not touch, and 27 tests stayed green while the rendered document lost the withdrawal and
     gained its reversal. Comment-stripping is not rendering and this function does not
-    pretend otherwise; `_rendered` is the real check and this is the fallback.
+    pretend otherwise. `_rendered` is the check that runs; when it cannot, the suite SKIPS
+    rather than falling back to this. Round 8 asked for "the fallback" to go because the code
+    does not fall back, and round 9 found the edit had not landed: the batch that carried it
+    raised on an earlier replacement and wrote nothing. Verified in the file this time.
     """
     return " ".join(re.sub(r"<!--.*?-->", " ", text, flags=re.S).split())
 
