@@ -298,10 +298,14 @@ def build() -> dict:
                "wording excludes. Population I is therefore 'small injected edits that survived "
                "a sparse visible suite and failed a hidden one', not 'defects the specification "
                "determines'.",
+        # Round 6: this repeated the inference the probe cannot support -- that the two
+        # populations differ in MORE than specification-determinedness. The probe separates
+        # them; what feature it separates them by is not identified, and the arms differ in
+        # task composition, which is a confound on its own.
         "what_survives": "the counts and the curves, as descriptive observations about small "
-                         "injected edits, together with the 96.7% separability probe that says "
-                         "those edits differ from natural code in more than the property this "
-                         "study meant to isolate",
+                         "injected edits, together with a probe that separates these edits "
+                         "from natural code at 96.7% on the items it answered, by a feature "
+                         "it does not identify",
         "recorded": "Amendment 7 (2026-09-16); completed after the second cross-vendor review "
                     "(2026-09-20), which found the withdrawal had not reached this file",
     }

@@ -29,14 +29,14 @@ REGISTRY = (
      "confound: every instance of I was audited again without the injected lines."),
     ("curve", "## 1. What was measured",
      "And the reading barely needs repeating:"),
-    ("probe", "## 3. The limitation that matters most: the defects are detectably artificial",
+    ("probe", "## 3. The limitation that matters most: the two populations are separable, by something",
      "ask whether it was written in one pass or written and then edited."),
     # Round 2: this anchor still demanded "it points the other way", the sentence commit
     # 60babd8 replaced when it found the cross-tab carries no information. The registry is
     # executable machinery, so a stale anchor here is a surviving endorsement of a withdrawn
     # reading -- and the test that would have caught it had been failing, unrun, since then.
-    ("xtab", "## 3. The limitation that matters most: the defects are detectably artificial",
-     "information, and it is kept here with that verdict rather than deleted:"),
+    ("xtab", "## 3. The limitation that matters most: the two populations are separable, by something",
+     "stronger \"carries no information\", which stood directly above the paragraph rejecting it:"),
     ("splits", "## 4. The other preregistered secondaries", "## 4. The other preregistered secondaries"),
 )
 

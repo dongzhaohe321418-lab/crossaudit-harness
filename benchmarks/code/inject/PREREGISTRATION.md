@@ -441,8 +441,10 @@ way. So self-announcement does **not** explain the effect.
 
 **3. What this study may still say.** It may report, descriptively, that the shipped auditor blocks
 small injected edits at a far higher rate than it blocks the natural residual, **and that those
-edits are separable from natural code at 96.7%, so the comparison is between populations that
-differ in more than specification-determinedness**. It may not be quoted as a prospective test of
+edits are separable from natural code at 96.7% on the items the probe answered, by a feature the
+probe does not identify**; the two arms also differ in task composition, which is a confound on
+its own, so the classification result does not establish an additional distinguishing property
+(round 6). It may not be quoted as a prospective test of
 study 21's post-hoc split, and **C4 does not gain its prospective test from this work**.
 
 **4. What would make the test.** A population whose specification-determinedness is established by

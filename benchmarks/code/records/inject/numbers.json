@@ -129,7 +129,7 @@
       "any prospective test of claim C4",
       "kill.fires, which is computed on the withdrawn denominator"
     ],
-    "what_survives": "the counts and the curves, as descriptive observations about small injected edits, together with the 96.7% separability probe that says those edits differ from natural code in more than the property this study meant to isolate",
+    "what_survives": "the counts and the curves, as descriptive observations about small injected edits, together with a probe that separates these edits from natural code at 96.7% on the items it answered, by a feature it does not identify",
     "why": "the six construction filters do not establish specification entailment. F6 is registered as recovering the first failing hidden input and implemented as a truthiness check on `witness_input` (179 of 281 witnesses are strings, 102 are lists, and none is executed); F2 to F5 each accept cases their registered wording excludes. Population I is therefore 'small injected edits that survived a sparse visible suite and failed a hidden one', not 'defects the specification determines'."
   },
   "bootstrap_reps": 10000,

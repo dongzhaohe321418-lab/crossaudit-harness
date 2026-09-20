@@ -36,18 +36,37 @@ RESULTS_TEXT = TEXT
 
 
 def _visible(text: str) -> str:
-    """The document with HTML comments removed, flattened.
+    """The source with HTML comments removed, flattened. A WEAK approximation of rendering.
 
-    Round 5 defeated the withdrawal binding by leaving the required sentence in an HTML
-    comment and displaying its reversal beside it. A sentence a reader cannot see is not a
-    sentence the report makes, so every check on the withdrawal reads this rather than the
-    source. The generated-table markers are HTML comments too, and stripping them is
-    harmless here: no withdrawal passage lives inside one.
+    Round 5 hid a withdrawal sentence in an HTML comment; this closed that. Round 6 then hid
+    one in a Markdown link reference definition -- `[x]: / "the sentence"` -- which this does
+    not touch, and 27 tests stayed green while the rendered document lost the withdrawal and
+    gained its reversal. Comment-stripping is not rendering and this function does not
+    pretend otherwise; `_rendered` is the real check and this is the fallback.
     """
     return " ".join(re.sub(r"<!--.*?-->", " ", text, flags=re.S).split())
 
 
+def _rendered(text: str) -> str | None:
+    """The document as a reader sees it, via pandoc. None when pandoc is absent.
+
+    Round 6's attack works because a passage can be present in the source and absent from the
+    rendering. The only honest check on "what the report says" is what it renders to, so this
+    shells out to a real CommonMark renderer. It returns None rather than falling back
+    silently: a check that quietly weakens itself when a tool is missing is how the last three
+    bindings came to claim more than they delivered.
+    """
+    import shutil
+    import subprocess
+    if not shutil.which("pandoc"):
+        return None
+    out = subprocess.run(["pandoc", "-f", "commonmark", "-t", "plain"],
+                         input=text, capture_output=True, text=True)
+    return " ".join(out.stdout.split()) if out.returncode == 0 else None
+
+
 VISIBLE = _visible(TEXT)
+RENDERED = _rendered(TEXT)
 
 
 def _splice():
@@ -160,8 +179,24 @@ def test_the_primary_and_the_paired_contrast_are_the_records():
     # What this establishes is narrow and worth stating: these passages cannot be removed or
     # reversed without going red. It does NOT establish that no contradictory prose can be
     # written elsewhere in the document, and no sentence here may claim that it does.
+    # The check reads the RENDERED document, because round 6's attack put a withdrawal
+    # sentence in a Markdown link reference definition: present in the source, absent from
+    # what a reader sees, 27 tests green. Comment-stripping is not rendering.
+    #
+    # If pandoc is not installed the rendered check cannot run, and the test says so rather
+    # than passing on the weaker one. The three previous versions of this binding all claimed
+    # more than they delivered; a silent fallback is the same error in a new place.
+    if RENDERED is None:
+        pytest.skip("pandoc is not installed; the rendered-document check cannot run, and "
+                    "the source-level check is not a substitute for it")
+    # pandoc's plain output carries no emphasis markers, so both sides are compared with
+    # asterisks removed. The words are what is bound; the bolding is not.
+    def plain(t: str) -> str:
+        return " ".join(t.replace("*", "").split()).lower()
+
+    rendered = plain(RENDERED)
     for passage in WITHDRAWAL_PASSAGES:
-        assert passage.lower() in VISIBLE.lower(), f"withdrawal passage missing: {passage}"
+        assert plain(passage) in rendered, f"withdrawal passage missing: {passage}"
 
 
 #: The complete, load-bearing sentences of the C4 withdrawal, each quoted whole. Round 5's
@@ -171,7 +206,10 @@ def test_the_primary_and_the_paired_contrast_are_the_records():
 WITHDRAWAL_PASSAGES = (
     "the kill is computed on that same denominator, so its not firing licenses nothing either",
     '"defects the specification determines" is not a description of the 92',
-    "**That conclusion is withdrawn**",
+    # Round 6: bound as a fragment, so replacing "nothing in this construction establishes
+    # that" with "all six filters establish that" passed. The clause is part of the sentence.
+    "**That conclusion is withdrawn**: it needs the 92 to be specification-determined "
+    "defects, and nothing in this construction establishes that.",
     "**What this licenses about C4 is nothing, and that is the finding.**",
     # The whole of section 2's withdrawal, not its opening. Round 5's fourth attack reversed
     # the subordinate clause -- "which §5 shows no filter establishes" became "which all six
@@ -208,8 +246,9 @@ def test_the_withdrawal_survives_round_5s_attacks():
     # line-wrapped in the source and a reversal would be written the same way.
     for old, new in ROUND5_ATTACKS:
         assert old in VISIBLE, f"attack no longer applies, rewrite it: {old}"
-        mutated = VISIBLE.replace(old, new, 1)
-        assert any(pas.lower() not in mutated.lower() for pas in WITHDRAWAL_PASSAGES), (
+        mutated = " ".join(VISIBLE.replace(old, new, 1).replace("*", "").split()).lower()
+        assert any(" ".join(pas.replace("*", "").split()).lower() not in mutated
+                   for pas in WITHDRAWAL_PASSAGES), (
             f"round 5's attack still passes: {old!r} -> {new!r}")
 
     # Round 5's fifth attack: leave the required sentence in an HTML comment and display its

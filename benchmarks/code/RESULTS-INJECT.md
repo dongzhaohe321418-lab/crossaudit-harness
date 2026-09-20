@@ -13,8 +13,9 @@
 > does not show that the specification entails the hidden suite's expected value.
 >
 > What the study may still report is descriptive: the auditor blocks small injected edits far more
-> often than the natural residual, **and those edits are separable from natural code at 96.7%**, so
-> the two populations differ in more than specification-determinedness. **This is not a
+> often than the natural residual, **and a probe separates the two sets at 96.7%** by a feature
+> it does not identify — the two arms differ in task composition, which is a confound on its own,
+> so the classification result does not establish an additional distinguishing property. **This is not a
 > prospective test of study 21's split, and C4 does not gain one from this work.**
 >
 > The numbers below are left unedited. Read them with the banner.
@@ -202,7 +203,7 @@ specification-determined defects, which §5 shows no filter establishes. The stu
 contradicts nothing: claim C4 keeps exactly the status study 21 gave it, post hoc and
 unreplicated, and this work does not move it in either direction.
 
-## 3. The limitation that matters most: the defects are detectably artificial
+## 3. The limitation that matters most: the two populations are separable, by something
 
 The preregistration anticipated that an injected defect might be easier to see for reasons
 having nothing to do with the specification, and fixed a measurement for it in advance: show a
@@ -241,8 +242,9 @@ the code, so it is not restricted to surface salience. What survives is that the
 are separable by *something*; **which something is not identified**, and "edit salience" is one
 candidate among several rather than the measured quantity.
 
-One post-hoc cross-tabulation was computed on that question. It turns out to carry no
-information, and it is kept here with that verdict rather than deleted:
+One post-hoc cross-tabulation was computed on that question. It does not distinguish the
+explanations, and it is kept here with that verdict rather than deleted — round 6 removed the
+stronger "carries no information", which stood directly above the paragraph rejecting it:
 
 <!-- BEGIN TABLE xtab (records/inject/tables.md) -->
 POST HOC: asked after the probe and the audit were both in hand.
@@ -360,9 +362,18 @@ stood in §1.
 
 ## 6. Cost
 
-Construction $9.58 (injection and both gates, 2,135 injector attempts over 910 base instances),
+Construction $9.58 (injection and both gates, **2,292** paid injector attempts over 910 base
+instances — 2,135 is the number that reached the filters, which round 6 found this line
+conflating),
 audit $6.26 (sixteen draws; 10 twin instances came free from ceiling 1's frozen cache), probe
 $0.63 — **$16.47** — plus Amendment 6's gate-rejected arm at **$1.90** (320 readings, derived
 here from the cached per-reading costs), for a **total of $18.37** against a preregistered cap
-of $35. Round 4 found the rejected arm missing from this section: it was added to the ladder and
-never to the ledger.
+of $35. Round 4 found the rejected arm missing from this section, and round 6 corrected how
+that was put: it was in both usage ledgers and its committed manifest all along, and missing
+only from this paragraph.
+
+**$18.37 is the retained-record subtotal, not the study's recorded API value.** Summing
+`api_value_usd` over the archived project ledgers — 4,794 distinct event ids — gives
+**$18.53**, $0.16 more. The difference is construction beyond the retained injection and gate
+caches ($0.110073), an earlier audit invocation `inject-0911042818` ($0.049900), and a route
+probe ($0.000195). Both figures are below the $35 cap; the larger one is what was spent.
