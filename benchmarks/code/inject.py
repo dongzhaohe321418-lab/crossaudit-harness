@@ -6,7 +6,7 @@ Preregistered in ``inject/PREREGISTRATION.md``, committed before the first model
     python benchmarks/code/inject.py --plan  <run-dir>
     python benchmarks/code/inject.py --run   <run-dir> --budget-usd 35
 
-Population I is built from ceiling 1's 150 stratum-C instances: the generator's own solutions
+Population I is built by walking 910 stratum-C base instances: the generator's own solutions
 that pass both suites. One defect is injected into each by the generator's own model, and the
 instance enters I only if six mechanical filters and a two-model gate accept it (§1). The audit
 is the shipped cross auditor, K = 8, ceiling 1's protocol and cache discipline, through

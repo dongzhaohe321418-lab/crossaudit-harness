@@ -3,7 +3,7 @@
     python benchmarks/code/report_inject.py
 
 Reads the cached readings, computes §3's hypotheses and §4's secondaries exactly as
-`inject/PREREGISTRATION.md` and its five amendments fix them, and writes
+`inject/PREREGISTRATION.md` and its seven amendments fix them, and writes
 `records/inject/numbers.json` and `records/inject/tables.md`. No model call.
 
 Helpers are ceiling 1's and study 18's, imported rather than reimplemented: the Wilson

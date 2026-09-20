@@ -18,7 +18,9 @@
 > so the classification result does not establish an additional distinguishing property. **This is not a
 > prospective test of study 21's split, and C4 does not gain one from this work.**
 >
-> The numbers below are left unedited. Read them with the banner.
+> The counts below are the ones the run produced and have not been recomputed; several
+> sentences around them HAVE been corrected across seven review rounds, and the cost
+> section now carries two figures where it carried one. Read them with the banner.
 
 # Study 22 — the ceiling on defects the specification determines
 
@@ -27,7 +29,10 @@ amendments, each committed before the step it governs: two construction pilots, 
 credit failure that changed a gate model, the paired twin arm, and a note fixing in advance
 which contrast carries which confound. Tables in this file are generated from
 `records/inject/numbers.json` by `report_inject.py` and spliced verbatim by
-`inject/splice_tables.py`; no figure here is typed by hand.
+`inject/splice_tables.py`. Figures inside those blocks are generated; figures in the prose
+around them — §5's witness-type split, the cost breakdown, the self-announcing count — are
+written by hand and checked only where a test names the exact string. Round 7 corrected
+"no figure here is typed by hand".
 
 ## 1. What was measured
 
@@ -344,7 +349,21 @@ study establishes specification entailment, and no repair of F6 alone would have
 is a population whose specification-determinedness is established by someone other than the
 injector.
 
-## 5. What was not run
+**That successor needs more than independence, and round 7 named what.** An independent party
+must validate **the actual violation and the specification-entailing expected behaviour**,
+under a fixed, blinded protocol. Independence alone does not do it, and neither does a second
+substrate alone: **task composition and construction confounding survive both**, as §3's probe
+shows here. This is a condition on a future C4 study. **It is not work required to finish this
+one**, which is finished.
+
+## 6. What was not run, and is not going to be
+
+**This report is final in its descriptive form.** What it delivers is blocking observations on a
+constructed population, after the withdrawal of the C4 interpretation. The two items below are
+**final omissions, not outstanding work**: completing this study does not depend on buying
+either, because neither would supply the semantic denominator whose absence is the reason C4
+gains nothing here. Round 7 of the review asked for that to be said plainly, so it is said here
+rather than left for a reader to infer from seven rounds of deferral.
 
 The naming adjudication of §5 of the preregistration — does a blocking finding name the injected
 class? — is not in this report. The finding texts are archived and the injector's own
@@ -360,7 +379,7 @@ A weaker gate is not a conservative one here: the instances it refused are caugh
 that specification judgements played no part — round 4 narrowed this, and the same overstatement
 stood in §1.
 
-## 6. Cost
+## 7. Cost
 
 Construction $9.58 (injection and both gates, **2,292** paid injector attempts over 910 base
 instances — 2,135 is the number that reached the filters, which round 6 found this line
