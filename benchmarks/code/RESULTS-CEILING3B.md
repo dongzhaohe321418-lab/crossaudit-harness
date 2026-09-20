@@ -125,7 +125,8 @@ Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster pe
   Tango [-3.4, +5.6]; grid-unconditional [-6.4, +8.2]; McNemar p = 1.00). No
   positive BLOCKER-recall effect is demonstrated; no equivalence margin was registered, so
   this is not a demonstration of *no* effect either. What B demonstrably did was return
-  fewer findings: under the any-finding rule B − S on P is -20.0 points [-29.7, -10.1].
+  fewer findings: under the any-finding rule B − S on P is -20.0 points [-29.7, -10.1]
+  (cluster; Tango [-29.2, -11.6], grid-unconditional [-31.2, -7.3]).
 * **H19b.** B's union FP on C at K = 4 is 4/150 = 2.7% (cluster 0.6–5.4), B − S on C
   +0.0 [-2.7, +2.7]; B's single-draw FP 0.8% (cluster 0.2–1.8) is inside the
   product bar (6.7% at K = 1), and so is its recall inside nothing.
@@ -135,7 +136,8 @@ Intervals: a k/n rate carries the 95% Wilson interval and the problem-cluster pe
   [+10.8, +31.8]** (25 vs 2; Tango [+12.9, +29.9]; grid-unconditional [+8.6, +31.8]; McNemar
   p = 5.6e-06; sign-flip p = 4.2e-04), at a false-positive cost of R − S on C = +8.0 points
   [+3.4, +12.7] (R's C union 16/150 = 10.7%, single draw 5.0%). Under the any-finding rule R
-  returns a finding on nearly every instance of either stratum (P 97.3%, C 96.0% at K = 4;
+  returns a finding on nearly every instance of either stratum (P 97.3% [93.7, 100.0],
+  C 96.0% [92.6, 98.7] at K = 4;
   R − S on P +43.6 [+31.5, +55.9], on C +66.7 [+58.6, +74.5]), which is why the flag rate says
   nothing by itself and H19d had to be adjudicated.
 * **H19d — what the findings name, adjudicated (Tables 5 and 5b).** Two labellers (L1 the
@@ -191,7 +193,8 @@ defect population (post hoc, Table 5b), and BLOCKER recall at K = 4 from 1.8% to
 (cluster [+3.4, +12.7]). Round 9 added these intervals; the rates were quoted bare, which
 EXPERIMENT_RECORD §9 counts as a defect whatever the rate says. Whether the rest of the
 near-zero rate is the rulebook's referent or the model's limit is not separated by this
-study: R's findings under the any-finding rule cover 97.3% of P and 96.0% of C, so the rule makes
+study: R's findings under the any-finding rule cover 97.3% [93.7, 100.0] of P and
+96.0% [92.6, 98.7] of C, so the rule makes
 the model write something about nearly every increment; 24 of its 62 naming findings on P
 call the failing class correctly handled or only untested, and 46 of 128 name something other than the
 defect. The residual across all measured families (Table 7) moves from 56 to 53 with R and

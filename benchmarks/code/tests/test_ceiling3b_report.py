@@ -194,3 +194,21 @@ def test_the_disputed_adjudication_sensitivity_is_recomputed_not_asserted():
     assert f"from 60/72 to **{agree}/{n}**" in _flat()
     assert f"strict κ from 0.695 to **{kappa:.3f}**" in _flat()
     assert f"from 24 of 62 to **{correct} of {len(r_kept)}**" in _flat()
+    # Round 10: the comment above says "every quantity the counterfactual DOES move is
+    # recomputed here", and the complementary first-pass count was not. A comment that
+    # claims completeness is itself a claim; this one is now true.
+    #
+    # This quantity lives on the NAMING sheet, not the strict one, and the counterfactual
+    # RE-LABELS J0168 rather than dropping it -- which is why its denominator stays at 128.
+    # A first attempt at this binding derived it from the strict labels and got a different
+    # number; the derivation is taken from report_ceiling3b's own `findings_no` instead.
+    def naming(name):
+        with open(CODE / "records" / "ceiling3b" / name, encoding="utf-8") as fh:
+            return {r["id"]: r["label"] for r in csv.DictReader(fh)}
+    n1, n2 = naming("L1-h19d.csv"), naming("L2-h19d.csv")
+    gold = {i: (n1[i] if n1[i] == n2[i] else "disputed") for i in n1}
+    r_items = [i for i in gold if key[i]["arm"] == "R"]
+    assert gold["J0168"] == "yes" and key["J0168"]["arm"] == "R"
+    base = sum(1 for i in r_items if gold[i] == "no")
+    flipped = sum(1 for i in r_items if gold[i] == "no" or i == "J0168")
+    assert f"from {base} of {len(r_items)} to **{flipped} of {len(r_items)}**" in _flat()
