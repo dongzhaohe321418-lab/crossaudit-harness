@@ -118,10 +118,13 @@ A(`cross-R`) − A(`cross`) on P, the constrained fit refitted inside every one 
   detection can look like a ceiling over eight readings: an instance found with probability
   0.02 per reading is missed by all eight about 85% of the time, so a curve can flatten
   because the remaining instances are *rare*, not because they are *unreachable*. And this
-  study's own secondary estimator says there is no ceiling at all — the ZIBB fit puts the
-  non-inflated share at essentially 1.0 for **both** families (`cross` π = 0.9999999999989448,
-  `cross-R` π = 0.9999999999896982 on P, cluster [0.658, 1.0]), that is, it finds no evidence of a
-  never-detectable class in either arm. Whatever the referent rule moves, it is not shown to
+  study's own secondary estimator finds no never-detectable class in either arm: the ZIBB fit
+  puts the non-inflated share at essentially 1.0 for **both** families (`cross`
+  π = 0.9999999999989448, `cross-R` π = 0.9999999999896982 on P, cluster [0.658, 1.0]). Round 4
+  narrowed this from "says there is no ceiling at all": the estimate sits at the boundary of the
+  parameter space, and a boundary estimate of zero never-detectable instances is not evidence
+  that everything is eventually detectable — the wide cluster interval on that same parameter
+  says how little it settles. Whatever the referent rule moves, it is not shown to
   be a limit. `cross-R` passes the
   registered bar — its K = 7 to K = 8
   gain 0.57 points, cluster [0.11, 1.04],
@@ -263,7 +266,10 @@ Residual rate with `cross-R` added: 32/110 = 29.1% (Wilson 21.4–38.2; cluster 
 > Round 3 of the review judged that this permits qualified quotation — it does not invalidate
 > arithmetic reproducible from the labels, the archived flags or the kill's upper bound — while
 > not satisfying the provenance standard this study set, which disclosure cannot restore. Every
-> figure in this section is therefore **conditional on the surviving labels** rather than on an
+> **adjudication-derived** figure in this section is therefore **conditional on the surviving
+> labels** — round 4 narrowed this from "every figure", because the nine flagged instances and
+> the kill's upper bound are verifiable from the archived flags without any label at all, and
+> saying otherwise made the evidence weaker than it is rather than on an
 > independently verifiable adjudication, and must not be set directly against the eight-reading
 > union of 30.0%.
 
@@ -454,7 +460,9 @@ Total from the 9 project ledgers: **$19.84** over 2,340 calls for 2,340 readings
   at about thirteen hours.
 
   **Two different interruptions are described in this study and must not be conflated.** The
-  denials counted above are HTTP 429 rate-limiting recorded in the `.failed.jsonl` files, which
+  96 rows counted above carry HTTP 429 errors recorded in the `.failed.jsonl` files — the other
+  6,904 are this client's breaker and one TLS failure, and only those 96 rows are evidence of
+  rate limiting at all — which
   is what the numbers in this bullet come from. Separately, the operator reported that the
   account's balance was exhausted during this period; **no record in this study attributes any
   particular denial to billing rather than to rate limiting**, so the balance report is context
@@ -464,7 +472,9 @@ Total from the 9 project ledgers: **$19.84** over 2,340 calls for 2,340 readings
   instruction to make no model call. Both raters have since answered the sheet, the registered
   primary rate is reported in §3 and Amendment 1's kill is evaluated and fires. L2's spend is
   not in this study's ledgers: it ran through the Codex CLI against a subscription, so the
-  cost figures in this section are unchanged by it. Nothing else in the preregistration is
+  cost figures in this section are unchanged by it. All registered outcomes are reported; that
+  is not a claim of complete compliance, since Amendment 2 records manifest deficiencies and §3
+  records a provenance loss. Nothing else in the preregistration is
   unmet.
 * **The registered status of the two adjudication questions differs, and is not relabelled
   here.** Naming is study 19's registered question. Recognition — "does the finding assert
