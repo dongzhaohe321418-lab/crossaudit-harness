@@ -66,32 +66,35 @@ with eight draws gains nothing from a lucky choice of which four to use. Round 1
 required this table; the first version had none.
 
 | family | rule | recall on P @ K=4 | false positives on C @ K=4 |
-|---|---|---:|---:|
-| `cross` | blocker>=1 (shipped) | 21.2% | 10.9% |
-| `cross` | blocker>=2 | 3.6% | 1.2% |
-| `cross` | any finding>=1 | 24.0% | 13.1% |
-| `cross` | any finding>=2 | 4.0% | 1.2% |
-| `self` | blocker>=1 (shipped) | 16.4% | 23.2% |
-| `self` | blocker>=2 | 7.7% | 18.6% |
-| `self` | any finding>=1 | 20.0% | 26.5% |
-| `self` | any finding>=2 | 8.6% | 18.9% |
-| `astra` | blocker>=1 (shipped) | 32.7% | 10.7% |
-| `astra` | blocker>=2 | 2.7% | 0.7% |
-| `astra` | any finding>=1 | 32.7% | 10.7% |
-| `astra` | any finding>=2 | 2.7% | 0.7% |
-| `self-strong` | blocker>=1 (shipped) | 2.1% | 2.5% |
-| `self-strong` | blocker>=2 | 0.9% | 0.9% |
-| `self-strong` | any finding>=1 | 52.3% | 29.4% |
-| `self-strong` | any finding>=2 | 2.1% | 1.0% |
-| `self-frontier` | blocker>=1 (shipped) | 0.9% | 2.7% |
-| `self-frontier` | blocker>=2 | 0.0% | 2.0% |
-| `self-frontier` | any finding>=1 | 20.9% | 18.0% |
-| `self-frontier` | any finding>=2 | 0.0% | 2.0% |
+|---|---|---|---|
+| `cross` | blocker>=1 (shipped) | 21.2% [13.1, 30.3] | 10.9% [6.9, 15.4] |
+| `cross` | blocker>=2 | 3.6% [0.9, 7.3] | 1.2% [0.0, 3.1] |
+| `cross` | any finding>=1 | 24.0% [15.7, 33.0] | 13.1% [8.7, 18.0] |
+| `cross` | any finding>=2 | 4.0% [0.9, 8.4] | 1.2% [0.0, 3.1] |
+| `self` | blocker>=1 (shipped) | 16.4% [7.7, 26.1] | 23.2% [16.6, 30.4] |
+| `self` | blocker>=2 | 7.7% [2.3, 14.3] | 18.6% [12.7, 25.2] |
+| `self` | any finding>=1 | 20.0% [10.4, 30.6] | 26.5% [19.6, 34.0] |
+| `self` | any finding>=2 | 8.6% [3.1, 15.5] | 18.9% [12.8, 25.5] |
+| `astra` | blocker>=1 (shipped) | 32.7% [21.1, 45.5] | 10.7% [5.9, 16.0] |
+| `astra` | blocker>=2 | 2.7% [0.0, 7.3] | 0.7% [0.0, 2.1] |
+| `astra` | any finding>=1 | 32.7% [21.1, 45.5] | 10.7% [5.9, 16.0] |
+| `astra` | any finding>=2 | 2.7% [0.0, 7.3] | 0.7% [0.0, 2.1] |
+| `self-strong` | blocker>=1 (shipped) | 2.1% [0.4, 4.3] | 2.5% [0.5, 5.0] |
+| `self-strong` | blocker>=2 | 0.9% [0.0, 2.3] | 0.9% [0.0, 2.3] |
+| `self-strong` | any finding>=1 | 52.3% [41.1, 63.4] | 29.4% [22.7, 36.4] |
+| `self-strong` | any finding>=2 | 2.1% [0.0, 4.9] | 1.0% [0.0, 2.7] |
+| `self-frontier` | blocker>=1 (shipped) | 0.9% [0.0, 2.8] | 2.7% [0.6, 5.4] |
+| `self-frontier` | blocker>=2 | 0.0% [0.0, 0.0] | 2.0% [0.0, 4.6] |
+| `self-frontier` | any finding>=1 | 20.9% [11.6, 31.5] | 18.0% [11.7, 24.7] |
+| `self-frontier` | any finding>=2 | 0.0% [0.0, 0.0] | 2.0% [0.0, 4.6] |
 
 ## What the sweep shows
 
-**A grading rule moves the measured rate by more than the choice of model does, on two
-families.** `self-strong` goes from 3.6% [0.9, 7.3] recall to 59.1% [47.3, 70.6] on the same
+**On `self-strong`, a grading rule moves the measured rate by more than the choice of model
+does.** Its re-grading gain is 55.5 points against C2's -26.4-point model contrast. The same is
+**not** true of `self-frontier`, whose 20.0-point re-grading gain is smaller than its 29.1-point
+shipped-rule gap from the full-ladder `cross`; round 2 asked for that comparator to be named
+rather than left implied. `self-strong` goes from 3.6% [0.9, 7.3] recall to 59.1% [47.3, 70.6] on the same
 readings, with no new model call, by counting a finding it wrote instead of the severity it
 assigned; its false positives move 3.3% [0.7, 6.6] to 34.0% [26.3, 41.8] with it. `self-frontier`
 goes 0.9% to 20.9% the same way. At the common depth the pattern holds: 2.1% to 52.3% and 0.9% to
@@ -106,11 +109,14 @@ first version said "the model was never blind to these defects; it wrote them do
 sentence is **withdrawn**. Changing the counting rule mechanically changes the result; it does
 not identify the cause of the families' original differences.
 
-**So C2's -26.4 points cannot be read as a difference in what the auditors can see** — but the
-sweep does not establish the converse either. What it shows is that a large part of the gap is
-attributable to where each family sets BLOCKER, and that the size of the gap is not stable under
-a change of rule that no preregistration fixed. C2's own entry already records the rule-dependent
-reversal; this is the direct measurement of it rather than an argument from one alternative rule.
+**So C2's -26.4 points cannot be read as a difference in what the auditors can see.** What the
+sweep establishes is narrower and worth stating exactly: **the measured flag coverage is
+rule-dependent**, and C2's magnitude is not invariant to a grading rule that no preregistration
+fixed. It does **not** establish why the families produced different findings or different
+severities — round 2 was right that "a large part of the gap is attributable to where each family
+sets BLOCKER" is a causal attribution the re-grading cannot support. C2's estimate remains valid
+for its own rule and configuration; its sign reverses under any-finding grading; and neither fact
+resolves the ranking at a matched false-positive rate.
 
 **The matched comparison, stated as what it is.** Choosing each family's point nearest `cross`'s
 false-positive rate is a **descriptive selection rule, not a measurement at a matched rate**. The
@@ -120,18 +126,31 @@ the four reachable rules `self-strong` has no point between 3.3% and 34.0% false
 precisely where a matched comparison with `cross` would sit — so **that family's comparison is
 bracketed, not measured, and nothing here resolves the ranking between its two endpoints.**
 
-**The one comparison that is matched, and it goes against the paper's reading.** At the common
-depth K = 4, `astra` and `cross` sit at essentially the same cost — 10.7% against 10.9% false
-positives — and `astra` reaches **32.7%** recall against `cross`'s **21.2%**. Paired over the
-same instances and clustered by problem, that is **+12.7 points [+3.6, +22.7]** of recall at
-**+0.0 points [-4.8, +4.7]** of false positives (10,000 resamples, seed 20260915). The interval
-on recall excludes zero and the interval on cost includes it: at equal depth and equal cost,
-`astra` finds more for the same price.
+**The one comparison that is matched, and what it does and does not settle.** At the common
+depth K = 4, `astra` and `cross` sit at essentially the same cost — 10.7% [5.9, 16.0] against
+10.9% [6.9, 15.4] false positives — and `astra` reaches **32.7%** [21.1, 45.5] recall against
+`cross`'s **21.2%** [13.1, 30.3]. Paired over the same instances and clustered by problem, with
+three comparators because they answer different questions:
 
-This differs from round 1's own paired figure, and the reason is depth: the reviewer compared
-`astra` at K = 4 against `cross` on its complete K = 8 ladder, which is a comparison between
-different budgets. Both are worth stating. Against a deeper `cross`, `astra`'s recall advantage is
-not established; against an equally deep one, it is.
+| `astra` at K = 4, minus… | recall difference | false-positive difference |
+|---|---|---|
+| `cross` at K = 4, averaged over all 70 four-draw subsets | **+11.5 points** [+2.9, +21.3] | -0.3 points [-3.8, +3.4] |
+| `cross` draws 1–4 only (sensitivity) | **+12.7 points** [+3.6, +22.7] | +0.0 points [-4.8, +4.7] |
+| `cross` on its complete K = 8 ladder | **+2.7 points** [-6.5, +13.0] | -5.3 points [-10.3, -0.7] |
+
+The first row is the one that matches the table above it: both sides averaged over all 70
+four-draw subsets. The second holds `cross` to its first four draws and is a sensitivity
+analysis, not the headline — the first version of this report used it while presenting the
+subset-averaged table beside it, which is a different estimand and is why 32.7 minus 21.2 could
+not give +12.7. The third compares `astra` at four readings against `cross` at eight, which is a
+comparison between budgets rather than between auditors.
+
+**What this supports:** higher flag recall at equal depth, with similar observed false-positive
+rates and a false-positive difference **unresolved around zero**. An interval containing zero is
+not evidence of equality, and the first version's "equal cost" and "the same price" are
+withdrawn. Against the deeper `cross`, the recall advantage is not established while the
+false-positive advantage is. **Neither comparison isolates model identity from the differing
+sampling configurations**, which is C2's confound and is not removed here.
 
 ## Limits, stated
 
@@ -139,8 +158,12 @@ not established; against an equally deep one, it is.
   are a chosen analysis set and not the archive's limit — the observed counts also permit a
   cutoff at three — but the reachable points remain coarse, and the gap that matters for
   `self-strong` falls inside one of them.
-* **Post hoc.** No preregistration names these rules. The sweep is exploratory and every figure
-  here carries that label. It may not be read as a test of anything.
+* **Post hoc.** No preregistration names these rules, so every figure here carries the
+  exploratory label. That is a limit on what it can become, not on what it can support: an
+  exploratory analysis can carry exploratory inference, and it cannot be turned into a
+  preregistered confirmatory test after the fact. Round 2 found "it may not be read as a test of
+  anything" too strong, and it was — the fifth time in this programme that a stated limit has
+  been larger than the truth.
 * **Re-grading is not re-asking.** It shows where the existing findings fall under a different
   cut, not how an auditor would behave if its severity instructions were different.
 * **Flag coverage is not naming.** No figure here says what a finding identified. Establishing

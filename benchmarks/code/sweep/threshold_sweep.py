@@ -83,6 +83,54 @@ def union_rate(draws, ids, rule, K):
     hit=[i for i in ids if any(rule(draws[k][i]) for k in ks if i in draws[k])]
     return len(hit), len(ids), {i: (i in set(hit)) for i in ids}
 
+def cluster_ci_frac(vals, probs, seed=SEED):
+    """Problem-cluster percentile bootstrap over FRACTIONAL per-instance coverage.
+
+    Round 2: `cluster_ci` casts each instance to int, which is right for a flag and wrong for
+    a subset-averaged coverage, where an instance flagged by k of K_max draws contributes
+    1 - C(K_max-k, K)/C(K_max, K) and not 0 or 1. Reusing it would have silently rounded the
+    common-K table's uncertainty away.
+    """
+    by = {}
+    for i, v in vals.items():
+        by.setdefault(probs[i], []).append(float(v))
+    keys = sorted(by); rng = random.Random(seed); out = []
+    for _ in range(BOOT):
+        a = 0.0; c = 0
+        for _ in range(len(keys)):
+            v = by[keys[rng.randrange(len(keys))]]; a += sum(v); c += len(v)
+        if c: out.append(100 * a / c)
+    out.sort(); return rc.percentile(out, 0.025), rc.percentile(out, 0.975)
+
+
+def subset_coverage(draws, ids, rule, K):
+    """Per instance, the exact probability a random K-subset of the draws flags it."""
+    from math import comb
+    kmax = len(draws); ds = sorted(draws)
+    out = {}
+    for i in ids:
+        k = sum(1 for d in ds if rule(draws[d][i]))
+        out[i] = 1.0 - (comb(kmax - k, K) / comb(kmax, K) if kmax - k >= K else 0.0)
+    return out
+
+
+def paired_diff(a_vals, b_vals, ids, probs, seed=SEED):
+    """Paired difference of two per-instance coverages, clustered by problem."""
+    by = {}
+    for i in ids:
+        by.setdefault(probs[i], []).append((float(a_vals[i]), float(b_vals[i])))
+    keys = sorted(by); rng = random.Random(seed); out = []
+    for _ in range(BOOT):
+        na = nb = 0.0; n = 0
+        for _ in range(len(keys)):
+            for x, y in by[keys[rng.randrange(len(keys))]]:
+                na += x; nb += y; n += 1
+        if n: out.append(100 * (na - nb) / n)
+    out.sort()
+    pt = 100 * (sum(a_vals[i] for i in ids) - sum(b_vals[i] for i in ids)) / len(ids)
+    return pt, rc.percentile(out, 0.025), rc.percentile(out, 0.975)
+
+
 def cluster_ci(flags, probs):
     by={}
     for i,f in flags.items(): by.setdefault(probs[i],[]).append(int(f))
@@ -133,22 +181,61 @@ for base,fam in FAMS:
 # being asked the same question as one read eight times. K = 4 is the largest depth every
 # family reaches. The rate is averaged EXACTLY over all C(K_max, 4) four-draw subsets, so a
 # family with eight draws is not advantaged by a lucky choice of which four to use.
-print(f"\n{'family':<14}{'rule':<22}{'K':>2}  {'recall P @ common K=4':>24}  {'FP on C @ K=4':>22}")
+print(f"\n{'family':<14}{'rule':<22}{'K':>2}  {'recall P @ common K=4':>22}  {'FP on C @ K=4':>22}")
 print("-"*90)
 common = []
+COVER = {}
 for base, fam in FAMS:
     draws = load(base, fam, set(SCOPE))
     draws = {d: r for d, r in draws.items() if len(r) == len(SCOPE)}
     if len(draws) < COMMON_K:
         print(f"{fam:<14}{'--':<22}{len(draws):>2}  fewer than {COMMON_K} complete draws")
         continue
+    COVER[fam] = {}
     for name, rule in RULES.items():
-        vals = []
+        cells = []
         for ids in (P_ALL, C_ALL):
-            ks = [sum(1 for d in sorted(draws) if rule(draws[d][i])) for i in ids]
-            vals.append(100 * rc.union_curve(ks, len(draws))[COMMON_K - 1])
-        common.append((fam, name, COMMON_K, vals[0], vals[1]))
-        print(f"{fam:<14}{name:<22}{COMMON_K:>2}  {vals[0]:>23.1f}%  {vals[1]:>21.1f}%")
+            cov = subset_coverage(draws, ids, rule, COMMON_K)
+            COVER[fam][(name, "P" if ids is P_ALL else "C")] = cov
+            pt = 100 * sum(cov.values()) / len(ids)
+            lo, hi = cluster_ci_frac(cov, PROBS)
+            cells.append((pt, lo, hi))
+        common.append((fam, name, COMMON_K,
+                       cells[0][0], cells[0][1], cells[0][2],
+                       cells[1][0], cells[1][1], cells[1][2]))
+        print(f"{fam:<14}{name:<22}{COMMON_K:>2}  {cells[0][0]:>6.1f}% [{cells[0][1]:>5.1f},"
+              f"{cells[0][2]:>5.1f}]  {cells[1][0]:>6.1f}% [{cells[1][1]:>5.1f},{cells[1][2]:>5.1f}]")
+
+# Round 2 required the paired contrast to be generated here rather than computed by hand, and
+# found that the hand-computed one used `cross` draws 1-4 while the table beside it averaged
+# over all 70 four-draw subsets -- a different estimand, which is why 32.7 - 21.2 could not
+# give +12.7. All three comparators are emitted, each labelled by what it holds fixed.
+SHIPPED = "blocker>=1 (shipped)"
+contrasts = {}
+if "astra" in COVER and "cross" in COVER:
+    all_draws = {f: {d: r for d, r in load(b, f, set(SCOPE)).items() if len(r) == len(SCOPE)}
+                 for b, f in FAMS if f in ("astra", "cross")}
+    rule = RULES[SHIPPED]
+    for label, mk in (
+        ("subset_averaged_K4", lambda fam, ids: COVER[fam][(SHIPPED, "P" if ids is P_ALL else "C")]),
+        ("cross_first_four_draws", lambda fam, ids: {
+            i: float(any(rule(all_draws[fam][d][i]) for d in sorted(all_draws[fam])[:COMMON_K]))
+            for i in ids}),
+        ("cross_complete_ladder", lambda fam, ids: {
+            i: float(any(rule(all_draws[fam][d][i]) for d in sorted(all_draws[fam])[
+                :(COMMON_K if fam == "astra" else max(all_draws[fam]))]))
+            for i in ids}),
+    ):
+        entry = {}
+        for axis, ids in (("recall_P", P_ALL), ("fp_C", C_ALL)):
+            pt, lo, hi = paired_diff(mk("astra", ids), mk("cross", ids), ids, PROBS)
+            entry[axis] = {"points": pt, "cluster_ci95": [lo, hi]}
+        contrasts[label] = entry
+        print(f"\nastra - cross [{label}]: "
+              f"recall {entry['recall_P']['points']:+.1f} "
+              f"[{entry['recall_P']['cluster_ci95'][0]:+.1f}, {entry['recall_P']['cluster_ci95'][1]:+.1f}]   "
+              f"FP {entry['fp_C']['points']:+.1f} "
+              f"[{entry['fp_C']['cluster_ci95'][0]:+.1f}, {entry['fp_C']['cluster_ci95'][1]:+.1f}]")
 
 # Round 1: this wrote to /tmp and the committed record was copied across by hand, so the
 # record and the code that made it could drift without anything noticing. It writes to the
@@ -158,7 +245,8 @@ out = {"scope": {"n_P": len(P_ALL), "n_C": len(C_ALL)},
        "k_by_family": K_USED,
        "rules": list(RULES),
        "rows": rows,
-       "common_k_subset_averaged": {"k": COMMON_K, "rows": common}}
+       "common_k_subset_averaged": {"k": COMMON_K, "rows": common},
+       "paired_astra_minus_cross": contrasts}
 Path("benchmarks/code/records/threshold_sweep.json").write_text(
     json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 print(f"\nwrote records/threshold_sweep.json: {len(rows)} rows, "
