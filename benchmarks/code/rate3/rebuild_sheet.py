@@ -27,6 +27,12 @@ classes stated oracle behaviour outright, which this deliberately withholds. The
 comparable across arms and mechanically derived; it is not equivalent to what it replaced.
 
 The rate_id to instance mapping is preserved exactly, so a partially completed sheet still maps.
+
+**This is a one-shot converter, found by the sixth review of `RESULTS-RATE3.md`.** It rewrites
+the original-format booklet; run again on an already-converted one, the header replacement no
+longer matches and the old header survives beside the new text. It converted the booklet once,
+the labels come from that conversion, and nothing here re-runs it -- but a future caller should
+convert from the original, not from the output.
 """
 from __future__ import annotations
 
