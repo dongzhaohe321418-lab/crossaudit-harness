@@ -163,13 +163,18 @@ def main(argv: list[str] | None = None) -> int:
 
     todo = [(iid, arm, d) for iid in ids for arm in ARMS for d in range(1, K + 1)
             if (iid, arm, d) not in done]
-    print(f"{len(todo)} readings to buy ({len(ids)} instances x {len(ARMS)} arms x K={K})",
+    n_todo = len(todo)
+    print(f"{n_todo} readings to buy ({len(ids)} instances x {len(ARMS)} arms x K={K})",
           flush=True)
 
     ledger = project / ".crossaudit" / "usage.jsonl"
     consecutive_failures = 0
+    cooldown_retries = 0
     with rows_path.open("a", encoding="utf-8") as fh:
-        for n, (iid, arm, draw) in enumerate(todo, 1):
+        n = 0
+        while todo:
+            iid, arm, draw = todo.pop(0)
+            n += 1
             so_far = spent(ledger, n - 1)
             if so_far >= HALT_USD:
                 print(f"HALT: ${so_far:.2f} spent, at or over the registered ${HALT_USD} halt",
@@ -190,6 +195,29 @@ def main(argv: list[str] | None = None) -> int:
                                    run_id=f"p3-{iid}-{arm}-{draw}", arm="cross")
             # `audit_one` is study 1's, and it keeps digests rather than text. The outcome here
             # is defined over the text, so the text is re-read from the outcome and stored.
+            # A cooling-down route is rate limiting, not an outage. The first full run halted
+            # at 29 of 384 readings on three of them, which is the guard working and the guard
+            # being wrong about what it saw: waiting fixes a cooldown and nothing fixes an
+            # outage. Cooldowns are waited out and retried, and only then counted.
+            err = row.get("error") or ""
+            # Two kinds of failure are transient and one is not. A cooling-down route is rate
+            # limiting; an SSL EOF or an unreachable provider is the network. Neither is an
+            # outage, both are fixed by waiting, and neither costs anything when it fails --
+            # the first full run halted at 29 readings on a cooldown and the second at 66 on a
+            # dropped connection, both of which the halt guard read as an outage. The halt now
+            # fires when the retries are exhausted, which is the thing it was meant to catch.
+            transient = any(t in err for t in (
+                "cooling down", "retry in", "429", "unreachable", "SSL", "EOF",
+                "Connection", "timed out", "Timeout"))
+            if not row.get("ok") and transient and cooldown_retries < 60:
+                cooldown_retries += 1
+                wait = min(30 * (1 + cooldown_retries // 10), 120)
+                print(f"  transient ({cooldown_retries}/60, waiting {wait}s): "
+                      f"{err[:80]} — retrying "
+                      f"{iid} {arm} draw {draw}", flush=True)
+                time.sleep(wait)
+                todo.append((iid, arm, draw))
+                continue
             if not row.get("ok"):
                 consecutive_failures += 1
                 if consecutive_failures >= 3:
@@ -210,10 +238,9 @@ def main(argv: list[str] | None = None) -> int:
                         "wall_s": time.monotonic() - started})
             fh.write(json.dumps(row, sort_keys=True) + "\n")
             fh.flush()
-            if n % 10 == 0 or n == len(todo):
-                print(f"  {n}/{len(todo)}  ${spent(ledger, n):.2f}", flush=True)
-    ok_n = sum(1 for _ in todo)
-    print(f"\nwrote {rows_path}; ${spent(ledger, ok_n):.2f} spent")
+            if n % 10 == 0 or not todo:
+                print(f"  {n} done, {len(todo)} left  ${spent(ledger, n):.2f}", flush=True)
+    print(f"\nwrote {rows_path}; ${spent(ledger, n_todo):.2f} spent")
     return 0
 
 
