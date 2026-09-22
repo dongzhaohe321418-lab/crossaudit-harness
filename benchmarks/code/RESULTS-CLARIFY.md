@@ -1,4 +1,4 @@
-# P3 — a clarified specification changes what the auditor diagnoses, and only when it is right
+# P3 — on these 32 instances, the auditor diagnosed only where the added rule agreed with the oracle
 
 > **Second version, after the first cross-vendor review refused the first.** Its blocking finding
 > was not about the arithmetic, which reproduced exactly. It was that **the intervention is not
@@ -10,8 +10,9 @@
 Registered in `plan/P3-PREREGISTRATION.md` with thirteen amendments, each committed before the
 step it governs. Records under `records/clarify/`. Auditor `gpt-5.6-terra`, clarifier
 `gpt-5.6-luna`, adjudicators `L1` (the author) and `L2` (`gpt-6-astra`). **32 instances on 19
-problems.** Readings for this run cost \$1.86; the discarded first audit cost \$2.13, and the
-ledger's \$3.99 is the sum of both.
+problems.** By ledger phase: preflight and smoke \$0.05, the discarded first audit \$2.14, and
+**this run \$1.80**, summing to the ledger's \$3.99. An earlier version split the ledger at its
+384th entry, which is not the run boundary.
 
 ## The registered result
 
@@ -53,10 +54,17 @@ against its own oracle and the table is published row by row in
 
 | what the added rule does | instances | correctly diagnosed |
 |---|---:|---:|
-| **states the rule the oracle encodes** | 7 | **7 / 7** |
+| **agrees with the oracle on every archived failing case** | 6 | **6 / 6** |
 | relaxes a precondition the original prose asserted | 1 | 1 / 1 |
-| right on some exercised inputs, wrong on others | 3 | 1 / 3 |
-| **contradicts the oracle** | **21** | **0 / 21** |
+| agrees on some archived cases and contradicts on others | 2 | 2 / 2 |
+| **contradicts the oracle** | **23** | **0 / 23** |
+
+Judged against **all 137 archived failing cases**, every one of which is published in the
+record. **The second review found three of these 32 rows wrong in their first version** — two
+`Mbpp/305` rows read as stating a `None` rule their text does not state, and `b1:Mbpp/559` read
+as consistent because the exporter published three of its five cases while the fourth and fifth
+contradicted it. The hand classification's measured first-pass error rate was **3 of 32**, and
+that is a reason to check the table rather than to trust it.
 
 Examples, each checkable against the record: `b2:Mbpp/137`'s clarification says an all-zero array
 gives `0.0` where the oracle expects `inf`; `b1:Mbpp/278`'s says to count all elements, giving 6
@@ -64,11 +72,20 @@ for a six-element tuple where the oracle expects 5; `b2:Mbpp/559`'s says the lar
 an all-negative list is its greatest element where the oracle expects 0; `b1:Mbpp/459`'s says
 every non-uppercase character survives where the oracle keeps only lowercase letters.
 
-**So the claim this study supports is not "clarifying a specification helps".** It is narrower:
-**when the added rule is the rule the hidden suite encodes, the auditor diagnosed the defect in
-7 of 7 instances; when the added rule contradicts it, in 0 of 21.** The registered contrast is
-the average of those two populations, and it is reported above as registered rather than being
-replaced by its favourable half.
+**So the claim this study supports is not "clarifying a specification helps".** It is narrower
+and is a description of these instances, not a law: **the auditor diagnosed the defect on all 9
+instances whose addition agrees with the oracle on the behaviour at issue, and on none of the 23
+whose addition contradicts it.** That is an association observed on one selected population, not
+a manipulated factor: correctness of the addition was not assigned, it was measured afterwards.
+The registered contrast averages **all four strata** and is reported above as registered, rather
+than being replaced by its favourable part.
+
+**And the determinacy instrument cannot separate information from bulk**, which belongs here
+rather than only in the limits below: the manipulation check's registered bar was met, but its
+contrast holding added length constant is +18.8 points with an interval from **−9.4 to +45.2**.
+That does not invalidate the registered H3 criterion, and inventing a threshold for it now would
+be the same error in the other direction — but any mechanistic reading of the table above
+carries it.
 
 **Two things that cross-tabulation is not.** It is **post hoc**, and the classification was
 written after the outcome was known — published row by row precisely because a judgement that
@@ -84,7 +101,7 @@ every arm: each of the nine was diagnosed on all four draws and none on only som
 statement about the four draws taken, not about this auditor in general.
 
 **The adjudication held.** `L1` and `L2` agreed on **84 of 91** items, Cohen's κ = **0.852**.
-Two item judgements deserve their own note, both raised by the review: `P0001` accepts a
+Two item judgements deserve their own note, both raised by the review: `P0021` accepts a
 finding that complains about a docstring, where three near-equivalent findings were rejected by
 `L2`; and one accepted finding contains a false example. Neither changes 9 of 32, because the
 affected instances carry other jointly accepted findings.

@@ -15,6 +15,12 @@ Each row records the added sentences, the witness's exercised inputs with the or
 value, and a hand verdict with its reason. **Hand verdicts are recorded as data, written after
 the outcome was known, and the table is published so a reader can disagree with any row** --
 which is the only honest form for a judgement that cannot be mechanised.
+
+**And a reader should: the second review of this study found three of these 32 rows wrong.**
+Two `Mbpp/305` rows were called partial on a rule the addition does not state, and
+`b1:Mbpp/559` was called consistent because the exporter published three of its five cases and
+the fourth-and-fifth contradicted it. Every case is now published, and the measured error rate
+of this hand classification on its first pass was **3 of 32**.
 """
 from __future__ import annotations
 
@@ -42,13 +48,13 @@ VERDICTS = {
  "b1:Mbpp/103": ("contradicts", "says the zero-index boundary value is 1; the oracle expects 0 at (0, 0)"),
  "b1:Mbpp/278": ("contradicts", "says count all elements, so 6 for a 6-tuple; the oracle expects 5"),
  "b1:Mbpp/294": ("contradicts", "says only numeric elements count; the oracle returns `False` on a list containing a string and a float"),
- "b1:Mbpp/305": ("partial", "the `None`-when-fewer-than-two rule matches the exercised inputs; the case-insensitivity it also adds does not — a later witness expects the uppercase-P match"),
+ "b1:Mbpp/305": ("contradicts", "prescribes a TUPLE of whatever matched when fewer than two are found, so `()` where the oracle expects `None`; and its case-insensitivity gives ('python', 'Programming') where the oracle expects ('PHP', 'Programming'). An earlier version called this partial by misreading its own addition as a None rule"),
  "b1:Mbpp/391": ("consistent", "shared indices, element-except-last as successive keys, last as value; matches every exercised case"),
  "b1:Mbpp/410": ("contradicts", "says non-integers are considered, which gives 2.5; the oracle expects 5"),
  "b1:Mbpp/459": ("contradicts", "says every non-uppercase character is left unchanged; the oracle keeps only lowercase letters"),
  "b1:Mbpp/556": ("consistent", "only the first n elements, unordered pairs counted once; matches n=1 -> 0 and n=10 -> 25"),
  "b1:Mbpp/558": ("contradicts", "says align by place value padding leading zeros, giving 14 on (12345, 9); the oracle expects 8, which is left-aligned truncation"),
- "b1:Mbpp/559": ("consistent", "empty or all-negative returns 0; matches both exercised cases"),
+ "b1:Mbpp/559": ("partial", "empty and all-negative return 0, matching four cases; the fifth, `([-100, -50, -30, -20, -10, 5, -3, -2, -7], -1)`, is not all-negative, so the addition requires the maximum non-empty sublist sum of 5 where the oracle expects 0. Called consistent while the exporter showed only three of its five cases"),
  "b1:Mbpp/576": ("consistent", "same relative order, not necessarily contiguous; matches every exercised case"),
  "b1:Mbpp/790": ("contradicts", "says odd indices may hold any value, which predicts True; the oracle expects False"),
  "b1:Mbpp/806": ("contradicts", "says the longest uppercase run's length, which is 1 for 'Aaa'; the oracle expects 0"),
@@ -56,7 +62,7 @@ VERDICTS = {
  "b2:Mbpp/137": ("contradicts", "says an all-zero array gives 0.0; the oracle expects `inf`"),
  "b2:Mbpp/278": ("contradicts", "says return the number of elements, so 6 for a 6-tuple; the oracle expects 5"),
  "b2:Mbpp/294": ("contradicts", "same as b1: only numeric counts, while the oracle returns `False`"),
- "b2:Mbpp/305": ("partial", "same split as b1 — the `None` rule matches, the case-insensitivity does not"),
+ "b2:Mbpp/305": ("contradicts", "same as b1: a tuple of the matching words where the oracle expects `None`, and case-insensitive matching where the oracle is not"),
  "b2:Mbpp/391": ("consistent", "shared indices, count equal to the shortest input; matches every exercised case"),
  "b2:Mbpp/410": ("contradicts", "same as b1: non-integers considered gives 2.5, the oracle expects 5"),
  "b2:Mbpp/459": ("contradicts", "same as b1: non-alphabetic characters preserved, while the oracle removes them"),
@@ -90,8 +96,16 @@ def main() -> int:
             "verdict": verdict, "reason": reason,
             "added": added_sentences(conds[iid]["original"]["spec"],
                                      conds[iid]["clarified"]["spec"]),
+            # EVERY archived case, not the first three. The docstring defined consistency
+            # over "every exercised input" and the exporter published `cases[:3]`, so a row
+            # could be called consistent on the strength of three cases while a fourth
+            # contradicted it -- which is what happened to `b1:Mbpp/559`, whose fifth case the
+            # table never showed. 137 cases exist; 87 were published. Found by the second
+            # review, and it is the same defect as the metric it was written to repair: an
+            # artefact that claims more than it delivers.
             "exercised": [{"input": c.get("input"), "oracle_expects": c.get("expected")}
-                          for c in cases[:3]],
+                          for c in cases],
+            "n_cases": len(cases),
         }
         tally[verdict] = tally.get(verdict, 0) + 1
 

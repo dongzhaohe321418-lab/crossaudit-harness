@@ -10,8 +10,14 @@ Two checks, and the second is the one with teeth:
 
 1. The candidate equals the frozen generation batch's solution for that instance.
 2. **The candidate reproduces the witness's recorded `actual` value on the witness's own failing
-   inputs.** A different program can be made to satisfy any digest scheme; it cannot reproduce
-   another program's outputs. This is the check that would have caught the defect on its own.
+   inputs.**
+
+**The first version of this docstring said a different program cannot reproduce another's
+outputs. That is false**, and the second review of `RESULTS-CLARIFY.md` said so: agreement on a
+finite set of witness cases establishes **consistency**, not identity. Identity is established
+by check 1, the comparison against the frozen batch source. Check 2 is what catches a candidate
+that is the right source but has been transformed in transit, and it is what caught the
+canonical-solution defect in practice -- but on its own it proves the weaker thing.
 """
 from __future__ import annotations
 
