@@ -41,6 +41,12 @@ def gate_no_leak(clarified: str, witness: dict, hidden_program: str) -> list[str
     hidden test. A text that describes the failure is a leak: the auditor would be diagnosing
     a defect it was handed rather than one it found.
     """
+    if not isinstance(hidden_program, str):
+        raise TypeError(
+            "gate_no_leak needs the hidden program's TEXT, not "
+            f"{type(hidden_program).__name__}. `Problem.hidden_program` is a method taking the "
+            "solution and returning (text, bool); passing the bound method made the first run "
+            "die inside the gate rather than fail the instance.")
     problems = []
     body = " ".join(clarified.split())
     for case in (witness.get("cases") or [])[:8]:

@@ -171,9 +171,12 @@ sampling configurations**, which is C2's confound and is not removed here.
   been larger than the truth.
 * **Re-grading is not re-asking.** It shows where the existing findings fall under a different
   cut, not how an auditor would behave if its severity instructions were different.
-* **Flag coverage is not naming.** No figure here says what a finding identified. Establishing
-  that needs the two-rater adjudication that studies 18 and 19 ran, on texts this sweep does not
-  read.
+* **Flag coverage is not naming.** No figure here establishes what a finding identified; that
+  requires assessing finding content against the hidden failure, which this sweep does not do.
+  The earlier sentence here named studies 18 and 19 as having run a two-rater adjudication that
+  would supply it. Study 18's report says the opposite in its own words -- its advisory texts
+  "were not archived or adjudicated against the hidden failure" -- and no study 19 record
+  adjudicates finding content either. The sentence credited two studies with work neither did.
 * **The sampling asymmetry travels with every cross-family row.** The cross-vendor route is sent
   no sampling parameter and the same-vendor routes are sent temperature 0, so the families are
   not equally free to vary between draws. That confound is C2's and it is not removed here.
