@@ -15,10 +15,12 @@ harness could not recover, and the caught arm's four are timeouts. Each is shown
 
 **The witness carries the expected value and this sheet does not show it.** The question is
 whether the specification determines what should be returned on the failing input. Showing the expected value would
-change the question: a rater shown a proposed return value is asked whether the prose is
-consistent with *that* value, not whether the prose determines what to return. Whether it would
-also anchor the rater is **not measured here**, and an earlier version of this docstring asserted
-it would. Only the failing input is shown, recovered mechanically instead of written by
+change the question being asked. Without a target, a rater judges whether the prose determines
+what to return; with one, it judges whether the prose entails that particular value -- which is
+what the six-category comparator asked, explicitly, and is a different question rather than a
+weaker one. Whether a shown value would also anchor the rater is **not measured here**. Two
+earlier versions of this docstring asserted more than that: first that a shown value makes a
+rater judge the prose determines it, then that it reduces the question to consistency. Only the failing input is shown, recovered mechanically instead of written by
 the author. This is **not** the same information content as the prose classes it replaces, as
 this docstring claimed until the second review of `RESULTS-RATE3.md` checked it: some of those
 classes stated oracle behaviour outright, which this deliberately withholds. The replacement is

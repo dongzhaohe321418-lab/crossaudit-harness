@@ -1,4 +1,4 @@
-# P1's third rating — and a rater that disagrees with itself on more than half the repeats
+# P1's third rating — and a rater that repeats itself 7 times in 11
 
 > **Third version, 2026-09-22.** Two cross-vendor reviews refused the two before it. Round 1
 > found the arms overlapping, the accompanying registration's chronology false, and the rater
@@ -16,14 +16,18 @@ All intervals: problem-cluster percentile bootstrap, 10,000 resamples, **seed 20
 The sheet carries 11 instances **twice** — once in each arm — with the **same specification text
 and the same witness display** both times. They are the same question asked twice in one pass.
 
-> **On the three-option label, `L3` agreed with itself on 5 of those 11 pairs.** On the binary
-> outcome the contrasts are actually built from — `undetermined` against everything else — it
-> agreed on **7 of 11**, because two of the disagreements are `determined` against `cannot-tell`,
-> which count identically in every table below.
+> **On the binary outcome the primary contrasts are built from — `undetermined` against
+> everything else — `L3` agreed with itself on 7 of those 11 pairs.** On the full three-option
+> label it agreed on 5, because two disagreements are `determined` against `cannot-tell`, which
+> the primary counts identically.
+>
+> **The abstention-excluded rows are a third case, not either of those.** They drop
+> `cannot-tell` from the denominator, so those two pairs leave the analysis rather than
+> collapsing into agreement: **7 pairs survive with no abstention, and 5 of them agree.**
 
-Neither earlier version of this report mentioned it. **7 of 11 is the number that bears on the
-contrasts**; 5 of 11 describes the fuller label and is the more alarming of the two, which is
-why it is stated second rather than first.
+Neither earlier version of this report mentioned any of it. Each figure describes the analysis
+named beside it; none of the three describes the others, and an earlier version's claim that the
+two labels "count identically in every table below" was false of the abstention-excluded rows.
 
 **The scope, exactly.** These 11 pairs sit on **6 problems**, so they are not 11 independent
 observations. They are also not the sheet's only repeated text: the 121 entries carry 56
@@ -36,7 +40,9 @@ each agreed with themselves **11 times out of 11**. They were answering a differ
 on a different sheet, with expected values shown, so this is not a controlled comparison — but
 it does place `L3`'s 5, or 7, against a background of 11.
 
-**No figure in this report should be quoted without this paragraph beside it.**
+**No figure from the rebuilt-sheet rows should be quoted without the matching one of
+those three numbers beside it.** The six-category comparator row is not covered: its raters
+were checked above and were stable.
 
 ## Provenance, stated exactly
 
@@ -88,7 +94,7 @@ expected values — so this rating never checks whether the particular hidden ex
 follows from the prose. The instruments differ in more than option count. The closeness of +22.4
 to +22.6 is a coincidence between two instruments and is not evidence.
 
-## Table 2 — what the unanswerable sheet said, and why it could not have been published
+## Table 2 — what the unanswerable sheet said, and what the registered gate did with it
 
 The same model rated the sheet before it was rebuilt on mechanically recovered witnesses. That
 version showed 42 of its 53 caught entries no failing input class at all.
@@ -129,12 +135,17 @@ context, and an earlier draft of this paragraph claimed they could.
 
 * `L3` is a model. P1 exists to obtain a rating from **a human outside the project**; this does
   not deliver that, and no sentence here should be read as delivering it.
-* **5 of 11 within-pass repeats agree.** See the top of this report.
+* **Within-pass repeats: 7 of 11 agree on the primary binary outcome, 5 of 11 on the full
+  label, and 5 of the 7 abstention-free pairs agree.** All three sit on 6 problems. See the
+  top of this report.
 * The disjoint reading, the abstention-excluded secondary and the broken-sheet comparison
   are all post hoc.
 * Each of the **four rebuilt-sheet contrasts** has its lower end within five points of zero
-  (+1.2, +2.0, +2.4, +4.8). The broken-sheet intervals start at +38.5 and the Wilson
-  intervals are wider still; this limit is about those four rows and not about the table.
+  (+1.2, +2.0, +2.4, +4.8). The broken-sheet contrast intervals start at +38.5, so
+  this limit is about those four rows and not about the table. It is not about the Wilson
+  intervals either — they are intervals for single rates rather than for a difference, and they
+  are **narrower** than the broken-sheet contrasts (22.3 and 25.8 points against 31.0 and 36.1),
+  not wider as an earlier version said.
 * **L1 — the author — rated all 121 entries**, covering all 110 unique instances, so the
   programme holds a re-test rather than an independent review for each. That does not prevent an
   independent rater from re-rating; it is the reason P1 asks for one.
