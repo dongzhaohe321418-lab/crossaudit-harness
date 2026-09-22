@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
-"""P1's third rating, analysed exactly as `plan/P1-ANALYSIS-REGISTRATION.md` fixed it.
+"""P1's third rating.
 
-Three contrasts: the primary with `cannot-tell` in the denominator, a secondary excluding it,
-and an exploratory reading of what the broken sheet cost. All reported whatever they show.
+**Provenance, stated precisely, because two earlier versions of this header got it wrong.**
+The rubric, the share taken over all items, the problem-cluster percentile bootstrap over the
+union of their problems, 10,000 resamples, **seed 20260921** and Wilson beside it were all
+registered in P3's Amendment 1 (`d5919b9`, 2026-09-21 20:24:05), a day before the ratings. So
+was an inconclusiveness gate at one-third `cannot-tell` in either group.
+
+`plan/P1-ANALYSIS-REGISTRATION.md`, written the next day, is **withdrawn**: it claimed no
+contrast had been computed when one had been committed an hour earlier. What that withdrawal
+does NOT license is the opposite overstatement -- the method above was fixed in advance.
+
+What was **not** registered anywhere: the disjoint-population diagnostic, and the comparison
+against the broken sheet. Both are post hoc and are labelled so.
 """
 from __future__ import annotations
 
@@ -18,7 +28,7 @@ import report_ceiling as rc  # noqa: E402
 
 KEY = Path.home() / "Desktop/CrossAudit-审计天花板/人类评分任务/_items.json"
 REC = Path("benchmarks/code/records/rate3")
-SEED = 20260922
+SEED = 20260921        # the registered seed; 20260922 was used by mistake in one draft
 N_BOOT = 10000
 
 
@@ -98,7 +108,9 @@ def main() -> int:
     primary = contrast(items, rebuilt, drop_cannot=False)
     disjoint = contrast(items, rebuilt, drop_cannot=False, disjoint=True)
     secondary = contrast(items, rebuilt, drop_cannot=True)
+    secondary_dj = contrast(items, rebuilt, drop_cannot=True, disjoint=True)
     explor = contrast(items, broken, drop_cannot=False)
+    explor_dj = contrast(items, broken, drop_cannot=False, disjoint=True)
 
     moved = sum(1 for it in items
                 if broken.get(it["rate_id"]) != rebuilt.get(it["rate_id"]))
@@ -113,13 +125,47 @@ def main() -> int:
     ct = {"broken": sum(1 for v in broken.values() if v == "cannot-tell"),
           "rebuilt": sum(1 for v in rebuilt.values() if v == "cannot-tell")}
 
+    # The 11 instances that sit in both arms are the same specification and the same witness
+    # display, rated twice in one pass. Their agreement is a within-pass consistency reading of
+    # the instrument itself, and it is the strongest constraint on anything read off it.
+    dup = {}
+    for it in items:
+        dup.setdefault(it["instance"], []).append(it)
+    pairs = [(i, rows) for i, rows in dup.items() if len(rows) > 1]
+    agree = [(i, [rebuilt.get(x["rate_id"]) for x in rows]) for i, rows in pairs]
+    same_text = all(len({x["spec"] for x in rows}) == 1 for _, rows in pairs)
+    n_agree = sum(1 for _, ls in agree if len(set(ls)) == 1)
+
+    ct_share = {}
+    for sheet, L in (("rebuilt", rebuilt), ("broken", broken)):
+        for a in ("missed", "caught"):
+            ids = [it["rate_id"] for it in items if it["arm"] == a]
+            ct_share[f"{sheet}_{a}"] = 100 * sum(
+                1 for r in ids if L.get(r) == "cannot-tell") / len(ids)
+
     out = {
+        "within_pass_consistency": {
+            "note": "the 11 instances carried in both arms: identical specification text, "
+                    "identical witness display, rated twice in the same pass",
+            "n_pairs": len(pairs), "n_agreeing": n_agree,
+            "specification_text_identical_in_every_pair": same_text,
+            "pairs": {i: ls for i, ls in agree},
+        },
+        "registered_inconclusive_gate": {
+            "rule": "Amendment 1 (d5919b9): inconclusive if either group exceeds one third "
+                    "`cannot-tell`",
+            "cannot_tell_share_pct": ct_share,
+            "rebuilt_passes": max(ct_share["rebuilt_missed"], ct_share["rebuilt_caught"]) <= 100 / 3,
+            "broken_passes": max(ct_share["broken_missed"], ct_share["broken_caught"]) <= 100 / 3,
+        },
         "rater": "gpt-5.6-luna (L3), per rate3/third_rater.py -- a MODEL, not the outside "
                  "human P1 asks for, and deliberately NOT gpt-6-astra, which was study 21's L2",
         "seed": SEED, "n_boot": N_BOOT,
         "sheet_groups_NOT_missed_vs_caught": primary,
         "disjoint_instances_57_vs_53": disjoint,
-        "secondary_cannot_tell_excluded": secondary,
+        "secondary_cannot_tell_excluded_OVERLAPPING": secondary,
+        "secondary_cannot_tell_excluded_DISJOINT": secondary_dj,
+        "exploratory_broken_sheet_DISJOINT": explor_dj,
         "exploratory_broken_sheet": explor,
         "labels_changed_between_sheets": moved,
         "labels_changed_by_arm": moved_by_arm,
@@ -147,14 +193,20 @@ def main() -> int:
     print()
     show("DISJOINT INSTANCES (the 11 missed-arm copies removed)", disjoint)
     print()
-    show("SECONDARY (cannot-tell excluded)", secondary)
+    show("SECONDARY overlapping (cannot-tell excluded)", secondary)
     print()
-    show("EXPLORATORY (the broken sheet -- evidence about SHEETS, not specifications)", explor)
+    show("SECONDARY disjoint  (cannot-tell excluded)", secondary_dj)
+    print()
+    show("EXPLORATORY broken sheet, overlapping groups", explor)
+    print()
+    show("EXPLORATORY broken sheet, disjoint instances", explor_dj)
     print(f"\ncannot-tell: {ct['broken']} on the broken sheet, {ct['rebuilt']} on the rebuilt one")
     print(f"{moved} of {len(items)} labels changed between the two sheets "
           f"(missed {moved_by_arm['missed']}, caught {moved_by_arm['caught']}); the "
           f"undetermined RATE moved {rate_shift['missed']:+.2f} points on missed and "
           f"{rate_shift['caught']:+.2f} on caught")
+    print(f"\nwithin-pass consistency: {n_agree} of {len(pairs)} duplicate pairs agree "
+          f"(identical specification text in every pair: {same_text})")
     print(f"\nsix-category comparator (a DIFFERENT instrument): missed 46/68, caught 24/53, "
           f"{out['six_category_comparator']['diff_points']:+.1f} points")
     return 0

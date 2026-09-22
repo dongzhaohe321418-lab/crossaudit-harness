@@ -16,8 +16,11 @@ harness could not recover, and the caught arm's four are timeouts. Each is shown
 **The witness carries the expected value and this sheet does not show it.** The question is
 whether the specification determines what should be returned on the failing input. A rater who is
 shown the expected value has been handed the answer and will tend to judge that the prose
-determines it. Only the failing input is shown -- the same information content as the original
-prose class, recovered mechanically instead of written by the author.
+determines it. Only the failing input is shown, recovered mechanically instead of written by
+the author. This is **not** the same information content as the prose classes it replaces, as
+this docstring claimed until the second review of `RESULTS-RATE3.md` checked it: some of those
+classes stated oracle behaviour outright, which this deliberately withholds. The replacement is
+comparable across arms and mechanically derived; it is not equivalent to what it replaced.
 
 The rate_id to instance mapping is preserved exactly, so a partially completed sheet still maps.
 """
