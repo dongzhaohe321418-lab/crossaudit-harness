@@ -87,6 +87,28 @@ SCAFFOLD = ["SPECIFICATION:",
             "The hidden suite exercises these inputs, where the prose is silent:"]
 
 
+#: The instance's OWN candidate, from the frozen generation batches. Keyed by `<batch>:<problem>`
+#: exactly as the population's instance ids are.
+BATCH_SOLUTIONS = (Path.home() / "Documents/Crossaudit/study-data/wt-testgen-runs/inputs")
+
+
+def batch_candidates() -> dict[str, str]:
+    out: dict[str, str] = {}
+    for batch in ("b1", "b2"):
+        path = BATCH_SOLUTIONS / f"solutions-{batch}.jsonl"
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            sol = row.get("solution")
+            if isinstance(sol, str) and sol.strip():
+                out[f"{batch}:{row['problem_id']}"] = sol
+    return out
+
+
+BATCH_CANDIDATES: dict[str, str] = {}
+
+
 def load_keys() -> None:
     for line in (Path.home() / ".crossaudit-keys.env").read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -133,7 +155,14 @@ def ask(system: str, prompt: str) -> str:
 
 def main() -> int:
     load_keys()
+    global BATCH_CANDIDATES
+    BATCH_CANDIDATES = batch_candidates()
     pop = json.loads(POP.read_text(encoding="utf-8"))
+    missing = [i for i in pop["instance_ids"] if i not in BATCH_CANDIDATES]
+    if missing:
+        raise SystemExit(f"ERR: no frozen candidate for {len(missing)} instances: {missing[:5]}. "
+                         "Refusing to fall back on canonical_solution -- that fallback is what "
+                         "Amendment 13 is about.")
     witnesses = {r["instance_id"]: r for r in json.loads(DUMP.read_text(encoding="utf-8"))}
     problems = {p.problem_id: p for p in load_problems()}
 
@@ -173,10 +202,14 @@ def main() -> int:
         conds["clarified"] = {"spec": clarified, "candidate": "", "visible_tests": ""}
         conds["placebo"] = {"spec": placebo, "candidate": "", "visible_tests": ""}
 
-        # The code is identical by construction here -- nothing in this script touches it --
-        # and gate 1 checks that rather than trusting it.
+        # Amendment 13. This used `problem.canonical_solution`, which is per PROBLEM, while an
+        # instance is a (batch, problem) pair: b1:Mbpp/459 and b2:Mbpp/459 are two independent
+        # generations with two different candidates. All 32 of the population's real candidates
+        # differ from it, so the first audit read a program the population is not about --
+        # 384 readings, discarded. Gate 1 passed throughout, because it checks that the
+        # candidate is identical across the three conditions and this one was: identically wrong.
         for c in conds.values():
-            c["candidate"] = problem.canonical_solution
+            c["candidate"] = BATCH_CANDIDATES[iid]
             c["visible_tests"] = problem.visible_tests_text()
 
         # `hidden_program` is a method taking the solution and returning (text, bool), not a
