@@ -111,8 +111,11 @@ not identify the cause of the families' original differences.
 
 **So C2's -26.4 points cannot be read as a difference in what the auditors can see.** What the
 sweep establishes is narrower and worth stating exactly: **the measured flag coverage is
-rule-dependent**, and C2's magnitude is not invariant to a grading rule that no preregistration
-fixed. It does **not** establish why the families produced different findings or different
+rule-dependent**. C2's magnitude is specific to its **preregistered** BLOCKER rule — ceiling 1's
+registration fixes the flag as "≥ 1 BLOCKER finding" and study 18 inherits it — and exploratory
+re-grading changes that magnitude and reverses its sign. Round 3 corrected "a grading rule that
+no preregistration fixed", which was larger than the truth in the direction of disparaging the
+original study's rigour. It does **not** establish why the families produced different findings or different
 severities — round 2 was right that "a large part of the gap is attributable to where each family
 sets BLOCKER" is a causal attribution the re-grading cannot support. C2's estimate remains valid
 for its own rule and configuration; its sign reverses under any-finding grading; and neither fact
@@ -126,9 +129,10 @@ the four reachable rules `self-strong` has no point between 3.3% and 34.0% false
 precisely where a matched comparison with `cross` would sit — so **that family's comparison is
 bracketed, not measured, and nothing here resolves the ranking between its two endpoints.**
 
-**The one comparison that is matched, and what it does and does not settle.** At the common
-depth K = 4, `astra` and `cross` sit at essentially the same cost — 10.7% [5.9, 16.0] against
-10.9% [6.9, 15.4] false positives — and `astra` reaches **32.7%** [21.1, 45.5] recall against
+**The comparison at equal depth, and what it does and does not settle.** At the common depth
+K = 4 the observed false-positive rates are similar — 10.7% [5.9, 16.0] against 10.9%
+[6.9, 15.4] — which is an observation about two rates and not a matched operating point; the
+contrast below leaves their difference unresolved. At that depth `astra` reaches **32.7%** [21.1, 45.5] recall against
 `cross`'s **21.2%** [13.1, 30.3]. Paired over the same instances and clustered by problem, with
 three comparators because they answer different questions:
 
@@ -138,8 +142,9 @@ three comparators because they answer different questions:
 | `cross` draws 1–4 only (sensitivity) | **+12.7 points** [+3.6, +22.7] | +0.0 points [-4.8, +4.7] |
 | `cross` on its complete K = 8 ladder | **+2.7 points** [-6.5, +13.0] | -5.3 points [-10.3, -0.7] |
 
-The first row is the one that matches the table above it: both sides averaged over all 70
-four-draw subsets. The second holds `cross` to its first four draws and is a sensitivity
+The first row is the one that matches the table above it: each side averaged over all its
+available four-draw subsets, which is 70 for `cross` and, since it has exactly four draws, one
+for `astra`. The second holds `cross` to its first four draws and is a sensitivity
 analysis, not the headline — the first version of this report used it while presenting the
 subset-averaged table beside it, which is a different estimand and is why 32.7 minus 21.2 could
 not give +12.7. The third compares `astra` at four readings against `cross` at eight, which is a
@@ -158,7 +163,7 @@ sampling configurations**, which is C2's confound and is not removed here.
   are a chosen analysis set and not the archive's limit — the observed counts also permit a
   cutoff at three — but the reachable points remain coarse, and the gap that matters for
   `self-strong` falls inside one of them.
-* **Post hoc.** No preregistration names these rules, so every figure here carries the
+* **Post hoc.** This four-rule sweep was not preregistered, so every figure here carries the
   exploratory label. That is a limit on what it can become, not on what it can support: an
   exploratory analysis can carry exploratory inference, and it cannot be turned into a
   preregistered confirmatory test after the fact. Round 2 found "it may not be read as a test of
