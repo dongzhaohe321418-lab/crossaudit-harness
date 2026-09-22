@@ -63,7 +63,7 @@ Reply with the complete edited specification and nothing else."""
 
 PLACEBO_SYSTEM = """You are editing a programming problem's specification prose.
 
-Add one or two sentences of the same length and register as the surrounding text that resolve
+Add one or two sentences in the register of the surrounding text that resolve
 NO ambiguity whatever: context about where the function sits, a restatement of something the
 prose already says, or a note about style. After your edit a reader must be able to derive
 exactly what they could derive before, and no more.
@@ -72,6 +72,11 @@ You must NOT:
   - state or imply any behavioural rule not already present,
   - mention tests, failures, bugs, or that anything is wrong,
   - change any sentence that is already there.
+
+Your addition must be TARGET_WORDS words long, give or take a word or two. That length is
+not a stylistic preference: the placebo exists to hold everything constant except the
+information, so if it is shorter than the clarification the two conditions differ in bulk as
+well as in content and the contrast is confounded.
 
 Reply with the complete edited specification and nothing else."""
 
@@ -115,11 +120,21 @@ def main() -> int:
         base = (f"SPECIFICATION:\n{problem.spec}\n\n"
                 f"The hidden suite exercises these inputs, where the prose is silent:\n{inputs}\n")
 
+        # Amendment 5. The first run dropped every instance it reached, and four of the five
+        # drops were the placebo-length gate, not a leak: the placebo was written blind, told
+        # only to match "the surrounding text", while the gate measures it against the
+        # CLARIFICATION's added words. The placebo was being asked to hit a number it had not
+        # been told. The clarification is therefore written first and its added length passed
+        # to the placebo as the target. The gate is unchanged and still checks the result
+        # independently -- what changes is that the writer is now told what it must achieve.
+        n_words = lambda t: len(t.split())                           # noqa: E731
         conds = {"original": {"spec": problem.spec, "candidate": "", "visible_tests": ""}}
-        for name, system in (("clarified", CLARIFY_SYSTEM), ("placebo", PLACEBO_SYSTEM)):
-            spec = ask(system, base if name == "clarified"
-                       else f"SPECIFICATION:\n{problem.spec}\n")
-            conds[name] = {"spec": spec, "candidate": "", "visible_tests": ""}
+        clarified = ask(CLARIFY_SYSTEM, base)
+        added = max(n_words(clarified) - n_words(problem.spec), 1)
+        placebo = ask(PLACEBO_SYSTEM.replace("TARGET_WORDS", str(added)),
+                      f"SPECIFICATION:\n{problem.spec}\n")
+        conds["clarified"] = {"spec": clarified, "candidate": "", "visible_tests": ""}
+        conds["placebo"] = {"spec": placebo, "candidate": "", "visible_tests": ""}
 
         # The code is identical by construction here -- nothing in this script touches it --
         # and gate 1 checks that rather than trusting it.
@@ -136,7 +151,16 @@ def main() -> int:
         if problems_found:
             print(f"  [{n}/{len(pop['instance_ids'])}] {iid}: regenerating, "
                   f"{problems_found[0].split(': ', 1)[1][:70]}", flush=True)
-            conds["clarified"]["spec"] = ask(CLARIFY_SYSTEM, base)
+            # Regenerate the condition the failure NAMES. The first run regenerated the
+            # clarification on every failure, including length failures -- which moves the
+            # target the placebo missed instead of moving the placebo.
+            if any("word counts" in f for f in problems_found):
+                added = max(n_words(conds["clarified"]["spec"]) - n_words(problem.spec), 1)
+                conds["placebo"]["spec"] = ask(
+                    PLACEBO_SYSTEM.replace("TARGET_WORDS", str(added)),
+                    f"SPECIFICATION:\n{problem.spec}\n")
+            else:
+                conds["clarified"]["spec"] = ask(CLARIFY_SYSTEM, base)
             problems_found = gates.run_all(iid, conds, wit.get("witness") or {}, hidden_text)
         if problems_found:
             dropped.append({"instance_id": iid, "reasons": problems_found})
