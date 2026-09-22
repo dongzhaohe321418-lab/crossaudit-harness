@@ -208,7 +208,12 @@ def main(argv: list[str] | None = None) -> int:
             # fires when the retries are exhausted, which is the thing it was meant to catch.
             transient = any(t in err for t in (
                 "cooling down", "retry in", "429", "unreachable", "SSL", "EOF",
-                "Connection", "timed out", "Timeout"))
+                "Connection", "timed out", "Timeout",
+                # Added after four readings were lost to these: they are the network and the
+                # provider hiccuping, and the first run's classifier read them as an outage,
+                # wrote a failed row, and moved on.
+                "RemoteDisconnected", "non-JSON", "Remote end closed", "BadStatusLine",
+                "IncompleteRead", "reset by peer"))
             if not row.get("ok") and transient and cooldown_retries < 60:
                 cooldown_retries += 1
                 wait = min(30 * (1 + cooldown_retries // 10), 120)
@@ -240,7 +245,26 @@ def main(argv: list[str] | None = None) -> int:
             fh.flush()
             if n % 10 == 0 or not todo:
                 print(f"  {n} done, {len(todo)} left  ${spent(ledger, n):.2f}", flush=True)
+    # A run that leaves holes must not report success. The previous version drained its queue,
+    # printed a total and exited 0 with four readings missing, because a non-transient failure
+    # writes a row and moves on -- and nothing downstream would have shown those four as holes
+    # rather than as absences of findings. This is the third time in this study that a check
+    # reported completion over an incomplete artefact.
+    have = set()
+    for line in rows_path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            r = json.loads(line)
+            if r.get("ok"):
+                have.add((r["instance_id"], r["condition"], r["draw"]))
+    want = {(i, a, d) for i in ids for a in ARMS for d in range(1, K + 1)}
+    holes = sorted(want - have)
     print(f"\nwrote {rows_path}; ${spent(ledger, n_todo):.2f} spent")
+    if holes:
+        print(f"INCOMPLETE: {len(holes)} of {len(want)} readings are missing, e.g. {holes[:4]}")
+        print("Re-run to fill them. The analysis must not be computed over this file.")
+        return 4
+    print(f"complete: all {len(want)} readings present "
+          f"({len(ids)} instances x {len(ARMS)} arms x K={K})")
     return 0
 
 
