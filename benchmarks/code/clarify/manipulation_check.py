@@ -70,7 +70,7 @@ def main() -> int:
     # cannot see which condition an item is, and the two arms of a pair are not adjacent.
     sheet = []
     for iid, c in conds.items():
-        for arm in ("original", "clarified"):
+        for arm in ("original", "clarified", "placebo"):
             sheet.append({"iid": iid, "arm": arm, "spec": c[arm]["spec"]})
     random.Random(SEED).shuffle(sheet)
     for n, item in enumerate(sheet, 1):
@@ -96,7 +96,7 @@ def main() -> int:
             labels[m.group(1)] = m.group(2)
         print(f"  {chunk[0]['rid']}-{chunk[-1]['rid']}: {len(labels)}/{len(sheet)}", flush=True)
 
-    by_arm = {"original": [], "clarified": []}
+    by_arm = {"original": [], "clarified": [], "placebo": []}
     probs = {}
     for item in sheet:
         lab = labels.get(item["rid"])
@@ -110,34 +110,47 @@ def main() -> int:
         k = sum(v for _, v in rows)
         rates[arm] = {"k": k, "n": len(rows), "rate": 100 * k / len(rows) if rows else None}
 
-    # Paired on the instance, clustered by problem.
-    paired = {}
-    for iid, v in by_arm["original"]:
-        paired.setdefault(iid, {})["original"] = v
-    for iid, v in by_arm["clarified"]:
-        paired.setdefault(iid, {})["clarified"] = v
-    both = {i: d for i, d in paired.items() if len(d) == 2}
-    by_problem: dict[str, list] = {}
-    for iid, d in both.items():
-        by_problem.setdefault(probs[iid], []).append((d["clarified"], d["original"]))
-    keys = sorted(by_problem)
-    rng = random.Random(SEED)
-    diffs = []
-    for _ in range(10000):
-        a = b = n = 0
-        for _ in range(len(keys)):
-            for c, o in by_problem[keys[rng.randrange(len(keys))]]:
-                a += c; b += o; n += 1
-        if n:
-            diffs.append(100 * (a - b) / n)
-    diffs.sort()
-    point = 100 * sum(d["clarified"] - d["original"] for d in both.values()) / len(both)
-    lo, hi = rc.percentile(diffs, 0.025), rc.percentile(diffs, 0.975)
-    passed = lo > 0
+    # Paired on the instance, clustered by problem: 44 instances sit on 26 problems, 18 of
+    # which carry two instances, so the instance is not the independent unit.
+    paired: dict[str, dict] = {}
+    for arm in ("original", "clarified", "placebo"):
+        for iid, v in by_arm[arm]:
+            paired.setdefault(iid, {})[arm] = v
+
+    def contrast(treat: str, ref: str) -> dict:
+        both = {i: d for i, d in paired.items() if treat in d and ref in d}
+        if not both:
+            return {"n": 0, "points": None, "ci95": [None, None]}
+        by_problem: dict[str, list] = {}
+        for iid, d in both.items():
+            by_problem.setdefault(probs[iid], []).append((d[treat], d[ref]))
+        keys = sorted(by_problem)
+        rng = random.Random(SEED)
+        diffs = []
+        for _ in range(10000):
+            a = b = n = 0
+            for _ in range(len(keys)):
+                for t, r in by_problem[keys[rng.randrange(len(keys))]]:
+                    a += t; b += r; n += 1
+            if n:
+                diffs.append(100 * (a - b) / n)
+        diffs.sort()
+        pt = 100 * sum(d[treat] - d[ref] for d in both.values()) / len(both)
+        return {"n": len(both), "n_problems": len(keys), "points": pt,
+                "ci95": [rc.percentile(diffs, 0.025), rc.percentile(diffs, 0.975)]}
+
+    primary = contrast("clarified", "original")      # the bar Amendment 4 registered
+    validity = contrast("placebo", "original")       # Amendment 7, reported beside it
+    both = {i: d for i, d in paired.items() if "clarified" in d and "original" in d}
+    point = primary["points"]
+    lo, hi = primary["ci95"]
+    passed = bool(lo is not None and lo > 0)
 
     OUT.write_text(json.dumps({
         "rater": RATER, "clarifier": data.get("model"), "seed": SEED,
         "n_pairs": len(both), "rates": rates,
+        "primary_clarified_minus_original": primary,
+        "validity_placebo_minus_original": validity,
         "clarified_minus_original_points": point, "cluster_ci95_points": [lo, hi],
         "manipulation_worked": passed,
         "bar": "registered in Amendment 4: clarified judged `determined` more often, "
@@ -148,7 +161,14 @@ def main() -> int:
 
     print(f"\noriginal  {rates['original']['k']}/{rates['original']['n']} determined")
     print(f"clarified {rates['clarified']['k']}/{rates['clarified']['n']} determined")
-    print(f"paired difference {point:+.1f} points, cluster [{lo:+.1f}, {hi:+.1f}], n={len(both)}")
+    print(f"placebo   {rates['placebo']['k']}/{rates['placebo']['n']} determined")
+    print(f"\nclarified - original {point:+.1f} points, cluster [{lo:+.1f}, {hi:+.1f}], "
+          f"n={primary['n']} on {primary['n_problems']} problems   [the registered bar]")
+    v = validity
+    if v["points"] is not None:
+        print(f"placebo   - original {v['points']:+.1f} points, cluster "
+              f"[{v['ci95'][0]:+.1f}, {v['ci95'][1]:+.1f}], n={v['n']}   [validity: a placebo "
+              f"that reads as MORE determined means the rating tracks length, not information]")
     print(f"\nMANIPULATION {'WORKED — the audit may be bought' if passed else 'FAILED — no audit reading is bought'}")
     return 0 if passed else 2
 
