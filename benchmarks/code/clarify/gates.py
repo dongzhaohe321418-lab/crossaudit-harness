@@ -80,12 +80,67 @@ def gate_placebo_length(clarified: str, placebo: str, original: str,
     return []
 
 
+def _sentences(text: str) -> list[str]:
+    flat = " ".join(text.split())
+    return [p.strip() for p in re.split(r"(?<=[.!?])\s+", flat) if p.strip()]
+
+
+def gate_preserves_original(edited: str, original: str, arm: str) -> list[str]:
+    """Gate 4: the edit ADDED to the specification and changed nothing that was there.
+
+    Both generators are instructed to "change no sentence that is already there", and until
+    2026-09-22 nothing checked it.
+
+    The check is order-preserving containment at SENTENCE granularity, not line granularity.
+    The first draft of this gate compared lines and failed its own clean fixture: appending a
+    sentence to an existing paragraph rewrites that line while deleting nothing, which is
+    exactly what the generators are asked to do. Sentences are the unit the instruction is
+    written in, so they are the unit the gate checks.
+    """
+    edited_flat = " ".join(edited.split())
+    pos = 0
+    for sent in _sentences(original):
+        idx = edited_flat.find(sent, pos)
+        if idx < 0:
+            return [f"{arm} does not preserve the original prose; sentence missing or "
+                    f"reordered: {sent[:60]!r}"]
+        pos = idx + len(sent)
+    return []
+
+
+def gate_no_scaffolding(edited: str, scaffold_lines: list[str], arm: str) -> list[str]:
+    """Gate 5: none of the PROMPT's own structure appears in the edited specification.
+
+    The smoke run returned specifications beginning with a `SPECIFICATION:` header echoed back
+    out of the prompt -- present in two of three edited arms and in no original. Gate 4 cannot
+    see it: prepending a line deletes nothing, so every original sentence is still there in
+    order. A leak gate cannot see it either; it carries no hidden information.
+
+    What it does carry is a label. An arm that is visibly marked as edited is readable by the
+    determinacy rater whose blinding the manipulation check depends on, and by the auditor
+    afterwards. The gate is therefore stated over the scaffolding as a whole rather than over
+    the one header that was observed: the caller passes the lines it used to BUILD the prompt,
+    and none of them may appear in what comes back.
+    """
+    flat = " ".join(edited.split())
+    for line in scaffold_lines:
+        line = " ".join(line.split())
+        if line and line in flat:
+            return [f"{arm} echoes the prompt's scaffolding: {line[:60]!r}"]
+    return []
+
+
 def run_all(instance_id: str, conditions: dict[str, dict], witness: dict,
-            hidden_program: str) -> list[str]:
+            hidden_program: str,
+            scaffold_lines: list[str] | None = None) -> list[str]:
     """Every gate for one instance. Returns the problems; empty means it may be bought."""
     out = gate_code_identity(conditions)
     out += gate_no_leak(conditions["clarified"]["spec"], witness, hidden_program)
     out += gate_placebo_length(conditions["clarified"]["spec"],
                                conditions["placebo"]["spec"],
                                conditions["original"]["spec"])
+    for arm in ("clarified", "placebo"):
+        out += gate_preserves_original(conditions[arm]["spec"],
+                                       conditions["original"]["spec"], arm)
+        out += gate_no_scaffolding(conditions[arm]["spec"], scaffold_lines or [], arm)
     return [f"{instance_id}: {p}" for p in out]

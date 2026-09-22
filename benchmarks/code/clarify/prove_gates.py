@@ -16,7 +16,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gates  # noqa: E402
 
-ORIGINAL = ("Return the list sorted ascending. " * 6).strip()
+# Six DISTINCT five-word sentences. They were six copies of one sentence until 2026-09-22,
+# which made "reordered" and "dropped a sentence" impossible to plant: every sentence matched
+# every other one.
+SENTS = ["Return the list sorted ascending.",
+         "Accept any comparable element type.",
+         "Leave the caller's list untouched.",
+         "Return a newly allocated list.",
+         "Raise nothing on empty input.",
+         "Treat missing values as absent."]
+ORIGINAL = " ".join(SENTS)
 CLARIFIED = ORIGINAL + " When two elements compare equal, keep their original relative order."
 PLACEBO = ORIGINAL + " This function is part of the collections utilities in this module."
 WITNESS = {"cases": [{"input": "[[3, 1, 2]]", "expected": "[1, 2, 3]", "actual": "[3, 2, 1]"}]}
@@ -36,40 +45,76 @@ def conditions(spec_clarified=CLARIFIED, spec_placebo=PLACEBO,
 
 
 CASES = [
-    ("clean run passes", conditions(), WITNESS, HIDDEN, 0),
+    ("clean run passes", conditions(), WITNESS, HIDDEN, ""),
     ("candidate differs in one condition",
-     conditions(candidate_clarified="def f(x):\n    return x  # edited"), WITNESS, HIDDEN, 1),
+     conditions(candidate_clarified="def f(x):\n    return x  # edited"), WITNESS, HIDDEN,
+     "candidate"),
     ("visible suite differs in one condition",
-     conditions(visible_placebo="assert f(1) == 1  # edited"), WITNESS, HIDDEN, 1),
+     conditions(visible_placebo="assert f(1) == 1  # edited"), WITNESS, HIDDEN, "visible"),
     ("clarification leaks the failing input",
      conditions(spec_clarified=ORIGINAL + " On the input [[3, 1, 2]] return them in order."),
-     WITNESS, HIDDEN, 1),
+     WITNESS, HIDDEN, "input of a failing case"),
     ("clarification leaks the expected value",
      conditions(spec_clarified=ORIGINAL + " The result there is [1, 2, 3] and nothing else."),
-     WITNESS, HIDDEN, 1),
-    # This case used to quote a hidden line that also contained the expected value, so it was
-    # caught by the expected-value rule and the hidden-line rule was never exercised. The line
-    # quoted here appears in the hidden program and in no witness field, which is the only way
-    # to know the third rule works.
+     WITNESS, HIDDEN, "expected of a failing case"),
+    # The witness's expected value is changed here so the quoted hidden line is caught by the
+    # hidden-line rule and by nothing else.
     ("clarification quotes a hidden test line (isolated)",
-     conditions(spec_clarified=ORIGINAL + " assert sort_list([]) == []"),
+     conditions(spec_clarified=ORIGINAL + " assert sort_list([]) == [] and nothing more here."),
      {"cases": [{"input": "[[3, 1, 2]]", "expected": "[9, 9, 9]", "actual": "[3, 2, 1]"}]},
-     HIDDEN, 1),
+     HIDDEN, "hidden-test line"),
     ("placebo is far shorter than the clarification",
-     conditions(spec_placebo=ORIGINAL + " Also note this."), WITNESS, HIDDEN, 1),
+     conditions(spec_placebo=ORIGINAL + " Also note this."), WITNESS, HIDDEN, "word counts"),
     ("placebo adds nothing at all",
-     conditions(spec_placebo=ORIGINAL), WITNESS, HIDDEN, 1),
+     conditions(spec_placebo=ORIGINAL), WITNESS, HIDDEN, "added no words"),
+    # Gates 4 and 5. Each keeps both arms' ADDED word counts inside the length band, so the
+    # length gate cannot fire and the planted violation is the only thing left to catch.
+    ("clarification rewrites a sentence that was already there",
+     conditions(spec_clarified=" ".join(["Return the array sorted ascending."] + SENTS[1:])
+                + " When two elements compare equal, keep their original relative order."),
+     WITNESS, HIDDEN, "does not preserve"),
+    ("placebo drops a sentence that was already there",
+     conditions(spec_placebo=" ".join(SENTS[1:])
+                + " This function is part of the collections utilities in this module,"
+                  " alongside five other helpers."),
+     WITNESS, HIDDEN, "does not preserve"),
+    ("clarification reorders the original's sentences",
+     conditions(spec_clarified=" ".join([SENTS[1], SENTS[0]] + SENTS[2:])
+                + " When two elements compare equal, keep their original relative order."),
+     WITNESS, HIDDEN, "does not preserve"),
+    ("adding before the original is allowed",
+     conditions(spec_clarified="When two elements compare equal, keep their original relative"
+                                " order. " + ORIGINAL), WITNESS, HIDDEN, ""),
+    ("edited arm echoes the prompt's scaffolding header",
+     conditions(spec_clarified="SPECIFICATION:\n" + CLARIFIED), WITNESS, HIDDEN,
+     "scaffolding"),
+    ("scaffolding echo is caught in the placebo arm too",
+     conditions(spec_placebo="SPECIFICATION:\n" + ORIGINAL
+                + " This function is part of the collections utilities here."),
+     WITNESS, HIDDEN, "scaffolding"),
 ]
+
+# Gate 5 is only as good as the lines the caller passes it. These are the lines
+# `generate.py` uses to build its prompts; if that prompt changes, this list must change with
+# it, and the two scaffolding cases above are what notices.
+SCAFFOLD = ["SPECIFICATION:",
+            "The hidden suite exercises these inputs, where the prose is silent:"]
 
 
 def main() -> int:
     failures = []
-    for name, conds, witness, hidden, expect_problems in CASES:
-        problems = gates.run_all("TEST", conds, witness, hidden)
+    # A case caught by a rule other than the one it plants proves nothing about that rule --
+    # this programme has now made that mistake twice, once with a hidden line that was also an
+    # expected value, and once with three length-matched cases that all tripped the length
+    # gate. Each case therefore names the text its intended gate produces, and a case caught
+    # by a different gate FAILS.
+    for name, conds, witness, hidden, want_substr in CASES:
+        problems = gates.run_all("TEST", conds, witness, hidden, SCAFFOLD)
         caught = len(problems) > 0
-        want = expect_problems > 0
-        mark = "ok " if caught == want else "FAIL"
-        if caught != want:
+        want = bool(want_substr)
+        ok = (caught == want) and (not want or any(want_substr in p for p in problems))
+        mark = "ok " if ok else "FAIL"
+        if not ok:
             failures.append(name)
         detail = problems[0].split(": ", 1)[1][:72] if problems else "no problems"
         print(f"  [{mark}] {name:44s} -> {detail}")

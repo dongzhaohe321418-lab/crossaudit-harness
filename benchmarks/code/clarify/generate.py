@@ -81,6 +81,12 @@ well as in content and the contrast is confounded.
 Reply with the complete edited specification and nothing else."""
 
 
+# Gate 5 forbids any of the prompt's own structure from appearing in what comes back. These
+# are the lines the prompts are BUILT from, so the gate cannot drift out of step with them.
+SCAFFOLD = ["SPECIFICATION:",
+            "The hidden suite exercises these inputs, where the prose is silent:"]
+
+
 def load_keys() -> None:
     for line in (Path.home() / ".crossaudit-keys.env").read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -98,7 +104,12 @@ def ask(system: str, prompt: str) -> str:
                                            prompt=prompt, max_tokens=2000, timeout=240.0)
             text = (getattr(reply, "text", "") or "").strip()
             if text:
-                return re.sub(r"^```[a-z]*\n|\n```$", "", text).strip()
+                text = re.sub(r"^```[a-z]*\n|\n```$", "", text).strip()
+                # The model sometimes echoes the prompt's own `SPECIFICATION:` header back.
+                # Gate 4 catches it, but catching it costs the instance a regeneration for a
+                # transcription artefact rather than anything about the edit, so strip it here
+                # and let the gate stay the independent check it is.
+                return re.sub(rf"^{re.escape(SCAFFOLD[0])}\s*\n", "", text).strip()
         except Exception as exc:                                       # noqa: BLE001
             print(f"    {type(exc).__name__} attempt {attempt + 1}/3", flush=True)
         time.sleep(4 * (attempt + 1))
@@ -111,14 +122,20 @@ def main() -> int:
     witnesses = {r["instance_id"]: r for r in json.loads(DUMP.read_text(encoding="utf-8"))}
     problems = {p.problem_id: p for p in load_problems()}
 
+    # A smoke run writes to its OWN file. A limited run that wrote `conditions.json` would leave
+    # a record whose `n_kept` is a fraction of the population and whose name says otherwise.
+    limit = int(os.environ.get("P3_LIMIT", "0"))
+    out_path = OUT.with_name("conditions-smoke.json") if limit else OUT
+    ids = pop["instance_ids"][:limit] if limit else pop["instance_ids"]
+
     out, dropped = {}, []
-    for n, iid in enumerate(pop["instance_ids"], 1):
+    for n, iid in enumerate(ids, 1):
         problem = problems[iid.split(":", 1)[1]]
         wit = witnesses[iid]
         cases = (wit.get("witness") or {}).get("cases") or []
         inputs = "\n".join(f"  {c.get('input')}" for c in cases[:4])
-        base = (f"SPECIFICATION:\n{problem.spec}\n\n"
-                f"The hidden suite exercises these inputs, where the prose is silent:\n{inputs}\n")
+        base = (f"{SCAFFOLD[0]}\n{problem.spec}\n\n"
+                f"{SCAFFOLD[1]}\n{inputs}\n")
 
         # Amendment 5. The first run dropped every instance it reached, and four of the five
         # drops were the placebo-length gate, not a leak: the placebo was written blind, told
@@ -132,7 +149,7 @@ def main() -> int:
         clarified = ask(CLARIFY_SYSTEM, base)
         added = max(n_words(clarified) - n_words(problem.spec), 1)
         placebo = ask(PLACEBO_SYSTEM.replace("TARGET_WORDS", str(added)),
-                      f"SPECIFICATION:\n{problem.spec}\n")
+                      f"{SCAFFOLD[0]}\n{problem.spec}\n")
         conds["clarified"] = {"spec": clarified, "candidate": "", "visible_tests": ""}
         conds["placebo"] = {"spec": placebo, "candidate": "", "visible_tests": ""}
 
@@ -147,9 +164,9 @@ def main() -> int:
         # its `.splitlines()` and died on instance one -- so nothing was generated and nothing
         # was spent. A gate that receives the wrong type is not a gate that passed.
         hidden_text = problem.hidden_program(problem.canonical_solution)[0]
-        problems_found = gates.run_all(iid, conds, wit.get("witness") or {}, hidden_text)
+        problems_found = gates.run_all(iid, conds, wit.get("witness") or {}, hidden_text, SCAFFOLD)
         if problems_found:
-            print(f"  [{n}/{len(pop['instance_ids'])}] {iid}: regenerating, "
+            print(f"  [{n}/{len(ids)}] {iid}: regenerating, "
                   f"{problems_found[0].split(': ', 1)[1][:70]}", flush=True)
             # Regenerate the condition the failure NAMES. The first run regenerated the
             # clarification on every failure, including length failures -- which moves the
@@ -158,21 +175,22 @@ def main() -> int:
                 added = max(n_words(conds["clarified"]["spec"]) - n_words(problem.spec), 1)
                 conds["placebo"]["spec"] = ask(
                     PLACEBO_SYSTEM.replace("TARGET_WORDS", str(added)),
-                    f"SPECIFICATION:\n{problem.spec}\n")
+                    f"{SCAFFOLD[0]}\n{problem.spec}\n")
             else:
                 conds["clarified"]["spec"] = ask(CLARIFY_SYSTEM, base)
-            problems_found = gates.run_all(iid, conds, wit.get("witness") or {}, hidden_text)
+            problems_found = gates.run_all(iid, conds, wit.get("witness") or {}, hidden_text, SCAFFOLD)
         if problems_found:
             dropped.append({"instance_id": iid, "reasons": problems_found})
-            print(f"  [{n}/{len(pop['instance_ids'])}] {iid}: DROPPED", flush=True)
+            print(f"  [{n}/{len(ids)}] {iid}: DROPPED", flush=True)
             continue
         out[iid] = conds
-        print(f"  [{n}/{len(pop['instance_ids'])}] {iid}: ok", flush=True)
+        print(f"  [{n}/{len(ids)}] {iid}: ok", flush=True)
 
-    OUT.write_text(json.dumps({"model": MODEL, "n_kept": len(out), "n_dropped": len(dropped),
+    out_path.write_text(json.dumps({"model": MODEL, "n_of_population": len(ids),
+                               "smoke": bool(limit), "n_kept": len(out), "n_dropped": len(dropped),
                                "dropped": dropped, "conditions": out},
                               indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"\nwrote {OUT}: {len(out)} kept, {len(dropped)} dropped")
+    print(f"\nwrote {out_path}: {len(out)} kept, {len(dropped)} dropped")
     return 0
 
 
