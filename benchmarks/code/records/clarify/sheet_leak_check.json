@@ -1,0 +1,47 @@
+{
+  "n_items": 171,
+  "overlap_with_own_conditions_addition": {
+    "clarified": {
+      "n_findings": 108,
+      "quotation_longest_run": {
+        "max": 1.0,
+        "n_over_half": 14,
+        "n_over_threequarters": 4
+      },
+      "vocabulary_any_order": {
+        "max": 1.0,
+        "n_over_half": 45,
+        "n_over_threequarters": 17
+      }
+    },
+    "original": {
+      "n_findings": 27,
+      "note": "the original condition adds no sentence, so there is nothing for a finding to overlap with; compare clarified against placebo, not against this row",
+      "quotation_longest_run": {
+        "max": 0.0,
+        "n_over_half": 0,
+        "n_over_threequarters": 0
+      },
+      "vocabulary_any_order": {
+        "max": 0.0,
+        "n_over_half": 0,
+        "n_over_threequarters": 0
+      },
+      "zero_is_structural": true
+    },
+    "placebo": {
+      "n_findings": 36,
+      "quotation_longest_run": {
+        "max": 0.47058823529411764,
+        "n_over_half": 0,
+        "n_over_threequarters": 0
+      },
+      "vocabulary_any_order": {
+        "max": 0.5454545454545454,
+        "n_over_half": 4,
+        "n_over_threequarters": 0
+      }
+    }
+  },
+  "seed": 20260921
+}

@@ -157,6 +157,14 @@ def main() -> int:
                      "quotation_longest_run": stat(v, 0),
                      "vocabulary_any_order": stat(v, 1)}
                for arm, v in leak.items()}
+    # The original arm adds nothing, so `added_sentences` is empty and both metrics are zero by
+    # construction. That zero is structural and is NOT evidence that the original arm leaks
+    # less; it is the arm the other two are measured against. Said here so the record cannot be
+    # read as a three-way comparison when only two of its rows carry information.
+    summary["original"]["zero_is_structural"] = True
+    summary["original"]["note"] = ("the original condition adds no sentence, so there is "
+                                   "nothing for a finding to overlap with; compare clarified "
+                                   "against placebo, not against this row")
     RECORD.write_text(json.dumps({"seed": SEED, "n_items": len(items),
                                   "overlap_with_own_conditions_addition": summary},
                                  indent=2, sort_keys=True) + "\n", encoding="utf-8")
