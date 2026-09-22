@@ -1,0 +1,79 @@
+{
+  "cannot_tell_counts": {
+    "broken": 47,
+    "rebuilt": 12
+  },
+  "exploratory_broken_sheet": {
+    "caught": [
+      4,
+      53
+    ],
+    "caught_pct": 7.547169811320755,
+    "cluster_ci95": [
+      38.75659526240425,
+      69.75624321357154
+    ],
+    "diff_points": 54.217536071032185,
+    "missed": [
+      42,
+      68
+    ],
+    "missed_pct": 61.76470588235294,
+    "n_boot_ok": 10000,
+    "n_problems": 56
+  },
+  "labels_changed_between_sheets": 67,
+  "n_boot": 10000,
+  "primary_cannot_tell_in_denominator": {
+    "caught": [
+      23,
+      53
+    ],
+    "caught_pct": 43.39622641509434,
+    "cluster_ci95": [
+      1.5052678154010573,
+      38.17917232021709
+    ],
+    "diff_points": 19.83906770255272,
+    "missed": [
+      43,
+      68
+    ],
+    "missed_pct": 63.23529411764706,
+    "n_boot_ok": 10000,
+    "n_problems": 56
+  },
+  "rater": "gpt-6-astra (L3) -- a third MODEL, not the outside human P1 asks for",
+  "secondary_cannot_tell_excluded": {
+    "caught": [
+      23,
+      48
+    ],
+    "caught_pct": 47.916666666666664,
+    "cluster_ci95": [
+      2.111284977348347,
+      42.6256013077416
+    ],
+    "diff_points": 22.575136612021858,
+    "missed": [
+      43,
+      61
+    ],
+    "missed_pct": 70.49180327868852,
+    "n_boot_ok": 10000,
+    "n_problems": 53
+  },
+  "seed": 20260922,
+  "six_category_comparator": {
+    "caught": [
+      24,
+      53
+    ],
+    "diff_points": 22.364039955604888,
+    "missed": [
+      46,
+      68
+    ],
+    "note": "a DIFFERENT instrument: ambiguous-oracle among six options, not a three-option determinacy rubric. Reported beside, not as a replication."
+  }
+}
