@@ -1,0 +1,112 @@
+{
+  "H3": {
+    "half_one_clarified_beats_original_excluding_zero": true,
+    "half_two_placebo_difference_smaller": true,
+    "holds": true,
+    "registered_kill": "if the clarified-minus-original difference does not exclude zero, H3 fails and the report says C4 remains a correlation"
+  },
+  "K": 4,
+  "NOT_THE_OUTCOME": {
+    "flag_rate_pct_per_reading": {
+      "clarified": 50.0,
+      "original": 0.0,
+      "placebo": 2.4193548387096775
+    },
+    "note": "flag rate and no-finding counts are secondaries; three studies in this programme have read one of these as recognition",
+    "readings_with_no_finding": {
+      "clarified": 62,
+      "original": 123,
+      "placebo": 121
+    }
+  },
+  "ladder_union_at_k": {
+    "clarified": {
+      "1": 29.032258064516128,
+      "2": 29.032258064516128,
+      "3": 29.032258064516128,
+      "4": 29.032258064516128
+    },
+    "original": {
+      "1": 0.0,
+      "2": 0.0,
+      "3": 0.0,
+      "4": 0.0
+    },
+    "placebo": {
+      "1": 0.0,
+      "2": 0.0,
+      "3": 0.0,
+      "4": 0.0
+    }
+  },
+  "n_instances": 31,
+  "placebo_minus_original": {
+    "cluster_ci95": [
+      0.0,
+      0.0
+    ],
+    "discordant_ref_only": 0,
+    "discordant_treat_only": 0,
+    "mcnemar_exact_p": 1.0,
+    "n": 31,
+    "n_problems": 18,
+    "points": 0.0,
+    "signflip_cluster_p": 1.0
+  },
+  "post_hoc_clarified_minus_placebo": {
+    "cluster_ci95": [
+      9.090909090909092,
+      51.724137931034484
+    ],
+    "discordant_ref_only": 0,
+    "discordant_treat_only": 9,
+    "mcnemar_exact_p": 0.00390625,
+    "n": 31,
+    "n_problems": 18,
+    "points": 29.032258064516128,
+    "signflip_cluster_p": 0.061493850614938506
+  },
+  "primary_clarified_minus_original": {
+    "cluster_ci95": [
+      9.090909090909092,
+      51.724137931034484
+    ],
+    "discordant_ref_only": 0,
+    "discordant_treat_only": 9,
+    "mcnemar_exact_p": 0.00390625,
+    "n": 31,
+    "n_problems": 18,
+    "points": 29.032258064516128,
+    "signflip_cluster_p": 0.061493850614938506
+  },
+  "rates_correct_diagnosis": {
+    "clarified": {
+      "k": 9,
+      "n": 31,
+      "pct": 29.032258064516128,
+      "wilson": [
+        16.09580015630062,
+        46.592329330749926
+      ]
+    },
+    "original": {
+      "k": 0,
+      "n": 31,
+      "pct": 0.0,
+      "wilson": [
+        0.0,
+        11.025539546043596
+      ]
+    },
+    "placebo": {
+      "k": 0,
+      "n": 31,
+      "pct": 0.0,
+      "wilson": [
+        0.0,
+        11.025539546043596
+      ]
+    }
+  },
+  "seed": 20260921
+}

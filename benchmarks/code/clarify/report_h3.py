@@ -122,6 +122,13 @@ def main() -> int:
                              "registered outcome and this refuses to compute it.")
         import csv
         labels[who] = {r["id"]: r["label"] for r in csv.DictReader(f.open(encoding="utf-8"))}
+        gaps = [sid for sid in key if sid not in labels[who]]
+        if gaps:
+            raise SystemExit(
+                f"ERR: {who} has {len(gaps)} of {len(key)} items unlabelled ({gaps[:6]}). "
+                "H3 counts disagreement as not diagnosed, so a MISSING label would be "
+                "silently counted the same way as a considered `no` -- and the first run of "
+                "this analysis did exactly that on five items. Fill them and re-run.")
 
     # Registered: both raters must say yes. Disagreement counts as not diagnosed.
     diagnosed_item = {sid: (labels["L1"].get(sid) == "yes" and labels["L2"].get(sid) == "yes")
