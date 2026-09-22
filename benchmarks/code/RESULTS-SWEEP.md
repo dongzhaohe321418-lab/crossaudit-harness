@@ -173,9 +173,11 @@ sampling configurations**, which is C2's confound and is not removed here.
   cut, not how an auditor would behave if its severity instructions were different.
 * **Flag coverage is not naming.** This sweep re-grades counts without assessing finding
   content against the hidden failure. Study 18 did not archive or adjudicate its advisory
-  texts; study 19 adjudicated separate readings -- its H19d texts come from a fifth reading,
-  not from the four re-graded here -- which does not establish what the findings re-graded in
-  this sweep identified.
+  texts. Study 19's H19d did adjudicate finding content, over 190 items -- 128 from arm R's
+  first reading, 38 from a separate S-text reading, 24 from arm B's first reading. Those are
+  not the readings re-graded here, which are `self-strong`'s eight, averaged over all 70
+  four-reading subsets at common depth. So that adjudication does not establish what this
+  sweep's findings identified.
 * **The sampling asymmetry travels with every cross-family row.** The cross-vendor route is sent
   no sampling parameter and the same-vendor routes are sent temperature 0, so the families are
   not equally free to vary between draws. That confound is C2's and it is not removed here.
