@@ -192,14 +192,28 @@ def main() -> int:
             # Regenerate the condition the failure NAMES. The first run regenerated the
             # clarification on every failure, including length failures -- which moves the
             # target the placebo missed instead of moving the placebo.
+            # Amendment 9. This branch used to test the length problem FIRST, so an instance
+            # carrying a clarification problem AND a length problem regenerated the placebo and
+            # left the offending clarification untouched -- a regeneration that could not fix
+            # what failed. Two of run 2's thirteen drops went that way.
+            #
+            # The clarification is the arm that can carry a leak, so it is regenerated whenever
+            # it is implicated; the placebo is then regenerated too, because a new clarification
+            # moves the length it must match. A length-only failure regenerates the placebo alone.
+            clar_problem = any(f.startswith("clarification") or f.startswith("clarified")
+                               for f in (p.split(": ", 1)[1] for p in problems_found))
             try:
-              if any("word counts" in f for f in problems_found):
+              if clar_problem:
+                conds["clarified"]["spec"] = ask(CLARIFY_SYSTEM, base)
                 added = max(n_words(conds["clarified"]["spec"]) - n_words(problem.spec), 1)
                 conds["placebo"]["spec"] = ask(
                     PLACEBO_SYSTEM.replace("TARGET_WORDS", str(added)),
                     f"{SCAFFOLD[0]}\n{problem.spec}\n")
               else:
-                conds["clarified"]["spec"] = ask(CLARIFY_SYSTEM, base)
+                added = max(n_words(conds["clarified"]["spec"]) - n_words(problem.spec), 1)
+                conds["placebo"]["spec"] = ask(
+                    PLACEBO_SYSTEM.replace("TARGET_WORDS", str(added)),
+                    f"{SCAFFOLD[0]}\n{problem.spec}\n")
             except GenerationFailed as exc:
                 failed.append({"instance_id": iid, "why": f"on regeneration: {exc}"})
                 print(f"  [{n}/{len(ids)}] {iid}: GENERATION FAILED -- {exc}", flush=True)
