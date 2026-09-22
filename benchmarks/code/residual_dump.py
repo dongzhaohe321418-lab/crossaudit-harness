@@ -37,18 +37,31 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True)
     parser.add_argument("--population", default="three_families_all_P")
+    # P3 Amendment 1 found the rating sheet's control arm unanswerable: `failing_input_class`
+    # lives in the residual classification, which by construction covers only the residual, so
+    # 42 of 53 caught instances carried none and every one of them was rated `cannot-tell`.
+    # The witness this script recovers is mechanical and exists for ANY stratum-P instance, so
+    # the same evidence can be dumped for the caught arm and the two made comparable.
+    parser.add_argument("--ids-file", default="",
+                        help="dump these instance ids instead of a named residual population")
+    parser.add_argument("--out", default="residual", help="subdirectory of --run to write into")
     args = parser.parse_args(argv)
 
     numbers_path = rc.CEILING / "numbers.json"
     if not numbers_path.exists():
         raise SystemExit("run report_ceiling.py first")
     numbers = json.loads(numbers_path.read_text(encoding="utf-8"))
-    residual = numbers["ceiling1"]["residual"].get(args.population)
-    if not residual:
-        raise SystemExit(f"no residual population named {args.population!r}")
-    ids = residual["instance_ids"]
-    print(f"{len(ids)} residual instances "
-          f"({', '.join(residual['families'])}, {residual['total_draws']} draws)")
+    if args.ids_file:
+        ids = [x.strip() for x in Path(args.ids_file).read_text(encoding="utf-8").splitlines()
+               if x.strip()]
+        print(f"{len(ids)} instances from {args.ids_file}")
+    else:
+        residual = numbers["ceiling1"]["residual"].get(args.population)
+        if not residual:
+            raise SystemExit(f"no residual population named {args.population!r}")
+        ids = residual["instance_ids"]
+        print(f"{len(ids)} residual instances "
+              f"({', '.join(residual['families'])}, {residual['total_draws']} draws)")
 
     run_dir = Path(args.run)
     problems = {p.problem_id: p for p in load_problems()}
@@ -66,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
                 row = json.loads(line)
                 scored[f"{batch}:{row['problem_id']}"] = row
 
-    out_dir = run_dir / "residual"
+    out_dir = run_dir / args.out
     out_dir.mkdir(parents=True, exist_ok=True)
     index = []
     for iid in ids:
