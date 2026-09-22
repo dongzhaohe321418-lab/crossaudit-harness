@@ -72,6 +72,12 @@ CASES = [
      conditions(spec_clarified=ORIGINAL + " The result is [1, 2, 3] whenever ties are broken."),
      {"cases": [{"input": "[[9, 9, 9]]", "expected": "[1, 2, 3]", "actual": "[3, 2, 1]"}]},
      HIDDEN, "expected of a failing case"),
+    # A line printed in the specification itself is public, not hidden. Until the first review
+    # of P3 this gate excluded an instance for quoting three assertions its own specification
+    # prints.
+    ("a line that is public in the specification is not a leak",
+     conditions(spec_clarified=CLARIFIED),
+     WITNESS, "assert sort_list([]) == []\n" + SENTS[0] + " " + SENTS[1], ""),
     ("clarification quotes a hidden test line (isolated)",
      conditions(spec_clarified=ORIGINAL + " assert sort_list([]) == [] and nothing more here."),
      {"cases": [{"input": "[[3, 1, 2]]", "expected": "[9, 9, 9]", "actual": "[3, 2, 1]"}]},

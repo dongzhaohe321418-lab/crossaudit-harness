@@ -39,11 +39,37 @@ CASES = [
      "The function has no type annotations and its name shadows a builtin in this module.",
      False, False),
     ("an empty finding", "", False, False),
+    # The case the first version of this file did NOT contain, and whose absence let a metric
+    # that never checked order pass as one that did. The first review found it by construction:
+    # the added sentence's own words, reversed, scored 1.00 on the old implementation.
 ]
 
 
 def main() -> int:
     added = added_sentences(ORIGINAL, CLARIFIED)
+    # Order must matter. The metric this file exists to check scored a fully reversed sentence
+    # at 1.00 until the first review of P3 found it, because it asked whether each word appeared
+    # ANYWHERE rather than whether the words appeared together in sequence.
+    words = added[0].rstrip(".").split()
+    reversed_text = " ".join(reversed(words))
+    r = overlap(reversed_text, added)
+    if r >= 0.5:
+        print(f"  [FAIL] a fully reversed sentence scores {r:.2f}; the metric is not measuring "
+              "order, whatever it is named")
+        return 1
+    print(f"  [ok ] a fully reversed sentence scores {r:.2f} -- order is actually measured")
+    if overlap(added[0], added) < 0.99:
+        print("  [FAIL] the sentence itself does not score 1.00")
+        return 1
+    print("  [ok ] the sentence itself scores 1.00")
+    # And the addition must not carry the original's own text.
+    tail = added_sentences("Do a thing. Your code must satisfy these tests: assert f(1) == 1",
+                           "Do a thing. Your code must satisfy these tests: assert f(1) == 1 "
+                           "Ties keep their original order.")
+    if any("assert" in t for t in tail):
+        print(f"  [FAIL] the 'addition' carries the original's assertions: {tail}")
+        return 1
+    print("  [ok ] an addition after an unpunctuated original line is isolated correctly")
     if len(added) != 1:
         print(f"  [FAIL] the added sentence was not recovered: {added}")
         return 1

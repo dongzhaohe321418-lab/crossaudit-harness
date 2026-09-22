@@ -1,17 +1,8 @@
 {
   "amendment_13_repair": {
     "candidate_source": "study-data/wt-testgen-runs/inputs/solutions-{b1,b2}.jsonl",
-    "dropped_on_real_candidate": [
-      {
-        "instance_id": "b1:Mbpp/427",
-        "reasons": [
-          "b1:Mbpp/427: clarification quotes a hidden-test line: 'assert change_date_format(\"2026-01-02\") == \\'02-01-2026\\''",
-          "b1:Mbpp/427: clarification quotes a hidden-test line: 'assert change_date_format(\"2020-11-13\") == \\'13-11-2020\\''",
-          "b1:Mbpp/427: clarification quotes a hidden-test line: 'assert change_date_format(\"2021-04-26\") == \\'26-04-2021\\''"
-        ]
-      }
-    ],
-    "n_after": 31,
+    "dropped_on_real_candidate": [],
+    "n_after": 32,
     "n_before": 32,
     "note": "specifications were NOT regenerated; Amendment 9 registered run 3 as final. Only the candidate and visible suite changed, and every gate was re-run against them.",
     "specs_unchanged": true
@@ -134,6 +125,23 @@
         "candidate": "def min_val(lst):\n    \"\"\"\n    Find the minimum value in a heterogeneous list.\n    Only considers numeric values (int, float) and ignores strings.\n    \"\"\"\n    numeric_values = [x for x in lst if isinstance(x, (int, float)) and not isinstance(x, bool)]\n    return min(numeric_values) if numeric_values else None",
         "spec": "Write a function to find the minimum value in a given heterogeneous list.\n\nThe examples refer to the function as `min_val` and present heterogeneous lists as its arguments, while the surrounding description states the requested operation in this specification.\n\nYour code must satisfy these tests:\nassert min_val(['Python', 3, 2, 4, 5, 'version'])==2\nassert min_val(['Python', 15, 20, 25])==15\nassert min_val(['Python', 30, 20, 40, 50, 'version'])==20",
         "visible_tests": "assert min_val(['Python', 3, 2, 4, 5, 'version'])==2\nassert min_val(['Python', 15, 20, 25])==15\nassert min_val(['Python', 30, 20, 40, 50, 'version'])==20"
+      }
+    },
+    "b1:Mbpp/427": {
+      "clarified": {
+        "candidate": "def change_date_format(date_str):\n    \"\"\"Convert date from yyyy-mm-dd format to dd-mm-yyyy format.\"\"\"\n    year, month, day = date_str.split('-')\n    return f\"{day}-{month}-{year}\"\n\n\n# Test cases\nassert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'",
+        "spec": "Write a function to convert a date of yyyy-mm-dd format to dd-mm-yyyy format.\n\nYour code must satisfy these tests:\nassert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'\n\n\nThe conversion treats each hyphen-separated component as a field and reverses the order of all such fields. It does not validate the number, width, or calendar validity of the fields.",
+        "visible_tests": "assert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'"
+      },
+      "original": {
+        "candidate": "def change_date_format(date_str):\n    \"\"\"Convert date from yyyy-mm-dd format to dd-mm-yyyy format.\"\"\"\n    year, month, day = date_str.split('-')\n    return f\"{day}-{month}-{year}\"\n\n\n# Test cases\nassert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'",
+        "spec": "Write a function to convert a date of yyyy-mm-dd format to dd-mm-yyyy format.\n\nYour code must satisfy these tests:\nassert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'\n",
+        "visible_tests": "assert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'"
+      },
+      "placebo": {
+        "candidate": "def change_date_format(date_str):\n    \"\"\"Convert date from yyyy-mm-dd format to dd-mm-yyyy format.\"\"\"\n    year, month, day = date_str.split('-')\n    return f\"{day}-{month}-{year}\"\n\n\n# Test cases\nassert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'",
+        "spec": "Write a function to convert a date of yyyy-mm-dd format to dd-mm-yyyy format.\n\nThe requested conversion uses the same numeric year, month, and day components shown in the input, with their order rearranged to match the specified output format, as examples below illustrate.\n\nYour code must satisfy these tests:\nassert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'",
+        "visible_tests": "assert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'"
       }
     },
     "b1:Mbpp/459": {
@@ -709,7 +717,7 @@
   "model": "gpt-5.6-luna",
   "n_dropped_by_gate": 8,
   "n_generation_failed": 4,
-  "n_kept": 31,
+  "n_kept": 32,
   "n_kept_after_regeneration": 2,
   "n_of_population": 44,
   "smoke": false

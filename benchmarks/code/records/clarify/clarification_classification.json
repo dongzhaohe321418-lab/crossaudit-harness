@@ -1,0 +1,676 @@
+{
+  "n": 32,
+  "rows": {
+    "b1:Mbpp/102": {
+      "added": [
+        "Treat one or more consecutive underscores as a separator and ignore empty components, including leading and trailing ones.",
+        "Capitalize the first character of each remaining component, leave its other characters unchanged, and concatenate the components."
+      ],
+      "exercised": [
+        {
+          "input": "['___python_program']",
+          "oracle_expects": "'___PythonProgram'"
+        },
+        {
+          "input": "['__12_python__language___']",
+          "oracle_expects": "'__12Python_Language___'"
+        },
+        {
+          "input": "['your_programming__langu__age___']",
+          "oracle_expects": "'YourProgramming_Langu_Age___'"
+        }
+      ],
+      "reason": "says leading/trailing separators produce ignored empty components; the oracle preserves them (`___python_program` -> `___PythonProgram`)",
+      "verdict": "contradicts"
+    },
+    "b1:Mbpp/103": {
+      "added": [
+        "Use the standard convention that the Eulerian number at the zero-index boundary is 1, and interpret Boolean arguments by their integer values."
+      ],
+      "exercised": [
+        {
+          "input": "[0, 0]",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "[False, False]",
+          "oracle_expects": "0"
+        }
+      ],
+      "reason": "says the zero-index boundary value is 1; the oracle expects 0 at (0, 0)",
+      "verdict": "contradicts"
+    },
+    "b1:Mbpp/278": {
+      "added": [
+        "If the given tuple contains no element that is itself a tuple, count all of its elements."
+      ],
+      "exercised": [
+        {
+          "input": "[(1, 2, 3, 4, 5, 6)]",
+          "oracle_expects": "5"
+        },
+        {
+          "input": "[(15, 15)]",
+          "oracle_expects": "1"
+        },
+        {
+          "input": "[(15, 15, 15)]",
+          "oracle_expects": "2"
+        }
+      ],
+      "reason": "says count all elements, so 6 for a 6-tuple; the oracle expects 5",
+      "verdict": "contradicts"
+    },
+    "b1:Mbpp/294": {
+      "added": [
+        "Only numeric elements are considered when determining the maximum; non-numeric elements are ignored.",
+        "Numeric values may be integers or floating-point numbers."
+      ],
+      "exercised": [
+        {
+          "input": "[['3.14', False, 7.5]]",
+          "oracle_expects": "False"
+        }
+      ],
+      "reason": "says only numeric elements count; the oracle returns `False` on a list containing a string and a float",
+      "verdict": "contradicts"
+    },
+    "b1:Mbpp/305": {
+      "added": [
+        "Words are examined from left to right, treating whitespace-separated text and nested lists of words as one sequence, and matching is case-insensitive.",
+        "Return the first two matching words as a tuple, or a tuple containing all matching words when fewer than two are found."
+      ],
+      "exercised": [
+        {
+          "input": "[[]]",
+          "oracle_expects": "None"
+        },
+        {
+          "input": "[['apple', 'banana', 'carrot', 'dog', 'elephant']]",
+          "oracle_expects": "None"
+        },
+        {
+          "input": "[['python Programming', 'Java Programming', 'perl Programming', 'Ruby Programming', 'PHP Programming', 'C Programming']]",
+          "oracle_expects": "('PHP', 'Programming')"
+        }
+      ],
+      "reason": "the `None`-when-fewer-than-two rule matches the exercised inputs; the case-insensitivity it also adds does not \u2014 a later witness expects the uppercase-P match",
+      "verdict": "partial"
+    },
+    "b1:Mbpp/391": {
+      "added": [
+        "For each index shared by all input lists, create one nested dictionary using the elements at that index in order, with each element except the last serving as a successive key and the last element as the value.",
+        "If the input lists have different lengths, process only the indices present in every list, and preserve all elements as-is regardless of their types."
+      ],
+      "exercised": [
+        {
+          "input": "[['S001', 'S002', 'S003', 'S004'], ['Adina Park', 'Leyton Marsh', 'Duncan Boyle', 'Saim Richards'], [[1, 2, 3], [4, 5, 6], {'a': 'x', 'b': 'y', 'c': 'z'}]]",
+          "oracle_expects": "[{'S001': {'Adina Park': [1, 2, 3]}}, {'S002': {'Leyton Marsh': [4, 5, 6]}}, {'S003': {'Duncan Boyle': {'a': 'x', 'b': 'y', 'c': 'z'}}}]"
+        },
+        {
+          "input": "[[10, 20, 30, 40, 20], [10, 20, 30, 40, 20], [['a', 'b'], [1, 2, 3, 4], {'x': 1, 'y': 2}]]",
+          "oracle_expects": "[{10: {10: ['a', 'b']}}, {20: {20: [1, 2, 3, 4]}}, {30: {30: {'x': 1, 'y': 2}}}]"
+        },
+        {
+          "input": "[[92.17031809189785], ['Adina', 'Boyle'], []]",
+          "oracle_expects": "[]"
+        }
+      ],
+      "reason": "shared indices, element-except-last as successive keys, last as value; matches every exercised case",
+      "verdict": "consistent"
+    },
+    "b1:Mbpp/410": {
+      "added": [
+        "Only numeric elements, including both integers and floating-point values, are considered when determining the minimum; nonnumeric elements are ignored regardless of their position in the list."
+      ],
+      "exercised": [
+        {
+          "input": "[['Python', 10, 5, 2.5, 2.5, 'version']]",
+          "oracle_expects": "5"
+        },
+        {
+          "input": "[['Python', 10, 3, 2.5, 2.5, 'version']]",
+          "oracle_expects": "3"
+        },
+        {
+          "input": "[['Python', 4, 10, 3, 2.5, 2.5, 'version']]",
+          "oracle_expects": "3"
+        }
+      ],
+      "reason": "says non-integers are considered, which gives 2.5; the oracle expects 5",
+      "verdict": "contradicts"
+    },
+    "b1:Mbpp/427": {
+      "added": [
+        "The conversion treats each hyphen-separated component as a field and reverses the order of all such fields.",
+        "It does not validate the number, width, or calendar validity of the fields."
+      ],
+      "exercised": [
+        {
+          "input": "['2021-1-026']",
+          "oracle_expects": "'02-1-20216'"
+        },
+        {
+          "input": "['2022-04-32030-09-311']",
+          "oracle_expects": "'32-04-2022030-09-311'"
+        },
+        {
+          "input": "['0000-00-2022-02-290']",
+          "oracle_expects": "'20-00-000022-02-290'"
+        }
+      ],
+      "reason": "says reverse ALL hyphen-separated fields without validating their number or width; the oracle applies a width-constrained substitution and leaves the unmatched tail in place ('2021-1-026' -> '02-1-20216', not '026-1-2021')",
+      "verdict": "contradicts"
+    },
+    "b1:Mbpp/459": {
+      "added": [
+        "An uppercase substring is a sequence of one or more uppercase English letters; remove all such substrings while leaving every other character unchanged."
+      ],
+      "exercised": [
+        {
+          "input": "['ThiS%^%!s&a(mY)TesTStR%i*ng']",
+          "oracle_expects": "'hisamesting'"
+        },
+        {
+          "input": "['ThiS%^%!s&a(mY)TsesTStR%i*ng']",
+          "oracle_expects": "'hisamsesting'"
+        },
+        {
+          "input": "['ThiS%^%!%s*ng']",
+          "oracle_expects": "'hisng'"
+        }
+      ],
+      "reason": "says every non-uppercase character is left unchanged; the oracle keeps only lowercase letters",
+      "verdict": "contradicts"
+    },
+    "b1:Mbpp/556": {
+      "added": [
+        "The function should consider only the first `n` elements of the list.",
+        "Count each unordered pair of distinct positions once, with repeated values at different positions treated as separate elements."
+      ],
+      "exercised": [
+        {
+          "input": "[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 2], 10]",
+          "oracle_expects": "25"
+        },
+        {
+          "input": "[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 1]",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "[[1, 8, 2, 3, 4, 5, 6, 7, 8, 9, 10], 10]",
+          "oracle_expects": "25"
+        }
+      ],
+      "reason": "only the first n elements, unordered pairs counted once; matches n=1 -> 0 and n=10 -> 25",
+      "verdict": "consistent"
+    },
+    "b1:Mbpp/558": {
+      "added": [
+        "Compare digits by their decimal place, aligning the units digits and treating any missing leading digits of the shorter integer as zeros.",
+        "Sum the absolute differences for all positions present in either integer."
+      ],
+      "exercised": [
+        {
+          "input": "[12345, 9]",
+          "oracle_expects": "8"
+        },
+        {
+          "input": "[9876543210, 123]",
+          "oracle_expects": "18"
+        },
+        {
+          "input": "[0, 987654321]",
+          "oracle_expects": "9"
+        }
+      ],
+      "reason": "says align by place value padding leading zeros, giving 14 on (12345, 9); the oracle expects 8, which is left-aligned truncation",
+      "verdict": "contradicts"
+    },
+    "b1:Mbpp/559": {
+      "added": [
+        "If the list is empty or all of its elements are negative, return 0.",
+        "In all other cases, return the maximum sum of a non-empty contiguous sublist."
+      ],
+      "exercised": [
+        {
+          "input": "[[], 0]",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "[[-10, -5, -3, -2, -1], 5]",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "[[-1, -2, -3, -4, -5, -6, -7, -8, -9, -10], 10]",
+          "oracle_expects": "0"
+        }
+      ],
+      "reason": "empty or all-negative returns 0; matches both exercised cases",
+      "verdict": "consistent"
+    },
+    "b1:Mbpp/576": {
+      "added": [
+        "The second list is a sublist of the first when all its elements occur in the first list in the same relative order.",
+        "The matching elements need not be contiguous, and repeated values must correspond to distinct occurrences."
+      ],
+      "exercised": [
+        {
+          "input": "[[1, 2, 3, 4, 5], [1, 3, 5]]",
+          "oracle_expects": "True"
+        },
+        {
+          "input": "[[1, 2, 3, 4, 5], [2, 4]]",
+          "oracle_expects": "True"
+        },
+        {
+          "input": "[[1, 1, 2, 3, 4, 5], [1, 3, 5]]",
+          "oracle_expects": "True"
+        }
+      ],
+      "reason": "same relative order, not necessarily contiguous; matches every exercised case",
+      "verdict": "consistent"
+    },
+    "b1:Mbpp/790": {
+      "added": [
+        "Indices are zero-based, and only elements at even indices are subject to the condition; elements at odd indices may have any value."
+      ],
+      "exercised": [
+        {
+          "input": "[[2, 1, 4, 2, 6, 1, 8, 2, 10, 1, 12]]",
+          "oracle_expects": "False"
+        },
+        {
+          "input": "[[2, 7, 4, 9, 6, 12, 8]]",
+          "oracle_expects": "False"
+        },
+        {
+          "input": "[[2, 1, 4, 6, 8, 2, 10, 12]]",
+          "oracle_expects": "False"
+        }
+      ],
+      "reason": "says odd indices may hold any value, which predicts True; the oracle expects False",
+      "verdict": "contradicts"
+    },
+    "b1:Mbpp/806": {
+      "added": [
+        "A run is a contiguous sequence of one or more uppercase characters; any non-uppercase character terminates the run.",
+        "The function returns the length of the longest run, including runs at the beginning or end of the string and runs consisting of a single uppercase character."
+      ],
+      "exercised": [
+        {
+          "input": "['Aaa']",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "['aAaa']",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "['aAaaa']",
+          "oracle_expects": "0"
+        }
+      ],
+      "reason": "says the longest uppercase run's length, which is 1 for 'Aaa'; the oracle expects 0",
+      "verdict": "contradicts"
+    },
+    "b2:Mbpp/103": {
+      "added": [
+        "For the empty case, where both parameters are zero, the Eulerian number is 1.",
+        "Boolean arguments are accepted and treated according to their integer equivalents."
+      ],
+      "exercised": [
+        {
+          "input": "[0, 0]",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "[False, False]",
+          "oracle_expects": "0"
+        }
+      ],
+      "reason": "same as b1: says 1 at (0, 0); the oracle expects 0",
+      "verdict": "contradicts"
+    },
+    "b2:Mbpp/137": {
+      "added": [
+        "If the array contains only zeroes, the ratio is defined as 0.0."
+      ],
+      "exercised": [
+        {
+          "input": "[[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]",
+          "oracle_expects": "inf"
+        }
+      ],
+      "reason": "says an all-zero array gives 0.0; the oracle expects `inf`",
+      "verdict": "contradicts"
+    },
+    "b2:Mbpp/278": {
+      "added": [
+        "If the given tuple contains no element that is itself a tuple, return the number of elements in the given tuple."
+      ],
+      "exercised": [
+        {
+          "input": "[(1, 2, 3, 4, 5, 6)]",
+          "oracle_expects": "5"
+        },
+        {
+          "input": "[(15, 15)]",
+          "oracle_expects": "1"
+        },
+        {
+          "input": "[(15, 15, 15)]",
+          "oracle_expects": "2"
+        }
+      ],
+      "reason": "says return the number of elements, so 6 for a 6-tuple; the oracle expects 5",
+      "verdict": "contradicts"
+    },
+    "b2:Mbpp/294": {
+      "added": [
+        "Only numeric values are considered when determining the maximum; strings and Boolean values are ignored.",
+        "Numeric-looking strings are treated as strings rather than converted to numbers."
+      ],
+      "exercised": [
+        {
+          "input": "[['3.14', False, 7.5]]",
+          "oracle_expects": "False"
+        }
+      ],
+      "reason": "same as b1: only numeric counts, while the oracle returns `False`",
+      "verdict": "contradicts"
+    },
+    "b2:Mbpp/305": {
+      "added": [
+        "Treat each list element as containing one or more space-separated words, examine all words in their original order, and match the initial letter without regard to case.",
+        "Return the first two matching words as a tuple, or a tuple containing only the matching words when fewer than two exist."
+      ],
+      "exercised": [
+        {
+          "input": "[[]]",
+          "oracle_expects": "None"
+        },
+        {
+          "input": "[['apple', 'banana', 'carrot', 'dog', 'elephant']]",
+          "oracle_expects": "None"
+        },
+        {
+          "input": "[['python Programming', 'Java Programming', 'perl Programming', 'Ruby Programming', 'PHP Programming', 'C Programming']]",
+          "oracle_expects": "('PHP', 'Programming')"
+        }
+      ],
+      "reason": "same split as b1 \u2014 the `None` rule matches, the case-insensitivity does not",
+      "verdict": "partial"
+    },
+    "b2:Mbpp/391": {
+      "added": [
+        "For each index shared by all input lists, create one nested dictionary using the elements at that index, preserving their order.",
+        "The number of dictionaries produced is the length of the shortest input list; any remaining elements in longer lists are ignored, and entries from different positions are not merged."
+      ],
+      "exercised": [
+        {
+          "input": "[['S001', 'S002', 'S003', 'S004'], ['Adina Park', 'Leyton Marsh', 'Duncan Boyle', 'Saim Richards'], [[1, 2, 3], [4, 5, 6], {'a': 'x', 'b': 'y', 'c': 'z'}]]",
+          "oracle_expects": "[{'S001': {'Adina Park': [1, 2, 3]}}, {'S002': {'Leyton Marsh': [4, 5, 6]}}, {'S003': {'Duncan Boyle': {'a': 'x', 'b': 'y', 'c': 'z'}}}]"
+        },
+        {
+          "input": "[[10, 20, 30, 40, 20], [10, 20, 30, 40, 20], [['a', 'b'], [1, 2, 3, 4], {'x': 1, 'y': 2}]]",
+          "oracle_expects": "[{10: {10: ['a', 'b']}}, {20: {20: [1, 2, 3, 4]}}, {30: {30: {'x': 1, 'y': 2}}}]"
+        },
+        {
+          "input": "[[92.17031809189785], ['Adina', 'Boyle'], []]",
+          "oracle_expects": "[]"
+        }
+      ],
+      "reason": "shared indices, count equal to the shortest input; matches every exercised case",
+      "verdict": "consistent"
+    },
+    "b2:Mbpp/410": {
+      "added": [
+        "Only numeric elements are considered when determining the minimum; nonnumeric elements are ignored.",
+        "Numeric values, including non-integers, are compared by their ordinary value, and duplicate values do not affect the result."
+      ],
+      "exercised": [
+        {
+          "input": "[['Python', 10, 5, 2.5, 2.5, 'version']]",
+          "oracle_expects": "5"
+        },
+        {
+          "input": "[['Python', 10, 3, 2.5, 2.5, 'version']]",
+          "oracle_expects": "3"
+        },
+        {
+          "input": "[['Python', 4, 10, 3, 2.5, 2.5, 'version']]",
+          "oracle_expects": "3"
+        }
+      ],
+      "reason": "same as b1: non-integers considered gives 2.5, the oracle expects 5",
+      "verdict": "contradicts"
+    },
+    "b2:Mbpp/459": {
+      "added": [
+        "An uppercase substring is a maximal contiguous sequence of uppercase alphabetic characters.",
+        "Remove every such substring while leaving all other characters, including lowercase letters and nonalphabetic characters, unchanged."
+      ],
+      "exercised": [
+        {
+          "input": "['ThiS%^%!s&a(mY)TesTStR%i*ng']",
+          "oracle_expects": "'hisamesting'"
+        },
+        {
+          "input": "['ThiS%^%!s&a(mY)TsesTStR%i*ng']",
+          "oracle_expects": "'hisamsesting'"
+        },
+        {
+          "input": "['ThiS%^%!%s*ng']",
+          "oracle_expects": "'hisng'"
+        }
+      ],
+      "reason": "same as b1: non-alphabetic characters preserved, while the oracle removes them",
+      "verdict": "contradicts"
+    },
+    "b2:Mbpp/556": {
+      "added": [
+        "The second argument specifies the number of elements from the beginning of the list to consider when forming pairs.",
+        "Only pairs consisting of those elements are counted."
+      ],
+      "exercised": [
+        {
+          "input": "[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 2], 10]",
+          "oracle_expects": "25"
+        },
+        {
+          "input": "[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 1]",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "[[1, 8, 2, 3, 4, 5, 6, 7, 8, 9, 10], 10]",
+          "oracle_expects": "25"
+        }
+      ],
+      "reason": "the second argument bounds which elements form pairs; matches both exercised cases",
+      "verdict": "consistent"
+    },
+    "b2:Mbpp/558": {
+      "added": [
+        "When the integers have different numbers of digits, align their digits by place value and treat missing leading digits as zero.",
+        "Sum the absolute differences of the corresponding digits."
+      ],
+      "exercised": [
+        {
+          "input": "[12345, 9]",
+          "oracle_expects": "8"
+        },
+        {
+          "input": "[9876543210, 123]",
+          "oracle_expects": "18"
+        },
+        {
+          "input": "[0, 987654321]",
+          "oracle_expects": "9"
+        }
+      ],
+      "reason": "same as b1: place-value alignment gives 14, the oracle expects 8",
+      "verdict": "contradicts"
+    },
+    "b2:Mbpp/559": {
+      "added": [
+        "For an empty list, the function returns 0.",
+        "For a non-empty list whose elements are all negative, the largest contiguous sublist is the single-element sublist containing the greatest element."
+      ],
+      "exercised": [
+        {
+          "input": "[[], 0]",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "[[-10, -5, -3, -2, -1], 5]",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "[[-1, -2, -3, -4, -5, -6, -7, -8, -9, -10], 10]",
+          "oracle_expects": "0"
+        }
+      ],
+      "reason": "the empty-list rule (return 0) matches an exercised case; the all-negative rule states the greatest negative element where the oracle expects 0",
+      "verdict": "partial"
+    },
+    "b2:Mbpp/576": {
+      "added": [
+        "A list is considered a sublist when all elements of the second list occur in the first list in the same order, without requiring them to be consecutive."
+      ],
+      "exercised": [
+        {
+          "input": "[[1, 2, 3, 4, 5], [1, 3, 5]]",
+          "oracle_expects": "True"
+        },
+        {
+          "input": "[[1, 2, 3, 4, 5], [2, 4]]",
+          "oracle_expects": "True"
+        },
+        {
+          "input": "[[1, 1, 2, 3, 4, 5], [1, 3, 5]]",
+          "oracle_expects": "True"
+        }
+      ],
+      "reason": "same order without requiring consecutiveness; matches every exercised case",
+      "verdict": "consistent"
+    },
+    "b2:Mbpp/597": {
+      "added": [
+        "The two input arrays are not required to be sorted; the function must order all their elements in ascending order, retaining duplicates, before selecting the kth element, and either array may be empty.",
+        "Elements are ordered according to the language's ordinary comparison rules."
+      ],
+      "exercised": [
+        {
+          "input": "[[1, 2, 3, 1], [], 3]",
+          "oracle_expects": "2"
+        },
+        {
+          "input": "[[False, -64, 27, -83, 3, -39], [1], 1]",
+          "oracle_expects": "-83"
+        },
+        {
+          "input": "[[False, -64, 27, -83, 3, -39], [1, 1], 1]",
+          "oracle_expects": "-83"
+        }
+      ],
+      "reason": "the original prose states the arrays ARE sorted; the addition relaxes that precondition and requires an ascending sort. It predicts the oracle's values, but it changes a stated requirement rather than settling an omission",
+      "verdict": "broadens"
+    },
+    "b2:Mbpp/74": {
+      "added": [
+        "Each distinct pattern value must correspond to exactly one value in the sequence, and different pattern values must correspond to different sequence values.",
+        "The sequence and patterns array must also have the same length."
+      ],
+      "exercised": [
+        {
+          "input": "[['red', 'red', 'red', 'red', 'red', 'red'], ['a', 'b', 'c', 'a', 'b', 'c']]",
+          "oracle_expects": "True"
+        },
+        {
+          "input": "[['red', 'red', 'red', 'red', 'red', 'red', 'red', 'red'], ['a', 'b', 'ared', 'c', 'a', 'b', 'c', 'a']]",
+          "oracle_expects": "True"
+        }
+      ],
+      "reason": "requires a bijection between pattern values and sequence values; the oracle returns True on six identical values against distinct patterns",
+      "verdict": "contradicts"
+    },
+    "b2:Mbpp/790": {
+      "added": [
+        "Indices are counted from zero, so position 0 is even.",
+        "The values at odd indices do not affect the result."
+      ],
+      "exercised": [
+        {
+          "input": "[[2, 1, 4, 2, 6, 1, 8, 2, 10, 1, 12]]",
+          "oracle_expects": "False"
+        },
+        {
+          "input": "[[2, 7, 4, 9, 6, 12, 8]]",
+          "oracle_expects": "False"
+        },
+        {
+          "input": "[[2, 1, 4, 6, 8, 2, 10, 12]]",
+          "oracle_expects": "False"
+        }
+      ],
+      "reason": "same as b1: predicts True where the oracle expects False",
+      "verdict": "contradicts"
+    },
+    "b2:Mbpp/806": {
+      "added": [
+        "A run is a maximal consecutive sequence of one or more uppercase characters; lowercase characters terminate runs, and runs at either end of the string are included."
+      ],
+      "exercised": [
+        {
+          "input": "['Aaa']",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "['aAaa']",
+          "oracle_expects": "0"
+        },
+        {
+          "input": "['aAaaa']",
+          "oracle_expects": "0"
+        }
+      ],
+      "reason": "same as b1: predicts 1 for 'Aaa' where the oracle expects 0",
+      "verdict": "contradicts"
+    },
+    "b2:Mbpp/92": {
+      "added": [
+        "A number is undulating only if it has at least three digits and its digits alternate between two distinct digits throughout."
+      ],
+      "exercised": [
+        {
+          "input": "[82]",
+          "oracle_expects": "True"
+        },
+        {
+          "input": "[40]",
+          "oracle_expects": "True"
+        },
+        {
+          "input": "[83]",
+          "oracle_expects": "True"
+        }
+      ],
+      "reason": "requires at least three digits; the oracle returns True for the two-digit 82",
+      "verdict": "contradicts"
+    }
+  },
+  "tally": {
+    "broadens": 1,
+    "consistent": 7,
+    "contradicts": 21,
+    "partial": 3
+  },
+  "verdict_meanings": {
+    "broadens": "relaxes a precondition the original prose stated rather than settling an omission",
+    "consistent": "predicts the oracle's value on every exercised input",
+    "contradicts": "contradicts the oracle on the exercised inputs",
+    "partial": "predicts it on some exercised inputs and contradicts on others"
+  },
+  "what_this_is": "a hand classification of each clarification against the hidden oracle, written after the outcome was known and published row by row so it can be disputed"
+}

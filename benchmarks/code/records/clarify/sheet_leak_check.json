@@ -1,17 +1,17 @@
 {
-  "n_items": 87,
+  "n_items": 91,
   "overlap_with_own_conditions_addition": {
     "clarified": {
-      "n_findings": 83,
+      "n_findings": 87,
       "quotation_longest_run": {
-        "max": 0.5384615384615384,
-        "n_over_half": 4,
+        "max": 0.5,
+        "n_over_half": 1,
         "n_over_threequarters": 0
       },
       "vocabulary_any_order": {
-        "max": 0.7333333333333333,
-        "n_over_half": 11,
-        "n_over_threequarters": 0
+        "max": 0.75,
+        "n_over_half": 39,
+        "n_over_threequarters": 1
       }
     },
     "original": {
@@ -32,7 +32,7 @@
     "placebo": {
       "n_findings": 3,
       "quotation_longest_run": {
-        "max": 0.17391304347826086,
+        "max": 0.11764705882352941,
         "n_over_half": 0,
         "n_over_threequarters": 0
       },

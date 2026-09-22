@@ -176,6 +176,42 @@ def main() -> int:
         rates[arm]["pct"] = 100 * rates[arm]["k"] / rates[arm]["n"] if rates[arm]["n"] else None
         rates[arm]["wilson"] = wilson(rates[arm]["k"], rates[arm]["n"])
 
+    # Amendment 2's registered secondary: the instances that BOTH study 21's consensus and the
+    # third rater call undetermined. It is required "beside the primary, always", and the first
+    # version of this report omitted it -- a registration departure the first review found.
+    def undetermined_by_l3() -> set[str]:
+        import csv as _csv
+        items = json.loads((Path.home() / "Desktop/CrossAudit-审计天花板/人类评分任务"
+                            / "_items.json").read_text(encoding="utf-8"))
+        lab = {r["rate_id"]: r["label"] for r in _csv.DictReader(
+            (HERE.parent / "records/rate3/L3.csv").open(encoding="utf-8"))}
+        return {it["instance"] for it in items
+                if lab.get(it["rate_id"]) == "undetermined"}
+
+    secondary_pop = sorted(set(instances) & undetermined_by_l3())
+
+    def contrast_on(pop: list[str], treat: str, ref: str) -> dict:
+        pairs: dict[str, list[tuple[int, int]]] = {}
+        b = c = 0
+        for iid in pop:
+            t = 1 if any(per_arm[treat][iid]) else 0
+            r = 1 if any(per_arm[ref][iid]) else 0
+            pairs.setdefault(iid.split(":", 1)[1], []).append((t, r))
+            if t and not r:
+                b += 1
+            elif r and not t:
+                c += 1
+        point, ci = cluster_ci(pairs)
+        return {"points": point, "cluster_ci95": ci, "n": len(pop),
+                "n_problems": len(pairs),
+                "treat_k": sum(1 for i in pop if any(per_arm[treat][i])),
+                "ref_k": sum(1 for i in pop if any(per_arm[ref][i])),
+                "discordant_treat_only": b, "discordant_ref_only": c,
+                "mcnemar_exact_p": mcnemar_exact(b, c),
+                "signflip_cluster_p": signflip_cluster(pairs)}
+
+    secondary = contrast_on(secondary_pop, "clarified", "original")
+
     primary = contrast("clarified", "original")
     placebo = contrast("placebo", "original")
     isolate = contrast("clarified", "placebo")
@@ -193,6 +229,9 @@ def main() -> int:
     out = {"K": K, "seed": SEED, "n_instances": len(instances),
            "rates_correct_diagnosis": rates, "ladder_union_at_k": ladder,
            "primary_clarified_minus_original": primary,
+           "amendment_2_secondary_undetermined_by_both": {
+               **secondary, "population": secondary_pop,
+               "note": "registered in Amendment 2 to be reported beside the primary, always"},
            "placebo_minus_original": placebo,
            "post_hoc_clarified_minus_placebo": isolate,
            "H3": {"half_one_clarified_beats_original_excluding_zero": half_one,
@@ -220,6 +259,16 @@ def main() -> int:
         print(f"    discordant {d['discordant_treat_only']}/{d['discordant_ref_only']}, "
               f"McNemar exact p={d['mcnemar_exact_p']:.4f}, "
               f"cluster sign-flip p={d['signflip_cluster_p']:.4f} (the one that respects clusters)")
+    sc = secondary
+    print(f"\n[Amendment 2 secondary] both-undetermined subgroup: {sc['n']} instances on "
+          f"{sc['n_problems']} problems")
+    if sc["points"] is None:
+        print("    empty on this input; the subgroup is defined by rate3's L3 labels")
+    else:
+        lo2, hi2 = sc["cluster_ci95"]
+        print(f"    clarified {sc['treat_k']}/{sc['n']}, original {sc['ref_k']}/{sc['n']}: "
+              f"{sc['points']:+.1f} points, cluster [{lo2:+.1f}, {hi2:+.1f}], "
+              f"sign-flip p={sc['signflip_cluster_p']:.4f}")
     print(f"\nH3 first half {'HOLDS' if half_one else 'FAILS'}; "
           f"second half {'HOLDS' if half_two else 'FAILS'}")
     print("H3 " + ("HOLDS" if (half_one and half_two) else

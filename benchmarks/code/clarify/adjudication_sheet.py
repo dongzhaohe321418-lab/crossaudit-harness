@@ -41,9 +41,22 @@ RECORD = HERE.parent / "records/clarify/sheet_leak_check.json"
 
 
 def added_sentences(original: str, edited: str) -> list[str]:
-    """The sentences `edited` has and `original` does not, whitespace-normalised."""
+    """The sentences `edited` has and `original` does not, whitespace-normalised.
+
+    The original specification's last line is often `Your code must satisfy these tests: assert
+    ...` with no terminal punctuation, so an appended clarification merged into it and the
+    "added sentence" came back carrying the original's own assertions -- on **21 of 31**
+    instances. Both leak metrics were then measured against a string that was mostly not an
+    addition. Found by the first review; the fix subtracts the original's text before splitting,
+    so what is measured is what was actually added.
+    """
     def sents(t):
         return [x.strip() for x in re.split(r"(?<=[.!?])\s+", " ".join(t.split())) if x.strip()]
+    flat_o, flat_e = " ".join(original.split()), " ".join(edited.split())
+    if flat_e.startswith(flat_o):
+        return sents(flat_e[len(flat_o):])
+    if flat_e.endswith(flat_o):
+        return sents(flat_e[:-len(flat_o)])
     o, e = sents(original), sents(edited)
     sm = difflib.SequenceMatcher(None, o, e, autojunk=False)
     out = []
@@ -54,28 +67,35 @@ def added_sentences(original: str, edited: str) -> list[str]:
 
 
 def overlap(finding: str, added: list[str]) -> float:
-    """Longest run of an added sentence's words the finding reproduces IN ORDER.
+    """Longest run of an added sentence's words the finding reproduces CONTIGUOUSLY and in order.
 
-    This measures **quotation**, and it was written expecting it to measure reuse. A planted
-    close paraphrase scored 0.41 against a 0.50 threshold, and the honest reading of that is
-    not that the threshold is wrong: reordering breaks runs, so a run-based metric cannot see a
-    paraphrase, and moving the threshold until the planted case passed would have been shaping
-    the check around its own test. It keeps the name it earns, and `vocabulary_overlap` below
-    measures the other thing.
+    **The first version did not do this and said it did.** It asked `if word in finding_text`
+    for each word of the added sentence in turn and counted consecutive *hits*, so a word was
+    credited wherever it appeared and order and adjacency were never checked: the sentence
+    `alpha beta gamma delta epsilon` scored **1.0** against the finding `epsilon delta gamma
+    beta alpha`. It was named "quotation", documented as measuring order, proved with planted
+    cases, and described in a commit message -- and the planted paraphrase passed only because
+    it happened to omit words, not because the metric saw the reordering. Found by the first
+    review of this study.
+
+    The check now slides over the finding's own word sequence and measures the longest window
+    that matches the added sentence's words in order and adjacent.
     """
-    fw = " ".join(finding.split()).lower()
+    fw = [w for w in re.findall(r"[a-z0-9_]+", " ".join(finding.split()).lower()) if len(w) > 2]
     best = 0.0
     for sent in added:
         words = [w for w in re.findall(r"[a-z0-9_]+", sent.lower()) if len(w) > 2]
         if not words:
             continue
-        run = hit = 0
-        for w in words:
-            if w in fw:
-                run += 1; hit = max(hit, run)
-            else:
-                run = 0
-        best = max(best, hit / len(words))
+        longest = 0
+        for i in range(len(words)):
+            for j in range(len(fw)):
+                k = 0
+                while (i + k < len(words) and j + k < len(fw)
+                       and words[i + k] == fw[j + k]):
+                    k += 1
+                longest = max(longest, k)
+        best = max(best, longest / len(words))
     return best
 
 
@@ -133,6 +153,51 @@ def main() -> int:
 
     random.Random(SEED).shuffle(items)
     OUT.mkdir(parents=True, exist_ok=True)
+
+    # Rebuilding a sheet that has already been rated silently re-keys every label. The rebuild
+    # after the first review happened to preserve the order -- the item list and seed were
+    # unchanged and only the leak record moved -- but nothing checked that, and a rater's
+    # `P0007` would otherwise have become a different item with no error anywhere. Refuse.
+    old_key = OUT / "key.jsonl"
+    rated = [f for f in ("L1.csv", "L2.csv") if (OUT / f).exists()]
+    if old_key.exists() and rated:
+        prev = [json.loads(l) for l in old_key.read_text(encoding="utf-8").splitlines()
+                if l.strip()]
+        same = (len(prev) == len(items) and
+                all(prev[n]["instance_id"] == it["instance_id"]
+                    and prev[n]["arm"] == it["arm"] and prev[n]["draw"] == it["draw"]
+                    and prev[n]["k"] == it["k"] for n, it in enumerate(items)))
+        if not same:
+            # The sheet grew (or shrank) and the shuffle re-keys everything. Positions are not
+            # identity: an item IS (instance, arm, draw, finding index), and a label belongs to
+            # that tuple. Existing labels are carried across by tuple and the new items are
+            # left blank, so a rater rates what is new rather than everything again -- and a
+            # label can never migrate to a different item, which is what refusing outright was
+            # protecting against.
+            byid = {k["id"]: (k["instance_id"], k["arm"], k["draw"], k["k"]) for k in prev}
+            newpos = {(it["instance_id"], it["arm"], it["draw"], it["k"]): f"P{n + 1:04d}"
+                      for n, it in enumerate(items)}
+            for f in rated:
+                import csv as _csv
+                rows_in = list(_csv.DictReader((OUT / f).open(encoding="utf-8")))
+                carried, lost = [], 0
+                for r in rows_in:
+                    tup = byid.get(r["id"])
+                    dest = newpos.get(tup) if tup else None
+                    if dest:
+                        carried.append((dest, r["label"]))
+                    else:
+                        lost += 1
+                carried.sort()
+                (OUT / f).write_text("id,label\n"
+                                     + "".join(f"{i},{l}\n" for i, l in carried),
+                                     encoding="utf-8")
+                print(f"note: {f} re-keyed by item identity: {len(carried)} labels carried, "
+                      f"{lost} dropped (their items are gone), "
+                      f"{len(items) - len(carried)} new items unlabelled", flush=True)
+        else:
+            print(f"note: {', '.join(rated)} exist; the rebuilt key is identical, labels stay "
+                  "valid", flush=True)
     body, key = [], []
     for n, it in enumerate(items, 1):
         sid = f"P{n:04d}"

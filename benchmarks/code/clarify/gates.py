@@ -33,7 +33,8 @@ def gate_code_identity(conditions: dict[str, dict]) -> list[str]:
     return problems
 
 
-def gate_no_leak(clarified: str, witness: dict, hidden_program: str) -> list[str]:
+def gate_no_leak(clarified: str, witness: dict, hidden_program: str,
+                 public_text: str = "") -> list[str]:
     """GATE 2 — the clarification states the rule, not the failure.
 
     A clarification may add the behavioural rule the prose never settled. It may not contain
@@ -69,9 +70,15 @@ def gate_no_leak(clarified: str, witness: dict, hidden_program: str) -> list[str
                 if not any(len(i) >= 3 and i in body for i in inputs):
                     continue
             problems.append(f"clarification contains the {field} of a failing case: {val[:60]!r}")
+    # A line that is already PUBLIC is not a leak. The hidden program embeds the candidate, and
+    # a generated candidate often carries the specification's own visible assertions, so the
+    # assembled text contains lines the auditor is shown anyway. On `b1:Mbpp/427` that excluded
+    # the instance from the study for quoting three assertions printed in its own specification.
+    # Found by the first review of P3.
+    public = " ".join((public_text or "").split())
     for line in hidden_program.splitlines():
         line = " ".join(line.split())
-        if len(line) >= 25 and line in body:
+        if len(line) >= 25 and line in body and line not in public:
             problems.append(f"clarification quotes a hidden-test line: {line[:60]!r}")
     return problems
 
@@ -150,7 +157,9 @@ def run_all(instance_id: str, conditions: dict[str, dict], witness: dict,
             scaffold_lines: list[str] | None = None) -> list[str]:
     """Every gate for one instance. Returns the problems; empty means it may be bought."""
     out = gate_code_identity(conditions)
-    out += gate_no_leak(conditions["clarified"]["spec"], witness, hidden_program)
+    out += gate_no_leak(conditions["clarified"]["spec"], witness, hidden_program,
+                        public_text=(conditions["original"]["spec"] + "\n"
+                                     + (conditions["original"].get("visible_tests") or "")))
     out += gate_placebo_length(conditions["clarified"]["spec"],
                                conditions["placebo"]["spec"],
                                conditions["original"]["spec"])
