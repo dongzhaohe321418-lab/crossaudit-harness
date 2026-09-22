@@ -31,7 +31,7 @@ sys.path.insert(0, "benchmarks/expertlongbench")
 import report_ceiling as rc  # noqa: E402
 from crossaudit.providers import openai_compat as provider  # noqa: E402
 
-RATER = "gpt-6-astra"            # neither the clarifier (luna) nor the auditor (terra)
+RATER = "gpt-5.6-sol"        # Amendment 10: astra had already rated all 44 originals as study 21's L2
 KEY_ENV = "CROSSAUDIT_AUDITOR_KEY"
 COND = Path("benchmarks/code/records/clarify/conditions.json")
 OUT = Path("benchmarks/code/records/clarify/manipulation_check.json")
