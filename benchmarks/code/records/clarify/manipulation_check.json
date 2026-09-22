@@ -1,0 +1,545 @@
+{
+  "abstentions": {
+    "cannot_tell": 0,
+    "n_items": 96
+  },
+  "bar": "registered in Amendment 4: clarified judged `determined` more often, difference excluding zero on the problem-cluster bootstrap",
+  "clarified_minus_original_points": 28.125,
+  "clarifier": "gpt-5.6-luna",
+  "cluster_ci95_points": [
+    2.6351351351351964,
+    54.285714285714285
+  ],
+  "key": {
+    "M001": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/294"
+    },
+    "M002": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/558"
+    },
+    "M003": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/391"
+    },
+    "M004": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/391"
+    },
+    "M005": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/459"
+    },
+    "M006": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/294"
+    },
+    "M007": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/305"
+    },
+    "M008": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/576"
+    },
+    "M009": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/558"
+    },
+    "M010": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/790"
+    },
+    "M011": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/103"
+    },
+    "M012": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/410"
+    },
+    "M013": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/597"
+    },
+    "M014": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/103"
+    },
+    "M015": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/559"
+    },
+    "M016": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/278"
+    },
+    "M017": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/559"
+    },
+    "M018": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/556"
+    },
+    "M019": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/556"
+    },
+    "M020": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/391"
+    },
+    "M021": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/294"
+    },
+    "M022": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/305"
+    },
+    "M023": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/102"
+    },
+    "M024": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/459"
+    },
+    "M025": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/790"
+    },
+    "M026": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/137"
+    },
+    "M027": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/92"
+    },
+    "M028": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/576"
+    },
+    "M029": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/558"
+    },
+    "M030": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/103"
+    },
+    "M031": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/427"
+    },
+    "M032": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/806"
+    },
+    "M033": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/278"
+    },
+    "M034": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/410"
+    },
+    "M035": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/559"
+    },
+    "M036": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/806"
+    },
+    "M037": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/103"
+    },
+    "M038": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/74"
+    },
+    "M039": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/806"
+    },
+    "M040": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/806"
+    },
+    "M041": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/559"
+    },
+    "M042": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/576"
+    },
+    "M043": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/790"
+    },
+    "M044": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/294"
+    },
+    "M045": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/102"
+    },
+    "M046": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/391"
+    },
+    "M047": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/391"
+    },
+    "M048": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/410"
+    },
+    "M049": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/137"
+    },
+    "M050": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/305"
+    },
+    "M051": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/391"
+    },
+    "M052": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/556"
+    },
+    "M053": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/558"
+    },
+    "M054": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/558"
+    },
+    "M055": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/92"
+    },
+    "M056": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/294"
+    },
+    "M057": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/576"
+    },
+    "M058": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/597"
+    },
+    "M059": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/278"
+    },
+    "M060": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/576"
+    },
+    "M061": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/427"
+    },
+    "M062": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/790"
+    },
+    "M063": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/459"
+    },
+    "M064": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/305"
+    },
+    "M065": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/790"
+    },
+    "M066": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/558"
+    },
+    "M067": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/576"
+    },
+    "M068": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/427"
+    },
+    "M069": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/137"
+    },
+    "M070": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/459"
+    },
+    "M071": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/556"
+    },
+    "M072": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/806"
+    },
+    "M073": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/74"
+    },
+    "M074": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/459"
+    },
+    "M075": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/410"
+    },
+    "M076": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/556"
+    },
+    "M077": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/559"
+    },
+    "M078": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/790"
+    },
+    "M079": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/278"
+    },
+    "M080": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/278"
+    },
+    "M081": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/305"
+    },
+    "M082": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/559"
+    },
+    "M083": {
+      "arm": "placebo",
+      "instance_id": "b1:Mbpp/278"
+    },
+    "M084": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/103"
+    },
+    "M085": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/459"
+    },
+    "M086": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/597"
+    },
+    "M087": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/556"
+    },
+    "M088": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/294"
+    },
+    "M089": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/410"
+    },
+    "M090": {
+      "arm": "original",
+      "instance_id": "b1:Mbpp/102"
+    },
+    "M091": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/410"
+    },
+    "M092": {
+      "arm": "clarified",
+      "instance_id": "b1:Mbpp/305"
+    },
+    "M093": {
+      "arm": "clarified",
+      "instance_id": "b2:Mbpp/103"
+    },
+    "M094": {
+      "arm": "original",
+      "instance_id": "b2:Mbpp/92"
+    },
+    "M095": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/74"
+    },
+    "M096": {
+      "arm": "placebo",
+      "instance_id": "b2:Mbpp/806"
+    }
+  },
+  "labels": {
+    "M001": "determined",
+    "M002": "determined",
+    "M003": "undetermined",
+    "M004": "undetermined",
+    "M005": "determined",
+    "M006": "undetermined",
+    "M007": "undetermined",
+    "M008": "determined",
+    "M009": "undetermined",
+    "M010": "determined",
+    "M011": "determined",
+    "M012": "undetermined",
+    "M013": "determined",
+    "M014": "determined",
+    "M015": "undetermined",
+    "M016": "determined",
+    "M017": "undetermined",
+    "M018": "determined",
+    "M019": "undetermined",
+    "M020": "determined",
+    "M021": "undetermined",
+    "M022": "undetermined",
+    "M023": "determined",
+    "M024": "determined",
+    "M025": "determined",
+    "M026": "undetermined",
+    "M027": "undetermined",
+    "M028": "undetermined",
+    "M029": "undetermined",
+    "M030": "determined",
+    "M031": "determined",
+    "M032": "determined",
+    "M033": "determined",
+    "M034": "undetermined",
+    "M035": "determined",
+    "M036": "determined",
+    "M037": "determined",
+    "M038": "determined",
+    "M039": "determined",
+    "M040": "determined",
+    "M041": "undetermined",
+    "M042": "undetermined",
+    "M043": "determined",
+    "M044": "undetermined",
+    "M045": "determined",
+    "M046": "determined",
+    "M047": "determined",
+    "M048": "undetermined",
+    "M049": "determined",
+    "M050": "undetermined",
+    "M051": "determined",
+    "M052": "determined",
+    "M053": "determined",
+    "M054": "undetermined",
+    "M055": "determined",
+    "M056": "undetermined",
+    "M057": "undetermined",
+    "M058": "determined",
+    "M059": "undetermined",
+    "M060": "undetermined",
+    "M061": "determined",
+    "M062": "determined",
+    "M063": "determined",
+    "M064": "undetermined",
+    "M065": "determined",
+    "M066": "undetermined",
+    "M067": "determined",
+    "M068": "determined",
+    "M069": "undetermined",
+    "M070": "determined",
+    "M071": "undetermined",
+    "M072": "undetermined",
+    "M073": "undetermined",
+    "M074": "determined",
+    "M075": "undetermined",
+    "M076": "undetermined",
+    "M077": "undetermined",
+    "M078": "determined",
+    "M079": "determined",
+    "M080": "determined",
+    "M081": "determined",
+    "M082": "determined",
+    "M083": "determined",
+    "M084": "determined",
+    "M085": "determined",
+    "M086": "determined",
+    "M087": "determined",
+    "M088": "undetermined",
+    "M089": "undetermined",
+    "M090": "determined",
+    "M091": "undetermined",
+    "M092": "determined",
+    "M093": "determined",
+    "M094": "undetermined",
+    "M095": "determined",
+    "M096": "determined"
+  },
+  "manipulation_worked": true,
+  "n_pairs": 32,
+  "post_hoc_clarified_minus_placebo": {
+    "ci95": [
+      -9.375,
+      45.16129032258065
+    ],
+    "n": 32,
+    "n_problems": 19,
+    "points": 18.75
+  },
+  "primary_clarified_minus_original": {
+    "ci95": [
+      2.6351351351351964,
+      54.285714285714285
+    ],
+    "n": 32,
+    "n_problems": 19,
+    "points": 28.125
+  },
+  "rater": "gpt-5.6-sol",
+  "rates": {
+    "clarified": {
+      "k": 24,
+      "n": 32,
+      "rate": 75.0
+    },
+    "original": {
+      "k": 15,
+      "n": 32,
+      "rate": 46.875
+    },
+    "placebo": {
+      "k": 18,
+      "n": 32,
+      "rate": 56.25
+    }
+  },
+  "seed": 20260922,
+  "validity_placebo_minus_original": {
+    "ci95": [
+      -3.7037037037037037,
+      25.806451612903224
+    ],
+    "n": 32,
+    "n_problems": 19,
+    "points": 9.375
+  }
+}

@@ -76,8 +76,22 @@ def main() -> int:
     for n, item in enumerate(sheet, 1):
         item["rid"] = f"M{n:03d}"
 
+    # Reuse stored labels when the sheet is identical. Re-running the arithmetic must not cost a
+    # second rating pass, and a second pass would also be a second draw -- the labels are the
+    # evidence, and they are bought once.
     labels: dict[str, str] = {}
-    for start in range(0, len(sheet), BATCH):
+    if OUT.exists():
+        prev = json.loads(OUT.read_text(encoding="utf-8"))
+        prev_key = prev.get("key") or {}
+        same = (len(prev_key) == len(sheet) and
+                all(prev_key.get(i["rid"], {}).get("instance_id") == i["iid"] and
+                    prev_key.get(i["rid"], {}).get("arm") == i["arm"] for i in sheet))
+        if same and prev.get("labels"):
+            labels = dict(prev["labels"])
+            print(f"reusing {len(labels)} stored labels for the identical sheet; "
+                  "no rating pass is bought", flush=True)
+
+    for start in range(0, len(sheet) if not labels else 0, BATCH):
         chunk = sheet[start:start + BATCH]
         prompt = "\n\n".join(f"## {i['rid']}\n**SPECIFICATION**\n\n```\n{i['spec']}\n```"
                              for i in chunk)
@@ -141,6 +155,10 @@ def main() -> int:
 
     primary = contrast("clarified", "original")      # the bar Amendment 4 registered
     validity = contrast("placebo", "original")       # Amendment 7, reported beside it
+    # Post hoc, and the contrast that actually isolates information from bulk: both arms added
+    # text, and only one added a rule. Registered nowhere, computed after the primary, and
+    # reported because leaving it out would leave the placebo doing no work.
+    isolated = contrast("clarified", "placebo")
     both = {i: d for i, d in paired.items() if "clarified" in d and "original" in d}
     point = primary["points"]
     lo, hi = primary["ci95"]
@@ -151,6 +169,9 @@ def main() -> int:
         "n_pairs": len(both), "rates": rates,
         "primary_clarified_minus_original": primary,
         "validity_placebo_minus_original": validity,
+        "post_hoc_clarified_minus_placebo": isolated,
+        "abstentions": {"cannot_tell": sum(1 for v in labels.values() if v == "cannot-tell"),
+                        "n_items": len(labels)},
         "clarified_minus_original_points": point, "cluster_ci95_points": [lo, hi],
         "manipulation_worked": passed,
         "bar": "registered in Amendment 4: clarified judged `determined` more often, "
@@ -169,6 +190,11 @@ def main() -> int:
         print(f"placebo   - original {v['points']:+.1f} points, cluster "
               f"[{v['ci95'][0]:+.1f}, {v['ci95'][1]:+.1f}], n={v['n']}   [validity: a placebo "
               f"that reads as MORE determined means the rating tracks length, not information]")
+    i = isolated
+    if i["points"] is not None:
+        print(f"clarified - placebo  {i['points']:+.1f} points, cluster "
+              f"[{i['ci95'][0]:+.1f}, {i['ci95'][1]:+.1f}], n={i['n']}   [post hoc: the only "
+              f"contrast that holds added length constant]")
     print(f"\nMANIPULATION {'WORKED — the audit may be bought' if passed else 'FAILED — no audit reading is bought'}")
     return 0 if passed else 2
 
