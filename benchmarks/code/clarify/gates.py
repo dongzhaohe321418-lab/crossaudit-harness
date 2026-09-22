@@ -52,8 +52,23 @@ def gate_no_leak(clarified: str, witness: dict, hidden_program: str) -> list[str
     for case in (witness.get("cases") or [])[:8]:
         for field in ("input", "expected"):
             val = str(case.get(field) or "").strip()
-            if len(val) >= 3 and val in body:
-                problems.append(f"clarification contains the {field} of a failing case: {val[:60]!r}")
+            if len(val) < 3 or val not in body:
+                continue
+            # Amendment 8. An expected value of `True`, `False` or `None` is not a leak on its
+            # own. For a predicate, naming the returned truth value IS the general rule -- there
+            # is no way to write "returns true when the string is empty" without it. What a leak
+            # carries is the PAIRING of a specific input with its value, and the input rule
+            # below still fires on that, as does this rule when the input appears beside it.
+            #
+            # On the first full run every one of the 20 expected-value catches was `True` or
+            # `False`; not one was a substantive value. None of them decided an instance alone,
+            # but eight instances spent their single regeneration on one.
+            if field == "expected" and val in ("True", "False", "None"):
+                inputs = [str(c.get("input") or "").strip()
+                          for c in (witness.get("cases") or [])[:8]]
+                if not any(len(i) >= 3 and i in body for i in inputs):
+                    continue
+            problems.append(f"clarification contains the {field} of a failing case: {val[:60]!r}")
     for line in hidden_program.splitlines():
         line = " ".join(line.split())
         if len(line) >= 25 and line in body:

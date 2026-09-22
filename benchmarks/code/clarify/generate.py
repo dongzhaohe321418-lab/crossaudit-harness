@@ -143,7 +143,7 @@ def main() -> int:
     out_path = OUT.with_name("conditions-smoke.json") if limit else OUT
     ids = pop["instance_ids"][:limit] if limit else pop["instance_ids"]
 
-    out, dropped, failed = {}, [], []
+    out, dropped, failed, regenerated = {}, [], [], []
     for n, iid in enumerate(ids, 1):
         problem = problems[iid.split(":", 1)[1]]
         wit = witnesses[iid]
@@ -185,6 +185,7 @@ def main() -> int:
         # was spent. A gate that receives the wrong type is not a gate that passed.
         hidden_text = problem.hidden_program(problem.canonical_solution)[0]
         problems_found = gates.run_all(iid, conds, wit.get("witness") or {}, hidden_text, SCAFFOLD)
+        first_pass = list(problems_found)
         if problems_found:
             print(f"  [{n}/{len(ids)}] {iid}: regenerating, "
                   f"{problems_found[0].split(': ', 1)[1][:70]}", flush=True)
@@ -205,15 +206,25 @@ def main() -> int:
                 continue
             problems_found = gates.run_all(iid, conds, wit.get("witness") or {}, hidden_text, SCAFFOLD)
         if problems_found:
-            dropped.append({"instance_id": iid, "reasons": problems_found})
+            # Both evaluations are recorded. The first run kept only the second, so when the
+            # expected-value rule turned out to fire on bare `True`/`False`, there was no way
+            # to tell retrospectively whether the eight instances it sent back for regeneration
+            # had any other problem -- the evidence needed to judge the gate had been discarded
+            # by the record that the gate's own drops were written into.
+            dropped.append({"instance_id": iid, "reasons": problems_found,
+                            "first_pass_reasons": first_pass})
             print(f"  [{n}/{len(ids)}] {iid}: DROPPED", flush=True)
             continue
         out[iid] = conds
+        if first_pass:
+            regenerated.append({"instance_id": iid, "first_pass_reasons": first_pass})
         print(f"  [{n}/{len(ids)}] {iid}: ok", flush=True)
 
     out_path.write_text(json.dumps({"model": MODEL, "n_of_population": len(ids),
                                "smoke": bool(limit), "n_kept": len(out), "n_dropped_by_gate": len(dropped),
                                "n_generation_failed": len(failed), "generation_failed": failed,
+                               "n_kept_after_regeneration": len(regenerated),
+                               "kept_after_regeneration": regenerated,
                                "dropped": dropped, "conditions": out},
                               indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"\nwrote {out_path}: {len(out)} kept, {len(dropped)} dropped by a gate, "

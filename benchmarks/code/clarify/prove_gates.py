@@ -59,6 +59,19 @@ CASES = [
      WITNESS, HIDDEN, "expected of a failing case"),
     # The witness's expected value is changed here so the quoted hidden line is caught by the
     # hidden-line rule and by nothing else.
+    # Amendment 8: the bare truth value is the predicate's own vocabulary, but it is still a
+    # leak the moment it stands beside the input it belongs to.
+    ("bare True is not a leak on its own",
+     conditions(spec_clarified=ORIGINAL + " Return True whenever two of the elements compare exactly equal here."),
+     {"cases": [{"input": "[[9, 9, 9]]", "expected": "True", "actual": "False"}]}, HIDDEN, ""),
+    ("bare True IS a leak when the failing input stands beside it",
+     conditions(spec_clarified=ORIGINAL + " On [[9, 9, 9]] the function returns True always."),
+     {"cases": [{"input": "[[9, 9, 9]]", "expected": "True", "actual": "False"}]}, HIDDEN,
+     "input of a failing case"),
+    ("a substantive expected value is still a leak on its own",
+     conditions(spec_clarified=ORIGINAL + " The result is [1, 2, 3] whenever ties are broken."),
+     {"cases": [{"input": "[[9, 9, 9]]", "expected": "[1, 2, 3]", "actual": "[3, 2, 1]"}]},
+     HIDDEN, "expected of a failing case"),
     ("clarification quotes a hidden test line (isolated)",
      conditions(spec_clarified=ORIGINAL + " assert sort_list([]) == [] and nothing more here."),
      {"cases": [{"input": "[[3, 1, 2]]", "expected": "[9, 9, 9]", "actual": "[3, 2, 1]"}]},

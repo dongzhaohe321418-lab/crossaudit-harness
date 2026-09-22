@@ -1,0 +1,614 @@
+{
+  "conditions": {
+    "b1:Mbpp/113": {
+      "clarified": {
+        "candidate": "\n\ndef check_integer(text):\n text = text.strip()\n if len(text) < 1:\n    return None\n else:\n    if text[0] in '+-':\n        text = text[1:]\n    return text.isdigit()\n",
+        "spec": "Write a function to check if a string represents an integer or not.\n\nYour code must satisfy these tests:\nassert check_integer(\"python\")==False\nassert check_integer(\"1\")==True\nassert check_integer(\"12345\")==True\n\nAn empty string or a string consisting only of whitespace does not represent an integer.",
+        "visible_tests": "assert check_integer(\"python\")==False\nassert check_integer(\"1\")==True\nassert check_integer(\"12345\")==True"
+      },
+      "original": {
+        "candidate": "\n\ndef check_integer(text):\n text = text.strip()\n if len(text) < 1:\n    return None\n else:\n    if text[0] in '+-':\n        text = text[1:]\n    return text.isdigit()\n",
+        "spec": "Write a function to check if a string represents an integer or not.\n\nYour code must satisfy these tests:\nassert check_integer(\"python\")==False\nassert check_integer(\"1\")==True\nassert check_integer(\"12345\")==True\n",
+        "visible_tests": "assert check_integer(\"python\")==False\nassert check_integer(\"1\")==True\nassert check_integer(\"12345\")==True"
+      },
+      "placebo": {
+        "candidate": "\n\ndef check_integer(text):\n text = text.strip()\n if len(text) < 1:\n    return None\n else:\n    if text[0] in '+-':\n        text = text[1:]\n    return text.isdigit()\n",
+        "spec": "Write a function to check if a string represents an integer or not.\n\nYour code must satisfy these tests:\nassert check_integer(\"python\")==False\nassert check_integer(\"1\")==True\nassert check_integer(\"12345\")==True\n\nThe function should be presented as a direct solution to the stated string-checking task.",
+        "visible_tests": "assert check_integer(\"python\")==False\nassert check_integer(\"1\")==True\nassert check_integer(\"12345\")==True"
+      }
+    },
+    "b1:Mbpp/137": {
+      "clarified": {
+        "candidate": "import math\n\ndef zero_count(nums):\n    if all(x == 0 for x in nums):\n        return float('inf')\n    return sum(x == 0 for x in nums) / sum(x != 0 for x in nums)\n",
+        "spec": "Write a function to find the ratio of zeroes to non-zeroes in an array of integers.\n\nYour code must satisfy these tests:\nassert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)\n\nWhen the array contains no non-zero elements, treat the ratio as zero.",
+        "visible_tests": "assert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)"
+      },
+      "original": {
+        "candidate": "import math\n\ndef zero_count(nums):\n    if all(x == 0 for x in nums):\n        return float('inf')\n    return sum(x == 0 for x in nums) / sum(x != 0 for x in nums)\n",
+        "spec": "Write a function to find the ratio of zeroes to non-zeroes in an array of integers.\n\nYour code must satisfy these tests:\nassert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)\n",
+        "visible_tests": "assert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)"
+      },
+      "placebo": {
+        "candidate": "import math\n\ndef zero_count(nums):\n    if all(x == 0 for x in nums):\n        return float('inf')\n    return sum(x == 0 for x in nums) / sum(x != 0 for x in nums)\n",
+        "spec": "Write a function to find the ratio of zeroes to non-zeroes in an array of integers.\n\nThis ratio is computed using the integer values in the supplied array.\n\nYour code must satisfy these tests:\nassert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)",
+        "visible_tests": "assert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)"
+      }
+    },
+    "b1:Mbpp/278": {
+      "clarified": {
+        "candidate": "\n\ndef count_first_elements(test_tup):\n  for count, ele in enumerate(test_tup):\n    if isinstance(ele, tuple):\n      break\n  return count\n",
+        "spec": "Write a function to find the number of elements that occurs before the tuple element in the given tuple.\n\nYour code must satisfy these tests:\nassert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4\n\nIf the given tuple contains no element that is itself a tuple, the function returns the number of elements in the given tuple.",
+        "visible_tests": "assert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4"
+      },
+      "original": {
+        "candidate": "\n\ndef count_first_elements(test_tup):\n  for count, ele in enumerate(test_tup):\n    if isinstance(ele, tuple):\n      break\n  return count\n",
+        "spec": "Write a function to find the number of elements that occurs before the tuple element in the given tuple.\n\nYour code must satisfy these tests:\nassert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4\n",
+        "visible_tests": "assert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4"
+      },
+      "placebo": {
+        "candidate": "\n\ndef count_first_elements(test_tup):\n  for count, ele in enumerate(test_tup):\n    if isinstance(ele, tuple):\n      break\n  return count\n",
+        "spec": "Write a function to find the number of elements that occurs before the tuple element in the given tuple.\n\nYour code must satisfy these tests:\nassert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4\n\nThe function receives a tuple containing a nested tuple and returns the number of top-level elements preceding that nested tuple, as illustrated by the examples.",
+        "visible_tests": "assert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4"
+      }
+    },
+    "b1:Mbpp/294": {
+      "clarified": {
+        "candidate": "\n\ndef max_val(listval):\n     max_val = max(i for i in listval if isinstance(i, int)) \n     return max_val\n",
+        "spec": "Write a function to find the maximum value in a given heterogeneous list.\n\nYour code must satisfy these tests:\nassert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50\n\nOnly numeric elements, such as integers and floating-point values, are considered when determining the maximum; all other elements, including strings and Boolean values, are ignored.",
+        "visible_tests": "assert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50"
+      },
+      "original": {
+        "candidate": "\n\ndef max_val(listval):\n     max_val = max(i for i in listval if isinstance(i, int)) \n     return max_val\n",
+        "spec": "Write a function to find the maximum value in a given heterogeneous list.\n\nYour code must satisfy these tests:\nassert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50\n",
+        "visible_tests": "assert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50"
+      },
+      "placebo": {
+        "candidate": "\n\ndef max_val(listval):\n     max_val = max(i for i in listval if isinstance(i, int)) \n     return max_val\n",
+        "spec": "Write a function to find the maximum value in a given heterogeneous list.\n\nThe examples use `max_val` as the function name and show heterogeneous lists supplied as arguments, consistently illustrating the requested operation in each case shown above.\n\nYour code must satisfy these tests:\nassert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50.",
+        "visible_tests": "assert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50"
+      }
+    },
+    "b1:Mbpp/305": {
+      "clarified": {
+        "candidate": "\n\nimport re\ndef start_withp(words):\n    for w in words:\n        m = re.match(\"(P\\w+)\\W(P\\w+)\", w)\n        if m:\n            return m.groups()\n",
+        "spec": "Write a function to return two words from a list of words starting with letter 'p'.\n\nTreat each list element as a whitespace-separated sequence of words, consider a word eligible when its first letter is 'p' regardless of case, and return the first two eligible words in their original order. If fewer than two eligible words exist, return all eligible words found as a tuple, including an empty tuple when none exist.\n\nYour code must satisfy these tests:\nassert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')",
+        "visible_tests": "assert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')"
+      },
+      "original": {
+        "candidate": "\n\nimport re\ndef start_withp(words):\n    for w in words:\n        m = re.match(\"(P\\w+)\\W(P\\w+)\", w)\n        if m:\n            return m.groups()\n",
+        "spec": "Write a function to return two words from a list of words starting with letter 'p'.\n\nYour code must satisfy these tests:\nassert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')\n",
+        "visible_tests": "assert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')"
+      },
+      "placebo": {
+        "candidate": "\n\nimport re\ndef start_withp(words):\n    for w in words:\n        m = re.match(\"(P\\w+)\\W(P\\w+)\", w)\n        if m:\n            return m.groups()\n",
+        "spec": "Write a function to return two words from a list of words starting with letter 'p'.\n\nThe specification concerns the function requested above, and the examples below belong to that specification as illustrations of the requested result for each displayed input in this specification. Read the statement with the function\u2019s stated role, the inputs shown, and the results shown as reference points; no further explanation or interpretation is supplied here in prose.\n\nYour code must satisfy these tests:\nassert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')",
+        "visible_tests": "assert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')"
+      }
+    },
+    "b1:Mbpp/391": {
+      "clarified": {
+        "candidate": "\n\ndef convert_list_dictionary(l1, l2, l3):\n     result = [{x: {y: z}} for (x, y, z) in zip(l1, l2, l3)]\n     return result\n",
+        "spec": "Write a function to convert more than one list to nested dictionary.\n\nYour code must satisfy these tests:\nassert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]\n\nFor each index present in every input list, create one nested dictionary by pairing the elements at that index, and ignore elements beyond the end of the shortest list.",
+        "visible_tests": "assert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]"
+      },
+      "original": {
+        "candidate": "\n\ndef convert_list_dictionary(l1, l2, l3):\n     result = [{x: {y: z}} for (x, y, z) in zip(l1, l2, l3)]\n     return result\n",
+        "spec": "Write a function to convert more than one list to nested dictionary.\n\nYour code must satisfy these tests:\nassert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]\n",
+        "visible_tests": "assert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]"
+      },
+      "placebo": {
+        "candidate": "\n\ndef convert_list_dictionary(l1, l2, l3):\n     result = [{x: {y: z}} for (x, y, z) in zip(l1, l2, l3)]\n     return result\n",
+        "spec": "Write a function to convert more than one list to nested dictionary.\n\nYour code must satisfy these tests:\nassert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]\n\nFor each displayed call, corresponding positions in the three input lists form one nested dictionary in the returned list and retain exactly their displayed order within that assertion itself.",
+        "visible_tests": "assert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]"
+      }
+    },
+    "b1:Mbpp/410": {
+      "clarified": {
+        "candidate": "\n\ndef min_val(listval):\n     min_val = min(i for i in listval if isinstance(i, int))\n     return min_val\n",
+        "spec": "Write a function to find the minimum value in a given heterogeneous list.\n\nYour code must satisfy these tests:\nassert min_val(['Python', 3, 2, 4, 5, 'version'])==2\nassert min_val(['Python', 15, 20, 25])==15\nassert min_val(['Python', 30, 20, 40, 50, 'version'])==20\n\nOnly integer elements are considered when determining the minimum; all other element types are ignored.",
+        "visible_tests": "assert min_val(['Python', 3, 2, 4, 5, 'version'])==2\nassert min_val(['Python', 15, 20, 25])==15\nassert min_val(['Python', 30, 20, 40, 50, 'version'])==20"
+      },
+      "original": {
+        "candidate": "\n\ndef min_val(listval):\n     min_val = min(i for i in listval if isinstance(i, int))\n     return min_val\n",
+        "spec": "Write a function to find the minimum value in a given heterogeneous list.\n\nYour code must satisfy these tests:\nassert min_val(['Python', 3, 2, 4, 5, 'version'])==2\nassert min_val(['Python', 15, 20, 25])==15\nassert min_val(['Python', 30, 20, 40, 50, 'version'])==20\n",
+        "visible_tests": "assert min_val(['Python', 3, 2, 4, 5, 'version'])==2\nassert min_val(['Python', 15, 20, 25])==15\nassert min_val(['Python', 30, 20, 40, 50, 'version'])==20"
+      },
+      "placebo": {
+        "candidate": "\n\ndef min_val(listval):\n     min_val = min(i for i in listval if isinstance(i, int))\n     return min_val\n",
+        "spec": "Write a function to find the minimum value in a given heterogeneous list.\n\nThis specification concerns a function named min_val, applied to each heterogeneous list shown below.\n\nYour code must satisfy these tests:\nassert min_val(['Python', 3, 2, 4, 5, 'version'])==2\nassert min_val(['Python', 15, 20, 25])==15\nassert min_val(['Python', 30, 20, 40, 50, 'version'])==20.",
+        "visible_tests": "assert min_val(['Python', 3, 2, 4, 5, 'version'])==2\nassert min_val(['Python', 15, 20, 25])==15\nassert min_val(['Python', 30, 20, 40, 50, 'version'])==20"
+      }
+    },
+    "b1:Mbpp/427": {
+      "clarified": {
+        "candidate": "\n\nimport re\ndef change_date_format(dt):\n    return re.sub(r'(\\d{4})-(\\d{1,2})-(\\d{1,2})', '\\\\3-\\\\2-\\\\1', dt)\n",
+        "spec": "Write a function to convert a date of yyyy-mm-dd format to dd-mm-yyyy format.\n\nYour code must satisfy these tests:\nassert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'\n\n\nThe function should split the input at every hyphen and return all resulting components in reverse order, preserving each component exactly as provided without validating its length or calendar validity.",
+        "visible_tests": "assert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'"
+      },
+      "original": {
+        "candidate": "\n\nimport re\ndef change_date_format(dt):\n    return re.sub(r'(\\d{4})-(\\d{1,2})-(\\d{1,2})', '\\\\3-\\\\2-\\\\1', dt)\n",
+        "spec": "Write a function to convert a date of yyyy-mm-dd format to dd-mm-yyyy format.\n\nYour code must satisfy these tests:\nassert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'\n",
+        "visible_tests": "assert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'"
+      },
+      "placebo": {
+        "candidate": "\n\nimport re\ndef change_date_format(dt):\n    return re.sub(r'(\\d{4})-(\\d{1,2})-(\\d{1,2})', '\\\\3-\\\\2-\\\\1', dt)\n",
+        "spec": "Write a function to convert a date of yyyy-mm-dd format to dd-mm-yyyy format.\n\nHere, the input is written with the year first, followed by month and day, while the returned date uses the same components reordered as day, month, and year, with hyphens preserved.\n\nYour code must satisfy these tests:\nassert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'",
+        "visible_tests": "assert change_date_format(\"2026-01-02\") == '02-01-2026'\nassert change_date_format(\"2020-11-13\") == '13-11-2020'\nassert change_date_format(\"2021-04-26\") == '26-04-2021'"
+      }
+    },
+    "b1:Mbpp/459": {
+      "clarified": {
+        "candidate": "\n\ndef remove_uppercase(str1):\n  return ''.join(c for c in str1 if c.islower())\n",
+        "spec": "Write a function to remove uppercase substrings from a given string.\n\nYour code must satisfy these tests:\nassert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'\n\nAn uppercase substring consists of one or more consecutive uppercase letters; remove all such letters while leaving every other character unchanged and in its original order.",
+        "visible_tests": "assert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'"
+      },
+      "original": {
+        "candidate": "\n\ndef remove_uppercase(str1):\n  return ''.join(c for c in str1 if c.islower())\n",
+        "spec": "Write a function to remove uppercase substrings from a given string.\n\nYour code must satisfy these tests:\nassert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'\n",
+        "visible_tests": "assert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'"
+      },
+      "placebo": {
+        "candidate": "\n\ndef remove_uppercase(str1):\n  return ''.join(c for c in str1 if c.islower())\n",
+        "spec": "Write a function to remove uppercase substrings from a given string.\n\nThe function belongs to the specification above, and examples below illustrate requested result without adding requirements beyond description of removing uppercase substrings from a given input string.\n\nYour code must satisfy these tests:\nassert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'",
+        "visible_tests": "assert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'"
+      }
+    },
+    "b1:Mbpp/556": {
+      "clarified": {
+        "candidate": "\n\ndef find_Odd_Pair(A,N) : \n    oddPair = 0\n    for i in range(0,N) :  \n        for j in range(i+1,N) :  \n            if ((A[i] ^ A[j]) % 2 != 0):  \n                oddPair+=1  \n    return oddPair  \n",
+        "spec": "Write a python function to count the number of pairs whose xor value is odd.\n\nYour code must satisfy these tests:\nassert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2\n\nThe second argument specifies the number of elements from the beginning of the list to consider. Pairs consist of distinct positions among those elements, and each unordered pair is counted once.",
+        "visible_tests": "assert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2"
+      },
+      "original": {
+        "candidate": "\n\ndef find_Odd_Pair(A,N) : \n    oddPair = 0\n    for i in range(0,N) :  \n        for j in range(i+1,N) :  \n            if ((A[i] ^ A[j]) % 2 != 0):  \n                oddPair+=1  \n    return oddPair  \n",
+        "spec": "Write a python function to count the number of pairs whose xor value is odd.\n\nYour code must satisfy these tests:\nassert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2\n",
+        "visible_tests": "assert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2"
+      },
+      "placebo": {
+        "candidate": "\n\ndef find_Odd_Pair(A,N) : \n    oddPair = 0\n    for i in range(0,N) :  \n        for j in range(i+1,N) :  \n            if ((A[i] ^ A[j]) % 2 != 0):  \n                oddPair+=1  \n    return oddPair  \n",
+        "spec": "Write a python function to count the number of pairs whose xor value is odd.\n\nThe requested implementation is a Python function named `find_Odd_Pair`, with the inputs arranged as demonstrated by the assertions; its stated purpose is counting pairs according to their xor values.\n\nYour code must satisfy these tests:\nassert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2",
+        "visible_tests": "assert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2"
+      }
+    },
+    "b1:Mbpp/558": {
+      "clarified": {
+        "candidate": "\n\ndef digit_distance_nums(n1, n2):\n    return sum([abs(int(c1) - int(c2)) for c1, c2 in zip(str(n1), str(n2))])\n",
+        "spec": "Write a python function to find the sum of the per-digit difference between two integers.\n\nYour code must satisfy these tests:\nassert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7\n\nFor integers with different numbers of digits, align corresponding digits by place value and treat missing leading digits as zero. Each per-digit difference is the absolute difference between the corresponding digits.",
+        "visible_tests": "assert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7"
+      },
+      "original": {
+        "candidate": "\n\ndef digit_distance_nums(n1, n2):\n    return sum([abs(int(c1) - int(c2)) for c1, c2 in zip(str(n1), str(n2))])\n",
+        "spec": "Write a python function to find the sum of the per-digit difference between two integers.\n\nYour code must satisfy these tests:\nassert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7\n",
+        "visible_tests": "assert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7"
+      },
+      "placebo": {
+        "candidate": "\n\ndef digit_distance_nums(n1, n2):\n    return sum([abs(int(c1) - int(c2)) for c1, c2 in zip(str(n1), str(n2))])\n",
+        "spec": "Write a python function to find the sum of the per-digit difference between two integers.\n\nYour code must satisfy these tests:\nassert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7\n\nThe function belongs to the Python code being requested here, and the examples above use its stated name; present the implementation as a self-contained code fragment in the usual Python style.",
+        "visible_tests": "assert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7"
+      }
+    },
+    "b1:Mbpp/559": {
+      "clarified": {
+        "candidate": "\n\ndef max_sub_array_sum(a, size):\n  max_so_far = 0\n  max_ending_here = 0\n  for i in range(0, size):\n    max_ending_here = max_ending_here + a[i]\n    if max_ending_here < 0:\n      max_ending_here = 0\n    elif (max_so_far < max_ending_here):\n      max_so_far = max_ending_here\n  return max_so_far\n",
+        "spec": "Write a function to find the sum of the largest contiguous sublist in the given list.\n\nYour code must satisfy these tests:\nassert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10\n\nFor an empty list, return 0. For a nonempty list containing only negative values, the result is the largest (least negative) element.",
+        "visible_tests": "assert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10"
+      },
+      "original": {
+        "candidate": "\n\ndef max_sub_array_sum(a, size):\n  max_so_far = 0\n  max_ending_here = 0\n  for i in range(0, size):\n    max_ending_here = max_ending_here + a[i]\n    if max_ending_here < 0:\n      max_ending_here = 0\n    elif (max_so_far < max_ending_here):\n      max_so_far = max_ending_here\n  return max_so_far\n",
+        "spec": "Write a function to find the sum of the largest contiguous sublist in the given list.\n\nYour code must satisfy these tests:\nassert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10\n",
+        "visible_tests": "assert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10"
+      },
+      "placebo": {
+        "candidate": "\n\ndef max_sub_array_sum(a, size):\n  max_so_far = 0\n  max_ending_here = 0\n  for i in range(0, size):\n    max_ending_here = max_ending_here + a[i]\n    if max_ending_here < 0:\n      max_ending_here = 0\n    elif (max_so_far < max_ending_here):\n      max_so_far = max_ending_here\n  return max_so_far\n",
+        "spec": "Write a function to find the sum of the largest contiguous sublist in the given list.\n\nYour code must satisfy these tests:\nassert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10\n\nThis function returns the maximum sum obtained by selecting a contiguous portion of the supplied list, exactly as described above in the task.",
+        "visible_tests": "assert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10"
+      }
+    },
+    "b1:Mbpp/806": {
+      "clarified": {
+        "candidate": "\n\ndef max_run_uppercase(test_str):\n  cnt = 0\n  res = 0\n  for idx in range(0, len(test_str)):\n    if test_str[idx].isupper():\n      cnt += 1\n    else:\n      res = cnt\n      cnt = 0\n  if test_str[len(test_str) - 1].isupper():\n    res = cnt\n  return res\n",
+        "spec": "Write a function to find maximum run of uppercase characters in the given string.\n\nA run consists of one or more consecutive uppercase characters, with lowercase characters and the string boundaries delimiting each run; a single uppercase character counts as a run of length one.\n\nYour code must satisfy these tests:\nassert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4",
+        "visible_tests": "assert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4"
+      },
+      "original": {
+        "candidate": "\n\ndef max_run_uppercase(test_str):\n  cnt = 0\n  res = 0\n  for idx in range(0, len(test_str)):\n    if test_str[idx].isupper():\n      cnt += 1\n    else:\n      res = cnt\n      cnt = 0\n  if test_str[len(test_str) - 1].isupper():\n    res = cnt\n  return res\n",
+        "spec": "Write a function to find maximum run of uppercase characters in the given string.\n\nYour code must satisfy these tests:\nassert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4\n",
+        "visible_tests": "assert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4"
+      },
+      "placebo": {
+        "candidate": "\n\ndef max_run_uppercase(test_str):\n  cnt = 0\n  res = 0\n  for idx in range(0, len(test_str)):\n    if test_str[idx].isupper():\n      cnt += 1\n    else:\n      res = cnt\n      cnt = 0\n  if test_str[len(test_str) - 1].isupper():\n    res = cnt\n  return res\n",
+        "spec": "Write a function to find maximum run of uppercase characters in the given string.\n\nYour code must satisfy these tests:\nassert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4\n\nThe requested function is the sole subject of this specification; the examples illustrate the stated task, and the surrounding prose should be read together with those examples when implementing the function.",
+        "visible_tests": "assert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4"
+      }
+    },
+    "b2:Mbpp/137": {
+      "clarified": {
+        "candidate": "import math\n\ndef zero_count(nums):\n    if all(x == 0 for x in nums):\n        return float('inf')\n    return sum(x == 0 for x in nums) / sum(x != 0 for x in nums)\n",
+        "spec": "Write a function to find the ratio of zeroes to non-zeroes in an array of integers.\n\nYour code must satisfy these tests:\nassert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)\n\nIf the array contains no non-zero elements, the ratio is defined to be 0.0.",
+        "visible_tests": "assert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)"
+      },
+      "original": {
+        "candidate": "import math\n\ndef zero_count(nums):\n    if all(x == 0 for x in nums):\n        return float('inf')\n    return sum(x == 0 for x in nums) / sum(x != 0 for x in nums)\n",
+        "spec": "Write a function to find the ratio of zeroes to non-zeroes in an array of integers.\n\nYour code must satisfy these tests:\nassert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)\n",
+        "visible_tests": "assert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)"
+      },
+      "placebo": {
+        "candidate": "import math\n\ndef zero_count(nums):\n    if all(x == 0 for x in nums):\n        return float('inf')\n    return sum(x == 0 for x in nums) / sum(x != 0 for x in nums)\n",
+        "spec": "Write a function to find the ratio of zeroes to non-zeroes in an array of integers. The ratio is determined by counting zero-valued elements and non-zero-valued elements in the array.\n\nYour code must satisfy these tests:\nassert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)",
+        "visible_tests": "assert math.isclose(zero_count([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8]), 0.181818, rel_tol=0.001)\nassert math.isclose(zero_count([2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8]), 0.00, rel_tol=0.001)\nassert math.isclose(zero_count([2, 4, -6, -9, 11, -12, 14, -5, 17]), 0.00, rel_tol=0.001)"
+      }
+    },
+    "b2:Mbpp/278": {
+      "clarified": {
+        "candidate": "\n\ndef count_first_elements(test_tup):\n  for count, ele in enumerate(test_tup):\n    if isinstance(ele, tuple):\n      break\n  return count\n",
+        "spec": "Write a function to find the number of elements that occurs before the tuple element in the given tuple.\n\nIf the given tuple contains no element that is itself a tuple, return the total number of elements in the given tuple. If it contains multiple tuple elements, count the elements before the first one.\n\nYour code must satisfy these tests:\nassert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4",
+        "visible_tests": "assert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4"
+      },
+      "original": {
+        "candidate": "\n\ndef count_first_elements(test_tup):\n  for count, ele in enumerate(test_tup):\n    if isinstance(ele, tuple):\n      break\n  return count\n",
+        "spec": "Write a function to find the number of elements that occurs before the tuple element in the given tuple.\n\nYour code must satisfy these tests:\nassert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4\n",
+        "visible_tests": "assert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4"
+      },
+      "placebo": {
+        "candidate": "\n\ndef count_first_elements(test_tup):\n  for count, ele in enumerate(test_tup):\n    if isinstance(ele, tuple):\n      break\n  return count\n",
+        "spec": "Write a function to find the number of elements that occurs before the tuple element in the given tuple.\n\nThe function's result is the count of elements appearing before the tuple element in the supplied tuple, as illustrated by the examples; the surrounding elements and their values remain represented exactly as written in each example.\n\nYour code must satisfy these tests:\nassert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4",
+        "visible_tests": "assert count_first_elements((1, 5, 7, (4, 6), 10) ) == 3\nassert count_first_elements((2, 9, (5, 7), 11) ) == 2\nassert count_first_elements((11, 15, 5, 8, (2, 3), 8) ) == 4"
+      }
+    },
+    "b2:Mbpp/294": {
+      "clarified": {
+        "candidate": "\n\ndef max_val(listval):\n     max_val = max(i for i in listval if isinstance(i, int)) \n     return max_val\n",
+        "spec": "Write a function to find the maximum value in a given heterogeneous list.\n\nYour code must satisfy these tests:\nassert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50\n\nOnly values of numeric types are considered when determining the maximum; non-numeric values, including numeric-looking strings and Boolean values, are ignored.",
+        "visible_tests": "assert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50"
+      },
+      "original": {
+        "candidate": "\n\ndef max_val(listval):\n     max_val = max(i for i in listval if isinstance(i, int)) \n     return max_val\n",
+        "spec": "Write a function to find the maximum value in a given heterogeneous list.\n\nYour code must satisfy these tests:\nassert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50\n",
+        "visible_tests": "assert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50"
+      },
+      "placebo": {
+        "candidate": "\n\ndef max_val(listval):\n     max_val = max(i for i in listval if isinstance(i, int)) \n     return max_val\n",
+        "spec": "Write a function to find the maximum value in a given heterogeneous list.\n\nYour code must satisfy these tests:\nassert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50\n\nThe examples use heterogeneous lists containing strings and numbers, with the expected result being the greatest numeric value in each list.",
+        "visible_tests": "assert max_val(['Python', 3, 2, 4, 5, 'version'])==5\nassert max_val(['Python', 15, 20, 25])==25\nassert max_val(['Python', 30, 20, 40, 50, 'version'])==50"
+      }
+    },
+    "b2:Mbpp/305": {
+      "clarified": {
+        "candidate": "\n\nimport re\ndef start_withp(words):\n    for w in words:\n        m = re.match(\"(P\\w+)\\W(P\\w+)\", w)\n        if m:\n            return m.groups()\n",
+        "spec": "Write a function to return two words from a list of words starting with letter 'p'.\n\nTreat the comparison as case-insensitive and treat each list element as possibly containing one or more whitespace-separated words. Return the first two qualifying words in their original order, or all qualifying words if fewer than two exist, as a tuple.\n\nYour code must satisfy these tests:\nassert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')",
+        "visible_tests": "assert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')"
+      },
+      "original": {
+        "candidate": "\n\nimport re\ndef start_withp(words):\n    for w in words:\n        m = re.match(\"(P\\w+)\\W(P\\w+)\", w)\n        if m:\n            return m.groups()\n",
+        "spec": "Write a function to return two words from a list of words starting with letter 'p'.\n\nYour code must satisfy these tests:\nassert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')\n",
+        "visible_tests": "assert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')"
+      },
+      "placebo": {
+        "candidate": "\n\nimport re\ndef start_withp(words):\n    for w in words:\n        m = re.match(\"(P\\w+)\\W(P\\w+)\", w)\n        if m:\n            return m.groups()\n",
+        "spec": "Write a function to return two words from a list of words starting with letter 'p'.\n\nUse the function name shown in the examples when referring to the required function. The examples illustrate the requested result using ordinary Python list and tuple notation; they also provide the complete context in which the stated requirement is expressed.\n\nYour code must satisfy these tests:\nassert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')",
+        "visible_tests": "assert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')\nassert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')\nassert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')"
+      }
+    },
+    "b2:Mbpp/391": {
+      "clarified": {
+        "candidate": "\n\ndef convert_list_dictionary(l1, l2, l3):\n     result = [{x: {y: z}} for (x, y, z) in zip(l1, l2, l3)]\n     return result\n",
+        "spec": "Write a function to convert more than one list to nested dictionary.\n\nFor each index present in all input lists, create one dictionary containing the corresponding element from the first list as the outer key, the corresponding element from the second list as the inner key, and the corresponding element from the third list as its value. The result must preserve input order, stop at the shortest input list, and retain elements as values without flattening or otherwise transforming them, including when keys or values repeat or are themselves collections.\n\nYour code must satisfy these tests:\nassert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]",
+        "visible_tests": "assert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]"
+      },
+      "original": {
+        "candidate": "\n\ndef convert_list_dictionary(l1, l2, l3):\n     result = [{x: {y: z}} for (x, y, z) in zip(l1, l2, l3)]\n     return result\n",
+        "spec": "Write a function to convert more than one list to nested dictionary.\n\nYour code must satisfy these tests:\nassert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]\n",
+        "visible_tests": "assert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]"
+      },
+      "placebo": {
+        "candidate": "\n\ndef convert_list_dictionary(l1, l2, l3):\n     result = [{x: {y: z}} for (x, y, z) in zip(l1, l2, l3)]\n     return result\n",
+        "spec": "Write a function to convert more than one list to nested dictionary.\n\nYour code must satisfy these tests:\nassert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]\n\nThe function named `convert_list_dictionary` is the function referred to by each assertion above. In every displayed example, the first, second, and third arguments are written as separate lists, and the expected value is written as a list of dictionaries. The examples show the intended nested-dictionary presentation directly, including the spelling, capitalization, punctuation, ordering, and numeric values shown in their expected results. Keep the function\u2019s name and the examples\u2019 notation unchanged when reading this specification as provided.",
+        "visible_tests": "assert convert_list_dictionary([\"S001\", \"S002\", \"S003\", \"S004\"],[\"Adina Park\", \"Leyton Marsh\", \"Duncan Boyle\", \"Saim Richards\"] ,[85, 98, 89, 92])==[{'S001': {'Adina Park': 85}}, {'S002': {'Leyton Marsh': 98}}, {'S003': {'Duncan Boyle': 89}}, {'S004': {'Saim Richards': 92}}]\nassert convert_list_dictionary([\"abc\",\"def\",\"ghi\",\"jkl\"],[\"python\",\"program\",\"language\",\"programs\"],[100,200,300,400])==[{'abc':{'python':100}},{'def':{'program':200}},{'ghi':{'language':300}},{'jkl':{'programs':400}}]\nassert convert_list_dictionary([\"A1\",\"A2\",\"A3\",\"A4\"],[\"java\",\"C\",\"C++\",\"DBMS\"],[10,20,30,40])==[{'A1':{'java':10}},{'A2':{'C':20}},{'A3':{'C++':30}},{'A4':{'DBMS':40}}]"
+      }
+    },
+    "b2:Mbpp/459": {
+      "clarified": {
+        "candidate": "\n\ndef remove_uppercase(str1):\n  return ''.join(c for c in str1 if c.islower())\n",
+        "spec": "Write a function to remove uppercase substrings from a given string.\n\nAn uppercase substring is any maximal contiguous sequence of uppercase English letters; all such substrings are removed, while every other character is preserved in its original order.\n\nYour code must satisfy these tests:\nassert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'",
+        "visible_tests": "assert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'"
+      },
+      "original": {
+        "candidate": "\n\ndef remove_uppercase(str1):\n  return ''.join(c for c in str1 if c.islower())\n",
+        "spec": "Write a function to remove uppercase substrings from a given string.\n\nYour code must satisfy these tests:\nassert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'\n",
+        "visible_tests": "assert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'"
+      },
+      "placebo": {
+        "candidate": "\n\ndef remove_uppercase(str1):\n  return ''.join(c for c in str1 if c.islower())\n",
+        "spec": "Write a function to remove uppercase substrings from a given string.\n\nThis specification uses the conventional concise style of programming exercises, and its wording is not intended to prescribe any additional implementation or presentation details beyond those already stated.\n\nYour code must satisfy these tests:\nassert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'",
+        "visible_tests": "assert remove_uppercase('cAstyoUrFavoRitETVshoWs') == 'cstyoravoitshos'\nassert remove_uppercase('wAtchTheinTernEtrAdIo') == 'wtchheinerntrdo'\nassert remove_uppercase('VoicESeaRchAndreComMendaTionS') == 'oiceachndreomendaion'"
+      }
+    },
+    "b2:Mbpp/556": {
+      "clarified": {
+        "candidate": "\n\ndef find_Odd_Pair(A,N) : \n    oddPair = 0\n    for i in range(0,N) :  \n        for j in range(i+1,N) :  \n            if ((A[i] ^ A[j]) % 2 != 0):  \n                oddPair+=1  \n    return oddPair  \n",
+        "spec": "Write a python function to count the number of pairs whose xor value is odd.\n\nYour code must satisfy these tests:\nassert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2\n\nThe second argument specifies the number of elements to consider, so only the first \\(n\\) elements of the list are used when counting pairs. Elements beyond those \\(n\\) elements are ignored.",
+        "visible_tests": "assert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2"
+      },
+      "original": {
+        "candidate": "\n\ndef find_Odd_Pair(A,N) : \n    oddPair = 0\n    for i in range(0,N) :  \n        for j in range(i+1,N) :  \n            if ((A[i] ^ A[j]) % 2 != 0):  \n                oddPair+=1  \n    return oddPair  \n",
+        "spec": "Write a python function to count the number of pairs whose xor value is odd.\n\nYour code must satisfy these tests:\nassert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2\n",
+        "visible_tests": "assert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2"
+      },
+      "placebo": {
+        "candidate": "\n\ndef find_Odd_Pair(A,N) : \n    oddPair = 0\n    for i in range(0,N) :  \n        for j in range(i+1,N) :  \n            if ((A[i] ^ A[j]) % 2 != 0):  \n                oddPair+=1  \n    return oddPair  \n",
+        "spec": "Write a python function to count the number of pairs whose xor value is odd.\n\nThe function name, inputs, and expected results are illustrated by the examples below; the requested result is the count of pairs whose XOR value is odd in the supplied examples shown.\n\nYour code must satisfy these tests:\nassert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2",
+        "visible_tests": "assert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2"
+      }
+    },
+    "b2:Mbpp/558": {
+      "clarified": {
+        "candidate": "\n\ndef digit_distance_nums(n1, n2):\n    return sum([abs(int(c1) - int(c2)) for c1, c2 in zip(str(n1), str(n2))])\n",
+        "spec": "Write a python function to find the sum of the per-digit difference between two integers.\n\nYour code must satisfy these tests:\nassert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7\n\nWhen the integers have different numbers of digits, align their digits by place value, treating any missing higher-order digits as zero.",
+        "visible_tests": "assert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7"
+      },
+      "original": {
+        "candidate": "\n\ndef digit_distance_nums(n1, n2):\n    return sum([abs(int(c1) - int(c2)) for c1, c2 in zip(str(n1), str(n2))])\n",
+        "spec": "Write a python function to find the sum of the per-digit difference between two integers.\n\nYour code must satisfy these tests:\nassert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7\n",
+        "visible_tests": "assert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7"
+      },
+      "placebo": {
+        "candidate": "\n\ndef digit_distance_nums(n1, n2):\n    return sum([abs(int(c1) - int(c2)) for c1, c2 in zip(str(n1), str(n2))])\n",
+        "spec": "Write a python function to find the sum of the per-digit difference between two integers.\n\nThe function described here is `digit_distance_nums`, and it receives the two integers whose per-digit differences are summed to produce the requested result.\n\nYour code must satisfy these tests:\nassert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7",
+        "visible_tests": "assert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7"
+      }
+    },
+    "b2:Mbpp/559": {
+      "clarified": {
+        "candidate": "\n\ndef max_sub_array_sum(a, size):\n  max_so_far = 0\n  max_ending_here = 0\n  for i in range(0, size):\n    max_ending_here = max_ending_here + a[i]\n    if max_ending_here < 0:\n      max_ending_here = 0\n    elif (max_so_far < max_ending_here):\n      max_so_far = max_ending_here\n  return max_so_far\n",
+        "spec": "Write a function to find the sum of the largest contiguous sublist in the given list.\n\nYour code must satisfy these tests:\nassert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10\n\nWhen the given list is empty, the sum is 0. For a nonempty list, the contiguous sublist must contain at least one element; therefore, an all-negative list yields its largest (least negative) element.",
+        "visible_tests": "assert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10"
+      },
+      "original": {
+        "candidate": "\n\ndef max_sub_array_sum(a, size):\n  max_so_far = 0\n  max_ending_here = 0\n  for i in range(0, size):\n    max_ending_here = max_ending_here + a[i]\n    if max_ending_here < 0:\n      max_ending_here = 0\n    elif (max_so_far < max_ending_here):\n      max_so_far = max_ending_here\n  return max_so_far\n",
+        "spec": "Write a function to find the sum of the largest contiguous sublist in the given list.\n\nYour code must satisfy these tests:\nassert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10\n",
+        "visible_tests": "assert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10"
+      },
+      "placebo": {
+        "candidate": "\n\ndef max_sub_array_sum(a, size):\n  max_so_far = 0\n  max_ending_here = 0\n  for i in range(0, size):\n    max_ending_here = max_ending_here + a[i]\n    if max_ending_here < 0:\n      max_ending_here = 0\n    elif (max_so_far < max_ending_here):\n      max_so_far = max_ending_here\n  return max_so_far\n",
+        "spec": "Write a function to find the sum of the largest contiguous sublist in the given list.\n\nYour code must satisfy these tests:\nassert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10\n\nThe function is named `max_sub_array_sum`, receives the list and its length as arguments, and returns the maximum sum of any contiguous sublist, as illustrated by the specified calls shown below.",
+        "visible_tests": "assert max_sub_array_sum([-2, -3, 4, -1, -2, 1, 5, -3], 8) == 7\nassert max_sub_array_sum([-3, -4, 5, -2, -3, 2, 6, -4], 8) == 8\nassert max_sub_array_sum([-4, -5, 6, -3, -4, 3, 7, -5], 8) == 10"
+      }
+    },
+    "b2:Mbpp/597": {
+      "clarified": {
+        "candidate": "\n\ndef find_kth(arr1, arr2, k):\n\treturn sorted(arr1 + arr2)[k - 1]\n",
+        "spec": "Write a function to find kth element from the given two sorted arrays.\n\nYour code must satisfy these tests:\nassert find_kth([2, 3, 6, 7, 9], [1, 4, 8, 10], 5) == 6\nassert find_kth([100, 112, 256, 349, 770], [72, 86, 113, 119, 265, 445, 892], 7) == 256\nassert find_kth([3, 4, 7, 8, 10], [2, 5, 9, 11], 6) == 8\n\nThe input arrays need not be sorted; the function must order their combined contents in nondecreasing order before selecting the kth element. Duplicate values occupy separate positions, and an empty array is permitted.",
+        "visible_tests": "assert find_kth([2, 3, 6, 7, 9], [1, 4, 8, 10], 5) == 6\nassert find_kth([100, 112, 256, 349, 770], [72, 86, 113, 119, 265, 445, 892], 7) == 256\nassert find_kth([3, 4, 7, 8, 10], [2, 5, 9, 11], 6) == 8"
+      },
+      "original": {
+        "candidate": "\n\ndef find_kth(arr1, arr2, k):\n\treturn sorted(arr1 + arr2)[k - 1]\n",
+        "spec": "Write a function to find kth element from the given two sorted arrays.\n\nYour code must satisfy these tests:\nassert find_kth([2, 3, 6, 7, 9], [1, 4, 8, 10], 5) == 6\nassert find_kth([100, 112, 256, 349, 770], [72, 86, 113, 119, 265, 445, 892], 7) == 256\nassert find_kth([3, 4, 7, 8, 10], [2, 5, 9, 11], 6) == 8\n",
+        "visible_tests": "assert find_kth([2, 3, 6, 7, 9], [1, 4, 8, 10], 5) == 6\nassert find_kth([100, 112, 256, 349, 770], [72, 86, 113, 119, 265, 445, 892], 7) == 256\nassert find_kth([3, 4, 7, 8, 10], [2, 5, 9, 11], 6) == 8"
+      },
+      "placebo": {
+        "candidate": "\n\ndef find_kth(arr1, arr2, k):\n\treturn sorted(arr1 + arr2)[k - 1]\n",
+        "spec": "Write a function to find kth element from the given two sorted arrays.\n\nHere, `find_kth` denotes the function requested above, and each displayed assertion records an expected result for the corresponding inputs; the surrounding specification provides the complete statement of the task in the text above.\n\nYour code must satisfy these tests:\nassert find_kth([2, 3, 6, 7, 9], [1, 4, 8, 10], 5) == 6\nassert find_kth([100, 112, 256, 349, 770], [72, 86, 113, 119, 265, 445, 892], 7) == 256\nassert find_kth([3, 4, 7, 8, 10], [2, 5, 9, 11], 6) == 8",
+        "visible_tests": "assert find_kth([2, 3, 6, 7, 9], [1, 4, 8, 10], 5) == 6\nassert find_kth([100, 112, 256, 349, 770], [72, 86, 113, 119, 265, 445, 892], 7) == 256\nassert find_kth([3, 4, 7, 8, 10], [2, 5, 9, 11], 6) == 8"
+      }
+    },
+    "b2:Mbpp/7": {
+      "clarified": {
+        "candidate": "\n\nimport re\ndef find_char_long(text):\n  return (re.findall(r\"\\b\\w{4,}\\b\", text))\n",
+        "spec": "Write a function to find all words which are at least 4 characters long in a string.\n\nYour code must satisfy these tests:\nassert set(find_char_long('Please move back to stream')) == set(['Please', 'move', 'back', 'stream'])\nassert set(find_char_long('Jing Eco and Tech')) == set(['Jing', 'Tech'])\nassert set(find_char_long('Jhingai wulu road Zone 3')) == set(['Jhingai', 'wulu', 'road', 'Zone'])\n\nWords are maximal sequences of alphabetic characters separated by non-alphabetic characters, and punctuation is not part of a word. Return every qualifying occurrence in its order of appearance, including repeated words.",
+        "visible_tests": "assert set(find_char_long('Please move back to stream')) == set(['Please', 'move', 'back', 'stream'])\nassert set(find_char_long('Jing Eco and Tech')) == set(['Jing', 'Tech'])\nassert set(find_char_long('Jhingai wulu road Zone 3')) == set(['Jhingai', 'wulu', 'road', 'Zone'])"
+      },
+      "original": {
+        "candidate": "\n\nimport re\ndef find_char_long(text):\n  return (re.findall(r\"\\b\\w{4,}\\b\", text))\n",
+        "spec": "Write a function to find all words which are at least 4 characters long in a string.\n\nYour code must satisfy these tests:\nassert set(find_char_long('Please move back to stream')) == set(['Please', 'move', 'back', 'stream'])\nassert set(find_char_long('Jing Eco and Tech')) == set(['Jing', 'Tech'])\nassert set(find_char_long('Jhingai wulu road Zone 3')) == set(['Jhingai', 'wulu', 'road', 'Zone'])\n",
+        "visible_tests": "assert set(find_char_long('Please move back to stream')) == set(['Please', 'move', 'back', 'stream'])\nassert set(find_char_long('Jing Eco and Tech')) == set(['Jing', 'Tech'])\nassert set(find_char_long('Jhingai wulu road Zone 3')) == set(['Jhingai', 'wulu', 'road', 'Zone'])"
+      },
+      "placebo": {
+        "candidate": "\n\nimport re\ndef find_char_long(text):\n  return (re.findall(r\"\\b\\w{4,}\\b\", text))\n",
+        "spec": "Write a function to find all words which are at least 4 characters long in a string.\n\nThe function belongs to the task described here, and the examples below show its use in the same straightforward style as the preceding sentence, without introducing additional notation or any terminology.\n\nYour code must satisfy these tests:\nassert set(find_char_long('Please move back to stream')) == set(['Please', 'move', 'back', 'stream'])\nassert set(find_char_long('Jing Eco and Tech')) == set(['Jing', 'Tech'])\nassert set(find_char_long('Jhingai wulu road Zone 3')) == set(['Jhingai', 'wulu', 'road', 'Zone'])",
+        "visible_tests": "assert set(find_char_long('Please move back to stream')) == set(['Please', 'move', 'back', 'stream'])\nassert set(find_char_long('Jing Eco and Tech')) == set(['Jing', 'Tech'])\nassert set(find_char_long('Jhingai wulu road Zone 3')) == set(['Jhingai', 'wulu', 'road', 'Zone'])"
+      }
+    },
+    "b2:Mbpp/806": {
+      "clarified": {
+        "candidate": "\n\ndef max_run_uppercase(test_str):\n  cnt = 0\n  res = 0\n  for idx in range(0, len(test_str)):\n    if test_str[idx].isupper():\n      cnt += 1\n    else:\n      res = cnt\n      cnt = 0\n  if test_str[len(test_str) - 1].isupper():\n    res = cnt\n  return res\n",
+        "spec": "Write a function to find maximum run of uppercase characters in the given string.\n\nYour code must satisfy these tests:\nassert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4\n\nA run is a maximal sequence of consecutive uppercase characters, delimited by the beginning or end of the string or by a non-uppercase character. Runs of length one are included, and the function returns 0 when the string contains no uppercase characters.",
+        "visible_tests": "assert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4"
+      },
+      "original": {
+        "candidate": "\n\ndef max_run_uppercase(test_str):\n  cnt = 0\n  res = 0\n  for idx in range(0, len(test_str)):\n    if test_str[idx].isupper():\n      cnt += 1\n    else:\n      res = cnt\n      cnt = 0\n  if test_str[len(test_str) - 1].isupper():\n    res = cnt\n  return res\n",
+        "spec": "Write a function to find maximum run of uppercase characters in the given string.\n\nYour code must satisfy these tests:\nassert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4\n",
+        "visible_tests": "assert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4"
+      },
+      "placebo": {
+        "candidate": "\n\ndef max_run_uppercase(test_str):\n  cnt = 0\n  res = 0\n  for idx in range(0, len(test_str)):\n    if test_str[idx].isupper():\n      cnt += 1\n    else:\n      res = cnt\n      cnt = 0\n  if test_str[len(test_str) - 1].isupper():\n    res = cnt\n  return res\n",
+        "spec": "Write a function to find maximum run of uppercase characters in the given string.\n\nYour code must satisfy these tests:\nassert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4\n\nThe requested result is the length of the longest contiguous run of uppercase characters in the supplied string. The function is named `max_run_uppercase`, and the examples above specify its expected result for each shown input; no other requirements are introduced here explicitly.",
+        "visible_tests": "assert max_run_uppercase('GeMKSForGERksISBESt') == 5\nassert max_run_uppercase('PrECIOusMOVemENTSYT') == 6\nassert max_run_uppercase('GooGLEFluTTER') == 4"
+      }
+    }
+  },
+  "dropped": [
+    {
+      "instance_id": "b1:HumanEval/151",
+      "reasons": [
+        "b1:HumanEval/151: clarification quotes a hidden-test line: 'def double_the_difference(lst):'",
+        "b1:HumanEval/151: clarification quotes a hidden-test line: 'Given a list of numbers, return the sum of squares of the nu'",
+        "b1:HumanEval/151: clarification quotes a hidden-test line: 'in the list that are odd. Ignore numbers that are negative o'",
+        "b1:HumanEval/151: clarification quotes a hidden-test line: 'double_the_difference([1, 3, 2, 0]) == 1 + 9 + 0 + 0 = 10'",
+        "b1:HumanEval/151: clarification quotes a hidden-test line: 'double_the_difference([-1, -2, 0]) == 0'",
+        "b1:HumanEval/151: clarification quotes a hidden-test line: 'double_the_difference([9, -2]) == 81'",
+        "b1:HumanEval/151: clarification quotes a hidden-test line: 'double_the_difference([0]) == 0'",
+        "b1:HumanEval/151: clarification quotes a hidden-test line: 'If the input list is empty, return 0.'",
+        "b1:HumanEval/151: added word counts differ by more than 15%: clarified +21, placebo +16 (ratio 0.76)"
+      ]
+    },
+    {
+      "instance_id": "b1:Mbpp/102",
+      "reasons": [
+        "b1:Mbpp/102: clarification contains the input of a failing case: \"['___python_program']\"",
+        "b1:Mbpp/102: clarification contains the input of a failing case: \"['__12_python__language___']\"",
+        "b1:Mbpp/102: clarification contains the input of a failing case: \"['your_programming__langu__age___']\"",
+        "b1:Mbpp/102: clarification contains the input of a failing case: \"['another__ex44ample___']\"",
+        "b1:Mbpp/102: added word counts differ by more than 15%: clarified +43, placebo +53 (ratio 1.23)",
+        "b1:Mbpp/102: clarified echoes the prompt's scaffolding: 'The hidden suite exercises these inputs, where the prose is '"
+      ]
+    },
+    {
+      "instance_id": "b1:Mbpp/103",
+      "reasons": [
+        "b1:Mbpp/103: an edited condition added no words: clarified +-3, placebo +5",
+        "b1:Mbpp/103: clarified does not preserve the original prose; sentence missing or reordered: 'Your code must satisfy these tests: assert eulerian_num(3, 1'"
+      ]
+    },
+    {
+      "instance_id": "b1:Mbpp/109",
+      "reasons": [
+        "b1:Mbpp/109: added word counts differ by more than 15%: clarified +40, placebo +9 (ratio 0.23)"
+      ]
+    },
+    {
+      "instance_id": "b1:Mbpp/576",
+      "reasons": [
+        "b1:Mbpp/576: clarification contains the expected of a failing case: 'True'",
+        "b1:Mbpp/576: clarification contains the expected of a failing case: 'True'",
+        "b1:Mbpp/576: clarification contains the expected of a failing case: 'True'",
+        "b1:Mbpp/576: clarification contains the expected of a failing case: 'True'",
+        "b1:Mbpp/576: added word counts differ by more than 15%: clarified +33, placebo +40 (ratio 1.21)"
+      ]
+    },
+    {
+      "instance_id": "b1:Mbpp/735",
+      "reasons": [
+        "b1:Mbpp/735: clarified does not preserve the original prose; sentence missing or reordered: 'https://www.geeksforgeeks.org/toggle-bits-number-expect-firs'",
+        "b1:Mbpp/735: placebo does not preserve the original prose; sentence missing or reordered: 'https://www.geeksforgeeks.org/toggle-bits-number-expect-firs'"
+      ]
+    },
+    {
+      "instance_id": "b1:Mbpp/748",
+      "reasons": [
+        "b1:Mbpp/748: clarification contains the input of a failing case: \"['MyNameIsAIAndIAmHereToHelpYou']\"",
+        "b1:Mbpp/748: clarification contains the input of a failing case: \"['ThisIsATestStringWithMultipleCamelCaseWords']\"",
+        "b1:Mbpp/748: clarification contains the input of a failing case: \"['IAmAProgrammerAndIWritingCodeInPython']\"",
+        "b1:Mbpp/748: clarification contains the input of a failing case: \"['PleaseDOntDisturbWhileTestIsRunning']\"",
+        "b1:Mbpp/748: added word counts differ by more than 15%: clarified +31, placebo +41 (ratio 1.32)",
+        "b1:Mbpp/748: clarified does not preserve the original prose; sentence missing or reordered: 'Write a function to put spaces between words starting with c'",
+        "b1:Mbpp/748: clarified echoes the prompt's scaffolding: 'The hidden suite exercises these inputs, where the prose is '"
+      ]
+    },
+    {
+      "instance_id": "b1:Mbpp/771",
+      "reasons": [
+        "b1:Mbpp/771: an edited condition added no words: clarified +-10, placebo +9",
+        "b1:Mbpp/771: clarified does not preserve the original prose; sentence missing or reordered: 'https://www.geeksforgeeks.org/check-for-balanced-parentheses'",
+        "b1:Mbpp/771: placebo does not preserve the original prose; sentence missing or reordered: 'https://www.geeksforgeeks.org/check-for-balanced-parentheses'"
+      ]
+    },
+    {
+      "instance_id": "b1:Mbpp/790",
+      "reasons": [
+        "b1:Mbpp/790: clarification contains the expected of a failing case: 'False'",
+        "b1:Mbpp/790: clarification contains the expected of a failing case: 'False'",
+        "b1:Mbpp/790: clarification contains the expected of a failing case: 'False'",
+        "b1:Mbpp/790: clarification contains the expected of a failing case: 'False'",
+        "b1:Mbpp/790: clarification contains the expected of a failing case: 'False'",
+        "b1:Mbpp/790: added word counts differ by more than 15%: clarified +19, placebo +23 (ratio 1.21)"
+      ]
+    },
+    {
+      "instance_id": "b2:HumanEval/151",
+      "reasons": [
+        "b2:HumanEval/151: clarification quotes a hidden-test line: 'def double_the_difference(lst):'",
+        "b2:HumanEval/151: clarification quotes a hidden-test line: 'Given a list of numbers, return the sum of squares of the nu'",
+        "b2:HumanEval/151: clarification quotes a hidden-test line: 'in the list that are odd. Ignore numbers that are negative o'",
+        "b2:HumanEval/151: clarification quotes a hidden-test line: 'double_the_difference([1, 3, 2, 0]) == 1 + 9 + 0 + 0 = 10'",
+        "b2:HumanEval/151: clarification quotes a hidden-test line: 'double_the_difference([-1, -2, 0]) == 0'",
+        "b2:HumanEval/151: clarification quotes a hidden-test line: 'double_the_difference([9, -2]) == 81'",
+        "b2:HumanEval/151: clarification quotes a hidden-test line: 'double_the_difference([0]) == 0'",
+        "b2:HumanEval/151: clarification quotes a hidden-test line: 'If the input list is empty, return 0.'"
+      ]
+    },
+    {
+      "instance_id": "b2:Mbpp/103",
+      "reasons": [
+        "b2:Mbpp/103: added word counts differ by more than 15%: clarified +33, placebo +1 (ratio 0.03)"
+      ]
+    },
+    {
+      "instance_id": "b2:Mbpp/410",
+      "reasons": [
+        "b2:Mbpp/410: added word counts differ by more than 15%: clarified +3, placebo +4 (ratio 1.33)",
+        "b2:Mbpp/410: clarified does not preserve the original prose; sentence missing or reordered: \"Your code must satisfy these tests: assert min_val(['Python'\""
+      ]
+    },
+    {
+      "instance_id": "b2:Mbpp/576",
+      "reasons": [
+        "b2:Mbpp/576: clarification contains the input of a failing case: '[[1, 2, 3, 4, 5], [1, 3, 5]]'",
+        "b2:Mbpp/576: clarification contains the expected of a failing case: 'True'",
+        "b2:Mbpp/576: clarification contains the input of a failing case: '[[1, 2, 3, 4, 5], [2, 4]]'",
+        "b2:Mbpp/576: clarification contains the expected of a failing case: 'True'",
+        "b2:Mbpp/576: clarification contains the input of a failing case: '[[1, 1, 2, 3, 4, 5], [1, 3, 5]]'",
+        "b2:Mbpp/576: clarification contains the expected of a failing case: 'True'",
+        "b2:Mbpp/576: clarification contains the input of a failing case: '[[1, 2, 3, 4, 5], [3, 5]]'",
+        "b2:Mbpp/576: clarification contains the expected of a failing case: 'True'",
+        "b2:Mbpp/576: added word counts differ by more than 15%: clarified +74, placebo +30 (ratio 0.41)",
+        "b2:Mbpp/576: clarified echoes the prompt's scaffolding: 'The hidden suite exercises these inputs, where the prose is '"
+      ]
+    },
+    {
+      "instance_id": "b2:Mbpp/735",
+      "reasons": [
+        "b2:Mbpp/735: added word counts differ by more than 15%: clarified +23, placebo +35 (ratio 1.52)",
+        "b2:Mbpp/735: clarified does not preserve the original prose; sentence missing or reordered: 'https://www.geeksforgeeks.org/toggle-bits-number-expect-firs'",
+        "b2:Mbpp/735: placebo does not preserve the original prose; sentence missing or reordered: 'https://www.geeksforgeeks.org/toggle-bits-number-expect-firs'"
+      ]
+    },
+    {
+      "instance_id": "b2:Mbpp/74",
+      "reasons": [
+        "b2:Mbpp/74: clarification contains the expected of a failing case: 'True'",
+        "b2:Mbpp/74: clarification contains the expected of a failing case: 'True'",
+        "b2:Mbpp/74: added word counts differ by more than 15%: clarified +19, placebo +37 (ratio 1.95)"
+      ]
+    },
+    {
+      "instance_id": "b2:Mbpp/748",
+      "reasons": [
+        "b2:Mbpp/748: added word counts differ by more than 15%: clarified +25, placebo +34 (ratio 1.36)",
+        "b2:Mbpp/748: placebo does not preserve the original prose; sentence missing or reordered: 'Write a function to put spaces between words starting with c'"
+      ]
+    },
+    {
+      "instance_id": "b2:Mbpp/771",
+      "reasons": [
+        "b2:Mbpp/771: an edited condition added no words: clarified +-12, placebo +8",
+        "b2:Mbpp/771: clarified does not preserve the original prose; sentence missing or reordered: 'https://www.geeksforgeeks.org/check-for-balanced-parentheses'",
+        "b2:Mbpp/771: placebo does not preserve the original prose; sentence missing or reordered: 'https://www.geeksforgeeks.org/check-for-balanced-parentheses'"
+      ]
+    },
+    {
+      "instance_id": "b2:Mbpp/790",
+      "reasons": [
+        "b2:Mbpp/790: clarification contains the expected of a failing case: 'False'",
+        "b2:Mbpp/790: clarification contains the expected of a failing case: 'False'",
+        "b2:Mbpp/790: clarification contains the expected of a failing case: 'False'",
+        "b2:Mbpp/790: clarification contains the expected of a failing case: 'False'",
+        "b2:Mbpp/790: clarification contains the expected of a failing case: 'False'",
+        "b2:Mbpp/790: added word counts differ by more than 15%: clarified +25, placebo +13 (ratio 0.52)"
+      ]
+    },
+    {
+      "instance_id": "b2:Mbpp/92",
+      "reasons": [
+        "b2:Mbpp/92: an edited condition added no words: clarified +-1, placebo +26",
+        "b2:Mbpp/92: clarified does not preserve the original prose; sentence missing or reordered: 'Your code must satisfy these tests: assert is_undulating(121'"
+      ]
+    }
+  ],
+  "generation_failed": [],
+  "model": "gpt-5.6-luna",
+  "n_dropped_by_gate": 19,
+  "n_generation_failed": 0,
+  "n_kept": 25,
+  "n_of_population": 44,
+  "smoke": false
+}
