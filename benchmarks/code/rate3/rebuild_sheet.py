@@ -100,7 +100,8 @@ def main() -> int:
         "* **不要**去查这些实例之前被标成什么。编号已打乱、已盲化。",
         "* **不要**去查这些实例之前被标成什么。编号已打乱、已盲化。\n"
         "* 失败位置现在由机器重跑隐藏测试得出，两组的呈现方式完全相同。"
-        "**只给失败的输入，不给期望值**——期望值等于答案，给了就没法问这个问题了。")
+        "**只给失败的输入，不给期望值**——给出期望值会把问题换成另一个："
+        "不再是“散文是否确定了该返回什么”，而是“散文是否蕴含这个值”。")
     (SHEET / "评分册.md").write_text(head + "".join(rebuilt), encoding="utf-8")
     print(f"rebuilt {len(rebuilt)} items; {len(missing)} could not be rebuilt: {missing[:8]}")
     return 1 if missing else 0

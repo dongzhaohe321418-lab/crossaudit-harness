@@ -29,8 +29,11 @@ Neither earlier version of this report mentioned any of it. Each figure describe
 named beside it; none of the three describes the others, and an earlier version's claim that the
 two labels "count identically in every table below" was false of the abstention-excluded rows.
 
-**The scope, exactly.** These 11 pairs sit on **6 problems**, so they are not 11 independent
-observations. They are also not the sheet's only repeated text: the 121 entries carry 56
+**The scope, exactly.** The 11 pairs sit on **6 problems**, so they are not 11 independent
+observations — and the abstention-free subset sits on **4**: dropping the pairs that contain a
+`cannot-tell` removes `HumanEval/154` and `Mbpp/300` entirely, leaving `Mbpp/119`, `Mbpp/244`,
+`Mbpp/589` and `Mbpp/739`. **So the three readings are 7 of 11 on six problems, 5 of 11 on six,
+and 5 of 7 on four**, and an earlier version assigned six problems to all three. They are also not the sheet's only repeated text: the 121 entries carry 56
 distinct specifications, and across all 81 identical-text pairs 55 agree — a figure that is
 heavily dependent and is **not** an alternative reliability estimate, only a second look at the
 same weakness.
@@ -135,9 +138,9 @@ context, and an earlier draft of this paragraph claimed they could.
 
 * `L3` is a model. P1 exists to obtain a rating from **a human outside the project**; this does
   not deliver that, and no sentence here should be read as delivering it.
-* **Within-pass repeats: 7 of 11 agree on the primary binary outcome, 5 of 11 on the full
-  label, and 5 of the 7 abstention-free pairs agree.** All three sit on 6 problems. See the
-  top of this report.
+* **Within-pass repeats: 7 of 11 agree on the primary binary outcome (6 problems), 5 of 11 on
+  the full label (6 problems), and 5 of 7 among the abstention-free pairs (4 problems).** See
+  the top of this report.
 * The disjoint reading, the abstention-excluded secondary and the broken-sheet comparison
   are all post hoc.
 * Each of the **four rebuilt-sheet contrasts** has its lower end within five points of zero
@@ -157,6 +160,13 @@ context, and an earlier draft of this paragraph claimed they could.
 * **Two caught-arm entries, H003 and H117, render an escaped `\n` as an actual newline** in the
   displayed input. They are left as they are: the sheet is the artefact that was rated, and
   editing it afterwards would misdescribe what the rater saw.
+* **The booklet's header overstates its own rationale.** It tells the rater that the expected
+  value "is the answer, and giving it makes the question unaskable". Supplying an oracle value
+  does not answer whether the prose entails it — that is precisely what the six-category
+  comparator asked. `L3` never saw this text (`third_rater.py` takes the items and the rubric,
+  not the header), so these labels are unaffected; a human rater reading the booklet would have
+  seen it. The generator is corrected so a future rebuild does not reproduce it, and **the
+  booklet on disk is left as it was rated**, for the same reason H003 and H117 are.
 * `rebuild_sheet.py` said the rebuilt blocks carry "the same information content" as the prose
   classes they replaced. They do not: some of the old descriptions stated oracle behaviour,
   while the replacement supplies concrete inputs and no expected values. That docstring is
