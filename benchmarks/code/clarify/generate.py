@@ -97,12 +97,26 @@ def load_keys() -> None:
             os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 
+class GenerationFailed(RuntimeError):
+    """The provider never returned text. NOT a gate violation.
+
+    `ask` used to return "" after three failed attempts. The empty string went on to the gates,
+    which reported "an edited condition added no words" -- and that sentence would have entered
+    the study's record as the reason the instance was dropped. The provider refusing three times
+    and the generator writing something the gates caught are different events, and a record that
+    calls one the other is false about why instances were lost.
+    """
+
+
 def ask(system: str, prompt: str) -> str:
+    last = "no attempt ran"
     for attempt in range(3):
         try:
             reply = provider.complete(model=MODEL, key_env=KEY_ENV, system=system,
                                            prompt=prompt, max_tokens=2000, timeout=240.0)
             text = (getattr(reply, "text", "") or "").strip()
+            if not text:
+                last = "provider returned empty text"
             if text:
                 text = re.sub(r"^```[a-z]*\n|\n```$", "", text).strip()
                 # The model sometimes echoes the prompt's own `SPECIFICATION:` header back.
@@ -111,9 +125,10 @@ def ask(system: str, prompt: str) -> str:
                 # and let the gate stay the independent check it is.
                 return re.sub(rf"^{re.escape(SCAFFOLD[0])}\s*\n", "", text).strip()
         except Exception as exc:                                       # noqa: BLE001
+            last = f"{type(exc).__name__}: {str(exc)[:200]}"
             print(f"    {type(exc).__name__} attempt {attempt + 1}/3", flush=True)
         time.sleep(4 * (attempt + 1))
-    return ""
+    raise GenerationFailed(last)
 
 
 def main() -> int:
@@ -128,7 +143,7 @@ def main() -> int:
     out_path = OUT.with_name("conditions-smoke.json") if limit else OUT
     ids = pop["instance_ids"][:limit] if limit else pop["instance_ids"]
 
-    out, dropped = {}, []
+    out, dropped, failed = {}, [], []
     for n, iid in enumerate(ids, 1):
         problem = problems[iid.split(":", 1)[1]]
         wit = witnesses[iid]
@@ -146,10 +161,15 @@ def main() -> int:
         # independently -- what changes is that the writer is now told what it must achieve.
         n_words = lambda t: len(t.split())                           # noqa: E731
         conds = {"original": {"spec": problem.spec, "candidate": "", "visible_tests": ""}}
-        clarified = ask(CLARIFY_SYSTEM, base)
-        added = max(n_words(clarified) - n_words(problem.spec), 1)
-        placebo = ask(PLACEBO_SYSTEM.replace("TARGET_WORDS", str(added)),
-                      f"{SCAFFOLD[0]}\n{problem.spec}\n")
+        try:
+            clarified = ask(CLARIFY_SYSTEM, base)
+            added = max(n_words(clarified) - n_words(problem.spec), 1)
+            placebo = ask(PLACEBO_SYSTEM.replace("TARGET_WORDS", str(added)),
+                          f"{SCAFFOLD[0]}\n{problem.spec}\n")
+        except GenerationFailed as exc:
+            failed.append({"instance_id": iid, "why": str(exc)})
+            print(f"  [{n}/{len(ids)}] {iid}: GENERATION FAILED -- {exc}", flush=True)
+            continue
         conds["clarified"] = {"spec": clarified, "candidate": "", "visible_tests": ""}
         conds["placebo"] = {"spec": placebo, "candidate": "", "visible_tests": ""}
 
@@ -171,13 +191,18 @@ def main() -> int:
             # Regenerate the condition the failure NAMES. The first run regenerated the
             # clarification on every failure, including length failures -- which moves the
             # target the placebo missed instead of moving the placebo.
-            if any("word counts" in f for f in problems_found):
+            try:
+              if any("word counts" in f for f in problems_found):
                 added = max(n_words(conds["clarified"]["spec"]) - n_words(problem.spec), 1)
                 conds["placebo"]["spec"] = ask(
                     PLACEBO_SYSTEM.replace("TARGET_WORDS", str(added)),
                     f"{SCAFFOLD[0]}\n{problem.spec}\n")
-            else:
+              else:
                 conds["clarified"]["spec"] = ask(CLARIFY_SYSTEM, base)
+            except GenerationFailed as exc:
+                failed.append({"instance_id": iid, "why": f"on regeneration: {exc}"})
+                print(f"  [{n}/{len(ids)}] {iid}: GENERATION FAILED -- {exc}", flush=True)
+                continue
             problems_found = gates.run_all(iid, conds, wit.get("witness") or {}, hidden_text, SCAFFOLD)
         if problems_found:
             dropped.append({"instance_id": iid, "reasons": problems_found})
@@ -187,10 +212,12 @@ def main() -> int:
         print(f"  [{n}/{len(ids)}] {iid}: ok", flush=True)
 
     out_path.write_text(json.dumps({"model": MODEL, "n_of_population": len(ids),
-                               "smoke": bool(limit), "n_kept": len(out), "n_dropped": len(dropped),
+                               "smoke": bool(limit), "n_kept": len(out), "n_dropped_by_gate": len(dropped),
+                               "n_generation_failed": len(failed), "generation_failed": failed,
                                "dropped": dropped, "conditions": out},
                               indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"\nwrote {out_path}: {len(out)} kept, {len(dropped)} dropped")
+    print(f"\nwrote {out_path}: {len(out)} kept, {len(dropped)} dropped by a gate, "
+          f"{len(failed)} never generated")
     return 0
 
 
