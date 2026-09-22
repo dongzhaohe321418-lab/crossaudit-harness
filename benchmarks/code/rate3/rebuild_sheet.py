@@ -9,7 +9,9 @@ The sheet could not compare the groups, and a human rater would have met the sam
 `residual_dump.py` already recovers a **witness** for any stratum-P instance by re-executing its
 failing hidden inputs. That evidence exists for both arms, passes through no hand step, and is
 what both arms are rebuilt on here: 61 of 68 missed and 49 of 53 caught carry concrete failing
-cases, the rest being timeouts that are shown as such.
+cases. The remainder is **not all timeouts**, as this docstring said until the first review of
+`RESULTS-RATE3.md` checked it: the missed arm's seven are five timeouts and two whose inputs the
+harness could not recover, and the caught arm's four are timeouts. Each is shown as what it is.
 
 **The witness carries the expected value and this sheet does not show it.** The question is
 whether the specification determines what should be returned on the failing input. A rater who is

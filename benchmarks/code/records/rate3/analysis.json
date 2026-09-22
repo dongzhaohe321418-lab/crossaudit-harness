@@ -3,12 +3,43 @@
     "broken": 47,
     "rebuilt": 12
   },
+  "disjoint_instances_57_vs_53": {
+    "caught": [
+      23,
+      53
+    ],
+    "caught_pct": 43.39622641509434,
+    "caught_wilson": [
+      30.950396559750292,
+      56.73464857239271
+    ],
+    "cluster_ci95": [
+      2.4454270489024545,
+      44.03549260246017
+    ],
+    "diff_points": 23.27044025157233,
+    "missed": [
+      38,
+      57
+    ],
+    "missed_pct": 66.66666666666667,
+    "missed_wilson": [
+      53.72251158005143,
+      77.50619392484926
+    ],
+    "n_boot_ok": 10000,
+    "n_problems": 56
+  },
   "exploratory_broken_sheet": {
     "caught": [
       4,
       53
     ],
     "caught_pct": 7.547169811320755,
+    "caught_wilson": [
+      2.97395550869467,
+      17.858477483653225
+    ],
     "cluster_ci95": [
       38.75659526240425,
       69.75624321357154
@@ -19,37 +50,30 @@
       68
     ],
     "missed_pct": 61.76470588235294,
+    "missed_wilson": [
+      49.880712452221424,
+      72.39055021789457
+    ],
     "n_boot_ok": 10000,
     "n_problems": 56
   },
   "labels_changed_between_sheets": 67,
-  "n_boot": 10000,
-  "primary_cannot_tell_in_denominator": {
-    "caught": [
-      23,
-      53
-    ],
-    "caught_pct": 43.39622641509434,
-    "cluster_ci95": [
-      1.5052678154010573,
-      38.17917232021709
-    ],
-    "diff_points": 19.83906770255272,
-    "missed": [
-      43,
-      68
-    ],
-    "missed_pct": 63.23529411764706,
-    "n_boot_ok": 10000,
-    "n_problems": 56
+  "labels_changed_by_arm": {
+    "caught": 46,
+    "missed": 21
   },
-  "rater": "gpt-6-astra (L3) -- a third MODEL, not the outside human P1 asks for",
+  "n_boot": 10000,
+  "rater": "gpt-5.6-luna (L3), per rate3/third_rater.py -- a MODEL, not the outside human P1 asks for, and deliberately NOT gpt-6-astra, which was study 21's L2",
   "secondary_cannot_tell_excluded": {
     "caught": [
       23,
       48
     ],
     "caught_pct": 47.916666666666664,
+    "caught_wilson": [
+      34.47131617695162,
+      61.6707676966572
+    ],
     "cluster_ci95": [
       2.111284977348347,
       42.6256013077416
@@ -60,10 +84,41 @@
       61
     ],
     "missed_pct": 70.49180327868852,
+    "missed_wilson": [
+      58.11059794277964,
+      80.44498124172395
+    ],
     "n_boot_ok": 10000,
     "n_problems": 53
   },
   "seed": 20260922,
+  "sheet_groups_NOT_missed_vs_caught": {
+    "caught": [
+      23,
+      53
+    ],
+    "caught_pct": 43.39622641509434,
+    "caught_wilson": [
+      30.950396559750292,
+      56.73464857239271
+    ],
+    "cluster_ci95": [
+      1.5052678154010573,
+      38.17917232021709
+    ],
+    "diff_points": 19.83906770255272,
+    "missed": [
+      43,
+      68
+    ],
+    "missed_pct": 63.23529411764706,
+    "missed_wilson": [
+      51.35563563911616,
+      73.69953486476433
+    ],
+    "n_boot_ok": 10000,
+    "n_problems": 56
+  },
   "six_category_comparator": {
     "caught": [
       24,
@@ -75,5 +130,9 @@
       68
     ],
     "note": "a DIFFERENT instrument: ambiguous-oracle among six options, not a three-option determinacy rubric. Reported beside, not as a replication."
+  },
+  "undetermined_rate_shift_points_by_arm": {
+    "caught": 35.84905660377358,
+    "missed": 1.4705882352941178
   }
 }

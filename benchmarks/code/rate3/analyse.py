@@ -26,7 +26,30 @@ def labels(path: Path) -> dict[str, str]:
     return {r["rate_id"]: r["label"] for r in csv.DictReader(path.open(encoding="utf-8"))}
 
 
-def contrast(items: list[dict], lab: dict[str, str], drop_cannot: bool) -> dict:
+def wilson(k: int, n: int) -> list[float]:
+    """Wilson, printed beside the cluster interval and marked too narrow, as everywhere here."""
+    if not n:
+        return [None, None]
+    z, p = 1.959963984540054, k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return [100 * (c - h), 100 * (c + h)]
+
+
+def contrast(items: list[dict], lab: dict[str, str], drop_cannot: bool,
+             disjoint: bool = False) -> dict:
+    # The sheet's 121 entries cover 110 unique instances: 11 appear in BOTH arms, because the
+    # 68-item missed sheet is 57 residual instances plus 11 that were caught. A contrast over
+    # the sheet's two groups is therefore not a contrast between missed and caught instances.
+    # `disjoint` drops each such instance's missed-arm copy, leaving 57 against 53.
+    if disjoint:
+        seen = {}
+        for it in items:
+            seen.setdefault(it["instance"], set()).add(it["arm"])
+        both = {i for i, a in seen.items() if len(a) > 1}
+        items = [it for it in items
+                 if not (it["instance"] in both and it["arm"] == "missed")]
     rows = []
     for it in items:
         l = lab.get(it["rate_id"])
@@ -61,6 +84,7 @@ def contrast(items: list[dict], lab: dict[str, str], drop_cannot: bool) -> dict:
             diffs.append(100 * (mm / mmn - cc / ccn))
     diffs.sort()
     return {"missed_pct": m, "missed": [mk, mn], "caught_pct": c, "caught": [ck, cn],
+            "missed_wilson": wilson(mk, mn), "caught_wilson": wilson(ck, cn),
             "diff_points": (m - c) if (m is not None and c is not None) else None,
             "cluster_ci95": [rc.percentile(diffs, 0.025), rc.percentile(diffs, 0.975)],
             "n_problems": len(keys), "n_boot_ok": len(diffs)}
@@ -72,21 +96,34 @@ def main() -> int:
     broken = labels(REC / "L3-broken-sheet.csv")
 
     primary = contrast(items, rebuilt, drop_cannot=False)
+    disjoint = contrast(items, rebuilt, drop_cannot=False, disjoint=True)
     secondary = contrast(items, rebuilt, drop_cannot=True)
     explor = contrast(items, broken, drop_cannot=False)
 
     moved = sum(1 for it in items
                 if broken.get(it["rate_id"]) != rebuilt.get(it["rate_id"]))
+    moved_by_arm = {}
+    rate_shift = {}
+    for a in ("missed", "caught"):
+        ids = [it["rate_id"] for it in items if it["arm"] == a]
+        moved_by_arm[a] = sum(1 for r in ids if broken.get(r) != rebuilt.get(r))
+        bu = sum(1 for r in ids if broken.get(r) == "undetermined")
+        ru = sum(1 for r in ids if rebuilt.get(r) == "undetermined")
+        rate_shift[a] = 100 * (ru - bu) / len(ids) if ids else None
     ct = {"broken": sum(1 for v in broken.values() if v == "cannot-tell"),
           "rebuilt": sum(1 for v in rebuilt.values() if v == "cannot-tell")}
 
     out = {
-        "rater": "gpt-6-astra (L3) -- a third MODEL, not the outside human P1 asks for",
+        "rater": "gpt-5.6-luna (L3), per rate3/third_rater.py -- a MODEL, not the outside "
+                 "human P1 asks for, and deliberately NOT gpt-6-astra, which was study 21's L2",
         "seed": SEED, "n_boot": N_BOOT,
-        "primary_cannot_tell_in_denominator": primary,
+        "sheet_groups_NOT_missed_vs_caught": primary,
+        "disjoint_instances_57_vs_53": disjoint,
         "secondary_cannot_tell_excluded": secondary,
         "exploratory_broken_sheet": explor,
         "labels_changed_between_sheets": moved,
+        "labels_changed_by_arm": moved_by_arm,
+        "undetermined_rate_shift_points_by_arm": rate_shift,
         "cannot_tell_counts": ct,
         "six_category_comparator": {
             "note": "a DIFFERENT instrument: ambiguous-oracle among six options, not a "
@@ -106,13 +143,18 @@ def main() -> int:
         print(f"  difference {d['diff_points']:+.1f} points, cluster [{lo:+.1f}, {hi:+.1f}], "
               f"{d['n_problems']} problems")
 
-    show("PRIMARY   (cannot-tell in the denominator)", primary)
+    show("SHEET GROUPS (NOT missed-vs-caught: 11 instances sit in both)", primary)
+    print()
+    show("DISJOINT INSTANCES (the 11 missed-arm copies removed)", disjoint)
     print()
     show("SECONDARY (cannot-tell excluded)", secondary)
     print()
     show("EXPLORATORY (the broken sheet -- evidence about SHEETS, not specifications)", explor)
     print(f"\ncannot-tell: {ct['broken']} on the broken sheet, {ct['rebuilt']} on the rebuilt one")
-    print(f"{moved} of {len(items)} labels changed between the two sheets")
+    print(f"{moved} of {len(items)} labels changed between the two sheets "
+          f"(missed {moved_by_arm['missed']}, caught {moved_by_arm['caught']}); the "
+          f"undetermined RATE moved {rate_shift['missed']:+.2f} points on missed and "
+          f"{rate_shift['caught']:+.2f} on caught")
     print(f"\nsix-category comparator (a DIFFERENT instrument): missed 46/68, caught 24/53, "
           f"{out['six_category_comparator']['diff_points']:+.1f} points")
     return 0
