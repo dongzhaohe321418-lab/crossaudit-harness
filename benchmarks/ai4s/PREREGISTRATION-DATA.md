@@ -149,8 +149,8 @@ rather than edited in place:
 * **Amendment 3** says `self` was on draw 2; it was on draw 3. It says no outcome had been computed;
   that is what the agent did, but no record can establish it.
 * **The analysis script** (`abd2c9b`, 23:45:32) was committed after 278 valid `self` readings
-  existed, not before any valid reading existed, as Amendment 3 and the first report said. It was
-  committed before any outcome was computed from them.
+  existed, not before any valid reading existed, as Amendment 3 and the first report said. The agent
+  states it had not analysed them; the records cannot verify that.
 * **The registration's pool counts**: the superconductivity pool is deduplicated after selecting its
   12 columns, which removes 84 rows, not the 66 full-row duplicates stated. The concrete source
   README gives Age a range of 1 to 365 days, which the frozen spec omits; the validator therefore

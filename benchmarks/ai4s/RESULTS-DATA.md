@@ -3,7 +3,7 @@
 Registration: `PREREGISTRATION-DATA.md`, Amendments 1–3 and the erratum at its end. Registered
 analysis: `analyze_data.py` → `records/ai4s/data_results.json`. Post hoc analyses, added after
 review round 1 and labelled so wherever used: `posthoc_data.py` → `records/ai4s/data_posthoc.json`
-and `classify_clean_flags.py` → `records/ai4s/data_clean_flag_labels.json`. Items:
+and `clean_flag_exemplars.py` → `records/ai4s/data_clean_flag_exemplars.json`. Items:
 `records/ai4s/data_items.json`. Readings: `~/Documents/Crossaudit/ai4s/runs/data_audit/`
 (`cross.d1-4.jsonl`, `self.d1-4.jsonl`; all 2,240 planned readings exist and are `ok`; the ledgers
 hold 1,126 and 1,125 call events, the difference being retried calls). Spend: $30.61 cumulative,
@@ -105,10 +105,10 @@ the concrete README states, it would also catch `concrete.F5.4` (Age values 594 
 into range violation), raising its recall to 93/140 (66.4%) at 0 clean flags and leaving 17
 fault-relevant model-only catches (post hoc sensitivity).
 
-`self`'s 28 cannot be read the same way. It flags 47.9% of clean items, and on shuffled targets its
-rate (45.0%, 9/20) is no higher than that. At that false-positive rate its flags are not evidence of
-detection as a set, although individual `self` findings do identify real faults (for example the
-humidity sentinel in `ccpp.F6.0`).
+`self`'s 28 were not adjudicated for fault relevance, so what they detect is unestablished. It flags
+47.9% of clean items, and on shuffled targets its rate (45.0%, 9/20) is no higher than that, so its
+flag rate alone does not show detection; individual `self` findings do identify real faults (for
+example the humidity sentinel in `ccpp.F6.0`).
 
 ## Localisation (registered: a flagging BLOCKER contains the faulted column's name)
 
@@ -123,28 +123,28 @@ for another reason: `airfoil.F1.2` counts as localised because its documentation
 
 ## Flags on clean items, read one by one
 
-The registration forbids calling a clean-item flag wrong without reading it. Every BLOCKER text on
-a clean item was read and labelled, post hoc, at the level of the observation, with precedence
-F > A > P > D > R: **F** a checkably false statement about the delivered files; **A** a true
-observation of an anomaly; **P** a plausibility judgement about genuine values; **D** a
-documentation or requirement judgement; **R** a text that names no defect or withdraws it.
-Detectors proposed F; the reading overrides are recorded in `classify_clean_flags.py`.
+The registration forbids calling a clean-item flag wrong without reading it. Every BLOCKER text on a
+clean item was read.
 
-**`cross`: 4 items (all airfoil), 4 texts, all D.** Each says the card lists identifiers and units
-without describing what the columns measure; asking for fuller definitions is a fair reading of the
-task ("which states what each column is"), and the airfoil card is the sparsest of the four. Two of
-them (`airfoil.clean.11`, `.33`) also say the card does not identify the sound-pressure column as
-the target, which is false: the card states "Target column: scaled_sound_pressure_dB".
+**`cross`: 4 items (all airfoil), one text each.** Each asks for fuller column definitions than the
+airfoil card gives, a fair reading of the task ("which states what each column is"); the airfoil
+card is the sparsest of the four. Two of them (`airfoil.clean.11`, `.33`) also say the card does not
+identify the sound-pressure column as the target, which is false: the card states "Target column:
+scaled_sound_pressure_dB". None of the four asserts anything about the data.
 
-**`self`: 67 items (superconductivity 34, concrete 26, power plant 7), 304 texts.** Text labels:
-F 156 (the CSV absent, only inline, or not a file 63; a row count other than 120, e.g. 100, 101,
-130 or 150, 57; a column, target values or a header quote missing 18; field counts 10; truncation
-or a missing newline 6; values outside ranges the card does not state or the data do not violate 2),
-D 141, R 4, A 2, P 1. Item level: **62 of 67 items carry at least one F text**; 4 carry only
-documentation judgements; 1 carries only a plausibility judgement (early-age strengths of about
-6.5 MPa called implausible; they are genuine). The two true anomaly texts are the 0.02 slag value
-(`concrete.clean.29`) and the card's humidity bound of 100.16% exceeding physical saturation
-(`ccpp.clean.2`, a value the source itself gives); both items also carry F texts in other readings.
+**`self`: 67 items (superconductivity 34, concrete 26, power plant 7), 304 texts.** The claim made
+here is item-level only. **For 62 of the 67 items, at least one BLOCKER text states something about
+the delivered files that the item refutes** (post hoc; `clean_flag_exemplars.py` names one such text
+per item, and checks the refuting fact against the item's file). The exemplars are of five kinds:
+that `work/data/data.csv` is absent, only inline, or not a file (both files were supplied as named
+increment files in every reading), 29 items; a data row count other than 120 (e.g. 100, 101, 129,
+130, 150), 21; a missing column, missing target values or an unclosed header quote, 9; a field count
+of 8, 2; a truncated final row, 1. The other 5 items carry documentation or requirement
+judgements (empty range cells, missing descriptions or provenance, a sample rather than the full
+table), and one of them (`concrete.clean.18`) also calls genuine early-age strengths of about 6.5 MPa
+implausible. We give no text-level totals: an earlier text-level labelling was found by review to
+misapply its own rubric and was withdrawn. Among the texts, one observation about the data is true:
+`concrete.clean.29` notes the Blast Furnace Slag value of 0.02, which is in the source.
 
 ## Construction cues found in review
 
@@ -166,12 +166,14 @@ label or hash reaches the prompt.
    four about the card. It flagged no shuffled target (0/20). It is weaker than the validator on
    every fault the validator was written for (duplicates 0/20, rounding 3/20, negatives 14/20,
    sentinels 16/20, against 20/20 each).
-2. **The two tiers are complementary.** Validator alone: 65.7% at 0.0%. Auditor alone: 46.4% at
-   2.9% (43.6% fault-relevant, post hoc). Union: 80.0% at 2.9% (78.6% fault-relevant, post hoc).
+2. **The two tiers are complementary.** Registered rule: validator alone 65.7% at 0.0% flags on
+   clean items; auditor alone 46.4% at 2.9%; union 80.0% at 2.9%. Post hoc fault-relevance rule,
+   which also removes the four clean flags: auditor 43.6% at 0.0%; union 78.6% at 0.0%.
    Each catches items the other does not, which is the design premise of the product's science
    profile (the model reads, code verifies); the union is not dominated by either part.
 3. **The same-vendor route did not work as a data auditor in this configuration.** It flags 47.9% of
-   clean items, and 62 of those 67 items carry at least one false statement about the files. This is
+   clean items, and for 62 of those 67 items at least one of its findings states something about the
+   files that the item refutes. This is
    one model through one route (the CLI, with its own added context and default sampling), not a
    statement about the vendor.
 4. **Both cross-row fault types were missed by the shipped auditor.** Duplicated rows and a shuffled
@@ -198,11 +200,13 @@ sampling; `self` differs from Act 2's same-vendor family in route and sampling.
   the void run had been seen as progress counts; the fix follows from the product's scope rule.
 * Amendment 3: halt raised from $45 to $60 before it was reached. Its progress note misstates
   `self`'s draw (erratum).
-* The analysis script was committed after 278 valid `self` readings existed and before any outcome
-  was computed (erratum; the first version of this report said "before any valid reading existed").
+* The analysis script was committed after 278 valid `self` readings existed. The agent states it had
+  not analysed them; no record can verify that (erratum; the first version of this report said
+  "before any valid reading existed").
 * The OpenAI account ran out of credit mid-study; the `cross` run was stopped and resumed after the
   owner topped it up.
 * The halt is not strictly fail-closed (erratum); no cap was reached.
 * Review round 1 (not quotable) led to: the post hoc fault-relevance analysis, the Age-range
-  sensitivity, the observation-level clean-flag labels, the construction-cue disclosure and the
-  corrections above.
+  sensitivity, the construction-cue disclosure and the corrections above. Review round 2 (not
+  quotable) found that a text-level labelling of the clean-item flags misapplied its own rubric; it
+  was withdrawn and replaced by the item-level exemplars, and the chronology wording was narrowed.

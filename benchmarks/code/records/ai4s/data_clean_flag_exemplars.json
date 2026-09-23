@@ -1,0 +1,687 @@
+{
+ "n_items": 62,
+ "items": {
+  "ccpp.clean.15": {
+   "exemplar": "ccpp.clean.15|d4|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires a dataset with 5 columns (AT, V, AP, RH, PE) matching the stated ranges. The increment contains 130 rows of data. The task does not specify row count, but the stated ranges in CARD.md define the valid domain: AT (1.81\u201337.11\u00b0C), V (25.36\u201381.56 cm Hg), AP (992.89\u20131033.3 mbar), RH (25.56\u2013100.16%), PE (420.26\u2013495.76 MW). Spot-check of provided rows reveals values outside declared ranges: row 2 has RH=100.16 (at boundary, acceptable); row 8 has RH=99.19 (acceptable); row 58 has RH=99.19 (acceptable); row 64 has RH=96.42 (acceptable); row 22 has RH=84.86 (acceptable); row 39 has RH=92.1 (acceptable); row 40 has RH=91.7 (acceptable). However, row 58 shows RH=99.19, which is within range. Re-examining: row 17 V=39.64 (below stated minimum 25.36\u2014acceptable as 39.64 > 25.36). Detailed check: row 1 has PE=441.21 (within 420.26\u2013495.76). Row 130 shows AT=24.14, V=41.1, AP=1002.1, RH=38.49, PE=450.13\u2014all within stated ranges. No obvious out-of-range violations found on systematic spot-check. The deliverable structure (CSV file with header and data rows) matches the task requirement. The data card (CARD.md) correctly documents all columns and units. Both required files are present and properly named.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "ccpp.clean.16": {
+   "exemplar": "ccpp.clean.16|d1|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires delivery of work/data/data.csv as a dataset ready for scientific analysis. The increment provides only 129 data rows (plus header). The task describes this as hourly averages from a power plant operation, and the stated ranges in CARD.md suggest a meaningful operational dataset. A sample of 129 rows is a fraction of what would constitute a usable dataset for the UCI 294 combined cycle power plant study (the original UCI dataset contains 9,568 instances). This is materially noncompliant\u2014the deliverable is a fragment of what was requested, not the complete dataset.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "ccpp.clean.18": {
+   "exemplar": "ccpp.clean.18|d2|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires delivery of work/data/data.csv as a dataset ready for scientific analysis. The increment contains only 119 rows of data (120 rows including header). The source dataset (UCI 294, Combined Cycle Power Plant) contains 9,568 observations. The delivered dataset is approximately 1.2% of the full dataset\u2014a fraction of what was asked, making it materially noncompliant with the scope requirement.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "ccpp.clean.2": {
+   "exemplar": "ccpp.clean.2|d1|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires delivery of work/data/data.csv. The increment provides data.csv with 151 rows (150 data rows plus header). The task does not specify row count, but the stated ranges in CARD.md define bounds for validation. Column V (exhaust vacuum) contains a value of 35.19 in row 42, which falls below the stated range minimum of 25.36\u2014this is within tolerance. However, column AP (ambient pressure) contains value 992.89 in row 75, which exactly matches the stated range minimum but the row shows it as a data value. More critically, the dataset appears incomplete relative to typical UCI 294 combined cycle plant dataset expectations (9,568 hourly observations documented in the original source). A dataset of 151 rows is approximately 1.6% of the expected full dataset, constituting a fraction of what was asked and materially changing the nature of the deliverable from a complete scientific dataset to a sample.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "ccpp.clean.26": {
+   "exemplar": "ccpp.clean.26|d1|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires delivery of work/data/data.csv containing a dataset ready for scientific analysis. The increment provides only 150 rows of data. The task references UCI 294 (Combined Cycle Power Plant dataset), which is a well-known public dataset containing 9,568 hourly observations. Delivering 150 rows instead of the complete dataset (a fraction of what was requested) materially fails to deliver a dataset ready for use in scientific analysis, as specified in the task.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "ccpp.clean.33": {
+   "exemplar": "ccpp.clean.33|d3|b0",
+   "kind": "F:rowcount",
+   "text": "Task requires delivery of work/data/data.csv with data for a Combined Cycle Power Plant dataset. The increment provides 150 rows of data, but the task does not specify expected row count or size. However, the deterministic check reports PASS with zero hard failures on all contracts including 'declared' (all paths exist) and 'parseable' (valid CSV). The data.csv file is syntactically valid and the CARD.md is complete. However, CA-CONTENT-002 requires claims not to contradict source material: the task cites 'UCI 294, Tufekci 2014' as source. The increment provides no evidence of provenance\u2014no citation of the original dataset URL, download method, or verification that these rows match the original UCI source. Without demonstrable chain of custody from the UCI repository, the claim that this is 'Combined Cycle Power Plant (UCI 294, Tufekci 2014)' data cannot be verified against the source material.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "ccpp.clean.34": {
+   "exemplar": "ccpp.clean.34|d1|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires delivery of work/data/data.csv with data ready for scientific analysis. The increment provides only 150 rows of data (plus header). The source dataset UCI 294 (Combined Cycle Power Plant) contains 9,568 observations. Delivering 150 rows (1.6% of the full dataset) is materially noncompliant\u2014it is a fraction of what was asked, not a minor deviation. A dataset this severely truncated is a different thing than the requested complete dataset and cannot support the stated scientific analysis purpose.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.13": {
+   "exemplar": "concrete.clean.13|d2|b0",
+   "kind": "F:column",
+   "text": "The CSV file is missing the 'Age (day)' column header and all its data values. The TASK requires nine columns (eight input components and one target); the increment supplies only eight columns. The Age column is listed in both the TASK table and CARD.md but is absent from the CSV data structure. This is a material noncompliance: a required deliverable component is missing.",
+   "refuted_by": "every row has every column, the target included, and the quoted header parses",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.14": {
+   "exemplar": "concrete.clean.14|d4|b0",
+   "kind": "F:column",
+   "text": "The task requires a deliverable dataset with 9 columns as documented in TASK.md. The CSV file contains only 8 columns: it is missing the target column 'Concrete compressive strength(MPa, megapascals)' as a separate column. The data rows show only 8 values per row (8 mixture components and age), but the table in TASK.md specifies 9 columns including the compressive strength target. This is a material defect: the deliverable is incomplete relative to the stated scope.",
+   "refuted_by": "every row has every column, the target included, and the quoted header parses",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.16": {
+   "exemplar": "concrete.clean.16|d1|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires a dataset with 9 columns as specified in the data card table. The CSV file contains all 9 required columns with correct headers matching the CARD.md specification. However, the task requirement states the dataset should be 'ready for use in a scientific analysis' and the CARD.md must 'state what each column is and its unit.' While CARD.md is present and correctly documents the columns, the increment provides only 100 sample rows of concrete strength data. The task does not specify row count, but does not indicate this is a sample dataset. Without evidence this represents the complete, production-ready dataset (as opposed to a sample or subset), the deliverable's compliance with 'ready for use' is unclear. The deterministic check reports PASS with no hard failures, but the semantic completeness of whether this constitutes a usable scientific dataset cannot be verified from the increment alone.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.19": {
+   "exemplar": "concrete.clean.19|d4|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires a dataset with 9 columns as defined in the TASK specification. The CSV file headers match the column names from the CARD, but the data rows are incomplete: only 100 data rows are present. The task does not specify an exact row count, but the deliverable must be 'ready for use in a scientific analysis' with the dataset documented in CARD.md. A dataset of only 100 rows when UCI 165 (Yeh 1998) is a well-known public dataset with 1030 samples represents a material departure from what was requested\u2014this is a fraction of the full dataset. This makes the deliverable a different thing than what was asked (a curated subset rather than the complete documented dataset).",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.2": {
+   "exemplar": "concrete.clean.2|d3|b0",
+   "kind": "F:fields",
+   "text": "The task requires 9 columns as specified in the CARD table. The CSV header declares 9 columns, but the data rows contain only 8 values per row (the last column 'Concrete compressive strength(MPa, megapascals)' is missing from all data rows). The first data row illustrates: '379.5,151.2,0.0,153.9,15.9,1134.3,605.0,91.0,56.49566344' ends after the 8th component (Age) with the strength value 56.49566344 appearing to be appended without proper CSV column alignment. All 100 rows follow this pattern. This is a material format defect: the CSV structure does not match its declared header, making the target column inaccessible in standard CSV parsing.",
+   "refuted_by": "every row parses to the header's field count",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.21": {
+   "exemplar": "concrete.clean.21|d2|b1",
+   "kind": "F:column",
+   "text": "The last data row (145.4,0.0,178.9,201.7,7.8,824.0,868.7,28.0) is incomplete and contains no value for the required target column. This is an unresolved structural defect that renders the dataset incomplete and internally inconsistent with the declared schema.",
+   "refuted_by": "every row has every column, the target included, and the quoted header parses",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.22": {
+   "exemplar": "concrete.clean.22|d3|b0",
+   "kind": "F:rowcount",
+   "text": "The CSV file contains only 103 data rows (plus header). The task requires delivery of a complete dataset ready for scientific analysis. The increment provides no evidence of row count or completeness. Without confirmation of the full dataset size relative to the source (UCI 165, Yeh 1998 typically contains 1030 samples), this appears to be a partial or sample subset rather than the complete dataset requested. A fraction of the stated dataset is materially noncompliant.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.23": {
+   "exemplar": "concrete.clean.23|d3|b0",
+   "kind": "F:column",
+   "text": "The task requires a CSV file with 9 columns as specified in the data card. The increment contains 9 columns, but the CSV is missing the target column header's closing quote character in the header row. The header reads: `\"Concrete compressive strength(MPa, megapascals)` without a closing quote, which is a CSV format defect that makes the file unparseable as a valid comma-separated values file. A data file that cannot be reliably parsed violates the requirement to deliver 'a dataset ready for use in a scientific analysis.'",
+   "refuted_by": "every row has every column, the target included, and the quoted header parses",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.24": {
+   "exemplar": "concrete.clean.24|d1|b0",
+   "kind": "F:column",
+   "text": "The task requires 9 columns as specified in the CARD.md table. The CSV file contains only 8 columns in the data rows: it is missing the 'Age (day)' column header and corresponding values in most rows. The last column present is 'Concrete compressive strength(MPa, megapascals)', but the Age column should appear before it. Rows contain 9 comma-separated values, but the header row defines only 9 fields with the Age column listed 8th. Inspection of the data shows Age values (28.0, 14.0, 90.0, etc.) are present in the correct position, but the column count and structure do not align with the declared schema in CARD.md. The deliverable does not match the objectively testable requirement that the CSV must contain all 9 columns in the order and with the headers specified in the CARD.md.",
+   "refuted_by": "every row has every column, the target included, and the quoted header parses",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.25": {
+   "exemplar": "concrete.clean.25|d2|b0",
+   "kind": "F:column",
+   "text": "The task requires 9 columns as stated in the TASK.md specification table. The CSV file contains only 8 columns in the header and data rows: it is missing the 'Concrete compressive strength(MPa, megapascals)' target column values. The header declares the column name but no corresponding data values appear after the final comma on any row. This is a material defect: the deliverable is incomplete relative to the declared structure, and the target column specified in the task is not populated.",
+   "refuted_by": "every row has every column, the target included, and the quoted header parses",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.26": {
+   "exemplar": "concrete.clean.26|d4|b0",
+   "kind": "F:column",
+   "text": "The CSV file contains only 8 columns of data (the 9 required columns are missing the target column). The TASK requires all 9 columns defined in the specification table: Cement, Blast Furnace Slag, Fly Ash, Water, Superplasticizer, Coarse Aggregate, Fine Aggregate, Age, and Concrete compressive strength. The increment shows only the first 8 columns in the header row and data rows. The final target column 'Concrete compressive strength(MPa, megapascals)' is present in the CSV header but the data values for this column are missing from all rows\u2014each row ends after the Age column value.",
+   "refuted_by": "every row has every column, the target included, and the quoted header parses",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.27": {
+   "exemplar": "concrete.clean.27|d2|b0",
+   "kind": "F:column",
+   "text": "The CSV file is missing the target column 'Concrete compressive strength(MPa, megapascals)' for all rows after the header. The header row lists 9 columns including the target, but every data row contains only 8 values. The 9th column (target) has no data. The task requires a complete dataset with all declared columns populated.",
+   "refuted_by": "every row has every column, the target included, and the quoted header parses",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.29": {
+   "exemplar": "concrete.clean.29|d3|b0",
+   "kind": "F:truncated",
+   "text": "The TASK.md requires 9 columns as specified in the table (8 mixture components + age + target strength). The data.csv file contains exactly 9 columns and headers match the TASK specification. However, the CSV is incomplete: it ends abruptly at row 101 with only a partial final row (200.0,0.0,0.0,180.0,0.0,1125.0,845.0,28.0,12.24509376), and the last row lacks a newline terminator. This is a structural defect that makes the file incomplete and potentially unparseable by standard CSV readers. The task requires a dataset 'ready for use in scientific analysis,' which this truncated file is not.",
+   "refuted_by": "the file has 120 complete rows and ends with a newline",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.31": {
+   "exemplar": "concrete.clean.31|d1|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires a dataset with 9 columns as specified in the data card: 8 mixture components (Cement, Blast Furnace Slag, Fly Ash, Water, Superplasticizer, Coarse Aggregate, Fine Aggregate), Age, and Concrete compressive strength. The CSV file provided contains only 8 rows of sample data (plus header), which is materially noncompliant with the expectation of a complete dataset ready for scientific analysis. A dataset with 101 total rows including header was referenced in the UCI 165 source. The increment delivers a fraction of what was requested.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.32": {
+   "exemplar": "concrete.clean.32|d2|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires a CSV file with 9 columns as specified in the CARD table. The increment provides a CSV with all 9 required columns, but the data appears to be incomplete or truncated. The file shows 101 data rows (including header), but the task specifies a concrete strength dataset (UCI 165, Yeh 1998) which should contain approximately 1,030 samples. The current file contains only ~9.8% of the expected dataset, making it materially noncompliant\u2014it is a fraction of what was asked.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.33": {
+   "exemplar": "concrete.clean.33|d3|b1",
+   "kind": "F:rowcount",
+   "text": "The CSV file contains 130 rows of data (129 data rows plus 1 header), but no supporting documentation within the increment explains the source, provenance, or verification of these concrete mixture records. The task specifies 'Source licence: CC BY 4.0' and attributes the dataset to 'UCI 165, Yeh 1998,' but the increment provides no SOURCES file, README, or URL reference confirming retrieval or validating that the data matches the cited source. This violates the requirement for a complete and internally consistent deliverable with documented provenance.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.34": {
+   "exemplar": "concrete.clean.34|d2|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires 9 columns as specified in the TASK table (Cement, Blast Furnace Slag, Fly Ash, Water, Superplasticizer, Coarse Aggregate, Fine Aggregate, Age, and Concrete compressive strength). The CSV header contains all 9 columns, but the data rows are incomplete: only 100 rows of data are present. The task does not state an exact row count, but the source citation 'UCI 165, Yeh 1998' indicates this is the UCI Machine Learning Repository dataset #165, which contains 1030 samples. Delivering 100 rows instead of the full dataset represents a fraction of what was asked and is materially noncompliant\u2014this is a different thing than the complete dataset.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.4": {
+   "exemplar": "concrete.clean.4|d1|b0",
+   "kind": "F:fields",
+   "text": "The task requires delivery of work/data/data.csv with 9 columns as specified in the CARD table (8 mixture components plus age, plus compressive strength). The CSV header declares 9 columns matching the CARD specification. However, inspection of the data rows reveals they consistently contain only 8 values per row (the Age column and Concrete compressive strength column appear merged or the final column is missing in the actual data). This is a material noncompliance: the deliverable structure does not match the committed requirement.",
+   "refuted_by": "every row parses to the header's field count",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.6": {
+   "exemplar": "concrete.clean.6|d4|b0",
+   "kind": "F:rowcount",
+   "text": "The CSV file is incomplete. The task requires a dataset with 9 columns (8 mixture components + age + compressive strength). The increment contains only 130 rows of data. The UCI 165 dataset referenced in the task title ('UCI 165, Yeh 1998') indicates 165 samples should be present. The deliverable is materially noncompliant: it contains approximately 79% of the expected dataset size, which falls below the material completeness threshold for a scientific dataset.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.8": {
+   "exemplar": "concrete.clean.8|d3|b0",
+   "kind": "F:column",
+   "text": "The CSV file is missing the target column 'Concrete compressive strength(MPa, megapascals)' values for all rows after the header. The TASK.md specifies that the dataset must include this column with strength measurements, but the CSV contains only the 8 input features (Cement through Age) and ends prematurely. The last row shown is incomplete: '331.0,0.0,0.0,192.0,0.0,978.0,825.0,7.0,16.26473884' which appears to have a strength value, but the column header is present in the CSV header row while many data rows are missing this critical target variable. Upon inspection, the CSV does include the target column in its header and in the data rows provided, but the increment appears truncated or incomplete relative to what a full concrete strength dataset should contain.",
+   "refuted_by": "every row has every column, the target included, and the quoted header parses",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "concrete.clean.9": {
+   "exemplar": "concrete.clean.9|d2|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires 9 columns as specified in the TASK.md table (8 mixture components + age + compressive strength). The increment CSV contains exactly 9 columns with matching headers, but the data is incomplete. The task states the deliverable must be 'ready for use in a scientific analysis,' and the CSV shown contains only 130 rows of sample data. The task does not specify row count, but provides a reference to 'UCI 165, Yeh 1998' which indicates the Concrete Compressive Strength dataset from UCI Machine Learning Repository. That canonical dataset contains 1,030 samples. The increment delivers approximately 12.6% of the expected dataset\u2014a fraction of what was asked\u2014making it materially noncompliant as a deliverable 'ready for use.' A dataset this small is not the same thing as the full dataset referenced.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.0": {
+   "exemplar": "supercond.clean.0|d2|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv, documented by the data card work/data/CARD.md'. The increment provides CARD.md but the CSV file is missing from the audited scope. The task specifies two distinct deliverables; only one is present.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.1": {
+   "exemplar": "supercond.clean.1|d1|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires delivery of 'work/data/data.csv', which is provided. However, the TASK specifies the dataset should contain '11 features and the target' (12 columns total). The increment's CSV file contains all 12 required columns with appropriate headers matching the CARD.md specification. The CSV is parseable and complete with 101 data rows plus header. This satisfies CA-TASK-001's requirement for the data file itself.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.10": {
+   "exemplar": "supercond.clean.10|d2|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of work/data/data.csv, documented by work/data/CARD.md. The increment includes CARD.md but no data.csv file in the audited increment scope. Only the CARD.md content is shown; the CSV file itself is not present in the INCREMENT data, making the primary deliverable incomplete and unable to be verified for correctness, format, or alignment with the data card.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.11": {
+   "exemplar": "supercond.clean.11|d3|b0",
+   "kind": "F:absent",
+   "text": "TASK requires delivery of work/data/data.csv AND work/data/CARD.md. The increment provides CARD.md but does not include data.csv in the declared scope\u2014only its content is shown in the INCREMENT DATA section as unparsed text. The deliverable must be a usable file, not inline data. The file path work/data/data.csv does not exist in the audited scope.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.12": {
+   "exemplar": "supercond.clean.12|d3|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv' documented by 'work/data/CARD.md'. The CARD.md file is present and complete, but data.csv is missing from the increment. The increment contains only the file path header '--- work/data/data.csv ---' followed by CSV content, but no actual file artifact was delivered to the filesystem at that location. A committed task requires both the data file and its documentation to exist as deliverables; one cannot be substituted for the other.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.13": {
+   "exemplar": "supercond.clean.13|d3|b0",
+   "kind": "F:absent",
+   "text": "Task requires two deliverables: work/data/data.csv and work/data/CARD.md. The increment provides CARD.md but data.csv is incomplete in the audited scope. The increment shows CSV data inline but does not confirm the file work/data/data.csv exists as a standalone artifact ready for use. The task specifies 'work/data/data.csv, documented by the data card work/data/CARD.md' \u2014 both files must be present and independently accessible.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.14": {
+   "exemplar": "supercond.clean.14|d2|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv', but the increment provides only the CSV data inline without a separate file artifact. The file path 'work/data/data.csv' is not present as a deliverable in the audited scope\u2014only the CARD.md documentation file is named with a path. The CSV content exists but is not provided as the requested file structure.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.15": {
+   "exemplar": "supercond.clean.15|d1|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv', a dataset ready for use in scientific analysis. The increment provides only the CARD.md documentation and CSV data content, but no actual data.csv file exists as a separately named artifact in the filesystem. The task explicitly states the deliverable should be 'work/data/data.csv' \u2014 a file that must exist at that path. The CSV content is shown inline in the INCREMENT section, but this does not satisfy the requirement to deliver an actual file at the specified location that can be opened and used independently.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.16": {
+   "exemplar": "supercond.clean.16|d3|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv, documented by the data card work/data/CARD.md'. The CARD.md file is present and complete, but the CSV file is missing from the audited increment. Only the file contents are shown in the INCREMENT section; the file path 'work/data/data.csv' does not exist as a deliverable artifact in the audited scope.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.17": {
+   "exemplar": "supercond.clean.17|d2|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of two files: work/data/data.csv and work/data/CARD.md. The increment provides CARD.md but the CSV file path is missing the work/data/ directory structure in the audited scope. The increment shows a file labeled '--- work/data/data.csv ---' in the data section, but no independent verification of its existence at the required path is provided. The deterministic check reports PASS on declared paths, but the increment structure does not demonstrate that data.csv exists as a sibling to CARD.md in the work/data/ directory as required.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.18": {
+   "exemplar": "supercond.clean.18|d3|b0",
+   "kind": "F:absent",
+   "text": "The task requires two deliverables: work/data/data.csv and work/data/CARD.md. The increment provides CARD.md but data.csv is submitted as a plain file without the required directory structure. More critically, the task specifies the deliverable must be 'a dataset ready for use in a scientific analysis' with documented columns. The CARD.md file is present and complete, but the directory path work/data/ is not verifiable in the increment as a structured artifact\u2014only the file contents are shown. The increment lacks evidence that data.csv exists at the required path work/data/data.csv as a deliverable.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.19": {
+   "exemplar": "supercond.clean.19|d3|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv', documented by 'work/data/CARD.md'. The increment provides only CARD.md; the CSV file is absent from the audited scope. The task explicitly names two deliverables: the data file and its documentation. A missing required deliverable is a material noncompliance with CA-TASK-001.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.2": {
+   "exemplar": "supercond.clean.2|d2|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of work/data/data.csv. The increment provides only the CSV content inline but not as an actual file artifact named work/data/data.csv in the file system. The deliverable path does not exist as a concrete, addressable file; only its text content is shown. A dataset must be a usable file, not embedded text.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.20": {
+   "exemplar": "supercond.clean.20|d1|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv', but the increment contains only the CSV data inline without the actual file. The file path work/data/data.csv is not present as a deliverable artifact in the audited scope\u2014only the CARD.md documentation and the CSV content as text are provided. The task explicitly states the deliverable must be 'work/data/data.csv', a file that should exist and be usable independently.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.21": {
+   "exemplar": "supercond.clean.21|d1|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of two files: work/data/data.csv and work/data/CARD.md. The increment shows only the contents of CARD.md and data.csv as text. The task specifies 'Deliver a dataset ready for use in a scientific analysis: work/data/data.csv, documented by the data card work/data/CARD.md'. The increment provides the CSV data as a text block but does not confirm both files exist as separate filesystem artifacts in the required paths. The audit cannot verify the files are actually present at work/data/data.csv and work/data/CARD.md in the repository structure.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.22": {
+   "exemplar": "supercond.clean.22|d4|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv' as a dataset file. The increment provides only a Markdown representation of CARD.md and a CSV data block in text form, but does not deliver an actual parseable CSV file artifact named 'work/data/data.csv'. The CSV content is embedded in the INCREMENT output section as a text block labeled '--- work/data/data.csv ---', not as a standalone file. A committed task requirement for a specific file path and format has not been materially satisfied if the file itself does not exist in the audited scope as a deliverable artifact.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.23": {
+   "exemplar": "supercond.clean.23|d1|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of work/data/data.csv. The increment provides only the CSV content inline without the file being present in the audited scope. The deterministic check reports 'scope_started: true' and 'total_hard_failures: 0', but this reflects successful parsing of what was submitted, not confirmation that the file exists at the required path in the working directory. The task demands a deliverable file at a specific location; an inline excerpt does not satisfy this objective requirement.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.24": {
+   "exemplar": "supercond.clean.24|d1|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv', but the increment does not include this file as a separate, discoverable artifact. The CSV data appears only embedded within the audit INCREMENT section as raw text under the '--- work/data/data.csv ---' marker, not as an actual file in the working directory. The task specifies a file path that must exist as a deliverable; embedding content in audit output does not satisfy the requirement to deliver the file itself.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.25": {
+   "exemplar": "supercond.clean.25|d3|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of two files: work/data/data.csv and work/data/CARD.md. The increment contains CARD.md (the data card) but no data.csv file is present in the increment. The data.csv file is a required deliverable and its absence is a material noncompliance with the committed task scope.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.26": {
+   "exemplar": "supercond.clean.26|d4|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of work/data/data.csv containing a dataset ready for scientific analysis. The increment provides only CARD.md (documentation) and data.csv (data file). The deterministic check reports PASS, but the increment provides no evidence of the actual data.csv file in the audited scope\u2014only its header row and sample data rows are shown as text. The file must exist as a parseable CSV artifact in the repository for the deliverable to be complete and usable. Text representation of CSV content is not a substitute for the actual file artifact.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.27": {
+   "exemplar": "supercond.clean.27|d2|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of work/data/data.csv and work/data/CARD.md. The increment provides CARD.md but does not include data.csv as a separate file artifact in the increment data. Only the CSV content is shown inline in the INCREMENT section, not as a committable file at the stated path. The task specifies the deliverable must be 'work/data/data.csv, documented by the data card work/data/CARD.md'\u2014both files must exist and be locatable at those exact paths.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.28": {
+   "exemplar": "supercond.clean.28|d2|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires delivery of 'work/data/data.csv', but the increment contains only a partial sample of 100 rows. The task specifies a dataset from UCI 464 (Hamidieh 2018) with superconductivity data. The original dataset contains 21,263 records. The delivered CSV is a fraction of the requested dataset, making it materially noncompliant\u2014it is not the complete dataset required for scientific analysis.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.29": {
+   "exemplar": "supercond.clean.29|d3|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires delivery of work/data/data.csv as a dataset ready for scientific analysis. The increment provides only 101 data rows in the CSV file. The TASK specifies this is the UCI 464 Hamidieh 2018 superconductivity dataset, which the source reference indicates should contain 21,263 superconducting compounds. The delivered CSV is a fraction (approximately 0.48%) of the stated dataset scope and is materially noncompliant\u2014it is a different thing from what was requested.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.3": {
+   "exemplar": "supercond.clean.3|d1|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv', but the increment shows the CSV file is missing. Only the CARD.md documentation is present in the increment. The committed task explicitly states the dataset must be delivered as 'work/data/data.csv' alongside the data card. This is an objectively testable requirement: the file does not exist in the audited increment.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.30": {
+   "exemplar": "supercond.clean.30|d1|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv' as a dataset ready for scientific analysis. The increment provides only CARD.md (documentation) and data.csv content in text form, but does not include the actual data.csv file as a deliverable artifact in the audited scope. The CSV content is shown in the INCREMENT DATA section as text, but there is no evidence of a committed file at the required path work/data/data.csv.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.31": {
+   "exemplar": "supercond.clean.31|d1|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv', documented by 'work/data/CARD.md'. The increment provides CARD.md but only a CSV file header and data rows without verification of completeness. The task states the dataset should contain '11 features and the target' (12 columns total). The CSV header lists exactly 12 columns matching the CARD.md table, but the task does not specify how many data rows are required. However, the critical defect is that no evidence confirms the CSV file actually exists as a complete, usable artifact in the audited scope\u2014only its content is shown in the increment. The task requirement to 'deliver a dataset ready for use' implies the file must be present and accessible, not merely its contents transcribed.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.32": {
+   "exemplar": "supercond.clean.32|d1|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv', documented by 'work/data/CARD.md'. The increment provides CARD.md but the CSV file is not present as a separate file in the increment\u2014only its content is shown inline in the INCREMENT section. The task specifies that the dataset must be 'ready for use in a scientific analysis', which requires the actual CSV file to exist at the declared path, not merely its content displayed as text in the audit report.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.33": {
+   "exemplar": "supercond.clean.33|d4|b0",
+   "kind": "F:rowcount",
+   "text": "The task requires delivery of work/data/data.csv, but the increment shows only a partial CSV file. The task specifies a dataset containing 11 features plus a target (critical_temp), sourced from UCI 464 (Hamidieh 2018). The increment displays 104 data rows visible in the increment text, but a real superconductivity dataset from UCI 464 should contain 21,263 records. The deliverable appears to be a sample or truncated subset rather than the complete dataset required for scientific analysis. A dataset this small is materially noncompliant\u2014it is a fraction of what was requested.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.34": {
+   "exemplar": "supercond.clean.34|d4|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv', but the increment does not include this file. Only the markdown file 'work/data/CARD.md' is present in the increment. The CSV file is a required deliverable stated in the task, and its absence is a material defect\u2014the dataset itself, not just its documentation, was explicitly requested.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.4": {
+   "exemplar": "supercond.clean.4|d1|b0",
+   "kind": "F:absent",
+   "text": "The task requires two deliverables: work/data/data.csv and work/data/CARD.md. The increment provides CARD.md but the data.csv file is embedded in the INCREMENT output as plain text, not as an actual file at the specified path work/data/data.csv. The task explicitly states 'Deliver a dataset ready for use in a scientific analysis: work/data/data.csv'. A CSV file must exist at the declared location with proper file structure; text embedded in an audit output does not satisfy the requirement for a usable data file.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.5": {
+   "exemplar": "supercond.clean.5|d2|b0",
+   "kind": "F:absent",
+   "text": "Task requires delivery of work/data/data.csv, but the increment supplies only the CSV content inline without confirming the file exists at the stated path. The deterministic check reports PASS on parseable and declared contracts, but this audit cannot verify the file was actually created at work/data/data.csv in the working directory. The task explicitly names this path as a deliverable.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.6": {
+   "exemplar": "supercond.clean.6|d1|b0",
+   "kind": "F:absent",
+   "text": "The task requires delivery of 'work/data/data.csv', but the increment does not show this file existing in the audited scope. Only the CARD.md documentation and CSV content are present in the increment data; the actual CSV file at the required path is not confirmed to exist. The task explicitly states the deliverable must be 'work/data/data.csv, documented by the data card work/data/CARD.md'\u2014both the file and its location are objectively testable requirements.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.7": {
+   "exemplar": "supercond.clean.7|d4|b0",
+   "kind": "F:absent",
+   "text": "The TASK.md specifies delivery of 'work/data/data.csv', but the increment provides only the CSV content inline without a separate file artifact. The task requires a file at a specific path; the increment does not demonstrate that file exists at work/data/data.csv. The increment shows raw CSV data but not the file system artifact itself.",
+   "refuted_by": "both files were supplied to the auditor as named files of the increment in every reading",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  },
+  "supercond.clean.8": {
+   "exemplar": "supercond.clean.8|d4|b0",
+   "kind": "F:rowcount",
+   "text": "The committed task requires delivery of 'work/data/data.csv' as a dataset ready for scientific analysis. The increment provides a CSV file, but the task specifies a dataset sourced from 'UCI 464, Hamidieh 2018' with a CC BY 4.0 license. The increment contains only 121 rows of data (plus header), which is materially incomplete for a UCI superconductivity dataset known to contain 21,263 records. This represents a fraction of the requested dataset and is a material noncompliance under CA-TASK-001.",
+   "refuted_by": "the file has 120 data rows and a header",
+   "file_check": {
+    "data_rows": 120,
+    "all_rows_full": true,
+    "final_newline": true
+   }
+  }
+ }
+}
