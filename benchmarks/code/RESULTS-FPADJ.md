@@ -5,14 +5,16 @@ corrected the extractor's history before any extraction. Records under `records/
 texts, extractions and executions in the study-data archive. Spend, from the kernel's usage
 ledger: audit **$4.199** over 1,200 ledger events, including the six-reading first invocation
 (summing cached row costs gives $5.72, because retry passes reuse run IDs; the ledger is the
-figure); extraction **$0.077**, priced from token counts and the model's capability card.
+figure); extraction **$0.0765 in recorded replies**, priced from token counts and the model's
+capability card — the cost of failed attempts and of the first, halted call is not in the record,
+so this is not a verified complete extraction total.
 
 ## The readings
 
 The shipped cross-vendor route (`gpt-5.6-terra`) re-read ceiling 1's 150 correct-stratum
 instances through ceiling 1's own code path, K = 8, with every candidate checked byte-identical
-to ceiling 1's before any call. 49 readings lost to provider cooldowns on the first invocation
-were refused by the completeness guard and filled by a rerun: **1,200 of 1,200** present.
+to ceiling 1's before any call. After a six-reading first invocation, 49 readings lost to provider
+cooldowns in the full run were refused by the completeness guard and filled by a rerun: **1,200 of 1,200** present.
 
 **20 of 150** instances were flagged in at least one reading — union false positives **13.3%**,
 problem-cluster [7.9, 19.2] — against ceiling 1's 24/150 = 16.0% [10.1, 22.3] for the same route
@@ -66,21 +68,27 @@ alarm. None of the three is called a true positive or a false alarm.
   for which the extractor returned no input). Record `records/fpadj/extraction_audit.json`. The
   first review read all 70 and found two further limitations: the empty-list omission recurs
   outside the sample, and one extraction encoded tab and newline as two-character escape strings
-  rather than the characters the finding names. Neither changes a class: the implementations
-  behave identically on those inputs and other findings supply the actual whitespace inputs.
+  rather than the characters the finding names. The registered audit leaves classifications
+  unchanged by design, but the two limitations differ in consequence. The escaped-whitespace
+  extraction would not change a class: other findings supply the actual whitespace inputs and the
+  instance is already A. The empty-list omission would: for `b2:Mbpp/743`, currently N, candidate
+  and reference both return `[]` on `([], n)` for every `n` tried, so supplying the omitted input
+  would move it **N → A**. D is unchanged either way. *An earlier version said neither limitation
+  changes a class; the second review corrected it.*
 * **Leak check,** as implemented: no line of the reference at least 20 characters long and absent
   from the specification and candidate appears in any prompt. That is narrower than the
   registration's "no line" wording; it passed on all 70 prompts.
 * **Spend guards — not as registered.** The audit halt of $12 was checked per invocation, not
   cumulatively (total spend stayed at $4.20). The extraction guard priced replies from token
-  counts rather than reading the usage ledger, and let an empty reply with no cost pass; it did
-  halt on the first priced-reply attempt when no cost could be computed, but that halt is not
-  independently documented in the archive. Registered per-call fail-closed accounting was not
+  counts rather than reading the usage ledger, and let an empty reply with no cost pass. By the
+  author's account it halted on its first call, when the reply carried no cost field, before
+  pricing from token counts was added; the archive does not document that halt. Registered per-call fail-closed accounting was not
   fully implemented.
 * **Comparison rule:** correct on every output observed here, but not universal —
   `same("nan", "nan")` and `same("1.0", "'1'")` return true. Neither case occurs in this data.
 * **Amendment 1's timing.** It says six readings, none flagged, had landed "when written"; at its
-  commit time (17:39 +08:00) the ledger shows 57 readings. Both precede any extraction, which is
+  commit time (17:39 +08:00) the ledger shows 57 readings, of which two instances
+  (`b1:HumanEval/146`, `b1:Mbpp/16`) had been flagged. Both states precede any extraction, which is
   what the amendment governs.
 
 ## A post-hoc sensitivity, not the registered outcome
