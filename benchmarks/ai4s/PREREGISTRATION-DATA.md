@@ -147,7 +147,7 @@ rather than edited in place:
 * **Amendment 1** was committed together with the rebuilt manifest (`64fd36d`), so it did not
   precede the rebuild it governs. It did precede every model call after the pilot.
 * **Amendment 3** says `self` was on draw 2; it was on draw 3. It says no outcome had been computed;
-  that is what the agent did, but no record can establish it.
+  the agent states that, and no record can verify it.
 * **The analysis script** (`abd2c9b`, 23:45:32) was committed after 278 valid `self` readings
   existed, not before any valid reading existed, as Amendment 3 and the first report said. The agent
   states it had not analysed them; the records cannot verify that.

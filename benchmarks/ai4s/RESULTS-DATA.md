@@ -133,18 +133,26 @@ identify the sound-pressure column as the target, which is false: the card state
 scaled_sound_pressure_dB". None of the four asserts anything about the data.
 
 **`self`: 67 items (superconductivity 34, concrete 26, power plant 7), 304 texts.** The claim made
-here is item-level only. **For 62 of the 67 items, at least one BLOCKER text states something about
-the delivered files that the item refutes** (post hoc; `clean_flag_exemplars.py` names one such text
-per item, and checks the refuting fact against the item's file). The exemplars are of five kinds:
-that `work/data/data.csv` is absent, only inline, or not a file (both files were supplied as named
-increment files in every reading), 29 items; a data row count other than 120 (e.g. 100, 101, 129,
-130, 150), 21; a missing column, missing target values or an unclosed header quote, 9; a field count
-of 8, 2; a truncated final row, 1. The other 5 items carry documentation or requirement
-judgements (empty range cells, missing descriptions or provenance, a sample rather than the full
-table), and one of them (`concrete.clean.18`) also calls genuine early-age strengths of about 6.5 MPa
-implausible. We give no text-level totals: an earlier text-level labelling was found by review to
-misapply its own rubric and was withdrawn. Among the texts, one observation about the data is true:
-`concrete.clean.29` notes the Blast Furnace Slag value of 0.02, which is in the source.
+here is item-level only. **For 56 of the 67 items, at least one BLOCKER text states something about
+the delivered files that the item refutes, and does not withdraw it** (post hoc;
+`clean_flag_exemplars.py` names one such text per item and checks it against the item: the claimed
+row count against the file's 120, a claimed field count against the parsed width, a claimed missing
+column or target against the file, a claimed truncation against its last row and final newline, and,
+for a claim that the CSV was not delivered, that the reading's program hash equals the file's). By
+kind of exemplar: a data row count other than 120 (e.g. 100, 101, 129, 130, 150), 28 items; a denial
+that the CSV was included under its named path, 18; a missing column, missing target values or an
+unclosed header quote, 7; a field count of 8, 2; a truncated final row, 1.
+
+Of the other 11 items, 5 carry only documentation or requirement judgements (empty range cells,
+missing descriptions or provenance, a sample rather than the full table; one of them,
+`concrete.clean.18`, also calls genuine early-age strengths of about 6.5 MPa implausible). In 4
+(`supercond.clean.2`, `.7`, `.15`, `.21`) the closest texts doubt that the file exists on disk rather
+than deny its contents; the harness passes files in memory and never writes them to disk, so that
+doubt is not refuted, though it is not a finding about the data either. In 2 (`concrete.clean.8`,
+`.24`) the allegation of a missing column is withdrawn within the same text. We give no text-level
+totals: an earlier text-level labelling was found in review to misapply its own rubric and was
+withdrawn. One observation about the data among the texts is true: `concrete.clean.29` notes the
+Blast Furnace Slag value of 0.02, which is in the source.
 
 ## Construction cues found in review
 
@@ -172,8 +180,8 @@ label or hash reaches the prompt.
    Each catches items the other does not, which is the design premise of the product's science
    profile (the model reads, code verifies); the union is not dominated by either part.
 3. **The same-vendor route did not work as a data auditor in this configuration.** It flags 47.9% of
-   clean items, and for 62 of those 67 items at least one of its findings states something about the
-   files that the item refutes. This is
+   clean items, and for 56 of those 67 items at least one of its findings states, without withdrawing
+   it, something about the files that the item refutes. This is
    one model through one route (the CLI, with its own added context and default sampling), not a
    statement about the vendor.
 4. **Both cross-row fault types were missed by the shipped auditor.** Duplicated rows and a shuffled
@@ -210,3 +218,6 @@ sampling; `self` differs from Act 2's same-vendor family in route and sampling.
   sensitivity, the construction-cue disclosure and the corrections above. Review round 2 (not
   quotable) found that a text-level labelling of the clean-item flags misapplied its own rubric; it
   was withdrawn and replaced by the item-level exemplars, and the chronology wording was narrowed.
+  Review round 3 (not quotable) found that some exemplars only doubted on-disk delivery or withdrew
+  their allegation; those were replaced by directly refutable texts where they exist, the other six
+  items were removed from the count (62 → 56), and the record now checks each kind against the file.

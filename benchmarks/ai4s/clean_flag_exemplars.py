@@ -13,6 +13,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -22,13 +23,17 @@ RUNS, ITEMS = AI4S / "runs/data_audit", AI4S / "runs/data_items"
 OUT = REPO / "benchmarks/code/records/ai4s/data_clean_flag_exemplars.json"
 
 REFUTES = {
-    "F:absent": "both files were supplied to the auditor as named files of the increment in every reading",
+    "F:absent": "the CSV's contents were supplied under their named path in the increment (the reading's program hash equals the file's)",
     "F:rowcount": "the file has 120 data rows and a header",
     "F:column": "every row has every column, the target included, and the quoted header parses",
     "F:fields": "every row parses to the header's field count",
     "F:truncated": "the file has 120 complete rows and ends with a newline",
 }
-#: item -> (exemplar key, kind). Each was read in full.
+#: item -> (exemplar key, kind). Each was read in full. Review round 3 found that some "absent"
+#: texts only doubted on-disk delivery (which the in-memory harness does not establish) and that two
+#: texts withdrew their allegation; those exemplars were replaced by a directly refutable text on the
+#: same item where one exists, and otherwise the item was removed from this record:
+#: supercond.clean.2, .7, .15, .21 (no refutable text), concrete.clean.8, .24 (self-retracting).
 EXEMPLARS = {
     "ccpp.clean.15": ("ccpp.clean.15|d4|b0", "F:rowcount"),
     "ccpp.clean.16": ("ccpp.clean.16|d1|b0", "F:rowcount"),
@@ -45,7 +50,6 @@ EXEMPLARS = {
     "concrete.clean.21": ("concrete.clean.21|d2|b1", "F:column"),
     "concrete.clean.22": ("concrete.clean.22|d3|b0", "F:rowcount"),
     "concrete.clean.23": ("concrete.clean.23|d3|b0", "F:column"),
-    "concrete.clean.24": ("concrete.clean.24|d1|b0", "F:column"),
     "concrete.clean.25": ("concrete.clean.25|d2|b0", "F:column"),
     "concrete.clean.26": ("concrete.clean.26|d4|b0", "F:column"),
     "concrete.clean.27": ("concrete.clean.27|d2|b0", "F:column"),
@@ -56,41 +60,36 @@ EXEMPLARS = {
     "concrete.clean.34": ("concrete.clean.34|d2|b0", "F:rowcount"),
     "concrete.clean.4": ("concrete.clean.4|d1|b0", "F:fields"),
     "concrete.clean.6": ("concrete.clean.6|d4|b0", "F:rowcount"),
-    "concrete.clean.8": ("concrete.clean.8|d3|b0", "F:column"),
     "concrete.clean.9": ("concrete.clean.9|d2|b0", "F:rowcount"),
     "supercond.clean.0": ("supercond.clean.0|d2|b0", "F:absent"),
     "supercond.clean.1": ("supercond.clean.1|d1|b0", "F:rowcount"),
     "supercond.clean.10": ("supercond.clean.10|d2|b0", "F:absent"),
     "supercond.clean.11": ("supercond.clean.11|d3|b0", "F:absent"),
     "supercond.clean.12": ("supercond.clean.12|d3|b0", "F:absent"),
-    "supercond.clean.13": ("supercond.clean.13|d3|b0", "F:absent"),
+    "supercond.clean.13": ("supercond.clean.13|d1|b0", "F:rowcount"),
     "supercond.clean.14": ("supercond.clean.14|d2|b0", "F:absent"),
-    "supercond.clean.15": ("supercond.clean.15|d1|b0", "F:absent"),
     "supercond.clean.16": ("supercond.clean.16|d3|b0", "F:absent"),
     "supercond.clean.17": ("supercond.clean.17|d2|b0", "F:absent"),
     "supercond.clean.18": ("supercond.clean.18|d3|b0", "F:absent"),
     "supercond.clean.19": ("supercond.clean.19|d3|b0", "F:absent"),
-    "supercond.clean.2": ("supercond.clean.2|d2|b0", "F:absent"),
     "supercond.clean.20": ("supercond.clean.20|d1|b0", "F:absent"),
-    "supercond.clean.21": ("supercond.clean.21|d1|b0", "F:absent"),
     "supercond.clean.22": ("supercond.clean.22|d4|b0", "F:absent"),
     "supercond.clean.23": ("supercond.clean.23|d1|b0", "F:absent"),
-    "supercond.clean.24": ("supercond.clean.24|d1|b0", "F:absent"),
+    "supercond.clean.24": ("supercond.clean.24|d3|b0", "F:rowcount"),
     "supercond.clean.25": ("supercond.clean.25|d3|b0", "F:absent"),
-    "supercond.clean.26": ("supercond.clean.26|d4|b0", "F:absent"),
+    "supercond.clean.26": ("supercond.clean.26|d1|b0", "F:rowcount"),
     "supercond.clean.27": ("supercond.clean.27|d2|b0", "F:absent"),
     "supercond.clean.28": ("supercond.clean.28|d2|b0", "F:rowcount"),
     "supercond.clean.29": ("supercond.clean.29|d3|b0", "F:rowcount"),
     "supercond.clean.3": ("supercond.clean.3|d1|b0", "F:absent"),
     "supercond.clean.30": ("supercond.clean.30|d1|b0", "F:absent"),
-    "supercond.clean.31": ("supercond.clean.31|d1|b0", "F:absent"),
+    "supercond.clean.31": ("supercond.clean.31|d4|b0", "F:rowcount"),
     "supercond.clean.32": ("supercond.clean.32|d1|b0", "F:absent"),
     "supercond.clean.33": ("supercond.clean.33|d4|b0", "F:rowcount"),
     "supercond.clean.34": ("supercond.clean.34|d4|b0", "F:absent"),
-    "supercond.clean.4": ("supercond.clean.4|d1|b0", "F:absent"),
-    "supercond.clean.5": ("supercond.clean.5|d2|b0", "F:absent"),
-    "supercond.clean.6": ("supercond.clean.6|d1|b0", "F:absent"),
-    "supercond.clean.7": ("supercond.clean.7|d4|b0", "F:absent"),
+    "supercond.clean.4": ("supercond.clean.4|d4|b0", "F:rowcount"),
+    "supercond.clean.5": ("supercond.clean.5|d2|b1", "F:rowcount"),
+    "supercond.clean.6": ("supercond.clean.6|d3|b0", "F:rowcount"),
     "supercond.clean.8": ("supercond.clean.8|d4|b0", "F:rowcount"),
 }
 
@@ -105,8 +104,25 @@ def main() -> int:
         parsed = list(csv.reader(io.StringIO(raw)))
         width = len(parsed[0])
         check = {"data_rows": len(parsed) - 1, "all_rows_full": all(len(r) == width for r in parsed),
-                 "final_newline": raw.endswith("\n")}
-        assert check == {"data_rows": 120, "all_rows_full": True, "final_newline": True}, (item, check)
+                 "final_newline": raw.endswith("\n"), "fields": width}
+        assert check["data_rows"] == 120 and check["all_rows_full"] and check["final_newline"], (item, check)
+        flat = " ".join(text.split())
+        if kind == "F:rowcount":
+            claimed = [int(m.group(1)) for m in re.finditer(r"(?<![\d,.])(\d{1,3})\s+(?:\w+\s+)?(?:rows|records|observations|entries|samples)\b", flat)]
+            wrong = [c for c in claimed if c not in (120, 9, 11, 12)]
+            assert wrong, (item, claimed)
+            check["claimed_row_counts"] = wrong
+        elif kind == "F:fields":
+            assert re.search(r"\b(8|eight)\s+(columns|fields|values|comma)", flat) and width in (9,), (item, width)
+        elif kind == "F:column":
+            header = parsed[0]
+            assert all(r[-1] != "" for r in parsed[1:]) and len(header) == width, item
+        elif kind == "F:truncated":
+            assert raw.endswith("\n") and all(len(r) == width for r in parsed), item
+        elif kind == "F:absent":
+            import hashlib
+            row = next(r for r in rows if r["instance_id"] == item)
+            assert row["program_sha256"] == hashlib.sha256(raw.encode("utf-8")).hexdigest(), item
         out[item] = {"exemplar": key, "kind": kind, "text": " ".join(text.split()),
                      "refuted_by": REFUTES[kind], "file_check": check}
     OUT.write_text(json.dumps({"n_items": len(out), "items": out}, indent=1) + "\n", encoding="utf-8")
