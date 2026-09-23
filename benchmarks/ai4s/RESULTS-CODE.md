@@ -18,7 +18,8 @@ Generation (1,014 step samples) cost $10.04 more, summed from its records. Both 
 SciCode (Apache-2.0): the frozen generator of Acts 2–3 (`claude-haiku-4-5`) wrote every step three
 times in the benchmark's protocol, each sample building on its own earlier steps. An instance (sample,
 step) is **correct** if it passes the scientists' tests for the step and **defective** if it fails or
-times out; a step enters only if some sample passes it. 81 defective instances (30 problems) and 150
+times out; a step enters only if some sample passes it, so these are defects on steps this
+generator sometimes solves (184 of 336 evaluated steps had no passing sample and were excluded). 81 defective instances (30 problems) and 150
 correct ones (53 problems, drawn at seed 20260925 from 374) were audited. SciCode has no
 visible/hidden split, and the auditor saw no tests. Each instance was read 8 times by the shipped
 cross-vendor auditor (`cross`, `gpt-5.6-terra`) and 8 times by the generator's own model (`self`,
@@ -32,7 +33,9 @@ in their chain (post hoc description).
 **Two arms differ only in the task text.** In A (registered) the task opened with the whole
 problem's main description, then the step, background, header and dependencies. In B the task names
 the step's function as the deliverable and gives the main description last, "for context only"; the
-program bytes are identical (asserted for all 231 instances before any B call).
+program bytes are identical: every reading in both arms records the SHA-256 of the program it was
+given, and for each of the 231 instances the hashes agree across arms. (A check was run before B's
+calls; its output was not retained, so the hash agreement is the evidence.)
 
 ## Table 1 — union flag rates (registered outcomes)
 
@@ -83,46 +86,66 @@ ran) and by `gpt-5.6-luna`, which audits nothing here.
 | B (secondary) | 19 instances, 8 problems | 13 | 3 | 68.4% [28.6, 93.5] | 0.59 | killed (lower bound < 50%) |
 
 Both point estimates are below EvalPlus's 77.2%. The residuals are too small, and in A too clustered,
-for the rule's interval to exceed 50%. What the undetermined items share, on reading: an unstated
-convention the tests fix (the logarithm's base in an entropy, which qubit of a pair a channel acts on,
-the direction of a minimum-image vector, the origin of a periodic box, the axis order of a k-space
-grid, the unit a potential energy is returned in).
+for the rule's interval to exceed 50%. What the undetermined items involve, on reading: some an unstated convention the tests
+fix (the logarithm's base in an entropy, the direction of a minimum-image vector, the origin of a
+periodic box, the axis order and spacing of a k-space grid, which qubit of a pair a channel acts on);
+others a conflict between the step's text and its tests (a header that promises a 2-D output where
+the test expects a vector; a function documented for a vector and tested on higher-rank arrays), or
+the units of supplied quantities where the output unit is stated.
 
 ## What the auditor objected to on correct code (post hoc)
 
-In arm A, 69 of the 103 flagged correct instances carry at least one BLOCKER, by a pattern count,
-saying the increment does not implement the whole multi-step problem (e.g. "implements only `f_V`
-… no RPA calculation") or holding the step to requirements of the whole problem; for 16 it is the
-only kind. In arm B the same pattern appears on 6 of 54, and never alone. Correct instances with a
-clean chain and with a failing earlier step are flagged at similar rates (A 70/101 and 33/49; B
-37/101 and 17/49), so defects in earlier steps do not explain the flags on correct code.
+A pattern count (post hoc; `posthoc_code.py`) matches, in arm A, at least one BLOCKER on 69 of the
+103 flagged correct instances (the only kind on 16), and in arm B on 6 of 54 (never alone). The
+pattern was written to catch findings that the increment does not implement the whole multi-step
+problem (e.g. "implements only `f_V` … no RPA calculation", which is accurate for A), but it also
+matches ordinary step-level objections: on reading, none of B's 6 matches makes that demand (they
+concern a changed recurrence, the sign of an acceleration, a detection threshold, mass factors, and
+a docstring promising a term the code omits), and A's matches include step-level complaints too. The
+counts are regex matches, not validated counts of whole-problem objections. Correct instances with no
+recorded earlier-step failure are flagged at rates similar to those with one (A 70/101 and 33/49; B
+37/101 and 17/49), so flags on correct code remain common without earlier-step failures; this does
+not show that earlier-step defects explain none of them.
 
-A seeded sample (seed 20260929) of 20 flagged correct instances with clean chains in arm B, one
-BLOCKER each, read: 6 cite a deviation from an explicit requirement in the step's text (a mass term
+A seeded sample (seed 20260929) of 20 flagged correct instances with clean chains in arm B, the first
+BLOCKER of the first flagged reading of each, read: 6 cite a deviation from an explicit requirement in the step's text (a mass term
 omitted from the stated equation of motion; the speed of light taken as 299 792 458 m/s where the
 text fixes 3 × 10⁸; a Lennard-Jones potential that is truncated but not shifted as specified; a 2 × 2
 array where the text asks for a tuple), 7 a docstring that contradicts its own code (a matrix
 documented as floats and built complex), 4 an edge case or dtype (a zero initial residual giving
 0/0; a one-point grid; integer output where floats are documented), and 3 an algorithmic claim.
-None of these was checked against the tests' inputs, which pass; as for C16, a flag on test-passing
-code is not shown to be wrong or right here.
+Four of the seven documentation findings concern
+earlier steps' functions, which B's task excluded from the deliverable. We did not check these
+findings against the tests. Independent review checked four of the requirement findings and found
+different situations. In `39.1.s3` and `15.1.s3` the step's prose and its function header disagree,
+and the tests follow the header. In `60.2.s1` the prose says "truncated and shifted" while its
+displayed formula is unshifted, and the unshifted code passes. In `21.2.s1` the test targets are 0,
+0 and 4.4 × 10⁻²⁷, so under the default tolerance a constant zero would pass. As for C16, a flag on
+test-passing code is not shown to be wrong or right here.
 
 ## Reading
 
-1. **On scientific code the auditor's flag rate is set largely by what the task says the
-   deliverable is.** Changing only the task text, with the same programs, halved the `cross`
-   auditor's flags on correct code (68.7% → 36.0%) and cost 15 points of recall (87.7% → 72.8%). A
-   recall figure for an auditor on multi-step scientific code is therefore a property of the task
-   framing as much as of the auditor, which extends Act 3's finding (recall moves with the rulebook
-   and the decision rule) to a variable no one had registered as one.
-2. **Even with the step as the deliverable, discrimination is modest.** 72.8% of defective and 36.0%
-   of correct instances are flagged at K = 8; at K = 1, 61.7% and 19.8%. On correct code, most of
-   what it raises (on reading a sample) is a real divergence between the code and the step's text or
-   its own documentation that the scientists' tests do not exercise; whether these are defects is a
-   question the tests cannot answer.
-3. **Misses are few and mostly conventions the prose leaves open.** At K = 8 across both families
-   the residual is 7 (A) or 19 (B) defective instances; most rated consensus-undetermined, but the
-   registered bar for "more than EvalPlus" is not met.
+1. **In these SciCode runs, the auditor's flag rate moved substantially with the task framing.**
+   Changing only the task text, with the same programs, reduced the `cross` auditor's flags on
+   correct code from 68.7% to 36.0% (a 47.6% relative reduction) and its recall from 87.7% to 72.8%.
+   The change is the whole reframing (the step named as deliverable, the problem description moved
+   last and marked as context, earlier functions exempted), not any one of its parts, and the arms
+   were run in sequence, not in randomised order. It shows that a recall figure for an auditor on
+   multi-step code depends on a design choice that A's registration did not vary; it does not measure
+   how much framing matters in general.
+2. **With the step as the deliverable, discrimination is modest.** 72.8% of defective and 36.0% of
+   correct instances are flagged at K = 8; at K = 1, 61.7% and 19.8%. What the flags on correct code
+   raise, on reading a sample, ranges from divergences between the code and the step's text or its
+   own documentation to contradictions within the benchmark's own instructions and tests too weak to
+   distinguish outputs; we did not establish which flags point at defects.
+3. **The residual is small, and most of it was rated undetermined.** At K = 8 across both families,
+   7 (A) or 19 (B) defective instances were never flagged, and most received consensus-undetermined
+   labels, but the registered bar for "more than EvalPlus" is not met in either arm. The rubric asks
+   whether the prose settles the expected value, not why the program failed or why the auditor
+   missed it, so these labels do not explain the misses. The sheets show only the step's function
+   (not helpers the test calls, such as `u_triple` in the orientation-matrix items) and truncate long
+   expected arrays. Six item bodies appear on both sheets: L1 gave the same label to all six, L2
+   changed three.
 
 ## What this does not license
 
@@ -137,6 +160,8 @@ and A as an error (both are registered designs, and the difference between them 
   about 400 tokens of fixed context, default sampling.
 * The OpenAI account ran out of credit during the programme; the `cross` runs of this study started
   after it was restored and lost no reading.
+* One arm-A `self` row has `ok = true` with verdict ESCALATE and no flag; `ok` records a completed
+  call, not necessarily a binary model verdict.
 * The registered analysis's cluster sign-flip test falls back to sampling above 22 non-zero clusters,
   with the ceiling module's fixed seed (20260915), not this study's.
 * A4S-1's framing defect was found only after its registered outcomes were computed; A4S-1b was
