@@ -132,27 +132,25 @@ card is the sparsest of the four. Two of them (`airfoil.clean.11`, `.33`) also s
 identify the sound-pressure column as the target, which is false: the card states "Target column:
 scaled_sound_pressure_dB". None of the four asserts anything about the data.
 
-**`self`: 67 items (superconductivity 34, concrete 26, power plant 7), 304 texts.** The claim made
-here is item-level only. **For 56 of the 67 items, at least one BLOCKER text states something about
-the delivered files that the item refutes, and does not withdraw it** (post hoc;
-`clean_flag_exemplars.py` names one such text per item and checks it against the item: the claimed
-row count against the file's 120, a claimed field count against the parsed width, a claimed missing
-column or target against the file, a claimed truncation against its last row and final newline, and,
-for a claim that the CSV was not delivered, that the reading's program hash equals the file's). By
-kind of exemplar: a data row count other than 120 (e.g. 100, 101, 129, 130, 150), 28 items; a denial
-that the CSV was included under its named path, 18; a missing column, missing target values or an
-unclosed header quote, 7; a field count of 8, 2; a truncated final row, 1.
+**`self`: 67 items (superconductivity 34, concrete 26, power plant 7), 304 texts.** Claims here are
+item-level only, and each flagged clean item is placed in exactly one group (post hoc;
+`clean_flag_exemplars.py`, which names the exemplars, checks each against the item's CSV, and runs a
+negative control showing each check fails on a file that matches the claim):
 
-Of the other 11 items, 5 carry only documentation or requirement judgements (empty range cells,
-missing descriptions or provenance, a sample rather than the full table; one of them,
-`concrete.clean.18`, also calls genuine early-age strengths of about 6.5 MPa implausible). In 4
-(`supercond.clean.2`, `.7`, `.15`, `.21`) the closest texts doubt that the file exists on disk rather
-than deny its contents; the harness passes files in memory and never writes them to disk, so that
-doubt is not refuted, though it is not a finding about the data either. In 2 (`concrete.clean.8`,
-`.24`) the allegation of a missing column is withdrawn within the same text. We give no text-level
-totals: an earlier text-level labelling was found in review to misapply its own rubric and was
-withdrawn. One observation about the data among the texts is true: `concrete.clean.29` notes the
-Blast Furnace Slag value of 0.02, which is in the source.
+| group | items | what the findings claim |
+|---|---|---|
+| refuted | **48** | at least one unwithdrawn statement that the CSV contradicts: a data row count other than 120 (e.g. 100, 101, 122, 150), 38 items; a named column, the target values or the header's closing quote missing, 7; a field count of 8, 2; a truncated final row, 1 |
+| delivery dispute | 12 | the CSV was not delivered as a file (only shown as contents, not on disk, path not established); no refutable statement found |
+| withdrawn | 2 | the one refutable allegation is withdrawn in the same text (`concrete.clean.8`); in `concrete.clean.24` only in part, and its surviving claim that the columns do not match the card is not counted |
+| documentation | 5 | only documentation or requirement judgements (empty range cells, missing descriptions or provenance, a sample rather than the full table); `concrete.clean.18` also calls genuine early-age strengths of about 6.5 MPa implausible |
+
+The 48 is a lower bound: items in the other groups may carry statements not examined here. The
+delivery disputes are not counted as false: the harness passes the files' named contents in memory
+and writes nothing to disk, so a finding that the file was not "physically" delivered disputes the
+protocol rather than misreading the data. We give no text-level totals: an earlier text-level
+labelling was found in review to misapply its own rubric and was withdrawn. One observation about
+the data among the texts is true: `concrete.clean.29` notes the Blast Furnace Slag value of 0.02,
+which is in the source.
 
 ## Construction cues found in review
 
@@ -180,8 +178,9 @@ label or hash reaches the prompt.
    Each catches items the other does not, which is the design premise of the product's science
    profile (the model reads, code verifies); the union is not dominated by either part.
 3. **The same-vendor route did not work as a data auditor in this configuration.** It flags 47.9% of
-   clean items, and for 56 of those 67 items at least one of its findings states, without withdrawing
-   it, something about the files that the item refutes. This is
+   clean items; for at least 48 of those 67 items one of its findings states, without withdrawing it,
+   a row count, field count, missing column or truncation that the file contradicts, and 12 more
+   dispute that the file was delivered at all. This is
    one model through one route (the CLI, with its own added context and default sampling), not a
    statement about the vendor.
 4. **Both cross-row fault types were missed by the shipped auditor.** Duplicated rows and a shuffled
@@ -221,3 +220,6 @@ sampling; `self` differs from Act 2's same-vendor family in route and sampling.
   Review round 3 (not quotable) found that some exemplars only doubted on-disk delivery or withdrew
   their allegation; those were replaced by directly refutable texts where they exist, the other six
   items were removed from the count (62 → 56), and the record now checks each kind against the file.
+  Review round 4 (not quotable) found that delivery disputes were still counted as refuted facts and
+  that the column check did not verify the column named; delivery disputes now form their own group
+  (56 → 48 refuted), the column check verifies the named column, and a negative control was added.
