@@ -96,3 +96,25 @@ calling a flag on a correct instance a mistake (C16 applies); calling a rater's 
 ## Review
 
 The report goes to cross-vendor review; it enters the paper only when quotable.
+
+## Amendment 1 — the Anthropic route runs through the Claude Code CLI (2026-09-23, before any successful call)
+
+The first generation attempts returned HTTP 400, "credit balance is too low", from the Anthropic
+API; no reply was produced and nothing was spent. The API account cannot be topped up by the
+agent. The same model, `claude-haiku-4-5-20251001`, is reachable through the Claude Code CLI on
+the owner's subscription, so the Anthropic transport changes and nothing else does:
+
+* A shim (`cli_transport.py`) replaces `crossaudit.providers.anthropic.complete` for this study
+  only, sending the same system prompt and user prompt to `claude -p --model
+  claude-haiku-4-5-20251001 --system-prompt <system> --tools "" --strict-mcp-config` with
+  `MAX_THINKING_TOKENS=0` and auto-memory disabled, from an empty working directory. Generation
+  and the `self` audit family therefore keep the product's own prompt-building code.
+* **What differs from the API route, measured before use:** the CLI adds about 400 tokens of
+  context (the working directory, platform, the model's own identity, the date and the owner's
+  email address; no project memory, no CLAUDE.md, no MCP tools, verified by having the model
+  repeat its context verbatim), and its sampling parameters are the CLI's defaults. Thinking is
+  off (0 thinking tokens measured).
+* Cost is read from the CLI's reported `total_cost_usd` (list-price equivalent) per call; the
+  generation halt of $15 and the audit halt of $90 apply to those figures and fail closed if a
+  successful call reports no cost.
+* The `cross` family (OpenAI) is unaffected.
