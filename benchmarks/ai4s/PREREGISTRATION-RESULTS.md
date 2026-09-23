@@ -75,3 +75,43 @@ running it. No directional hypothesis about the LLM is registered.
 ## Budget and review
 
 Model halt **$30**, cumulative, from the ledger, failing closed. Cross-vendor review before the paper.
+
+## Amendment 1 — construction details the registration left open (2026-09-24)
+
+Written before any item is built and before any model call of this study, after a mock item (two
+made-up numbers, no benchmark content) was run through the shipped `science` profile to find a
+layout its checks accept. Known when written: A4S-1's strata (81 defective, 150 correct); nothing
+from any A4S-1 audit reading is used or has been analysed.
+
+* **The unit token is `dimensionless`.** The registration says every quantity carries "the unit
+  token registered in the gate" and the gate names none. SciCode states no output units, so every
+  quantity, clean or faulty, carries `dimensionless`.
+* **Every file sits under `work/`** (`work/solution.py`, `work/inputs.py`, `work/outputs/run.log`,
+  `work/results/results.json`, `work/results/metadata.yml`, `work/report.md`), inside the audited
+  scope; A4S-3 Amendment 2 is the reason.
+* **Formats.** Values are written with 8 significant digits (`format(x, ".8g")`), a relative
+  rounding well inside `np.allclose` defaults. `run.log` holds one element per line as
+  `<value> dimensionless`. Each element of the output is one quantity named `output[i]`, whose
+  `source` is `work/outputs/run.log@<rev>#L<i+1>` and which carries a `text` field
+  `"<value> dimensionless"`. A JSON line never holds a number followed by its unit, so without
+  that field no report row could quote `results.json` in a form the shipped check can verify.
+  `metadata.yml` declares `code_version: <rev>` and the three inputs `path@<rev>`. The report is
+  one paragraph stating the values, and its `crossaudit-numbers` rows each quote a `text` field.
+* **Population.** A4S-1's correct stratum as sampled (the 150 instances in `strata.json`). For
+  each, one test case is drawn at seed 20260927. The instance qualifies if the call can be read
+  from that case's assertion (the argument compared with `target`) and the output on the case's
+  inputs is a finite real scalar or a finite real array of at most 10 elements with at least one
+  nonzero element. Booleans and complex values do not qualify. An all-zero output would make R1,
+  R2 and R4 no-ops. Instances that do not qualify are dropped, and their count is reported.
+* **Faults.** The seven fault types are shuffled once at seed 20260927 and assigned in that
+  cycle over the qualifying instances in sorted order. R1, R2 and R4 apply to every element
+  (×1000, sign, ×1.05). R3 takes the output of another test case of the same step that has the
+  same shape and is not `np.allclose` to the true one, drawn by seed. R5 transposes the first
+  pair of adjacent distinct digits in the first element that has one, in the report's prose and
+  its row `v` only; the row's quote is copied from `results.json`, as a transcription slip would
+  leave it. F1 and F4 apply R1's and R4's change to `run.log`, `results.json` and the report
+  alike. If the assigned fault cannot be constructed (R3 with no eligible other case; R5 with no
+  eligible digit pair), the instance takes the next fault in the cycle, and the substitutions
+  are reported.
+* **Re-execution** compares the report's stated values (the rows' `v`) with the program's output
+  on `work/inputs.py`, under `np.allclose` defaults.
