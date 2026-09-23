@@ -1,0 +1,191 @@
+{
+ "clean_flag_labels": {
+  "27.1.s2.clean": "correct: provenance (inputs are call literals; inputs.py empty)",
+  "34.1.s2.clean": "correct: provenance (inputs are call literals; inputs.py empty)",
+  "35.1.s1.clean": "correct: provenance, and unit (solution documents nm, report says dimensionless)",
+  "42.2.s1.clean": "correct: provenance (inputs are call literals; inputs.py empty)",
+  "42.2.s3.clean": "correct: provenance (inputs are call literals; inputs.py empty)",
+  "57.4.s1.clean": "correct: provenance (inputs are call literals; inputs.py empty)",
+  "57.4.s2.clean": "correct: provenance (inputs are call literals; inputs.py empty)",
+  "77.8.s3.clean": "correct: unit (solution documents zeptojoules, report says dimensionless)",
+  "25.1.s2.clean": "wrong: hand-computed value (0.018) disagrees with the executed output",
+  "32.1.s1.clean": "wrong: hand-computed value off by 10^12 from the executed output",
+  "61.2.s1.clean": "wrong: claims the output ignores p_s; the executed output is the report's",
+  "72.7.s1.clean": "wrong: claims a syntax error in a line whose trailing text is a comment"
+ },
+ "clean_flags_correct": 8,
+ "clean_flags_wrong": 4,
+ "empty_inputs_instances": [
+  "11.3.s2",
+  "27.1.s2",
+  "34.1.s2",
+  "35.1.s1",
+  "42.2.s1",
+  "42.2.s3",
+  "57.4.s1",
+  "57.4.s2",
+  "70.4.s2"
+ ],
+ "reexec_missed_faulty_instances": [
+  "11.10.s1",
+  "23.2.s3",
+  "66.3.s1",
+  "70.5.s1"
+ ],
+ "reexec_missed_true_values": {
+  "11.10.s1": [
+   "-3.2034265e-16"
+  ],
+  "23.2.s3": [
+   "2.220446e-16"
+  ],
+  "66.3.s1": [
+   "3.5966739e-09"
+  ],
+  "70.5.s1": [
+   "-1.6159828e-07"
+  ]
+ },
+ "sensitivity": {
+  "registered": {
+   "instances": 74,
+   "llm_k4": {
+    "recall": "72/74",
+    "clean_fp": "12/74",
+    "by_fault": {
+     "R1": "11/11",
+     "R2": "10/10",
+     "R3": "9/9",
+     "R4": "11/11",
+     "R5": "8/8",
+     "F1": "14/14",
+     "F4": "9/11"
+    }
+   },
+   "reexec": {
+    "recall": "70/74",
+    "clean_fp": "0/74",
+    "by_fault": {
+     "R1": "10/11",
+     "R2": "10/10",
+     "R3": "9/9",
+     "R4": "10/11",
+     "R5": "8/8",
+     "F1": "14/14",
+     "F4": "9/11"
+    }
+   }
+  },
+  "without_empty_inputs": {
+   "instances": 65,
+   "llm_k4": {
+    "recall": "63/65",
+    "clean_fp": "5/65",
+    "by_fault": {
+     "R1": "9/9",
+     "R2": "8/8",
+     "R3": "8/8",
+     "R4": "11/11",
+     "R5": "7/7",
+     "F1": "11/11",
+     "F4": "9/11"
+    }
+   },
+   "reexec": {
+    "recall": "61/65",
+    "clean_fp": "0/65",
+    "by_fault": {
+     "R1": "8/9",
+     "R2": "8/8",
+     "R3": "8/8",
+     "R4": "10/11",
+     "R5": "7/7",
+     "F1": "11/11",
+     "F4": "9/11"
+    }
+   }
+  },
+  "without_reexec_tolerance_cases": {
+   "instances": 70,
+   "llm_k4": {
+    "recall": "68/70",
+    "clean_fp": "12/70",
+    "by_fault": {
+     "R1": "10/10",
+     "R2": "10/10",
+     "R3": "9/9",
+     "R4": "10/10",
+     "R5": "8/8",
+     "F1": "14/14",
+     "F4": "7/9"
+    }
+   },
+   "reexec": {
+    "recall": "70/70",
+    "clean_fp": "0/70",
+    "by_fault": {
+     "R1": "10/10",
+     "R2": "10/10",
+     "R3": "9/9",
+     "R4": "10/10",
+     "R5": "8/8",
+     "F1": "14/14",
+     "F4": "9/9"
+    }
+   }
+  },
+  "without_both": {
+   "instances": 61,
+   "llm_k4": {
+    "recall": "59/61",
+    "clean_fp": "5/61",
+    "by_fault": {
+     "R1": "8/8",
+     "R2": "8/8",
+     "R3": "8/8",
+     "R4": "10/10",
+     "R5": "7/7",
+     "F1": "11/11",
+     "F4": "7/9"
+    }
+   },
+   "reexec": {
+    "recall": "61/61",
+    "clean_fp": "0/61",
+    "by_fault": {
+     "R1": "8/8",
+     "R2": "8/8",
+     "R3": "8/8",
+     "R4": "10/10",
+     "R5": "7/7",
+     "F1": "11/11",
+     "F4": "9/9"
+    }
+   }
+  }
+ },
+ "mcnemar_exact_full_precision": {
+  "llm_k4_vs_dcl": {
+   "only_first": 23,
+   "only_second": 0,
+   "p_exact": 2.384185791015625e-07
+  },
+  "llm_k4_vs_reexec": {
+   "only_first": 4,
+   "only_second": 2,
+   "p_exact": 0.6875
+  }
+ },
+ "within_instance_full_precision": {
+  "llm_k4": {
+   "faulty_only": 61,
+   "clean_only": 1,
+   "p_exact": 2.7321894746634712e-17
+  },
+  "reexec": {
+   "faulty_only": 70,
+   "clean_only": 0,
+   "p_exact": 1.6940658945086007e-21
+  }
+ }
+}
