@@ -93,3 +93,14 @@ alarm. The words "true positive" and "false alarm" are not used of any class.
   ceiling 1's per-reading price.
 * **Review.** The report goes to an independent cross-vendor review and enters the paper only
   if it ends quotable.
+
+## Amendment 1 — the extractor's history was misstated (2026-09-23, after the first audit readings, before any extraction)
+
+This registration said `gpt-5.6-luna` "holds no audit role anywhere in this programme". That is
+false: `rate3/third_rater.py` records that it served as `cheap-cross`, an audit route, in the
+explore study, and as a probe alternative in study 22. The same false sentence was written into
+the paper the same day and is corrected there. What is true, and what this study needs, is
+narrower: luna is **not the route whose flags are being adjudicated** (`gpt-5.6-terra`) and is
+not shown the reference, the hidden tests or any expected output. Its role here is extraction,
+not judgement, and the outcome is decided by execution. The choice of extractor is unchanged.
+Known when written: 6 of 1,200 readings had landed, none flagged; no extraction had run.
