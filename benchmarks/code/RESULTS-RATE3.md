@@ -66,6 +66,16 @@ first said "nothing here was registered in advance", and **that was an overcorre
 paragraph above is what the record supports. One draft of the analysis also ran at seed
 `20260922` rather than the registered `20260921`; every figure here is at the registered seed.
 
+**The two groups are not one population with duplicate rows.** The sheet's 121 entries cover
+**110 unique instances**, and 11 appear in both groups because **the groups use different
+definitions of "caught"**. The 68-entry group is ceiling 1's residual — 57 instances no family
+flagged, plus 11 that only the third family flagged. The 53-entry group is the stratum-P
+instances **some draw of any family** flagged. The 11 are missed under the first definition and
+caught under the second: they are where the two definitions disagree, not strays. A contrast
+between the two groups counts them on both sides. *Five conclusion-bearing review rounds
+described this as eleven instances sitting in both arms; the definitional cause was found by a
+review told nothing about our conclusions.*
+
 ## Table 1 — undetermined labels
 
 | reading | first group | caught group | difference | cluster 95% |
@@ -91,7 +101,12 @@ at +38.5, nor of the Wilson intervals. Nothing licenses quoting a point estimate
 rows as though its interval were tight, and the consistency reading above applies to them — but
 **not** to the six-category comparator row, whose raters were checked above and were stable.
 
-The six-category row is orientation only: two raters, a six-category hierarchy, and witness
+The six-category row is orientation only, and **its category is not this one**. Study 21's
+`ambiguous-oracle` asks whether one sentence of the specification entails the expected value and
+excludes the candidate's, and its own report says an oracle *stricter than the prose, silent on
+the input class, **or contradicted by the prose*** all land in it. A specification that
+determines an answer the oracle contradicts is `ambiguous-oracle` there and is **not**
+`undetermined` here. Beyond that: two raters, a six-category hierarchy, and witness
 expected *and* actual values, against one rater, three options, and failing inputs with no
 expected values — so this rating never checks whether the particular hidden expected value
 follows from the prose. The instruments differ in more than option count. The closeness of +22.4
@@ -149,14 +164,21 @@ context, and an earlier draft of this paragraph claimed they could.
   intervals either — they are intervals for single rates rather than for a difference, and they
   are **narrower** than the broken-sheet contrasts (22.3 and 25.8 points against 31.0 and 36.1),
   not wider as an earlier version said.
-* **L1 — the author — rated all 121 entries**, covering all 110 unique instances, so the
-  programme holds a re-test rather than an independent review for each. That does not prevent an
+* **`L1` — the author — rated all 121 entries.** What that prevents is `L1` validating `L1`;
+  it does **not** make a fresh rater's judgement of the same material non-independent. An
+  earlier version said the programme holds "a re-test rather than an independent review for
+  each", which overstates the limit in the direction that makes the work look weaker. That does not prevent an
   independent rater from re-rating; it is the reason P1 asks for one.
 * `cannot-tell` stays in the denominator as registered, estimating the share *labelled*
   `undetermined` and claiming nothing about abstentions. Excluding them answers a different,
   conditional question. Both are reported.
-* Seven of the 68 missed entries carry no concrete failing input: **five timeouts and two whose
-  inputs could not be recovered**.
+* **The sheet shows at most three failing inputs per entry, and 81 of the 121 entries have more
+  than three recorded.** Eleven entries carry no concrete failing input at all — seven in the
+  missed group (five timeouts, two whose inputs could not be recovered) and four in the caught
+  group. A label therefore certifies what the prose determines **on the inputs displayed**, not
+  across an instance's hidden failures, and expected values are withheld throughout. This is the
+  same truncation P3's classification made the same day in a different artefact, and no
+  conclusion-bearing round of this review found either.
 * **Two caught-arm entries, H003 and H117, render an escaped `\n` as an actual newline** in the
   displayed input. They are left as they are: the sheet is the artefact that was rated, and
   editing it afterwards would misdescribe what the rater saw.
