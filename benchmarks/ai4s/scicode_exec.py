@@ -15,7 +15,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-AI4S = Path(__file__).resolve().parents[1]
+AI4S = Path.home() / "Documents/Crossaudit/ai4s"
 H5 = AI4S / "gdrive/test_data.h5"
 SRC = AI4S / "SciCode/src"
 PY = AI4S / ".venv/bin/python"

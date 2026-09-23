@@ -101,6 +101,7 @@ def spent() -> float:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--shard", default="0/1", help="i/n: this process takes problems i, i+n, ...")
     args = ap.parse_args()
     load_keys()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -112,6 +113,8 @@ def main() -> int:
     samples = range(1, SAMPLES + 1)
     if args.limit:
         rows, samples = rows[: args.limit], range(1, 2)
+    i, n = (int(x) for x in args.shard.split("/"))
+    rows = rows[i::n]
     for p in rows:
         pid = p["problem_id"]
         for smp in samples:
