@@ -1,0 +1,86 @@
+# A4S-3 — auditing scientific data
+
+Registered 2026-09-23 **before the items are built and before any model call of this study**.
+Amendments are numbered and committed before the step they govern. Programme: `plan/AI4S-PROGRAM.md`.
+
+## Question
+
+Can the auditor that reviews code also review a scientific dataset, and what does it catch that a
+simple deterministic validator, written from the dataset's own documentation, does not?
+
+## Substrate
+
+Four physical-science tabular datasets from the UCI repository, each verified on its page as
+**CC BY 4.0**: Concrete Compressive Strength (165), Airfoil Self-Noise (291), Combined Cycle
+Power Plant (294), Superconductivity (464; the target and 11 named features). Zip SHA-256s are
+recorded in `records/ai4s/data_sources.json`.
+
+**Clean pools, fixed now from measured anomalies:** exact duplicate rows are removed (concrete 25,
+power plant 41, superconductivity 66); power-plant rows with relative humidity above 100% are
+removed (55). No dataset has negative or missing cells. Abalone was considered and excluded: its
+UCI page gives millimetres and grams while its values are scaled by 1/200, a real documentation
+fault that would make a correct flag on a "clean" copy count as a false positive. Wine Quality
+was excluded because its page gives no units.
+
+## Items
+
+Each item is a random sample of **120 rows** from one dataset's clean pool, as `data.csv`, with a
+**data card** stating the dataset's name, source, what each column is, its unit where the source
+states one, and the source's stated range where it gives one. Nothing on the card mentions faults.
+
+* **Clean items:** 35 per dataset (140), each a fresh row sample.
+* **Faulty items:** for each dataset, each of seven fault types, 5 seeds (140), one fault per item,
+  applied to a fresh sample:
+
+| code | fault | construction |
+|---|---|---|
+| F1 | mixed units | one unit-bearing column: a random 20% of its rows converted to another unit of the same quantity (×1000 for kg↔g or m↔mm, ÷1000 for Hz→kHz, +273.15 for °C→K, ×145.04 for MPa→psi, −273.15 for K→°C), column header unchanged |
+| F2 | impossible values | 3 rows of one non-negative quantity set to the negative of their value |
+| F3 | duplicated rows | 12 rows (10%) replaced by exact copies of other rows in the item |
+| F4 | shuffled target | the target column permuted among a random 30% of rows |
+| F5 | swapped columns | the values of two numeric columns with different ranges exchanged, headers unchanged |
+| F6 | missing-value sentinel | 6 cells (5%) of one column set to −999 |
+| F7 | truncated precision | one continuous column rounded to integers where the source reports decimals |
+
+The column, rows and conversion are drawn from seed **20260926** per item and recorded with the
+item. Ground truth is the construction.
+
+## Auditors
+
+* **LLM auditor, `cross`** (`openai:gpt-5.6-terra`), through the product's `run_audit` with the
+  shipped constitution: task = the data card and the instruction "Audit this dataset for
+  correctness before it is used in an analysis"; files = `data/data.csv` and `data/CARD.md`.
+  **K = 4** readings per item. Flag = at least one BLOCKER.
+* **LLM auditor, `self`** (`claude-haiku-4-5`, through the CLI route of A4S-1 Amendment 1), K = 4,
+  secondary.
+* **Deterministic validator**, written now from the data card alone and frozen in
+  `data_validator.py` before any item is built: declared-range check (source ranges where
+  stated; non-negativity for every mass, concentration, length, frequency, pressure and absolute
+  temperature), exact-duplicate check, sentinel check (any value in {−999, −9999, 9999}), and
+  integer-valued check on columns the card declares continuous. It flags an item if any check fires.
+
+## Outcomes
+
+Primary: `cross` union recall at K = 4 on faulty items, by fault type and overall, and union false
+positives on clean items, with dataset-clustered and item-level intervals (bootstrap over items
+within dataset, 10,000, seed 20260926; four clusters are too few for a cluster bootstrap and the
+report says so). Secondary: the same for `self`; the validator's recall and false positives; the
+union of LLM and validator; **what only the LLM catches** (faulty items the validator misses and
+the LLM flags) by fault type; and **localisation**, whether a flagging finding names the faulted
+column, checked by string match on the column's name.
+
+## Expectations stated now
+
+The validator should catch F2, F3, F6 by construction and F7 where declared, and miss F1 (within
+range after conversion is possible), F4 and F5 unless ranges separate them. The LLM's value, if
+any, is on F1, F4 and F5. That is the comparison the study exists for; no directional hypothesis
+about the LLM is registered.
+
+What no reading licenses: a claim about scientific data in general (four tabular datasets, seven
+synthetic fault types); calling an LLM flag on a clean item wrong without reading it (a clean
+sample can still contain natural oddities the pool filter did not remove).
+
+## Budget and review
+
+Model halt **$45** cumulative across both LLM families, read from the ledgers, failing closed. The
+report goes to cross-vendor review and enters the paper only when quotable.
