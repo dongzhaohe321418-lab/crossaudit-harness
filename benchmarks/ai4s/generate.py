@@ -147,7 +147,7 @@ def main() -> int:
                             rep = anthropic.complete(model=MODEL, system="", prompt=prompt,
                                                      key_env=KEY_ENV, max_tokens=4096, timeout=300.0)
                             text = rep.text or ""
-                            cost = rep.cost_usd
+                            cost = rep.raw.get("cli_cost_usd")
                             err = ""
                             break
                         except Exception as exc:                        # noqa: BLE001

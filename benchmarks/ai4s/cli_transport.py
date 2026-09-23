@@ -54,10 +54,19 @@ def complete(*, model: str, system: str, prompt: str, key_env: str = "", base_ur
                      "cache_creation_input_tokens": u.get("cache_creation_input_tokens", 0),
                      "cache_read_input_tokens": u.get("cache_read_input_tokens", 0)},
            "model": model, "cli_session": data.get("session_id")}
-    return CLIReply(text=data.get("result") or "", raw=raw, cost_usd=data.get("total_cost_usd"),
-                    request_id=data.get("session_id"))
+    raw["cli_cost_usd"] = data.get("total_cost_usd")
+    text = data.get("result") or ""
+    from crossaudit.providers.base import Reply
+    import hashlib
+    return Reply(text=text, request_id=data.get("session_id"),
+                 request_sha256=hashlib.sha256((system + "\x00" + prompt).encode()).hexdigest(),
+                 response_sha256=hashlib.sha256(text.encode()).hexdigest(), raw=raw)
 
 
 def install() -> None:
-    from crossaudit.providers import anthropic
+    """Patch both the module attribute and the registry, which holds its own reference taken at
+    import time; patching only the former would leave every audit on the depleted API."""
+    from crossaudit.providers import anthropic, registry
     anthropic.complete = complete
+    registry._PROVIDERS["anthropic"] = complete
+    assert registry._PROVIDERS["anthropic"] is complete
