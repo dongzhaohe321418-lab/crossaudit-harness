@@ -1,0 +1,49 @@
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes failed. openai:gpt-5.6-terra \u2014 provider unreachable: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1028)>", "instance_id": "b2:Mbpp/234", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/239", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/242", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/253", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/269", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/270", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/274", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/277", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/3", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/388", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/420", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/445", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/450", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/454", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/460", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/473", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/557", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/572", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/585", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/598", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/604", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/614", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/623", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/628", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/635", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/64", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/68", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/720", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/728", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/733", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/734", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/743", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/744", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/75", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/772", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/775", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/8", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/82", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/88", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/9", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/93", "pass": 1}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes failed. openai:gpt-5.6-terra \u2014 provider unreachable: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1028)>; openai:gpt-5.6-terra \u2014 provider unreachable: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_", "instance_id": "b2:Mbpp/75", "pass": 2}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes failed. openai:gpt-5.6-terra \u2014 provider unreachable: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1028)>; openai:gpt-5.6-terra \u2014 provider unreachable: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_", "instance_id": "b2:Mbpp/772", "pass": 2}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes failed. openai:gpt-5.6-terra \u2014 provider unreachable: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1028)>", "instance_id": "b2:Mbpp/775", "pass": 2}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/8", "pass": 2}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/82", "pass": 2}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/88", "pass": 2}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/9", "pass": 2}
+{"detector": "holistic__cross__d3", "error": "ProviderDenial: all configured auditor provider routes are cooling down; retry in 60s", "instance_id": "b2:Mbpp/93", "pass": 2}
