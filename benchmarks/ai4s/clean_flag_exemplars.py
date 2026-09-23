@@ -126,7 +126,9 @@ def check(kind: str, text: str, raw: str) -> dict:
 
 
 def negative_control() -> None:
-    """Each check must fail on a file that does what the exemplar says."""
+    """Each check must reject one relevant mutation of a real file (a renamed column, 100 rows, one
+    eight-field row, a missing final newline). This shows each branch can fail; it does not reproduce
+    every allegation in full, and interpretation and withdrawal were judged by reading."""
     raw = (ITEMS / "concrete.clean.13" / "data.csv").read_text(encoding="utf-8")
     broken = {
         "F:column": (raw.replace(AGE, "UNRELATED_COLUMN", 1), "the CSV is missing the 'Age (day)' column"),
