@@ -15,9 +15,15 @@ Two checks, and the second is the one with teeth:
 **The first version of this docstring said a different program cannot reproduce another's
 outputs. That is false**, and the second review of `RESULTS-CLARIFY.md` said so: agreement on a
 finite set of witness cases establishes **consistency**, not identity. Identity is established
-by check 1, the comparison against the frozen batch source. Check 2 is what catches a candidate
-that is the right source but has been transformed in transit, and it is what caught the
-canonical-solution defect in practice -- but on its own it proves the weaker thing.
+by check 1, the comparison against the frozen batch source. Check 2 executes the condition
+file's candidate on the first three witness cases and is what caught the canonical-solution
+defect in practice -- but on its own it proves the weaker thing.
+
+**What this script does NOT check** (third review): it never reads the recorded audit prompts,
+so it cannot show the candidate reached the auditor untransformed. It is not an end-to-end
+transit check. For the archived run, that gap was closed by the third review's separate
+reconstruction of all 96 condition prompts, which reproduced every successful reading's saved
+prompt hash -- an external check, not this script.
 """
 from __future__ import annotations
 

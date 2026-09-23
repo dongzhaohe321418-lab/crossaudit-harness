@@ -19,7 +19,7 @@ which is the only honest form for a judgement that cannot be mechanised.
 **And a reader should: the second review of this study found three of these 32 rows wrong.**
 Two `Mbpp/305` rows were called partial on a rule the addition does not state, and
 `b1:Mbpp/559` was called consistent because the exporter published three of its five cases and
-the fourth-and-fifth contradicted it. Every case is now published, and the measured error rate
+the fifth contradicted it (the fourth is all-negative and agrees). Every case is now published, and the measured error rate
 of this hand classification on its first pass was **3 of 32**.
 """
 from __future__ import annotations

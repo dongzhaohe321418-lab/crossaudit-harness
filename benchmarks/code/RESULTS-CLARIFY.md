@@ -62,8 +62,9 @@ against its own oracle and the table is published row by row in
 Judged against **all 137 archived failing cases**, every one of which is published in the
 record. **The second review found three of these 32 rows wrong in their first version** — two
 `Mbpp/305` rows read as stating a `None` rule their text does not state, and `b1:Mbpp/559` read
-as consistent because the exporter published three of its five cases while the fourth and fifth
-contradicted it. The hand classification's measured first-pass error rate was **3 of 32**, and
+as consistent because the exporter published three of its five cases while the fifth
+contradicted it (the fourth is all-negative, and the addition correctly predicts zero there; the
+third review caught this repair's own exaggeration). The hand classification's measured first-pass error rate was **3 of 32**, and
 that is a reason to check the table rather than to trust it.
 
 Examples, each checkable against the record: `b2:Mbpp/137`'s clarification says an all-zero array
@@ -143,7 +144,13 @@ cannot exclude paraphrase.
   measures their agreement, not either one's accuracy.
 * **Nothing here says an auditor could have written the clarification.** The generator was shown
   the witness's inputs; the auditor was shown neither. And on 21 of 32 instances the generator,
-  with those inputs, inferred a rule that is wrong.
+  with those inputs, inferred a rule the oracle contradicts entirely on 23 of 32 instances and
+  partly on 2 more.
+
+* **One registered secondary was not reported.** Registration section 3 promises flag rate
+  *and naming rate* beside the primary. The outcome record carries flag rates and no-finding
+  counts; no naming rate was computed. The primary outcome is unaffected, but the claim that
+  every registered secondary was executed would be false, and this document does not make it.
 
 ## Generation yields, as Amendment 9 requires them reported together
 
