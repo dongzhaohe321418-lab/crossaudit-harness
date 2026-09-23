@@ -134,7 +134,13 @@ def extract() -> int:
                     reply = openai_compat.complete(model=MODEL, key_env=KEY_ENV, system=SYSTEM,
                                                    prompt=prompt, max_tokens=800, timeout=120.0)
                     text = getattr(reply, "text", "") or ""
-                    cost = getattr(reply, "cost_usd", None)
+                    # `Reply` carries no cost; price it the way the kernel's ledger does, from
+                    # the token counts and the model's capability card. Unpriced stays None and
+                    # halts below.
+                    from crossaudit import usage as usage_mod
+                    counts = usage_mod.normalise_usage(reply.raw, system=SYSTEM, prompt=prompt,
+                                                       response=text)
+                    cost = usage_mod._api_value(counts, usage_mod._rates("openai", MODEL))
                     if text.strip():
                         break
                 except Exception as exc:                               # noqa: BLE001

@@ -1,0 +1,60 @@
+{
+  "D_cluster_ci95": [
+    0.0,
+    26.31578947368421
+  ],
+  "D_share_pct": 10.0,
+  "D_wilson_too_narrow": [
+    2.7866481213768224,
+    30.10336452284873
+  ],
+  "ceiling1_union_fp_K8_for_comparison": "24/150 = 16.0% [10.1, 22.3]; neither corrects the other",
+  "classes": {
+    "A": 9,
+    "D": 2,
+    "N": 9
+  },
+  "extraction_parse_failures": 1,
+  "findings_extracted": 70,
+  "flagged_instances": 20,
+  "inputs_by_status": {
+    "agree": 76,
+    "disagree": 3,
+    "not-a-literal": 8
+  },
+  "label": "P4 primary, registered 37ae487; Amendment 1 75131f6",
+  "n_boot": 10000,
+  "per_instance_class": {
+    "b1:HumanEval/127": "N",
+    "b1:HumanEval/143": "A",
+    "b1:HumanEval/146": "A",
+    "b1:HumanEval/55": "N",
+    "b1:HumanEval/64": "A",
+    "b1:Mbpp/123": "D",
+    "b1:Mbpp/16": "A",
+    "b1:Mbpp/245": "D",
+    "b1:Mbpp/250": "N",
+    "b1:Mbpp/743": "N",
+    "b1:Mbpp/766": "N",
+    "b1:Mbpp/80": "A",
+    "b1:Mbpp/800": "A",
+    "b2:HumanEval/116": "A",
+    "b2:HumanEval/150": "N",
+    "b2:HumanEval/157": "A",
+    "b2:HumanEval/20": "N",
+    "b2:HumanEval/84": "A",
+    "b2:HumanEval/94": "N",
+    "b2:Mbpp/743": "N"
+  },
+  "problems": 19,
+  "seed": 20260924,
+  "union_fp_K8": [
+    20,
+    150
+  ],
+  "union_fp_K8_cluster_ci95": [
+    7.947019867549669,
+    19.205298013245034
+  ],
+  "union_fp_K8_pct": 13.333333333333334
+}

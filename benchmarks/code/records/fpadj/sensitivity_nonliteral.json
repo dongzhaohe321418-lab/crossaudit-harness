@@ -1,0 +1,58 @@
+[
+ {
+  "instance_id": "b2:HumanEval/94",
+  "input": "([2, 10**400 + 1],)",
+  "status": "invalid",
+  "ref": "raise",
+  "cand": "raise"
+ },
+ {
+  "instance_id": "b1:HumanEval/127",
+  "input": "((0, 10**1000 + 1), (0, 10**1000 + 1))",
+  "status": "invalid",
+  "ref": "raise",
+  "cand": "raise"
+ },
+ {
+  "instance_id": "b2:HumanEval/94",
+  "input": "([2, 10**400],)",
+  "status": "invalid",
+  "ref": "raise",
+  "cand": "ok"
+ },
+ {
+  "instance_id": "b2:HumanEval/94",
+  "input": "([10**1000],)",
+  "status": "invalid",
+  "ref": "raise",
+  "cand": "raise"
+ },
+ {
+  "instance_id": "b2:HumanEval/20",
+  "input": "([1.0, float('inf')],)",
+  "status": "agree",
+  "ref": "ok",
+  "cand": "ok"
+ },
+ {
+  "instance_id": "b2:HumanEval/20",
+  "input": "([float('inf'), float('inf')],)",
+  "status": "agree",
+  "ref": "ok",
+  "cand": "ok"
+ },
+ {
+  "instance_id": "b2:HumanEval/20",
+  "input": "([float('-inf'), float('inf')],)",
+  "status": "agree",
+  "ref": "ok",
+  "cand": "ok"
+ },
+ {
+  "instance_id": "b2:HumanEval/94",
+  "input": "([2**1279 - 1],)",
+  "status": "invalid",
+  "ref": "raise",
+  "cand": "raise"
+ }
+]
