@@ -11,6 +11,7 @@ beside the sheet. The sheet quotes SciCode (Apache-2.0) and stays in the run arc
     python benchmarks/ai4s/residual_sheet.py build     # sheet + key
     python benchmarks/ai4s/residual_sheet.py rate-l2   # luna's labels -> records/ai4s/residual_L2.csv
     python benchmarks/ai4s/residual_sheet.py analyse   # consensus share, cluster interval, kappa, H2
+    python benchmarks/ai4s/residual_sheet.py analyse-b # the same for A4S-1b's residual (seed 20260930)
 
 L1 (the agent that ran the study, which wrote the rubric and knows the hypotheses) labelled the sheet
 first; its file's SHA-256 and time were recorded (`runs/residual/L1.sha256`) before L2 ran. L2's run
@@ -184,23 +185,23 @@ def rate_l2() -> int:
     return 0
 
 
-def analyse() -> int:
+def analyse(prefix: str = "residual", seed: int = 20260925) -> int:
     sys.path.insert(0, str(REPO / "benchmarks/code"))
     import report_ceiling as rc
     rec = REPO / "benchmarks/code/records/ai4s"
     key = {json.loads(l)["id"]: json.loads(l)["instance"]
-           for l in (rec / "residual_key.jsonl").read_text().splitlines() if l.strip()}
+           for l in (rec / f"{prefix}_key.jsonl").read_text().splitlines() if l.strip()}
     def read(name):
         rows = (rec / name).read_text().splitlines()[1:]
         return {r.split(",")[0]: r.split(",")[1] for r in rows if r}
-    l1, l2 = read("residual_L1.csv"), read("residual_L2.csv")
+    l1, l2 = read(f"{prefix}_L1.csv"), read(f"{prefix}_L2.csv")
     cons = {i: (l1[i] if l1[i] == l2[i] else "disputed") for i in key}
     by = {}
     for i, lab in cons.items():
         by.setdefault(key[i].rsplit(".", 2)[0], []).append(float(lab == "undetermined"))
     n = len(cons)
     share = sum(v for vs in by.values() for v in vs) / n
-    lo, hi = rc.cluster_bootstrap_ci(by, 10_000, 20260925)
+    lo, hi = rc.cluster_bootstrap_ci(by, 10_000, seed)
     labels = ("determined", "undetermined", "cannot-tell")
     po = sum(l1[i] == l2[i] for i in key) / n
     pe = sum((sum(l1[i] == c for i in key) / n) * (sum(l2[i] == c for i in key) / n) for c in labels)
@@ -211,7 +212,7 @@ def analyse() -> int:
            "disputed": sum(1 for v in cons.values() if v == "disputed"),
            "share_undetermined": round(100 * share, 1), "cluster_ci": [round(100 * lo, 1), round(100 * hi, 1)],
            "agreement": round(po, 3), "kappa": round(kappa, 3), "H2": h2}
-    (rec / "residual_results.json").write_text(json.dumps(out, indent=1) + "\n", encoding="utf-8")
+    (rec / f"{prefix}_results.json").write_text(json.dumps(out, indent=1) + "\n", encoding="utf-8")
     print(json.dumps(out, indent=1))
     return 0
 
@@ -219,4 +220,5 @@ def analyse() -> int:
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     raise SystemExit(build() if cmd == "build" else rate_l2() if cmd == "rate-l2"
-                     else analyse() if cmd == "analyse" else print(__doc__))
+                     else analyse() if cmd == "analyse"
+                     else analyse("residual_b", 20260930) if cmd == "analyse-b" else print(__doc__))

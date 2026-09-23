@@ -1,0 +1,65 @@
+{
+ "arm": "b",
+ "earlier_step": {
+  "cross/defective": {
+   "clean_chain": "22/30",
+   "earlier_step_failed": "37/51"
+  },
+  "cross/correct": {
+   "clean_chain": "37/101",
+   "earlier_step_failed": "17/49"
+  },
+  "self/defective": {
+   "clean_chain": "8/30",
+   "earlier_step_failed": "13/51"
+  },
+  "self/correct": {
+   "clean_chain": "21/101",
+   "earlier_step_failed": "6/49"
+  }
+ },
+ "scope": {
+  "cross/defective": {
+   "flagged": "59/81",
+   "any_scope_blocker": 25,
+   "only_scope_blockers": 0
+  },
+  "cross/correct": {
+   "flagged": "54/150",
+   "any_scope_blocker": 6,
+   "only_scope_blockers": 0
+  },
+  "self/defective": {
+   "flagged": "21/81",
+   "any_scope_blocker": 5,
+   "only_scope_blockers": 0
+  },
+  "self/correct": {
+   "flagged": "27/150",
+   "any_scope_blocker": 10,
+   "only_scope_blockers": 0
+  }
+ },
+ "sample_20": [
+  "70.1.s2",
+  "78.1.s2",
+  "59.2.s3",
+  "70.4.s2",
+  "21.2.s1",
+  "70.2.s3",
+  "15.1.s3",
+  "60.2.s1",
+  "39.1.s3",
+  "50.3.s1",
+  "70.2.s2",
+  "12.2.s2",
+  "53.2.s3",
+  "1.1.s2",
+  "77.1.s3",
+  "80.2.s3",
+  "78.1.s3",
+  "60.3.s1",
+  "4.1.s3",
+  "50.1.s1"
+ ]
+}

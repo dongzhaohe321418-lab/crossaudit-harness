@@ -1,0 +1,35 @@
+{
+ "n": 19,
+ "problems": 8,
+ "consensus": {
+  "S001": "disputed",
+  "S002": "undetermined",
+  "S003": "undetermined",
+  "S004": "undetermined",
+  "S005": "determined",
+  "S006": "undetermined",
+  "S007": "undetermined",
+  "S008": "disputed",
+  "S009": "undetermined",
+  "S010": "determined",
+  "S011": "undetermined",
+  "S012": "determined",
+  "S013": "undetermined",
+  "S014": "undetermined",
+  "S015": "undetermined",
+  "S016": "disputed",
+  "S017": "undetermined",
+  "S018": "undetermined",
+  "S019": "undetermined"
+ },
+ "consensus_undetermined": 13,
+ "disputed": 3,
+ "share_undetermined": 68.4,
+ "cluster_ci": [
+  28.6,
+  93.5
+ ],
+ "agreement": 0.842,
+ "kappa": 0.587,
+ "H2": "killed"
+}
