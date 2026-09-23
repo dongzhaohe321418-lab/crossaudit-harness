@@ -117,4 +117,7 @@ the owner's subscription, so the Anthropic transport changes and nothing else do
 * Cost is read from the CLI's reported `total_cost_usd` (list-price equivalent) per call; the
   generation halt of $15 and the audit halt of $90 apply to those figures and fail closed if a
   successful call reports no cost.
+* Where the caller passes no system prompt (generation), the CLI rejects an empty one and would
+  otherwise substitute its own agent prompt, so the fixed line "You are a helpful assistant." is
+  sent. Found on the first CLI attempt, which failed with no reply and no spend.
 * The `cross` family (OpenAI) is unaffected.

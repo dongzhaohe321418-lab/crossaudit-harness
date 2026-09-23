@@ -14,6 +14,11 @@ import tempfile
 from dataclasses import dataclass, field
 
 
+#: The API route sends no system prompt when the caller passes none; the CLI rejects an empty
+#: one and would otherwise substitute its own agent prompt, so a fixed neutral line is sent.
+NEUTRAL_SYSTEM = "You are a helpful assistant."
+
+
 @dataclass
 class CLIReply:
     text: str
@@ -32,7 +37,7 @@ def complete(*, model: str, system: str, prompt: str, key_env: str = "", base_ur
     env.pop("ANTHROPIC_API_KEY", None)          # the depleted API key must not be used
     with tempfile.TemporaryDirectory() as d:
         cp = subprocess.run(
-            ["claude", "-p", prompt, "--model", model, "--system-prompt", system or " ",
+            ["claude", "-p", prompt, "--model", model, "--system-prompt", system if (system or "").strip() else NEUTRAL_SYSTEM,
              "--tools", "", "--strict-mcp-config", "--output-format", "json"],
             cwd=d, env=env, capture_output=True, text=True, timeout=timeout)
     out = cp.stdout.strip()
