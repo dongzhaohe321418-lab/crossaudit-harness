@@ -1,0 +1,26 @@
+{
+  "L3_marginal": {
+    "cannot-tell": 6,
+    "determined": 13,
+    "undetermined": 38
+  },
+  "crosstab": {
+    "ambiguous-oracle|cannot-tell": 1,
+    "ambiguous-oracle|determined": 13,
+    "ambiguous-oracle|undetermined": 30,
+    "disputed|cannot-tell": 2,
+    "disputed|undetermined": 6,
+    "timeout|cannot-tell": 3,
+    "unexercised-edge|undetermined": 2
+  },
+  "label": "POST HOC; not reviewed; different instruments",
+  "n": 57,
+  "pair_undetermined_L3_agrees": 30,
+  "pair_undetermined_total": 44,
+  "study21_pair_marginal": {
+    "ambiguous-oracle": 44,
+    "disputed": 8,
+    "timeout": 3,
+    "unexercised-edge": 2
+  }
+}

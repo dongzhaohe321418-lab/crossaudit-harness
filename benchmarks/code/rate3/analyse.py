@@ -26,7 +26,9 @@ sys.path.insert(0, "benchmarks/code")
 sys.path.insert(0, "benchmarks/expertlongbench")
 import report_ceiling as rc  # noqa: E402
 
-KEY = Path.home() / "Desktop/CrossAudit-审计天花板/人类评分任务/_items.json"
+# Committed 2026-09-23; it lived only on the Desktop until then, so this analysis could not be
+# rerun from the repository. Byte-identical copy.
+KEY = REC / "items.json"
 REC = Path("benchmarks/code/records/rate3")
 SEED = 20260921        # the registered seed; 20260922 was used by mistake in one draft
 N_BOOT = 10000
