@@ -34,8 +34,8 @@ in their chain (post hoc description).
 problem's main description, then the step, background, header and dependencies. In B the task names
 the step's function as the deliverable and gives the main description last, "for context only"; the
 program bytes are identical: every reading in both arms records the SHA-256 of the program it was
-given, and for each of the 231 instances the hashes agree across arms. (A check was run before B's
-calls; its output was not retained, so the hash agreement is the evidence.)
+given, and for each of the 231 instances the hashes agree across arms. (The agent states it also
+checked this before B's calls; that check was not retained and is not evidence here.)
 
 ## Table 1 — union flag rates (registered outcomes)
 
@@ -86,11 +86,12 @@ ran) and by `gpt-5.6-luna`, which audits nothing here.
 | B (secondary) | 19 instances, 8 problems | 13 | 3 | 68.4% [28.6, 93.5] | 0.59 | killed (lower bound < 50%) |
 
 Both point estimates are below EvalPlus's 77.2%. The residuals are too small, and in A too clustered,
-for the rule's interval to exceed 50%. What the undetermined items involve, on reading: some an unstated convention the tests
+for the rule's interval to exceed 50%. What the residual items involve, on reading (consensus-undetermined unless noted): some an unstated convention the tests
 fix (the logarithm's base in an entropy, the direction of a minimum-image vector, the origin of a
 periodic box, the axis order and spacing of a k-space grid, which qubit of a pair a channel acts on);
 others a conflict between the step's text and its tests (a header that promises a 2-D output where
-the test expects a vector; a function documented for a vector and tested on higher-rank arrays), or
+the test expects a vector; a function documented for a vector and tested on higher-rank arrays, both instances
+disputed between the raters), or
 the units of supplied quantities where the output unit is stated.
 
 ## What the auditor objected to on correct code (post hoc)
@@ -117,8 +118,9 @@ documented as floats and built complex), 4 an edge case or dtype (a zero initial
 Four of the seven documentation findings concern
 earlier steps' functions, which B's task excluded from the deliverable. We did not check these
 findings against the tests. Independent review checked four of the requirement findings and found
-different situations. In `39.1.s3` and `15.1.s3` the step's prose and its function header disagree,
-and the tests follow the header. In `60.2.s1` the prose says "truncated and shifted" while its
+different situations. In `39.1.s3` the tests follow the header's 2 × 2-array output rather than
+the prose's four-element tuple; in `15.1.s3` they follow the background's complex coefficients
+rather than the header's float elements. In `60.2.s1` the prose says "truncated and shifted" while its
 displayed formula is unshifted, and the unshifted code passes. In `21.2.s1` the test targets are 0,
 0 and 4.4 × 10⁻²⁷, so under the default tolerance a constant zero would pass. As for C16, a flag on
 test-passing code is not shown to be wrong or right here.
