@@ -1,0 +1,127 @@
+{
+ "cross_doc_only_items": [
+  "airfoil.F1.1",
+  "airfoil.F1.2",
+  "airfoil.F2.4",
+  "airfoil.F7.0",
+  "airfoil.clean.11",
+  "airfoil.clean.29",
+  "airfoil.clean.33",
+  "airfoil.clean.7"
+ ],
+ "cross_fault_relevant": {
+  "faulty": 61,
+  "clean": 0,
+  "by_fault": {
+   "F1": 15,
+   "F2": 13,
+   "F3": 0,
+   "F4": 0,
+   "F5": 15,
+   "F6": 16,
+   "F7": 2
+  }
+ },
+ "cross_fault_relevant_union_with_validator": {
+  "faulty": 110,
+  "clean": 0,
+  "by_fault": {
+   "F1": 15,
+   "F2": 20,
+   "F3": 20,
+   "F4": 0,
+   "F5": 15,
+   "F6": 20,
+   "F7": 20
+  }
+ },
+ "llm_only_fault_relevant": [
+  "airfoil.F1.0",
+  "airfoil.F1.3",
+  "airfoil.F1.4",
+  "airfoil.F5.0",
+  "airfoil.F5.2",
+  "airfoil.F5.4",
+  "concrete.F1.0",
+  "concrete.F1.1",
+  "concrete.F1.2",
+  "concrete.F1.3",
+  "concrete.F1.4",
+  "concrete.F5.0",
+  "concrete.F5.3",
+  "concrete.F5.4",
+  "supercond.F1.4",
+  "supercond.F5.0",
+  "supercond.F5.2",
+  "supercond.F5.4"
+ ],
+ "validator_with_age_range": {
+  "faulty": 93,
+  "clean": 0,
+  "by_fault": {
+   "F1": 6,
+   "F2": 20,
+   "F3": 20,
+   "F4": 0,
+   "F5": 7,
+   "F6": 20,
+   "F7": 20
+  }
+ },
+ "validator_with_age_range_new_catches": [
+  "concrete.F5.4"
+ ],
+ "llm_only_fault_relevant_vs_age_validator": [
+  "airfoil.F1.0",
+  "airfoil.F1.3",
+  "airfoil.F1.4",
+  "airfoil.F5.0",
+  "airfoil.F5.2",
+  "airfoil.F5.4",
+  "concrete.F1.0",
+  "concrete.F1.1",
+  "concrete.F1.2",
+  "concrete.F1.3",
+  "concrete.F1.4",
+  "concrete.F5.0",
+  "concrete.F5.3",
+  "supercond.F1.4",
+  "supercond.F5.0",
+  "supercond.F5.2",
+  "supercond.F5.4"
+ ],
+ "items_with_14plus_decimal_cells": {
+  "airfoil:F1": 2,
+  "airfoil:F2": 0,
+  "airfoil:F3": 0,
+  "airfoil:F4": 0,
+  "airfoil:F5": 0,
+  "airfoil:F6": 0,
+  "airfoil:F7": 0,
+  "airfoil:clean": 0,
+  "ccpp:F1": 3,
+  "ccpp:F2": 0,
+  "ccpp:F3": 0,
+  "ccpp:F4": 0,
+  "ccpp:F5": 0,
+  "ccpp:F6": 0,
+  "ccpp:F7": 0,
+  "ccpp:clean": 0,
+  "concrete:F1": 5,
+  "concrete:F2": 5,
+  "concrete:F3": 5,
+  "concrete:F4": 5,
+  "concrete:F5": 5,
+  "concrete:F6": 5,
+  "concrete:F7": 0,
+  "concrete:clean": 35,
+  "supercond:F1": 5,
+  "supercond:F2": 5,
+  "supercond:F3": 5,
+  "supercond:F4": 5,
+  "supercond:F5": 5,
+  "supercond:F6": 5,
+  "supercond:F7": 5,
+  "supercond:clean": 35
+ }
+}

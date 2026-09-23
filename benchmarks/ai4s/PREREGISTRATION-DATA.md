@@ -137,3 +137,24 @@ raised to **$60** so that the registered design can complete; nothing else chang
 cost alone. Known when written: progress tallies only; no outcome has been computed on any valid
 reading, and the analysis script (`analyze_data.py`) was committed before any valid reading
 existed.
+
+## Erratum to Amendments 1 and 3 and to the registration (2026-09-24, after the first review)
+
+The first cross-vendor review (`codex-review-a4s3`, report archived there) checked the history
+against the commit times and ledgers. Three statements above are wrong, and are corrected here
+rather than edited in place:
+
+* **Amendment 1** was committed together with the rebuilt manifest (`64fd36d`), so it did not
+  precede the rebuild it governs. It did precede every model call after the pilot.
+* **Amendment 3** says `self` was on draw 2; it was on draw 3. It says no outcome had been computed;
+  that is what the agent did, but no record can establish it.
+* **The analysis script** (`abd2c9b`, 23:45:32) was committed after 278 valid `self` readings
+  existed, not before any valid reading existed, as Amendment 3 and the first report said. It was
+  committed before any outcome was computed from them.
+* **The registration's pool counts**: the superconductivity pool is deduplicated after selecting its
+  12 columns, which removes 84 rows, not the 66 full-row duplicates stated. The concrete source
+  README gives Age a range of 1 to 365 days, which the frozen spec omits; the validator therefore
+  does not use every range the documentation states.
+* **The halt** is not strictly fail-closed: a draw's readings are queued at once, so a halt check
+  waits for queued readings, and an unpriced ledger event is tolerated if others are priced. No cap
+  was reached.
