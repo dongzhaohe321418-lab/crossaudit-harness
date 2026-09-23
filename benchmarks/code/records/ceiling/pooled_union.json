@@ -1,0 +1,39 @@
+{
+  "C": {
+    "cluster_ci95": [
+      0.2820469798657718,
+      0.4421768707482993
+    ],
+    "k": 54,
+    "n": 150,
+    "n_problems": 143,
+    "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+    "rate": 0.36,
+    "wilson95": [
+      0.28756583250443635,
+      0.43942583591862505
+    ]
+  },
+  "P": {
+    "cluster_ci95": [
+      0.36363636363636365,
+      0.5982142857142857
+    ],
+    "k": 53,
+    "n": 110,
+    "n_problems": 56,
+    "note": "cluster_ci95 is the primary interval; Wilson assumes instances are independent and they are not where a problem supplies two",
+    "rate": 0.4818181818181818,
+    "wilson95": [
+      0.39064279126942547,
+      0.5742206245595985
+    ]
+  },
+  "readings": {
+    "astra": 4,
+    "cross": 8,
+    "self": 8
+  },
+  "reps": 10000,
+  "seed": 20260908
+}
