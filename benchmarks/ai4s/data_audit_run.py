@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""A4S-3 auditing: the product's run_audit on data items, cross and self, K = 4 (derived from audit_run.py).
+"""A4S-3 auditing: the product's run_audit on the data items, cross and self, K = 4.
 
-Registered in `PREREGISTRATION-CODE.md` (with Amendment 1). The auditor is shown the main problem
-description, the step's description and background, the function header and dependencies as the
-task, and the candidate program as `work/solution/solution.py`. No tests of any kind. The `self`
-family's calls go through the Claude Code CLI (Amendment 1); `cross` goes to OpenAI as shipped.
-Every reading's BLOCKER texts are archived; the halt reads every project's usage ledger
-cumulatively and fails closed.
+Registered in `PREREGISTRATION-DATA.md` (Amendments 1 and 2). Each item's CSV and data card are
+committed at `work/data/data.csv` and `work/data/CARD.md` inside the audited scope (Amendment 2);
+the task is the registered delivery sentence followed by the card. The `self` family's calls go
+through the Claude Code CLI (A4S-1 Amendment 1); `cross` goes to OpenAI as shipped. Every
+reading's BLOCKER texts are archived; the halt reads every ledger this study wrote, the voided
+and pilot runs included, and fails closed.
 
-    python benchmarks/ai4s/audit_run.py --plan
-    python benchmarks/ai4s/audit_run.py --family cross --workers 6
+    python benchmarks/ai4s/data_audit_run.py --plan
+    python benchmarks/ai4s/data_audit_run.py --family cross --workers 6
 """
 from __future__ import annotations
 
@@ -32,6 +32,8 @@ sys.path.insert(0, str(HERE))
 AI4S = Path.home() / "Documents/Crossaudit/ai4s"
 GEN = AI4S / "runs/generation"
 OUT = AI4S / "runs/data_audit"
+VOID = AI4S / "runs/data_audit_void_scope"      # Amendment 2: counted, never analysed
+PILOT = AI4S / "runs/data_audit_pilot"          # Amendment 1: counted, never analysed
 ITEMS = AI4S / "runs/data_items"
 MANIFEST = REPO / "benchmarks/code/records/ai4s/data_items.json"
 STRATA = REPO / "benchmarks/code/records/ai4s/strata.json"
@@ -91,7 +93,10 @@ def instance(iid: str, probs: dict, gen: dict) -> tuple[str, str]:
 def spent() -> tuple[float, int]:
     from crossaudit import usage
     total, n, priced = 0.0, 0, 0
-    for ledger in OUT.glob("projects/*/.crossaudit/usage.jsonl"):
+    ledgers = [*OUT.glob("projects/*/.crossaudit/usage.jsonl"),
+               *VOID.glob("projects/*/.crossaudit/usage.jsonl"),
+               *PILOT.glob("**/.crossaudit/usage.jsonl")]
+    for ledger in ledgers:
         events, _ = usage.read_events(ledger)
         for e in events:
             n += 1
@@ -150,8 +155,9 @@ def main() -> int:
     project = study1.build_project(OUT / "projects", args.family, SPECS[args.family], GENERATOR,
                                    constitution)
     cfg = load(project / "crossaudit.yml")
-    TASK = ("Deliver a dataset ready for use in a scientific analysis: data/data.csv, documented "
-            "by the data card data/CARD.md, which states what each column is and its unit.")
+    TASK = ("Deliver a dataset ready for use in a scientific analysis: work/data/data.csv, "
+            "documented by the data card work/data/CARD.md, which states what each column is "
+            "and its unit.")                   # Amendment 2: inside the audited scope
     lock = threading.Lock()
 
     def one(iid: str, draw: int) -> dict:
@@ -168,8 +174,8 @@ def main() -> int:
         for attempt in range(1, 8):
             try:
                 out = run_audit(cfg=cfg, sha="0" * 40, round_=1,
-                                files={"data/data.csv": program.encode("utf-8"),
-                                       "data/CARD.md": card_text.encode("utf-8")}, notes=[],
+                                files={"work/data/data.csv": program.encode("utf-8"),
+                                       "work/data/CARD.md": card_text.encode("utf-8")}, notes=[],
                                 constitution=constitution, constitution_commit="frozen",
                                 task=task, on_event=on_event,
                                 usage_context={"run_id": run_id, "arm": args.family,
