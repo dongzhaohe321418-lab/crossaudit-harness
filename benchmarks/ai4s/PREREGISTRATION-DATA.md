@@ -127,3 +127,13 @@ halt.
 Known when written: draw-1 flag counts by fault type and on clean items had been looked at (a
 progress tally, not an analysis). The fix is determined by the product's scope rule alone and
 would be the same whatever those counts were. The void run is not reported as a comparison.
+
+## Amendment 3 — the halt is raised to $60 (2026-09-24)
+
+At $20.04 cumulative (cross draw 1 complete, draw 2 at 25 of 280; self draw 2 in progress), the
+projected total for the registered design is about $44, against the $45 halt. The margin was
+consumed by the voided run of Amendment 2 ($6.6), which the halt counts by design. The halt is
+raised to **$60** so that the registered design can complete; nothing else changes. The reason is
+cost alone. Known when written: progress tallies only; no outcome has been computed on any valid
+reading, and the analysis script (`analyze_data.py`) was committed before any valid reading
+existed.
