@@ -1,0 +1,23 @@
+{
+ "n": 7,
+ "problems": 2,
+ "consensus": {
+  "S001": "disputed",
+  "S002": "undetermined",
+  "S003": "undetermined",
+  "S004": "disputed",
+  "S005": "disputed",
+  "S006": "undetermined",
+  "S007": "undetermined"
+ },
+ "consensus_undetermined": 4,
+ "disputed": 3,
+ "share_undetermined": 57.1,
+ "cluster_ci": [
+  0.0,
+  80.0
+ ],
+ "agreement": 0.571,
+ "kappa": -0.235,
+ "H2": "killed"
+}
