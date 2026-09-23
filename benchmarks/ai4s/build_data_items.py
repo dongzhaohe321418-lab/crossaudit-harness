@@ -30,7 +30,9 @@ SEEDS_PER_FAULT = 5
 
 
 def pool(name: str) -> pd.DataFrame:
-    d = pd.read_csv(AI4S / f"data/uci/{name}.csv")[DATASETS[name]["columns"]]
+    raw = pd.read_csv(AI4S / f"data/uci/{name}.csv")
+    raw.columns = [c.strip() for c in raw.columns]   # Amendment 1: one name in CSV and card
+    d = raw[DATASETS[name]["columns"]]
     d = d.drop_duplicates()
     # Every column as float for every item, clean and faulty alike: casting only a faulted column
     # would print it as 800.0 where clean items print 800, a formatting tell that leaks the fault.

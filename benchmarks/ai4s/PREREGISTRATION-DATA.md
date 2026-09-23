@@ -84,3 +84,22 @@ sample can still contain natural oddities the pool filter did not remove).
 
 Model halt **$45** cumulative across both LLM families, read from the ledgers, failing closed. The
 report goes to cross-vendor review and enters the paper only when quotable.
+
+## Amendment 1 — two instrument defects found on a three-item pilot (2026-09-23)
+
+A pilot of three clean concrete items (one `cross` reading each, $0.08) was run to check that the
+files reach the auditor. It found two defects in the instrument, not in the data:
+
+* **The card and the CSV named the target column differently.** The UCI header ends in a trailing
+  space; the card printed it stripped. Every reading flagged the mismatch, correctly. Column names
+  are now stripped of surrounding whitespace in the CSV too, so card and data agree.
+* **The task framing did not fit the product.** CrossAudit audits a deliverable against a task;
+  "Audit this dataset for correctness" was read as a task the increment failed to perform ("no
+  audit result is supplied"). The task now reads: "Deliver a dataset ready for use in a scientific
+  analysis: data/data.csv, documented by the data card data/CARD.md, which states what each column
+  is and its unit." The data is the deliverable, which is what an auditor of scientific data is
+  asked to judge.
+
+The three pilot readings are discarded and archived separately; items are rebuilt with the fixed
+names (same seeds, same faults). Known when written: three clean items, all flagged for the name
+mismatch; no faulty item had been read.

@@ -14,7 +14,7 @@ CONC = [
     "Coarse Aggregate  (component 6)(kg in a m^3 mixture)",
     "Fine Aggregate (component 7)(kg in a m^3 mixture)",
     "Age (day)",
-    "Concrete compressive strength(MPa, megapascals) ",
+    "Concrete compressive strength(MPa, megapascals)",
 ]
 SUPER = ["number_of_elements", "mean_atomic_mass", "mean_fie", "mean_atomic_radius",
          "mean_Density", "mean_ElectronAffinity", "mean_FusionHeat", "mean_ThermalConductivity",
@@ -97,6 +97,6 @@ def card(name: str) -> str:
              "| column | unit | stated range |", "|---|---|---|"]
     for c in d["columns"]:
         r = d["ranges"].get(c)
-        lines.append(f"| {c.strip()} | {d['units'].get(c, '')} | {f'{r[0]} to {r[1]}' if r else ''} |")
-    lines += ["", f"Target column: {d['target'].strip()}.", ""]
+        lines.append(f"| {c} | {d['units'].get(c, '')} | {f'{r[0]} to {r[1]}' if r else ''} |")
+    lines += ["", f"Target column: {d['target']}.", ""]
     return "\n".join(lines)
