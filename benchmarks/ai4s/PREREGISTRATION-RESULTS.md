@@ -115,3 +115,30 @@ from any A4S-1 audit reading is used or has been analysed.
   are reported.
 * **Re-execution** compares the report's stated values (the rows' `v`) with the program's output
   on `work/inputs.py`, under `np.allclose` defaults.
+
+## Amendment 2 — the task names Amendment 1's paths (2026-09-24)
+
+Before any model call. Amendment 1 moved every file under `work/`, and the registered task still
+names `report.md`. The task now reads "Deliver the result of running work/solution.py on
+work/inputs.py, reported in work/report.md with its provenance." Nothing else changes. The item
+gate passed on the first build with no repair: 74 of the 150 correct instances qualify, every
+clean item passes the shipped `science` profile with no BLOCKER, and every clean item
+re-executes to its reported value. Known when written: the gate result and the deterministic
+profile's verdict on every item, which the builder records by design. No model reading exists.
+
+## Amendment 3 — the items did not say how the result was produced (2026-09-24)
+
+A two-item pilot (one clean, one faulty item of the same instance; one `cross` reading each,
+$0.04) found an instrument defect. `work/solution.py` only defines functions and `work/inputs.py`
+only assigns inputs (using `np` without importing it), and no file runs the step's call. Both
+readings blocked on exactly that, correctly: the report claims a run that nothing in the
+increment performs. Every clean item would carry the same legitimate defect.
+
+Fix: each item gains `work/run.py`, which imports the candidate program, executes
+`work/inputs.py` verbatim in that namespace, evaluates the registered call, and writes
+`work/outputs/run.log` in the registered format. `metadata.yml` declares it as a fourth input,
+and the report names it and the call. The builder now runs `run.py` inside every clean item and
+requires the log it writes to equal the item's `run.log` byte for byte, so the clean log is the
+program's own output and not a transcription. Items, seeds, faults and everything else are
+unchanged. The two pilot readings are discarded, archived as `runs/results_audit_pilot/`, and
+counted toward the $30 halt. The gate is rerun before any further model call.
