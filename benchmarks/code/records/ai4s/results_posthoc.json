@@ -14,6 +14,10 @@
    "unit": "nm",
    "clean_flagged": true
   },
+  "61.2.s1": {
+   "unit": "inverse angstrom",
+   "clean_flagged": true
+  },
   "77.8.s2": {
    "unit": "zeptojoules",
    "clean_flagged": false
@@ -198,6 +202,20 @@
    "only_first": 4,
    "only_second": 2,
    "p_exact": 0.6875
+  }
+ },
+ "signflip_by_problem_sensitivity": {
+  "llm_k4_vs_dcl": {
+   "p": 3.814697265625e-06,
+   "n_clusters": 36,
+   "n_nonzero_clusters": 19,
+   "method": "exact enumeration"
+  },
+  "llm_k4_vs_reexec": {
+   "p": 0.6875,
+   "n_clusters": 36,
+   "n_nonzero_clusters": 6,
+   "method": "exact enumeration"
   }
  },
  "within_instance_full_precision": {

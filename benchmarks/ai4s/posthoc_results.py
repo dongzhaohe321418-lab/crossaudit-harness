@@ -57,7 +57,8 @@ FABRICATION_UNSOUND = {
     "70.5.s1": "claims the tensor terms cancel to zero; they sum to -1.616e-7",
 }
 #: Solutions whose docstring gives the output a unit (read one by one).
-UNIT_DOCUMENTED = {"35.1.s1": "nm", "77.8.s2": "zeptojoules", "77.8.s3": "zeptojoules"}
+UNIT_DOCUMENTED = {"35.1.s1": "nm", "61.2.s1": "inverse angstrom", "77.8.s2": "zeptojoules",
+                   "77.8.s3": "zeptojoules"}
 
 
 def main() -> int:
@@ -84,7 +85,7 @@ def main() -> int:
                                 f"{sum(1 for i in keep if fault[i] == f)}" for f in FAULTS}}
         return res
 
-    pairs = {}
+    pairs, clustered = {}, {}
     for a, b, va, vb in (("llm_k4", "dcl", llm, None), ("llm_k4", "reexec", llm, rx)):
         if vb is None:
             dcl = {}
@@ -97,6 +98,11 @@ def main() -> int:
         only_b = sum(1 for i in man if vb[f"{i['instance']}.faulty"] and not va[f"{i['instance']}.faulty"])
         pairs[f"{a}_vs_{b}"] = {"only_first": only_a, "only_second": only_b,
                                 "p_exact": rc.mcnemar_exact(only_a, only_b)}
+        signed: dict[str, list[int]] = {}
+        for i in man:
+            k = f"{i['instance']}.faulty"
+            signed.setdefault(i["instance"].split(".")[0], []).append(int(bool(va[k])) - int(bool(vb[k])))
+        clustered[f"{a}_vs_{b}"] = rc.signflip_p(signed)
     within = {}
     for name, v in (("llm_k4", llm), ("reexec", rx)):
         b_ = sum(1 for i in man if v[f"{i['instance']}.faulty"] and not v[f"{i['instance']}.clean"])
@@ -128,7 +134,8 @@ def main() -> int:
                            "without_empty_inputs": outcomes(set(empty)),
                            "without_reexec_tolerance_cases": outcomes(set(rx_missed)),
                            "without_both": outcomes(set(empty) | set(rx_missed))},
-           "mcnemar_exact_full_precision": pairs, "within_instance_full_precision": within}
+           "mcnemar_exact_full_precision": pairs,
+           "signflip_by_problem_sensitivity": clustered, "within_instance_full_precision": within}
     OUT.write_text(json.dumps(out, indent=1) + "\n", encoding="utf-8")
     print(json.dumps({k: v for k, v in out.items() if k != "clean_flag_labels"}, indent=1))
     return 0

@@ -57,7 +57,9 @@ LLM's K ladder, recall and clean flags: K = 1 93.2% at 10.1%, K = 2 95.0% at 12.
 
 **Paired comparisons (registered, both forms).** Between auditors on the 74 faulty items, exact
 McNemar: LLM against the profile, 23 items flagged only by the LLM and 0 only by the profile
-(p = 2.4 × 10⁻⁷, i.e. 2⁻²²); LLM against re-execution, 4 and 2 (p = 0.69). Within instance, faulty
+(p = 2.4 × 10⁻⁷, i.e. 2⁻²²); LLM against re-execution, 4 and 2 (p = 0.69). McNemar treats instances
+as independent although they repeat within problems; a problem-level sign-flip test (post hoc
+sensitivity, exact) gives p = 3.8 × 10⁻⁶ (the 23 discordant items fall in 19 problems) and 0.69. Within instance, faulty
 flagged and clean not, against the reverse: LLM 61 against 1; profile 49 against 0; re-execution 70
 against 0.
 
@@ -102,10 +104,12 @@ The LLM flagged 12 of 74 clean items. All were read; labels are in `posthoc_resu
   case passes its inputs as literals inside the call (e.g. `Fermi(2 * 10 ** 17, …)`), so
   `work/inputs.py` is empty, `work/run.py` hard-codes the arguments, and the report's sentence that the
   program ran "on the inputs in work/inputs.py" is false. Seven of the 9 clean items were flagged for
-  exactly that. Separately, three solutions document their output's unit (nanometres in one,
-  zeptojoules in two) while every report says `dimensionless`, the unit token Amendment 1 fixed for
-  all quantities; two of the three clean items were flagged for the contradiction (one of them is
-  also among the seven) and one (`77.8.s2`) was not. The gate did not test either property.
+  exactly that. Separately, four solutions document their output's unit (nanometres in `35.1.s1`,
+  inverse ångströms in `61.2.s1`, zeptojoules in `77.8.s2` and `77.8.s3`) while every report says
+  `dimensionless`, the unit token Amendment 1 fixed for all quantities. Two clean items were flagged
+  for the contradiction (`35.1.s1`, also among the seven, and `77.8.s3`); `61.2.s1` was flagged
+  only on a wrong calculation, which the unit defect does not make correct; `77.8.s2` was not
+  flagged. The gate did not test either property.
 * **4 are wrong**: three hand computations of the output that disagree with the executed output
   (one by a factor of 10¹²), and one claim of a syntax error in a line whose trailing text is a
   comment. On one of these instances (`25.1.s2`) the same model computed the output correctly when
@@ -135,7 +139,8 @@ unit contradiction.
    and inputs to be small enough to reason about, and it errs (4 wrong flags on 74 clean items, two
    fabrication flags resting on wrong calculations, and inconsistent arithmetic across readings).
 2. **Re-execution is the reference, and it has a blind spot the registration did not anticipate.**
-   With default tolerances it cannot see faults in outputs near zero. Here the LLM covered those four.
+   With default tolerances it cannot see faults in outputs near zero. The LLM flagged all four under the
+   registered rule, three of them with a sound finding (post hoc).
 3. **Much of what looked like false positives were true.** The LLM flagged a provenance sentence we
    wrote carelessly and a unit label we fixed by convention. A deterministic check could have caught
    neither without being written for it.
@@ -163,5 +168,7 @@ but self-consistent method) was not tested.
   sensitivity above.
 * The analysis script rounds exact p values to four places; the full values are in the post hoc
   record. It was committed after 12 production readings and before any item had its four.
-* Review round 1 (not quotable) led to: the fabrication-rationale reading, the third unit-affected
-  instance, the combined-workflow wording for reporting faults, and the Amendment 2 erratum.
+* Review round 1 (not quotable) led to: the fabrication-rationale reading, the combined-workflow
+  wording for reporting faults, and the Amendment 2 erratum. Round 2 (not quotable) led to: the
+  fourth unit-documented instance, the corrected closing sentence on re-execution, and the
+  problem-level sign-flip sensitivity.
