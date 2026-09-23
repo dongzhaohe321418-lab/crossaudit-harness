@@ -1,0 +1,4664 @@
+{
+ "seed": 20260927,
+ "cycle": [
+  "F4",
+  "R5",
+  "F1",
+  "R1",
+  "R3",
+  "R4",
+  "R2"
+ ],
+ "n_correct": 150,
+ "n_qualifying": 74,
+ "dropped": [
+  {
+   "instance": "10.3.s1",
+   "case": 3,
+   "why": "call not readable from the assertion"
+  },
+  {
+   "instance": "10.9.s3",
+   "case": 3,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "11.3.s3",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "12.2.s2",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "13.1.s2",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "13.14.s1",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "13.14.s3",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "13.2.s1",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "13.2.s3",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "13.4.s2",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "13.5.s1",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "14.2.s1",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "14.2.s2",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "14.2.s3",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "15.1.s1",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "15.1.s3",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "16.1.s1",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "19.1.s1",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "19.2.s2",
+   "case": 3,
+   "why": "all-zero output"
+  },
+  {
+   "instance": "21.2.s1",
+   "case": 0,
+   "why": "all-zero output"
+  },
+  {
+   "instance": "24.3.s3",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "29.1.s3",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "29.3.s1",
+   "case": 3,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "29.3.s2",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "31.1.s3",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "33.1.s1",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "39.1.s1",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "39.1.s3",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "39.3.s2",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "4.1.s2",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "4.1.s3",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "42.3.s3",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "44.1.s3",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "47.1.s1",
+   "case": 2,
+   "why": "all-zero output"
+  },
+  {
+   "instance": "49.2.s1",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "49.2.s3",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "49.3.s2",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "49.3.s3",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "50.1.s1",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "50.2.s1",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "50.2.s3",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "50.3.s1",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "53.1.s2",
+   "case": 2,
+   "why": "call not readable from the assertion"
+  },
+  {
+   "instance": "53.1.s3",
+   "case": 0,
+   "why": "call not readable from the assertion"
+  },
+  {
+   "instance": "53.2.s3",
+   "case": 0,
+   "why": "call not readable from the assertion"
+  },
+  {
+   "instance": "56.3.s3",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "57.1.s3",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "59.1.s2",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "59.2.s3",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "60.5.s3",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "61.5.s1",
+   "case": 3,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "62.2.s2",
+   "case": 0,
+   "why": "call not readable from the assertion"
+  },
+  {
+   "instance": "62.2.s3",
+   "case": 0,
+   "why": "call not readable from the assertion"
+  },
+  {
+   "instance": "62.4.s1",
+   "case": 0,
+   "why": "call not readable from the assertion"
+  },
+  {
+   "instance": "62.4.s3",
+   "case": 0,
+   "why": "call not readable from the assertion"
+  },
+  {
+   "instance": "63.1.s1",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "63.1.s2",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "63.1.s3",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "65.3.s1",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "65.4.s2",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "66.2.s1",
+   "case": 1,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "66.5.s1",
+   "case": 2,
+   "why": "all-zero output"
+  },
+  {
+   "instance": "7.1.s1",
+   "case": 3,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "7.1.s2",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "70.1.s2",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "70.2.s1",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "70.2.s2",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "70.2.s3",
+   "case": 2,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "70.5.s2",
+   "case": 0,
+   "why": "all-zero output"
+  },
+  {
+   "instance": "70.6.s1",
+   "case": 0,
+   "why": "output not a finite real scalar/array <= 10"
+  },
+  {
+   "instance": "72.4.s2",
+   "case": 1,
+   "why": "all-zero output"
+  },
+  {
+   "instance": "77.4.s2",
+   "case": 0,
+   "why": "all-zero output"
+  },
+  {
+   "instance": "78.1.s2",
+   "case": 1,
+   "why": "call not readable from the assertion"
+  },
+  {
+   "instance": "78.1.s3",
+   "case": 1,
+   "why": "call not readable from the assertion"
+  },
+  {
+   "instance": "78.2.s1",
+   "case": 0,
+   "why": "call not readable from the assertion"
+  },
+  {
+   "instance": "80.2.s3",
+   "case": 0,
+   "why": "all-zero output"
+  }
+ ],
+ "substitutions": [
+  {
+   "instance": "19.2.s1",
+   "assigned": "R5",
+   "used": "F1"
+  },
+  {
+   "instance": "44.1.s2",
+   "assigned": "R3",
+   "used": "R4"
+  },
+  {
+   "instance": "57.4.s1",
+   "assigned": "R5",
+   "used": "F1"
+  },
+  {
+   "instance": "71.6.s2",
+   "assigned": "R5",
+   "used": "F1"
+  }
+ ],
+ "instances": [
+  {
+   "instance": "1.1.s2",
+   "case": 1,
+   "call": "cg(A, b, x0, tol)",
+   "true_values": [
+    "0.014285714",
+    "0.035364235",
+    "0.0023420578",
+    "-0.035104006",
+    "-0.16497266",
+    "0.01677371",
+    "0.16524911"
+   ],
+   "shape": [
+    7
+   ],
+   "fault": "F4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "1.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.014285714",
+      "0.035364235",
+      "0.0023420578",
+      "-0.035104006",
+      "-0.16497266",
+      "0.01677371",
+      "0.16524911"
+     ],
+     "files_sha256": {
+      "work/solution.py": "90d1844a5d933d3ae0813e1866df02f496fde0c13faf9929de0f770959dbbaad",
+      "work/inputs.py": "291dcf361b02ee5d523c625e656ccf3cbf98ff7352033681ae6d3e8a4cdc25c1",
+      "work/run.py": "61a7cc2ef039329811c688a3271138f3a10c6e45bfcd1ec2c78c489d2a4763f6",
+      "work/outputs/run.log": "9dd90b1adb3ca8d8f1c08554881d187e19c96ae18805a1a83a120653d546a260",
+      "work/results/results.json": "7e2f418d00fd12896f4595e0852f5b828c882455a339b1f3438144b86a533b2d",
+      "work/results/metadata.yml": "58a96ed135a42408150ffefd8f7918abe35dd02d3fc2aa1e8905614e664a6e5c",
+      "work/report.md": "d2babcb274588c296a75ab0c41671794937a5393a381d10b6187ebbe405a03a1"
+     }
+    },
+    {
+     "item": "1.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "F4",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.015",
+      "0.037132446",
+      "0.0024591607",
+      "-0.036859206",
+      "-0.17322129",
+      "0.017612396",
+      "0.17351156"
+     ],
+     "files_sha256": {
+      "work/solution.py": "90d1844a5d933d3ae0813e1866df02f496fde0c13faf9929de0f770959dbbaad",
+      "work/inputs.py": "291dcf361b02ee5d523c625e656ccf3cbf98ff7352033681ae6d3e8a4cdc25c1",
+      "work/run.py": "61a7cc2ef039329811c688a3271138f3a10c6e45bfcd1ec2c78c489d2a4763f6",
+      "work/outputs/run.log": "a024ef1173d8899d97edd8411926deb47c2fd937551ba4b64cad9c91a7af82f9",
+      "work/results/results.json": "4aeccfe288f0298cafb60314eebd06b2c4b69c051ccec3ab7fd47bb00d3ff897",
+      "work/results/metadata.yml": "58a96ed135a42408150ffefd8f7918abe35dd02d3fc2aa1e8905614e664a6e5c",
+      "work/report.md": "94c1e0751da0e49eeb6076f3a67716feda1cec0b242a9af1b6a09bf2aad6377d"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "1.1.s3",
+   "case": 1,
+   "call": "cg(A, b, x0, tol)",
+   "true_values": [
+    "0.014285714",
+    "0.035364235",
+    "0.0023420578",
+    "-0.035104006",
+    "-0.16497266",
+    "0.01677371",
+    "0.16524911"
+   ],
+   "shape": [
+    7
+   ],
+   "fault": "R5",
+   "fault_detail": {
+    "element": 0
+   },
+   "items": [
+    {
+     "item": "1.1.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.014285714",
+      "0.035364235",
+      "0.0023420578",
+      "-0.035104006",
+      "-0.16497266",
+      "0.01677371",
+      "0.16524911"
+     ],
+     "files_sha256": {
+      "work/solution.py": "3a19461df51122c98468530733387f0f726103f5338e9a877a4301767858c16a",
+      "work/inputs.py": "291dcf361b02ee5d523c625e656ccf3cbf98ff7352033681ae6d3e8a4cdc25c1",
+      "work/run.py": "61a7cc2ef039329811c688a3271138f3a10c6e45bfcd1ec2c78c489d2a4763f6",
+      "work/outputs/run.log": "9dd90b1adb3ca8d8f1c08554881d187e19c96ae18805a1a83a120653d546a260",
+      "work/results/results.json": "17f8380cf1ab4ff9cc5f03103db43cc2c76c1865427bb584e7c36863c18d9c98",
+      "work/results/metadata.yml": "9f4fe821d73008a8705365c5f6bb00d49d2a83cb992195bb36c9644b98220f4e",
+      "work/report.md": "d2babcb274588c296a75ab0c41671794937a5393a381d10b6187ebbe405a03a1"
+     }
+    },
+    {
+     "item": "1.1.s3.faulty",
+     "kind": "faulty",
+     "fault": "R5",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "0.104285714",
+      "0.035364235",
+      "0.0023420578",
+      "-0.035104006",
+      "-0.16497266",
+      "0.01677371",
+      "0.16524911"
+     ],
+     "files_sha256": {
+      "work/solution.py": "3a19461df51122c98468530733387f0f726103f5338e9a877a4301767858c16a",
+      "work/inputs.py": "291dcf361b02ee5d523c625e656ccf3cbf98ff7352033681ae6d3e8a4cdc25c1",
+      "work/run.py": "61a7cc2ef039329811c688a3271138f3a10c6e45bfcd1ec2c78c489d2a4763f6",
+      "work/outputs/run.log": "9dd90b1adb3ca8d8f1c08554881d187e19c96ae18805a1a83a120653d546a260",
+      "work/results/results.json": "17f8380cf1ab4ff9cc5f03103db43cc2c76c1865427bb584e7c36863c18d9c98",
+      "work/results/metadata.yml": "9f4fe821d73008a8705365c5f6bb00d49d2a83cb992195bb36c9644b98220f4e",
+      "work/report.md": "2d051211d86d17846d72268fdb2e560aa6c1463b43437d648886b7b55f2656ef"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "10.9.s1",
+   "case": 0,
+   "call": "sum_real_self(EX['atom_charges'], EX['configs'].shape[0], get_alpha(np.linalg.inv(EX['latvec']).T))",
+   "true_values": [
+    "-4.8860251"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "10.9.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-4.8860251"
+     ],
+     "files_sha256": {
+      "work/solution.py": "76dca33c164a428e94d592891665de09432072fd88b9cb4aff80f2d0c5a69510",
+      "work/inputs.py": "a86150ed4e0ef65c55f8362ce228cb8e5009ef2072230aef3bbbbd2ec24d6108",
+      "work/run.py": "9fcf5c755c1bc27a404912903e242d58b216bcb194e6cf7436af055dd2a18d92",
+      "work/outputs/run.log": "2a10be44321c5d70603ddbdbf077d32e92a1b84b9282b98d36574a1eba2bba4f",
+      "work/results/results.json": "ca6fa81616fd9c5af1f862a189fa98684fb82696dae8d122ceb2ebe4c55d05ee",
+      "work/results/metadata.yml": "c053f8ffe79c644231896d05a79abbb6ec969909dcd9e7d044742d22d3ce9dfd",
+      "work/report.md": "7d20ce17fb9715611a5dbc7bc4404dc663bc51bd4e599f98d1dbacaa53f977b6"
+     }
+    },
+    {
+     "item": "10.9.s1.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-4886.0251"
+     ],
+     "files_sha256": {
+      "work/solution.py": "76dca33c164a428e94d592891665de09432072fd88b9cb4aff80f2d0c5a69510",
+      "work/inputs.py": "a86150ed4e0ef65c55f8362ce228cb8e5009ef2072230aef3bbbbd2ec24d6108",
+      "work/run.py": "9fcf5c755c1bc27a404912903e242d58b216bcb194e6cf7436af055dd2a18d92",
+      "work/outputs/run.log": "9c7fa4a1e00be8e7431660fd19b558d89320c47ec84bbd865be9d5b7a357883b",
+      "work/results/results.json": "0e6addefd513f8fbce7e7aa5aaf225e1cb1e0365297d4bd90a51f6571920ee3b",
+      "work/results/metadata.yml": "c053f8ffe79c644231896d05a79abbb6ec969909dcd9e7d044742d22d3ce9dfd",
+      "work/report.md": "21d42ec1b28504b4edf5bcb2a23376e3d37f9f8398a34c7a464f74f9b27949c5"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "11.10.s1",
+   "case": 1,
+   "call": "entropy(rho)",
+   "true_values": [
+    "-3.2034265e-16"
+   ],
+   "shape": [],
+   "fault": "R1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "11.10.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-3.2034265e-16"
+     ],
+     "files_sha256": {
+      "work/solution.py": "55093252404bd28adf5dbd6eccf8ade9c1c909f1dcac8b968cf512a395c5d82f",
+      "work/inputs.py": "53b9e53d9aa0cb574064807e2d9e15a7c1f3e3fe3524ce7e06a855f4030475ef",
+      "work/run.py": "3ad33b9af69720c19a89c845ba8b3c987295a7903b76769e30e0081e96c74a32",
+      "work/outputs/run.log": "017b0a58fe1e5540fadf7489f7db7057947a61f6529755471d21976fd2b12fd8",
+      "work/results/results.json": "17c5689ea057a45c88b45d4abfb6855a4c5368b6f94f7732710548ac9a58ca74",
+      "work/results/metadata.yml": "57ea50157ba054404305b5ffd9ae48dcd01639497ff08eefb61d821a9685af22",
+      "work/report.md": "c45adc9bcf95f0c0aa3feea8a66f0b27f05c37417d8ec35e0f9c6fa38ded0977"
+     }
+    },
+    {
+     "item": "11.10.s1.faulty",
+     "kind": "faulty",
+     "fault": "R1",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-3.2034265e-13"
+     ],
+     "files_sha256": {
+      "work/solution.py": "55093252404bd28adf5dbd6eccf8ade9c1c909f1dcac8b968cf512a395c5d82f",
+      "work/inputs.py": "53b9e53d9aa0cb574064807e2d9e15a7c1f3e3fe3524ce7e06a855f4030475ef",
+      "work/run.py": "3ad33b9af69720c19a89c845ba8b3c987295a7903b76769e30e0081e96c74a32",
+      "work/outputs/run.log": "017b0a58fe1e5540fadf7489f7db7057947a61f6529755471d21976fd2b12fd8",
+      "work/results/results.json": "ff1a2c2fb10531a5dd8cb5cbec13806adf9b97f3098775ebec637bbeae49ca1b",
+      "work/results/metadata.yml": "57ea50157ba054404305b5ffd9ae48dcd01639497ff08eefb61d821a9685af22",
+      "work/report.md": "e0c10a8e7314d63329a3aba134ec5e68e033a7f6be2c9853cb94cdbf6fa7ac83"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "11.11.s1",
+   "case": 1,
+   "call": "coherent_inf_state(rho_AB, 2, 3)",
+   "true_values": [
+    "-1"
+   ],
+   "shape": [],
+   "fault": "R3",
+   "fault_detail": {
+    "other_case": 0
+   },
+   "items": [
+    {
+     "item": "11.11.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "9251798f1b613fa1565b34e725b781bd094ca4a1849b5b6bf85b9253810e9f68",
+      "work/inputs.py": "aeb6ac4856b2bbe50cb189621cd412a70a81b610cdb9d6c9c9c8784b8eef66e9",
+      "work/run.py": "cff85938ac2424a4c65d7dc810ed2a6c0b784be39abfc9e8ae56fcebbecc7598",
+      "work/outputs/run.log": "7bf6a3714cb5e6c0046fdeaba7d5fdee9ff63cfde2d72305551bc241d0e2ecc5",
+      "work/results/results.json": "c56b02853261a05f409b77b59a03243e335facb8ab4929abb724766bd97ff350",
+      "work/results/metadata.yml": "bf200c0b2273c839ce284a4732c30be57d533408260daeeb5047d7d3b3853ed3",
+      "work/report.md": "9d43b8f805f9b4f8372fda996878a1e77733446b9fe44837ea56a26283b47fc3"
+     }
+    },
+    {
+     "item": "11.11.s1.faulty",
+     "kind": "faulty",
+     "fault": "R3",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "9251798f1b613fa1565b34e725b781bd094ca4a1849b5b6bf85b9253810e9f68",
+      "work/inputs.py": "aeb6ac4856b2bbe50cb189621cd412a70a81b610cdb9d6c9c9c8784b8eef66e9",
+      "work/run.py": "cff85938ac2424a4c65d7dc810ed2a6c0b784be39abfc9e8ae56fcebbecc7598",
+      "work/outputs/run.log": "7bf6a3714cb5e6c0046fdeaba7d5fdee9ff63cfde2d72305551bc241d0e2ecc5",
+      "work/results/results.json": "b0e86274f74d026b9d92187b1b931c8dc15ebbded616ac24d19784eeb53a6224",
+      "work/results/metadata.yml": "bf200c0b2273c839ce284a4732c30be57d533408260daeeb5047d7d3b3853ed3",
+      "work/report.md": "18397e77bd49c80b476dcc2142338690a02891665ea0ee4185f66cf70002b6c6"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "11.11.s2",
+   "case": 1,
+   "call": "coherent_inf_state(rho_AB, 2, 3)",
+   "true_values": [
+    "-1"
+   ],
+   "shape": [],
+   "fault": "R4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "11.11.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "8c7f5069b8692923cb6db23301c09ce77bb2330b39b0a5388c3bf36a8962ee3b",
+      "work/inputs.py": "aeb6ac4856b2bbe50cb189621cd412a70a81b610cdb9d6c9c9c8784b8eef66e9",
+      "work/run.py": "cff85938ac2424a4c65d7dc810ed2a6c0b784be39abfc9e8ae56fcebbecc7598",
+      "work/outputs/run.log": "7bf6a3714cb5e6c0046fdeaba7d5fdee9ff63cfde2d72305551bc241d0e2ecc5",
+      "work/results/results.json": "cc9f145a31d72caeae4d28778d6c1e3b042425054ba9bd88489808aa633688fa",
+      "work/results/metadata.yml": "ddd61cec0e62a92256d7846393f5cbe5c8a0a41fe7f7ac36c17647a5df59b532",
+      "work/report.md": "9d43b8f805f9b4f8372fda996878a1e77733446b9fe44837ea56a26283b47fc3"
+     }
+    },
+    {
+     "item": "11.11.s2.faulty",
+     "kind": "faulty",
+     "fault": "R4",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-1.05"
+     ],
+     "files_sha256": {
+      "work/solution.py": "8c7f5069b8692923cb6db23301c09ce77bb2330b39b0a5388c3bf36a8962ee3b",
+      "work/inputs.py": "aeb6ac4856b2bbe50cb189621cd412a70a81b610cdb9d6c9c9c8784b8eef66e9",
+      "work/run.py": "cff85938ac2424a4c65d7dc810ed2a6c0b784be39abfc9e8ae56fcebbecc7598",
+      "work/outputs/run.log": "7bf6a3714cb5e6c0046fdeaba7d5fdee9ff63cfde2d72305551bc241d0e2ecc5",
+      "work/results/results.json": "d292eedb427d8cd8e605c8dd8715e436467863a4024c48f0c337a50a2f7691a6",
+      "work/results/metadata.yml": "ddd61cec0e62a92256d7846393f5cbe5c8a0a41fe7f7ac36c17647a5df59b532",
+      "work/report.md": "b557946d8baaa9aab936a6208ad76679ca78bc1376f4140687aab6c795b14243"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "11.3.s2",
+   "case": 0,
+   "call": "tensor([0, 1], [0, 1])",
+   "true_values": [
+    "0",
+    "0",
+    "0",
+    "1"
+   ],
+   "shape": [
+    4
+   ],
+   "fault": "R2",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "11.3.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0",
+      "0",
+      "0",
+      "1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "0aa8583335d9140bf4293dfaae81c4e3fe9b1ce48c26882c7e81b88076638fcb",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "f3b8d4129fb17557b37cb07681d9d1765089edbf9960f6cac832ea90dd7b84d3",
+      "work/outputs/run.log": "192a32c2924a06374b715195b17e9a5332bd07399a0840fb0e5b08c18c561a50",
+      "work/results/results.json": "270d59b06368bbefbc35b91a59ee4ffcf7463c089d78caffc072fafe1d392229",
+      "work/results/metadata.yml": "86afe94fb4e3ec8a903abca4af3b10d27c5ebb6bc2c7d0f8a9b0265445be8536",
+      "work/report.md": "002022b75227cfa38564e0320f99aa1945adf520b4b2a228880c69fb849ab642"
+     }
+    },
+    {
+     "item": "11.3.s2.faulty",
+     "kind": "faulty",
+     "fault": "R2",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-0",
+      "-0",
+      "-0",
+      "-1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "0aa8583335d9140bf4293dfaae81c4e3fe9b1ce48c26882c7e81b88076638fcb",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "f3b8d4129fb17557b37cb07681d9d1765089edbf9960f6cac832ea90dd7b84d3",
+      "work/outputs/run.log": "192a32c2924a06374b715195b17e9a5332bd07399a0840fb0e5b08c18c561a50",
+      "work/results/results.json": "888bf5a2b1e9428f63c396fea10eba60f5abdebbad50c92c40e1bfbc1074cb68",
+      "work/results/metadata.yml": "86afe94fb4e3ec8a903abca4af3b10d27c5ebb6bc2c7d0f8a9b0265445be8536",
+      "work/report.md": "1f0447c1b3be9992ed000c28f7e398ad4f9cbc6e8c8f7cc1eb45b882687e68a5"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "14.1.s1",
+   "case": 1,
+   "call": "harmonic_mannella_leapfrog(x0, v0, t0, steps, taup, omega0, vrms)",
+   "true_values": [
+    "1.3013517e-06"
+   ],
+   "shape": [],
+   "fault": "F4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "14.1.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1.3013517e-06"
+     ],
+     "files_sha256": {
+      "work/solution.py": "ea77a10120d6e19fe58bdcb8072c93f6c09665a08a652246b6f94897b98f2e67",
+      "work/inputs.py": "3c124beb420b7a56124b147ef677ee05875f7683f1838f4fb6bce579a077b73b",
+      "work/run.py": "7efcc5903abb18158abf69e7c85425728f96a3f926f6f5044849e9f6e5b6edd1",
+      "work/outputs/run.log": "9efc380b378c3f6577e0e4dd26748e6d1e4b1135e53d0d7e2682cd4806c8b008",
+      "work/results/results.json": "61e1f9d1f33678231ff6c8b95dc775bfa4187ce29eb7c36fe8bd6b3d8c1611ff",
+      "work/results/metadata.yml": "88f3534092dc0bfd32e271805bb163a069fd1ba87034b0b5f669c7c4b022c9b3",
+      "work/report.md": "b653334dfdbdfe26cf5a163bf82681fd5a21101904ad80cf9a97392cf59ddf55"
+     }
+    },
+    {
+     "item": "14.1.s1.faulty",
+     "kind": "faulty",
+     "fault": "F4",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1.3664193e-06"
+     ],
+     "files_sha256": {
+      "work/solution.py": "ea77a10120d6e19fe58bdcb8072c93f6c09665a08a652246b6f94897b98f2e67",
+      "work/inputs.py": "3c124beb420b7a56124b147ef677ee05875f7683f1838f4fb6bce579a077b73b",
+      "work/run.py": "7efcc5903abb18158abf69e7c85425728f96a3f926f6f5044849e9f6e5b6edd1",
+      "work/outputs/run.log": "d4d2c0855b7fb456b91caa6caeee3602ffc5744ec47b6036ff6e271de613e1c9",
+      "work/results/results.json": "7d2baada157f0b9bedfe5f8085b8ce6b5bb8f58d5510f858edf3f37b6377c102",
+      "work/results/metadata.yml": "88f3534092dc0bfd32e271805bb163a069fd1ba87034b0b5f669c7c4b022c9b3",
+      "work/report.md": "b0ac89bcbc4c336d3c7230f90ebc88d807e131e828a1687080fda5711787f286"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "19.2.s1",
+   "case": 0,
+   "call": "n_tangle(MaxEnt)",
+   "true_values": [
+    "1"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "19.2.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "52f39de48353c055acb4843960b821d4253a138d262af012e0060d36e16d3994",
+      "work/inputs.py": "85032c05c1d5eb344db1e47069bb70b8173ebb6ceb1b3f889705edf2b81e6245",
+      "work/run.py": "a2b44da75173979aa38186bc077a9cb9c3eca49512ba78562131f855994d12a3",
+      "work/outputs/run.log": "537094b96f63df1b36eed0c29c35da411dd79a97b4745224d6ecaf5bca302fad",
+      "work/results/results.json": "30404c298dd793acf2b9a8479a32ddb93a7b40ffeda7a1e5bcbbf51b4c0ee410",
+      "work/results/metadata.yml": "f7b130df89a990a24ed861dfa1b129d7a211a829ac6ef3ae344d1161928d9957",
+      "work/report.md": "13277c32a1dcb0018e3da4af9780055ea3413a549fd435ca8ed2f60e41c7f7e7"
+     }
+    },
+    {
+     "item": "19.2.s1.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1000"
+     ],
+     "files_sha256": {
+      "work/solution.py": "52f39de48353c055acb4843960b821d4253a138d262af012e0060d36e16d3994",
+      "work/inputs.py": "85032c05c1d5eb344db1e47069bb70b8173ebb6ceb1b3f889705edf2b81e6245",
+      "work/run.py": "a2b44da75173979aa38186bc077a9cb9c3eca49512ba78562131f855994d12a3",
+      "work/outputs/run.log": "975f33ce78172332ae6351b090a321a466950c6b9b45a40fc38661d30284a959",
+      "work/results/results.json": "a67c6f2fcf94ccf54231b847bb5f805d35859c66b1cde2adebc32f48648a4e5d",
+      "work/results/metadata.yml": "f7b130df89a990a24ed861dfa1b129d7a211a829ac6ef3ae344d1161928d9957",
+      "work/report.md": "901c4784ab9ec29171e66b141b27ed7e806564ae78f2db775a2c3f41d07a06f0"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "23.1.s2",
+   "case": 0,
+   "call": "KL_divergence(p, q)",
+   "true_values": [
+    "1"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "23.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "1c5eabe40e48b2945ce69e8dd8ae89808829f2ce0f1daab2bfc20be43bd05d25",
+      "work/inputs.py": "53b24eeb6ddaebba0bfa844924b099e93c8941a083768f97cbfceebcc642b75e",
+      "work/run.py": "5cd30ae4ec37e9333ba64c3fa87d76bda2b00b6b8fa910a72f6e254a5ea08d75",
+      "work/outputs/run.log": "537094b96f63df1b36eed0c29c35da411dd79a97b4745224d6ecaf5bca302fad",
+      "work/results/results.json": "cf0ac73340e0197f1838e1796abc81b62f2db14a11cb9ea03162b9b4ef542af6",
+      "work/results/metadata.yml": "cc3d94039b21f06059e1380d27c468e1151f2d701e3e15c5e434ce50809ad340",
+      "work/report.md": "a38fe5bde15d6e3843d4b9be4ed0352f7ed9481768004a4f79419ea67f2c34b1"
+     }
+    },
+    {
+     "item": "23.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1000"
+     ],
+     "files_sha256": {
+      "work/solution.py": "1c5eabe40e48b2945ce69e8dd8ae89808829f2ce0f1daab2bfc20be43bd05d25",
+      "work/inputs.py": "53b24eeb6ddaebba0bfa844924b099e93c8941a083768f97cbfceebcc642b75e",
+      "work/run.py": "5cd30ae4ec37e9333ba64c3fa87d76bda2b00b6b8fa910a72f6e254a5ea08d75",
+      "work/outputs/run.log": "975f33ce78172332ae6351b090a321a466950c6b9b45a40fc38661d30284a959",
+      "work/results/results.json": "160e58eebc9cd2ed50edc2e8efd89b3366192d5131d5e91d3687507ce61f659d",
+      "work/results/metadata.yml": "cc3d94039b21f06059e1380d27c468e1151f2d701e3e15c5e434ce50809ad340",
+      "work/report.md": "ed563ea258700c46460d912a233d7905aadf27d08bb5e39521fca0dd9d24dcea"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "23.1.s3",
+   "case": 2,
+   "call": "KL_divergence(p, q)",
+   "true_values": [
+    "2"
+   ],
+   "shape": [],
+   "fault": "R1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "23.1.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "2"
+     ],
+     "files_sha256": {
+      "work/solution.py": "8eb20577ae62f5f1576749d4c958358c0f3cfea248ca379203dedafcf1c0f91a",
+      "work/inputs.py": "bcd47f469fea095a88d12ff0aeb65f63d6f6a8387f18a5f33da1003a95ef9207",
+      "work/run.py": "5cd30ae4ec37e9333ba64c3fa87d76bda2b00b6b8fa910a72f6e254a5ea08d75",
+      "work/outputs/run.log": "962bd521fbaef00f9f63938b683f93ab5f328d5a3356517c479506b47d37ccbd",
+      "work/results/results.json": "3e00c7e232d7d11f1fbab2e8f30dee978a8a875cdca15d4f1043bf40123bcbe0",
+      "work/results/metadata.yml": "8be24aa86f12c202a3370ffbdefcc8f23a9c62d7dbe166da23a34860addd9f3f",
+      "work/report.md": "8ca6894499f0ce8b6dbf6878305ee765f742b9c5b16bb0bf21afe04698c498ac"
+     }
+    },
+    {
+     "item": "23.1.s3.faulty",
+     "kind": "faulty",
+     "fault": "R1",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "2000"
+     ],
+     "files_sha256": {
+      "work/solution.py": "8eb20577ae62f5f1576749d4c958358c0f3cfea248ca379203dedafcf1c0f91a",
+      "work/inputs.py": "bcd47f469fea095a88d12ff0aeb65f63d6f6a8387f18a5f33da1003a95ef9207",
+      "work/run.py": "5cd30ae4ec37e9333ba64c3fa87d76bda2b00b6b8fa910a72f6e254a5ea08d75",
+      "work/outputs/run.log": "962bd521fbaef00f9f63938b683f93ab5f328d5a3356517c479506b47d37ccbd",
+      "work/results/results.json": "6ac5940e5497d5cf4eb39c10e25969869f85c5d56eea901ea9dabe0b9b30eccd",
+      "work/results/metadata.yml": "8be24aa86f12c202a3370ffbdefcc8f23a9c62d7dbe166da23a34860addd9f3f",
+      "work/report.md": "b21316fffe7c1444a9871a82582e7e6496c099fdd6bd2eb8d71a9e1512d564e8"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "23.2.s2",
+   "case": 1,
+   "call": "mutual_info(channel, prior)",
+   "true_values": [
+    "2.220446e-16"
+   ],
+   "shape": [],
+   "fault": "R3",
+   "fault_detail": {
+    "other_case": 0
+   },
+   "items": [
+    {
+     "item": "23.2.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "2.220446e-16"
+     ],
+     "files_sha256": {
+      "work/solution.py": "cd414b40c1296f0fa2b0c73ec7cf6d3e0dc9bff3737cb015b1f60753ec154810",
+      "work/inputs.py": "4d7d5b3178a0f031ce60b60249fad0746f1e62e6a93b0b5ab466645e26f8badd",
+      "work/run.py": "1cbb5ea83bdaed3dbc1f15984387414cc89ff53603b7b13a916d60b565516d51",
+      "work/outputs/run.log": "f273c13c5b47bfd4d884f43eb66498d7a3bb0d23402b181bcea0e08881b14ada",
+      "work/results/results.json": "4b5bb3db9561e8eb6bf38e4fb3ebb50e596ae8081c23a084cc354a65157a3526",
+      "work/results/metadata.yml": "1572e2b41a0d9ba5e4a2b291b6c44e1b1c3c96428cb235e1416ae26ddbac9bcd",
+      "work/report.md": "693a128874529021525f9fc4ab3f0826c9cc32cb2ea07a1687ecb1d8fdc56c65"
+     }
+    },
+    {
+     "item": "23.2.s2.faulty",
+     "kind": "faulty",
+     "fault": "R3",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "cd414b40c1296f0fa2b0c73ec7cf6d3e0dc9bff3737cb015b1f60753ec154810",
+      "work/inputs.py": "4d7d5b3178a0f031ce60b60249fad0746f1e62e6a93b0b5ab466645e26f8badd",
+      "work/run.py": "1cbb5ea83bdaed3dbc1f15984387414cc89ff53603b7b13a916d60b565516d51",
+      "work/outputs/run.log": "f273c13c5b47bfd4d884f43eb66498d7a3bb0d23402b181bcea0e08881b14ada",
+      "work/results/results.json": "76f4652aafdb1580d47416c0e31ac469f547deec1085b058f5a3b0341100a813",
+      "work/results/metadata.yml": "1572e2b41a0d9ba5e4a2b291b6c44e1b1c3c96428cb235e1416ae26ddbac9bcd",
+      "work/report.md": "e245dffafee0d2150db53de2d2b62023511690c2529ed7a49d427dc185c605dc"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "23.2.s3",
+   "case": 1,
+   "call": "mutual_info(channel, prior)",
+   "true_values": [
+    "2.220446e-16"
+   ],
+   "shape": [],
+   "fault": "R4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "23.2.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "2.220446e-16"
+     ],
+     "files_sha256": {
+      "work/solution.py": "8bb522274f18ed51e180c6d800d2637e2d6cb48bdd74fc12cea7e2dfde972dea",
+      "work/inputs.py": "4d7d5b3178a0f031ce60b60249fad0746f1e62e6a93b0b5ab466645e26f8badd",
+      "work/run.py": "1cbb5ea83bdaed3dbc1f15984387414cc89ff53603b7b13a916d60b565516d51",
+      "work/outputs/run.log": "f273c13c5b47bfd4d884f43eb66498d7a3bb0d23402b181bcea0e08881b14ada",
+      "work/results/results.json": "5db486cc5dac9479dcd9a9097034ccd7e32993ab1e5c42b5d3312adacd58ee7e",
+      "work/results/metadata.yml": "be4b74318e79c4fecd66d9477a023ff371f0f9eaad736e728b8bceb76d074438",
+      "work/report.md": "693a128874529021525f9fc4ab3f0826c9cc32cb2ea07a1687ecb1d8fdc56c65"
+     }
+    },
+    {
+     "item": "23.2.s3.faulty",
+     "kind": "faulty",
+     "fault": "R4",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "2.3314684e-16"
+     ],
+     "files_sha256": {
+      "work/solution.py": "8bb522274f18ed51e180c6d800d2637e2d6cb48bdd74fc12cea7e2dfde972dea",
+      "work/inputs.py": "4d7d5b3178a0f031ce60b60249fad0746f1e62e6a93b0b5ab466645e26f8badd",
+      "work/run.py": "1cbb5ea83bdaed3dbc1f15984387414cc89ff53603b7b13a916d60b565516d51",
+      "work/outputs/run.log": "f273c13c5b47bfd4d884f43eb66498d7a3bb0d23402b181bcea0e08881b14ada",
+      "work/results/results.json": "79fbdf1c1487578994eb3a2f8b1abdd72534a4eaf12bbed54af3aba7fd82f4f2",
+      "work/results/metadata.yml": "be4b74318e79c4fecd66d9477a023ff371f0f9eaad736e728b8bceb76d074438",
+      "work/report.md": "6081ed96b0b876b466f0d3cf5914ec7c0419e6a3b943561e1ec317d1a49672d2"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "24.2.s3",
+   "case": 2,
+   "call": "LaxF(v_i, v_i1)",
+   "true_values": [
+    "22.5"
+   ],
+   "shape": [],
+   "fault": "R2",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "24.2.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "22.5"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4f4b50b79fe70c1c2c6d741d0de54a1ebcc17985f4ac889eddf782abf91532b9",
+      "work/inputs.py": "22ed7da8b21d4b0d32eebd56a6126dd5aa6f1b0dade6c9e8c6c4fdbb6e5ea83d",
+      "work/run.py": "499906c9264fe989e868db92d0a88d75f30b857c5c96aa61fc35f2e8eb2d6562",
+      "work/outputs/run.log": "0b9151ed13190ba9a8694db37c511c13a608309dc19221dd27797a19c1a38be0",
+      "work/results/results.json": "94bd0e20e237a41927b6dff854f4b9d9515efb7fb0ba3165b5ce2d9958fc256e",
+      "work/results/metadata.yml": "1941279876dce90e7ccafc00b58938fb6c95f966ecb3375af9206d9a79ef66fc",
+      "work/report.md": "91162319f5d73bcde619b2c47b8cce0edfee608b54bafe89b629adfd88c91423"
+     }
+    },
+    {
+     "item": "24.2.s3.faulty",
+     "kind": "faulty",
+     "fault": "R2",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-22.5"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4f4b50b79fe70c1c2c6d741d0de54a1ebcc17985f4ac889eddf782abf91532b9",
+      "work/inputs.py": "22ed7da8b21d4b0d32eebd56a6126dd5aa6f1b0dade6c9e8c6c4fdbb6e5ea83d",
+      "work/run.py": "499906c9264fe989e868db92d0a88d75f30b857c5c96aa61fc35f2e8eb2d6562",
+      "work/outputs/run.log": "0b9151ed13190ba9a8694db37c511c13a608309dc19221dd27797a19c1a38be0",
+      "work/results/results.json": "f2de0b12f41f24b75908b7ed4f3339ba21aa48bf7e2c9275235bb6b72062f0d4",
+      "work/results/metadata.yml": "1941279876dce90e7ccafc00b58938fb6c95f966ecb3375af9206d9a79ef66fc",
+      "work/report.md": "cf72572d903c46b24dfa2544f67f87c3f4ef15d02416f12bb2e45a6f017873cf"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "25.1.s2",
+   "case": 2,
+   "call": "SpeciesGrowth(spc, res, b, c, w, m)",
+   "true_values": [
+    "0.019",
+    "0.04",
+    "0.006"
+   ],
+   "shape": [
+    3
+   ],
+   "fault": "F4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "25.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.019",
+      "0.04",
+      "0.006"
+     ],
+     "files_sha256": {
+      "work/solution.py": "aa748be6e57f6edcc73daa0cd2b7fd8813e205c71443befac8bc7a580a137cdb",
+      "work/inputs.py": "33043c2e59dddff9220936dd9aea019040c441228495d52deacbdfa4cf6fdb82",
+      "work/run.py": "dfb07c425cafb720d8a3efcebeeb9a88909cc743f71ceb4f5611a0f36684d7ed",
+      "work/outputs/run.log": "dedb5fa003dce9094bc9b358e7029fee7a68b9aa4bec0ac7648af0e67d1a7693",
+      "work/results/results.json": "7b5d5fbe637acb07267e18736d1a3e074b326e58147deb20d8921612191be34c",
+      "work/results/metadata.yml": "19266165b6a3101ed40f3353bff8818625d94571d1034e191c42b371bde26303",
+      "work/report.md": "eb8177d6ba0fb7f79126fcc5fa503dde112fc4615bc4ada6d7bbdefba22bfe0a"
+     }
+    },
+    {
+     "item": "25.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "F4",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.01995",
+      "0.042",
+      "0.0063"
+     ],
+     "files_sha256": {
+      "work/solution.py": "aa748be6e57f6edcc73daa0cd2b7fd8813e205c71443befac8bc7a580a137cdb",
+      "work/inputs.py": "33043c2e59dddff9220936dd9aea019040c441228495d52deacbdfa4cf6fdb82",
+      "work/run.py": "dfb07c425cafb720d8a3efcebeeb9a88909cc743f71ceb4f5611a0f36684d7ed",
+      "work/outputs/run.log": "c91c214cdfbb8ab301ec7a091d44caa3559c0e3750118e082ffd39cc1a3bf7cf",
+      "work/results/results.json": "915e6d2c8d3fd8fa2995dcd2ec2bee49c5d640402610aa76cde2554616be7124",
+      "work/results/metadata.yml": "19266165b6a3101ed40f3353bff8818625d94571d1034e191c42b371bde26303",
+      "work/report.md": "28b1bf285ec66a58f37a86e88f366220dc3c7f44bd8c6e4ae637b38c4ffe6c30"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "25.2.s1",
+   "case": 1,
+   "call": "ResourcesUpdate(spc, res, c, r, K)",
+   "true_values": [
+    "0.094888889",
+    "0.0376"
+   ],
+   "shape": [
+    2
+   ],
+   "fault": "R5",
+   "fault_detail": {
+    "element": 0
+   },
+   "items": [
+    {
+     "item": "25.2.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.094888889",
+      "0.0376"
+     ],
+     "files_sha256": {
+      "work/solution.py": "cbfe272eb44006692d021460a28eab9469559c30b9968beaa6fb0bfdb4a69f01",
+      "work/inputs.py": "cf6af243adef5cccb14c9c217f39fb06269ca51b690cd287a12bc01d9c2f163a",
+      "work/run.py": "eac8f89003b12b6d753accc88f18061bd33a2840c4c057a3c297f8df8d65e860",
+      "work/outputs/run.log": "f5bab557652ad8d06783e1a0c5abdfd5acf76a27b947b51c575fa1f940dc17f3",
+      "work/results/results.json": "36188258bc5102a0effcee4f356223f15ab0a35427e5d58c3ba0a2e48727e411",
+      "work/results/metadata.yml": "c08295a8bbafcc9330da5c81c857612c3d373f2d03a5993cf8ff12b965461e94",
+      "work/report.md": "12faadb87321c4277548d3d35e8709da97847e291a7a9e7573582382cbfd346e"
+     }
+    },
+    {
+     "item": "25.2.s1.faulty",
+     "kind": "faulty",
+     "fault": "R5",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "0.904888889",
+      "0.0376"
+     ],
+     "files_sha256": {
+      "work/solution.py": "cbfe272eb44006692d021460a28eab9469559c30b9968beaa6fb0bfdb4a69f01",
+      "work/inputs.py": "cf6af243adef5cccb14c9c217f39fb06269ca51b690cd287a12bc01d9c2f163a",
+      "work/run.py": "eac8f89003b12b6d753accc88f18061bd33a2840c4c057a3c297f8df8d65e860",
+      "work/outputs/run.log": "f5bab557652ad8d06783e1a0c5abdfd5acf76a27b947b51c575fa1f940dc17f3",
+      "work/results/results.json": "36188258bc5102a0effcee4f356223f15ab0a35427e5d58c3ba0a2e48727e411",
+      "work/results/metadata.yml": "c08295a8bbafcc9330da5c81c857612c3d373f2d03a5993cf8ff12b965461e94",
+      "work/report.md": "30b8bf25faa1f23fed7afe4f3cb3ed9edde1dea196741a1209f5f0965f4f41b2"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "25.2.s2",
+   "case": 0,
+   "call": "ResourcesUpdate(spc, res, c, r, K)",
+   "true_values": [
+    "-0.0108",
+    "-0.0368"
+   ],
+   "shape": [
+    2
+   ],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "25.2.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-0.0108",
+      "-0.0368"
+     ],
+     "files_sha256": {
+      "work/solution.py": "d6b1e78b3b1be271a9989b02059e21bfa20e8542ac7392af86d063a391d2e641",
+      "work/inputs.py": "d2e7f2ef0dbeac7af64ac689ab647ef7ea005f4841990c03568ef63a6e44c983",
+      "work/run.py": "eac8f89003b12b6d753accc88f18061bd33a2840c4c057a3c297f8df8d65e860",
+      "work/outputs/run.log": "0ae4a31cea6a1b9a9c258f7b08600b474c8478f11323c71806fc0dadeca274d0",
+      "work/results/results.json": "17fd6e131036f1f6fce425bb8bfc580f2facbdd90b94bc0aec065d745a7b979c",
+      "work/results/metadata.yml": "74e92aaadfec725cd8d41dcf8d7953e19925380e0d1b7e86cfd644d635f17a60",
+      "work/report.md": "0d85f8b1491c586b6ba953a4065196c7886321389fc449d28f108a24bdca0a7c"
+     }
+    },
+    {
+     "item": "25.2.s2.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-10.8",
+      "-36.8"
+     ],
+     "files_sha256": {
+      "work/solution.py": "d6b1e78b3b1be271a9989b02059e21bfa20e8542ac7392af86d063a391d2e641",
+      "work/inputs.py": "d2e7f2ef0dbeac7af64ac689ab647ef7ea005f4841990c03568ef63a6e44c983",
+      "work/run.py": "eac8f89003b12b6d753accc88f18061bd33a2840c4c057a3c297f8df8d65e860",
+      "work/outputs/run.log": "2202602ef043b08b2b237ef0d4562005e252737ca8efbc2648ca104acf39dfd2",
+      "work/results/results.json": "c2dce7e53c365c8aa032a030f3e5dc549a981dd27c6a2aaa0c8f6b474680e0b2",
+      "work/results/metadata.yml": "74e92aaadfec725cd8d41dcf8d7953e19925380e0d1b7e86cfd644d635f17a60",
+      "work/report.md": "d6db1c845660da780f9f0138a2c2444322fd7eec2fc8ccf9d0364fdbb119dc6f"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "27.1.s2",
+   "case": 2,
+   "call": "Fermi(2 * 10 ** 17, 3 * 10 ** 17, 2 * 10 ** 11)",
+   "true_values": [
+    "0.35782172",
+    "0.36832327"
+   ],
+   "shape": [
+    2
+   ],
+   "fault": "R1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "27.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.35782172",
+      "0.36832327"
+     ],
+     "files_sha256": {
+      "work/solution.py": "72f817b35dc2bea1beaf86afd8bb96b63ed49df9ab77bc9a88f87dd3b778a596",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "3cc54418c4d8655f6936508550f80da82f13bbb066cc2fb928ba06fe957c2efd",
+      "work/outputs/run.log": "aa4b118265ac5155f1530f3d4c7d0336f5397dbb569478b455e55c71cc47db87",
+      "work/results/results.json": "8929f09f9ef08261b888f412102fef1f7f63c64f09ba01be61ccbc425dab9476",
+      "work/results/metadata.yml": "c513abf884456c9f6f1761682528ecd48853d8a08d75c91430ab2bdfcc8e3cd6",
+      "work/report.md": "9505e6d478c946d80028a2db36b17d196e3fb783d20ebd8a3cfa84b0f90e03db"
+     }
+    },
+    {
+     "item": "27.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "R1",
+     "dcl_hard_failures": 2,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "357.82172",
+      "368.32327"
+     ],
+     "files_sha256": {
+      "work/solution.py": "72f817b35dc2bea1beaf86afd8bb96b63ed49df9ab77bc9a88f87dd3b778a596",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "3cc54418c4d8655f6936508550f80da82f13bbb066cc2fb928ba06fe957c2efd",
+      "work/outputs/run.log": "aa4b118265ac5155f1530f3d4c7d0336f5397dbb569478b455e55c71cc47db87",
+      "work/results/results.json": "2c4f33547c03322989efb042de4b134e5b71dd0482d1c35825862f10d4e4564f",
+      "work/results/metadata.yml": "c513abf884456c9f6f1761682528ecd48853d8a08d75c91430ab2bdfcc8e3cd6",
+      "work/report.md": "e54c24758a97822af02b47d51a111c1cf18b6bc97014567bd744f9fe91c4eb03"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "29.2.s2",
+   "case": 0,
+   "call": "inner_product(u, v)",
+   "true_values": [
+    "24"
+   ],
+   "shape": [],
+   "fault": "R3",
+   "fault_detail": {
+    "other_case": 2
+   },
+   "items": [
+    {
+     "item": "29.2.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "24"
+     ],
+     "files_sha256": {
+      "work/solution.py": "483fcbca787a7fe547d5ad15af54cefe6c9eb6b5d490b61c67462542906395ef",
+      "work/inputs.py": "bd1ea648a7e7a1b64803c4ed5cc0bf72b84e4554a3f45990727589cd16a23a6b",
+      "work/run.py": "c6b4d50497fb29d99c9a4b6c9c7689d05edd50af8a9b78eac636fc39376f9a4f",
+      "work/outputs/run.log": "a5662d81d34d303345afd3bfdeccaa9753ae36187bf0f061ec07a65d98a1aa14",
+      "work/results/results.json": "29c9c0c2cd0fdd53c0b2a59d843930c09a0badd2509c7365818bb554c3d85295",
+      "work/results/metadata.yml": "24d4eb34f43cac17b6baaca35f5c40ab488908bd7a8be767298c97532a0ead1c",
+      "work/report.md": "bb1429be9004f02b2b2771e0fae8b55211d8bc4c34d8d95ad502f6872b1d04b1"
+     }
+    },
+    {
+     "item": "29.2.s2.faulty",
+     "kind": "faulty",
+     "fault": "R3",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "86"
+     ],
+     "files_sha256": {
+      "work/solution.py": "483fcbca787a7fe547d5ad15af54cefe6c9eb6b5d490b61c67462542906395ef",
+      "work/inputs.py": "bd1ea648a7e7a1b64803c4ed5cc0bf72b84e4554a3f45990727589cd16a23a6b",
+      "work/run.py": "c6b4d50497fb29d99c9a4b6c9c7689d05edd50af8a9b78eac636fc39376f9a4f",
+      "work/outputs/run.log": "a5662d81d34d303345afd3bfdeccaa9753ae36187bf0f061ec07a65d98a1aa14",
+      "work/results/results.json": "8039ef6fe0d2d826d960d1804942f515220f6f4663bc886432c14abe39b05e6e",
+      "work/results/metadata.yml": "24d4eb34f43cac17b6baaca35f5c40ab488908bd7a8be767298c97532a0ead1c",
+      "work/report.md": "6bbd69c166cb747d0beccff855b0ea6ed73e746d661931704609e9207b5cad1f"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "3.1.s1",
+   "case": 1,
+   "call": "GS(A, b, eps, x_true, x0)",
+   "true_values": [
+    "8.6222069e-05",
+    "9.7203288e-06"
+   ],
+   "shape": [
+    2
+   ],
+   "fault": "R4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "3.1.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "8.6222069e-05",
+      "9.7203288e-06"
+     ],
+     "files_sha256": {
+      "work/solution.py": "f02f817d48679380f55be588a5151a8d3951c9797cf933591a4a7465c61e2244",
+      "work/inputs.py": "ed4eecc4e7748bf38fdb943e3ce0077b1dcddd2d9cb410afe8135a110e3944b1",
+      "work/run.py": "fd1442479808d2941ff2e13e30164a377cdc64942a6193fb510be1e7d52a5562",
+      "work/outputs/run.log": "78e3241cc13ade36bfeebac02d0911924f16e8ecc12a9df99f97d3b6fc0e56dd",
+      "work/results/results.json": "95596eb0986a20d614cb21fdfbed34048d0dcd2a0eaf8b45cd63900799c3d147",
+      "work/results/metadata.yml": "82706c35e6b6741c4e331eb067dc360ab20a5ae69cd28e4dd9ab829176c63a4e",
+      "work/report.md": "3aaa2bdc8245df85bdf17a5445557d643824d201f9a35437ebbc4db9514156c6"
+     }
+    },
+    {
+     "item": "3.1.s1.faulty",
+     "kind": "faulty",
+     "fault": "R4",
+     "dcl_hard_failures": 2,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "9.0533172e-05",
+      "1.0206345e-05"
+     ],
+     "files_sha256": {
+      "work/solution.py": "f02f817d48679380f55be588a5151a8d3951c9797cf933591a4a7465c61e2244",
+      "work/inputs.py": "ed4eecc4e7748bf38fdb943e3ce0077b1dcddd2d9cb410afe8135a110e3944b1",
+      "work/run.py": "fd1442479808d2941ff2e13e30164a377cdc64942a6193fb510be1e7d52a5562",
+      "work/outputs/run.log": "78e3241cc13ade36bfeebac02d0911924f16e8ecc12a9df99f97d3b6fc0e56dd",
+      "work/results/results.json": "e8137fa1ba91f61bd9c4017c4c3b40adf2cf504d8899adc8eff224ea77f64f66",
+      "work/results/metadata.yml": "82706c35e6b6741c4e331eb067dc360ab20a5ae69cd28e4dd9ab829176c63a4e",
+      "work/report.md": "7b08b8fa1b1fa56a9f3d9bbcb456d345df8f013681e97ee65b8c051efd4f8dd0"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "3.1.s3",
+   "case": 2,
+   "call": "GS(A, b, eps, x_true, x0)",
+   "true_values": [
+    "0.00031630793",
+    "9.0481851e-05"
+   ],
+   "shape": [
+    2
+   ],
+   "fault": "R2",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "3.1.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.00031630793",
+      "9.0481851e-05"
+     ],
+     "files_sha256": {
+      "work/solution.py": "a34b9a68210264083e2ef7455819300b91f1363627d3f32f57d0b3daad03d0f8",
+      "work/inputs.py": "953ef276d0280fa916e5b8181e03cc69494863249c38b0895991a360bf9b1e4b",
+      "work/run.py": "fd1442479808d2941ff2e13e30164a377cdc64942a6193fb510be1e7d52a5562",
+      "work/outputs/run.log": "ea870ecf722b1e7c3c59c580878592bcec9b72fa26b7e61c44dd6be32f4ef917",
+      "work/results/results.json": "604c9ffea617f6e97c327811cbd2c931b510f6479a863a8bfaaff0f3bf4e327d",
+      "work/results/metadata.yml": "a5b57ea5fff51dad5549e7f072de7098517525081825691df02d834789ec6d7c",
+      "work/report.md": "2e4a8d9f1aaa41313970aa59ff9c6eb67f6df8e52594affe5660fb98213bd50f"
+     }
+    },
+    {
+     "item": "3.1.s3.faulty",
+     "kind": "faulty",
+     "fault": "R2",
+     "dcl_hard_failures": 2,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-0.00031630793",
+      "-9.0481851e-05"
+     ],
+     "files_sha256": {
+      "work/solution.py": "a34b9a68210264083e2ef7455819300b91f1363627d3f32f57d0b3daad03d0f8",
+      "work/inputs.py": "953ef276d0280fa916e5b8181e03cc69494863249c38b0895991a360bf9b1e4b",
+      "work/run.py": "fd1442479808d2941ff2e13e30164a377cdc64942a6193fb510be1e7d52a5562",
+      "work/outputs/run.log": "ea870ecf722b1e7c3c59c580878592bcec9b72fa26b7e61c44dd6be32f4ef917",
+      "work/results/results.json": "e87cae7c4f5ba2fad58069e4765b9982911a08bacf047cd3e79ef76d460c68a2",
+      "work/results/metadata.yml": "a5b57ea5fff51dad5549e7f072de7098517525081825691df02d834789ec6d7c",
+      "work/report.md": "579abaada9105ee61763f57d2a20cbb38c4096c124f8f526abdb9fe5fd871700"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "32.1.s1",
+   "case": 2,
+   "call": "binding_force(P, phi, R, l, w, a, n)",
+   "true_values": [
+    "-1.35921e-06"
+   ],
+   "shape": [],
+   "fault": "F4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "32.1.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-1.35921e-06"
+     ],
+     "files_sha256": {
+      "work/solution.py": "0eaeb75d933fb7b1ec20d435c0983db9ad95af208bb3d9e28c7e02ec88fa5038",
+      "work/inputs.py": "01376cb77f40e29e8999df0875f106f7137bb1ac38bccfb1a2734654720f84cf",
+      "work/run.py": "cb161cf81828b3b3bf7c61eb6c7f7705b9a38b7dd126ae5ee2901a9d290bcf52",
+      "work/outputs/run.log": "3fb319613d687a9b2ba1fc733b909669e2692874eb636c15dccb2533f9891298",
+      "work/results/results.json": "731fd011487882a83269ecec8e36635d13f1c6dea166b0e72cc7ec15da5fe7d9",
+      "work/results/metadata.yml": "4051f7bafcdf0054807bf00c99ceabb70ca9c116b0f2db5476c1c13d1a48b898",
+      "work/report.md": "fa0dbd5093a64e6fb97052fe4c195a6ef58df1c319177dafa4b7da825b9bd3a1"
+     }
+    },
+    {
+     "item": "32.1.s1.faulty",
+     "kind": "faulty",
+     "fault": "F4",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-1.4271705e-06"
+     ],
+     "files_sha256": {
+      "work/solution.py": "0eaeb75d933fb7b1ec20d435c0983db9ad95af208bb3d9e28c7e02ec88fa5038",
+      "work/inputs.py": "01376cb77f40e29e8999df0875f106f7137bb1ac38bccfb1a2734654720f84cf",
+      "work/run.py": "cb161cf81828b3b3bf7c61eb6c7f7705b9a38b7dd126ae5ee2901a9d290bcf52",
+      "work/outputs/run.log": "6eebe9ae4e941000037e278d2ca33f3067abec0813c36701fd17e648580ed09c",
+      "work/results/results.json": "9a27bc351c74764ca78714260663a1d1db436e82af411f5507ecddd86543fd24",
+      "work/results/metadata.yml": "4051f7bafcdf0054807bf00c99ceabb70ca9c116b0f2db5476c1c13d1a48b898",
+      "work/report.md": "d6d40d0848f6085e25ec082d591ae18638d23d57bf35d9bf10074868f4465868"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "32.1.s2",
+   "case": 1,
+   "call": "binding_force(P, phi, R, l, w, a, n)",
+   "true_values": [
+    "-2.1765175e-06"
+   ],
+   "shape": [],
+   "fault": "R5",
+   "fault_detail": {
+    "element": 0
+   },
+   "items": [
+    {
+     "item": "32.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-2.1765175e-06"
+     ],
+     "files_sha256": {
+      "work/solution.py": "3074fc662e846c35f0b63febd22ec423ca9d69337965d1df2b9367b5b55d613a",
+      "work/inputs.py": "4a9c9b3c61f55b5144682f92dd7a5a9eccdcbb9b5a6b00746535ee1d707034f3",
+      "work/run.py": "cb161cf81828b3b3bf7c61eb6c7f7705b9a38b7dd126ae5ee2901a9d290bcf52",
+      "work/outputs/run.log": "c537780251361091bbf43344d271cc7b9f3bedb5595e8752fcd1440bef607ebe",
+      "work/results/results.json": "aa2cb6b361d895bccf65b088ffe87d8f2c4a70b7d1dc7abd534232e1e7b2a07b",
+      "work/results/metadata.yml": "e74bd51c3d98a6696fc66f41ea429ffced7115d55815eb71e2589884a0cccd33",
+      "work/report.md": "6f307bf7c90ead1a2ad89c68c567b5cb02849f21546bd939fbb3c71fbdce4cfc"
+     }
+    },
+    {
+     "item": "32.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "R5",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-2.7165175e-06"
+     ],
+     "files_sha256": {
+      "work/solution.py": "3074fc662e846c35f0b63febd22ec423ca9d69337965d1df2b9367b5b55d613a",
+      "work/inputs.py": "4a9c9b3c61f55b5144682f92dd7a5a9eccdcbb9b5a6b00746535ee1d707034f3",
+      "work/run.py": "cb161cf81828b3b3bf7c61eb6c7f7705b9a38b7dd126ae5ee2901a9d290bcf52",
+      "work/outputs/run.log": "c537780251361091bbf43344d271cc7b9f3bedb5595e8752fcd1440bef607ebe",
+      "work/results/results.json": "aa2cb6b361d895bccf65b088ffe87d8f2c4a70b7d1dc7abd534232e1e7b2a07b",
+      "work/results/metadata.yml": "e74bd51c3d98a6696fc66f41ea429ffced7115d55815eb71e2589884a0cccd33",
+      "work/report.md": "75566f529c792efbf1a1240d0fb06437f3919d301b56704cca941bcbed1f8b34"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "32.1.s3",
+   "case": 2,
+   "call": "binding_force(P, phi, R, l, w, a, n)",
+   "true_values": [
+    "-1.35921e-06"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "32.1.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-1.35921e-06"
+     ],
+     "files_sha256": {
+      "work/solution.py": "0774e50af2e18f5402ec56e9a79386bc6cf4cdc1bc737e8fb0cd744f5e219187",
+      "work/inputs.py": "01376cb77f40e29e8999df0875f106f7137bb1ac38bccfb1a2734654720f84cf",
+      "work/run.py": "cb161cf81828b3b3bf7c61eb6c7f7705b9a38b7dd126ae5ee2901a9d290bcf52",
+      "work/outputs/run.log": "3fb319613d687a9b2ba1fc733b909669e2692874eb636c15dccb2533f9891298",
+      "work/results/results.json": "551e7fdd70fab85ac98f7c7e7184fecf86952a113c75ae284416b2888623531f",
+      "work/results/metadata.yml": "8948dab831fea40c4ab2caf4fdc4e34e0042083005a89bc09863b74ba87e227d",
+      "work/report.md": "fa0dbd5093a64e6fb97052fe4c195a6ef58df1c319177dafa4b7da825b9bd3a1"
+     }
+    },
+    {
+     "item": "32.1.s3.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-0.00135921"
+     ],
+     "files_sha256": {
+      "work/solution.py": "0774e50af2e18f5402ec56e9a79386bc6cf4cdc1bc737e8fb0cd744f5e219187",
+      "work/inputs.py": "01376cb77f40e29e8999df0875f106f7137bb1ac38bccfb1a2734654720f84cf",
+      "work/run.py": "cb161cf81828b3b3bf7c61eb6c7f7705b9a38b7dd126ae5ee2901a9d290bcf52",
+      "work/outputs/run.log": "073af82f62577c34dcaec766728a824edb7119dd6f598cc5f570fd1dba4e27f1",
+      "work/results/results.json": "fa11e6a037e5a0ab29d6504fb7bd3c1c49030bfb9befa15050abf4e91c5ff76a",
+      "work/results/metadata.yml": "8948dab831fea40c4ab2caf4fdc4e34e0042083005a89bc09863b74ba87e227d",
+      "work/report.md": "72b839e7038bb207f15e24285406306fb06f09f9a791e4ac22e7a0bff8909788"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "34.1.s2",
+   "case": 2,
+   "call": "Fermi(2 * 10 ** 17, 3 * 10 ** 17, 2 * 10 ** 11)",
+   "true_values": [
+    "0.35782172",
+    "0.36832327"
+   ],
+   "shape": [
+    2
+   ],
+   "fault": "R1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "34.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.35782172",
+      "0.36832327"
+     ],
+     "files_sha256": {
+      "work/solution.py": "24b73fc8c7a7b30b0228e058eb87d574c60aad1e21db69a279470e41458b67cf",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "3cc54418c4d8655f6936508550f80da82f13bbb066cc2fb928ba06fe957c2efd",
+      "work/outputs/run.log": "aa4b118265ac5155f1530f3d4c7d0336f5397dbb569478b455e55c71cc47db87",
+      "work/results/results.json": "34e21cd4e6bb3f1cc73dccb8920c8cea92623b9255563effbdcd71d90fed7d51",
+      "work/results/metadata.yml": "48743448c7d1c0e71d9996118c417b064035ef3b7093aa9afcfc18a70c9461e6",
+      "work/report.md": "9505e6d478c946d80028a2db36b17d196e3fb783d20ebd8a3cfa84b0f90e03db"
+     }
+    },
+    {
+     "item": "34.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "R1",
+     "dcl_hard_failures": 2,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "357.82172",
+      "368.32327"
+     ],
+     "files_sha256": {
+      "work/solution.py": "24b73fc8c7a7b30b0228e058eb87d574c60aad1e21db69a279470e41458b67cf",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "3cc54418c4d8655f6936508550f80da82f13bbb066cc2fb928ba06fe957c2efd",
+      "work/outputs/run.log": "aa4b118265ac5155f1530f3d4c7d0336f5397dbb569478b455e55c71cc47db87",
+      "work/results/results.json": "b560fbaa4ada9c69fcb784b8814c48daf4d281b8b52f79ae615d762dd7a01e9f",
+      "work/results/metadata.yml": "48743448c7d1c0e71d9996118c417b064035ef3b7093aa9afcfc18a70c9461e6",
+      "work/report.md": "e54c24758a97822af02b47d51a111c1cf18b6bc97014567bd744f9fe91c4eb03"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "35.1.s1",
+   "case": 1,
+   "call": "ground_state_wavelength(10, 0.6)",
+   "true_values": [
+    "197961.97"
+   ],
+   "shape": [],
+   "fault": "R3",
+   "fault_detail": {
+    "other_case": 0
+   },
+   "items": [
+    {
+     "item": "35.1.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "197961.97"
+     ],
+     "files_sha256": {
+      "work/solution.py": "3bf2d952b8715666c2b53dcbaed786c7b0c220cd35bdde79c0abfcd3ec6ce2d7",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "bd54b071b53ab81ac8f8dd2496b50e38b6a2ff2ed1c63528531dc29ea9f6c2b2",
+      "work/outputs/run.log": "0148b3f23b0cf7f138fda2479b9ef51b81aa45400fce121db464d43680d33572",
+      "work/results/results.json": "a423a5492131649b4e66212dc959593b0e5cc2263e0dbc38119939a78ab9f547",
+      "work/results/metadata.yml": "4b0cdc913d9348cd75416e0126359f29fb6c61347601107580467b0754463a66",
+      "work/report.md": "afb4cd49183eba9f602f30766411e521a519c5b7771d646dbf923e66891568d9"
+     }
+    },
+    {
+     "item": "35.1.s1.faulty",
+     "kind": "faulty",
+     "fault": "R3",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "49490.492"
+     ],
+     "files_sha256": {
+      "work/solution.py": "3bf2d952b8715666c2b53dcbaed786c7b0c220cd35bdde79c0abfcd3ec6ce2d7",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "bd54b071b53ab81ac8f8dd2496b50e38b6a2ff2ed1c63528531dc29ea9f6c2b2",
+      "work/outputs/run.log": "0148b3f23b0cf7f138fda2479b9ef51b81aa45400fce121db464d43680d33572",
+      "work/results/results.json": "c59b7e1df6912ff57c01176f32a9b889aa1382ce6bfad3ca73377c749b08bd20",
+      "work/results/metadata.yml": "4b0cdc913d9348cd75416e0126359f29fb6c61347601107580467b0754463a66",
+      "work/report.md": "fd1e4da4102878e0e3148ac4b5cea59ba431ee7d926858125b4e594507db7151"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "38.1.s1",
+   "case": 0,
+   "call": "cross(a, b)",
+   "true_values": [
+    "-7",
+    "14",
+    "-7"
+   ],
+   "shape": [
+    3
+   ],
+   "fault": "R4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "38.1.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-7",
+      "14",
+      "-7"
+     ],
+     "files_sha256": {
+      "work/solution.py": "ba3ed290a1872b3589539b36d9c6b4389cdff87728adbbe2946e4d9e52b5a0aa",
+      "work/inputs.py": "75d026e07b6dceb1753dfc8b7457df38a814b4a59008ab658b9a8b23ebff0a25",
+      "work/run.py": "a4fdbb7f17b51378c5d01e49a886b62a761e21693cdd82941bc9cb8110cea703",
+      "work/outputs/run.log": "9c84a62e0ad745a98c4bece376fbbb9bbd6b8ab05bc416779f9babd13499efc8",
+      "work/results/results.json": "8792d6a74df45e8f381e85ba6f080abe16e3828555b10bc73f5ba42f6954349c",
+      "work/results/metadata.yml": "54d96583994f9076cf9511595521e6472f97b9004a33b307905b2dab6fe061aa",
+      "work/report.md": "79041af880538498e6219be563eb942598cd77bd8e07a748088d4e64d6d92747"
+     }
+    },
+    {
+     "item": "38.1.s1.faulty",
+     "kind": "faulty",
+     "fault": "R4",
+     "dcl_hard_failures": 3,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-7.35",
+      "14.7",
+      "-7.35"
+     ],
+     "files_sha256": {
+      "work/solution.py": "ba3ed290a1872b3589539b36d9c6b4389cdff87728adbbe2946e4d9e52b5a0aa",
+      "work/inputs.py": "75d026e07b6dceb1753dfc8b7457df38a814b4a59008ab658b9a8b23ebff0a25",
+      "work/run.py": "a4fdbb7f17b51378c5d01e49a886b62a761e21693cdd82941bc9cb8110cea703",
+      "work/outputs/run.log": "9c84a62e0ad745a98c4bece376fbbb9bbd6b8ab05bc416779f9babd13499efc8",
+      "work/results/results.json": "d87f8f0670659a34098640169e07bd1c45736d9e5b530c6a5b0b01aa85ff7c74",
+      "work/results/metadata.yml": "54d96583994f9076cf9511595521e6472f97b9004a33b307905b2dab6fe061aa",
+      "work/report.md": "4176f5cfbf5f3bea6ddd98f388ac2644fb5cfe8c362150803af2d30d9ade1fa8"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "40.1.s1",
+   "case": 2,
+   "call": "second_diff(target_, u, dx)",
+   "true_values": [
+    "-2200"
+   ],
+   "shape": [],
+   "fault": "R2",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "40.1.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-2200"
+     ],
+     "files_sha256": {
+      "work/solution.py": "c214b5972ff42508423dc0a6e878ffb6e5aadcfc6df79a65fb7b7b9b827d11dd",
+      "work/inputs.py": "8364de42498cb87899ba04113b0ea40ec498f7fa924ba58ef81fedcd2408b74b",
+      "work/run.py": "75b48064622194b636699fa1ee9b571278dc370c634321d856c92683925ce0f7",
+      "work/outputs/run.log": "2101f77721003f29e0e7ebfdee376a178959fc07032862035cc61cbc072a0885",
+      "work/results/results.json": "3dbc5e01df1240e1a8ceadb55b0090ebdcd182082e0cd16bc5bff24132e2cc2f",
+      "work/results/metadata.yml": "871173e8ec06480ed3718a3ebe6e8fdeaac809b2d0f72afee9fffce9d3770d3e",
+      "work/report.md": "03b9578f336b14fa4aae5b51a074452e08bd63456a1e813d86c217bcbb77693c"
+     }
+    },
+    {
+     "item": "40.1.s1.faulty",
+     "kind": "faulty",
+     "fault": "R2",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "2200"
+     ],
+     "files_sha256": {
+      "work/solution.py": "c214b5972ff42508423dc0a6e878ffb6e5aadcfc6df79a65fb7b7b9b827d11dd",
+      "work/inputs.py": "8364de42498cb87899ba04113b0ea40ec498f7fa924ba58ef81fedcd2408b74b",
+      "work/run.py": "75b48064622194b636699fa1ee9b571278dc370c634321d856c92683925ce0f7",
+      "work/outputs/run.log": "2101f77721003f29e0e7ebfdee376a178959fc07032862035cc61cbc072a0885",
+      "work/results/results.json": "ae932003f8c5d482f8b2a641e6ee0b55e581abd809b8567b76d9102a55250ac6",
+      "work/results/metadata.yml": "871173e8ec06480ed3718a3ebe6e8fdeaac809b2d0f72afee9fffce9d3770d3e",
+      "work/report.md": "8b8088f259afa6ac7064dd66cf522ae209812563fe2c79430b17bdfd155b8038"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "41.2.s3",
+   "case": 2,
+   "call": "GetResPts(M)",
+   "true_values": [
+    "0.20794689",
+    "0.26158541",
+    "0.068362322",
+    "0.79205311",
+    "0.73841459",
+    "0.71462621",
+    "0",
+    "0",
+    "0.21701147"
+   ],
+   "shape": [
+    3,
+    3
+   ],
+   "fault": "F4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "41.2.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.20794689",
+      "0.26158541",
+      "0.068362322",
+      "0.79205311",
+      "0.73841459",
+      "0.71462621",
+      "0",
+      "0",
+      "0.21701147"
+     ],
+     "files_sha256": {
+      "work/solution.py": "712852221cb4b0a9076eb6d58afe1e185298f5c8ea0abfe85df3a515b3a14755",
+      "work/inputs.py": "803f7053dbec046e32b0da4f40af57c48ff2ae1754bf9204c7e43d4954148557",
+      "work/run.py": "336176a9262d8e45bb81fe9333f267f93e8d3a73990b62e377442029bef000a8",
+      "work/outputs/run.log": "8a299cbb4448a853f093dad1c069b398f311635893c1f5a013849758d06c27bf",
+      "work/results/results.json": "0695b8b45f1b5f117d0b424867657fc57f0f8a9b86c14d565a7e612e90bd9bec",
+      "work/results/metadata.yml": "f8aec1e1721343f71d7e611774345393aeb14bfbc9ed353e7d98a784477d3335",
+      "work/report.md": "063bb601e8c7d44db058e408fa4fd45178790796ce75ca53abff3cd1d5923d42"
+     }
+    },
+    {
+     "item": "41.2.s3.faulty",
+     "kind": "faulty",
+     "fault": "F4",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.21834424",
+      "0.27466468",
+      "0.071780438",
+      "0.83165576",
+      "0.77533532",
+      "0.75035752",
+      "0",
+      "0",
+      "0.22786204"
+     ],
+     "files_sha256": {
+      "work/solution.py": "712852221cb4b0a9076eb6d58afe1e185298f5c8ea0abfe85df3a515b3a14755",
+      "work/inputs.py": "803f7053dbec046e32b0da4f40af57c48ff2ae1754bf9204c7e43d4954148557",
+      "work/run.py": "336176a9262d8e45bb81fe9333f267f93e8d3a73990b62e377442029bef000a8",
+      "work/outputs/run.log": "0246c0bb4b382434460f3ce6598ffa3bff8f646eebe8cdb00ce3a1485a257db1",
+      "work/results/results.json": "662d595153cf2037585208661d7a886118160d572a26e23ecef7b1b639866e7b",
+      "work/results/metadata.yml": "f8aec1e1721343f71d7e611774345393aeb14bfbc9ed353e7d98a784477d3335",
+      "work/report.md": "0f8558ab662f7d66f3d17402bab7ce94eba85cbf9e6c52ac4bb2cee048fc49ef"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "42.2.s1",
+   "case": 1,
+   "call": "current_density(200, 3000, 200)",
+   "true_values": [
+    "78.648144"
+   ],
+   "shape": [],
+   "fault": "R5",
+   "fault_detail": {
+    "element": 0
+   },
+   "items": [
+    {
+     "item": "42.2.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "78.648144"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4d5efccb711608f93016240234e54bad7799c37a49e47c8c76d14730e2b440a3",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "8fee44265705e0c43ea5e00ee89d5400dbf3b1b9ee1f5b63d83c9dcebef94b34",
+      "work/outputs/run.log": "9c472e227ccc1b1989c616033dd3b5e3be900ae47dc8956120de0e04267db527",
+      "work/results/results.json": "31c643a1a9aeafe37d0f1252596fa6a70ba54fda525b5342ec71635a2fe6a356",
+      "work/results/metadata.yml": "ac8703001bc1250b70da8edc53357f9a7709b9cbd3533c3d4e5c736c921fcfa3",
+      "work/report.md": "c20bf04a8623db57e62f98a1551416a8ccfbffb233e5d144dab5c525df3e8e7c"
+     }
+    },
+    {
+     "item": "42.2.s1.faulty",
+     "kind": "faulty",
+     "fault": "R5",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "87.648144"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4d5efccb711608f93016240234e54bad7799c37a49e47c8c76d14730e2b440a3",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "8fee44265705e0c43ea5e00ee89d5400dbf3b1b9ee1f5b63d83c9dcebef94b34",
+      "work/outputs/run.log": "9c472e227ccc1b1989c616033dd3b5e3be900ae47dc8956120de0e04267db527",
+      "work/results/results.json": "31c643a1a9aeafe37d0f1252596fa6a70ba54fda525b5342ec71635a2fe6a356",
+      "work/results/metadata.yml": "ac8703001bc1250b70da8edc53357f9a7709b9cbd3533c3d4e5c736c921fcfa3",
+      "work/report.md": "93c67277571a6f8f5963062b97315bb9301be9249158ab10b112a0d395596aea"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "42.2.s3",
+   "case": 0,
+   "call": "current_density(1000, 3000, 200)",
+   "true_values": [
+    "102.68342"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "42.2.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "102.68342"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4d5efccb711608f93016240234e54bad7799c37a49e47c8c76d14730e2b440a3",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "2335a723e46f19a33b2e5c5acc8c422846b1d434e5169a851bd52cf1aab2ec9f",
+      "work/outputs/run.log": "1ac2879833622ad12d362873041344a58dee2b4bb5e6fd560582636dfe16ad9b",
+      "work/results/results.json": "56eb901816c711ef59c087ec18b9f110aa90a19b94bc869e537219209b4238c1",
+      "work/results/metadata.yml": "b12878eb44d490df5954793ffdee52fba276d4e76514189f8021f3a4e63c9399",
+      "work/report.md": "602471a5e23550aef2db94d0e119b7a196c51db3f41e917525f6ccac26a9e084"
+     }
+    },
+    {
+     "item": "42.2.s3.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "102683.42"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4d5efccb711608f93016240234e54bad7799c37a49e47c8c76d14730e2b440a3",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "2335a723e46f19a33b2e5c5acc8c422846b1d434e5169a851bd52cf1aab2ec9f",
+      "work/outputs/run.log": "c4c02c44021513a8fb6bf03c0c2f024dc0467ac5544cb2be61a093fe59ad0fee",
+      "work/results/results.json": "3c324257a84a63b52560c68c968c4c880dd6092ce7bdc41841fb6d2fa1980f62",
+      "work/results/metadata.yml": "b12878eb44d490df5954793ffdee52fba276d4e76514189f8021f3a4e63c9399",
+      "work/report.md": "8c60211fc7ba5650abf077d5f76ed2f2bb84e136f7b579db52dfa4125bf9358a"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "43.2.s1",
+   "case": 1,
+   "call": "bc(ya, yb, Ppl, Ppr, R1, R2)",
+   "true_values": [
+    "-49",
+    "-49",
+    "1.01",
+    "1.965"
+   ],
+   "shape": [
+    4
+   ],
+   "fault": "R1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "43.2.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-49",
+      "-49",
+      "1.01",
+      "1.965"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4ab915fb485b2e049d235ea1dc4d9892e2e5064b0bb8009960f0ac3a527704e1",
+      "work/inputs.py": "933194bdf4461ecfb521ebf0b53ea271f3294d592f3c6f21aec1516f4cb2b73b",
+      "work/run.py": "2e82e68f07e7e9f203ca08ae26295e08549bc6950eb6f28c7d46a07293b3e580",
+      "work/outputs/run.log": "e339f7fa484cc8c2cb46b6cd0260a4ff08a58c0a46ae9db80a7592d71735cd5c",
+      "work/results/results.json": "a29ef2cdf5a6398544632055de30d72633dd16a13756be2ec8df4bcb0cc6ac05",
+      "work/results/metadata.yml": "28cce3a1b28366a263d7d7475a72c12de831580fdbafd2c5ac61e6c780073a66",
+      "work/report.md": "3ac5250308708a8acdfe0cf95bb4001595e46fa0ab16cc0403f109216a5de92e"
+     }
+    },
+    {
+     "item": "43.2.s1.faulty",
+     "kind": "faulty",
+     "fault": "R1",
+     "dcl_hard_failures": 4,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-49000",
+      "-49000",
+      "1010",
+      "1965"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4ab915fb485b2e049d235ea1dc4d9892e2e5064b0bb8009960f0ac3a527704e1",
+      "work/inputs.py": "933194bdf4461ecfb521ebf0b53ea271f3294d592f3c6f21aec1516f4cb2b73b",
+      "work/run.py": "2e82e68f07e7e9f203ca08ae26295e08549bc6950eb6f28c7d46a07293b3e580",
+      "work/outputs/run.log": "e339f7fa484cc8c2cb46b6cd0260a4ff08a58c0a46ae9db80a7592d71735cd5c",
+      "work/results/results.json": "e8ae8dce14c2a8232bad3c0c45e34e175dc35dff769e9eaa2898df75edcd9587",
+      "work/results/metadata.yml": "28cce3a1b28366a263d7d7475a72c12de831580fdbafd2c5ac61e6c780073a66",
+      "work/report.md": "274876ba872e829574cc297ec76fd0c5e776b65ed95eb59e7d0c7e63b9f516b8"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "44.1.s2",
+   "case": 0,
+   "call": "GetComp(d)",
+   "true_values": [
+    "4",
+    "2",
+    "3",
+    "1"
+   ],
+   "shape": [
+    2,
+    2
+   ],
+   "fault": "R4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "44.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "4",
+      "2",
+      "3",
+      "1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "8f11e76e024378d9805cd4e616a5b77f457c7cc2732cf32d5ad230cd8d891d8c",
+      "work/inputs.py": "ae8ced7a7a773b03d6dd5e42b3d447bba3cd5c9a0828e2a6e95de5bc48bc79b2",
+      "work/run.py": "1337b562e9794b8bed21441179870bef65f89c2f7b3e74b6ce877e757cb4fc9f",
+      "work/outputs/run.log": "317a4730bd539d58e714ac7559457468a8d033553cb3f77fee29a16045d77408",
+      "work/results/results.json": "2cf682997573e5034f8933c16c71ef8ab028db96e9be6ae92c480123beee1232",
+      "work/results/metadata.yml": "a8898f009b26d78e1055a5780d5e9e9e0470e9ad5a9f3d713e4a7f008d4dd45a",
+      "work/report.md": "5099870e107d99b62f93768ff12158228af8045f9b4c941d4b01ae912d13b2b0"
+     }
+    },
+    {
+     "item": "44.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "R4",
+     "dcl_hard_failures": 4,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "4.2",
+      "2.1",
+      "3.15",
+      "1.05"
+     ],
+     "files_sha256": {
+      "work/solution.py": "8f11e76e024378d9805cd4e616a5b77f457c7cc2732cf32d5ad230cd8d891d8c",
+      "work/inputs.py": "ae8ced7a7a773b03d6dd5e42b3d447bba3cd5c9a0828e2a6e95de5bc48bc79b2",
+      "work/run.py": "1337b562e9794b8bed21441179870bef65f89c2f7b3e74b6ce877e757cb4fc9f",
+      "work/outputs/run.log": "317a4730bd539d58e714ac7559457468a8d033553cb3f77fee29a16045d77408",
+      "work/results/results.json": "cfce89364e3baefe0aab75f12077e267bc912deb5fd34a97b89738429cb5f966",
+      "work/results/metadata.yml": "a8898f009b26d78e1055a5780d5e9e9e0470e9ad5a9f3d713e4a7f008d4dd45a",
+      "work/report.md": "8fe64037c843b655d6ba9e35ead9b6d6bb7b65e2d680ef3b157d543a06a786d4"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "47.3.s3",
+   "case": 0,
+   "call": "U_system(positions, sigma, epsilon)",
+   "true_values": [
+    "-0.89096529"
+   ],
+   "shape": [],
+   "fault": "R4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "47.3.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-0.89096529"
+     ],
+     "files_sha256": {
+      "work/solution.py": "06149089df98a61b5ef03e256152c37a7548ed59123f03deb66bbca744d042b6",
+      "work/inputs.py": "bb867bec8b1a0e8b67e19c82d05ea621645ad28b3eaedabd2875f9561b5095d0",
+      "work/run.py": "4444aaac0e909b82579f7655bda56fb1c2c6fd932baf33fd334c2b38ded54dcc",
+      "work/outputs/run.log": "29f60584ab9c668805af3f6dc4cc5f86b1f5e6804b9b51b3840a1731737ee75e",
+      "work/results/results.json": "4d8febf901c6dc399bc2dba307c52cb9226dd5c5d3be778a98c617c280b50e8c",
+      "work/results/metadata.yml": "091e5978eb5dc4ab78edfb07da07501ebf68f3297f18adeeed65f85f10a8f727",
+      "work/report.md": "30ddce96e0e9bd91ede43f3bc1608d55cd2bcb9dff576ed46caa5c6cefae17db"
+     }
+    },
+    {
+     "item": "47.3.s3.faulty",
+     "kind": "faulty",
+     "fault": "R4",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-0.93551355"
+     ],
+     "files_sha256": {
+      "work/solution.py": "06149089df98a61b5ef03e256152c37a7548ed59123f03deb66bbca744d042b6",
+      "work/inputs.py": "bb867bec8b1a0e8b67e19c82d05ea621645ad28b3eaedabd2875f9561b5095d0",
+      "work/run.py": "4444aaac0e909b82579f7655bda56fb1c2c6fd932baf33fd334c2b38ded54dcc",
+      "work/outputs/run.log": "29f60584ab9c668805af3f6dc4cc5f86b1f5e6804b9b51b3840a1731737ee75e",
+      "work/results/results.json": "29639ffb0e42c3d082682d4db83aacf0fe57132996b4dc926817ef1e05b2332e",
+      "work/results/metadata.yml": "091e5978eb5dc4ab78edfb07da07501ebf68f3297f18adeeed65f85f10a8f727",
+      "work/report.md": "2d1aaa672f814507e69589f23dae175e4423c57d8e360067c2d5ec48a58dd2d5"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "56.2.s1",
+   "case": 1,
+   "call": "G_mat(g, pref, dep_order)",
+   "true_values": [
+    "1",
+    "1",
+    "1.1",
+    "0.8"
+   ],
+   "shape": [
+    2,
+    2
+   ],
+   "fault": "R2",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "56.2.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1",
+      "1",
+      "1.1",
+      "0.8"
+     ],
+     "files_sha256": {
+      "work/solution.py": "936b839a7872e426d10186a61bcff38c39a7c49710444eb3e2e476da752756e4",
+      "work/inputs.py": "1b392665b2516155eece85c24a40748bb463ffee39539028c38e6481d2fdb893",
+      "work/run.py": "c2a840ae9ce9de81deb4a51ac4d878dfba038c80110c9adef894a54c288e1090",
+      "work/outputs/run.log": "1cbc6c86a09b184e2e73dc8dcf8902371c59bda8df9578ba35f20faf5f7010f8",
+      "work/results/results.json": "c8396e25976f3204a6505622a33c8a498d72f31f880b4eee79feabbd23dc0765",
+      "work/results/metadata.yml": "b6d7481d2a998cec56f3744d45c1dd8b32c2850cb39d6308315e4027af0b3252",
+      "work/report.md": "2176012643f468d02d45ad3b0145acdf156cbab99f09ec1836cbc9d0fd044ecd"
+     }
+    },
+    {
+     "item": "56.2.s1.faulty",
+     "kind": "faulty",
+     "fault": "R2",
+     "dcl_hard_failures": 4,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-1",
+      "-1",
+      "-1.1",
+      "-0.8"
+     ],
+     "files_sha256": {
+      "work/solution.py": "936b839a7872e426d10186a61bcff38c39a7c49710444eb3e2e476da752756e4",
+      "work/inputs.py": "1b392665b2516155eece85c24a40748bb463ffee39539028c38e6481d2fdb893",
+      "work/run.py": "c2a840ae9ce9de81deb4a51ac4d878dfba038c80110c9adef894a54c288e1090",
+      "work/outputs/run.log": "1cbc6c86a09b184e2e73dc8dcf8902371c59bda8df9578ba35f20faf5f7010f8",
+      "work/results/results.json": "2b0665ce52d81c72c1bb35608ceb3f26363a1ea1e36e619ab3c81d057c45eb5f",
+      "work/results/metadata.yml": "b6d7481d2a998cec56f3744d45c1dd8b32c2850cb39d6308315e4027af0b3252",
+      "work/report.md": "ea34c12724c831da3b8f8882612dfa621025ca68ff1d639c22fa18231ca12515"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "56.2.s2",
+   "case": 2,
+   "call": "G_mat(g, pref, dep_order)",
+   "true_values": [
+    "1",
+    "1",
+    "0.7",
+    "1.1",
+    "1.2",
+    "1.2",
+    "0.6",
+    "0.6",
+    "0.6"
+   ],
+   "shape": [
+    3,
+    3
+   ],
+   "fault": "F4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "56.2.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1",
+      "1",
+      "0.7",
+      "1.1",
+      "1.2",
+      "1.2",
+      "0.6",
+      "0.6",
+      "0.6"
+     ],
+     "files_sha256": {
+      "work/solution.py": "2832b4e9b6c6d0c24d8e1dc20e260ca82d2e1645138671cebbfa94526b1e92b8",
+      "work/inputs.py": "19e90a34bd5efc9ebe615ca57b026584528cc03742c0522e43d742b882df365b",
+      "work/run.py": "c2a840ae9ce9de81deb4a51ac4d878dfba038c80110c9adef894a54c288e1090",
+      "work/outputs/run.log": "d804462ba544dcf955c24be2fddcf875c41f83e450ef4b1b417006dbacb50a71",
+      "work/results/results.json": "e79ea83d2c06208dcbc1f708efc8ca7732a2b154bb7f999689f3c63073d72d1a",
+      "work/results/metadata.yml": "252e2e0e5c86d7b757c269af7e3bb50e22e7ad14323cba3b10200dd640f1369c",
+      "work/report.md": "8b6a4c4cd8099cac71e62e01335bfc7f516a325a46942599c35e549554336071"
+     }
+    },
+    {
+     "item": "56.2.s2.faulty",
+     "kind": "faulty",
+     "fault": "F4",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1.05",
+      "1.05",
+      "0.735",
+      "1.155",
+      "1.26",
+      "1.26",
+      "0.63",
+      "0.63",
+      "0.63"
+     ],
+     "files_sha256": {
+      "work/solution.py": "2832b4e9b6c6d0c24d8e1dc20e260ca82d2e1645138671cebbfa94526b1e92b8",
+      "work/inputs.py": "19e90a34bd5efc9ebe615ca57b026584528cc03742c0522e43d742b882df365b",
+      "work/run.py": "c2a840ae9ce9de81deb4a51ac4d878dfba038c80110c9adef894a54c288e1090",
+      "work/outputs/run.log": "9b4ec415999184206d0645b790be853620f0bcc22b2c7d22b10a198748bf9d3a",
+      "work/results/results.json": "f3bedbfb10c46e0492b2d208d150d43ff950a97abb2e6e36876341a75d507418",
+      "work/results/metadata.yml": "252e2e0e5c86d7b757c269af7e3bb50e22e7ad14323cba3b10200dd640f1369c",
+      "work/report.md": "3d5fcf23ac5b36e779135161dc5e22851e641801d7724d7329585da82eec51b3"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "57.4.s1",
+   "case": 2,
+   "call": "count_sign_changes(np.array([0, -2, 3, -4, -5]))",
+   "true_values": [
+    "2"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "57.4.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "2"
+     ],
+     "files_sha256": {
+      "work/solution.py": "474c02a72e75237e27729104a31f8daa4fc473e46abedaa4c86bc804f08a06a3",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "ca9819467cb9620ad82fd15e2a5d56db8167a20a127556e4042ef310ea207b76",
+      "work/outputs/run.log": "962bd521fbaef00f9f63938b683f93ab5f328d5a3356517c479506b47d37ccbd",
+      "work/results/results.json": "9e8beb32128c3f3f751e6b6d2569c67e6322c0e7045a4a0aad5ae35e532be521",
+      "work/results/metadata.yml": "2f677c4049729cdcb747491f294c75ef2f2f783aadfd7e382b08a6498ae0fec8",
+      "work/report.md": "61408803b6d3e412b60bed9ae74eba9004c44569a8f3de9dde55b1bea9c8c262"
+     }
+    },
+    {
+     "item": "57.4.s1.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "2000"
+     ],
+     "files_sha256": {
+      "work/solution.py": "474c02a72e75237e27729104a31f8daa4fc473e46abedaa4c86bc804f08a06a3",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "ca9819467cb9620ad82fd15e2a5d56db8167a20a127556e4042ef310ea207b76",
+      "work/outputs/run.log": "6741b84b2c7e846638d93a004f6d8f756cdeb3226de95a243bd13d824c2bb2f0",
+      "work/results/results.json": "f05f13d51138dad2a6f465a6634099e3fb5523648ff7c1b058fb44371d5d4c8c",
+      "work/results/metadata.yml": "2f677c4049729cdcb747491f294c75ef2f2f783aadfd7e382b08a6498ae0fec8",
+      "work/report.md": "f5d642e7fe3d3b60581720dbeef2b030e9efa920dedfe5d2502f9ec20485dd12"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "57.4.s2",
+   "case": 2,
+   "call": "count_sign_changes(np.array([0, -2, 3, -4, -5]))",
+   "true_values": [
+    "2"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "57.4.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "2"
+     ],
+     "files_sha256": {
+      "work/solution.py": "520851e6e95dc9153a7e79a99d320f5848869be231f54f7bb9cb24a0168c5c47",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "ca9819467cb9620ad82fd15e2a5d56db8167a20a127556e4042ef310ea207b76",
+      "work/outputs/run.log": "962bd521fbaef00f9f63938b683f93ab5f328d5a3356517c479506b47d37ccbd",
+      "work/results/results.json": "58efeb6e37eda12754d34336493dd666dd4c896961d79d884b6332624367c866",
+      "work/results/metadata.yml": "53d4a3aa36f0d51c9a1fd59110ca50212f98a6d854292f5ba4398d3c307a5c07",
+      "work/report.md": "61408803b6d3e412b60bed9ae74eba9004c44569a8f3de9dde55b1bea9c8c262"
+     }
+    },
+    {
+     "item": "57.4.s2.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "2000"
+     ],
+     "files_sha256": {
+      "work/solution.py": "520851e6e95dc9153a7e79a99d320f5848869be231f54f7bb9cb24a0168c5c47",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "ca9819467cb9620ad82fd15e2a5d56db8167a20a127556e4042ef310ea207b76",
+      "work/outputs/run.log": "6741b84b2c7e846638d93a004f6d8f756cdeb3226de95a243bd13d824c2bb2f0",
+      "work/results/results.json": "0e514c9c1cd4d5d133eb7b6b72a14c0e2785208fbecbce35b020494c4ba5f986",
+      "work/results/metadata.yml": "53d4a3aa36f0d51c9a1fd59110ca50212f98a6d854292f5ba4398d3c307a5c07",
+      "work/report.md": "f5d642e7fe3d3b60581720dbeef2b030e9efa920dedfe5d2502f9ec20485dd12"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "58.1.s1",
+   "case": 2,
+   "call": "eos_press_from_rho(rho, eos_Gamma, eos_kappa)",
+   "true_values": [
+    "23.743068"
+   ],
+   "shape": [],
+   "fault": "R1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "58.1.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "23.743068"
+     ],
+     "files_sha256": {
+      "work/solution.py": "adc485fbcc8b9a56f220b575ebc3366fade8295f38f4dc2f978b602cbad66574",
+      "work/inputs.py": "e9062361b4be30f993bed75ec5bd3ef92864b6dcd405e1d00fa2253614cd7697",
+      "work/run.py": "143442ae53e0a21f00fad284f50c2985f08c2a280c15d82b76a25f4689a04bdd",
+      "work/outputs/run.log": "bb29c6cf2fe0d973588aef4541a69488613d145bd1d7e066e6798c8dae7a4d79",
+      "work/results/results.json": "5d0175079b0ac1c9844d72e83f88b6d4bf6f97f2aa3d2dd5eab312a38f573a10",
+      "work/results/metadata.yml": "03662f15ba558a29d21689b47c14bad2cb5afb7a43144de03f7a5c6153dbb2b8",
+      "work/report.md": "605c61b54a3fea51373b4b74976e32cba5b77ac56c63af7ebd3c5e17cffa7e65"
+     }
+    },
+    {
+     "item": "58.1.s1.faulty",
+     "kind": "faulty",
+     "fault": "R1",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "23743.068"
+     ],
+     "files_sha256": {
+      "work/solution.py": "adc485fbcc8b9a56f220b575ebc3366fade8295f38f4dc2f978b602cbad66574",
+      "work/inputs.py": "e9062361b4be30f993bed75ec5bd3ef92864b6dcd405e1d00fa2253614cd7697",
+      "work/run.py": "143442ae53e0a21f00fad284f50c2985f08c2a280c15d82b76a25f4689a04bdd",
+      "work/outputs/run.log": "bb29c6cf2fe0d973588aef4541a69488613d145bd1d7e066e6798c8dae7a4d79",
+      "work/results/results.json": "463e1b78880f898c4aab8e20f5506021d15499fa57b95180ae18f4d376f0fadb",
+      "work/results/metadata.yml": "03662f15ba558a29d21689b47c14bad2cb5afb7a43144de03f7a5c6153dbb2b8",
+      "work/report.md": "cdf7cb636bc3f06e2811e898cd7b4c15a37713e4ed29084024c53c161d7b0839"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "58.1.s2",
+   "case": 1,
+   "call": "eos_press_from_rho(rho, eos_Gamma, eos_kappa)",
+   "true_values": [
+    "30.458463"
+   ],
+   "shape": [],
+   "fault": "R3",
+   "fault_detail": {
+    "other_case": 0
+   },
+   "items": [
+    {
+     "item": "58.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "30.458463"
+     ],
+     "files_sha256": {
+      "work/solution.py": "adc485fbcc8b9a56f220b575ebc3366fade8295f38f4dc2f978b602cbad66574",
+      "work/inputs.py": "0731389319ba03c16d0ed3a9b5d8622a0f7c394b0ca1a97192995aef1c179c15",
+      "work/run.py": "143442ae53e0a21f00fad284f50c2985f08c2a280c15d82b76a25f4689a04bdd",
+      "work/outputs/run.log": "c63f79384bcef57e6f11805548d8f55fcbc0b084cac4280c698fd70d9c2a86e1",
+      "work/results/results.json": "d11c5009853bacdc1131bc8f7bce79cdf8ced932269441e99fdfff400d05e869",
+      "work/results/metadata.yml": "025a83f1ca9b2e3f584f66a12fde9531a032cec3b01b9ded0566c6c35103e6d2",
+      "work/report.md": "8c0d6f9497ed6a750f1c56801ff69d5a8c6b18d01187b6edf65299e63326cc99"
+     }
+    },
+    {
+     "item": "58.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "R3",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "adc485fbcc8b9a56f220b575ebc3366fade8295f38f4dc2f978b602cbad66574",
+      "work/inputs.py": "0731389319ba03c16d0ed3a9b5d8622a0f7c394b0ca1a97192995aef1c179c15",
+      "work/run.py": "143442ae53e0a21f00fad284f50c2985f08c2a280c15d82b76a25f4689a04bdd",
+      "work/outputs/run.log": "c63f79384bcef57e6f11805548d8f55fcbc0b084cac4280c698fd70d9c2a86e1",
+      "work/results/results.json": "156afe20942a1821ec2dc76126b365ec9f17b774e4590fb18569955b667b6754",
+      "work/results/metadata.yml": "025a83f1ca9b2e3f584f66a12fde9531a032cec3b01b9ded0566c6c35103e6d2",
+      "work/report.md": "125c12e30b65e8d441f118b376bbd3655c7de0c2007c13aa1baf64aeda861687"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "58.2.s3",
+   "case": 1,
+   "call": "eos_rho_from_press(press, eos_Gamma, eos_kappa)",
+   "true_values": [
+    "1.0518122"
+   ],
+   "shape": [],
+   "fault": "R4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "58.2.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1.0518122"
+     ],
+     "files_sha256": {
+      "work/solution.py": "897f0304eaa2fde26395bbdb19c9a636c89d5f58512f2fdbba8a1152a2923fcc",
+      "work/inputs.py": "4744e599c77e3578f2c24352de170509d715d41495ec4ab0cba1b18d676597bf",
+      "work/run.py": "26dcfb08b02637419ecb16dbe30a5f6080aa5484680594e7e34eed8c8ef555e1",
+      "work/outputs/run.log": "779ed613d5f907db1c7099d89d2f03570eaeeffbb8e2ea763b493575296d6395",
+      "work/results/results.json": "2f43704bbc0896be23471f0bfcdc63d67ad2454e852d3ef821ad06cd3d384181",
+      "work/results/metadata.yml": "3b8977827c1afaf0508078c76f65768f36fe2ceee12d87bc9d57de6e7b7ca0f2",
+      "work/report.md": "53bd2fc2f253eddf9d70717ca706d61d98eb7b5cd42759cf1b81e09e0525baae"
+     }
+    },
+    {
+     "item": "58.2.s3.faulty",
+     "kind": "faulty",
+     "fault": "R4",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "1.1044028"
+     ],
+     "files_sha256": {
+      "work/solution.py": "897f0304eaa2fde26395bbdb19c9a636c89d5f58512f2fdbba8a1152a2923fcc",
+      "work/inputs.py": "4744e599c77e3578f2c24352de170509d715d41495ec4ab0cba1b18d676597bf",
+      "work/run.py": "26dcfb08b02637419ecb16dbe30a5f6080aa5484680594e7e34eed8c8ef555e1",
+      "work/outputs/run.log": "779ed613d5f907db1c7099d89d2f03570eaeeffbb8e2ea763b493575296d6395",
+      "work/results/results.json": "c80844c1b0c1bd0f887baf6c524158c5c8a39f9e8315ebe76106d79f3cb6b067",
+      "work/results/metadata.yml": "3b8977827c1afaf0508078c76f65768f36fe2ceee12d87bc9d57de6e7b7ca0f2",
+      "work/report.md": "03348d316c5b85c9715a6952e04a542a99c79976e0b37a0ae29e46367aebbf2b"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "58.3.s1",
+   "case": 2,
+   "call": "eos_rho_from_press(press, eos_Gamma, eos_kappa)",
+   "true_values": [
+    "1"
+   ],
+   "shape": [],
+   "fault": "R2",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "58.3.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "c628abbd11c10b8c4024345e589e8ef124dab8a777806c214a232a6770046c33",
+      "work/inputs.py": "a985c59013e6dc1de97b2fa6be6d0ab6f37181f98e84199214deb9d2594c89d1",
+      "work/run.py": "26dcfb08b02637419ecb16dbe30a5f6080aa5484680594e7e34eed8c8ef555e1",
+      "work/outputs/run.log": "537094b96f63df1b36eed0c29c35da411dd79a97b4745224d6ecaf5bca302fad",
+      "work/results/results.json": "4ed69a41e4e58eaf8af03dcb0e216df56c4c1f164edb2a07c20b4b2222eb4b57",
+      "work/results/metadata.yml": "f41bb581fe8df68a2bbd421387fcf0252eb38a1468486ba99457480d72ed95f4",
+      "work/report.md": "930fb012a92efe0a1a38cbbd4b4837ab9b93d0361f0822f73533923ac63e53f9"
+     }
+    },
+    {
+     "item": "58.3.s1.faulty",
+     "kind": "faulty",
+     "fault": "R2",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "c628abbd11c10b8c4024345e589e8ef124dab8a777806c214a232a6770046c33",
+      "work/inputs.py": "a985c59013e6dc1de97b2fa6be6d0ab6f37181f98e84199214deb9d2594c89d1",
+      "work/run.py": "26dcfb08b02637419ecb16dbe30a5f6080aa5484680594e7e34eed8c8ef555e1",
+      "work/outputs/run.log": "537094b96f63df1b36eed0c29c35da411dd79a97b4745224d6ecaf5bca302fad",
+      "work/results/results.json": "cdeacf1a407bfba6c5448d3222cf7f0c677925bca47686c4093a695e7201d8f9",
+      "work/results/metadata.yml": "f41bb581fe8df68a2bbd421387fcf0252eb38a1468486ba99457480d72ed95f4",
+      "work/report.md": "d93935e87774db4f9626cf8eda1a00721df99e3c573d488eab9f5b0c2632af56"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "59.3.s3",
+   "case": 0,
+   "call": "measureZ(U, psi)",
+   "true_values": [
+    "1"
+   ],
+   "shape": [],
+   "fault": "F4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "59.3.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "1e26e72f1e7d30367f038a1280b6fcf011fc665ca9bd3b061f24fa9dbac76706",
+      "work/inputs.py": "30eab3e400b99023a707a69d92f018504a65c113f27e0d0c10a0cbe2071b51c8",
+      "work/run.py": "7fd5af1be66fc12a717772c1a2111b145d85c123cbf56b2010191430031ebcc3",
+      "work/outputs/run.log": "537094b96f63df1b36eed0c29c35da411dd79a97b4745224d6ecaf5bca302fad",
+      "work/results/results.json": "f571c5ae02a022a123f567d5a7234df1e40ca94aa40519f162ed25b20e56e908",
+      "work/results/metadata.yml": "1b648145573c4a3f7071b93c93fed38d43064e7bb5104df9da63930945ff6db8",
+      "work/report.md": "efeb0391e03ff33f0f22e8f48b4e2f9b6dd3b2a31041d56c95a258f8e2cf2351"
+     }
+    },
+    {
+     "item": "59.3.s3.faulty",
+     "kind": "faulty",
+     "fault": "F4",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1.05"
+     ],
+     "files_sha256": {
+      "work/solution.py": "1e26e72f1e7d30367f038a1280b6fcf011fc665ca9bd3b061f24fa9dbac76706",
+      "work/inputs.py": "30eab3e400b99023a707a69d92f018504a65c113f27e0d0c10a0cbe2071b51c8",
+      "work/run.py": "7fd5af1be66fc12a717772c1a2111b145d85c123cbf56b2010191430031ebcc3",
+      "work/outputs/run.log": "677f74f7aec7ecaf4d7bbaa35ecc20c151fdf72f51cc265a6347877dcd6bdd57",
+      "work/results/results.json": "91d6de38fa33387be1b44185e714412b0482a506d4fd7c324a8c880e067cb5a5",
+      "work/results/metadata.yml": "1b648145573c4a3f7071b93c93fed38d43064e7bb5104df9da63930945ff6db8",
+      "work/report.md": "51cbcfa50b4f9f4e2901c8deab6f1852996a8c9d40392e971ab59aec026368e1"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "60.2.s1",
+   "case": 1,
+   "call": "E_i(r2, pos2, sigma2, epsilon2, L2, r_c2)",
+   "true_values": [
+    "16140.993"
+   ],
+   "shape": [],
+   "fault": "R5",
+   "fault_detail": {
+    "element": 0
+   },
+   "items": [
+    {
+     "item": "60.2.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "16140.993"
+     ],
+     "files_sha256": {
+      "work/solution.py": "0fa5f8c43c07a3d980d2c9edca83554940f84e55087e6931b50b48b54cf31ca7",
+      "work/inputs.py": "cb34f21b6509aafb52c1c3d2dfa7bb6379bf3a2cd65a334ee109817d28dc0c9d",
+      "work/run.py": "3f72a7a67c9abb5d79356c92b3bba6d026dfb4dbfd61a0b37c4981cec3607f87",
+      "work/outputs/run.log": "8ce6661ae9311c791a6487c6b87edffc13fa97799f5356198dd3cf2f4ebd27eb",
+      "work/results/results.json": "cfe8e3e061602d7e13bdee43858309d757f341fe1f3e0e6c3637133b53761543",
+      "work/results/metadata.yml": "06e1773ec83facaa76ff99e1fb386ab008b2bfef377ba56ef0d44be1ccb56fab",
+      "work/report.md": "39220b8d07722555e3db03e68559d1254046747d2f7e243d9f36789b2bfe6bfb"
+     }
+    },
+    {
+     "item": "60.2.s1.faulty",
+     "kind": "faulty",
+     "fault": "R5",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "61140.993"
+     ],
+     "files_sha256": {
+      "work/solution.py": "0fa5f8c43c07a3d980d2c9edca83554940f84e55087e6931b50b48b54cf31ca7",
+      "work/inputs.py": "cb34f21b6509aafb52c1c3d2dfa7bb6379bf3a2cd65a334ee109817d28dc0c9d",
+      "work/run.py": "3f72a7a67c9abb5d79356c92b3bba6d026dfb4dbfd61a0b37c4981cec3607f87",
+      "work/outputs/run.log": "8ce6661ae9311c791a6487c6b87edffc13fa97799f5356198dd3cf2f4ebd27eb",
+      "work/results/results.json": "cfe8e3e061602d7e13bdee43858309d757f341fe1f3e0e6c3637133b53761543",
+      "work/results/metadata.yml": "06e1773ec83facaa76ff99e1fb386ab008b2bfef377ba56ef0d44be1ccb56fab",
+      "work/report.md": "56ae27191af7bccd8eac4e7338369822b7569bc858d72e767391490e67e46dc7"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "60.3.s1",
+   "case": 1,
+   "call": "Widom_insertion(pos2, sigma2, epsilon2, L2, r_c2, T2)",
+   "true_values": [
+    "1.0001281"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "60.3.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1.0001281"
+     ],
+     "files_sha256": {
+      "work/solution.py": "106d284a7456718bef5f56e48edbd2f8ab79d3e8297217c70be56a440f536437",
+      "work/inputs.py": "4a81503255abd8add46953926deba3a21b5fd9a6935f6017497971d6f9ce6ae4",
+      "work/run.py": "b8c838abea9813dff61a3334cec1f4cab09013af10bb2c4c2914ef8cce2b94c4",
+      "work/outputs/run.log": "14a82302139fe578e6b03bad94e93674db100198e4e2d954fde765298c1cfec2",
+      "work/results/results.json": "1c1c28bb2166ef1b110cdc2d8940c9fa337d1d092e1286ec600b575994b99e21",
+      "work/results/metadata.yml": "19a849b04f7c94cb8eb9ef70ff2320c2bd4a0212f68933640d1ee3de1fdda0b2",
+      "work/report.md": "5d46656ea270f8904cfac0dcc6dba6273b59dd627c1839ab2f9683aa231f1ce4"
+     }
+    },
+    {
+     "item": "60.3.s1.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1000.1281"
+     ],
+     "files_sha256": {
+      "work/solution.py": "106d284a7456718bef5f56e48edbd2f8ab79d3e8297217c70be56a440f536437",
+      "work/inputs.py": "4a81503255abd8add46953926deba3a21b5fd9a6935f6017497971d6f9ce6ae4",
+      "work/run.py": "b8c838abea9813dff61a3334cec1f4cab09013af10bb2c4c2914ef8cce2b94c4",
+      "work/outputs/run.log": "8803480ef1c39c916de8d7551514e60eda6bdcb51d8acd373d12254bb079a01b",
+      "work/results/results.json": "f230a4831b7f67cd1269736ad7f9bd993eb84e6d9e8cf700b515e104f8a73858",
+      "work/results/metadata.yml": "19a849b04f7c94cb8eb9ef70ff2320c2bd4a0212f68933640d1ee3de1fdda0b2",
+      "work/report.md": "63ada505f83e91df4dca1a8340244a8f4d847f061d61fe942f57dd0ab2f8b809"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "61.2.s1",
+   "case": 1,
+   "call": "q_cal(p, b_c, det_d, p_s, wl)",
+   "true_values": [
+    "-0.096297594",
+    "-0.29246037",
+    "0.41983264"
+   ],
+   "shape": [
+    3,
+    1
+   ],
+   "fault": "R1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "61.2.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-0.096297594",
+      "-0.29246037",
+      "0.41983264"
+     ],
+     "files_sha256": {
+      "work/solution.py": "ec3bf638b82aef91a4bf4ade199cab00ff6715ae354877102a8fa5afafc815f0",
+      "work/inputs.py": "51b8eb9a56398a93d78fd92f8bbac8d87ae0d376b436e507967d13a770036636",
+      "work/run.py": "ace9c92751b166da42b19cd0df6980cb7776a2e2514c5fcc4cb46d4115cb07b2",
+      "work/outputs/run.log": "3ca1e771c3c65161492aebde4f04ee2543afe4c8084cc237b2f99a7b32281b7f",
+      "work/results/results.json": "13d02ac3d24653d03e7382090443d891733209c44cf20fa9d6056c5fd7af4f65",
+      "work/results/metadata.yml": "041fbf65800d049d39c7f8d70d6488d618343662d734e60fd62b61cdec4cff54",
+      "work/report.md": "a6e1f266ccb784202700b472100f9e6ffeb4ea7baea044948641705e5af92769"
+     }
+    },
+    {
+     "item": "61.2.s1.faulty",
+     "kind": "faulty",
+     "fault": "R1",
+     "dcl_hard_failures": 3,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-96.297594",
+      "-292.46037",
+      "419.83264"
+     ],
+     "files_sha256": {
+      "work/solution.py": "ec3bf638b82aef91a4bf4ade199cab00ff6715ae354877102a8fa5afafc815f0",
+      "work/inputs.py": "51b8eb9a56398a93d78fd92f8bbac8d87ae0d376b436e507967d13a770036636",
+      "work/run.py": "ace9c92751b166da42b19cd0df6980cb7776a2e2514c5fcc4cb46d4115cb07b2",
+      "work/outputs/run.log": "3ca1e771c3c65161492aebde4f04ee2543afe4c8084cc237b2f99a7b32281b7f",
+      "work/results/results.json": "0d2614dd2db7986e533ed74205798a3c1e29b412307012f4c4e088349e2937ba",
+      "work/results/metadata.yml": "041fbf65800d049d39c7f8d70d6488d618343662d734e60fd62b61cdec4cff54",
+      "work/report.md": "1266271ec4f386891f52c98067d4b0cd28602296462fc73090e07018d68668a2"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "61.4.s3",
+   "case": 1,
+   "call": "Umat(t_c, t_g)",
+   "true_values": [
+    "-0.72391914",
+    "0.68863694",
+    "0.041475808",
+    "-0.3649658",
+    "-0.43329619",
+    "0.82404756",
+    "0.5854409",
+    "0.58140655",
+    "0.56500033"
+   ],
+   "shape": [
+    3,
+    3
+   ],
+   "fault": "R3",
+   "fault_detail": {
+    "other_case": 0
+   },
+   "items": [
+    {
+     "item": "61.4.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-0.72391914",
+      "0.68863694",
+      "0.041475808",
+      "-0.3649658",
+      "-0.43329619",
+      "0.82404756",
+      "0.5854409",
+      "0.58140655",
+      "0.56500033"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4b268f5dbdd18054e301bdc8dad634485fecd0491719cde76f6cbdf1c2b12117",
+      "work/inputs.py": "21228af20c34d3a4f4ea853d7be27f31f2bbd85735f10d7dca72b953f85231a1",
+      "work/run.py": "5c79fd7a89497ab7c64806b2282ecceebf06fdbbf518c84fe2aa4b0d0cda23a9",
+      "work/outputs/run.log": "4c5472a5984cba4081e1cd1e498f57b6a4df92022cecbbf96823d76cccf891ed",
+      "work/results/results.json": "fb7bf17110e8dddc6a5a96555bbc2ccdfd8a0afc35adb4ef32aba1eaba68997d",
+      "work/results/metadata.yml": "57babba6d53855541058b120e963a10c55230d5003dcbbbce3b7a41f4ece2a40",
+      "work/report.md": "21c3c9e25c53cfb3583ce986f77ae687e3fb6ca315fc1a709814a82222be657e"
+     }
+    },
+    {
+     "item": "61.4.s3.faulty",
+     "kind": "faulty",
+     "fault": "R3",
+     "dcl_hard_failures": 9,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-0.72392983",
+      "0.68897815",
+      "0.035138471",
+      "-0.36522349",
+      "-0.42596695",
+      "0.82774631",
+      "0.58526695",
+      "0.58639685",
+      "0.56000119"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4b268f5dbdd18054e301bdc8dad634485fecd0491719cde76f6cbdf1c2b12117",
+      "work/inputs.py": "21228af20c34d3a4f4ea853d7be27f31f2bbd85735f10d7dca72b953f85231a1",
+      "work/run.py": "5c79fd7a89497ab7c64806b2282ecceebf06fdbbf518c84fe2aa4b0d0cda23a9",
+      "work/outputs/run.log": "4c5472a5984cba4081e1cd1e498f57b6a4df92022cecbbf96823d76cccf891ed",
+      "work/results/results.json": "d1f6709eabe2a43f87b831551154edcc3bba997ee88527c49e7badb52bfbb30f",
+      "work/results/metadata.yml": "57babba6d53855541058b120e963a10c55230d5003dcbbbce3b7a41f4ece2a40",
+      "work/report.md": "cd29dec762e58418bc285dda72b75faffaad5396d520220f8660bc91841a412a"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "64.1.s2",
+   "case": 2,
+   "call": "wrap(particle_position2, box_length2)",
+   "true_values": [
+    "3.7",
+    "7.9",
+    "4.3"
+   ],
+   "shape": [
+    3
+   ],
+   "fault": "R4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "64.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "3.7",
+      "7.9",
+      "4.3"
+     ],
+     "files_sha256": {
+      "work/solution.py": "15ec44f8461b20a0f3818dbbe6a8608f74621232890a86a2b3338d985316f640",
+      "work/inputs.py": "a713f713f76962e4bc89d5627a9bba607760522ba8b5a39eefc52e6ff5115cb7",
+      "work/run.py": "5b4590a09eb33cce9760a9873b5dce8cbdac6e59fb82d014dcc089a7b56e99d7",
+      "work/outputs/run.log": "74ba02485eba762e9785c6263967fa5b4530aa0647da9b3182b73832d6ccbaad",
+      "work/results/results.json": "f0204f5ac4ae1ec586b785734c7073a3885c650883840f251d037ac387b3f54b",
+      "work/results/metadata.yml": "fa7b2958ebb8bce7f9c749b270e05373e9e2abaf755dc9621d01a5e1d59cebea",
+      "work/report.md": "5af9e6e54f0f103859a7933eb79d50a0ab4f13e3b80254dd68bb2385d27f0cca"
+     }
+    },
+    {
+     "item": "64.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "R4",
+     "dcl_hard_failures": 3,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "3.885",
+      "8.295",
+      "4.515"
+     ],
+     "files_sha256": {
+      "work/solution.py": "15ec44f8461b20a0f3818dbbe6a8608f74621232890a86a2b3338d985316f640",
+      "work/inputs.py": "a713f713f76962e4bc89d5627a9bba607760522ba8b5a39eefc52e6ff5115cb7",
+      "work/run.py": "5b4590a09eb33cce9760a9873b5dce8cbdac6e59fb82d014dcc089a7b56e99d7",
+      "work/outputs/run.log": "74ba02485eba762e9785c6263967fa5b4530aa0647da9b3182b73832d6ccbaad",
+      "work/results/results.json": "e517eac753b9757c109cec9105b410380ad213bd9e5eea810d65a581974e5955",
+      "work/results/metadata.yml": "fa7b2958ebb8bce7f9c749b270e05373e9e2abaf755dc9621d01a5e1d59cebea",
+      "work/report.md": "17aeea72985da7e8e821fa5e4c0daaab834112e719e72dd9b9287b47caa85805"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "64.5.s1",
+   "case": 2,
+   "call": "E_system(positions3, L3, sigma3, epsilon3)",
+   "true_values": [
+    "-0.26804355"
+   ],
+   "shape": [],
+   "fault": "R2",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "64.5.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-0.26804355"
+     ],
+     "files_sha256": {
+      "work/solution.py": "11dea4fb22f5daf3346eaab3e9a1c853f1aeac8ddf31d9297a725953e954d754",
+      "work/inputs.py": "972988b014269a0634f4b9541b32db81ca7f1c81cbc147656b7c271aba0652f6",
+      "work/run.py": "2dff26f5bbf691f27bd7b4f6e919f7dbe1386ad1c39acc45ee5b104d2f3d36e4",
+      "work/outputs/run.log": "66846ab572eae144d9525cecc0d0789036385468b67c9f79b19e87bef7ba6298",
+      "work/results/results.json": "c50d5490b6eed4985d2291fd11f13081d7748411337b18b68dd083d296f91273",
+      "work/results/metadata.yml": "8bd995e7c8d99aa4402ef7448c48606e29e945b15b382de406c22b0916265083",
+      "work/report.md": "b3d0d3d844570c2813c64bce6addbf8abfc145514e4a8a989b2b58570ee6ef85"
+     }
+    },
+    {
+     "item": "64.5.s1.faulty",
+     "kind": "faulty",
+     "fault": "R2",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "0.26804355"
+     ],
+     "files_sha256": {
+      "work/solution.py": "11dea4fb22f5daf3346eaab3e9a1c853f1aeac8ddf31d9297a725953e954d754",
+      "work/inputs.py": "972988b014269a0634f4b9541b32db81ca7f1c81cbc147656b7c271aba0652f6",
+      "work/run.py": "2dff26f5bbf691f27bd7b4f6e919f7dbe1386ad1c39acc45ee5b104d2f3d36e4",
+      "work/outputs/run.log": "66846ab572eae144d9525cecc0d0789036385468b67c9f79b19e87bef7ba6298",
+      "work/results/results.json": "66d06c4216d9620f333fddba71826b78a6ec604f5c0dec6934bebb937c30caee",
+      "work/results/metadata.yml": "8bd995e7c8d99aa4402ef7448c48606e29e945b15b382de406c22b0916265083",
+      "work/report.md": "df014010162e3861ae96b82bf1e2c1647494ee7204944c6c613f1c7129cb22f3"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "66.3.s1",
+   "case": 2,
+   "call": "potential_repulsive(np.array([[-2.46, -4.26084499, 3.2]]), n_i, n_j, z0, C, C0, C2, C4, delta, lamda)",
+   "true_values": [
+    "3.5966739e-09"
+   ],
+   "shape": [
+    1
+   ],
+   "fault": "F4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "66.3.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "3.5966739e-09"
+     ],
+     "files_sha256": {
+      "work/solution.py": "2c52e839fab755dea2ac31caa7d14cf7a0098e92e9d03649a5ca929dd1919b76",
+      "work/inputs.py": "173f401c08c6a33e64a57bdd0aac7d5d408005be4aa4526d4fa2c2217aff93ae",
+      "work/run.py": "d682e822d4f585f2498a21e980fca506879b5935a6d1b35dc3a4c793da2758af",
+      "work/outputs/run.log": "c008e71d8536706379c6c873126283d744743641a12c9f7a0e73fd3d62113379",
+      "work/results/results.json": "dcb50a5cd0e1a67f2a43c80b52907184abd271420486b758a1553530e691143f",
+      "work/results/metadata.yml": "51d04dff557a920e8a48fcf3b1658849ee227527361ef3772acd70758c8beb4e",
+      "work/report.md": "66a4f40a7dc49e3c5d13eedf1e5e0a4667d1ac06ca2fdf47b43aa7761752c79f"
+     }
+    },
+    {
+     "item": "66.3.s1.faulty",
+     "kind": "faulty",
+     "fault": "F4",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "3.7765076e-09"
+     ],
+     "files_sha256": {
+      "work/solution.py": "2c52e839fab755dea2ac31caa7d14cf7a0098e92e9d03649a5ca929dd1919b76",
+      "work/inputs.py": "173f401c08c6a33e64a57bdd0aac7d5d408005be4aa4526d4fa2c2217aff93ae",
+      "work/run.py": "d682e822d4f585f2498a21e980fca506879b5935a6d1b35dc3a4c793da2758af",
+      "work/outputs/run.log": "66557d0d55ac814b241ad9f826ad751d6881246d5718e240b1cbdf60364e004e",
+      "work/results/results.json": "75a7fa1497bc9658590b6ff18cc25e38c2e51db49b5a3ffa5fa03066165b728d",
+      "work/results/metadata.yml": "51d04dff557a920e8a48fcf3b1658849ee227527361ef3772acd70758c8beb4e",
+      "work/report.md": "8f40308dfd0f225248affd342959a01458ce0164f30ae23ace33902b3567e880"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "66.3.s2",
+   "case": 0,
+   "call": "potential_repulsive(np.array([[0, 0, 3.2]]), n_i, n_j, z0, C, C0, C2, C4, delta, lamda)",
+   "true_values": [
+    "76.144098"
+   ],
+   "shape": [
+    1
+   ],
+   "fault": "R5",
+   "fault_detail": {
+    "element": 0
+   },
+   "items": [
+    {
+     "item": "66.3.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "76.144098"
+     ],
+     "files_sha256": {
+      "work/solution.py": "944eb3c08a8786a869adcac8972828d316bcaacb87217b4c9c5b77df3419fea5",
+      "work/inputs.py": "173f401c08c6a33e64a57bdd0aac7d5d408005be4aa4526d4fa2c2217aff93ae",
+      "work/run.py": "ba79e3a19677f1295bc3befc48d87e86627503a288bb16e02985229b36adc607",
+      "work/outputs/run.log": "bc3011e422396e7820878a3485a352a593cbef9baa308bb4d8422628ecd4e1aa",
+      "work/results/results.json": "5738e0c1cc0d6b2d9313322115b1b9bde6643b4eabf925b6371e371f7b9d3e24",
+      "work/results/metadata.yml": "3c3c5a5ea3738511f9b06ff943045a751cd9d5456607c1ee22cbbdeb0a1c292a",
+      "work/report.md": "802e284a5c4806998b90efd8c45d5701a041666ee890604afae68b6edfb689f1"
+     }
+    },
+    {
+     "item": "66.3.s2.faulty",
+     "kind": "faulty",
+     "fault": "R5",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "67.144098"
+     ],
+     "files_sha256": {
+      "work/solution.py": "944eb3c08a8786a869adcac8972828d316bcaacb87217b4c9c5b77df3419fea5",
+      "work/inputs.py": "173f401c08c6a33e64a57bdd0aac7d5d408005be4aa4526d4fa2c2217aff93ae",
+      "work/run.py": "ba79e3a19677f1295bc3befc48d87e86627503a288bb16e02985229b36adc607",
+      "work/outputs/run.log": "bc3011e422396e7820878a3485a352a593cbef9baa308bb4d8422628ecd4e1aa",
+      "work/results/results.json": "5738e0c1cc0d6b2d9313322115b1b9bde6643b4eabf925b6371e371f7b9d3e24",
+      "work/results/metadata.yml": "3c3c5a5ea3738511f9b06ff943045a751cd9d5456607c1ee22cbbdeb0a1c292a",
+      "work/report.md": "8a17664d226edd2a96fb76350204fc3835f231b20077ea900563754656726e3a"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "66.4.s2",
+   "case": 1,
+   "call": "potential_attractive(4.03628542, z0, A)",
+   "true_values": [
+    "-4.434863"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "66.4.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-4.434863"
+     ],
+     "files_sha256": {
+      "work/solution.py": "53045d27eca81194e1a3ddcf211726f020a5bf440a842ff82a8c06ced00aff10",
+      "work/inputs.py": "173f401c08c6a33e64a57bdd0aac7d5d408005be4aa4526d4fa2c2217aff93ae",
+      "work/run.py": "9b2e4403bffa61512875992d516f66405837051b05b5f973830c9c8d76a3b4c7",
+      "work/outputs/run.log": "bcd1458e6bd8a28e96ef3947f25d21cc37e047e07a10cc5807511efb89566703",
+      "work/results/results.json": "4d007351376e88f2e805f3fd30a00c5d2bf74f1b408c3f1a80518e4de2449c41",
+      "work/results/metadata.yml": "9bad4902a9810f3ac121837cd0ce3d41d26360083fdb0874011b646f4cf50f83",
+      "work/report.md": "336c71d76887579881f3ede2ffd70f27678a7140081472c87c03f07e9790396c"
+     }
+    },
+    {
+     "item": "66.4.s2.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-4434.863"
+     ],
+     "files_sha256": {
+      "work/solution.py": "53045d27eca81194e1a3ddcf211726f020a5bf440a842ff82a8c06ced00aff10",
+      "work/inputs.py": "173f401c08c6a33e64a57bdd0aac7d5d408005be4aa4526d4fa2c2217aff93ae",
+      "work/run.py": "9b2e4403bffa61512875992d516f66405837051b05b5f973830c9c8d76a3b4c7",
+      "work/outputs/run.log": "d6e394b94d1ffc1c0387adcc03e9cfec5bebfa84fb378d97bec47b0b4d0a4c0c",
+      "work/results/results.json": "e0b817f90b80dc8de57d75c4a5601e93488e555bfa7f5a7730cbcae87df1e958",
+      "work/results/metadata.yml": "9bad4902a9810f3ac121837cd0ce3d41d26360083fdb0874011b646f4cf50f83",
+      "work/report.md": "77cabff44d2f90461201ccd0a08865fc14624f1222fa6ffaaefba8d40852f264"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "67.1.s1",
+   "case": 2,
+   "call": "f_V(q, d, bg_eps, l1, l2)",
+   "true_values": [
+    "0.27623689"
+   ],
+   "shape": [],
+   "fault": "R1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "67.1.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.27623689"
+     ],
+     "files_sha256": {
+      "work/solution.py": "ec618fb8b022449bb44f8772a37b42a4b89aacdd03099657e093cfe70f5b1788",
+      "work/inputs.py": "3598f019a6aea6edf5e1d7f64aba11c5ae84e0eda2c15a24830fffd6b47ad7d6",
+      "work/run.py": "d0aaa84c6a3767cd923b3e88eee5c7eecbc12a1e197a7136342d3975d5566d6c",
+      "work/outputs/run.log": "eb725af12c8f38dfa034e35994ed9de91a6420d608882a35758f23a8d9afa71e",
+      "work/results/results.json": "850da0684297c074ad9527192f6d79df883f3fc84413b15fc2816aa43fb4c720",
+      "work/results/metadata.yml": "8948e0bc111c21f0ef7d0052b6e46452c508d1133bf438962c642b9381336566",
+      "work/report.md": "6231ca4caf3bb062fce9d2d53032aeb06ec7af9087b100be9e028f77d6aa1ab5"
+     }
+    },
+    {
+     "item": "67.1.s1.faulty",
+     "kind": "faulty",
+     "fault": "R1",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "276.23689"
+     ],
+     "files_sha256": {
+      "work/solution.py": "ec618fb8b022449bb44f8772a37b42a4b89aacdd03099657e093cfe70f5b1788",
+      "work/inputs.py": "3598f019a6aea6edf5e1d7f64aba11c5ae84e0eda2c15a24830fffd6b47ad7d6",
+      "work/run.py": "d0aaa84c6a3767cd923b3e88eee5c7eecbc12a1e197a7136342d3975d5566d6c",
+      "work/outputs/run.log": "eb725af12c8f38dfa034e35994ed9de91a6420d608882a35758f23a8d9afa71e",
+      "work/results/results.json": "b072aa1bd80c34dcf82399bff6cbd1193ff88498b59b7d9e90d58a30160b5021",
+      "work/results/metadata.yml": "8948e0bc111c21f0ef7d0052b6e46452c508d1133bf438962c642b9381336566",
+      "work/report.md": "51482f892c990fdc0f8575cb09d29b04194f4f41a88062e5e909dca66dd585d3"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "67.1.s2",
+   "case": 0,
+   "call": "f_V(q, d, bg_eps, l1, l2)",
+   "true_values": [
+    "0.022519488"
+   ],
+   "shape": [],
+   "fault": "R3",
+   "fault_detail": {
+    "other_case": 1
+   },
+   "items": [
+    {
+     "item": "67.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.022519488"
+     ],
+     "files_sha256": {
+      "work/solution.py": "d9c189091d475c08b157d73b58d7253996d8e9e0638f0c82e1f5ef493dcec779",
+      "work/inputs.py": "f57b1cad0926ef69344efc3331334d75079f16bcb7a8859223b2131373b4ce02",
+      "work/run.py": "d0aaa84c6a3767cd923b3e88eee5c7eecbc12a1e197a7136342d3975d5566d6c",
+      "work/outputs/run.log": "adc2bc281692f384c6ee994e1aaced0f127c671216eadfc826482ba2c13a1c24",
+      "work/results/results.json": "ca0ad73147df76fdc003cab451f46ef4a8f3e585389d7baee5a02cb0b8871e01",
+      "work/results/metadata.yml": "ab21c11ea39ec1a8e00db114d44e16b39740f5795b35825ea9df1129783e6dab",
+      "work/report.md": "613897ecad02c4b2cd089ee97dbaf9a0a303559cffedc3d8b89cf4e1afe6e3d4"
+     }
+    },
+    {
+     "item": "67.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "R3",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "0.95648525"
+     ],
+     "files_sha256": {
+      "work/solution.py": "d9c189091d475c08b157d73b58d7253996d8e9e0638f0c82e1f5ef493dcec779",
+      "work/inputs.py": "f57b1cad0926ef69344efc3331334d75079f16bcb7a8859223b2131373b4ce02",
+      "work/run.py": "d0aaa84c6a3767cd923b3e88eee5c7eecbc12a1e197a7136342d3975d5566d6c",
+      "work/outputs/run.log": "adc2bc281692f384c6ee994e1aaced0f127c671216eadfc826482ba2c13a1c24",
+      "work/results/results.json": "f1f62f688363acfeaab194e24199de1a1753d89f56c566c7c07fd0cf1724ff73",
+      "work/results/metadata.yml": "ab21c11ea39ec1a8e00db114d44e16b39740f5795b35825ea9df1129783e6dab",
+      "work/report.md": "e9cfe7ebe468c80beab3c840fa5fe76c783d7dac17056a3fc66ed6d0963e0648"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "70.3.s3",
+   "case": 2,
+   "call": "hamiltonian_3nu_su3_coefficients(hamiltonian)",
+   "true_values": [
+    "0.00010206207",
+    "-0",
+    "0.00039583333",
+    "0.00060491476",
+    "0.00094209891",
+    "-3.899296e-05",
+    "-6.0727937e-05",
+    "-0.00068560344"
+   ],
+   "shape": [
+    8
+   ],
+   "fault": "R4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "70.3.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.00010206207",
+      "-0",
+      "0.00039583333",
+      "0.00060491476",
+      "0.00094209891",
+      "-3.899296e-05",
+      "-6.0727937e-05",
+      "-0.00068560344"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4a82675d0b62017d1fc7ee997ea27b8e03d73af339f6fc09e48c07f24f1cdd2b",
+      "work/inputs.py": "3a60eece4bdd8ea2b4af3ea0a732a752227aad44687a28468723a7eb3bdf5b0b",
+      "work/run.py": "ac70e60a242eae43028996e8100fe10674b2be981ce7a6d969e381ec45ee2289",
+      "work/outputs/run.log": "eba2b8e5da43dd0a92b4ae674c452eeb9bb436efaae29b3fdc2c44055a1df8e0",
+      "work/results/results.json": "febb6a8c2d9d0b4ec3f68623a5a7af363fd742c889b8153b599e084c094c3079",
+      "work/results/metadata.yml": "be46316508f4ed95b4172d7b42e3b54a6224ac80bb59d64fe4760f6598f0d2a1",
+      "work/report.md": "a49bc933adcd1895bad4ea2813b93d8a37e2702567a744b8eeb2186019b19cde"
+     }
+    },
+    {
+     "item": "70.3.s3.faulty",
+     "kind": "faulty",
+     "fault": "R4",
+     "dcl_hard_failures": 7,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "0.00010716518",
+      "-0",
+      "0.000415625",
+      "0.00063516049",
+      "0.00098920386",
+      "-4.0942608e-05",
+      "-6.3764334e-05",
+      "-0.00071988362"
+     ],
+     "files_sha256": {
+      "work/solution.py": "4a82675d0b62017d1fc7ee997ea27b8e03d73af339f6fc09e48c07f24f1cdd2b",
+      "work/inputs.py": "3a60eece4bdd8ea2b4af3ea0a732a752227aad44687a28468723a7eb3bdf5b0b",
+      "work/run.py": "ac70e60a242eae43028996e8100fe10674b2be981ce7a6d969e381ec45ee2289",
+      "work/outputs/run.log": "eba2b8e5da43dd0a92b4ae674c452eeb9bb436efaae29b3fdc2c44055a1df8e0",
+      "work/results/results.json": "4ab3d6f3753a41792c90bd8ecbde290551698a7456ab8821f3ab6d86709517c2",
+      "work/results/metadata.yml": "be46316508f4ed95b4172d7b42e3b54a6224ac80bb59d64fe4760f6598f0d2a1",
+      "work/report.md": "b78c3ba7ada1939bd116c3e992b5dab0d84a4ab4e36b6b8f9fea59617c6e7a40"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "70.4.s2",
+   "case": 2,
+   "call": "tensor_d(5, 5, 8)",
+   "true_values": [
+    "-0.28867513"
+   ],
+   "shape": [],
+   "fault": "R2",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "70.4.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-0.28867513"
+     ],
+     "files_sha256": {
+      "work/solution.py": "01939ddfb9bef15a7db27d874ed48ac49ace7a6c07acbdbc4e4b6b008664cd4b",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "367e95d0adb10e5080f4a56c7f37eef61ef40b50745b2ad0fc43dbb1ca56ed1d",
+      "work/outputs/run.log": "548a5e35b92c65b67a77124f5580540372ca6e3f0e22724612b7fadda66218a5",
+      "work/results/results.json": "543bcc732a628a7c1cfd591ae22d52c62fcb8b7aacad3ed227b1a93e3c4fc9be",
+      "work/results/metadata.yml": "526b424542d3302977ca40ff38a085bf469a3d061e64b92fb5123457cd935c0e",
+      "work/report.md": "86b5f712405fdeccf78adaeecff0188cb4a624c608d7aa8d4c1eb36e9e913067"
+     }
+    },
+    {
+     "item": "70.4.s2.faulty",
+     "kind": "faulty",
+     "fault": "R2",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "0.28867513"
+     ],
+     "files_sha256": {
+      "work/solution.py": "01939ddfb9bef15a7db27d874ed48ac49ace7a6c07acbdbc4e4b6b008664cd4b",
+      "work/inputs.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "work/run.py": "367e95d0adb10e5080f4a56c7f37eef61ef40b50745b2ad0fc43dbb1ca56ed1d",
+      "work/outputs/run.log": "548a5e35b92c65b67a77124f5580540372ca6e3f0e22724612b7fadda66218a5",
+      "work/results/results.json": "d1b03bdf219a8871caffca02365a788afb02d079b268d063aa1b59c71fe94048",
+      "work/results/metadata.yml": "526b424542d3302977ca40ff38a085bf469a3d061e64b92fb5123457cd935c0e",
+      "work/report.md": "5e762f89be0fe38efbaffafb43cc32563dd61fc2efc0e798418b6c68e83ad9fc"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "70.5.s1",
+   "case": 2,
+   "call": "star_product(1, h_coefficient)",
+   "true_values": [
+    "-1.6159828e-07"
+   ],
+   "shape": [],
+   "fault": "F4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "70.5.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-1.6159828e-07"
+     ],
+     "files_sha256": {
+      "work/solution.py": "55ce4954b7af35d93aced3a18b694989510209adb98f62a34973d6dad433e23f",
+      "work/inputs.py": "a982860f64672a4983188be56ffa457eae21981816648c9ddb49620e988ec078",
+      "work/run.py": "5d97e2a2f8970f9d046a4bc34e0785d156c99460d22dacc57184bc7af7d1b4a8",
+      "work/outputs/run.log": "0921753d03734a9b887a317428fcd1a403a54b7096cd8fc40052d8417c1b02b5",
+      "work/results/results.json": "b7bd14d961fa4038207ba4d4ef44506da39bc077aa975eef3f61ebec63bc4795",
+      "work/results/metadata.yml": "20468cc95980e4a532f6574e30f9e5ea8bcf134b67a2e0a7697156c094112166",
+      "work/report.md": "d28b18750b851690fb4ac5fdae856b5bf73aa65c75d88d8a2991597a99aaf675"
+     }
+    },
+    {
+     "item": "70.5.s1.faulty",
+     "kind": "faulty",
+     "fault": "F4",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-1.696782e-07"
+     ],
+     "files_sha256": {
+      "work/solution.py": "55ce4954b7af35d93aced3a18b694989510209adb98f62a34973d6dad433e23f",
+      "work/inputs.py": "a982860f64672a4983188be56ffa457eae21981816648c9ddb49620e988ec078",
+      "work/run.py": "5d97e2a2f8970f9d046a4bc34e0785d156c99460d22dacc57184bc7af7d1b4a8",
+      "work/outputs/run.log": "b61a26719ddd625125145f72974c42a7a51bf49e7d41e6c62bd1a3d6c39f44bf",
+      "work/results/results.json": "d3d9fec70921211bf5a4cf61da754c5b8551813638bc78f1cbdb19fbf257632c",
+      "work/results/metadata.yml": "20468cc95980e4a532f6574e30f9e5ea8bcf134b67a2e0a7697156c094112166",
+      "work/report.md": "51f3846d79c11cd97205d4259b44f71d8ccc716871e1ac6f56e567aebbada203"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "71.6.s2",
+   "case": 0,
+   "call": "entropy(rho)",
+   "true_values": [
+    "2"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "71.6.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "2"
+     ],
+     "files_sha256": {
+      "work/solution.py": "ae2dd54c1bfc2f441eb60e25c51d89fce2bb7d3335c4d723c887eea97f63c0a5",
+      "work/inputs.py": "889981dc776fd5d696175ce0d42d08628756a2541bde62222764fa50ae24daa4",
+      "work/run.py": "3ad33b9af69720c19a89c845ba8b3c987295a7903b76769e30e0081e96c74a32",
+      "work/outputs/run.log": "962bd521fbaef00f9f63938b683f93ab5f328d5a3356517c479506b47d37ccbd",
+      "work/results/results.json": "275302f05d1215cdfefa63b953e35e97784db74d5f379aeb2d97dd66d4406b94",
+      "work/results/metadata.yml": "23d2f25b890ba76fd217ad3f67372df0afb48a0e4616ba149e487bcea12aed6d",
+      "work/report.md": "d3316d2bbce80ce654407c5c8da9fa7cf777c1880f631a6d3118a01c82a28094"
+     }
+    },
+    {
+     "item": "71.6.s2.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "2000"
+     ],
+     "files_sha256": {
+      "work/solution.py": "ae2dd54c1bfc2f441eb60e25c51d89fce2bb7d3335c4d723c887eea97f63c0a5",
+      "work/inputs.py": "889981dc776fd5d696175ce0d42d08628756a2541bde62222764fa50ae24daa4",
+      "work/run.py": "3ad33b9af69720c19a89c845ba8b3c987295a7903b76769e30e0081e96c74a32",
+      "work/outputs/run.log": "6741b84b2c7e846638d93a004f6d8f756cdeb3226de95a243bd13d824c2bb2f0",
+      "work/results/results.json": "d6da7045db3264753c61ab74cbfea437903bd423c8fd2f933ff7a76063faa4ad",
+      "work/results/metadata.yml": "23d2f25b890ba76fd217ad3f67372df0afb48a0e4616ba149e487bcea12aed6d",
+      "work/report.md": "c8c1e895788a33bce581752237d610b05557747dc51a202b0e7ce6272344434f"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "71.8.s2",
+   "case": 2,
+   "call": "neg_rev_coh_info(p, g, N)",
+   "true_values": [
+    "-0.089133942"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "71.8.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-0.089133942"
+     ],
+     "files_sha256": {
+      "work/solution.py": "a293084cec913b71ce8792df5dd3c9965aa4d9d7b0c6f6984889d5c1b6562b53",
+      "work/inputs.py": "72e2a7155d765f72606b46a27ba2098ce58185b28f8551adfcbbee5d00644a60",
+      "work/run.py": "a133e6e07ce0dd000f8a19af58a2cb82e989e7a5157fad6edd5fc37f499da02e",
+      "work/outputs/run.log": "0b2268fd4a065563f45198af113d1fc5de1940e84e0a45f8987da4e3ddc36fe5",
+      "work/results/results.json": "98d85e9eaba446c2198fcd4fbc9fef2d28ef175ffeacfd087248a5894ba163e2",
+      "work/results/metadata.yml": "0ad92538f02c2757aca7d81c2505266d7560e4195ba7e7a2a9c4ce79311d136b",
+      "work/report.md": "45a79f0773db1d0d902cf4a66763e33df1003c34870fe8581c1e831b405a459b"
+     }
+    },
+    {
+     "item": "71.8.s2.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-89.133942"
+     ],
+     "files_sha256": {
+      "work/solution.py": "a293084cec913b71ce8792df5dd3c9965aa4d9d7b0c6f6984889d5c1b6562b53",
+      "work/inputs.py": "72e2a7155d765f72606b46a27ba2098ce58185b28f8551adfcbbee5d00644a60",
+      "work/run.py": "a133e6e07ce0dd000f8a19af58a2cb82e989e7a5157fad6edd5fc37f499da02e",
+      "work/outputs/run.log": "f1b12313de287029187708de3abd3cf55ee6532e4c8e6cbcaca2d0483fe987d6",
+      "work/results/results.json": "69baa73b6a5cc1292ba86c2891d82cbce4b87417755e5ea1d6603f71fe7f6fea",
+      "work/results/metadata.yml": "0ad92538f02c2757aca7d81c2505266d7560e4195ba7e7a2a9c4ce79311d136b",
+      "work/report.md": "914c3d11242383ba4f944d50f7426f8c3ddaa9c2d72bb116e439f75cc1f7fcd2"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "72.2.s2",
+   "case": 0,
+   "call": "energy_site(i, j, lattice)",
+   "true_values": [
+    "-2"
+   ],
+   "shape": [],
+   "fault": "R1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "72.2.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-2"
+     ],
+     "files_sha256": {
+      "work/solution.py": "e15d52ece9170b2172b74dea1d1dc31d8c2972100c5345f4e7d32257aa4b0893",
+      "work/inputs.py": "76b0427845d9eac91d4c4ed6ab0ba87fee771a3c1c1ef80b8e34a3367b36ce0d",
+      "work/run.py": "cbb7fe0bdd55615c6978a7ea7a9b88efc927b205da7bf6f92d3359f63906452b",
+      "work/outputs/run.log": "d8cc1089ad8930eb7bd769b784d42d8a27e056b7d0258ac85404df639eae5b8e",
+      "work/results/results.json": "47c0811567e5a1fe17350fdb9fa2c73b59401e4a7a235d3b8f626e9f5b94662e",
+      "work/results/metadata.yml": "52f4f2ff34b0783124958530102a0ba05b8800b440632146fafd70bed05ff5c2",
+      "work/report.md": "ca4980bfb0aa966cc7c7ac096e3e13a5874e0cb5b7e31bbe4f3a58a4d600b526"
+     }
+    },
+    {
+     "item": "72.2.s2.faulty",
+     "kind": "faulty",
+     "fault": "R1",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-2000"
+     ],
+     "files_sha256": {
+      "work/solution.py": "e15d52ece9170b2172b74dea1d1dc31d8c2972100c5345f4e7d32257aa4b0893",
+      "work/inputs.py": "76b0427845d9eac91d4c4ed6ab0ba87fee771a3c1c1ef80b8e34a3367b36ce0d",
+      "work/run.py": "cbb7fe0bdd55615c6978a7ea7a9b88efc927b205da7bf6f92d3359f63906452b",
+      "work/outputs/run.log": "d8cc1089ad8930eb7bd769b784d42d8a27e056b7d0258ac85404df639eae5b8e",
+      "work/results/results.json": "0637d4636cafcd51355ce3a0d1711335b14a7db54158fcf5928c8fceb237303e",
+      "work/results/metadata.yml": "52f4f2ff34b0783124958530102a0ba05b8800b440632146fafd70bed05ff5c2",
+      "work/report.md": "ede8d114729abb319c1edfdff13d1b32cbf4649af2c8923a3713afc3a5d3e5e1"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "72.2.s3",
+   "case": 0,
+   "call": "energy_site(i, j, lattice)",
+   "true_values": [
+    "-2"
+   ],
+   "shape": [],
+   "fault": "R3",
+   "fault_detail": {
+    "other_case": 2
+   },
+   "items": [
+    {
+     "item": "72.2.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-2"
+     ],
+     "files_sha256": {
+      "work/solution.py": "3c3806733bb0480a35f42edc119e248ccef3f9cc7fd4bb21db5a04d16c63fa47",
+      "work/inputs.py": "76b0427845d9eac91d4c4ed6ab0ba87fee771a3c1c1ef80b8e34a3367b36ce0d",
+      "work/run.py": "cbb7fe0bdd55615c6978a7ea7a9b88efc927b205da7bf6f92d3359f63906452b",
+      "work/outputs/run.log": "d8cc1089ad8930eb7bd769b784d42d8a27e056b7d0258ac85404df639eae5b8e",
+      "work/results/results.json": "b516670201e30fbce9884cd788e6e0f703fa311767cd07c4eb60252916c70814",
+      "work/results/metadata.yml": "7de85003efec232cb206c10903e4b922f756fa0826bfe0cfa8325ca8fb9b4f3a",
+      "work/report.md": "ca4980bfb0aa966cc7c7ac096e3e13a5874e0cb5b7e31bbe4f3a58a4d600b526"
+     }
+    },
+    {
+     "item": "72.2.s3.faulty",
+     "kind": "faulty",
+     "fault": "R3",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "0"
+     ],
+     "files_sha256": {
+      "work/solution.py": "3c3806733bb0480a35f42edc119e248ccef3f9cc7fd4bb21db5a04d16c63fa47",
+      "work/inputs.py": "76b0427845d9eac91d4c4ed6ab0ba87fee771a3c1c1ef80b8e34a3367b36ce0d",
+      "work/run.py": "cbb7fe0bdd55615c6978a7ea7a9b88efc927b205da7bf6f92d3359f63906452b",
+      "work/outputs/run.log": "d8cc1089ad8930eb7bd769b784d42d8a27e056b7d0258ac85404df639eae5b8e",
+      "work/results/results.json": "55655cb0c6c7f3c56a2a2919848b29ae5b860cadc951a50b0f3e7dcf1c93eac4",
+      "work/results/metadata.yml": "7de85003efec232cb206c10903e4b922f756fa0826bfe0cfa8325ca8fb9b4f3a",
+      "work/report.md": "e920eca3a9a2d18895511c7b3c3791ccb7665ad69e83895de7c85bb40cbd57c6"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "72.3.s3",
+   "case": 2,
+   "call": "energy(lattice)",
+   "true_values": [
+    "4"
+   ],
+   "shape": [],
+   "fault": "R4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "72.3.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "4"
+     ],
+     "files_sha256": {
+      "work/solution.py": "721a320003831d8932a868691deef6ce86316a76e270934af17b7e9fbfe0c639",
+      "work/inputs.py": "72f2b10af55f2d75ca28958638e4c5eb60f8009754c1bf17502aa03706b8cd5b",
+      "work/run.py": "0a884ec7c112a1ff0403d6f28873f36c736e5adc3c90055d616e60257d49104f",
+      "work/outputs/run.log": "ea1ee1d594549a1ee988a97dcf135c5f3c756a28d4a1b5a4a9d7040ae75c8e72",
+      "work/results/results.json": "d11f809cc9a08c0008e1554d841870f92e35a222de578b7809569acea27702b2",
+      "work/results/metadata.yml": "e81821bcf7889863cc6e8f35dbc5ba18a5bc6f6f2bbb0b746508cec6145d3302",
+      "work/report.md": "fe14badf6bc8d1f783e877ae90b2a2bf6335832c4beb66772ecc1188710ca5c1"
+     }
+    },
+    {
+     "item": "72.3.s3.faulty",
+     "kind": "faulty",
+     "fault": "R4",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "4.2"
+     ],
+     "files_sha256": {
+      "work/solution.py": "721a320003831d8932a868691deef6ce86316a76e270934af17b7e9fbfe0c639",
+      "work/inputs.py": "72f2b10af55f2d75ca28958638e4c5eb60f8009754c1bf17502aa03706b8cd5b",
+      "work/run.py": "0a884ec7c112a1ff0403d6f28873f36c736e5adc3c90055d616e60257d49104f",
+      "work/outputs/run.log": "ea1ee1d594549a1ee988a97dcf135c5f3c756a28d4a1b5a4a9d7040ae75c8e72",
+      "work/results/results.json": "caa2ecdb8a76ea820cc934aacd1ae45ca46b5c31f524dd47caa0373b9f9f44c6",
+      "work/results/metadata.yml": "e81821bcf7889863cc6e8f35dbc5ba18a5bc6f6f2bbb0b746508cec6145d3302",
+      "work/report.md": "1d32451cf3b014eb4524de2ba730171e090a5cacdfafc551623492b759a352f3"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "72.4.s3",
+   "case": 0,
+   "call": "magnetization(spins)",
+   "true_values": [
+    "2"
+   ],
+   "shape": [],
+   "fault": "R2",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "72.4.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "2"
+     ],
+     "files_sha256": {
+      "work/solution.py": "42e601a13944eeed49fd6f843d1a1eb259c073f60d39e4cfa06d18cc2e95a5cc",
+      "work/inputs.py": "2a32e48c322326dd119d8efde39ace5fb68bf4e4675eb87bf46c7364a415f618",
+      "work/run.py": "435a771145284a914d16e181b5a9aabc1ff1052f173aa9409d44b3b43dda54ed",
+      "work/outputs/run.log": "962bd521fbaef00f9f63938b683f93ab5f328d5a3356517c479506b47d37ccbd",
+      "work/results/results.json": "17c54f9205f198dc0229bd9925b0f6784184d9bc5b6ba70bdbdf6e7b0a90ec49",
+      "work/results/metadata.yml": "d0a56053d752f84e1c762899f6de3e71e4d0ea178d253c3554861326d584f50a",
+      "work/report.md": "d5ceb6fbd05b94b06b69c01646f9ec364aa94bb7f5fbbadec984177798ab574c"
+     }
+    },
+    {
+     "item": "72.4.s3.faulty",
+     "kind": "faulty",
+     "fault": "R2",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-2"
+     ],
+     "files_sha256": {
+      "work/solution.py": "42e601a13944eeed49fd6f843d1a1eb259c073f60d39e4cfa06d18cc2e95a5cc",
+      "work/inputs.py": "2a32e48c322326dd119d8efde39ace5fb68bf4e4675eb87bf46c7364a415f618",
+      "work/run.py": "435a771145284a914d16e181b5a9aabc1ff1052f173aa9409d44b3b43dda54ed",
+      "work/outputs/run.log": "962bd521fbaef00f9f63938b683f93ab5f328d5a3356517c479506b47d37ccbd",
+      "work/results/results.json": "a8f5d254cb1adac473a22aca8ed7be0a30585640474524faf550c7dd1cbafd1b",
+      "work/results/metadata.yml": "d0a56053d752f84e1c762899f6de3e71e4d0ea178d253c3554861326d584f50a",
+      "work/report.md": "df8c15361f68bd6453f64f1c96f2268e78157756b9d62b4c57bc4c3ab2997865"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "72.7.s1",
+   "case": 0,
+   "call": "run(1.6, 3, 10)",
+   "true_values": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1",
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "shape": [
+    10
+   ],
+   "fault": "F4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "72.7.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1",
+      "1",
+      "1",
+      "1",
+      "1",
+      "1",
+      "1",
+      "1",
+      "1",
+      "1"
+     ],
+     "files_sha256": {
+      "work/solution.py": "e3b7eb22a917d2d930f33a2b6d1208dec36816754da29e6b41d124811be35ff8",
+      "work/inputs.py": "b9b2a6e2b498a0c96409bea97e9861cddf1ab0cb8ec9e95baff59597dbfca9a3",
+      "work/run.py": "1558126011328b93fc4d365a254ef52495c7a4d64c5bc4425b4f151708377512",
+      "work/outputs/run.log": "1c3b95d985e315ed7899fbec12b87fe84fc45334b14405b09ebe3f4b5cefe0e2",
+      "work/results/results.json": "1f1fe861e2657289acfbe5ebf710f9dc3b841156bbd892e0835622b427d8c11e",
+      "work/results/metadata.yml": "ad2f37123cdd99612ca7a38082fd34384958fc22b4efd6002330659c02aa9fb2",
+      "work/report.md": "01637239715e1c9bd133b10d3ff77a544d13feac1b0c2363e713511dc53fa359"
+     }
+    },
+    {
+     "item": "72.7.s1.faulty",
+     "kind": "faulty",
+     "fault": "F4",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "1.05",
+      "1.05",
+      "1.05",
+      "1.05",
+      "1.05",
+      "1.05",
+      "1.05",
+      "1.05",
+      "1.05",
+      "1.05"
+     ],
+     "files_sha256": {
+      "work/solution.py": "e3b7eb22a917d2d930f33a2b6d1208dec36816754da29e6b41d124811be35ff8",
+      "work/inputs.py": "b9b2a6e2b498a0c96409bea97e9861cddf1ab0cb8ec9e95baff59597dbfca9a3",
+      "work/run.py": "1558126011328b93fc4d365a254ef52495c7a4d64c5bc4425b4f151708377512",
+      "work/outputs/run.log": "7411bb58f4d6e8da0255a5b221b64d3a09b124ebcfcb5502305729656b2a86bf",
+      "work/results/results.json": "aa946be86b35420e56e866236ee4d3c986acb1dbfb11f72df2f4272f795afa79",
+      "work/results/metadata.yml": "ad2f37123cdd99612ca7a38082fd34384958fc22b4efd6002330659c02aa9fb2",
+      "work/report.md": "8d616f107da54878f49fd6d3e60261772aa605332fef868c626b944767f00388"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "72.8.s1",
+   "case": 0,
+   "call": "scan_T(Ts=[1.6, 2.1, 2.15, 2.2, 2.25, 2.3, 2.35, 2.4, 2.8], N=10, nsweeps=10)",
+   "true_values": [
+    "0.29864",
+    "0.07168",
+    "0.55728",
+    "0.18016",
+    "0.52224",
+    "0.08196",
+    "0.0314",
+    "0.183",
+    "0.08092"
+   ],
+   "shape": [
+    9
+   ],
+   "fault": "R5",
+   "fault_detail": {
+    "element": 0
+   },
+   "items": [
+    {
+     "item": "72.8.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.29864",
+      "0.07168",
+      "0.55728",
+      "0.18016",
+      "0.52224",
+      "0.08196",
+      "0.0314",
+      "0.183",
+      "0.08092"
+     ],
+     "files_sha256": {
+      "work/solution.py": "c12693fee44e7b01557ea2173de405c04e901bd1dad84a30a0eaec7bc442cb98",
+      "work/inputs.py": "b9b2a6e2b498a0c96409bea97e9861cddf1ab0cb8ec9e95baff59597dbfca9a3",
+      "work/run.py": "80761b976f856b88191a0621f2c6f897831c47020096e2e5d514e30777a821f9",
+      "work/outputs/run.log": "84ca349d69a80f2b9be4765f29c961b186f33a1246f98c43762134f3aaf7017b",
+      "work/results/results.json": "41d95e1e2d96ed904b2d8aeff95ee97fd4e64a20405e1f2c849d200b16453b0b",
+      "work/results/metadata.yml": "6a0e2ef6d74d6e73cb3b692a3a4aa2f1f462495461761285f24e40f82680e24a",
+      "work/report.md": "bf1c1c2f49d1d0c0cefa0851cbb0c811a3a28a7721da4e7c96247d5595ccf2ee"
+     }
+    },
+    {
+     "item": "72.8.s1.faulty",
+     "kind": "faulty",
+     "fault": "R5",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "0.92864",
+      "0.07168",
+      "0.55728",
+      "0.18016",
+      "0.52224",
+      "0.08196",
+      "0.0314",
+      "0.183",
+      "0.08092"
+     ],
+     "files_sha256": {
+      "work/solution.py": "c12693fee44e7b01557ea2173de405c04e901bd1dad84a30a0eaec7bc442cb98",
+      "work/inputs.py": "b9b2a6e2b498a0c96409bea97e9861cddf1ab0cb8ec9e95baff59597dbfca9a3",
+      "work/run.py": "80761b976f856b88191a0621f2c6f897831c47020096e2e5d514e30777a821f9",
+      "work/outputs/run.log": "84ca349d69a80f2b9be4765f29c961b186f33a1246f98c43762134f3aaf7017b",
+      "work/results/results.json": "41d95e1e2d96ed904b2d8aeff95ee97fd4e64a20405e1f2c849d200b16453b0b",
+      "work/results/metadata.yml": "6a0e2ef6d74d6e73cb3b692a3a4aa2f1f462495461761285f24e40f82680e24a",
+      "work/report.md": "16bd2c4e86e8e44f29f7a24da34163734c0d6407dcc3856950f0df4b7f258e01"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "77.1.s2",
+   "case": 2,
+   "call": "wrap(particle_position2, box_length2)",
+   "true_values": [
+    "3.7",
+    "7.9",
+    "4.3"
+   ],
+   "shape": [
+    3
+   ],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "77.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "3.7",
+      "7.9",
+      "4.3"
+     ],
+     "files_sha256": {
+      "work/solution.py": "88e8ad4c90cd8e4eb47d1b0880f89592bf50291a1b4458b08b64a42e206d2fdf",
+      "work/inputs.py": "a713f713f76962e4bc89d5627a9bba607760522ba8b5a39eefc52e6ff5115cb7",
+      "work/run.py": "5b4590a09eb33cce9760a9873b5dce8cbdac6e59fb82d014dcc089a7b56e99d7",
+      "work/outputs/run.log": "74ba02485eba762e9785c6263967fa5b4530aa0647da9b3182b73832d6ccbaad",
+      "work/results/results.json": "6dc3801533345d12dd5390a96ca1543c4aee015a79eba18df88e23a82ae1a43c",
+      "work/results/metadata.yml": "7d38a48010202a62af4a3151d0f63d04a2e02dd59444782ca9716de97857bf6b",
+      "work/report.md": "5af9e6e54f0f103859a7933eb79d50a0ab4f13e3b80254dd68bb2385d27f0cca"
+     }
+    },
+    {
+     "item": "77.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "3700",
+      "7900",
+      "4300"
+     ],
+     "files_sha256": {
+      "work/solution.py": "88e8ad4c90cd8e4eb47d1b0880f89592bf50291a1b4458b08b64a42e206d2fdf",
+      "work/inputs.py": "a713f713f76962e4bc89d5627a9bba607760522ba8b5a39eefc52e6ff5115cb7",
+      "work/run.py": "5b4590a09eb33cce9760a9873b5dce8cbdac6e59fb82d014dcc089a7b56e99d7",
+      "work/outputs/run.log": "47454b6a465ed5b6e035aa3f915fdf679c67ca8fe2ca1d8a1b8861f0cf01955a",
+      "work/results/results.json": "da5a328e698bc78fe132b707dcd37e3fce3e4560ae969e2110fc56f9d75dd55b",
+      "work/results/metadata.yml": "7d38a48010202a62af4a3151d0f63d04a2e02dd59444782ca9716de97857bf6b",
+      "work/report.md": "7c873666953ef9cd8bd0961b921772d7c57a533b1844a492e45a9025962e9d6f"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "77.1.s3",
+   "case": 2,
+   "call": "wrap(particle_position2, box_length2)",
+   "true_values": [
+    "3.7",
+    "7.9",
+    "4.3"
+   ],
+   "shape": [
+    3
+   ],
+   "fault": "R1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "77.1.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "3.7",
+      "7.9",
+      "4.3"
+     ],
+     "files_sha256": {
+      "work/solution.py": "b2c1c8a818c549ac393fe6f20d5d1ff4e7dbeecbcfb9d7d83a9939dcd2a85f04",
+      "work/inputs.py": "a713f713f76962e4bc89d5627a9bba607760522ba8b5a39eefc52e6ff5115cb7",
+      "work/run.py": "5b4590a09eb33cce9760a9873b5dce8cbdac6e59fb82d014dcc089a7b56e99d7",
+      "work/outputs/run.log": "74ba02485eba762e9785c6263967fa5b4530aa0647da9b3182b73832d6ccbaad",
+      "work/results/results.json": "da0e7069f1fe7aaa741001a5d7e0ce1dc5a74b66de1b1b9c092175ce3e7042c3",
+      "work/results/metadata.yml": "420b9071abd9dd1529752b91ea0c3db31d686c1c0d8ea032c25cb91da70cdff9",
+      "work/report.md": "5af9e6e54f0f103859a7933eb79d50a0ab4f13e3b80254dd68bb2385d27f0cca"
+     }
+    },
+    {
+     "item": "77.1.s3.faulty",
+     "kind": "faulty",
+     "fault": "R1",
+     "dcl_hard_failures": 3,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "3700",
+      "7900",
+      "4300"
+     ],
+     "files_sha256": {
+      "work/solution.py": "b2c1c8a818c549ac393fe6f20d5d1ff4e7dbeecbcfb9d7d83a9939dcd2a85f04",
+      "work/inputs.py": "a713f713f76962e4bc89d5627a9bba607760522ba8b5a39eefc52e6ff5115cb7",
+      "work/run.py": "5b4590a09eb33cce9760a9873b5dce8cbdac6e59fb82d014dcc089a7b56e99d7",
+      "work/outputs/run.log": "74ba02485eba762e9785c6263967fa5b4530aa0647da9b3182b73832d6ccbaad",
+      "work/results/results.json": "9bc6086c27c881e77b315669aca7c10a6c6cc296bf852ec3ed6341a0f5edd47d",
+      "work/results/metadata.yml": "420b9071abd9dd1529752b91ea0c3db31d686c1c0d8ea032c25cb91da70cdff9",
+      "work/report.md": "7c873666953ef9cd8bd0961b921772d7c57a533b1844a492e45a9025962e9d6f"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "77.2.s1",
+   "case": 2,
+   "call": "dist(r1, r2, box_length)",
+   "true_values": [
+    "0.34641016"
+   ],
+   "shape": [],
+   "fault": "R3",
+   "fault_detail": {
+    "other_case": 1
+   },
+   "items": [
+    {
+     "item": "77.2.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.34641016"
+     ],
+     "files_sha256": {
+      "work/solution.py": "c20f76a0636f39c33cdb475abff236c9ee22aa0efd58467202578277170299f9",
+      "work/inputs.py": "dcf929e5b67807d234db428ed9483d8c139e3e040dcb8f9a897d5a5a57d61a94",
+      "work/run.py": "00e2b3cf97b6e2310110b715edd394b72999bc72db02b591e281f2d7ea73855e",
+      "work/outputs/run.log": "5a5d09e2a491a1b2ea9794870cc8f3f5329510b2b4b37c414e919dd8f9aabd05",
+      "work/results/results.json": "b6a67d67a8ecbb1e694cd7c6a1e33fd20f5c2a7ba9897766e8e34fd6b88a5f79",
+      "work/results/metadata.yml": "68ae66061717862538751e38121eaab77f13aa6f52e72b8b870b5dcfd0aa0f11",
+      "work/report.md": "82c4f70141390534184d1d44cf47420a9edc295ce66696c6ea020f84ccd98333"
+     }
+    },
+    {
+     "item": "77.2.s1.faulty",
+     "kind": "faulty",
+     "fault": "R3",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "3.4641016"
+     ],
+     "files_sha256": {
+      "work/solution.py": "c20f76a0636f39c33cdb475abff236c9ee22aa0efd58467202578277170299f9",
+      "work/inputs.py": "dcf929e5b67807d234db428ed9483d8c139e3e040dcb8f9a897d5a5a57d61a94",
+      "work/run.py": "00e2b3cf97b6e2310110b715edd394b72999bc72db02b591e281f2d7ea73855e",
+      "work/outputs/run.log": "5a5d09e2a491a1b2ea9794870cc8f3f5329510b2b4b37c414e919dd8f9aabd05",
+      "work/results/results.json": "3171a753c3e40abb1a0ad74928098d01c47b3c97866c9767cdac870dc170af0a",
+      "work/results/metadata.yml": "68ae66061717862538751e38121eaab77f13aa6f52e72b8b870b5dcfd0aa0f11",
+      "work/report.md": "245defc0ad515938a32b648463add5985b64ebf3318330f4276d9b0f5dca49c5"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "77.8.s2",
+   "case": 2,
+   "call": "E_pot(positions3, L3, sigma3, epsilon3, rc)",
+   "true_values": [
+    "-0.25974266"
+   ],
+   "shape": [],
+   "fault": "R4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "77.8.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-0.25974266"
+     ],
+     "files_sha256": {
+      "work/solution.py": "514e844b931e5e4736a1c0c92b7d84737b90359e9d7fd9436d22ffaa550cf153",
+      "work/inputs.py": "12decdcd0d9f35ce436cef32af11c45220d3d345e34ffb0af6a9ff04c4c96f8e",
+      "work/run.py": "46968ab6a2c608872d9b3c5f131fe5972859a70928ef86edbe6ee1cb6eafbc4c",
+      "work/outputs/run.log": "83e23a9a73d6c1e51139949bbc68aa82e699dc38d2656c11044ef5a3774fa946",
+      "work/results/results.json": "67c4be0e5fe0ebcb35e4d67751d9c4fed883edf08ccd8dce6bea420654bf2cac",
+      "work/results/metadata.yml": "7fe88b93a7123d58a066a3fb88189a34bb0119f1eeb4f9c793e1a81efc8791ff",
+      "work/report.md": "4daf5254a9d9cf8444107e108e8c15b5840d2f767964de43c9b631f4a776912a"
+     }
+    },
+    {
+     "item": "77.8.s2.faulty",
+     "kind": "faulty",
+     "fault": "R4",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-0.2727298"
+     ],
+     "files_sha256": {
+      "work/solution.py": "514e844b931e5e4736a1c0c92b7d84737b90359e9d7fd9436d22ffaa550cf153",
+      "work/inputs.py": "12decdcd0d9f35ce436cef32af11c45220d3d345e34ffb0af6a9ff04c4c96f8e",
+      "work/run.py": "46968ab6a2c608872d9b3c5f131fe5972859a70928ef86edbe6ee1cb6eafbc4c",
+      "work/outputs/run.log": "83e23a9a73d6c1e51139949bbc68aa82e699dc38d2656c11044ef5a3774fa946",
+      "work/results/results.json": "db895d00e3a1eb8238c9360ea50186662169f4201d4b85ef9dbbf3a868580285",
+      "work/results/metadata.yml": "7fe88b93a7123d58a066a3fb88189a34bb0119f1eeb4f9c793e1a81efc8791ff",
+      "work/report.md": "5d44039b56892ecb635a72245bfe0bf71db9a1534ce9d5da99ae439b86894f4b"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "77.8.s3",
+   "case": 2,
+   "call": "E_pot(positions3, L3, sigma3, epsilon3, rc)",
+   "true_values": [
+    "-0.25974266"
+   ],
+   "shape": [],
+   "fault": "R2",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "77.8.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-0.25974266"
+     ],
+     "files_sha256": {
+      "work/solution.py": "a10df0e6c15712ec607c47f82512b61a02faa299fe3e528ce3d62e21b94d1375",
+      "work/inputs.py": "12decdcd0d9f35ce436cef32af11c45220d3d345e34ffb0af6a9ff04c4c96f8e",
+      "work/run.py": "46968ab6a2c608872d9b3c5f131fe5972859a70928ef86edbe6ee1cb6eafbc4c",
+      "work/outputs/run.log": "83e23a9a73d6c1e51139949bbc68aa82e699dc38d2656c11044ef5a3774fa946",
+      "work/results/results.json": "fa8ad72ba93e03d2b0e6cde3b2321be162e5157995430eaab544a4785a155507",
+      "work/results/metadata.yml": "f4a9e792c7b1b654b5f79259d536a2a745c1785244f79baaa26eb222116eef38",
+      "work/report.md": "4daf5254a9d9cf8444107e108e8c15b5840d2f767964de43c9b631f4a776912a"
+     }
+    },
+    {
+     "item": "77.8.s3.faulty",
+     "kind": "faulty",
+     "fault": "R2",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "0.25974266"
+     ],
+     "files_sha256": {
+      "work/solution.py": "a10df0e6c15712ec607c47f82512b61a02faa299fe3e528ce3d62e21b94d1375",
+      "work/inputs.py": "12decdcd0d9f35ce436cef32af11c45220d3d345e34ffb0af6a9ff04c4c96f8e",
+      "work/run.py": "46968ab6a2c608872d9b3c5f131fe5972859a70928ef86edbe6ee1cb6eafbc4c",
+      "work/outputs/run.log": "83e23a9a73d6c1e51139949bbc68aa82e699dc38d2656c11044ef5a3774fa946",
+      "work/results/results.json": "406fcc6b1c6cbe7255a5b325e961d429682f324ffa65548bb849241fb9b68065",
+      "work/results/metadata.yml": "f4a9e792c7b1b654b5f79259d536a2a745c1785244f79baaa26eb222116eef38",
+      "work/report.md": "8bda8c7ecf7e55b07ef79a0ce28b251ede74d7d9a9a1705aa0234f8a9efa61be"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "79.1.s2",
+   "case": 1,
+   "call": "Verlet(v0, x0, m, dt, omega)",
+   "true_values": [
+    "0.44719123",
+    "0.004472136"
+   ],
+   "shape": [
+    2
+   ],
+   "fault": "F4",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "79.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.44719123",
+      "0.004472136"
+     ],
+     "files_sha256": {
+      "work/solution.py": "9a8ce3d2692c93de5a2e00822f47e39057527d99369e54869404c54e7bf31473",
+      "work/inputs.py": "3d90f92f22237617ac66da6ff3782fe98066875587a5df5f47399c97aa95095b",
+      "work/run.py": "cac83a6abbf42c39c8329998156cf1c1fef05a85c154e168adc929a195020508",
+      "work/outputs/run.log": "66f9194486dca169af2fc47193aa37f0e2ca3558101a59e6a2583ad78efb3881",
+      "work/results/results.json": "2ac4f7b50714d593a5b1a19ad1ffb6b68684ed85d5dbdd04661b12903592b079",
+      "work/results/metadata.yml": "d727d0a4e1503c65663a9577f7b486b5004a2c0b65ea68bb8bbbb147b7f1b971",
+      "work/report.md": "e5e31239df62e098a796447669257565716384e6840197d1c3558ebfdc716e77"
+     }
+    },
+    {
+     "item": "79.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "F4",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.4695508",
+      "0.0046957428"
+     ],
+     "files_sha256": {
+      "work/solution.py": "9a8ce3d2692c93de5a2e00822f47e39057527d99369e54869404c54e7bf31473",
+      "work/inputs.py": "3d90f92f22237617ac66da6ff3782fe98066875587a5df5f47399c97aa95095b",
+      "work/run.py": "cac83a6abbf42c39c8329998156cf1c1fef05a85c154e168adc929a195020508",
+      "work/outputs/run.log": "e2c052a5fd74374d8cc2c30a52eaa16ba35394d117fafbdb22060b3ec884011c",
+      "work/results/results.json": "20b22d23643f45f93fd3ef44d5f93a99e5dbc02c4eb2f05c454a8f82315095a5",
+      "work/results/metadata.yml": "d727d0a4e1503c65663a9577f7b486b5004a2c0b65ea68bb8bbbb147b7f1b971",
+      "work/report.md": "952ea36b8d911dc843071a882842068c0aa916dbd72d8db123730df607d1c6c8"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "79.1.s3",
+   "case": 0,
+   "call": "Verlet(v0, x0, m, dt, omega)",
+   "true_values": [
+    "0.44497753",
+    "0.04472136"
+   ],
+   "shape": [
+    2
+   ],
+   "fault": "R5",
+   "fault_detail": {
+    "element": 0
+   },
+   "items": [
+    {
+     "item": "79.1.s3.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.44497753",
+      "0.04472136"
+     ],
+     "files_sha256": {
+      "work/solution.py": "5ca1dc897d7cb2a1e95f6f936922197469b2febd1ae596ed1f69c99e636b0e36",
+      "work/inputs.py": "1698d4081e377425d450722ada1276d94b7adf8f494c594764f9f47efec80e73",
+      "work/run.py": "cac83a6abbf42c39c8329998156cf1c1fef05a85c154e168adc929a195020508",
+      "work/outputs/run.log": "c6e7f37edf9a48b6a97f196f22b767872b01aa7e0d2c5d591590e7fabc97d037",
+      "work/results/results.json": "03b403f0f4d418c0609ffc5b3b6df4df7c4988b5cf519775993686c098962c17",
+      "work/results/metadata.yml": "073e596da4aa219d62687f4dfac228931b6856217c8ba84e7f7eed308134b7cc",
+      "work/report.md": "0ea49855b9e03231d37436266670100bf3017c639eb6cfa2830e1308b8b96c75"
+     }
+    },
+    {
+     "item": "79.1.s3.faulty",
+     "kind": "faulty",
+     "fault": "R5",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "0.44947753",
+      "0.04472136"
+     ],
+     "files_sha256": {
+      "work/solution.py": "5ca1dc897d7cb2a1e95f6f936922197469b2febd1ae596ed1f69c99e636b0e36",
+      "work/inputs.py": "1698d4081e377425d450722ada1276d94b7adf8f494c594764f9f47efec80e73",
+      "work/run.py": "cac83a6abbf42c39c8329998156cf1c1fef05a85c154e168adc929a195020508",
+      "work/outputs/run.log": "c6e7f37edf9a48b6a97f196f22b767872b01aa7e0d2c5d591590e7fabc97d037",
+      "work/results/results.json": "03b403f0f4d418c0609ffc5b3b6df4df7c4988b5cf519775993686c098962c17",
+      "work/results/metadata.yml": "073e596da4aa219d62687f4dfac228931b6856217c8ba84e7f7eed308134b7cc",
+      "work/report.md": "a0ae1a650a1ccaafdad4a1187e004c7169f75034940a23839394773ba2a05e39"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "80.1.s2",
+   "case": 2,
+   "call": "dist(r1, r2, box_length)",
+   "true_values": [
+    "0.34641016"
+   ],
+   "shape": [],
+   "fault": "F1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "80.1.s2.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "0.34641016"
+     ],
+     "files_sha256": {
+      "work/solution.py": "68ebaf8dfb292d69f904ad23758ffc9a83efeebfb2d0c89316ef1a7df751162a",
+      "work/inputs.py": "dcf929e5b67807d234db428ed9483d8c139e3e040dcb8f9a897d5a5a57d61a94",
+      "work/run.py": "00e2b3cf97b6e2310110b715edd394b72999bc72db02b591e281f2d7ea73855e",
+      "work/outputs/run.log": "5a5d09e2a491a1b2ea9794870cc8f3f5329510b2b4b37c414e919dd8f9aabd05",
+      "work/results/results.json": "272a60192098c0ea7c1590234c13e599de967b65fa6bb6318c4ae36fb14eb912",
+      "work/results/metadata.yml": "681d91fee81de533ebf87d0a588727fab0834aab07a8fdf0c010171464ac78e6",
+      "work/report.md": "82c4f70141390534184d1d44cf47420a9edc295ce66696c6ea020f84ccd98333"
+     }
+    },
+    {
+     "item": "80.1.s2.faulty",
+     "kind": "faulty",
+     "fault": "F1",
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "346.41016"
+     ],
+     "files_sha256": {
+      "work/solution.py": "68ebaf8dfb292d69f904ad23758ffc9a83efeebfb2d0c89316ef1a7df751162a",
+      "work/inputs.py": "dcf929e5b67807d234db428ed9483d8c139e3e040dcb8f9a897d5a5a57d61a94",
+      "work/run.py": "00e2b3cf97b6e2310110b715edd394b72999bc72db02b591e281f2d7ea73855e",
+      "work/outputs/run.log": "36270d226d95cc30e2a10c2a8b9e639414682bb67e69bd9df742bfcb442189b2",
+      "work/results/results.json": "fedb733066bd77646620c12b226f149b10b9248997d336847ee56ec8a40c9c7d",
+      "work/results/metadata.yml": "681d91fee81de533ebf87d0a588727fab0834aab07a8fdf0c010171464ac78e6",
+      "work/report.md": "e2c04e4e5eeb80293d335d258e82b52da71acad2be1fb29c1cf315c266e37945"
+     }
+    }
+   ]
+  },
+  {
+   "instance": "80.2.s1",
+   "case": 2,
+   "call": "E_ij(r3, sigma3, epsilon3, rc)",
+   "true_values": [
+    "-0.061267454"
+   ],
+   "shape": [],
+   "fault": "R1",
+   "fault_detail": {},
+   "items": [
+    {
+     "item": "80.2.s1.clean",
+     "kind": "clean",
+     "fault": null,
+     "dcl_hard_failures": 0,
+     "dcl_rules": [],
+     "report_values": [
+      "-0.061267454"
+     ],
+     "files_sha256": {
+      "work/solution.py": "be760aeefda7011ad07f601de5ff27a73618c30b8bec9259c07a25efc9e1cf54",
+      "work/inputs.py": "b863ee0010984618d94327967d22983bda98e8d9d316623867339ad36340f8f0",
+      "work/run.py": "4a12f34d7eb55088a7a25c06c9add85e8cff0158485a0d1c8fc0e34041a93750",
+      "work/outputs/run.log": "3b76e4261676256e1e8ade86d9bce6edc4010cbae5940de3141b6dd6d39314e0",
+      "work/results/results.json": "c3e6bc0693cae542d96bfb66ac65628dc8ad0db4156901f733748f9d99619a21",
+      "work/results/metadata.yml": "614655665e972f254822b68f9434e3c5cb1559257b47a71db9af6dee3eb4e17c",
+      "work/report.md": "a31ecc5029b320df10922d9a0da42cd98e30b9bd002dec6d84e5cb5ad54ef2bf"
+     }
+    },
+    {
+     "item": "80.2.s1.faulty",
+     "kind": "faulty",
+     "fault": "R1",
+     "dcl_hard_failures": 1,
+     "dcl_rules": [
+      "DCL:number_source"
+     ],
+     "report_values": [
+      "-61.267454"
+     ],
+     "files_sha256": {
+      "work/solution.py": "be760aeefda7011ad07f601de5ff27a73618c30b8bec9259c07a25efc9e1cf54",
+      "work/inputs.py": "b863ee0010984618d94327967d22983bda98e8d9d316623867339ad36340f8f0",
+      "work/run.py": "4a12f34d7eb55088a7a25c06c9add85e8cff0158485a0d1c8fc0e34041a93750",
+      "work/outputs/run.log": "3b76e4261676256e1e8ade86d9bce6edc4010cbae5940de3141b6dd6d39314e0",
+      "work/results/results.json": "92ab6243e054e4e8c1045650d9b0994aaa132dec1a886fd62732cdd716186c59",
+      "work/results/metadata.yml": "614655665e972f254822b68f9434e3c5cb1559257b47a71db9af6dee3eb4e17c",
+      "work/report.md": "315882fe7ec02b1d2837f433753e677935db09dea1f187655d8411e9a6d166bb"
+     }
+    }
+   ]
+  }
+ ]
+}

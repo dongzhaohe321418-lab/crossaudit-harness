@@ -131,25 +131,40 @@ def transpose_digits(s: str) -> str | None:
     return None
 
 
+RUN_PY = """\"\"\"Writes outputs/run.log: the step's output on the benchmark's test inputs.\"\"\"
+import numpy as np
+
+from solution import *  # noqa: F401,F403  the candidate program
+
+exec(open("inputs.py", encoding="utf-8").read())  # the benchmark's input assignments, verbatim
+
+output = {call}
+with open("outputs/run.log", "w", encoding="utf-8") as log:
+    for value in np.ravel(np.asarray(output, dtype=float)):
+        log.write(format(float(value), ".8g") + " dimensionless\\n")
+"""
+
+
 def files_for(inst: str, code: str, inputs: str, log_vals: list[str], res_vals: list[str],
-              rep_vals: list[str], rev: str) -> dict[str, bytes]:
+              rep_vals: list[str], rev: str, call: str) -> dict[str, bytes]:
     log = "".join(f"{v} {UNIT}\n" for v in log_vals)
     q = [{"name": f"output[{i}]", "value": v, "unit": UNIT,
           "source": f"work/outputs/run.log@{rev}#L{i + 1}", "text": f"{v} {UNIT}"}
          for i, v in enumerate(res_vals)]
     res = "{\n \"quantities\": [\n" + ",\n".join("  " + json.dumps(x) for x in q) + "\n ]\n}\n"
     meta = (f"code_version: {rev}\ninputs:\n  - work/outputs/run.log@{rev}\n"
-            f"  - work/solution.py@{rev}\n  - work/inputs.py@{rev}\n")
+            f"  - work/solution.py@{rev}\n  - work/inputs.py@{rev}\n  - work/run.py@{rev}\n")
     rows = [{"v": rv, "u": UNIT,
              "src": {"file": "work/results/results.json", "quote": f"\"text\": \"{qv} {UNIT}\""}}
             for rv, qv in zip(rep_vals, res_vals)]
     stated = ", ".join(f"{v} {UNIT}" for v in rep_vals)
-    what = "value is" if len(rep_vals) == 1 else f"{len(rep_vals)} values are, in order,"
-    rep = (f"# Result\n\nRunning `work/solution.py` on the inputs in `work/inputs.py` produces the "
-           f"step's output; its {what} {stated}. The run log is `work/outputs/run.log` and the "
-           f"values are recorded in `work/results/results.json`.\n\n"
+    what = "is" if len(rep_vals) == 1 else f"has {len(rep_vals)} values, which are, in order,"
+    rep = (f"# Result\n\n`work/run.py` runs `work/solution.py` on the inputs in `work/inputs.py`, "
+           f"evaluating `{call}`, and writes `work/outputs/run.log`. The step's output {what} "
+           f"{stated}, recorded in `work/results/results.json`.\n\n"
            "```crossaudit-numbers\n" + json.dumps(rows) + "\n```\n")
     return {"work/solution.py": code.encode(), "work/inputs.py": (inputs + "\n").encode(),
+            "work/run.py": RUN_PY.format(call=call).encode(),
             "work/outputs/run.log": log.encode(), "work/results/results.json": res.encode(),
             "work/results/metadata.yml": meta.encode(), "work/report.md": rep.encode()}
 
@@ -218,7 +233,7 @@ def main() -> int:
     cycle = FAULTS[:]
     random.Random(SEED).shuffle(cycle)
     OUT.mkdir(parents=True, exist_ok=True)
-    manifest, subs = [], []
+    manifest, subs, run_py_matches = [], [], []
     for n, r in enumerate(qual):
         iid = r["instance"]
         rng = random.Random(f"{SEED}:fault:{iid}")
@@ -260,11 +275,22 @@ def main() -> int:
             detail["element"] = i
         entries = []
         for kind, (lv, rv, pv) in (("clean", (true, true, true)), (fault, (log, res, rep))):
-            files = files_for(iid, r["code"], r["inputs"], lv, rv, pv, rev)
+            files = files_for(iid, r["code"], r["inputs"], lv, rv, pv, rev, r["call"])
             d = OUT / f"{iid}.{'clean' if kind == 'clean' else 'faulty'}"
             for path, data in files.items():
                 (d / path).parent.mkdir(parents=True, exist_ok=True)
                 (d / path).write_bytes(data)
+            if kind == "clean":
+                with tempfile.TemporaryDirectory() as tmp:
+                    t = Path(tmp)
+                    for path, data in files.items():
+                        (t / path).parent.mkdir(parents=True, exist_ok=True)
+                        (t / path).write_bytes(data)
+                    (t / "work/outputs/run.log").unlink()
+                    subprocess.run([str(sx.PY), "run.py"], cwd=t / "work", capture_output=True,
+                                   timeout=600, env={"PYTHONPATH": str(sx.SRC), "PATH": "/usr/bin:/bin"})
+                    produced = (t / "work/outputs/run.log").read_bytes() if (t / "work/outputs/run.log").exists() else b""
+                    run_py_matches.append(produced == files["work/outputs/run.log"])
             dcl = run_checks(files, PROFILES["science"], [], []).as_dict()
             entries.append({"item": d.name, "kind": "clean" if kind == "clean" else "faulty",
                             "fault": None if kind == "clean" else fault,
@@ -285,10 +311,11 @@ def main() -> int:
                   if e["kind"] == "clean" and e["dcl_hard_failures"]]
     print(f"{len(qual)} of {len(correct)} qualify; dropped {len(dropped)}; substitutions {len(subs)}")
     print(f"cycle {cycle}")
+    print(f"run.py reproduces run.log on {sum(run_py_matches)} of {len(run_py_matches)} clean items")
     print(f"gate (DCL half): clean items with a science-profile BLOCKER: {len(clean_fail)} {clean_fail[:5]}")
     from collections import Counter
     print("faults", Counter(m["fault"] for m in manifest))
-    return 0 if not clean_fail else 1
+    return 0 if not clean_fail and all(run_py_matches) else 1
 
 
 if __name__ == "__main__":

@@ -1,0 +1,890 @@
+[
+ {
+  "item": "1.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "1.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "F4",
+  "flagged": true
+ },
+ {
+  "item": "1.1.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "1.1.s3.faulty",
+  "kind": "faulty",
+  "fault": "R5",
+  "flagged": true
+ },
+ {
+  "item": "10.9.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "10.9.s1.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "11.10.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "11.10.s1.faulty",
+  "kind": "faulty",
+  "fault": "R1",
+  "flagged": false
+ },
+ {
+  "item": "11.11.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "11.11.s1.faulty",
+  "kind": "faulty",
+  "fault": "R3",
+  "flagged": true
+ },
+ {
+  "item": "11.11.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "11.11.s2.faulty",
+  "kind": "faulty",
+  "fault": "R4",
+  "flagged": true
+ },
+ {
+  "item": "11.3.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "11.3.s2.faulty",
+  "kind": "faulty",
+  "fault": "R2",
+  "flagged": true
+ },
+ {
+  "item": "14.1.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "14.1.s1.faulty",
+  "kind": "faulty",
+  "fault": "F4",
+  "flagged": true
+ },
+ {
+  "item": "19.2.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "19.2.s1.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "23.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "23.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "23.1.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "23.1.s3.faulty",
+  "kind": "faulty",
+  "fault": "R1",
+  "flagged": true
+ },
+ {
+  "item": "23.2.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "23.2.s2.faulty",
+  "kind": "faulty",
+  "fault": "R3",
+  "flagged": true
+ },
+ {
+  "item": "23.2.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "23.2.s3.faulty",
+  "kind": "faulty",
+  "fault": "R4",
+  "flagged": false
+ },
+ {
+  "item": "24.2.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "24.2.s3.faulty",
+  "kind": "faulty",
+  "fault": "R2",
+  "flagged": true
+ },
+ {
+  "item": "25.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "25.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "F4",
+  "flagged": true
+ },
+ {
+  "item": "25.2.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "25.2.s1.faulty",
+  "kind": "faulty",
+  "fault": "R5",
+  "flagged": true
+ },
+ {
+  "item": "25.2.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "25.2.s2.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "27.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "27.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "R1",
+  "flagged": true
+ },
+ {
+  "item": "29.2.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "29.2.s2.faulty",
+  "kind": "faulty",
+  "fault": "R3",
+  "flagged": true
+ },
+ {
+  "item": "3.1.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "3.1.s1.faulty",
+  "kind": "faulty",
+  "fault": "R4",
+  "flagged": true
+ },
+ {
+  "item": "3.1.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "3.1.s3.faulty",
+  "kind": "faulty",
+  "fault": "R2",
+  "flagged": true
+ },
+ {
+  "item": "32.1.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "32.1.s1.faulty",
+  "kind": "faulty",
+  "fault": "F4",
+  "flagged": true
+ },
+ {
+  "item": "32.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "32.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "R5",
+  "flagged": true
+ },
+ {
+  "item": "32.1.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "32.1.s3.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "34.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "34.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "R1",
+  "flagged": true
+ },
+ {
+  "item": "35.1.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "35.1.s1.faulty",
+  "kind": "faulty",
+  "fault": "R3",
+  "flagged": true
+ },
+ {
+  "item": "38.1.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "38.1.s1.faulty",
+  "kind": "faulty",
+  "fault": "R4",
+  "flagged": true
+ },
+ {
+  "item": "40.1.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "40.1.s1.faulty",
+  "kind": "faulty",
+  "fault": "R2",
+  "flagged": true
+ },
+ {
+  "item": "41.2.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "41.2.s3.faulty",
+  "kind": "faulty",
+  "fault": "F4",
+  "flagged": true
+ },
+ {
+  "item": "42.2.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "42.2.s1.faulty",
+  "kind": "faulty",
+  "fault": "R5",
+  "flagged": true
+ },
+ {
+  "item": "42.2.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "42.2.s3.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "43.2.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "43.2.s1.faulty",
+  "kind": "faulty",
+  "fault": "R1",
+  "flagged": true
+ },
+ {
+  "item": "44.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "44.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "R4",
+  "flagged": true
+ },
+ {
+  "item": "47.3.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "47.3.s3.faulty",
+  "kind": "faulty",
+  "fault": "R4",
+  "flagged": true
+ },
+ {
+  "item": "56.2.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "56.2.s1.faulty",
+  "kind": "faulty",
+  "fault": "R2",
+  "flagged": true
+ },
+ {
+  "item": "56.2.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "56.2.s2.faulty",
+  "kind": "faulty",
+  "fault": "F4",
+  "flagged": true
+ },
+ {
+  "item": "57.4.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "57.4.s1.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "57.4.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "57.4.s2.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "58.1.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "58.1.s1.faulty",
+  "kind": "faulty",
+  "fault": "R1",
+  "flagged": true
+ },
+ {
+  "item": "58.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "58.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "R3",
+  "flagged": true
+ },
+ {
+  "item": "58.2.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "58.2.s3.faulty",
+  "kind": "faulty",
+  "fault": "R4",
+  "flagged": true
+ },
+ {
+  "item": "58.3.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "58.3.s1.faulty",
+  "kind": "faulty",
+  "fault": "R2",
+  "flagged": true
+ },
+ {
+  "item": "59.3.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "59.3.s3.faulty",
+  "kind": "faulty",
+  "fault": "F4",
+  "flagged": true
+ },
+ {
+  "item": "60.2.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "60.2.s1.faulty",
+  "kind": "faulty",
+  "fault": "R5",
+  "flagged": true
+ },
+ {
+  "item": "60.3.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "60.3.s1.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "61.2.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "61.2.s1.faulty",
+  "kind": "faulty",
+  "fault": "R1",
+  "flagged": true
+ },
+ {
+  "item": "61.4.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "61.4.s3.faulty",
+  "kind": "faulty",
+  "fault": "R3",
+  "flagged": true
+ },
+ {
+  "item": "64.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "64.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "R4",
+  "flagged": true
+ },
+ {
+  "item": "64.5.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "64.5.s1.faulty",
+  "kind": "faulty",
+  "fault": "R2",
+  "flagged": true
+ },
+ {
+  "item": "66.3.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "66.3.s1.faulty",
+  "kind": "faulty",
+  "fault": "F4",
+  "flagged": false
+ },
+ {
+  "item": "66.3.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "66.3.s2.faulty",
+  "kind": "faulty",
+  "fault": "R5",
+  "flagged": true
+ },
+ {
+  "item": "66.4.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "66.4.s2.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "67.1.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "67.1.s1.faulty",
+  "kind": "faulty",
+  "fault": "R1",
+  "flagged": true
+ },
+ {
+  "item": "67.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "67.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "R3",
+  "flagged": true
+ },
+ {
+  "item": "70.3.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "70.3.s3.faulty",
+  "kind": "faulty",
+  "fault": "R4",
+  "flagged": true
+ },
+ {
+  "item": "70.4.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "70.4.s2.faulty",
+  "kind": "faulty",
+  "fault": "R2",
+  "flagged": true
+ },
+ {
+  "item": "70.5.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "70.5.s1.faulty",
+  "kind": "faulty",
+  "fault": "F4",
+  "flagged": false
+ },
+ {
+  "item": "71.6.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "71.6.s2.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "71.8.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "71.8.s2.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "72.2.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "72.2.s2.faulty",
+  "kind": "faulty",
+  "fault": "R1",
+  "flagged": true
+ },
+ {
+  "item": "72.2.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "72.2.s3.faulty",
+  "kind": "faulty",
+  "fault": "R3",
+  "flagged": true
+ },
+ {
+  "item": "72.3.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "72.3.s3.faulty",
+  "kind": "faulty",
+  "fault": "R4",
+  "flagged": true
+ },
+ {
+  "item": "72.4.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "72.4.s3.faulty",
+  "kind": "faulty",
+  "fault": "R2",
+  "flagged": true
+ },
+ {
+  "item": "72.7.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "72.7.s1.faulty",
+  "kind": "faulty",
+  "fault": "F4",
+  "flagged": true
+ },
+ {
+  "item": "72.8.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "72.8.s1.faulty",
+  "kind": "faulty",
+  "fault": "R5",
+  "flagged": true
+ },
+ {
+  "item": "77.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "77.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "77.1.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "77.1.s3.faulty",
+  "kind": "faulty",
+  "fault": "R1",
+  "flagged": true
+ },
+ {
+  "item": "77.2.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "77.2.s1.faulty",
+  "kind": "faulty",
+  "fault": "R3",
+  "flagged": true
+ },
+ {
+  "item": "77.8.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "77.8.s2.faulty",
+  "kind": "faulty",
+  "fault": "R4",
+  "flagged": true
+ },
+ {
+  "item": "77.8.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "77.8.s3.faulty",
+  "kind": "faulty",
+  "fault": "R2",
+  "flagged": true
+ },
+ {
+  "item": "79.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "79.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "F4",
+  "flagged": true
+ },
+ {
+  "item": "79.1.s3.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "79.1.s3.faulty",
+  "kind": "faulty",
+  "fault": "R5",
+  "flagged": true
+ },
+ {
+  "item": "80.1.s2.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "80.1.s2.faulty",
+  "kind": "faulty",
+  "fault": "F1",
+  "flagged": true
+ },
+ {
+  "item": "80.2.s1.clean",
+  "kind": "clean",
+  "fault": null,
+  "flagged": false
+ },
+ {
+  "item": "80.2.s1.faulty",
+  "kind": "faulty",
+  "fault": "R1",
+  "flagged": true
+ }
+]

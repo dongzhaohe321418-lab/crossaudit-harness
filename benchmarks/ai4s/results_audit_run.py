@@ -31,6 +31,7 @@ sys.path.insert(0, str(HERE))
 AI4S = Path.home() / "Documents/Crossaudit/ai4s"
 GEN = AI4S / "runs/generation"
 OUT = AI4S / "runs/results_audit"
+PILOT = AI4S / "runs/results_audit_pilot"     # Amendment 3: counted, never analysed
 ITEMS = AI4S / "runs/results_items"
 MANIFEST = REPO / "benchmarks/code/records/ai4s/results_items.json"
 STRATA = REPO / "benchmarks/code/records/ai4s/strata.json"
@@ -90,7 +91,8 @@ def instance(iid: str, probs: dict, gen: dict) -> tuple[str, str]:
 def spent() -> tuple[float, int]:
     from crossaudit import usage
     total, n, priced = 0.0, 0, 0
-    for ledger in OUT.glob("projects/*/.crossaudit/usage.jsonl"):
+    for ledger in [*OUT.glob("projects/*/.crossaudit/usage.jsonl"),
+                   *PILOT.glob("projects/*/.crossaudit/usage.jsonl")]:   # Amendment 3
         events, _ = usage.read_events(ledger)
         for e in events:
             n += 1
