@@ -9,8 +9,14 @@
 > where this project's own `report_ceiling3.load_draws` has always looked. **Every cross-family
 > figure in the first version was computed on the wrong readings.** They are recomputed below
 > from complete ladders, and they reproduce ceiling 1's own headline under the shipped rule —
-> 30.0% [20.0, 40.7] recall at 16.0% [10.2, 22.3] false positives — which is the cross-check the
-> first version could not have passed.
+> 30.0% [20.0, 40.7] recall at 16.0% false positives — which is the cross-check the first
+> version could not have passed. **The false-positive interval here is [10.2, 22.3] and ceiling
+> 1 reports [10.1, 22.3] for the same quantity.** Both are percentile bootstraps of the same
+> counts at different seeds, so the endpoints differ in the first decimal; the point estimates
+> are identical. Ceiling 1's own review caught this shape once before, when one report quoted
+> [40.4, 63.6] and [40.0, 63.3] for a single share because two analyses had bootstrapped it
+> separately. **Where this paper quotes ceiling 1's headline it quotes ceiling 1's interval**,
+> and this sweep's interval is quoted only for this sweep's own recomputation.
 
 **No model calls.** This re-grades findings already archived by ceiling 1 and study 18 under four
 decision rules. Every reading carries `model_blockers` and `model_findings`, so the sweep is
