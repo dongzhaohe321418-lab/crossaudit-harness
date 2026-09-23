@@ -68,20 +68,31 @@ against 0.
 fabrication (0/25: everything agrees with everything else), with no flag on any clean item. That
 matches the registration's stated expectation.
 
-**The LLM catches fabrications by working out the result.** It flags 14 of 14 fabricated scale slips
-and 9 of 11 fabricated 5% errors, where the profile flags none. Its findings recompute the output
-from the program and the inputs, for example evaluating a KL divergence of two small distributions
-to 1 where the report says 1000, or checking that a reported solver output fails the first row of the
-linear system it solves. Its two misses are 5% errors on outputs of order 10⁻⁶. On the reporting
-faults it flags 49 of 49, but it has the profile's findings in its prompt, so those flags are not an
-independent measurement of the model.
+**The LLM flags most fabrications, usually by working out the result.** Under the registered rule it
+flags 14 of 14 fabricated scale slips and 9 of 11 fabricated 5% errors (23/25), where the profile
+flags none. Most of its findings recompute the output from the program and the inputs, for example
+evaluating a KL divergence of two small distributions to 1 where the report says 1000, or checking
+that a reported solver output fails the first row of the linear system it solves. Two of the 23 rest
+only on a wrong calculation (post hoc reading): on `32.1.s3` it says the output should be about
+−1.36 × 10⁶ (it is −1.36 × 10⁻⁶), and on `70.5.s1` it says the tensor terms cancel to zero (they sum
+to −1.6 × 10⁻⁷); the same reasoning would have flagged the true value. With a sound, fault-specific
+finding required, 21 of 25 (post hoc). Its two misses are 5% errors on outputs of order 10⁻⁶.
+
+**On the reporting faults the measurement is of the combined workflow, not of the model.** The
+model's prompt contains the profile's findings and tells it that a deterministic hard failure
+requires a BLOCKED verdict. Every one of the 49 reporting-fault items already has a deterministic
+failure, and 194 of their 196 readings carry a model BLOCKER. No arm without the deterministic
+findings was run, so the model's unaided rate on these faults is not measured.
 
 **Re-execution catches what re-execution can.** It flags every fault except four whose output is so
 close to zero that `np.allclose`'s default absolute tolerance (10⁻⁸) absorbs the change: an R1 and an
 R4 on outputs of −3.2 × 10⁻¹⁶ and 2.2 × 10⁻¹⁶ (floating-point zeros, where the "fault" changes
 numerical noise), and two F4 on outputs of 3.6 × 10⁻⁹ and −1.6 × 10⁻⁷. The registration's premise
-that a 5% error lies beyond `np.allclose` defaults is false for such outputs. The LLM flagged all
-four; the union of the LLM with re-execution flags all 74 faulty items.
+that a 5% error lies beyond `np.allclose` defaults is false for such outputs; this is a limit of the
+comparison rule we chose, not of re-execution. The LLM flagged all four under the registered rule,
+so the union of the LLM with re-execution flags all 74 faulty items; one of the four (`70.5.s1`) was
+flagged only on a wrong calculation, so with a sound finding required the union covers 73 of 74
+(post hoc).
 
 ## Flags on clean items, read one by one (post hoc)
 
@@ -91,10 +102,10 @@ The LLM flagged 12 of 74 clean items. All were read; labels are in `posthoc_resu
   case passes its inputs as literals inside the call (e.g. `Fermi(2 * 10 ** 17, …)`), so
   `work/inputs.py` is empty, `work/run.py` hard-codes the arguments, and the report's sentence that the
   program ran "on the inputs in work/inputs.py" is false. Seven of the 9 clean items were flagged for
-  exactly that. Separately, two solutions document their output's unit (nanometres, zeptojoules)
-  while every report says `dimensionless`, the unit token Amendment 1 fixed for all quantities; both
-  were flagged for the contradiction (one of them is also among the seven). The gate did not test
-  either property.
+  exactly that. Separately, three solutions document their output's unit (nanometres in one,
+  zeptojoules in two) while every report says `dimensionless`, the unit token Amendment 1 fixed for
+  all quantities; two of the three clean items were flagged for the contradiction (one of them is
+  also among the seven) and one (`77.8.s2`) was not. The gate did not test either property.
 * **4 are wrong**: three hand computations of the output that disagree with the executed output
   (one by a factor of 10¹²), and one claim of a syntax error in a line whose trailing text is a
   comment. On one of these instances (`25.1.s2`) the same model computed the output correctly when
@@ -118,10 +129,11 @@ unit contradiction.
 
 1. **Deterministic provenance checks and an LLM auditor catch different things, and the difference is
    the one that matters for results.** A number→source chain verifies that artefacts agree; it cannot
-   see a result that is consistently wrong. The LLM, reading the code and the inputs, caught 23 of 25
-   such fabrications at K = 4. Neither is a substitute for the other: the profile has no false
-   positives and needs no model; the LLM needs the code and inputs to be small enough to reason about,
-   and it errs (4 wrong flags on 74 clean items, and inconsistent arithmetic across readings).
+   see a result that is consistently wrong. The LLM, reading the code and the inputs, flagged 23 of 25
+   such fabrications at K = 4 (21 with a sound finding, post hoc). Neither is a substitute for the
+   other: the profile flagged none of these 74 clean items and needs no model; the LLM needs the code
+   and inputs to be small enough to reason about, and it errs (4 wrong flags on 74 clean items, two
+   fabrication flags resting on wrong calculations, and inconsistent arithmetic across readings).
 2. **Re-execution is the reference, and it has a blind spot the registration did not anticipate.**
    With default tolerances it cannot see faults in outputs near zero. Here the LLM covered those four.
 3. **Much of what looked like false positives were true.** The LLM flagged a provenance sentence we
@@ -140,7 +152,9 @@ but self-consistent method) was not tested.
 
 * Amendment 1 (before items): unit token, layout under `work/`, formats, population rule and fault
   construction, fixed after a mock item (no benchmark content) was run through the profile.
-* Amendment 2 (before any model call): the task names Amendment 1's paths.
+* Amendment 2: the task names Amendment 1's paths. The runner already used the corrected task when
+  the two pilot readings were made, but the amendment was committed after them, together with
+  Amendment 3 (erratum in the registration).
 * Amendment 3: a two-reading pilot found that no file performed the run the report described; items
   gained `run.py`, a third gate condition (each clean item's `run.py` reproduces its log byte for
   byte), and the pilot readings were discarded. All 74 clean items passed all three gate conditions.
@@ -148,4 +162,6 @@ but self-consistent method) was not tested.
   the unit label; and, in re-execution, the tolerance cases. None was repaired; all are reported as
   sensitivity above.
 * The analysis script rounds exact p values to four places; the full values are in the post hoc
-  record.
+  record. It was committed after 12 production readings and before any item had its four.
+* Review round 1 (not quotable) led to: the fabrication-rationale reading, the third unit-affected
+  instance, the combined-workflow wording for reporting faults, and the Amendment 2 erratum.

@@ -142,3 +142,13 @@ requires the log it writes to equal the item's `run.log` byte for byte, so the c
 program's own output and not a transcription. Items, seeds, faults and everything else are
 unchanged. The two pilot readings are discarded, archived as `runs/results_audit_pilot/`, and
 counted toward the $30 halt. The gate is rerun before any further model call.
+
+## Erratum to Amendment 2 (2026-09-24, after the first review)
+
+Amendment 2 says it was written before any model call and that no model reading existed. The runner
+already carried the corrected task text when the two pilot readings of Amendment 3 were made
+(00:08:44 and 00:08:55, UTC+8), but Amendments 2 and 3 were committed together afterwards (`bc48540`,
+00:09:20). Both pilot readings' task hashes match Amendment 2's text. The amendment's content governed
+every reading; its commit did not precede the pilot. Separately, two clean runners of problem 80
+import an unused plotting module that needs a writable Matplotlib cache; in a read-only environment
+their logs reproduce only with that import removed.

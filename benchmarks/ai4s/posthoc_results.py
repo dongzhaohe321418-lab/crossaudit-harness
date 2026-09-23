@@ -9,6 +9,10 @@
    premise that a 5% error lies beyond those defaults.
 3. Sensitivity: the registered outcomes recomputed without the instances in 2(a), 2(b), and both.
 4. Exact McNemar p values to full precision (the registered script rounds to 4 places).
+5. Fabrication rationale (added after review round 1): of the fabricated items the LLM flags, those
+   whose every flagging finding rests on an incorrect calculation of the output, read one by one.
+6. The unit defect: instances whose solution documents a unit for the output, which every report
+   labels `dimensionless`, and whether the LLM flagged the clean item.
 Input: the registered analysis output. Output: records/ai4s/results_posthoc.json.
 """
 from __future__ import annotations
@@ -45,6 +49,15 @@ CLEAN_FLAG_LABELS = {
     "61.2.s1.clean": "wrong: claims the output ignores p_s; the executed output is the report's",
     "72.7.s1.clean": "wrong: claims a syntax error in a line whose trailing text is a comment",
 }
+
+
+#: Fabricated items flagged only by findings whose own calculation of the output is wrong.
+FABRICATION_UNSOUND = {
+    "32.1.s3": "claims the output should be about -1.36e6; the executed output is -1.36e-6",
+    "70.5.s1": "claims the tensor terms cancel to zero; they sum to -1.616e-7",
+}
+#: Solutions whose docstring gives the output a unit (read one by one).
+UNIT_DOCUMENTED = {"35.1.s1": "nm", "77.8.s2": "zeptojoules", "77.8.s3": "zeptojoules"}
 
 
 def main() -> int:
@@ -92,7 +105,19 @@ def main() -> int:
     labelled = sorted(CLEAN_FLAG_LABELS)
     flagged_clean = sorted(k for k, v in llm.items() if k.endswith(".clean") and v)
     assert labelled == flagged_clean, (labelled, flagged_clean)
-    out = {"clean_flag_labels": CLEAN_FLAG_LABELS,
+    fab = [i["instance"] for i in man if i["fault"] in ("F1", "F4")]
+    fab_flagged = [i for i in fab if llm[f"{i}.faulty"]]
+    fab_sound = [i for i in fab_flagged if i not in FABRICATION_UNSOUND]
+    assert set(FABRICATION_UNSOUND) <= set(fab_flagged)
+    union_sound = sum(1 for i in man if (llm[f"{i['instance']}.faulty"] and i["instance"] not in FABRICATION_UNSOUND)
+                      or rx[f"{i['instance']}.faulty"])
+    out = {"fabrication": {"items": len(fab), "flagged_any_blocker": len(fab_flagged),
+                           "flagged_with_sound_rationale": len(fab_sound),
+                           "unsound": FABRICATION_UNSOUND},
+           "llm_or_reexec_with_sound_llm_rationale": f"{union_sound}/{len(man)}",
+           "unit_documented": {i: {"unit": u, "clean_flagged": llm[f"{i}.clean"]}
+                               for i, u in UNIT_DOCUMENTED.items()},
+           "clean_flag_labels": CLEAN_FLAG_LABELS,
            "clean_flags_correct": sum(v.startswith("correct") for v in CLEAN_FLAG_LABELS.values()),
            "clean_flags_wrong": sum(v.startswith("wrong") for v in CLEAN_FLAG_LABELS.values()),
            "empty_inputs_instances": empty,

@@ -1,4 +1,28 @@
 {
+ "fabrication": {
+  "items": 25,
+  "flagged_any_blocker": 23,
+  "flagged_with_sound_rationale": 21,
+  "unsound": {
+   "32.1.s3": "claims the output should be about -1.36e6; the executed output is -1.36e-6",
+   "70.5.s1": "claims the tensor terms cancel to zero; they sum to -1.616e-7"
+  }
+ },
+ "llm_or_reexec_with_sound_llm_rationale": "73/74",
+ "unit_documented": {
+  "35.1.s1": {
+   "unit": "nm",
+   "clean_flagged": true
+  },
+  "77.8.s2": {
+   "unit": "zeptojoules",
+   "clean_flagged": false
+  },
+  "77.8.s3": {
+   "unit": "zeptojoules",
+   "clean_flagged": true
+  }
+ },
  "clean_flag_labels": {
   "27.1.s2.clean": "correct: provenance (inputs are call literals; inputs.py empty)",
   "34.1.s2.clean": "correct: provenance (inputs are call literals; inputs.py empty)",
