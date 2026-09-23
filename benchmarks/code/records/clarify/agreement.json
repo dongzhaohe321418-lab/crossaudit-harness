@@ -1,0 +1,23 @@
+{
+  "L1_counts": {
+    "no": 42,
+    "yes": 49
+  },
+  "L2_counts": {
+    "cannot tell": 4,
+    "no": 41,
+    "yes": 46
+  },
+  "cohen_kappa": 0.8520325203252034,
+  "expected": 0.4801352493660186,
+  "joint": {
+    "no|cannot tell": 4,
+    "no|no": 38,
+    "yes|no": 3,
+    "yes|yes": 46
+  },
+  "n_agree": 84,
+  "n_items": 91,
+  "note": "agreement between the author (L1) and gpt-6-astra (L2); not accuracy",
+  "observed": 0.9230769230769231
+}
