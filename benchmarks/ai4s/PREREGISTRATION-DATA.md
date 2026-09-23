@@ -103,3 +103,27 @@ files reach the auditor. It found two defects in the instrument, not in the data
 The three pilot readings are discarded and archived separately; items are rebuilt with the fixed
 names (same seeds, same faults). Known when written: three clean items, all flagged for the name
 mismatch; no faulty item had been read.
+
+## Amendment 2 — the files sat outside the audited scope (2026-09-23)
+
+Found after 280 `cross` readings at draw 1 and 33 at draw 2 ($6.6 on the ledger), while writing
+the analysis: every reading's verdict was ESCALATE, flagged or not. The project's audited scope is
+`work/`, and the items were placed at `data/data.csv` and `data/CARD.md`. The product counts a
+scope as started only when a file lies at least two levels below the scope root (or a
+`results.json`/`metadata.yml` exists), so these increments were ruled *not started*. The
+deterministic tier's result, which is rendered into the auditor's prompt, therefore read
+`"verdict": "NOTHING_TO_AUDIT", "scope_started": false` on every item, and the verdict ladder
+escalated as for an empty increment. The auditor still received both files and returned findings,
+but it read them under a framing that A4S-1's layout (`work/solution/solution.py`) never produces
+and a shipped data project would not produce either.
+
+Fix: the files are placed at `work/data/data.csv` and `work/data/CARD.md`, and the task names those
+paths ("Deliver a dataset ready for use in a scientific analysis: work/data/data.csv, documented by
+the data card work/data/CARD.md, which states what each column is and its unit."). Items, seeds,
+faults, K, the flag rule and the budget are unchanged. All 313 readings are void for every
+registered outcome and archived as `runs/data_audit_void_scope/`; their spend counts toward the $45
+halt.
+
+Known when written: draw-1 flag counts by fault type and on clean items had been looked at (a
+progress tally, not an analysis). The fix is determined by the product's scope rule alone and
+would be the same whatever those counts were. The void run is not reported as a comparison.
