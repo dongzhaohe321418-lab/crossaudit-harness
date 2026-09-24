@@ -1,0 +1,5783 @@
+{
+ "seed": 20261001,
+ "n_rows": 120,
+ "items": [
+  {
+   "item": "concrete.clean.0",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "1a4e8aaae401d4b2195624d2c08719841364bb54762bc3f6ea22b5eb3a2b1bc2",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.1",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "c24ee8889881b9cdf7db38674da93251ffc2d0a4bea7a76919a8367316ff2588",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.2",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "b314d1d19c55eb0a0d08373441d76900c405b3366360c9023dfcfa96e3b592df",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.3",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "ecdbe776d9d467ffb8e9ff5467341bd6f1bc9e1c147ca725736119f1cd248694",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.4",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "55fe98e01d19081cfa3e129cde10258968510057e81d958e4ed1837d70236fde",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.5",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "b2be07d72cdcb794c423b064e8b7a1a9add781799d159530416891240657b601",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.6",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "53412265e09b23faf04fab14896260bcd78450f5acc8ad695ac4bba583ade0ba",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.7",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "56d1bfdb9df6255644ce9a67c62f5e80e68d3cc83b3f0528f7ada89d039c42bf",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.8",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "49e99966e6b6962346e9031a6459e77d439c9e98ce68918af73e14f0d7f2bdc5",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.9",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "84d26936fddf071655f572b2217056da83ddcdb1a60550e93e8077875d8fa3ce",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.10",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "c0b35a599aec892780248d1aa78e18d468faa4396c1770e2dd4043e221b22f0d",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.11",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "ff344ac527fefd81c315df1c495444f6f8fabfd9d080e1c68e461a47d1a84b22",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.12",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "38123ebd27068af56387ee388a0b66f47dcbe99b4e334b5a85dcf5d0e4ea9f79",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.13",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "75cd0ecfa14aa456dc83ffbca2b856797c8a826a102ba805d9e6d28ec3153583",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.14",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "786d301aa549b79c9ee29c8a0ed58724e733da2ecb9bd2a8ba08f63ed722eef7",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.15",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "db82030c562477644ec7f73e8cf946f19084a10dc08d9bc61e2231b062f8ee11",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.16",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "d745bb65f54542967495a4b75b1223430de182449fb99aa6295b7931dd81a0e3",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.17",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "b74bfa80d7bec4224a7e0a5a898918657bb65598df14f88b394b6d7a295a077a",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.18",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "11458184dddcd8502a0320ad6871ba5eabdd5840d65c0532cd8e2dfbcf6819e5",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.19",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "96e066feba8a3358ba76f72e14d46fe33f96596377a34df80f4be024d810d157",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.20",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "1c0206a4c141381096f5cfcbb1e4929015a5603f53730265b9a68de1a3c15983",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.21",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "d5c24fc85e49d4acc8abed43f57fc831587268e1f1512b469c92b718833392b3",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.22",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "d9db6d8589c3e257068fdf33799adad73a687d2a4ecd86899f028ab5cd563ec6",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.23",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "19d9b216ecae2a17b9b684b33358020d7583a015d39d943f51ca121325165b7b",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.24",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "9f63e5793779864dc0b59a8ca25b70f04926a1c84f9359537087d3176bed3363",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.25",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "c8850493c2b5648723f6818bf8ed03277d9d8d47169804ba93d331f87fa53779",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.26",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "2c36b4b50c425ed09f17297331953e14d69625783ced0c0a95093a7862024f98",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.27",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "0a46af63659f85ee67b2ee1f434749c5939a9cdc341259ff01096704a464ba53",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.28",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "135c933c49dbaf12521d27712fe664882bbce7782ef912880c1328350b40a061",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.29",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "5d0c05ca216b4f80c6588d0e6b37bf57c64e3c4c496944c15576dab5e4e86510",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.30",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "cdd0dd5d29a91f800a07347fb5398971fe2a01184a0b2bce3e9614f21fac5e92",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.31",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "76193ad5cd7042cd38737b4fe34bc5278ea7c887b2a531f83e5b39a3bfefc464",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.32",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "3b0f35101b7524ee2ed2ebe80db702675979cca92adb3e19c4d2975f300c3338",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.33",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "0601109ca9cc9b4a270a0391e957fcc17b3a8d6836ae53847445904138d1a98e",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.clean.34",
+   "dataset": "concrete",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "653cc142d058854a9481fa9cb396faef89faf9b2b2e2f36e789b73a68ffaa549",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F1.0",
+   "dataset": "concrete",
+   "fault": "F1",
+   "params": {
+    "column": "Water  (component 4)(kg in a m^3 mixture)",
+    "rows": [
+     0,
+     2,
+     9,
+     11,
+     12,
+     16,
+     25,
+     27,
+     31,
+     33,
+     35,
+     50,
+     57,
+     61,
+     67,
+     75,
+     77,
+     79,
+     83,
+     92,
+     95,
+     96,
+     105,
+     119
+    ],
+    "to_unit": "g per m^3",
+    "factor": 1000.0,
+    "offset": 0.0
+   },
+   "csv_sha256": "f6751ef09be69df816027d3c90987393b30a0c8a2b3699317aff3bf0742ae184",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F1.1",
+   "dataset": "concrete",
+   "fault": "F1",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)",
+    "rows": [
+     13,
+     20,
+     25,
+     33,
+     34,
+     40,
+     42,
+     43,
+     52,
+     56,
+     66,
+     70,
+     75,
+     85,
+     88,
+     89,
+     90,
+     103,
+     104,
+     106,
+     107,
+     116,
+     117,
+     119
+    ],
+    "to_unit": "psi",
+    "factor": 145.038,
+    "offset": 0.0
+   },
+   "csv_sha256": "f7da8e86a1a50f10ad8127bf9c198e4bfd361ade9bb5304207b5635716d933c9",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F1.2",
+   "dataset": "concrete",
+   "fault": "F1",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)",
+    "rows": [
+     1,
+     5,
+     10,
+     11,
+     14,
+     17,
+     27,
+     28,
+     31,
+     35,
+     49,
+     52,
+     54,
+     59,
+     61,
+     64,
+     66,
+     67,
+     72,
+     77,
+     80,
+     84,
+     95,
+     115
+    ],
+    "to_unit": "psi",
+    "factor": 145.038,
+    "offset": 0.0
+   },
+   "csv_sha256": "05aca9bb68ad2170c5c7af39e54b9fc34dee764ec203f28672bccdc722012206",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F1.3",
+   "dataset": "concrete",
+   "fault": "F1",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)",
+    "rows": [
+     1,
+     4,
+     8,
+     10,
+     16,
+     19,
+     31,
+     37,
+     46,
+     49,
+     50,
+     58,
+     60,
+     69,
+     70,
+     76,
+     78,
+     79,
+     103,
+     106,
+     107,
+     108,
+     111,
+     117
+    ],
+    "to_unit": "psi",
+    "factor": 145.038,
+    "offset": 0.0
+   },
+   "csv_sha256": "51340c4cf5d12c4986d57a582f907c3163ea637391c135c8fc15a8bb0c4132bc",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F1.4",
+   "dataset": "concrete",
+   "fault": "F1",
+   "params": {
+    "column": "Cement (component 1)(kg in a m^3 mixture)",
+    "rows": [
+     1,
+     6,
+     11,
+     14,
+     15,
+     16,
+     21,
+     24,
+     25,
+     26,
+     35,
+     37,
+     38,
+     42,
+     44,
+     46,
+     49,
+     63,
+     68,
+     84,
+     95,
+     97,
+     106,
+     108
+    ],
+    "to_unit": "g per m^3",
+    "factor": 1000.0,
+    "offset": 0.0
+   },
+   "csv_sha256": "fde159ba4e03923efbdf5b71dd5c35be7e7a906ddc02c1163d00222ba4ecf52a",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F2.0",
+   "dataset": "concrete",
+   "fault": "F2",
+   "params": {
+    "column": "Fly Ash (component 3)(kg in a m^3 mixture)",
+    "rows": [
+     31,
+     71,
+     109
+    ]
+   },
+   "csv_sha256": "556c3e1801ed63dd1ec05cabcfcd8e8083f7650ef69c568e3871260e06be093e",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:Fly Ash (component 3)(kg in a m^3 mixture)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F2.1",
+   "dataset": "concrete",
+   "fault": "F2",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)",
+    "rows": [
+     90,
+     111,
+     119
+    ]
+   },
+   "csv_sha256": "634bf3ffb6a702e9ea559f66b2946fdaea98460add6fb7c89a42819b2d8efdfa",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:Concrete compressive strength(MPa, megapascals)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F2.2",
+   "dataset": "concrete",
+   "fault": "F2",
+   "params": {
+    "column": "Age (day)",
+    "rows": [
+     17,
+     89,
+     117
+    ]
+   },
+   "csv_sha256": "caec09ca7fa03ff6d5822b214e6efc3089a7d4310787a1694b2ccf4ac50feb08",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:Age (day)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F2.3",
+   "dataset": "concrete",
+   "fault": "F2",
+   "params": {
+    "column": "Age (day)",
+    "rows": [
+     3,
+     76,
+     104
+    ]
+   },
+   "csv_sha256": "63b1392c1469ea982804559138c3a12b86fd72b08e81e3cf8a55468fdb155b17",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:Age (day)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F2.4",
+   "dataset": "concrete",
+   "fault": "F2",
+   "params": {
+    "column": "Cement (component 1)(kg in a m^3 mixture)",
+    "rows": [
+     74,
+     82,
+     112
+    ]
+   },
+   "csv_sha256": "6d931f4d00658490f112580fb1728357fb6b49e9b11f7029ac0266bc06ba1608",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:Cement (component 1)(kg in a m^3 mixture)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F3.0",
+   "dataset": "concrete",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     3,
+     5,
+     8,
+     34,
+     64,
+     65,
+     66,
+     93,
+     99,
+     105,
+     108,
+     115
+    ],
+    "copied_from": [
+     1,
+     0,
+     16,
+     88,
+     11,
+     26,
+     60,
+     57,
+     44,
+     53,
+     37,
+     114
+    ]
+   },
+   "csv_sha256": "cd851a9f0c3e089d15ebedf2200967bf4ae6bb5ba0889082817a2d19297ca3ad",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F3.1",
+   "dataset": "concrete",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     7,
+     10,
+     15,
+     36,
+     47,
+     54,
+     58,
+     69,
+     72,
+     73,
+     117,
+     119
+    ],
+    "copied_from": [
+     34,
+     0,
+     21,
+     106,
+     105,
+     100,
+     42,
+     25,
+     30,
+     3,
+     5,
+     50
+    ]
+   },
+   "csv_sha256": "6adf137c9d9f42fc79edba8107c83226a8548d2b583987956adbc5643f88a10e",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F3.2",
+   "dataset": "concrete",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     2,
+     37,
+     40,
+     52,
+     62,
+     80,
+     82,
+     85,
+     102,
+     108,
+     109,
+     117
+    ],
+    "copied_from": [
+     24,
+     67,
+     105,
+     84,
+     33,
+     21,
+     17,
+     98,
+     25,
+     78,
+     27,
+     58
+    ]
+   },
+   "csv_sha256": "4480d71ee2a1ffb293d43c234d2941389febc66b7a406fa0d8ff1c2e07e3922c",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F3.3",
+   "dataset": "concrete",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     5,
+     19,
+     39,
+     44,
+     67,
+     78,
+     82,
+     91,
+     92,
+     95,
+     99,
+     106
+    ],
+    "copied_from": [
+     117,
+     50,
+     10,
+     68,
+     35,
+     69,
+     31,
+     71,
+     89,
+     83,
+     23,
+     107
+    ]
+   },
+   "csv_sha256": "bad1f2c94021fe69a4e9c7b7c3c99f8121209b990adf939c2deb616d3484f914",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F3.4",
+   "dataset": "concrete",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     3,
+     7,
+     14,
+     15,
+     24,
+     67,
+     74,
+     86,
+     99,
+     108,
+     110,
+     118
+    ],
+    "copied_from": [
+     93,
+     64,
+     59,
+     98,
+     68,
+     79,
+     39,
+     27,
+     81,
+     69,
+     9,
+     64
+    ]
+   },
+   "csv_sha256": "4ef158770b54cf34ab1aff93d82c52c4c2f782715b50c7c90ce8e3e87cadd44e",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F4.0",
+   "dataset": "concrete",
+   "fault": "F4",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)",
+    "rows": [
+     2,
+     8,
+     9,
+     14,
+     18,
+     19,
+     23,
+     30,
+     34,
+     35,
+     37,
+     38,
+     54,
+     57,
+     58,
+     61,
+     66,
+     71,
+     72,
+     73,
+     74,
+     78,
+     87,
+     89,
+     90,
+     96,
+     97,
+     101,
+     106,
+     107,
+     109,
+     110,
+     111,
+     113,
+     117,
+     118
+    ]
+   },
+   "csv_sha256": "c51e3d011bfaabc1331be4ec963d08d00e66c7bc73374458eb929326fc6eba12",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F4.1",
+   "dataset": "concrete",
+   "fault": "F4",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)",
+    "rows": [
+     2,
+     6,
+     8,
+     11,
+     15,
+     16,
+     22,
+     24,
+     25,
+     27,
+     30,
+     36,
+     42,
+     45,
+     49,
+     55,
+     60,
+     64,
+     65,
+     66,
+     68,
+     71,
+     76,
+     78,
+     82,
+     91,
+     92,
+     96,
+     97,
+     101,
+     102,
+     111,
+     113,
+     114,
+     115,
+     118
+    ]
+   },
+   "csv_sha256": "ef804abe3560bc6978bc19d3fce4ccf58a16850f738bbf8589c143c544e9d336",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F4.2",
+   "dataset": "concrete",
+   "fault": "F4",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)",
+    "rows": [
+     4,
+     6,
+     7,
+     8,
+     13,
+     14,
+     15,
+     17,
+     30,
+     32,
+     39,
+     40,
+     41,
+     42,
+     45,
+     48,
+     53,
+     57,
+     58,
+     59,
+     67,
+     72,
+     76,
+     78,
+     81,
+     85,
+     88,
+     89,
+     92,
+     94,
+     97,
+     105,
+     109,
+     110,
+     115,
+     118
+    ]
+   },
+   "csv_sha256": "28d9198a1933212252c0d4b8bc046e1b3634c6cbb0e74a5ff53165d8a8c0e427",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F4.3",
+   "dataset": "concrete",
+   "fault": "F4",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)",
+    "rows": [
+     0,
+     4,
+     7,
+     8,
+     12,
+     13,
+     17,
+     20,
+     25,
+     33,
+     40,
+     44,
+     46,
+     58,
+     60,
+     62,
+     67,
+     69,
+     70,
+     74,
+     78,
+     79,
+     82,
+     83,
+     87,
+     88,
+     90,
+     92,
+     100,
+     101,
+     108,
+     109,
+     110,
+     114,
+     116,
+     119
+    ]
+   },
+   "csv_sha256": "2363ded6c841e987799d60bec98d98b3aa7aad471147395b39f8786bf9fc9060",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F4.4",
+   "dataset": "concrete",
+   "fault": "F4",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)",
+    "rows": [
+     1,
+     7,
+     11,
+     12,
+     16,
+     18,
+     19,
+     22,
+     27,
+     29,
+     33,
+     34,
+     38,
+     40,
+     44,
+     49,
+     58,
+     61,
+     69,
+     70,
+     71,
+     73,
+     74,
+     75,
+     78,
+     82,
+     83,
+     88,
+     90,
+     91,
+     93,
+     98,
+     100,
+     106,
+     109,
+     113
+    ]
+   },
+   "csv_sha256": "dccc60553006949511b3d9794f8ba5ac67e647e00846a287718f6a0f23ef6e2d",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F5.0",
+   "dataset": "concrete",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "Superplasticizer (component 5)(kg in a m^3 mixture)",
+     "Fine Aggregate (component 7)(kg in a m^3 mixture)"
+    ]
+   },
+   "csv_sha256": "c48c70fa71db5da3c635cdb7869e71fe40dc9d1d3d1b9ae3cba44e90a5e91520",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F5.1",
+   "dataset": "concrete",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "Blast Furnace Slag (component 2)(kg in a m^3 mixture)",
+     "Fine Aggregate (component 7)(kg in a m^3 mixture)"
+    ]
+   },
+   "csv_sha256": "8869c6eb7518b9df531adaf0a6d57096ecf8017bb973e494d5364120d0c78ba5",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F5.2",
+   "dataset": "concrete",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "Cement (component 1)(kg in a m^3 mixture)",
+     "Concrete compressive strength(MPa, megapascals)"
+    ]
+   },
+   "csv_sha256": "7598cb1ac40eb2fdf235e63f2e3719f558f1c3f707e521f27ce4e0ec2c66cf72",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F5.3",
+   "dataset": "concrete",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "Coarse Aggregate  (component 6)(kg in a m^3 mixture)",
+     "Concrete compressive strength(MPa, megapascals)"
+    ]
+   },
+   "csv_sha256": "6eb3dfb035fe162010a20b89dc3eee3133ad4ad9e0a0ca32f89f864774be05f7",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F5.4",
+   "dataset": "concrete",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "Water  (component 4)(kg in a m^3 mixture)",
+     "Concrete compressive strength(MPa, megapascals)"
+    ]
+   },
+   "csv_sha256": "e4d8fd05cfa0fc84a21a14a36bf1d0a5a492012f52f72e269ab3c2f78e6da061",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "concrete.F6.0",
+   "dataset": "concrete",
+   "fault": "F6",
+   "params": {
+    "column": "Water  (component 4)(kg in a m^3 mixture)",
+    "rows": [
+     37,
+     44,
+     72,
+     83,
+     91,
+     105
+    ]
+   },
+   "csv_sha256": "a575524101ddd6a96aa69d8c93357e8aa7c5b6088dd017ec8c5a4d37acbbdd73",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:Water  (component 4)(kg in a m^3 mixture)",
+     "negative:Water  (component 4)(kg in a m^3 mixture)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F6.1",
+   "dataset": "concrete",
+   "fault": "F6",
+   "params": {
+    "column": "Age (day)",
+    "rows": [
+     1,
+     15,
+     35,
+     48,
+     76,
+     104
+    ]
+   },
+   "csv_sha256": "41d23e70417d2954dd6890bf4e8bcd8979c3d640a2bac9f27732f4da86b3a4a5",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:Age (day)",
+     "negative:Age (day)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F6.2",
+   "dataset": "concrete",
+   "fault": "F6",
+   "params": {
+    "column": "Cement (component 1)(kg in a m^3 mixture)",
+    "rows": [
+     17,
+     36,
+     65,
+     71,
+     94,
+     114
+    ]
+   },
+   "csv_sha256": "3bbd7f33c95bcaa086bfbe125dc19e213ac7bf78de904af45339f3e2a14e76e4",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:Cement (component 1)(kg in a m^3 mixture)",
+     "negative:Cement (component 1)(kg in a m^3 mixture)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F6.3",
+   "dataset": "concrete",
+   "fault": "F6",
+   "params": {
+    "column": "Blast Furnace Slag (component 2)(kg in a m^3 mixture)",
+    "rows": [
+     14,
+     16,
+     39,
+     40,
+     94,
+     112
+    ]
+   },
+   "csv_sha256": "67f599788be6f33572343ee8064d8b6c37b849e2377bc3ad7fad7ffaf9efb0c7",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:Blast Furnace Slag (component 2)(kg in a m^3 mixture)",
+     "negative:Blast Furnace Slag (component 2)(kg in a m^3 mixture)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F6.4",
+   "dataset": "concrete",
+   "fault": "F6",
+   "params": {
+    "column": "Age (day)",
+    "rows": [
+     9,
+     11,
+     12,
+     33,
+     51,
+     75
+    ]
+   },
+   "csv_sha256": "203af07f089d6745eb817080c6f541d5fd6fe8f9de88337e24bdc8346aeb8308",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:Age (day)",
+     "negative:Age (day)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F7.0",
+   "dataset": "concrete",
+   "fault": "F7",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)"
+   },
+   "csv_sha256": "bec0cd203177ac365a73097c846d22ac925b46b5f54b4963b52cfba5c6b05eba",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:Concrete compressive strength(MPa, megapascals)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F7.1",
+   "dataset": "concrete",
+   "fault": "F7",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)"
+   },
+   "csv_sha256": "fb6e9dae96629043fa9da55c3bb423fb5bff032805afa85b5fd3abae67f39e1e",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:Concrete compressive strength(MPa, megapascals)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F7.2",
+   "dataset": "concrete",
+   "fault": "F7",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)"
+   },
+   "csv_sha256": "4c5f6ddc609f4fed462f5c4274cf0ddecc0d18aba509cc4596200db13ad6fb3e",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:Concrete compressive strength(MPa, megapascals)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F7.3",
+   "dataset": "concrete",
+   "fault": "F7",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)"
+   },
+   "csv_sha256": "13b75e9e251218a88ea0b6e55d3fea3a50936329007db5f23e66b9246b9d72ef",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:Concrete compressive strength(MPa, megapascals)"
+    ]
+   }
+  },
+  {
+   "item": "concrete.F7.4",
+   "dataset": "concrete",
+   "fault": "F7",
+   "params": {
+    "column": "Concrete compressive strength(MPa, megapascals)"
+   },
+   "csv_sha256": "e38ea11ef941a96a61e245a917a61b2901bc9b927eabbc0f9797cc2801cc0a01",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:Concrete compressive strength(MPa, megapascals)"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.clean.0",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "a59f97c1d29c29b3d147bf86627df9ec2b42479668e8b47b70ddb35b061c614b",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.1",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "67e94cbf0dc9fdc167e9a6b45fdd0b4c46b8dca1d97c4867da24bf772f593e39",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.2",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "45e3452d8797962cb1267902b3132a4b592fbb97c4f741d06203da34106ee079",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.3",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "0e1df7e0c5b9b28b58a649969100b097e26a99d227c26f6048dc1698d7561268",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.4",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "071efdca6c41eee1b8c9498869fed011b678f4518e4f113c31508555f82c02f3",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.5",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "29725fdb3bfc79889cc10b6aeadf14c8a5b7e814a0cfac38ebb3a15f585874e2",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.6",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "2542444b1a7ba0a8d7d9487a2922b192e6bf4c72eb41514acb1d55221b58c833",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.7",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "4e30f750478c7b3b604242a568bcdb1fc578305c55c38b40a3bf69aacf1a48e9",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.8",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "27a04f59546b63f8dfdb27f62b4010d8113a00375380562469147ffe6fa055f1",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.9",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "c3f5cddc943d6981697b2232a2ceacfb32a0e83c531180a5b350cfb0e9168426",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.10",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "35a4dd41421e18415f661271941ad8bceb2b0e10b4dd88115432d1d2061a964f",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.11",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "a083e915ee55daed8a1f2b3ff79eb7dba15409deec9901020a187977fa538fea",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.12",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "5ceb6aee337706c68d71e3f2b50cdb6454e0a1c6b3d7c74927274a08cfe9b11a",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.13",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "57be24576e2363cf2e23c67114f87552cbc8f1c0e2d6ca0fff065c581b50a56f",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.14",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "af5890dd7f49933f9b33b25ed2af87c83ecb2948d3da577f5bf4aeacdd6a0cdb",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.15",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "0d477cc4a16b431203a1ff255807c37bca53e7d0c0d58160e9775c267ea2dc0d",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.16",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "cefc8afc464b4bb445e7bde00ce3076923227e3f013c2f59e6af0045acf3991e",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.17",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "3e120ccfb95ff4bd8f61ce3e7654d49d046584b4ca5f543ed2e0ace45ad337de",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.18",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "c55c78707116267eb5b556bc0b9c0c5b72ddc7a9952c2cdc67afd4d5bdef8b37",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.19",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "3534232cd6e1805ecebf47861c04654c2a5616221b017c4c23ea4ab5d4b0b813",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.20",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "e2d151b61b245e7701d55318f128c402c9f6cda24826ef3a1b55f2779c017c1c",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.21",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "734536abf99f9f2c844a5c4f26b0569524c2defa5628dce1994d22b97f810f17",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.22",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "de29131eb25525af421283a6bbc7d896244b9d0ccaa333e2d84e4972af8ad1e7",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.23",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "cce99215d74b303c41cae68c87ac85a8b3734f6d1b241ac565a64df1a43d9d45",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.24",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "986205a50ee78979c06494d9ea67ed30af261cc72afc3f81e3d6e915e84a223c",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.25",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "8bc1038e8bf546266aff3dbd882e019a9508085ab57f7a6234ce55a63fa8b3c7",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.26",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "343bb2e2cdfbff2e055315a37c453a55b30aad43a60f99216d1422ee6bec3dde",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.27",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "809c167dd4d04df763b56a0be31fbc3708caaf16bbe4a459c63953fca1b9e359",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.28",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "9de2f29e1248253c8656707d0db1e2c48a5df16e1cda17aa7858c6f81f6c579a",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.29",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "f3a3a6c29bf1ddd2928986c5128bc67cad2bbb4814a25f2f2b051eb7684b9963",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.30",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "e870333dc82debc376a129cd9d3fe835ce076728a14a279708182ee9dd1d24b8",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.31",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "3d74c5189b63f3dba6d9ca5978fbfb3ee47c26dd361d6c923be5401fc0c1cd21",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.32",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "9b49ab6426a77b57c457a8950bb6adc441b1ce268467aeec039dd817313a2bb8",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.33",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "f2ab6cc786b48c756677acb1c36ef70a97246f86110226a8393521c144fe7586",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.clean.34",
+   "dataset": "airfoil",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "186b237f7c9c82b793bdc772af42af711e26a1a6c00ecdc2a17d4da1fa059038",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F1.0",
+   "dataset": "airfoil",
+   "fault": "F1",
+   "params": {
+    "column": "chord_length_m",
+    "rows": [
+     2,
+     4,
+     6,
+     9,
+     11,
+     30,
+     32,
+     35,
+     40,
+     50,
+     53,
+     61,
+     66,
+     71,
+     74,
+     78,
+     81,
+     85,
+     98,
+     105,
+     106,
+     107,
+     116,
+     117
+    ],
+    "to_unit": "mm",
+    "factor": 1000.0,
+    "offset": 0.0
+   },
+   "csv_sha256": "cda54f3e2380d18559173e88c95de6a8c13d71ab04f9c43be6b019365f421e58",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F1.1",
+   "dataset": "airfoil",
+   "fault": "F1",
+   "params": {
+    "column": "frequency_Hz",
+    "rows": [
+     2,
+     13,
+     14,
+     18,
+     19,
+     25,
+     27,
+     36,
+     37,
+     41,
+     43,
+     50,
+     80,
+     84,
+     88,
+     91,
+     93,
+     100,
+     101,
+     105,
+     106,
+     110,
+     113,
+     115
+    ],
+    "to_unit": "kHz",
+    "factor": 0.001,
+    "offset": 0.0
+   },
+   "csv_sha256": "84f2b34d917799de07646cf49cb1973499a0f425b20091f99e35c528519798f7",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F1.2",
+   "dataset": "airfoil",
+   "fault": "F1",
+   "params": {
+    "column": "chord_length_m",
+    "rows": [
+     2,
+     3,
+     5,
+     11,
+     16,
+     29,
+     34,
+     51,
+     55,
+     58,
+     59,
+     65,
+     66,
+     74,
+     75,
+     81,
+     89,
+     95,
+     102,
+     103,
+     104,
+     112,
+     116,
+     119
+    ],
+    "to_unit": "mm",
+    "factor": 1000.0,
+    "offset": 0.0
+   },
+   "csv_sha256": "621b1a8004eb6b236a6cfc3f00a5840099a267810b89cd7013d44f140448812e",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F1.3",
+   "dataset": "airfoil",
+   "fault": "F1",
+   "params": {
+    "column": "suction_side_displacement_thickness_m",
+    "rows": [
+     1,
+     9,
+     10,
+     17,
+     18,
+     19,
+     23,
+     25,
+     27,
+     30,
+     40,
+     53,
+     54,
+     57,
+     58,
+     63,
+     65,
+     71,
+     77,
+     99,
+     100,
+     103,
+     105,
+     118
+    ],
+    "to_unit": "mm",
+    "factor": 1000.0,
+    "offset": 0.0
+   },
+   "csv_sha256": "48d751d32c2ac9355198e3386902e359d82faa70d5d3fb1467c42b06686d605d",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F1.4",
+   "dataset": "airfoil",
+   "fault": "F1",
+   "params": {
+    "column": "frequency_Hz",
+    "rows": [
+     6,
+     8,
+     9,
+     10,
+     14,
+     15,
+     16,
+     17,
+     24,
+     46,
+     47,
+     48,
+     50,
+     53,
+     57,
+     59,
+     66,
+     70,
+     74,
+     77,
+     90,
+     91,
+     109,
+     114
+    ],
+    "to_unit": "kHz",
+    "factor": 0.001,
+    "offset": 0.0
+   },
+   "csv_sha256": "78a85cab7d584611d028db84881d4f4a240fc4de2d3736c272ea3602be4370a6",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F2.0",
+   "dataset": "airfoil",
+   "fault": "F2",
+   "params": {
+    "column": "free_stream_velocity_m_s",
+    "rows": [
+     71,
+     73,
+     93
+    ]
+   },
+   "csv_sha256": "6779f71561dcec47ec2d3b2c3916a71aa93e8f113a6af6b41cb1f7085c7fabbe",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:free_stream_velocity_m_s"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F2.1",
+   "dataset": "airfoil",
+   "fault": "F2",
+   "params": {
+    "column": "free_stream_velocity_m_s",
+    "rows": [
+     12,
+     19,
+     77
+    ]
+   },
+   "csv_sha256": "d5edfa82a8545038b9f6dcf8b82f0793c4fb5ac5834051e3842ffdae15c753f5",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:free_stream_velocity_m_s"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F2.2",
+   "dataset": "airfoil",
+   "fault": "F2",
+   "params": {
+    "column": "suction_side_displacement_thickness_m",
+    "rows": [
+     25,
+     54,
+     63
+    ]
+   },
+   "csv_sha256": "31c29fe19d32655a9ebde19e8a8cc50e0b4dabdec7df95991ca4171d0acd6988",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:suction_side_displacement_thickness_m"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F2.3",
+   "dataset": "airfoil",
+   "fault": "F2",
+   "params": {
+    "column": "suction_side_displacement_thickness_m",
+    "rows": [
+     4,
+     52,
+     87
+    ]
+   },
+   "csv_sha256": "86f295afa20f91b6d710fc03bf647ee68a62d7641f3903fe90034b4658a45413",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:suction_side_displacement_thickness_m"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F2.4",
+   "dataset": "airfoil",
+   "fault": "F2",
+   "params": {
+    "column": "frequency_Hz",
+    "rows": [
+     3,
+     70,
+     95
+    ]
+   },
+   "csv_sha256": "2174aa15fc3872b7f45415903df6ac69c4a2dc971782328e4263c8e43084a42a",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:frequency_Hz"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F3.0",
+   "dataset": "airfoil",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     1,
+     12,
+     21,
+     23,
+     26,
+     27,
+     41,
+     42,
+     46,
+     53,
+     88,
+     93
+    ],
+    "copied_from": [
+     94,
+     30,
+     78,
+     35,
+     87,
+     74,
+     80,
+     25,
+     17,
+     47,
+     50,
+     105
+    ]
+   },
+   "csv_sha256": "ccd7ff0b4c3da96eaf7a8b2dc4b6cda3ceab3b9da5e85d0a21a02e0b89b1d36c",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F3.1",
+   "dataset": "airfoil",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     8,
+     20,
+     23,
+     35,
+     36,
+     37,
+     54,
+     75,
+     80,
+     81,
+     88,
+     92
+    ],
+    "copied_from": [
+     51,
+     40,
+     4,
+     114,
+     19,
+     13,
+     67,
+     58,
+     103,
+     27,
+     53,
+     73
+    ]
+   },
+   "csv_sha256": "33ee10d3f45ab85e32ae9551fac528eccfec734da98cdf6dec2c9df127b52e48",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F3.2",
+   "dataset": "airfoil",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     1,
+     19,
+     20,
+     28,
+     39,
+     49,
+     53,
+     73,
+     74,
+     90,
+     103,
+     109
+    ],
+    "copied_from": [
+     34,
+     42,
+     2,
+     99,
+     104,
+     104,
+     71,
+     117,
+     56,
+     82,
+     67,
+     10
+    ]
+   },
+   "csv_sha256": "a37a49847901d7bff5b283af0df25a845bedf759feaf2e8a86c6d75e06f8e223",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F3.3",
+   "dataset": "airfoil",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     0,
+     1,
+     18,
+     31,
+     35,
+     56,
+     59,
+     73,
+     74,
+     75,
+     79,
+     111
+    ],
+    "copied_from": [
+     54,
+     99,
+     40,
+     105,
+     24,
+     69,
+     12,
+     76,
+     119,
+     42,
+     33,
+     71
+    ]
+   },
+   "csv_sha256": "537f476a0719c052156054d5e750c5db52080f789f71a30cd55daaed4ddc4208",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F3.4",
+   "dataset": "airfoil",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     7,
+     13,
+     20,
+     33,
+     43,
+     54,
+     69,
+     77,
+     87,
+     88,
+     106,
+     113
+    ],
+    "copied_from": [
+     93,
+     12,
+     81,
+     82,
+     0,
+     91,
+     6,
+     91,
+     80,
+     40,
+     65,
+     93
+    ]
+   },
+   "csv_sha256": "aa2b2b89cc277b483ee09812f13c537ec8c9fcc778369855239ad2d7cf8bd8de",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F4.0",
+   "dataset": "airfoil",
+   "fault": "F4",
+   "params": {
+    "column": "scaled_sound_pressure_dB",
+    "rows": [
+     2,
+     3,
+     6,
+     8,
+     9,
+     11,
+     15,
+     18,
+     21,
+     22,
+     23,
+     28,
+     29,
+     33,
+     37,
+     38,
+     39,
+     40,
+     50,
+     56,
+     57,
+     69,
+     70,
+     76,
+     80,
+     85,
+     87,
+     96,
+     97,
+     98,
+     103,
+     104,
+     105,
+     110,
+     114,
+     117
+    ]
+   },
+   "csv_sha256": "5ae2362ada71d22506770aac13c327b95ff43ba0e2e25de3cb11353d398e5147",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F4.1",
+   "dataset": "airfoil",
+   "fault": "F4",
+   "params": {
+    "column": "scaled_sound_pressure_dB",
+    "rows": [
+     0,
+     3,
+     5,
+     7,
+     10,
+     14,
+     17,
+     25,
+     26,
+     28,
+     29,
+     30,
+     34,
+     48,
+     52,
+     53,
+     55,
+     56,
+     59,
+     60,
+     64,
+     66,
+     67,
+     68,
+     78,
+     86,
+     88,
+     90,
+     99,
+     102,
+     105,
+     106,
+     108,
+     109,
+     115,
+     119
+    ]
+   },
+   "csv_sha256": "a6be90388047fb06c1ca9955e334391d877a0f198877514f33df849b5f5b4436",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F4.2",
+   "dataset": "airfoil",
+   "fault": "F4",
+   "params": {
+    "column": "scaled_sound_pressure_dB",
+    "rows": [
+     3,
+     4,
+     5,
+     6,
+     7,
+     17,
+     18,
+     24,
+     25,
+     34,
+     39,
+     40,
+     43,
+     46,
+     49,
+     50,
+     51,
+     53,
+     58,
+     61,
+     62,
+     65,
+     69,
+     70,
+     74,
+     85,
+     88,
+     89,
+     90,
+     95,
+     101,
+     105,
+     108,
+     109,
+     115,
+     116
+    ]
+   },
+   "csv_sha256": "4510f1f8fbfba78333ae00d4ac67e224cddb92e4eeed30947bd054785cfce9b0",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F4.3",
+   "dataset": "airfoil",
+   "fault": "F4",
+   "params": {
+    "column": "scaled_sound_pressure_dB",
+    "rows": [
+     0,
+     3,
+     4,
+     6,
+     7,
+     9,
+     10,
+     14,
+     16,
+     18,
+     19,
+     24,
+     26,
+     27,
+     38,
+     40,
+     44,
+     45,
+     46,
+     48,
+     49,
+     51,
+     55,
+     56,
+     70,
+     78,
+     79,
+     92,
+     94,
+     99,
+     104,
+     107,
+     112,
+     114,
+     116,
+     119
+    ]
+   },
+   "csv_sha256": "53b55307d07f097b3a8e1223f37ff774e01f1c7117e88e7f4445fc69b80c5c18",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F4.4",
+   "dataset": "airfoil",
+   "fault": "F4",
+   "params": {
+    "column": "scaled_sound_pressure_dB",
+    "rows": [
+     1,
+     5,
+     7,
+     8,
+     9,
+     10,
+     16,
+     17,
+     18,
+     31,
+     35,
+     37,
+     45,
+     47,
+     50,
+     53,
+     54,
+     55,
+     57,
+     58,
+     60,
+     61,
+     71,
+     74,
+     77,
+     79,
+     86,
+     92,
+     93,
+     96,
+     97,
+     98,
+     100,
+     107,
+     111,
+     118
+    ]
+   },
+   "csv_sha256": "f2d95b01d3c597d280f3ab01f1292477709c50eb046e0fef10a1d11f0ce9855d",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F5.0",
+   "dataset": "airfoil",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "free_stream_velocity_m_s",
+     "scaled_sound_pressure_dB"
+    ]
+   },
+   "csv_sha256": "0a1aac53a2d0b502542e3b45ccb901a5eeb605c069881c73a7c5dfe4f58b0174",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F5.1",
+   "dataset": "airfoil",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "frequency_Hz",
+     "scaled_sound_pressure_dB"
+    ]
+   },
+   "csv_sha256": "8cadffdd94c269732163a2b2a7eb9e1e3e2c9d04ec4998f21e684e164f5e0436",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:scaled_sound_pressure_dB"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F5.2",
+   "dataset": "airfoil",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "frequency_Hz",
+     "chord_length_m"
+    ]
+   },
+   "csv_sha256": "afc2829268a35918e97e93713d51778235a071d184c48cd55c005159171b851b",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:chord_length_m"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F5.3",
+   "dataset": "airfoil",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "attack_angle_deg",
+     "scaled_sound_pressure_dB"
+    ]
+   },
+   "csv_sha256": "c284a73f3c5023d89d042a5694274c70f317dc382f75792c63b104f1c8e7d006",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F5.4",
+   "dataset": "airfoil",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "attack_angle_deg",
+     "scaled_sound_pressure_dB"
+    ]
+   },
+   "csv_sha256": "77b83fa32e6b317dca3ecc2ce9b56514e3f087d55115238c44e47258982787dd",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "airfoil.F6.0",
+   "dataset": "airfoil",
+   "fault": "F6",
+   "params": {
+    "column": "suction_side_displacement_thickness_m",
+    "rows": [
+     5,
+     12,
+     21,
+     27,
+     36,
+     88
+    ]
+   },
+   "csv_sha256": "8169c62f0e0c2bd413fe795e52c38bcaf98d393cc9b5706c7cd11191891540cb",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:suction_side_displacement_thickness_m",
+     "negative:suction_side_displacement_thickness_m"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F6.1",
+   "dataset": "airfoil",
+   "fault": "F6",
+   "params": {
+    "column": "chord_length_m",
+    "rows": [
+     2,
+     31,
+     36,
+     43,
+     59,
+     79
+    ]
+   },
+   "csv_sha256": "2f382680daad2dd2fb03cfa9702e650c53750c608f83c7b773942d023895e2c4",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:chord_length_m",
+     "negative:chord_length_m"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F6.2",
+   "dataset": "airfoil",
+   "fault": "F6",
+   "params": {
+    "column": "suction_side_displacement_thickness_m",
+    "rows": [
+     14,
+     19,
+     37,
+     67,
+     98,
+     112
+    ]
+   },
+   "csv_sha256": "6e52a00d2cc00e453c1403ea67fbb4205ce613b521932862842058d46c59a5ae",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:suction_side_displacement_thickness_m",
+     "negative:suction_side_displacement_thickness_m"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F6.3",
+   "dataset": "airfoil",
+   "fault": "F6",
+   "params": {
+    "column": "free_stream_velocity_m_s",
+    "rows": [
+     7,
+     20,
+     30,
+     36,
+     68,
+     110
+    ]
+   },
+   "csv_sha256": "c3d1ff3018248245abe91d634f6ce846a3b47a7b874440ee0607772d771aeecc",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:free_stream_velocity_m_s",
+     "negative:free_stream_velocity_m_s"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F6.4",
+   "dataset": "airfoil",
+   "fault": "F6",
+   "params": {
+    "column": "attack_angle_deg",
+    "rows": [
+     11,
+     24,
+     47,
+     55,
+     87,
+     116
+    ]
+   },
+   "csv_sha256": "dfba075992790b22cdb400ca0f383f886f401797805ce802efd44cb47975bbe5",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:attack_angle_deg"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F7.0",
+   "dataset": "airfoil",
+   "fault": "F7",
+   "params": {
+    "column": "free_stream_velocity_m_s"
+   },
+   "csv_sha256": "29fed04e0769c4ba9623d4d96816caabc0578ad55eb74060f8e52151f71dc793",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:free_stream_velocity_m_s"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F7.1",
+   "dataset": "airfoil",
+   "fault": "F7",
+   "params": {
+    "column": "scaled_sound_pressure_dB"
+   },
+   "csv_sha256": "a8dc4ea0807e598d30affe20babb3e156e38f23a6248a7cbb3417d5ef48d2c9d",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:scaled_sound_pressure_dB"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F7.2",
+   "dataset": "airfoil",
+   "fault": "F7",
+   "params": {
+    "column": "scaled_sound_pressure_dB"
+   },
+   "csv_sha256": "5401eccc90f9323fd55589d575e036b8d37bfc78e0300a54455705f74d0f059f",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:scaled_sound_pressure_dB"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F7.3",
+   "dataset": "airfoil",
+   "fault": "F7",
+   "params": {
+    "column": "suction_side_displacement_thickness_m"
+   },
+   "csv_sha256": "68c7365eb44b5a1cfe1cccb60455d2c2b93da80f40add4bad9b6e02601ca7c3f",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:suction_side_displacement_thickness_m"
+    ]
+   }
+  },
+  {
+   "item": "airfoil.F7.4",
+   "dataset": "airfoil",
+   "fault": "F7",
+   "params": {
+    "column": "scaled_sound_pressure_dB"
+   },
+   "csv_sha256": "ee9c6e5d824d0167153e15ba6b881be0f49d5388835033c85e4bf7a863744b7f",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:scaled_sound_pressure_dB"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.clean.0",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "8f382dbbf63744908558370b83c53bf8f8dfa262f07b0401fcc3dad017734b00",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.1",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "7631deb7ab94850c776f4f6a134cde204d7840afb1e3175212dfe72b3cdd3f7f",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.2",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "a821a5732769b0ff6529279fd69610bfddb73528e64650d74da0a8ce5b431bdf",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.3",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "04f579395fcb17b7fe64c24d4fcba24c347963af64d5776f55a61f780c5c579c",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.4",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "86696e0cc7e216b12e417a75ccc3742c392132185aaff3822edab4ee84c2ad85",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.5",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "787b860fe90b1fefe4fc98f3e1b5ab45b39e4ace97f8119d485b9309ebcb23bb",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.6",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "2bf3ce8777a9566ca74890fd46efdcae74722e638da0afdf099a97ba4a2d033b",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.7",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "41d807e7a42b9fcbd1e1e576c927442d29955edb04d0b3ff6231243576457228",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.8",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "ce666449b28eb05ade6ec623aaa8d9773749f859ab610250e2a775b2dcee413b",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.9",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "a2f4735c7a1bc67d0145c755bb81948d4dc4017dc590ad476b315ffb87a4b1e3",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.10",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "9af303c0f951c1752fdee087255a6f3625ca9c11804972619f20d658a3805733",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.11",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "28fd41d64444d79505917f64c59715527255f9a8cf78be2fd105b8b823ccc119",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.12",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "3b7d7b39fa577a945b4ad74f088c9849019b8fe13bfdbb6f27a88dbb8aff9e89",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.13",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "7746f5d232f6897f940fa38c84d49ec2a5cfb1ba5fe883de2f04669bce0295a3",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.14",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "3e109b24f877e32f14e03a170c9eb569566297f134010c963a315a975cc2ea84",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.15",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "c67a73f96c1f3d889b224b1182773b17a222a8bfd43e5e17cbd4ffb43d780b37",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.16",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "deac10362f32a4a0fda6ad9e310c317451dc7f495aa4779ab6a8d2fcec3ecf6e",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.17",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "02edf14d0438a3cf85083a75c5345428e8205efab6874d951f05c878b6e43cf1",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.18",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "c26369a7bc9169eb5102c6d3529f716acd233758469216244ffaaf4a98bccec4",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.19",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "1c3af09cc04fea3b2b3f73bc51d148989721b682d1362bbfda2e1f19eec842c2",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.20",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "4426623a854cfdb482ce2d52b089156b0556ab78053a312dbe63f4ae5112cd1f",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.21",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "825d4fe7006d987dc32f84a25904b5333cfd1dbd343bb10ed63a2cad83fb3721",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.22",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "b5a146045f30bdd246c91995f31875fb02f1689497193e7f9c2ad5a8dd913f28",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.23",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "b8f8d630048cf77dfc9aaac4dff41e05ee30400174b9bd1da9f3ccbc4dea88de",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.24",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "2ff08bfa4bc2bb4203890e94e87f15632a34f524737a86c3701f44c34935f68f",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.25",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "9a70751db53d1728354ecf5ce981ef3ccc2744be07e04edebb4677c9576b577e",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.26",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "617ce115ddb33b4fef86da6610a5a41334a2836c4f4e945ae7cc33fa30cb32b8",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.27",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "623aa6165f04e3fa891bfd6fe39b1d238663901cb60dc2dbc16345a6ef33952a",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.28",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "e7dafe5aedb20a7b6ba6df3dbb18a4613b5a1e0e974648193144e1e7a7aee827",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.29",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "aff8c24c962381b3ea2c2a3b7d1fe41ae7b96fa926ee7866dff4438911e5310a",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.30",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "3bbd85880cce4ee291e1c05f93597c80e167d4269f1a3699f36a195182cbde7e",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.31",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "324794dbd98503702f90c86e0067c7f219e6e40e65d445dd154bbfd50200e820",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.32",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "15b14acf67bad4116db4e226f48272e34bd26396e09be4bb21755da2965ce9f0",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.33",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "2da76509d746d6f773890b068230c89517c45de1184c48402cb3a511b496f0ea",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.clean.34",
+   "dataset": "ccpp",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "63bc5304e61cb516612c3f2a939a602ed89b9860895880d09d776a83eeee5a27",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.F1.0",
+   "dataset": "ccpp",
+   "fault": "F1",
+   "params": {
+    "column": "AP",
+    "rows": [
+     1,
+     4,
+     7,
+     8,
+     12,
+     13,
+     23,
+     25,
+     38,
+     54,
+     57,
+     58,
+     65,
+     69,
+     73,
+     90,
+     95,
+     98,
+     105,
+     106,
+     112,
+     113,
+     115,
+     117
+    ],
+    "to_unit": "kPa",
+    "factor": 0.1,
+    "offset": 0.0
+   },
+   "csv_sha256": "eb0428e882b476a72818981bdce2d569a2973facbc0b63d0d6f5740cede0deba",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "range:AP"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F1.1",
+   "dataset": "ccpp",
+   "fault": "F1",
+   "params": {
+    "column": "AT",
+    "rows": [
+     5,
+     8,
+     9,
+     10,
+     17,
+     29,
+     34,
+     36,
+     43,
+     45,
+     53,
+     56,
+     57,
+     59,
+     67,
+     71,
+     84,
+     88,
+     89,
+     94,
+     98,
+     99,
+     101,
+     107
+    ],
+    "to_unit": "kelvin",
+    "factor": 1.0,
+    "offset": 273.15
+   },
+   "csv_sha256": "dfb89569fccdb756df1fc11a3ead42ec913a7e6b1c70377aa8b2c43d6903d9ac",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "range:AT"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F1.2",
+   "dataset": "ccpp",
+   "fault": "F1",
+   "params": {
+    "column": "PE",
+    "rows": [
+     0,
+     4,
+     5,
+     6,
+     13,
+     16,
+     17,
+     32,
+     35,
+     54,
+     55,
+     59,
+     60,
+     64,
+     77,
+     83,
+     85,
+     92,
+     97,
+     98,
+     107,
+     108,
+     111,
+     114
+    ],
+    "to_unit": "kW",
+    "factor": 1000.0,
+    "offset": 0.0
+   },
+   "csv_sha256": "f2f0d938896fca0bb0a0cecebbb2dae9c8a6f31f87d3f3bbef9c1069097f22df",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "range:PE"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F1.3",
+   "dataset": "ccpp",
+   "fault": "F1",
+   "params": {
+    "column": "AT",
+    "rows": [
+     2,
+     16,
+     18,
+     31,
+     33,
+     42,
+     48,
+     52,
+     54,
+     57,
+     61,
+     63,
+     64,
+     77,
+     78,
+     84,
+     86,
+     94,
+     95,
+     96,
+     105,
+     110,
+     114,
+     118
+    ],
+    "to_unit": "kelvin",
+    "factor": 1.0,
+    "offset": 273.15
+   },
+   "csv_sha256": "7acfe50576496df3331a317ccb36826c59e4d1492a7a252871a25d9b153c60a7",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "range:AT"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F1.4",
+   "dataset": "ccpp",
+   "fault": "F1",
+   "params": {
+    "column": "AP",
+    "rows": [
+     0,
+     7,
+     16,
+     21,
+     22,
+     24,
+     30,
+     36,
+     52,
+     59,
+     60,
+     61,
+     62,
+     66,
+     72,
+     77,
+     82,
+     83,
+     85,
+     88,
+     89,
+     92,
+     96,
+     115
+    ],
+    "to_unit": "kPa",
+    "factor": 0.1,
+    "offset": 0.0
+   },
+   "csv_sha256": "bc3bbab4c5c8e4f3f7b1509f968b7c965d32eb0c1b96dba45a781431cc7fd19f",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "range:AP"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F2.0",
+   "dataset": "ccpp",
+   "fault": "F2",
+   "params": {
+    "column": "V",
+    "rows": [
+     47,
+     54,
+     97
+    ]
+   },
+   "csv_sha256": "e9c3e33d948b53d8dfc23e960d3e086bdc352e0c36384cd5507fccb92492e0be",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:V",
+     "range:V"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F2.1",
+   "dataset": "ccpp",
+   "fault": "F2",
+   "params": {
+    "column": "RH",
+    "rows": [
+     75,
+     108,
+     119
+    ]
+   },
+   "csv_sha256": "43b336e09b61f37e670ab29d32830fc2b2ca7efffa6393793944286c0c41b074",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:RH",
+     "range:RH"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F2.2",
+   "dataset": "ccpp",
+   "fault": "F2",
+   "params": {
+    "column": "RH",
+    "rows": [
+     19,
+     46,
+     104
+    ]
+   },
+   "csv_sha256": "4aedf6a9e381b5ed9bce15087cd4b24a3098656a25912e19ca628e9afacb2bda",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:RH",
+     "range:RH"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F2.3",
+   "dataset": "ccpp",
+   "fault": "F2",
+   "params": {
+    "column": "RH",
+    "rows": [
+     35,
+     97,
+     103
+    ]
+   },
+   "csv_sha256": "b0d789f90b724e5beada6e7a1fc2f7e14c6a1d4ce9cc33778f6a5df881d72dc1",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:RH",
+     "range:RH"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F2.4",
+   "dataset": "ccpp",
+   "fault": "F2",
+   "params": {
+    "column": "PE",
+    "rows": [
+     48,
+     53,
+     99
+    ]
+   },
+   "csv_sha256": "4a869cb7a68df7d1e9def9f218bee89c9d9eb14bd528ab2fececee31fae3d7f4",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:PE",
+     "range:PE"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F3.0",
+   "dataset": "ccpp",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     7,
+     20,
+     21,
+     26,
+     30,
+     46,
+     49,
+     59,
+     86,
+     94,
+     97,
+     114
+    ],
+    "copied_from": [
+     91,
+     24,
+     101,
+     85,
+     96,
+     58,
+     63,
+     35,
+     117,
+     44,
+     45,
+     64
+    ]
+   },
+   "csv_sha256": "80c65cac6b9240d7c739bdf3d5045075d8cccf7170dfca09206c10819a9b1397",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F3.1",
+   "dataset": "ccpp",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     7,
+     21,
+     26,
+     31,
+     34,
+     54,
+     64,
+     67,
+     72,
+     79,
+     100,
+     112
+    ],
+    "copied_from": [
+     55,
+     30,
+     69,
+     6,
+     71,
+     75,
+     109,
+     103,
+     91,
+     61,
+     14,
+     3
+    ]
+   },
+   "csv_sha256": "4888359fa154f87eb35f6487afe890b191347cfe6b389bace6ce21cc1fa17ac9",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F3.2",
+   "dataset": "ccpp",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     12,
+     46,
+     53,
+     60,
+     62,
+     72,
+     77,
+     85,
+     96,
+     98,
+     100,
+     115
+    ],
+    "copied_from": [
+     32,
+     40,
+     59,
+     86,
+     50,
+     1,
+     75,
+     58,
+     83,
+     50,
+     103,
+     25
+    ]
+   },
+   "csv_sha256": "6f3426c01bdad05ba043394fea9d5518ed799393171dceef3e4e7df77a47be83",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F3.3",
+   "dataset": "ccpp",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     21,
+     26,
+     29,
+     33,
+     49,
+     52,
+     54,
+     67,
+     73,
+     87,
+     101,
+     106
+    ],
+    "copied_from": [
+     96,
+     63,
+     2,
+     114,
+     48,
+     78,
+     113,
+     91,
+     63,
+     64,
+     97,
+     111
+    ]
+   },
+   "csv_sha256": "fbbb797edded43e50047632634cda40d7e3902fff3ca37898d1476d37d3d66a9",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F3.4",
+   "dataset": "ccpp",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     3,
+     10,
+     17,
+     24,
+     26,
+     32,
+     54,
+     65,
+     82,
+     91,
+     97,
+     108
+    ],
+    "copied_from": [
+     83,
+     115,
+     51,
+     81,
+     53,
+     66,
+     29,
+     96,
+     118,
+     39,
+     48,
+     61
+    ]
+   },
+   "csv_sha256": "44f3f03d4382a8104e8e3b200c42976311ea14ed86432e678daf0314cf6e112e",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F4.0",
+   "dataset": "ccpp",
+   "fault": "F4",
+   "params": {
+    "column": "PE",
+    "rows": [
+     5,
+     6,
+     9,
+     10,
+     14,
+     22,
+     23,
+     27,
+     38,
+     47,
+     48,
+     51,
+     52,
+     53,
+     65,
+     72,
+     78,
+     79,
+     80,
+     81,
+     82,
+     85,
+     86,
+     87,
+     89,
+     91,
+     92,
+     100,
+     104,
+     105,
+     107,
+     109,
+     111,
+     113,
+     116,
+     119
+    ]
+   },
+   "csv_sha256": "30fb19ea357cba3f27be8fd69938c101c82b0edaf61ad965dad21e50f1fbb915",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.F4.1",
+   "dataset": "ccpp",
+   "fault": "F4",
+   "params": {
+    "column": "PE",
+    "rows": [
+     3,
+     4,
+     6,
+     8,
+     12,
+     13,
+     20,
+     21,
+     22,
+     24,
+     30,
+     32,
+     40,
+     47,
+     50,
+     51,
+     67,
+     68,
+     72,
+     73,
+     77,
+     79,
+     80,
+     82,
+     84,
+     85,
+     87,
+     89,
+     90,
+     93,
+     96,
+     103,
+     107,
+     110,
+     112,
+     113
+    ]
+   },
+   "csv_sha256": "5048cf35becd15e9462359d88b2e4546e7a4bc512c6d4df2097634a6a516cdf8",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.F4.2",
+   "dataset": "ccpp",
+   "fault": "F4",
+   "params": {
+    "column": "PE",
+    "rows": [
+     7,
+     10,
+     12,
+     13,
+     14,
+     20,
+     24,
+     26,
+     30,
+     36,
+     37,
+     39,
+     42,
+     54,
+     61,
+     62,
+     63,
+     64,
+     66,
+     69,
+     72,
+     75,
+     78,
+     84,
+     86,
+     89,
+     93,
+     97,
+     98,
+     99,
+     101,
+     105,
+     115,
+     116,
+     117,
+     119
+    ]
+   },
+   "csv_sha256": "c9d8e9590bbe2f506ffc52a45c9d0397b6372fb602425e5f7ec847ba5cd39a97",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.F4.3",
+   "dataset": "ccpp",
+   "fault": "F4",
+   "params": {
+    "column": "PE",
+    "rows": [
+     0,
+     2,
+     6,
+     10,
+     14,
+     17,
+     28,
+     29,
+     31,
+     39,
+     44,
+     45,
+     49,
+     50,
+     53,
+     54,
+     57,
+     61,
+     63,
+     64,
+     70,
+     71,
+     77,
+     81,
+     82,
+     83,
+     84,
+     86,
+     89,
+     91,
+     92,
+     94,
+     99,
+     105,
+     115,
+     119
+    ]
+   },
+   "csv_sha256": "1dc8e0528ac1939e3b000b8e5d459e1b252663975b2499cb6ff8da35cda6dc65",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.F4.4",
+   "dataset": "ccpp",
+   "fault": "F4",
+   "params": {
+    "column": "PE",
+    "rows": [
+     10,
+     11,
+     17,
+     20,
+     21,
+     22,
+     25,
+     27,
+     31,
+     38,
+     42,
+     49,
+     53,
+     57,
+     59,
+     62,
+     67,
+     69,
+     71,
+     73,
+     74,
+     81,
+     87,
+     90,
+     93,
+     94,
+     95,
+     96,
+     97,
+     100,
+     101,
+     104,
+     106,
+     112,
+     114,
+     115
+    ]
+   },
+   "csv_sha256": "066292c84174a55042124ce5aad27912ca7bc40fbe40357aa57e851a78512b5b",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "ccpp.F5.0",
+   "dataset": "ccpp",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "AP",
+     "RH"
+    ]
+   },
+   "csv_sha256": "16fac5f8a61ca45e079603047cb39b364b5c683024ce18955d0851650d2172de",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "range:AP",
+     "range:RH"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F5.1",
+   "dataset": "ccpp",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "AT",
+     "AP"
+    ]
+   },
+   "csv_sha256": "a84d0e97b739c30a66d4d5c39627452c001df7956f3406e9372990da85d23bd4",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "range:AT",
+     "range:AP"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F5.2",
+   "dataset": "ccpp",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "AT",
+     "PE"
+    ]
+   },
+   "csv_sha256": "d02bbf7eae037336234cda66d9011d398acf7cbb04934d7142b0ca193858f02e",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "range:AT",
+     "range:PE"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F5.3",
+   "dataset": "ccpp",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "V",
+     "PE"
+    ]
+   },
+   "csv_sha256": "2ab07a0b5aeda25acf88ee2bced225c5e77ac615076cfd184dc879225980d9cc",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "range:V",
+     "range:PE"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F5.4",
+   "dataset": "ccpp",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "V",
+     "AP"
+    ]
+   },
+   "csv_sha256": "b93c702ce8a84eec7d207b2b8cd06d0b8eeffc8e3e3f346c407f95b5fabaeffd",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "range:V",
+     "range:AP"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F6.0",
+   "dataset": "ccpp",
+   "fault": "F6",
+   "params": {
+    "column": "PE",
+    "rows": [
+     14,
+     41,
+     48,
+     58,
+     86,
+     91
+    ]
+   },
+   "csv_sha256": "4b38c9b451ede6e33bc66ebb41046e44a5350ddbaf0896f95261735e55843c56",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:PE",
+     "negative:PE",
+     "range:PE"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F6.1",
+   "dataset": "ccpp",
+   "fault": "F6",
+   "params": {
+    "column": "V",
+    "rows": [
+     3,
+     48,
+     60,
+     79,
+     86,
+     95
+    ]
+   },
+   "csv_sha256": "3f847833e1ebf5207aec61ad78db3acbc4a2f557ffcf97338ef3091e12484f1b",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:V",
+     "negative:V",
+     "range:V"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F6.2",
+   "dataset": "ccpp",
+   "fault": "F6",
+   "params": {
+    "column": "RH",
+    "rows": [
+     6,
+     10,
+     49,
+     56,
+     91,
+     110
+    ]
+   },
+   "csv_sha256": "fb5e2aa41ab1c620b5cf72a5aa7a340065f789e588b077bf3baf3dac9dd79eeb",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:RH",
+     "negative:RH",
+     "range:RH"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F6.3",
+   "dataset": "ccpp",
+   "fault": "F6",
+   "params": {
+    "column": "AT",
+    "rows": [
+     18,
+     26,
+     36,
+     104,
+     110,
+     117
+    ]
+   },
+   "csv_sha256": "eb7d831ef4e88497c76e0b34fedc431e2ee5430558deb1b19378e6732f28f3bf",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:AT",
+     "range:AT"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F6.4",
+   "dataset": "ccpp",
+   "fault": "F6",
+   "params": {
+    "column": "V",
+    "rows": [
+     47,
+     55,
+     62,
+     69,
+     75,
+     101
+    ]
+   },
+   "csv_sha256": "4de5cad35495ac7a6281041e2112ffd2242a27799155a430886bef4d00dbcc6a",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:V",
+     "negative:V",
+     "range:V"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F7.0",
+   "dataset": "ccpp",
+   "fault": "F7",
+   "params": {
+    "column": "PE"
+   },
+   "csv_sha256": "5e98c6108cc8eb0bf4ffc552a0a886a9e5b48a6615a5dd7c0178c193af85a2ec",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:PE"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F7.1",
+   "dataset": "ccpp",
+   "fault": "F7",
+   "params": {
+    "column": "RH"
+   },
+   "csv_sha256": "992d79c5ea5c5a9750cd1b347463c6bc24076cfd05789889678c3e9ebc2b1948",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:RH"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F7.2",
+   "dataset": "ccpp",
+   "fault": "F7",
+   "params": {
+    "column": "PE"
+   },
+   "csv_sha256": "a6b64418cb6f21b4d7b24efeda86794a7c23cff06f3aa6c868c63bfb591c91a0",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:PE"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F7.3",
+   "dataset": "ccpp",
+   "fault": "F7",
+   "params": {
+    "column": "AT"
+   },
+   "csv_sha256": "3689ad4f7ae1e96d09746829f4549e58682c5dc162a651dd734b7afc19a7a976",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:AT"
+    ]
+   }
+  },
+  {
+   "item": "ccpp.F7.4",
+   "dataset": "ccpp",
+   "fault": "F7",
+   "params": {
+    "column": "AT"
+   },
+   "csv_sha256": "ea60f0b53cf277723b90eaa1e8eb68aa2b5348175229957db0c88be59955cf0f",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:AT"
+    ]
+   }
+  },
+  {
+   "item": "supercond.clean.0",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "51ab44b71c288d2a054d0a3616f64f5ab9ee052562cddf0359ba4c0a5bdb91ac",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.1",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "d09599d5877c3ad2aa826aaf5d080885b95b8fe607fbacf46a6a45ff74c72795",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.2",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "51a0c953befd1acfeda2cbb055ecba4751d169f123c6c6d4649e31644c5c2403",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.3",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "b53f1b400520cea3b4d9734ab132174bfb1e5a74e3d12cac9e65ab852d27efec",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.4",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "5383c12d9218dd7080a23d422dc78245ce62ecd3fa94cbf4a59fdcb17473ba75",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.5",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "d46853b7f5b5f14583c4966c9963b99ad3e486855314032c997079d08e4cefa9",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.6",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "b8c772382ea54f325cb223ee1246d23edc9a08621a8544529b1fc8842ab3723c",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.7",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "14aa1fe44d679eedb2924b94a31dc831661bb684bab8f09ab7e668fd0c9ceb50",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.8",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "79883d9e066e22bf449db985900175384b9ef90decf28d12454642c7bd41d042",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.9",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "daa5862f3d9ca6d50230687f0916266493dd469fbaf2d89b6b0bf7238d2d53df",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.10",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "b774467da57ca119161a9730c06065c21009fa61e3904e595a640cb771e41355",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.11",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "aecdeea34be23c86b734b5b18da28cf42da930c335ed11b4c7e745fa3785f4b9",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.12",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "0351dca89a4f26c453f2b6615408657a712dbeae1ee48ae316363116e7d8b2df",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.13",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "f7a94463b64af0834a35cf9673c70e83e4e2f0512412c18512117f859d801852",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.14",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "1ab3cde9a8e6df4eaca3e47e766918b723a7a025c7d1ece5a064bfadacea6983",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.15",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "0920e665244610885f94cf48dce323462591145aa5ef90476a9cbcfa51530d94",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.16",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "e3f38e4005148dfca0e2276ce6872ec34b0bdb4bc3bd570f19dab8dc61176324",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.17",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "4ab21b878f5daab4335982f9e2de142be74343170555e59ea2036747727a6e6b",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.18",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "6934ff4e6c68b4fb50ce47ba859238676982b05ad3c5888afaab61d8117a56b2",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.19",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "acb8e3e8a8ac3ceae35de892dbc7da88a4c63b3d2de69c9e51442efeb248d2d5",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.20",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "883a953d6651aa71a65c5edaf90c66b74f66155e9d149b89cf6dd59b0b14c01a",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.21",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "5cbff56a101fbdfc943d78f737b856435cee805988729fe8d03fa72797602aca",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.22",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "f3362e7ae8a5444a25edf35d2e327f1138cbfd11e3c04e3f0881a051ef6fe98e",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.23",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "af3c2c5352400000a457a94bd08ffc5f57f778a905f18bb582a166342eaca556",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.24",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "ea2889e67dbf4ba6ccb094963a32a7e4c25475210f108aa619abfe3ca582eaba",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.25",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "4a5fd756dfbec32b025b000b815fc49224b2ed6b0ba8b017bf6f407ba1c9354b",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.26",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "49690fd43676049f6eeebbedaa52e01a0079272cd7a80a08cfd2f151e51f8770",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.27",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "d1fb82dd962369435878e1f497d8b587ee7dc4700a967da89494d89bc733cdb4",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.28",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "c7c955de2257dd45ba7ae3e8f2da0b002ff3729ceb6c34717f4714746f4bd6a7",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.29",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "d6b7fad8ac65aa25650b3a31866a5a6e841cd63582ac10d1583cbc5db3c4d69f",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.30",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "4b51906d7f5f2bd2f1e6a11e189e4305204b69c98c42e9a1cff1c35956e7c684",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.31",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "e2cb155940d3ae4ba5908e44667f611f87df43adf8b644b7b8d42fa5ef12a40d",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.32",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "b5e35149130d2a0637b6d3267db4aa3a8ba369839edc0a930d372c58140f49f1",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.33",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "1034238d7ddfb11919d6c81c758b1e694e3436d9c5e79c175130aedbb66500d8",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.clean.34",
+   "dataset": "supercond",
+   "fault": null,
+   "params": {},
+   "csv_sha256": "e626a3b529d9136aa8bd6f89c4928ffba17382639b219a03dd0bf31dbde4b224",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F1.0",
+   "dataset": "supercond",
+   "fault": "F1",
+   "params": {
+    "column": "mean_Density",
+    "rows": [
+     13,
+     18,
+     20,
+     29,
+     30,
+     32,
+     37,
+     42,
+     50,
+     54,
+     63,
+     70,
+     74,
+     75,
+     77,
+     90,
+     96,
+     101,
+     102,
+     104,
+     105,
+     109,
+     115,
+     117
+    ],
+    "to_unit": "g/cm^3",
+    "factor": 0.001,
+    "offset": 0.0
+   },
+   "csv_sha256": "07b9bdc2e9e759530c6874bd71d1adeedfb78d868c19af6911362c3f630ede4b",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F1.1",
+   "dataset": "supercond",
+   "fault": "F1",
+   "params": {
+    "column": "mean_Density",
+    "rows": [
+     0,
+     5,
+     7,
+     9,
+     10,
+     11,
+     17,
+     19,
+     28,
+     29,
+     31,
+     33,
+     36,
+     48,
+     53,
+     59,
+     67,
+     74,
+     80,
+     86,
+     94,
+     96,
+     99,
+     102
+    ],
+    "to_unit": "g/cm^3",
+    "factor": 0.001,
+    "offset": 0.0
+   },
+   "csv_sha256": "fd7eebedfeb7e8e140936cd1f80e9784a764febe45421596fc3d802ff6f908f9",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F1.2",
+   "dataset": "supercond",
+   "fault": "F1",
+   "params": {
+    "column": "mean_Density",
+    "rows": [
+     2,
+     4,
+     6,
+     10,
+     14,
+     17,
+     19,
+     22,
+     32,
+     34,
+     35,
+     36,
+     39,
+     43,
+     47,
+     49,
+     50,
+     57,
+     61,
+     65,
+     66,
+     74,
+     113,
+     115
+    ],
+    "to_unit": "g/cm^3",
+    "factor": 0.001,
+    "offset": 0.0
+   },
+   "csv_sha256": "4033156866c443ce9f9105f1160adee05c17a0ab27f1d07d4a00f0893a4e45dc",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F1.3",
+   "dataset": "supercond",
+   "fault": "F1",
+   "params": {
+    "column": "mean_atomic_radius",
+    "rows": [
+     1,
+     5,
+     11,
+     20,
+     22,
+     26,
+     27,
+     31,
+     34,
+     38,
+     45,
+     48,
+     49,
+     55,
+     62,
+     68,
+     69,
+     90,
+     93,
+     97,
+     102,
+     110,
+     116,
+     118
+    ],
+    "to_unit": "angstrom",
+    "factor": 0.01,
+    "offset": 0.0
+   },
+   "csv_sha256": "b483c09cb60c54c12006c159abbdd3de3dc4fd0767310599c933fb4734c53b7b",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F1.4",
+   "dataset": "supercond",
+   "fault": "F1",
+   "params": {
+    "column": "mean_Density",
+    "rows": [
+     5,
+     7,
+     9,
+     14,
+     19,
+     22,
+     34,
+     39,
+     48,
+     50,
+     59,
+     62,
+     65,
+     70,
+     76,
+     77,
+     78,
+     93,
+     94,
+     101,
+     111,
+     113,
+     114,
+     118
+    ],
+    "to_unit": "g/cm^3",
+    "factor": 0.001,
+    "offset": 0.0
+   },
+   "csv_sha256": "b8ed844210253304b60cf009c468d943a59712f75eb40461043059dcb5310dcf",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F2.0",
+   "dataset": "supercond",
+   "fault": "F2",
+   "params": {
+    "column": "mean_atomic_mass",
+    "rows": [
+     42,
+     101,
+     104
+    ]
+   },
+   "csv_sha256": "a59e84248dd4a048d28b959f196c4c01fd0e910302bde5344ef970fdf733060d",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:mean_atomic_mass"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F2.1",
+   "dataset": "supercond",
+   "fault": "F2",
+   "params": {
+    "column": "mean_ElectronAffinity",
+    "rows": [
+     16,
+     20,
+     98
+    ]
+   },
+   "csv_sha256": "7b9d25368ef11f52bbc5e65ea5361982ad054a3170d48d20c696bbb27f605497",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:mean_ElectronAffinity"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F2.2",
+   "dataset": "supercond",
+   "fault": "F2",
+   "params": {
+    "column": "mean_ElectronAffinity",
+    "rows": [
+     45,
+     82,
+     99
+    ]
+   },
+   "csv_sha256": "dc968e84b8143d58bfc0ed03406858df829251ed2d680f6b096058c6b09a6888",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:mean_ElectronAffinity"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F2.3",
+   "dataset": "supercond",
+   "fault": "F2",
+   "params": {
+    "column": "critical_temp",
+    "rows": [
+     35,
+     67,
+     117
+    ]
+   },
+   "csv_sha256": "e659b09102a1faa1bba3a60c4b6992f36cf2d4e8806dfc01efefa2c883b1d598",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:critical_temp"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F2.4",
+   "dataset": "supercond",
+   "fault": "F2",
+   "params": {
+    "column": "mean_Density",
+    "rows": [
+     71,
+     72,
+     101
+    ]
+   },
+   "csv_sha256": "fbeb0f55995e155feab57721c324b7a5dafd8b691ded38a412039514c5f4d353",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "negative:mean_Density"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F3.0",
+   "dataset": "supercond",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     3,
+     22,
+     27,
+     31,
+     36,
+     62,
+     72,
+     96,
+     108,
+     110,
+     116,
+     118
+    ],
+    "copied_from": [
+     106,
+     76,
+     59,
+     92,
+     0,
+     67,
+     25,
+     35,
+     46,
+     50,
+     77,
+     39
+    ]
+   },
+   "csv_sha256": "7b6ce301cdd343f5a576f0cd1a8a7008373616dc5b9e2e15a01941f6fa65e0df",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F3.1",
+   "dataset": "supercond",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     12,
+     27,
+     34,
+     40,
+     42,
+     53,
+     63,
+     68,
+     78,
+     102,
+     104,
+     118
+    ],
+    "copied_from": [
+     97,
+     6,
+     29,
+     114,
+     32,
+     83,
+     64,
+     56,
+     107,
+     81,
+     48,
+     94
+    ]
+   },
+   "csv_sha256": "1fdb7b95d05902b9ccd110d602ff11dcd222427fc2278ac2ae7c67571beded88",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F3.2",
+   "dataset": "supercond",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     0,
+     2,
+     3,
+     4,
+     26,
+     36,
+     57,
+     65,
+     73,
+     83,
+     87,
+     119
+    ],
+    "copied_from": [
+     25,
+     17,
+     49,
+     24,
+     64,
+     46,
+     97,
+     105,
+     46,
+     82,
+     63,
+     96
+    ]
+   },
+   "csv_sha256": "ceec62d33a7a8816b7900df6cbe1db52ce02fbae45bc5e410e1a77065715fef5",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F3.3",
+   "dataset": "supercond",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     5,
+     8,
+     17,
+     30,
+     77,
+     90,
+     102,
+     104,
+     106,
+     108,
+     114,
+     119
+    ],
+    "copied_from": [
+     100,
+     21,
+     79,
+     29,
+     96,
+     81,
+     9,
+     7,
+     23,
+     1,
+     2,
+     49
+    ]
+   },
+   "csv_sha256": "3bf23e9f44527ce7dae5b98ea2a97294eb20b9a249f0be21a9d45cb6ad944fa6",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F3.4",
+   "dataset": "supercond",
+   "fault": "F3",
+   "params": {
+    "rows": [
+     2,
+     19,
+     61,
+     64,
+     66,
+     68,
+     77,
+     80,
+     82,
+     83,
+     111,
+     115
+    ],
+    "copied_from": [
+     104,
+     12,
+     117,
+     75,
+     22,
+     32,
+     48,
+     100,
+     79,
+     33,
+     37,
+     50
+    ]
+   },
+   "csv_sha256": "f598ac0f4146b7ff172083bd5dd7fa0485f085360e3d16bb1d30696e770ea7a5",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "duplicates"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F4.0",
+   "dataset": "supercond",
+   "fault": "F4",
+   "params": {
+    "column": "critical_temp",
+    "rows": [
+     0,
+     2,
+     3,
+     5,
+     9,
+     12,
+     14,
+     15,
+     21,
+     30,
+     31,
+     40,
+     41,
+     48,
+     50,
+     59,
+     61,
+     64,
+     67,
+     70,
+     71,
+     73,
+     77,
+     79,
+     80,
+     81,
+     92,
+     93,
+     101,
+     102,
+     107,
+     111,
+     115,
+     117,
+     118,
+     119
+    ]
+   },
+   "csv_sha256": "1445941e13d8140f68cf9a08c38d50d7da8a39ef4a0c0afad1106ae39f83cc21",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F4.1",
+   "dataset": "supercond",
+   "fault": "F4",
+   "params": {
+    "column": "critical_temp",
+    "rows": [
+     1,
+     6,
+     11,
+     13,
+     16,
+     22,
+     27,
+     28,
+     29,
+     37,
+     38,
+     42,
+     43,
+     44,
+     45,
+     48,
+     50,
+     55,
+     58,
+     62,
+     65,
+     73,
+     77,
+     79,
+     86,
+     89,
+     91,
+     99,
+     103,
+     105,
+     106,
+     107,
+     112,
+     115,
+     116,
+     119
+    ]
+   },
+   "csv_sha256": "083bfa31e263896ab7fee6aedf49440e834f5946c906546b3c677605001a132d",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F4.2",
+   "dataset": "supercond",
+   "fault": "F4",
+   "params": {
+    "column": "critical_temp",
+    "rows": [
+     1,
+     2,
+     6,
+     7,
+     8,
+     16,
+     21,
+     25,
+     27,
+     29,
+     33,
+     34,
+     41,
+     46,
+     47,
+     48,
+     55,
+     56,
+     61,
+     63,
+     65,
+     71,
+     74,
+     75,
+     78,
+     79,
+     80,
+     82,
+     83,
+     88,
+     89,
+     90,
+     96,
+     100,
+     112,
+     115
+    ]
+   },
+   "csv_sha256": "48a74cd9151706c37d88594a653f45806e073a357a30f75a5319959d4c919ab0",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F4.3",
+   "dataset": "supercond",
+   "fault": "F4",
+   "params": {
+    "column": "critical_temp",
+    "rows": [
+     1,
+     4,
+     7,
+     8,
+     13,
+     16,
+     22,
+     32,
+     36,
+     37,
+     44,
+     51,
+     52,
+     54,
+     55,
+     56,
+     57,
+     60,
+     64,
+     67,
+     73,
+     78,
+     79,
+     80,
+     85,
+     88,
+     90,
+     91,
+     95,
+     96,
+     101,
+     102,
+     108,
+     109,
+     111,
+     112
+    ]
+   },
+   "csv_sha256": "15005c43c719a59110c0fd9166baef5d37351a8d40d3380c7e49b7a1592f3473",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F4.4",
+   "dataset": "supercond",
+   "fault": "F4",
+   "params": {
+    "column": "critical_temp",
+    "rows": [
+     1,
+     4,
+     15,
+     16,
+     19,
+     24,
+     29,
+     34,
+     37,
+     39,
+     41,
+     44,
+     46,
+     51,
+     54,
+     57,
+     62,
+     63,
+     65,
+     69,
+     73,
+     75,
+     84,
+     88,
+     92,
+     95,
+     97,
+     100,
+     101,
+     102,
+     104,
+     111,
+     112,
+     113,
+     115,
+     119
+    ]
+   },
+   "csv_sha256": "8cc5537fd35b35196cac06e22992eed37ba324953cef4d9ce8fe36fbf9485cbd",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F5.0",
+   "dataset": "supercond",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "mean_Density",
+     "range_atomic_radius"
+    ]
+   },
+   "csv_sha256": "f2a18a486048c354add76aec9754853fee2157e8eb871bbcce4e308fd9d81fcb",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F5.1",
+   "dataset": "supercond",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "mean_fie",
+     "mean_Valence"
+    ]
+   },
+   "csv_sha256": "c081439a4e8c3a6f608157e3073c38d5f1775e58b80f582a01b10139291f7cdd",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F5.2",
+   "dataset": "supercond",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "mean_atomic_radius",
+     "mean_FusionHeat"
+    ]
+   },
+   "csv_sha256": "83eee89a1c0fddb160046e67b7ad5159851e56ff80d804a5d9634cd4b37c25cf",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F5.3",
+   "dataset": "supercond",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "number_of_elements",
+     "mean_atomic_radius"
+    ]
+   },
+   "csv_sha256": "6cf22a816a297db4573c85653ded784e517f91bc521b1e75e16257fbd3fc91ca",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F5.4",
+   "dataset": "supercond",
+   "fault": "F5",
+   "params": {
+    "columns": [
+     "mean_Density",
+     "mean_FusionHeat"
+    ]
+   },
+   "csv_sha256": "8110b41ecc4261767c28ee7de23553719b754b4ad69eefb771e4898e721a453a",
+   "validator": {
+    "flagged": false,
+    "checks": []
+   }
+  },
+  {
+   "item": "supercond.F6.0",
+   "dataset": "supercond",
+   "fault": "F6",
+   "params": {
+    "column": "mean_ElectronAffinity",
+    "rows": [
+     18,
+     36,
+     86,
+     102,
+     109,
+     119
+    ]
+   },
+   "csv_sha256": "f627b1b7b22e0d6928ed8f7e3ae6ca7304ed179b32c67985e349e6a3f80fbf55",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:mean_ElectronAffinity",
+     "negative:mean_ElectronAffinity"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F6.1",
+   "dataset": "supercond",
+   "fault": "F6",
+   "params": {
+    "column": "mean_Density",
+    "rows": [
+     20,
+     48,
+     49,
+     66,
+     90,
+     112
+    ]
+   },
+   "csv_sha256": "483f6130462cdf198ce2918fae1ffb05c25cf62e8b18389063302845fbf127fc",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:mean_Density",
+     "negative:mean_Density"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F6.2",
+   "dataset": "supercond",
+   "fault": "F6",
+   "params": {
+    "column": "mean_FusionHeat",
+    "rows": [
+     45,
+     48,
+     55,
+     83,
+     93,
+     111
+    ]
+   },
+   "csv_sha256": "effc0ba3c64655cfefb636a4466a3439d626103a3ec754e7964bb262e26d030a",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:mean_FusionHeat",
+     "negative:mean_FusionHeat"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F6.3",
+   "dataset": "supercond",
+   "fault": "F6",
+   "params": {
+    "column": "mean_ElectronAffinity",
+    "rows": [
+     14,
+     22,
+     64,
+     80,
+     107,
+     115
+    ]
+   },
+   "csv_sha256": "f5bf74fe8c5f46fb1571a3957ef94afe97ac8b887e3646abc11429f00c262590",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:mean_ElectronAffinity",
+     "negative:mean_ElectronAffinity"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F6.4",
+   "dataset": "supercond",
+   "fault": "F6",
+   "params": {
+    "column": "range_atomic_radius",
+    "rows": [
+     2,
+     35,
+     66,
+     95,
+     108,
+     115
+    ]
+   },
+   "csv_sha256": "96f03156ea1bc6a867110a33e3ad1dfb4c2a57d659d6dc13550465639a097f2f",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "sentinel:range_atomic_radius",
+     "negative:range_atomic_radius"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F7.0",
+   "dataset": "supercond",
+   "fault": "F7",
+   "params": {
+    "column": "mean_atomic_mass"
+   },
+   "csv_sha256": "4eb7b87c836eed5d086969d5b9eee6c45a3e2e1ab681b64dc2eb275f399208dd",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:mean_atomic_mass"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F7.1",
+   "dataset": "supercond",
+   "fault": "F7",
+   "params": {
+    "column": "mean_FusionHeat"
+   },
+   "csv_sha256": "de935cfaee11cc398546d274e8e190ab2dad7ac9d4e192ed92411d8265152575",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:mean_FusionHeat"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F7.2",
+   "dataset": "supercond",
+   "fault": "F7",
+   "params": {
+    "column": "mean_FusionHeat"
+   },
+   "csv_sha256": "52c6499c854e01e702df426bf731e70ae155609fcb01333f0ae149e41a2fe41e",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:mean_FusionHeat"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F7.3",
+   "dataset": "supercond",
+   "fault": "F7",
+   "params": {
+    "column": "wtd_mean_ThermalConductivity"
+   },
+   "csv_sha256": "0cc5889845e9ed77c80078fb05b8d2baa8878c132495412c3c0d1205e4a1d00f",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:wtd_mean_ThermalConductivity"
+    ]
+   }
+  },
+  {
+   "item": "supercond.F7.4",
+   "dataset": "supercond",
+   "fault": "F7",
+   "params": {
+    "column": "mean_FusionHeat"
+   },
+   "csv_sha256": "c8bd92504764093913dce5cd098397c8e6ab0c0b05aa905a57eea96f18b3fac4",
+   "validator": {
+    "flagged": true,
+    "checks": [
+     "integer:mean_FusionHeat"
+    ]
+   }
+  }
+ ]
+}
