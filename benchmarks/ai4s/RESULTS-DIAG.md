@@ -2,8 +2,8 @@
 
 Registered at `a6c04af` (`PREREGISTRATION-DIAG.md`), before any held-out item was built and before
 any model call. Items built and committed at `5affaed` (manifest `records/ai4s/data_items_ho.json`,
-seed 20261001; 280 items, no CSV shared with A4S-3). Readings: `~/Documents/Crossaudit/ai4s/runs/
-data_audit_ho/` (8 files, 1,120 readings per family, **no reading missing**). Spend **$24.41**
+seed 20261001; 280 items, no CSV shared with A4S-3). Readings: `records/ai4s/diag_readings/` (copied from `~/Documents/Crossaudit/ai4s/runs/
+data_audit_ho/`; 8 files, 1,120 readings per family, **no reading missing**). Spend **$24.41**
 (halt $45). Analysis: `analyze_diag.py` → `records/ai4s/diag_results.json`. No amendment was made.
 
 ## What was measured
