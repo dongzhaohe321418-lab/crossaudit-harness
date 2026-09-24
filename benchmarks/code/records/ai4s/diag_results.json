@@ -1,0 +1,135 @@
+{
+ "budget": 0.1,
+ "operating_points": {
+  "cross": {
+   "m": 1,
+   "dev_clean_rate": {
+    "1": 0.02857142857142857,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 0.0
+   }
+  },
+  "self": {
+   "m": 4,
+   "dev_clean_rate": {
+    "1": 0.4785714285714286,
+    "2": 0.35,
+    "3": 0.18571428571428572,
+    "4": 0.07142857142857142
+   }
+  }
+ },
+ "incomplete_items": {
+  "cross": 0,
+  "self": 0
+ },
+ "n_faulty": 140,
+ "n_clean": 140,
+ "validator": {
+  "diagnosed": 90,
+  "diagnosed_pct_ci": [
+   56.390977443609025,
+   72.05882352941177
+  ],
+  "clean_flagged": 0,
+  "clean_pct_ci": [
+   0.0,
+   0.0
+  ],
+  "by_fault": {
+   "F1": 5,
+   "F2": 20,
+   "F3": 20,
+   "F5": 5,
+   "F6": 20,
+   "F7": 20
+  }
+ },
+ "cross": {
+  "diagnosed": 57,
+  "diagnosed_pct_ci": [
+   32.57575757575758,
+   48.888888888888886
+  ],
+  "clean_flagged": 9,
+  "clean_pct_ci": [
+   2.8368794326241136,
+   10.526315789473683
+  ],
+  "by_fault": {
+   "F1": 13,
+   "F2": 14,
+   "F5": 12,
+   "F6": 18
+  },
+  "flagged_faulty": 63
+ },
+ "self": {
+  "diagnosed": 40,
+  "diagnosed_pct_ci": [
+   21.678321678321677,
+   35.91549295774648
+  ],
+  "clean_flagged": 14,
+  "clean_pct_ci": [
+   5.555555555555555,
+   14.814814814814813
+  ],
+  "by_fault": {
+   "F1": 11,
+   "F2": 12,
+   "F4": 3,
+   "F5": 5,
+   "F6": 7,
+   "F7": 2
+  },
+  "flagged_faulty": 46
+ },
+ "validator_or_cross": {
+  "diagnosed": 105,
+  "diagnosed_pct_ci": [
+   67.62589928057554,
+   81.88976377952756
+  ],
+  "clean_flagged": 9,
+  "clean_pct_ci": [
+   2.8368794326241136,
+   10.526315789473683
+  ],
+  "by_fault": {
+   "F1": 13,
+   "F2": 20,
+   "F3": 20,
+   "F5": 12,
+   "F6": 20,
+   "F7": 20
+  }
+ },
+ "H1_union_minus_validator": {
+  "points": 10.714285714285714,
+  "ci": [
+   5.960264900662252,
+   15.942028985507244
+  ],
+  "discordant_a_only": 15,
+  "discordant_b_only": 0,
+  "mcnemar_exact_p": 6.103515625e-05,
+  "holds": true,
+  "rule": "holds iff the paired interval's lower end exceeds 0 and the union's held-out clean-flag rate is at most the budget"
+ },
+ "H2_cross_minus_self_route_comparison": {
+  "points": 12.142857142857142,
+  "ci": [
+   4.137931034482759,
+   20.30075187969925
+  ],
+  "discordant_a_only": 27,
+  "discordant_b_only": 10,
+  "mcnemar_exact_p": 0.007632078602910042
+ },
+ "S1_flags_without_diagnosis": {
+  "cross": 6,
+  "self": 6
+ }
+}
