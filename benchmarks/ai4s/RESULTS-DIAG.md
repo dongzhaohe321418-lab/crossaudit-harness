@@ -1,11 +1,10 @@
-# A4S-4 results — naming the injected fault at a fixed false-positive budget, on held-out scientific data
+# A4S-4 results — naming the injected column at a fixed false-positive budget, on held-out scientific data
 
 Registered at `a6c04af` (`PREREGISTRATION-DIAG.md`), before any held-out item was built and before
 any model call. Items built and committed at `5affaed` (manifest `records/ai4s/data_items_ho.json`,
 item files mirrored in `records/ai4s/data_items_ho/`, seed 20261001; 280 items, no CSV shared with
 A4S-3). Readings: `records/ai4s/diag_readings/` (copied from `~/Documents/Crossaudit/ai4s/runs/
-data_audit_ho/`; 8 files, 1,120 readings per family, **no reading missing**). Ledger API value
-**$24.41** (`cross` $13.58, `self` $10.83; 2,244 completion events for 2,240 retained readings; the
+data_audit_ho/`; 8 files, 1,120 readings per family, **no reading missing**). Ledger API value **$24.41** (`cross` $13.58, `self` $10.83; 2,244 completion events for 2,240 retained readings; ledgers mirrored in `records/ai4s/diag_ledger/`; the
 `self` route runs through Claude Code, so this is the ledger's valuation, not an invoice). The runner
 checks the $45 halt every 25 results, so it is not a hard cap; no overrun occurred. Registered
 analysis: `analyze_diag.py` → `records/ai4s/diag_results.json`. Supplement after review round 1:
@@ -21,8 +20,7 @@ for what it measures and reports the counterexamples and a post hoc stricter rea
 
 280 held-out data items (140 clean, 140 with one of seven injected faults, 20 each), four readings
 each by `cross` (the shipped cross-vendor auditor) and `self` (the generator's own model through the
-Claude Code CLI), plus A4S-3's frozen documentation-derived validator. The registered endpoint: a
-faulty item **names the injected fault** when a flagging reading's BLOCKER text meets the rule in
+Claude Code CLI), plus A4S-3's frozen documentation-derived validator. The registered endpoint: a faulty item **meets the registered lexical rule** when a flagging reading's BLOCKER text meets the rule in
 `diag_match.py` — it names the injected column (both columns for a swap; a duplication term for
 duplicated rows). No model judged any outcome. Each family's operating point was fixed on A4S-3
 before these items existed: the smallest vote threshold with a development clean-flag rate of at most
@@ -52,7 +50,7 @@ than `self` [4.1, 20.3] (27 against 10 discordant; exact McNemar p = 0.0076), at
 flags. Model and sampling change together, and the two sit at different realised rates inside one
 budget, so this is not a measure of auditing ability.
 
-**By fault type** (of 20 each; registered intervals, `diag_supplement.json`):
+**By fault type** (count of 20, with the 95% interval on the percentage; registered intervals, `diag_supplement.json`):
 
 | tier | F1 | F2 | F3 | F4 | F5 | F6 | F7 |
 |---|---|---|---|---|---|---|---|
@@ -73,27 +71,17 @@ The rule is liberal about meaning and strict about wording. It is not a lower bo
 diagnosis. Read against the manifest and the item files after the outcome:
 
 * **Counted, but about something else.** `cross` `airfoil.F2.3`: a request for column definitions
-  that mentions the column. `self` `supercond.F4.0`, `F4.1`, `F4.2` and `concrete.F7.4`: complaints
-  about the row count or the card that mention the column while listing the schema;
-  `supercond.F7.3`: a column listing that says the structure is satisfied; `concrete.F5.2`: a
+  that mentions the column. `self` `supercond.F4.0`, `F4.1` and `concrete.F7.4`: complaints about the row count or the card that mention the column while listing the schema; `supercond.F4.2`: an allegation of near-duplicate records with differing targets and an affirmative statement about the card, neither identifying the shuffle; `supercond.F7.3`: a column listing that says the structure is satisfied; `concrete.F5.2`: a
   complaint about missing ranges that lists both swapped columns without saying they are swapped.
   The rule would also accept a text such as "no duplicate rows".
 * **Counted, partly wrong.** `cross` `concrete.F5.0`, one of the fifteen items the union adds,
   reports a three-column reassignment including coarse aggregate; the injected fault swaps
   superplasticizer and fine aggregate only.
-* **Not counted, but relevant.** `cross` `supercond.F5.0` and `F5.3`, and `self` `ccpp.F5.2`, describe
-  impossible values in one of the two swapped columns and name only that one.
+* **Not counted, but relevant.** `cross` `supercond.F5.0` and `F5.3`, and `self` `ccpp.F5.2`, describe impossible values in one of the two swapped columns and name only that one.
 
-**Stricter reading (post hoc; `posthoc_diag.py`).** Requiring each counted finding also to state the
-fault itself — a negative value, a −999 or sentinel, a scale or unit, a swap, rounding, shuffling, or
-a quoted value equal to an injected cell — leaves `cross` 53 and `self` 32. The four `cross` items it
-drops are `airfoil.F2.3` and three power-plant swaps whose findings name both columns as out of range
-without saying they are swapped, which is exactly what the validator's range checks say and are
-credited for; all four are validator items, so the union is unchanged at 105. **All fifteen items
-the union adds state the fault**; the agent's reading of each is recorded in `diag_supplement.json`.
-Counting only the fourteen that also give the right columns (dropping `concrete.F5.0`), the contrast
-is **+10.0 points [5.4, 15.1]**, 14 against 0 (exact McNemar p = 0.00012). This reading is the
-agent's, after the outcome; it is not an independent adjudication.
+**A stricter lexical filter (post hoc; `posthoc_diag.py`).** Requiring each counted finding also to contain a fault term — a negative value, a −999 or sentinel, a scale or unit word, a swap word, rounding, shuffling — or a quoted value equal to an injected cell leaves `cross` 53 and `self` 32. It is still a keyword filter, not a check of meaning: it would admit "no duplicate rows", and it wrongly drops `ccpp.F5.1`, whose findings in both families describe the AT and AP values as reversed without using its swap words (restoring it gives 54 and 33). The other three `cross` items it drops are `airfoil.F2.3` and two power-plant swaps whose findings name both columns as out of range, which is what the validator's range checks say and are credited for. All four are validator items, so the union is unchanged at 105.
+
+**The agent's reading of the fifteen items the union adds (post hoc, unblinded, not independent; `diag_supplement.json`).** Fourteen locate the fault in the right columns and name its kind; `concrete.F5.0` reports a three-column reassignment where two columns were swapped. Counting those fourteen, the contrast is **+10.0 points [5.4, 15.1]**, 14 against 0 (exact McNemar p = 0.00012). Three of the fourteen, the compressive-strength items converted to psi, locate the anomaly without explaining the conversion (one calls it a decimal shift; one reconstructs a wrong 100× factor). Counting only the eleven that also explain the injected transformation gives **+7.9 points [3.7, 12.5]**.
 
 **The earlier inspection sample** (seed 7; population: each `cross` reading's first BLOCKER text the
 rule counts, in file order; `diag_supplement.json` lists the ten): each names the injected column and
@@ -108,17 +96,11 @@ registered, and should not be read as an error.
 
 ## What this does and does not show
 
-On these data, adding the model auditor to a documentation-derived validator raises, at a clean-flag
-budget fixed in advance, the share of faulty items with a finding that names the injected column;
-the fifteen items it adds all state the injected fault on the agent's post hoc reading, fourteen with
-the right columns. It does not establish correct diagnosis in general: the registered rule is lexical,
-counts findings about other things, and the stricter reading is post hoc and not independently
-adjudicated. The items are new draws from A4S-3's four tables and seven synthetic faults, so the
+On these data, adding the model auditor to a documentation-derived validator raises, at a clean-flag budget fixed in advance, the share of faulty items with a finding that names the injected column; on the agent's post hoc reading, fourteen of the fifteen items it adds locate the fault in the right columns and eleven also explain it. It does not establish correct diagnosis: the registered rule is lexical and counts findings about other things, the stricter filter is lexical too, and the item-level reading is the study agent's, post hoc and unblinded. The items are new draws from A4S-3's four tables and seven synthetic faults, so the
 result does not extend to other data, faults or cards. `cross`'s held-out clean-flag rate (6.4%) is
 above its development rate (2.9%), all from one card. Provenance: the registration, build and call
 times are consistent in the local records; that is not independent timestamp attestation.
 
 ## Review
 
-Round 1 (`codex-review-a4s4`) found the arithmetic and chronology correct and the endpoint's name
-wrong; this version is its repair. It goes back to review before anything from it enters the paper.
+Round 1 (`codex-review-a4s4`) found the arithmetic and chronology correct and the endpoint's name wrong; round 2 found the stricter filter and three verdicts described too strongly and one counterexample misdescribed. This version repairs both. It goes back to review before anything from it enters the paper.

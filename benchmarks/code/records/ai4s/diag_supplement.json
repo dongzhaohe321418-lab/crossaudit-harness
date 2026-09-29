@@ -268,9 +268,9 @@
   "airfoil.F5.2": "names both columns and says they are swapped",
   "airfoil.F5.4": "names both columns and says they are substituted/swapped",
   "concrete.F1.0": "names the column and values about 1000x the rest",
-  "concrete.F1.1": "names the column and values thousands of times the MPa range (psi)",
-  "concrete.F1.2": "names the column and decimal-shifted values",
-  "concrete.F1.3": "names the column and values thousands of times the rest",
+  "concrete.F1.1": "LOCATES ONLY: names the column and values far outside the MPa range; does not identify the psi conversion",
+  "concrete.F1.2": "LOCATES ONLY: names the column and anomalous values it calls decimal-shifted; the injection is a 145.038x psi conversion",
+  "concrete.F1.3": "LOCATES ONLY: names the column and anomalous values, with a wrong 100x reconstruction (the injection is 145.038x psi); its draw-4 reading does describe values in another unit",
   "concrete.F1.4": "names the column and values scaled by 1000",
   "concrete.F5.0": "PARTLY WRONG: reports a three-column reassignment including coarse aggregate; the injected fault swaps superplasticizer and fine aggregate only",
   "concrete.F5.3": "names both columns and says they are swapped",
@@ -290,6 +290,14 @@
    0
   ],
   "mcnemar_exact_p": 0.0001220703125
+ },
+ "posthoc_right_columns_and_explanation": {
+  "items": 11,
+  "points": 7.857142857142857,
+  "ci": [
+   3.7037037037037033,
+   12.5
+  ]
  },
  "inspection_sample_seed7": [
   {

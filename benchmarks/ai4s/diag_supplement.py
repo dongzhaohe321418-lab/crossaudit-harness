@@ -4,9 +4,10 @@
 1. REGISTERED, previously omitted: each tier's count and share by fault type with its interval
    (the registration's "also reported" list; the round-1 report gave counts only).
 2. POST HOC: the fifteen items the union adds under the registered rule, each with the agent's
-   reading of its matching finding against the manifest (verdicts below, written before this
-   script computed anything from them), and the H1 contrast counting only the items whose finding
-   names the injected fault with the right columns.
+   reading of its matching finding against the manifest (verdicts below; three were revised after
+   review round 2 to "LOCATES ONLY"), the H1 contrast counting only the items whose finding locates
+   the fault with the right columns (not "PARTLY WRONG"), and the count whose finding also explains
+   the injected transformation correctly (neither "PARTLY WRONG" nor "LOCATES ONLY").
 3. The seed-7 inspection sample of the round-1 report, reconstructed exactly (population: for each
    `cross` reading of a faulty item, its first BLOCKER text the registered rule counts; order:
    reading files d1..d4 in line order; `random.Random(7).shuffle`; first ten).
@@ -37,9 +38,13 @@ UNION_ONLY_VERDICTS = {
     "airfoil.F5.2": "names both columns and says they are swapped",
     "airfoil.F5.4": "names both columns and says they are substituted/swapped",
     "concrete.F1.0": "names the column and values about 1000x the rest",
-    "concrete.F1.1": "names the column and values thousands of times the MPa range (psi)",
-    "concrete.F1.2": "names the column and decimal-shifted values",
-    "concrete.F1.3": "names the column and values thousands of times the rest",
+    "concrete.F1.1": "LOCATES ONLY: names the column and values far outside the MPa range; does not "
+                     "identify the psi conversion",
+    "concrete.F1.2": "LOCATES ONLY: names the column and anomalous values it calls decimal-shifted; "
+                     "the injection is a 145.038x psi conversion",
+    "concrete.F1.3": "LOCATES ONLY: names the column and anomalous values, with a wrong 100x "
+                     "reconstruction (the injection is 145.038x psi); its draw-4 reading does describe "
+                     "values in another unit",
     "concrete.F1.4": "names the column and values scaled by 1000",
     "concrete.F5.0": "PARTLY WRONG: reports a three-column reassignment including coarse aggregate; "
                      "the injected fault swaps superplasticizer and fine aggregate only",
@@ -80,6 +85,7 @@ def main() -> int:
     only = sorted(i for i in faulty if tiers["validator_or_cross"](i) and not v[i])
     assert only == sorted(UNION_ONLY_VERDICTS), only
     strict = [i for i in only if not UNION_ONLY_VERDICTS[i].startswith("PARTLY WRONG")]
+    explains = [i for i in strict if not UNION_ONLY_VERDICTS[i].startswith("LOCATES ONLY")]
     F = set(faulty)
     strict_ci = A.boot_ci(items, lambda s: (sum(1 for i in s if i in strict) /
                                             max(1, sum(1 for i in s if i in F))))
@@ -99,6 +105,10 @@ def main() -> int:
         "posthoc_H1_strict": {"added_items": len(strict), "points": 100 * len(strict) / len(faulty),
                               "ci": strict_ci, "discordant": [len(strict), 0],
                               "mcnemar_exact_p": mcnemar(len(strict), 0)},
+        "posthoc_right_columns_and_explanation": {
+            "items": len(explains), "points": 100 * len(explains) / len(faulty),
+            "ci": A.boot_ci(items, lambda s: (sum(1 for i in s if i in explains) /
+                                              max(1, sum(1 for i in s if i in F))))},
         "inspection_sample_seed7": pop[:10],
         "self_operating_point_note": ("self at m=4 counts an item when all four readings flag and at "
                                       "least one flagging reading's text meets the rule"),

@@ -43,7 +43,7 @@ K = 4
 M = {"cross": 1, "self": 4}                     # the registered operating points
 
 UNIT_WORDS = {"g per m^3": ["g/m", "g per", "grams"], "psi": ["psi"], "kHz": ["khz"],
-              "mm": ["mm", "millimet"], "kelvin": ["kelvin", " k)", " k,", "k "],
+              "mm": ["mm", "millimet"], "kelvin": ["kelvin", " k)", " k,", " k "],
               "kPa": ["kpa"], "kW": ["kw", "kilowatt"], "degrees C": ["°c", "celsius", "degrees c"],
               "angstrom": ["angstrom", "ångström", "å"], "g/cm^3": ["g/cm", "g cm"]}
 SCALE = re.compile(r"\bunits?\b|scale|mixed|converted|conversion|magnitude|factor of|order of", re.I)
