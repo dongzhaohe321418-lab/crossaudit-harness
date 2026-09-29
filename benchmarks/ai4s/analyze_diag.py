@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""A4S-4 analysis: correct diagnosis at a fixed false-positive budget, on held-out data items.
+"""A4S-4 analysis: items meeting the registered lexical rule (naming the injected column) at a fixed
+false-positive budget, on held-out data items. ("diag" names below are historical; they are not a
+measure of correct diagnosis.)
 
 Registered in `PREREGISTRATION-DIAG.md`. Operating points are fixed on A4S-3 (development) and
 applied unchanged to the held-out items. Diagnosis is decided by `diag_match` alone; no model

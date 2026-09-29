@@ -1,4 +1,9 @@
-"""A4S-4 executable diagnosis rule: does a finding name the injected fault?
+"""A4S-4 executable rule: does a finding name the injected column?
+
+Note added after review (2026-09-29): the registration and the text below call a match a
+"diagnosis". Review showed the rule counts findings about other things, so the endpoint is reported
+as "meets the registered lexical rule" (names the injected column), never as correct diagnosis. The
+logic below is unchanged from the registered version; only this docstring was annotated.
 
 No model judges anything here. A faulty item counts as correctly diagnosed by a reading when at
 least one of the reading's BLOCKER texts meets the rule for the item's fault, read from the

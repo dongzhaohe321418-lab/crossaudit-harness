@@ -3,9 +3,11 @@
 
 Written after review round 1 of the paper branch found findings that the registered lexical rule
 counts although they are about something else (a documentation request that mentions the column; a
-schema listing that mentions the target). This rule keeps the registered operating points and adds,
-per fault type, a requirement that the finding state the fault itself, and where the fault writes
-numbers into cells, allows a quoted injected value as the witness:
+schema listing that mentions the target). This filter keeps the registered operating points and adds,
+per fault type, a required fault KEYWORD (or a quoted injected value where the fault writes numbers
+into cells). It is still lexical: it would accept "Water is complete and correct; document its unit"
+or "No duplicate rows", and it wrongly drops ccpp.F5.1. It does not check that a finding states the
+fault correctly:
 
   F1 mixed units   column named AND (a quoted number equal to an injected cell, or a unit word of
                    the converted unit, or a scale/unit term: "unit", "scale", "mixed", "converted",
