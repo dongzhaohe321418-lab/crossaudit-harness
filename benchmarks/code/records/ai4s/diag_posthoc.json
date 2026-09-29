@@ -1,0 +1,51 @@
+{
+ "note": "POST HOC; not registered. Operating points as registered.",
+ "families": {
+  "cross": {
+   "lexical": 57,
+   "fault_specific": 53,
+   "lexical_not_specific": [
+    "airfoil.F2.3",
+    "ccpp.F5.1",
+    "ccpp.F5.2",
+    "ccpp.F5.3"
+   ],
+   "specific_not_lexical": []
+  },
+  "self": {
+   "lexical": 40,
+   "fault_specific": 32,
+   "lexical_not_specific": [
+    "ccpp.F5.1",
+    "ccpp.F5.3",
+    "concrete.F5.2",
+    "concrete.F7.4",
+    "supercond.F4.0",
+    "supercond.F4.1",
+    "supercond.F4.2",
+    "supercond.F7.3"
+   ],
+   "specific_not_lexical": []
+  }
+ },
+ "validator": 90,
+ "union_fault_specific": 105,
+ "union_only_items": {
+  "airfoil.F1.0": "The requested Airfoil Self-Noise dataset is not ready for scientific analysis in the documented metre unit: `chord_length_m` contains values such as `50.8`, `25.4`, `152.4`, `228.6`, and `304.8` alongside correctly metre-scaled values such as `0.0508`, `0.0254`, `0.1524`, `0.2286`, and `0.3048`. The former values are 1,000 times the corresponding metre values, so the delivered data does not consistently satisfy the requested `m` unit.",
+  "airfoil.F1.3": "The delivered values do not faithfully provide the specified UCI 291 Airfoil Self-Noise dataset in metres: multiple suction_side_displacement_thickness_m values have a decimal-place error of 1,000\u00d7. For example, rows beginning `1600.0,8.9,0.1016,71.3,10.3088`, `315.0,9.9,0.1524,71.3,19.3001`, and `400.0,17.4,0.0254,55.5,16.570600000000002` record values in the tens of metres rather than the corresponding UCI values 0.0103088 m, 0.0193001 m, and 0.0165706 m. This substitutes corrupted measurements for the requested scientific dataset.",
+  "airfoil.F5.1": "The frequency and target values are swapped relative to the requested Airfoil Self-Noise column definitions. For example, row 1 labels 130.697 as frequency_Hz and 2000.0 as scaled_sound_pressure_dB, while the discrete 2000.0 value is a frequency value and 130.697 is a sound-pressure-level value; this pattern persists throughout the file (for example, 127.251/630.0 and 133.241/1600.0). Consequently the requested frequency_Hz and target scaled_sound_pressure_dB columns are not delivered with the stated meanings or units, so the dataset is not ready for the requested scientific analysis.",
+  "airfoil.F5.2": "The dataset's frequency and chord-length data are swapped relative to the committed task's required column meanings and units. For example, the first row labels 0.1524 as frequency_Hz and 315.0 as chord_length_m; throughout the file, the first field contains the metre-scale chord values (for example 0.0254, 0.0508, 0.3048) while the third field contains the Hz-scale frequency values (for example 315, 10000, 16000). Thus the delivered columns do not provide the required measurements under their declared names and units, so the dataset is not ready for scientific analysis as requested.",
+  "airfoil.F5.4": "The delivered data do not match the requested UCI 291 Airfoil Self-Noise dataset schema values: `attack_angle_deg` contains values such as 131.966 and 118.024, while `scaled_sound_pressure_dB` contains values such as 8.4 and 0.0. In UCI 291, angle of attack is measured in approximately the 0\u201322.2 degree range and scaled sound pressure is approximately 103.2\u2013140.0 dB; these two fields have been substituted/swapped relative to the requested source dataset.",
+  "concrete.F1.0": "The delivered dataset is not ready for scientific analysis as the requested concrete-mixture dataset: the Water column, documented as kg per m^3 of mixture, contains evidently mis-scaled values such as 187420.0 in row 1, 176000.0 in row 3, 161850.0 in row 10, and 228000.0 in the row beginning 304.0. These conflict with the surrounding water values in the same column (for example 164.9, 170.21, and 203.5) by approximately three orders of magnitude and are not valid mixture-proportion values in the stated unit.",
+  "concrete.F1.1": "The file presents its target values as concrete compressive strength in MPa, but contains values incompatible with the identified UCI 165 Yeh concrete-strength dataset. For example, the row beginning `325.6,166.4,0.0,174.0,8.9` reports `8881.51954711572` MPa, and the row beginning `522.0,0.0,0.0,146.0,0.0` reports `7326.01612364688` MPa. These contradict the supplied source identification and its stated target as the UCI concrete compressive-strength measurement in MPa; the values appear corrupted or incorrectly scaled rather than source measurements.",
+  "concrete.F1.2": "The target column is labeled as concrete compressive strength in MPa, but multiple records contain implausibly decimal-shifted values such as 6245.013744495601, 10457.02301460216, and 9703.02135513864, while neighbouring target values are in the tens of MPa (for example 31.02642 and 32.245413568000004). These values contradict the supplied source description of measured concrete compressive strength expressed in MPa and make the dataset scientifically unreliable.",
+  "concrete.F1.3": "The target column is declared in the task and data card as MPa, but multiple records contain values thousands of times larger than the surrounding concrete-strength values, e.g. 4792.5105477174 for the row beginning `290.2,193.5,...,28.0`, 9734.021423365919 for the row beginning `525.0,0.0,...,270.0`, and 9158.02015565904 for the row beginning `277.19,97.82,...,28.0`. These values are inconsistent with the supplied UCI 165/Yeh concrete-compressive-strength source identified as MPa data and indicate corrupted target values rather than measured MPa strengths.",
+  "concrete.F1.4": "The requested UCI 165 concrete-mixture dataset is not delivered faithfully: multiple Cement values have been scaled by 1,000, e.g. rows beginning `374000.0,189.2,...`, `239600.0,359.4,...`, and `480000.0,0.0,...` declare 374,000\u2013480,000 kg of cement per m^3 while the column is specified as kg per m^3 of mixture. This is a material data substitution/corruption rather than a dataset ready for scientific analysis.",
+  "concrete.F5.0": "The fifth through seventh mixture-component fields are misassigned for the requested UCI 165 schema: values that are coarse aggregate, fine aggregate, and superplasticizer are placed under Superplasticizer, Coarse Aggregate, and Fine Aggregate respectively. For example, the row beginning `480.0,0.0,0.0,192.0` records `712.2,936.2,0.0` in those three columns, thereby labeling the coarse- and fine-aggregate quantities as superplasticizer and coarse aggregate and labeling a zero superplasticizer quantity as fine aggregate. This does not deliver the requested source dataset with the task-specified column meanings.",
+  "concrete.F5.3": "The requested target is concrete compressive strength in MPa, but the target column contains values characteristic of the source dataset's coarse-aggregate amounts, such as 1028.4 in the first row. Conversely, the column labelled `Coarse Aggregate  (component 6)(kg in a m^3 mixture)` contains 32.66047812 in that row, a compressive-strength value. This swaps the requested target with the coarse-aggregate feature, so the delivered dataset does not provide the required target variable.",
+  "concrete.F5.4": "The requested target is `Concrete compressive strength(MPa, megapascals)`, but the CSV has the water and strength values interchanged. For example, the row beginning `540.0,0.0,0.0` records `79.98611076` under `Water` and `162.0` under the target; in the identified UCI 165 source record these are respectively the compressive strength (about 79.99 MPa) and water quantity (162 kg/m^3). Thus the delivered target column is not the requested compressive-strength target.",
+  "supercond.F1.3": "The dataset is internally inconsistent with the documented `mean_atomic_radius` definition in `work/data/CARD.md` (a mean in pm). For example, the row beginning `6.0,99.0067333333333` reports `mean_atomic_radius` of `1.60833333333333` pm and `range_atomic_radius` of `171.0` pm. With six nonnegative atomic radii spanning 171 pm, their mean cannot be 1.608 pm (even five zero values and one value 171 pm would yield a mean of 28.5 pm). Similar apparent 100-fold decimal shifts occur elsewhere, such as `1.2825` pm with a 147 pm range. The CSV is therefore not internally consistent or ready for scientific analysis as delivered.",
+  "supercond.F5.1": "The CSV does not satisfy the required column meanings and units. Its one-element silicon row has `mean_fie` = 4.0 and `mean_Valence` = 786.0; these values are reversed relative to the task definitions: 4 is silicon's valence, while 786 kJ/mol is its first ionization energy. Thus the `mean_fie` and `mean_Valence` columns are mislabeled, so the delivered dataset is not documented with the required column meanings."
+ },
+ "self_minus_cross_note": "route comparison"
+}

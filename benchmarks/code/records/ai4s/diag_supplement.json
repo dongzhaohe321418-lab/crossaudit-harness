@@ -1,0 +1,347 @@
+{
+ "registered_by_fault_with_intervals": {
+  "validator": {
+   "F1": {
+    "diagnosed": 5,
+    "of": 20,
+    "pct": 25.0,
+    "ci": [
+     7.142857142857142,
+     45.45454545454545
+    ]
+   },
+   "F2": {
+    "diagnosed": 20,
+    "of": 20,
+    "pct": 100.0,
+    "ci": [
+     100.0,
+     100.0
+    ]
+   },
+   "F3": {
+    "diagnosed": 20,
+    "of": 20,
+    "pct": 100.0,
+    "ci": [
+     100.0,
+     100.0
+    ]
+   },
+   "F4": {
+    "diagnosed": 0,
+    "of": 20,
+    "pct": 0.0,
+    "ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "F5": {
+    "diagnosed": 5,
+    "of": 20,
+    "pct": 25.0,
+    "ci": [
+     7.142857142857142,
+     44.44444444444444
+    ]
+   },
+   "F6": {
+    "diagnosed": 20,
+    "of": 20,
+    "pct": 100.0,
+    "ci": [
+     100.0,
+     100.0
+    ]
+   },
+   "F7": {
+    "diagnosed": 20,
+    "of": 20,
+    "pct": 100.0,
+    "ci": [
+     100.0,
+     100.0
+    ]
+   }
+  },
+  "cross": {
+   "F1": {
+    "diagnosed": 13,
+    "of": 20,
+    "pct": 65.0,
+    "ci": [
+     43.47826086956522,
+     85.71428571428571
+    ]
+   },
+   "F2": {
+    "diagnosed": 14,
+    "of": 20,
+    "pct": 70.0,
+    "ci": [
+     47.82608695652174,
+     89.47368421052632
+    ]
+   },
+   "F3": {
+    "diagnosed": 0,
+    "of": 20,
+    "pct": 0.0,
+    "ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "F4": {
+    "diagnosed": 0,
+    "of": 20,
+    "pct": 0.0,
+    "ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "F5": {
+    "diagnosed": 12,
+    "of": 20,
+    "pct": 60.0,
+    "ci": [
+     37.5,
+     81.25
+    ]
+   },
+   "F6": {
+    "diagnosed": 18,
+    "of": 20,
+    "pct": 90.0,
+    "ci": [
+     75.0,
+     100.0
+    ]
+   },
+   "F7": {
+    "diagnosed": 0,
+    "of": 20,
+    "pct": 0.0,
+    "ci": [
+     0.0,
+     0.0
+    ]
+   }
+  },
+  "self": {
+   "F1": {
+    "diagnosed": 11,
+    "of": 20,
+    "pct": 55.0,
+    "ci": [
+     33.33333333333333,
+     76.47058823529412
+    ]
+   },
+   "F2": {
+    "diagnosed": 12,
+    "of": 20,
+    "pct": 60.0,
+    "ci": [
+     38.095238095238095,
+     81.25
+    ]
+   },
+   "F3": {
+    "diagnosed": 0,
+    "of": 20,
+    "pct": 0.0,
+    "ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "F4": {
+    "diagnosed": 3,
+    "of": 20,
+    "pct": 15.0,
+    "ci": [
+     0.0,
+     32.0
+    ]
+   },
+   "F5": {
+    "diagnosed": 5,
+    "of": 20,
+    "pct": 25.0,
+    "ci": [
+     6.666666666666667,
+     45.0
+    ]
+   },
+   "F6": {
+    "diagnosed": 7,
+    "of": 20,
+    "pct": 35.0,
+    "ci": [
+     15.0,
+     56.25
+    ]
+   },
+   "F7": {
+    "diagnosed": 2,
+    "of": 20,
+    "pct": 10.0,
+    "ci": [
+     0.0,
+     25.0
+    ]
+   }
+  },
+  "validator_or_cross": {
+   "F1": {
+    "diagnosed": 13,
+    "of": 20,
+    "pct": 65.0,
+    "ci": [
+     43.47826086956522,
+     85.71428571428571
+    ]
+   },
+   "F2": {
+    "diagnosed": 20,
+    "of": 20,
+    "pct": 100.0,
+    "ci": [
+     100.0,
+     100.0
+    ]
+   },
+   "F3": {
+    "diagnosed": 20,
+    "of": 20,
+    "pct": 100.0,
+    "ci": [
+     100.0,
+     100.0
+    ]
+   },
+   "F4": {
+    "diagnosed": 0,
+    "of": 20,
+    "pct": 0.0,
+    "ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "F5": {
+    "diagnosed": 12,
+    "of": 20,
+    "pct": 60.0,
+    "ci": [
+     37.5,
+     81.25
+    ]
+   },
+   "F6": {
+    "diagnosed": 20,
+    "of": 20,
+    "pct": 100.0,
+    "ci": [
+     100.0,
+     100.0
+    ]
+   },
+   "F7": {
+    "diagnosed": 20,
+    "of": 20,
+    "pct": 100.0,
+    "ci": [
+     100.0,
+     100.0
+    ]
+   }
+  }
+ },
+ "posthoc_union_only_verdicts": {
+  "airfoil.F1.0": "names the column and the 1000x metre/millimetre scaling",
+  "airfoil.F1.3": "names the column and a 1000x error",
+  "airfoil.F5.1": "names both columns and says they are swapped",
+  "airfoil.F5.2": "names both columns and says they are swapped",
+  "airfoil.F5.4": "names both columns and says they are substituted/swapped",
+  "concrete.F1.0": "names the column and values about 1000x the rest",
+  "concrete.F1.1": "names the column and values thousands of times the MPa range (psi)",
+  "concrete.F1.2": "names the column and decimal-shifted values",
+  "concrete.F1.3": "names the column and values thousands of times the rest",
+  "concrete.F1.4": "names the column and values scaled by 1000",
+  "concrete.F5.0": "PARTLY WRONG: reports a three-column reassignment including coarse aggregate; the injected fault swaps superplasticizer and fine aggregate only",
+  "concrete.F5.3": "names both columns and says they are swapped",
+  "concrete.F5.4": "names both columns and says they are interchanged",
+  "supercond.F1.3": "names the column and a mean radius impossible in pm (angstrom values)",
+  "supercond.F5.1": "names both columns and says their values are reversed"
+ },
+ "posthoc_H1_strict": {
+  "added_items": 14,
+  "points": 10.0,
+  "ci": [
+   5.369127516778524,
+   15.107913669064748
+  ],
+  "discordant": [
+   14,
+   0
+  ],
+  "mcnemar_exact_p": 0.0001220703125
+ },
+ "inspection_sample_seed7": [
+  {
+   "item": "concrete.F6.1",
+   "draw": 4,
+   "text": "The requested dataset is not ready for scientific analysis as delivered: the `Age (day)` column contains `-999.0` in multiple rows (for example, rows beginning `314.0,0.0,113.0...`, `313.3,262.2,0.0...`, and `255.3,98.8,77.0...`). The data card defines this column in days but provides no missing-value convention or handling for this sentinel."
+  },
+  {
+   "item": "airfoil.F6.3",
+   "draw": 2,
+   "text": "The requested analysis-ready dataset contains -999.0 in free_stream_velocity_m_s (for example, rows beginning `250.0,9.5,0.0254,-999.0` and `1600.0,0.0,0.0508,-999.0`). This undocumented sentinel is presented as a measurement in m/s, so the delivered data are not ready for scientific analysis as requested."
+  },
+  {
+   "item": "concrete.F2.0",
+   "draw": 2,
+   "text": "The Fly Ash column contains negative component quantities, including -163.27, -174.74, and -100.39 kg per m^3. These contradict the supplied source description of these fields as mixture proportions/components in kg per m^3: a concrete mixture cannot contain a negative mass of a component."
+  },
+  {
+   "item": "ccpp.F6.3",
+   "draw": 1,
+   "text": "The task supplies AT's stated range as 1.81 to 37.11 degrees C, but five rows use AT=-999.0 (for example, the row beginning '-999.0,71.64,1007.11,69.85,436.58'). These values are outside the specified variable range and are not documented as missing-value sentinels, so the delivered dataset is not ready for scientific analysis as requested."
+  },
+  {
+   "item": "ccpp.F5.0",
+   "draw": 1,
+   "text": "The delivered dataset does not satisfy the task's specified column schema: values in the AP column are 26.67 to 97.09 in the shown rows, whereas AP is required to be ambient pressure in millibar with stated range 992.89 to 1033.3; values in the RH column are approximately 999.57 to 1031.96, whereas RH is required to be relative humidity (%) with stated range 25.56 to 100.16. The AP and RH value fields are evidently misassigned."
+  },
+  {
+   "item": "airfoil.F1.0",
+   "draw": 3,
+   "text": "The requested Airfoil Self-Noise dataset is not ready for scientific analysis in the documented metre unit: `chord_length_m` contains values such as `50.8`, `25.4`, `152.4`, `228.6`, and `304.8` alongside correctly metre-scaled values such as `0.0508`, `0.0254`, `0.1524`, `0.2286`, and `0.3048`. The former values are 1,000 times the corresponding metre values, so the delivered data does not consistently satisfy the requested `m` unit."
+  },
+  {
+   "item": "concrete.F2.2",
+   "draw": 3,
+   "text": "The Age (day) column contains negative values, including -28.0, -100.0, and -7.0. This contradicts the supplied task's description of this field as the age of concrete samples in days; a sample's age cannot be negative."
+  },
+  {
+   "item": "concrete.F6.2",
+   "draw": 3,
+   "text": "The dataset is not ready for scientific analysis as delivered: the Cement column contains repeated -999.0 values (for example, the records beginning '-999.0,118.0,92.0,...' and '-999.0,0.0,121.62,...'). The required card defines this column as cement in kg per m^3 of mixture, but neither the CSV nor CARD.md documents -999.0 as a missing-value code or otherwise resolves it."
+  },
+  {
+   "item": "concrete.F2.0",
+   "draw": 4,
+   "text": "The Fly Ash component column, documented as kilograms per m^3 of concrete mixture, contains negative values: -163.27, -174.74, and -100.39. These purported mixture-component quantities contradict the supplied source description of concrete mixture proportions and render the stated data facts invalid."
+  },
+  {
+   "item": "concrete.F2.3",
+   "draw": 1,
+   "text": "The Age (day) column contains negative values (-14.0, -90.0, and -28.0). The delivered dataset and CARD describe this field as the age in days of concrete samples; a sample age cannot be negative, so these factual records contradict the stated meaning of the supplied source field."
+  }
+ ],
+ "self_operating_point_note": "self at m=4 counts an item when all four readings flag and at least one flagging reading's text meets the rule"
+}
