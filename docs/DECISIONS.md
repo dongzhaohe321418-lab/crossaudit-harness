@@ -7673,3 +7673,42 @@ time, and the run cannot say whose failure that is": the measurement found the r
 unmet on this document shape at a rate it bounded with intervals — an association on one
 domain, not a cause — and left the cause to a slice designed to test it, which is what a
 second domain was for.
+
+## D167 — A completion the provider reports as cut off by a token limit is refused at the adapter, not repaired in the parser
+
+**Date:** 2026-10-21. **Branch:** `fix/truncated-output-and-ledger-splitlines`.
+
+**What was wrong.** Both HTTP adapters send `max_tokens=4096` and never read the
+provider's stop signal, and `generator._extract_file_blocks` deliberately accepts a file
+block with no END marker (the "model forgot the closing marker" recovery). A reply stopped
+by the output limit therefore parsed as complete work, and the half-written file was
+applied and committed as the round's deliverable. D165 had already recorded two generator
+replies hitting the 4,096-token ceiling.
+
+RULINGS:
+
+1. **The adapter refuses; the text is never returned.** Anthropic `stop_reason`
+   `max_tokens` (and `model_context_window_exceeded`, on models that report it) and
+   OpenAI-compatible `finish_reason` `length` raise a `ProviderDenial` with category
+   `truncated`, `retryable=False`, in the streaming and non-streaming paths of both
+   adapters (`providers/base.truncated_completion`). Not retryable because the identical
+   request with the identical budget truncates again; the resilience layer still tries the
+   next configured route, then rolls up into `routes_exhausted`, which the build loop
+   records as a parked run with a cycle-side escalation carrying the sentence. The
+   remedies omit `retry`.
+2. **The tolerant parser stays.** With the adapters refusing a reply the provider says was
+   cut off, a missing END marker on a reply that reached the parser is the case the
+   recovery was written for: a reply the provider reports as finished. What this does not
+   cover, stated rather than implied: an OpenAI-compatible origin that reports no
+   `finish_reason` at all is not second-guessed; the `replay` fixture carries no stop
+   signal; the Codex App Server bridge reads only the turn status, and any status other
+   than `completed` already fails closed (no output-limit signal is exposed to it).
+3. **The 4,096 default is not changed here**, and no knob is added. Raising it, or making
+   it per role, is a separate decision with a cost side (open).
+4. **Open:** a truncation parks as a provider wait (`provider_unavailable`), whose
+   remedies are connection-shaped; routing an all-routes-truncated stop to the content
+   remedies (revise the task) is a follow-up, not taken here.
+
+Recorded because a later reader could otherwise remove the parser's END-marker tolerance
+"to be safe" (losing a recovery the suite pins) or add a retry for truncation (which
+cannot succeed with the same budget).

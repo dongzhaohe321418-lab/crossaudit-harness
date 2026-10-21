@@ -5,12 +5,17 @@ import json
 
 from ..errors import ProviderDenial
 from .base import (Reply, egress_check, read_key, request_json, request_stream,
-                   sha256_text, vendor_message)
+                   sha256_text, truncated_completion, vendor_message)
 from .specs import capability_card
 from .streaming import ChunkEmitter, SSELines
 
 BUILTIN_ORIGIN = "https://api.anthropic.com"
 API_VERSION = "2023-06-01"
+
+#: ``stop_reason`` values that mean the model was cut off by a token limit
+#: rather than finishing: the output budget (``max_tokens``) or, on models that
+#: report it, the context window. Either way the text is incomplete.
+TRUNCATED_STOP_REASONS = frozenset({"max_tokens", "model_context_window_exceeded"})
 
 
 def _denial_text(exc: ProviderDenial) -> str:
@@ -63,6 +68,7 @@ class _MessageStream:
         self.blocks: dict[int, str] = {}
         self.usage: dict = {}
         self.request_id: str | None = None
+        self.stop_reason: str | None = None
         self.done = False
 
     def feed(self, raw: bytes) -> None:
@@ -118,6 +124,9 @@ class _MessageStream:
         elif kind == "message_delta":
             if isinstance(data.get("usage"), dict):
                 self.usage.update(data["usage"])
+            delta = data.get("delta") if isinstance(data.get("delta"), dict) else {}
+            if isinstance(delta.get("stop_reason"), str):
+                self.stop_reason = delta["stop_reason"]
         elif kind == "message_stop":
             self.done = True
 
@@ -139,7 +148,7 @@ class _MessageStream:
 
 
 def _stream(url: str, payload: dict, headers: dict, timeout: float, *,
-            repair: bool, on_chunk, on_thinking) -> Reply:
+            repair: bool, on_chunk, on_thinking, max_tokens: int) -> Reply:
     streamed = dict(payload, stream=True)
     parser = _MessageStream(on_chunk, on_thinking)
 
@@ -161,6 +170,8 @@ def _stream(url: str, payload: dict, headers: dict, timeout: float, *,
             retry.pop("temperature", None)
             rid = once(retry)
         text = parser.finish()
+        if parser.stop_reason in TRUNCATED_STOP_REASONS:
+            raise truncated_completion("anthropic", parser.stop_reason, max_tokens)
         if not text.strip():
             raise ProviderDenial("Anthropic returned an empty completion")
         # Residual text is flushed before the explicit terminal event; only the
@@ -203,12 +214,16 @@ def complete(*, model: str, system: str, prompt: str, key_env: str,
     headers = {"x-api-key": read_key(key_env), "anthropic-version": API_VERSION}
     if on_chunk is not None:
         return _stream(url, payload, headers, timeout, repair=card.compat_retry,
-                       on_chunk=on_chunk, on_thinking=on_thinking)
+                       on_chunk=on_chunk, on_thinking=on_thinking,
+                       max_tokens=max_tokens)
     data, rid = _request(url, payload, headers, timeout, repair=card.compat_retry)
     try:
         text = "".join(b.get("text", "") for b in data["content"] if b.get("type") == "text")
     except (KeyError, TypeError) as exc:
         raise ProviderDenial(f"unexpected Anthropic response shape: {exc}") from exc
+    stop_reason = data.get("stop_reason")
+    if isinstance(stop_reason, str) and stop_reason in TRUNCATED_STOP_REASONS:
+        raise truncated_completion("anthropic", stop_reason, max_tokens)
     if not text.strip():
         raise ProviderDenial("Anthropic returned an empty completion")
     return Reply(text=text, request_id=rid or data.get("id"),

@@ -877,6 +877,16 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("provider completion stream ended without a terminal marker",
      "供应商的回复流在没有结束标记的情况下结束了"),
     ("provider returned an empty completion", "供应商返回了空回复"),
+    # providers/base.py truncated_completion — the slot is the vendor id.
+    # The sentence opens with literal words, never the slot: a leading slot would
+    # swallow a composite prefix ("generator provider failure in round …") whole.
+    ("the reply from {} was cut off at a token limit before it finished (stop "
+     "reason {}, output limit {} tokens); the partial reply was discarded and "
+     "nothing from it was used. Ask for a smaller change per round so the whole "
+     "reply fits",
+     "来自 {} 的回复在完成之前被 token 上限截断（停止原因 {}，输出上限 {} 个 token）；"
+     "被截断的回复已丢弃，其中任何内容都没有被使用。请缩小每一轮要求的改动，"
+     "使完整的回复能够容纳在上限之内"),
     ("unexpected chat-completions response shape: {}",
      "chat-completions 返回了意料之外的响应结构：{}"),
     ("unknown provider {}; available: {}", "未知的供应商 {}；可用的有：{}"),

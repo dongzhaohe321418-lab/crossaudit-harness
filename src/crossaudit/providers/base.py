@@ -32,6 +32,27 @@ _STREAM_POLL_S = 0.025
 LOOPBACK = {"localhost", "127.0.0.1", "::1"}
 
 
+def truncated_completion(vendor: str, stop_reason: str,
+                         max_tokens: int) -> ProviderDenial:
+    """The refusal for a completion the provider itself reports as cut off.
+
+    A reply stopped by a token limit (Anthropic ``stop_reason`` ``max_tokens``,
+    OpenAI-compatible ``finish_reason`` ``length``) is not an answer: the
+    generator's file envelope tolerates a missing END marker, so a half file
+    would otherwise be committed as if it were complete. The text is never
+    returned. ``retryable=False`` because the identical request with the
+    identical output budget truncates again; the resilience layer still offers
+    the next configured route, which may be a different model.
+    """
+    return ProviderDenial(
+        f"the reply from {vendor} was cut off at a token limit before it finished "
+        f"(stop reason {stop_reason}, output limit {max_tokens} tokens); the "
+        f"partial reply was discarded and nothing from it was used. Ask for a "
+        f"smaller change per round so the whole reply fits",
+        category="truncated", retryable=False, stop_reason=stop_reason,
+        max_tokens=max_tokens, remediations=provider_remediations("truncated"))
+
+
 def _read_body_within_deadline(resp, deadline: float) -> bytes:
     """Read the response body under BOTH the size cap and a TOTAL wall deadline.
 
