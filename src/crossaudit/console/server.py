@@ -18,7 +18,14 @@ the defences are structural rather than promised:
   cross-site request arrives without the token and is refused — not by
   pretending cookies do not exist.
 * **Host pinned to localhost**, which is what turns away DNS rebinding.
-* **a strict inline-only CSP**, so nothing on the page can fetch or exfiltrate.
+* **a CSP with `default-src 'none'`**: no remote script, style, font, image
+  or frame is loaded, and the only scripts that run are the page's own two
+  `<script>` blocks, pinned by SHA-256 (no `'unsafe-inline'` for scripts, so
+  an injected `<script>` or `on*=` attribute does not execute). What it does
+  NOT do: `connect-src 'self'` lets the page's script call every same-origin
+  API, so script that did run could use them with the page's token; and a CSP
+  does not stop a top-level navigation from carrying data away. The
+  `innerHTML` sinks are kept safe by escaping (`esc`), not by the CSP.
 * **the write surface is an explicit POST allowlist**, not one narrow path.
   What began as `/api/say` alone has grown to two dozen actions, and several
   are consequential: they commit to git, delete projects and their
@@ -77,7 +84,7 @@ from ..runtime import (
     journal_path,
 )
 from . import chats, daemon, overview, projects
-from .page import PAGE
+from .page import PAGE, PAGE_CSP
 from .intake import INTAKE
 from .progress import TRACKER
 from .streams import bundle, legacy_seen
@@ -1277,10 +1284,7 @@ def make_handler(cfg: Config, token: str, touch) -> type:
             self.send_response(200)
             self.send_header("content-type", ctype)
             self.send_header("content-length", str(len(body)))
-            self.send_header("content-security-policy",
-                             "default-src 'none'; style-src 'unsafe-inline'; "
-                             "script-src 'unsafe-inline'; connect-src 'self'; "
-                             "img-src 'self' data:; frame-src 'self'")
+            self.send_header("content-security-policy", PAGE_CSP)
             self.send_header("referrer-policy", "no-referrer")
             self.send_header("x-content-type-options", "nosniff")
             self.end_headers()

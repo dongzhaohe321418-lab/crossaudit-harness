@@ -501,7 +501,9 @@ def test_the_status_line_renders_one_orb_on_the_live_phase_line_en_and_zh():
             assert expected in _unescape(text), (locale, name)
             assert html.count("<canvas") == 1
             # Interruptible always: the one control on the line stops the work.
-            assert "stream-stop" in html and "requestStop()" in html
+            # D170: wired by the delegated click listener, not an inline
+            # onclick (the page CSP no longer allows inline handlers).
+            assert 'class="stream-stop"' in html and "onclick" not in html
 
 
 @node

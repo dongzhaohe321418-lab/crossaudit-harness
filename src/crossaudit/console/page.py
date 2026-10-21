@@ -6156,6 +6156,17 @@ async function openFilePreview(path,trigger){
 document.getElementById('close-file-preview').onclick=closeFilePreview;
 filePreviewModal.addEventListener('click',event=>{if(event.target===filePreviewModal)closeFilePreview();});
 document.addEventListener('click',event=>{const button=event.target.closest('[data-preview]');if(button){event.preventDefault();openFilePreview(button.getAttribute('data-preview'),button);}});
+// D170: rendered markup carries no inline event handlers, so the page CSP can
+// pin its two script blocks by hash instead of allowing 'unsafe-inline'.
+// The stream's Stop button, the approval card's decision buttons and the live
+// draft fold are wired here by delegation. `toggle` does not bubble, hence
+// the capturing listener.
+document.addEventListener('click',event=>{const target=event.target;if(!target||!target.closest)return;
+  if(target.closest('.stream-stop')){requestStop();return;}
+  const decision=target.closest('.approval-card button[data-decision]');
+  if(decision)resolveApproval(decision.getAttribute('data-decision'));});
+document.addEventListener('toggle',event=>{const fold=event.target;
+  if(fold&&fold.matches&&fold.matches('details.draft-fold'))rememberDraftOpen(fold);},true);
 function artifactList(items,status,sha){
   if(!items||!items.length) return '';
   const rows=items.map(f=>outputFile(f,status,'')).join('');
@@ -6735,7 +6746,7 @@ function statusLine(d){
     +orbMarkup(phase,text,'srow-orb')
     +'<span class="stream-status-text">'+esc(text)+'</span>'+bar
     +'<button type="button" class="stream-stop"'+(stopping?' disabled':'')
-    +' onclick="requestStop()" aria-label="'+esc(zh?'停止此任务':'Stop this task')+'">'
+    +' aria-label="'+esc(zh?'停止此任务':'Stop this task')+'">'
     +esc(zh?(stopping?'正在停止…':'停止'):(stopping?'Stopping…':'Stop'))
     +'</button></div>';}
 // D8 / D4, moved onto the stream unchanged: thinking is model text no auditor
@@ -7565,8 +7576,8 @@ function approvalCard(d){
   if(!a || (a.run_id && chatProgress(d) && chatProgress(d).run_id && a.run_id!==chatProgress(d).run_id)) return '';
   const label = {once:'Allow once',run:'Allow this run',project:'Allow this project',deny:'Deny'};
   const buttons = (a.scopes||['once','deny']).map(s =>
-    '<button class="'+(s==='deny'?'deny':'allow')+'" data-decision="'+esc(s)+'" '
-    + 'onclick="resolveApproval(this.getAttribute(\'data-decision\'))">'+esc(label[s]||s)+'</button>').join('');
+    '<button class="'+(s==='deny'?'deny':'allow')+'" data-decision="'+esc(s)+'">'
+    + esc(label[s]||s)+'</button>').join('');
   const facts=[];
   if(a.paths&&a.paths.length) facts.push('<span>Paths <strong>'+esc(a.paths.join(', '))+'</strong></span>');
   if(a.host) facts.push('<span>Host <strong>'+esc(a.host)+'</strong></span>');
@@ -8627,7 +8638,7 @@ function liveDraftTurn(d){
   // unaudited, and the choice of the reader is remembered for this project.
   return '<article class="turn draft"><div class="turn-main">'
     +'<details class="draft-fold"'+(draftOpen(d)?' open':'')
-    +' ontoggle="rememberDraftOpen(this)">'
+    +'>'
     +'<summary class="turn-meta"><span class="role-mark" aria-hidden="true">G</span>'
     +'<b class="draft-label">'+esc(draftSummaryLine(draft))+'</b>'
     +'<span class="spacer"></span><span class="turn-time">'
@@ -10036,3 +10047,29 @@ async function initialReadiness(){
 }
 bootRoute();
 </script></body></html>"""
+
+
+def _script_sources(page: str) -> list[str]:
+    """The exact text of every inline ``<script>`` element, in page order."""
+    import re
+
+    return re.findall(r"<script\b[^>]*>(.*?)</script>", page, re.S | re.I)
+
+
+def _csp_hash(source: str) -> str:
+    import base64
+    import hashlib
+
+    digest = hashlib.sha256(source.encode("utf-8")).digest()
+    return "'sha256-" + base64.b64encode(digest).decode("ascii") + "'"
+
+
+#: D170: the page's Content-Security-Policy allows exactly these scripts --
+#: the vendored orbs engine and the console's own -- by the SHA-256 of their
+#: bytes, computed here from PAGE itself so an edit to either block can never
+#: leave a stale hash behind. No 'unsafe-inline': an injected <script> or
+#: inline handler attribute does not run. Styles stay 'unsafe-inline'.
+PAGE_SCRIPT_HASHES = tuple(_csp_hash(source) for source in _script_sources(PAGE))
+PAGE_CSP = ("default-src 'none'; style-src 'unsafe-inline'; "
+            "script-src " + " ".join(PAGE_SCRIPT_HASHES) + "; connect-src 'self'; "
+            "img-src 'self' data:; frame-src 'self'")

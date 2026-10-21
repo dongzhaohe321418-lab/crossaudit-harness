@@ -26,6 +26,10 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   for a turn, the reply is discarded and the round fails closed with a reason
   naming what was requested, as SECURITY.md already said. Before, the tool was
   blocked but the turn's text was still used (D170).
+- **The console page runs only its own scripts.** Its Content-Security-Policy
+  now allows the two script blocks it ships, by hash, instead of any inline
+  script, so an injected `<script>` or `onclick=` attribute does not execute.
+  The server's description of what the policy guarantees was corrected (D170).
 
 ## 4.17.0 — The activity stream
 
