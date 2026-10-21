@@ -12,6 +12,11 @@ check names, a project can name a profile:
              (advisory). Binds no data format; fits code, docs, web, contracts.
     science  structured-science rigor: schema, units, convergence, provenance
              (inputs that exist and are cited exactly).
+    science-ai4s
+             science plus the AI4S declaration pack: numeric validity,
+             declared ranges, recomputed derivations, split integrity,
+             declared claims (blockers) and reproducibility / precision
+             (advisory). Opt-in by name; `science` is unchanged.
 
 An explicit list is still accepted verbatim, so a project can compose its own mix
 (e.g. the general pack plus ``complete-strict`` to make placeholders hard-fail).
@@ -54,6 +59,19 @@ PROFILES: dict[str, list[str]] = {
     # The general pack plus the opt-in, deterministic citation-provenance check:
     # a report may only cite sources it fetched through a governed research tool.
     "research": ["parseable", "declared", "internal", "complete", "source_provenance"],
+    # The AI4S declaration pack (`dcl/ai4s.py`, `benchmarks/ai4s/DESIGN.md` §4)
+    # is a SEPARATE profile and not an extension of `science`, because a
+    # project that already wrote `checks: science` must not wake up to new
+    # blockers (AGENTS.md §1.2). Every pack check is silent where nothing is
+    # declared, but `complete` and `numeric_validity` are not declaration-gated,
+    # and an existing science increment carrying a `"value": null` or a
+    # leftover TODO would change verdict. It is `science` byte-for-byte plus the
+    # pack, so the arms of the AI4S measurement differ in the pack and nothing
+    # else; `complete` joins because a placeholder left in a science deliverable
+    # is a defect class the measurement counts (D15).
+    "science-ai4s": ["schema", "units", "convergence", "provenance", "number_source",
+                     "complete", "numeric_validity", "range_rules", "derivations",
+                     "split_integrity", "claims", "repro_declared", "precision"],
 }
 
 DEFAULT_PROFILE = "general"
