@@ -246,10 +246,20 @@ def egress_check(url: str, *, builtin_origin: str, allow_custom: bool,
     origin = f"{parts.scheme}://{parts.netloc}"
     host = (parts.hostname or "").lower()
     if parts.scheme != "https":
-        if not (allow_insecure_localhost and host in LOOPBACK):
+        # The old sentence named a `--allow-insecure-localhost` flag that never
+        # existed (D172 ruling 7). What exists: the generation adapters accept
+        # plain HTTP to a loopback host by themselves, and a non-built-in
+        # origin needs `base_url:` plus CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1;
+        # the model-catalogue fetch accepts HTTPS only, even on loopback.
+        if host in LOOPBACK and not allow_insecure_localhost:
+            raise ConfigDenial(
+                f"refusing plaintext {parts.scheme}:// to {host!r}; this request "
+                f"accepts HTTPS only, even on loopback")
+        if host not in LOOPBACK:
             raise ConfigDenial(
                 f"refusing plaintext {parts.scheme}:// to {host!r}; only HTTPS is "
-                f"allowed (loopback needs --allow-insecure-localhost)")
+                f"allowed, except to a loopback address set as `base_url:` with "
+                f"CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1")
     if origin != builtin_origin and not allow_custom:
         raise ConfigDenial(
             f"endpoint {origin} is not this provider's built-in origin "

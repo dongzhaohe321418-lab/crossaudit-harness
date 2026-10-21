@@ -348,10 +348,11 @@ pipx install "git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@mai
 crossaudit --version
 ```
 
-Expected version output:
+Expected version output (the last two fields are the install mode and the path
+the command runs from, so a second, older copy on `PATH` is visible):
 
 ```text
-crossaudit 4.17.0 (receipt schema 2)
+crossaudit 4.17.0 (receipt schema 2) · wheel · /Users/you/.local/bin/crossaudit
 ```
 
 Use a virtual environment instead when developing CrossAudit, testing source
@@ -461,6 +462,11 @@ crossaudit init my-project --no-console \
 The exact model must be available to your provider account. Interactive model
 menus always include a manual-entry option, so CrossAudit does not prevent you
 from using a model released after this package.
+
+When standard input is not a terminal (a script or CI job), `init` cannot
+prompt for keys, so it writes no keys file. Export `CROSSAUDIT_AUDITOR_KEY`
+and `CROSSAUDIT_GENERATOR_KEY` instead. `init` says so in its closing summary,
+and every later command reads the keys from those variables.
 
 #### 2. Check the installation
 
@@ -619,7 +625,11 @@ crossaudit console
 ```
 
 The command starts a local background server, opens the dashboard, and prints a
-tokenized localhost URL. The console shows:
+tokenized localhost URL. It opens the dashboard only when its output is a
+terminal. Pass `--no-open` to print the URL without opening a browser. With
+`--json`, or when output goes to a pipe or a CI log, it never opens one. Running
+`crossaudit console` again reattaches to the running server and opens the same
+URL. The console shows:
 
 - current generator, check, and auditor activity;
 - the latest task and cycle state;
@@ -936,14 +946,21 @@ audit report commit
 receipt commit
 ```
 
-A cycle can end in four meaningful states:
+Each audited round ends in a verdict, which the receipt records in its `verdict`
+field:
 
-| State | Meaning |
+| Verdict | Meaning |
 |---|---|
 | `PASS` | Deterministic checks passed and the independent auditor found no blocker. |
 | `BLOCKED` | At least one objective check or auditor finding prevents acceptance. |
-| `ESCALATED` | The loop cannot make a safe decision and needs a person. |
+| `ESCALATE` | The loop cannot make a safe decision and needs a person. |
 | `DCL_ONLY` | Deterministic checks ran without a model audit; this can never count as PASS. |
+
+`crossaudit status` lists cycles, not rounds. A cycle's state is `OPEN` while a
+round awaits its verdict, `PASSED` after a PASS, `BLOCKED` while a revision is
+due, and `ESCALATED` when it needs a person (an ESCALATE or DCL_ONLY verdict, or
+a spent round budget). It becomes `CONSUMED` once its receipt is admitted, and
+`CLOSED` when a person closes it with `resolve --close`.
 
 The report's `Evidence` section lists every finding with its tier and whether a
 deterministic check verified it, and the receipt binds that list. See
@@ -972,6 +989,14 @@ Change the rules between cycles with:
 crossaudit amend "Every benchmark must include the exact command and random seed"
 ```
 
+`amend` shows the proposed change and asks for confirmation. Without a
+terminal it refuses with exit code `20` instead of guessing. A script that has
+already reviewed the wording passes `--yes`:
+
+```bash
+crossaudit amend --yes "Every benchmark must include the exact command and random seed"
+```
+
 An audit always cites the committed rule version it used. Rules never change in
 the middle of a cycle.
 
@@ -988,15 +1013,20 @@ Choose **Revise and continue** to record correction guidance and unlock another
 audited attempt, or **Stop this task** to retain the current output as unadmitted.
 Both actions require a written explanation and enter the durable ledger.
 
-The equivalent CLI flow is available for automation and advanced users. View
-pending work with `crossaudit status`, then record a decision:
+The equivalent CLI flow works from a terminal. View pending work with
+`crossaudit status`, then record a decision:
 
 ```bash
 crossaudit resolve <cycle-id> --reopen --because "The source file is now available"
 crossaudit resolve <cycle-id> --close --because "The task is no longer required"
 ```
 
-The reason is committed to the ledger. Resolution requires an interactive
+The reason is committed to the ledger. Each ruling appends one line to
+`cycles/rulings.jsonl` (cycle, action, reason, who, and when) in a commit of its
+own, with the reason in the commit message. Lines are never rewritten, so a
+second ruling on the same cycle adds a line. `crossaudit status` lists every
+ruling under its cycle and shows a closed cycle as `CLOSED`. A close also ends
+the run that was waiting for the decision. Resolution requires an interactive
 human terminal and cannot be produced by either model.
 
 ## Configuration
@@ -1065,7 +1095,7 @@ ledger:
 scope:
   dirs: [experiments]
 
-checks: [schema, units, convergence, provenance]
+checks: general        # the default pack; `science` for the laboratory pack
 ```
 
 ### How strict the deterministic layer is (a dial, not the identity)
@@ -1080,7 +1110,7 @@ name** or an explicit list:
 | --- | --- | --- |
 | `off` | core audit chain only | "give me a trustworthy record, never mind format" |
 | `general` (default) | the domain-neutral pack — parses, dangling declarations, broken links (advisory), leftover placeholders (advisory) | code · docs · web · contracts · everyday |
-| `science` | `schema` · `units` · `convergence` · `provenance` | structured computational science |
+| `science` | `schema` · `units` · `convergence` · `provenance` · `number_source` | structured computational science |
 | `research` | the general pack + `source_provenance` | literature reports whose citations must trace to governed retrieval |
 | a list, e.g. `[parseable, declared, complete-strict]` | exactly those checks | a custom mix |
 
@@ -1262,15 +1292,40 @@ offers a compatible request control. Unsupported custom IDs are also kept on
 Automatic so a model switch cannot introduce an avoidable HTTP 400.
 
 Custom origins are denied by default because a base URL controls where the key
-is sent. Opt in only after checking the endpoint:
+is sent. To use one, set `base_url:` on the role in `crossaudit.yml` and opt in
+only after checking the endpoint:
+
+```yaml
+auditor:
+  vendor: other
+  provider: openai_compat
+  model: my-model
+  key_env: CROSSAUDIT_AUDITOR_KEY
+  base_url: https://llm.example.internal/v1
+```
 
 ```bash
 export CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1
 ```
 
+Only HTTPS is accepted, with one exception: a loopback `base_url:` (for example
+`http://127.0.0.1:8080/v1` for a local server) may use plain HTTP. It still
+needs the opt-in.
+
 ## Deterministic checks
 
-The default project enables four objective checks before the model review:
+`crossaudit init` enables the domain-neutral `general` pack by default. It runs
+four objective checks before the model review:
+
+| Check | What it validates |
+|---|---|
+| `parseable` | Every UTF-8 JSON or YAML file parses as its extension promises (blocker). |
+| `declared` | Every local path listed under `inputs`, `sources`, `requires`, or `depends_on` exists in scope (blocker). |
+| `internal` | Every relative Markdown link resolves inside the audited scope (advisory). |
+| `complete` | No leftover TODO, TBD, FIXME, or placeholder text (advisory). |
+
+Structured computational science can opt into the laboratory pack with
+`checks: science` (or `init --profile science`):
 
 | Check | What it validates |
 |---|---|
@@ -1278,6 +1333,10 @@ The default project enables four objective checks before the model review:
 | `units` | Every result quantity declares both a unit and source. |
 | `convergence` | Final results do not claim failed or over-threshold convergence. |
 | `provenance` | Result sources agree with declared inputs and code versions. |
+| `number_source` | Every number a write-up annotates (a `crossaudit-numbers` block, or a `results.json` source citing a line span) appears at the cited location with the same value and unit. |
+
+The [strictness table](#how-strict-the-deterministic-layer-is-a-dial-not-the-identity)
+lists every profile.
 
 `crossaudit init` writes `DETERMINISTIC_CHECKS.md` from the live check
 implementations. The same exact contract is included in the generator prompt,
@@ -1295,6 +1354,15 @@ crossaudit audit --offline
 
 An offline audit returns `DCL_ONLY`, never PASS, because no independent model
 review occurred.
+
+Without `--sha`, `audit` and `run` judge the latest increment: the newest
+commit that changed the configured scope directories. After `build`, `HEAD` is
+the loop's own receipt commit in the ledger, so that commit is skipped. Both
+commands print the commit they chose, and `--json` reports it as `sha`. An
+explicit `--sha` is used as given, and a commit that only touches the ledger is
+refused. Auditing a commit that already has a recorded decision opens a new
+cycle beside the old one and never overwrites it, so an earlier PASS stays
+admissible.
 
 ## Two-repository deployment
 
@@ -1355,6 +1423,12 @@ Exit codes are stable so scripts do not need to parse prose:
 | `20` | Configuration or environment refused the operation. |
 | `21` | Receipt, ledger, manifest, or verifier integrity failure. |
 | `22` | Provider, network, or model request failure. |
+
+`audit` and `run` report one cycle, so a BLOCKED round exits `10`. `build`
+reports the loop's final state instead. It exits `0` on PASS and `22` when the
+run stopped because every provider route failed. Any other escalation exits
+`11`, including a BLOCKED round that used up the round budget and a
+usage-guardrail pause. `crossaudit status` names the cause.
 
 ## Troubleshooting
 

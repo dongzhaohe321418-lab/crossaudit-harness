@@ -1189,6 +1189,42 @@ class RunJournal:
             db.commit()
             return True
 
+    def settle_human_wait(self, run_id: str, detail: str) -> bool:
+        """Record that a person ruled on the stop this run was waiting for.
+
+        WAITING_FOR_HUMAN is a resting state the worker has left, so
+        ``finish`` treats it as terminal; the human's `resolve --close` is the
+        only thing that ends it, by the declared WAITING_FOR_HUMAN ->
+        CANCELLED edge. Exactly once; any other state is left alone.
+        """
+        now = self._clock()
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                "SELECT state FROM runs WHERE run_id=?", (run_id,),
+            ).fetchone()
+            if row is None or _state(row["state"]) != RunState.WAITING_FOR_HUMAN:
+                db.rollback()
+                return False
+            if not _can_move(RunState.WAITING_FOR_HUMAN, RunState.CANCELLED):
+                db.rollback()
+                return False
+            self._insert_event(
+                # The existing cancellation kind, so every surface that
+                # renders a stopped run already knows this row.
+                db, run_id, kind="run_cancelled", actor="user",
+                text="cancelled", detail=detail[:2000], state=RunState.CANCELLED,
+                at=now,
+            )
+            db.execute(
+                "UPDATE runs SET state=?, outcome=?, error=?, updated=?, "
+                "finished=?, lease_expires_at=NULL WHERE run_id=?",
+                (RunState.CANCELLED.value, "cancelled", detail[:2000], now, now,
+                 run_id),
+            )
+            db.commit()
+            return True
+
     def recent(self, limit: int = 20) -> list[dict]:
         """The newest run rows, newest first, without their event streams.
 

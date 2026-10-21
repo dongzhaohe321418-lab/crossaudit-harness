@@ -8022,3 +8022,128 @@ Recorded because three boundaries here are easy to reopen by accident: that a pi
 working-tree check covers exactly the cycle files a receipt digest covers (and why
 `AUDIT_RULES.md` and the project's files are not among them); and that lock
 detection reads the commit, over root plus `scope.dirs`, and is additive.
+## D172 — Where a README command-line flow and the product disagreed, the product now does what the README documents
+
+**Date:** 2026-10-21. **Branch:** `fix/claims-round-1d`.
+
+**What was wrong.** A black-box acceptance run (`benchmarks/claims`, one project per
+README sentence, created by the documented `init` and driven by the documented commands
+against scripted fake providers) found README flows that could not be followed literally.
+Each ruling below names the claim it closes.
+
+RULINGS:
+
+1. **`doctor` writes nothing (C04).** `StateStore.capabilities()` — the admission probe
+   `doctor` and every console snapshot call — took the read-modify-write lock and wrote
+   `state.json` back, creating `.crossaudit/` on a fresh project. It now probes the same
+   `O_EXCL` acquisition on the real lock path when the state directory exists (reading the
+   state, never writing it, so a corrupt state file still reports as unlockable), and
+   before it exists probes `O_EXCL` in the nearest existing ancestor with a transient file
+   it removes. Considered and rejected: probing in the system temp directory (a different
+   filesystem proves nothing about the store's), and reporting `atomic: false` until the
+   directory exists (it would lower a fresh project's tier for no reason). `doctor --fix`
+   keeps its documented writes, and still only on a terminal.
+2. **Without `--sha`, `audit` and `run` judge the latest increment, and a recorded cycle is
+   never overwritten (C10).** After `build`, `HEAD` is the loop's own `audit receipt …`
+   commit, so the README's `build` then `audit --offline` refused with exit 20. The default
+   is now the newest commit (within 200) that changed work by the definition `run` already
+   used (`_increment_paths`: the scope directories, minus rules, configuration, ledger,
+   state, CI and house skills). `audit` prints `auditing <sha> (<subject>) …` before it
+   runs, and `--json` carries `sha` and `sha_source` (`latest_increment`, `explicit`,
+   `head`). An explicit `--sha` is used as given, and a ledger-only one is still refused.
+   Making this the default exposed a data-loss defect that **already existed on `main`
+   with an explicit `--sha`**. A cycle's id is derived from its root sha, and
+   `open_or_advance` had no branch for a PASSED cycle at the same sha. So re-auditing a
+   commit that rooted a cycle (one that later PASSED, or that advanced to a later round)
+   wrote a fresh OPEN cycle over the recorded one: `audit --offline --sha <increment>`
+   after `build` turned a PASSED cycle into an ESCALATED one, and its receipt could no
+   longer be admitted. Now `open_or_advance` never overwrites. On an id collision it
+   derives `cycle_id_for(repo, sha + "\n<attempt>")`, which stays 16 hex because the
+   console's continuation check and progress redaction match that shape. The id is
+   deterministic, so the same command on the same tree always produces the same ids. The
+   new record carries `reaudit_of`, `attempt` and `opened_at`, and `status` lists cycles
+   in opening order with the re-audit after the cycle it follows. The earlier PASS stays
+   admissible: admission is keyed by the receipt's cycle id, and the new DCL_ONLY cycle
+   cannot shadow it (tested by admitting once after the re-audit). Considered and
+   rejected: refusing a re-audit of a PASSED commit as "already has a recorded decision",
+   as D36 clause 2 does for OPEN/BLOCKED cycles and `record_build_escalation` does for
+   PASSED ones. It is equally fail-closed, but the README's flow would exit 20 again, and a
+   deterministic re-check of passed work is a legitimate thing to ask for.
+3. **`build` exits by the loop's final state, from one table (C20).** `run_loop` returns
+   0 or 11 for every stop (the console reads it that way, and that is unchanged). The
+   CLI's exit status now comes from `cli/build.BUILD_EXIT`, keyed by the loop's code and
+   the park kind of the run's final event. That kind is the same value the cycle side
+   records as `escalation_kind`. The rows: PASS is 0. A park because every provider route
+   failed, generator or auditor side, is 22. A usage-guardrail (`budget`) park is 11,
+   because a person raises the limit and nothing failed. Every other escalation is 11,
+   including a BLOCKED round that spent the round budget. There is no 10 row, because a
+   build never ends BLOCKED without escalating, while `audit` and `run` do return 10. Only
+   the final event counts: a park that was followed by more work is not reported as a
+   provider failure. Unlisted codes, such as a refusal raised before the loop, pass
+   through unchanged.
+4. **`--json routing` is always a JSON list (C21).** It is `[]` before anything is
+   routed, the same shape as the populated case, never the human sentence. Considered and
+   rejected: `{"decisions": [...]}`. It would change the populated shape scripts already
+   parse. The other commands the claim names (`status`, `doctor`, `check`, `verify`,
+   including `verify`'s denial path) already printed only JSON on an empty project, and a
+   sweep test now pins that.
+5. **A ruling is committed to the ledger, `status` shows it, and a close reads as closed
+   (C25).** `resolve` kept the reason only in the gitignored `state.json`. Now each ruling
+   (from `resolve`, and from `talk`'s resolve lane, which also said "Your reason is in the
+   ledger") appends one JSON line to `<ledger>/rulings.jsonl` with these fields:
+   `cycle_id`, `action`, `reason`, `by` (the repository's git identity), `t`, `at`,
+   `round`, `active_sha`, `status_after` and `escalation_reason`. That file alone is
+   committed, as `ruling <cycle> <action>: <first line of the reason>`, with the full
+   reason, who and when in the commit body (`src/crossaudit/rulings.py`). The shape
+   copies `routing.jsonl` and `disputes.jsonl`: a flat append-only JSONL beside the
+   receipts, keyed by cycle id. A line is never rewritten, so a second ruling appends,
+   and no existing cycle file is touched. Considered and rejected: a `decision.json` in
+   the round directory. Escalations recorded before any audit (a provider stop in round
+   one) have no round directory, and a per-round file would split one cycle's rulings
+   across directories. `status` (human and `--json`) lists the rulings under their cycle.
+   A closed cycle keeps controller status `BLOCKED` plus `closed_by_human`, because the
+   daemon reconciler and the run command key on both, and is reported as `closed: true`
+   and shown as `CLOSED`. A close also ends the run that was `WAITING_FOR_HUMAN` on that
+   decision, through a new `RunJournal.settle_human_wait`
+   (WAITING_FOR_HUMAN -> CANCELLED, the declared edge, recorded as `run_cancelled`). It
+   picks the run the escalation references, or, for a ladder escalation that carries no
+   reference, the newest run, only when the cycle's last activity does not predate the
+   run's start and the chat matches: the daemon's legacy association rule. The TTY
+   requirement is unchanged. **Open:** the console's decision screen (`console/server.py`,
+   outside this slice) still calls `resolve_escalation` without writing the ledger, so the
+   README's sentence about the app's two actions is not yet true there.
+6. **`crossaudit console` opens the dashboard for a person at a terminal (C28).** It
+   calls `webbrowser.open` on the printed tokenized URL, both when it starts the
+   background server and when it reattaches to one, only when stdout is a terminal. It
+   never opens with `--no-open` (new flag), under `--json`, or from the foreground server
+   process (`--foreground` or the daemon child). The test is stdout's `isatty()`, not
+   whether `BROWSER` or a display is present, so CI, pipes, the suite and other
+   non-interactive callers stay silent without having to know the flag, and a person
+   always gets the page. A failed or refused open prints "Open that URL when you are
+   ready." (the existing catalogue line), and setup is never failed for it.
+7. **Small README/product disagreements, settled toward the product's words unless the
+   product was wrong (C03 and others).** (a) "Deterministic checks" now describes the
+   `general` pack (parseable, declared, internal, complete), which is what `init`
+   writes, as the default, and the `science` pack (schema, units, convergence,
+   provenance, number_source) as `checks: science`. The strictness table's `science`
+   row gains `number_source`, and the configuration example ends `checks: general`.
+   (b) A non-interactive `init` (stdin not a terminal) writes no keys file. Its closing
+   summary now says "No keys file was written: keys are read from
+   CROSSAUDIT_AUDITOR_KEY and CROSSAUDIT_GENERATOR_KEY in the environment", and the
+   README's step 1 says the same. (c) `amend --yes` is documented for scripts, because
+   without a terminal `amend` exits 20. (d) The expected `--version` line shows the real
+   format, `crossaudit 4.17.0 (receipt schema 2) · <mode> · <path>`. (e) **The README
+   changed, not the product.** `status` says `PASSED` because it lists *cycle* states,
+   while `PASS` is a round's *verdict* and is the receipt's `verdict` value. Both words
+   are consistent in their own domain, so the README now has a verdict table (PASS,
+   BLOCKED, ESCALATE, DCL_ONLY) and a separate sentence naming the cycle states (OPEN,
+   PASSED, BLOCKED, ESCALATED, CONSUMED, CLOSED). (f) The plaintext refusal in
+   `providers/base.egress_check` named `--allow-insecure-localhost`, a flag that never
+   existed. It now names what does: a loopback `base_url:` with
+   `CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1` (the generation adapters accept plain HTTP to
+   loopback by themselves). The model-catalogue fetch, which accepts HTTPS only even on
+   loopback, gets its own sentence. Behaviour is unchanged. The README's provider
+   section shows `base_url:` with the variable. **Open:** the custom-origin refusal
+   still says "pass --allow-custom-endpoint", a flag that exists on `audit` and `run`
+   but not on `build`, where only the variable works.
+

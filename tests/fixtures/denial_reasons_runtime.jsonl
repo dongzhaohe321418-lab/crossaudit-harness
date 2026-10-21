@@ -414,3 +414,5 @@
 {"kind": "ProviderDenial", "reason": "the reply from openai was cut off at a token limit before it finished (stop reason length, output limit 4096 tokens); the partial reply was discarded and nothing from it was used. Ask for a smaller change per round so the whole reply fits"}
 {"kind": "ProviderDenial", "reason": "all configured generator provider routes failed. openai:gpt-fixture — the reply from openai was cut off at a token limit before it finished (stop reason length, output limit 4096 tokens); the partial reply was discarded and nothing from it was used. Ask for a smaller change per round so the whole reply fits"}
 {"kind": "LedgerError", "reason": "the evidence ledger does not verify (unparseable entry at line 2); refusing to append onto a damaged chain until it is recovered"}
+{"kind": "ConfigDenial", "reason": "refusing plaintext http:// to 'api.example.com'; only HTTPS is allowed, except to a loopback address set as `base_url:` with CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1"}
+{"kind": "ConfigDenial", "reason": "refusing plaintext http:// to '127.0.0.1'; this request accepts HTTPS only, even on loopback"}

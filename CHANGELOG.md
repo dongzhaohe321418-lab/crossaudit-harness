@@ -76,6 +76,43 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   bound in the receipt; before, only a lock the round itself changed was.
   `crossaudit reproduce` prints each lock's path and sha256 and whether your
   copy still matches it (D171).
+- **`crossaudit doctor` is read-only again.** On a fresh project it created
+  `.crossaudit/state.json` through its admission probe; it now writes nothing
+  unless you run `doctor --fix` in a terminal (D172).
+- **`build` then `audit --offline` (or `run`) works as the README shows.**
+  Without `--sha`, both now judge the latest commit that changed your work
+  instead of the ledger commit `build` leaves at `HEAD`, and say which commit
+  they chose (D172).
+- **Re-auditing a commit no longer overwrites its recorded cycle.** An explicit
+  `audit --sha <commit>` on a commit whose cycle had already PASSED replaced
+  that cycle with a new one, so the earlier receipt could no longer be admitted.
+  The re-audit now opens a new cycle beside the old one, and `status` lists both
+  (D172).
+- **`build` exits 22 when the provider failed.** A build that stopped because
+  every provider route failed (HTTP 5xx, network) exited 11 like any other
+  escalation. It now exits 22, as the README's exit-code table says (D172).
+- **`crossaudit --json routing` prints JSON on a fresh project.** It printed
+  the sentence `no routing decisions recorded yet`. It now prints `[]`, the
+  same list shape it prints once decisions exist (D172).
+- **`crossaudit resolve` commits the ruling, as the README says.** The reason
+  was kept only in the local state file. Each ruling now appends a line to
+  `cycles/rulings.jsonl` in its own commit, with the reason in the commit
+  message. `status` lists every ruling and shows a closed cycle as `CLOSED`, and
+  closing ends the run that was waiting for the decision (D172).
+- **`crossaudit console` opens the dashboard.** The README said it did, but it
+  only printed the URL. Run from a terminal, it now opens the tokenized URL in
+  your browser. `--no-open` prints the URL only, and nothing opens under
+  `--json` or when output is not a terminal (D172).
+- **A non-interactive `init` says where your keys come from.** Without a
+  terminal it cannot prompt for keys and writes no keys file. Its summary now
+  says the keys are read from `CROSSAUDIT_AUDITOR_KEY` and
+  `CROSSAUDIT_GENERATOR_KEY` (D172).
+- **The plain-HTTP refusal names a setting that exists.** It pointed at a
+  `--allow-insecure-localhost` flag that never existed. It now names a loopback
+  `base_url:` with `CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1` (D172).
+- **README corrections.** The default check pack is `general`, `amend --yes`
+  is documented for scripts, the `--version` line is shown as printed, and
+  verdicts (`PASS`) are kept apart from cycle states (`PASSED`) (D172).
 
 ## 4.17.0 — The activity stream
 

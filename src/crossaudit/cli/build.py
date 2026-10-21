@@ -40,7 +40,7 @@ from .. import skills as skills_mod
 from ..config import Config, heterogeneity, load
 from ..controller import StateStore
 from ..dcl import describe as describe_checks
-from ..errors import (EXIT_ESCALATED, EXIT_OK, ConfigDenial, Denial,
+from ..errors import (EXIT_ESCALATED, EXIT_OK, EXIT_PROVIDER, ConfigDenial, Denial,
                       ProviderDenial, park_escalation_kind)
 from ..file_identity import AppliedFiles
 from ..gitio import git, git_bytes, is_repo
@@ -1434,6 +1434,37 @@ def _missing_role_keys(cfg) -> list[str]:
     return missing
 
 
+#: How `crossaudit build` reports the loop's FINAL state (D172 ruling 3). The
+#: loop itself (`run_loop`) returns EXIT_OK or EXIT_ESCALATED for every stop,
+#: and the console reads it that way; only the CLI's exit status separates a
+#: stop that a provider caused. Keyed by (loop code, park kind), where the
+#: park kind is the ``waiting_reason.kind`` of the run's final event --
+#: the same value the cycle side records as ``escalation_kind``
+#: (``errors.park_escalation_kind``) -- or "" when the run did not park.
+#:
+#: - PASS                                   -> 0
+#: - parked: every provider route failed    -> 22 (README: provider failure)
+#: - parked: a usage guardrail (budget)     -> 11 (a person raises the limit)
+#: - any other escalation, including a
+#:   BLOCKED round that spent the budget    -> 11 (`status` names the cause)
+#:
+#: There is no "10" row: a build never ends BLOCKED without escalating -- a
+#: BLOCKED round either goes back to the generator or, on the last round,
+#: escalates. `audit` and `run` report one cycle and do return 10.
+BUILD_EXIT: dict[tuple[int, str], int] = {
+    (EXIT_OK, ""): EXIT_OK,
+    (EXIT_ESCALATED, "provider"): EXIT_PROVIDER,
+    (EXIT_ESCALATED, "budget"): EXIT_ESCALATED,
+    (EXIT_ESCALATED, ""): EXIT_ESCALATED,
+}
+
+
+def build_exit_code(loop_code: int, park_kind: str = "") -> int:
+    """The exit status for a finished build; anything unlisted passes through."""
+    return BUILD_EXIT.get((loop_code, park_kind or ""),
+                          BUILD_EXIT.get((loop_code, ""), loop_code))
+
+
 def cmd_build(args) -> int:
     _i18n.set_language(getattr(args, "lang", "en") or "en")
     _i18n.reset_fallbacks()
@@ -1444,6 +1475,8 @@ def cmd_build(args) -> int:
     #: Whether any round reached the auditor. Nothing reaching it means nothing
     #: was committed, which is what makes the closing sentence true.
     produced: set[str] = set()
+    #: The final event's park kind; a later event that does not park clears it.
+    final_park: list[str] = [""]
     prepared_task = resolve_task(cfg, args.words)
 
     def prepare() -> PreparedRun:
@@ -1464,6 +1497,7 @@ def cmd_build(args) -> int:
 
         def on_event(event: RunEvent) -> None:
             emit(event)
+            final_park[0] = str((event.waiting_reason or {}).get("kind", "") or "")
             # The source-mode console consumes chunks through named SSE events.
             # A raw edit envelope on stdout has no live-draft affordance yet, so
             # the CLI keeps its existing phase narration rather than presenting
@@ -1503,6 +1537,7 @@ def cmd_build(args) -> int:
 
     code = service.start(prepare, worker, background=False)
     assert isinstance(code, int)
+    code = build_exit_code(code, final_park[0])
     if code == EXIT_OK:
         print("\n  " + t("build.done"))
         print("  " + t("build.done.read"))
