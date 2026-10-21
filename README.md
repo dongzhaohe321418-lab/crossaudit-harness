@@ -619,7 +619,11 @@ crossaudit console
 ```
 
 The command starts a local background server, opens the dashboard, and prints a
-tokenized localhost URL. The console shows:
+tokenized localhost URL. It opens the dashboard only when its output is a
+terminal. Pass `--no-open` to print the URL without opening a browser. With
+`--json`, or when output goes to a pipe or a CI log, it never opens one. Running
+`crossaudit console` again reattaches to the running server and opens the same
+URL. The console shows:
 
 - current generator, check, and auditor activity;
 - the latest task and cycle state;

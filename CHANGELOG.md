@@ -39,6 +39,10 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   `cycles/rulings.jsonl` in its own commit, with the reason in the commit
   message. `status` lists every ruling and shows a closed cycle as `CLOSED`, and
   closing ends the run that was waiting for the decision (D172).
+- **`crossaudit console` opens the dashboard.** The README said it did, but it
+  only printed the URL. Run from a terminal, it now opens the tokenized URL in
+  your browser. `--no-open` prints the URL only, and nothing opens under
+  `--json` or when output is not a terminal (D172).
 
 ## 4.17.0 — The activity stream
 

@@ -1594,6 +1594,7 @@ def cmd_console(args: argparse.Namespace) -> int:
         print(f"\n  A console is already running for this project (pid "
               f"{running['pid']}).\n  {daemon.url_for(running)}\n\n"
               f"  Stop it with `crossaudit console --stop`.", flush=True)
+        _open_dashboard(args, daemon.url_for(running))
         return EXIT_OK
 
     if not args.foreground:
@@ -1606,6 +1607,7 @@ def cmd_console(args: argparse.Namespace) -> int:
               "  It keeps running when you close this window, and a build keeps\n"
               "  going with it. Come back with `crossaudit console` for the URL,\n"
               "  or end it with `crossaudit console --stop`.", flush=True)
+        _open_dashboard(args, daemon.url_for(info))
         return EXIT_OK
 
     # Foreground: this is the process the daemon actually runs.
@@ -1635,6 +1637,44 @@ def cmd_console(args: argparse.Namespace) -> int:
         # the one record that could find this process, before it had died.
         daemon.clear_run(cfg)
     return EXIT_OK
+
+
+def _should_open_browser(args: argparse.Namespace) -> bool:
+    """The rule for `crossaudit console` opening the dashboard (D172 ruling 6).
+
+    Open only for a person at a terminal: never with ``--no-open``, never
+    under ``--json`` (a script asked for data), never from the foreground
+    server process (that is the daemon child, or someone who chose to keep
+    the server in this window), and only when stdout is a terminal -- so
+    CI, pipes, the test suite and every non-interactive caller stay silent
+    without having to know about the flag.
+    """
+    if getattr(args, "no_open", False) or getattr(args, "json", False):
+        return False
+    if getattr(args, "foreground", False) or os.environ.get("CROSSAUDIT_CONSOLE_CHILD"):
+        return False
+    try:
+        return sys.stdout.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
+def _open_dashboard(args: argparse.Namespace, url: str) -> bool:
+    """Hand the printed, tokenized URL to the browser when the rule allows."""
+    if not _should_open_browser(args):
+        return False
+    import webbrowser
+
+    try:
+        # webbrowser can hand a URL to a text browser or block on a headless
+        # box, so it gets its own guard rather than the benefit of the doubt
+        # (the same guard `init`'s console tail uses).
+        opened = bool(webbrowser.open(url))
+    except Exception:                                        # noqa: BLE001
+        opened = False
+    print("  " + i18n.t("console.opened" if opened else "console.open_yourself"),
+          flush=True)
+    return opened
 
 
 def _cmd_pair(args: argparse.Namespace) -> int:
@@ -2236,12 +2276,17 @@ def build_parser() -> argparse.ArgumentParser:
     sk.add_argument("--new", metavar="NAME", help="write a starter skill")
     sk.set_defaults(func=cmd_skills)
 
-    co = sub.add_parser("console", help="the dashboard in a browser; runs in the background")
+    co = sub.add_parser("console", help="the dashboard in a browser; runs in the background "
+                        "and opens it when run from a terminal")
     co.add_argument("--port", type=int, default=0, help="0 picks a free port")
     co.add_argument("--foreground", action="store_true",
                     help="run here and stop when this window closes")
     co.add_argument("--stop", action="store_true", help="stop the running console")
     co.add_argument("--status", action="store_true", help="is one running?")
+    co.add_argument("--no-open", action="store_true",
+                    help="print the URL without opening a browser (the browser "
+                         "opens only when output is a terminal and --json is "
+                         "not given)")
     co.set_defaults(func=cmd_console)
 
     pr = sub.add_parser("pair", help="create the two repositories (plan, then --apply)")

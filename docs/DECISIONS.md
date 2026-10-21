@@ -7837,4 +7837,13 @@ RULINGS:
    requirement is unchanged. **Open:** the console's decision screen (`console/server.py`,
    outside this slice) still calls `resolve_escalation` without writing the ledger, so the
    README's sentence about the app's two actions is not yet true there.
+6. **`crossaudit console` opens the dashboard for a person at a terminal (C28).** It
+   calls `webbrowser.open` on the printed tokenized URL, both when it starts the
+   background server and when it reattaches to one, only when stdout is a terminal. It
+   never opens with `--no-open` (new flag), under `--json`, or from the foreground server
+   process (`--foreground` or the daemon child). The test is stdout's `isatty()`, not
+   whether `BROWSER` or a display is present, so CI, pipes, the suite and other
+   non-interactive callers stay silent without having to know the flag, and a person
+   always gets the page. A failed or refused open prints "Open that URL when you are
+   ready." (the existing catalogue line), and setup is never failed for it.
 
