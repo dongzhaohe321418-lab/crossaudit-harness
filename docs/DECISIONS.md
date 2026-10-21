@@ -7746,3 +7746,26 @@ RULINGS:
 Recorded because the escaping choice is a boundary a later reader could reopen (switching
 to `ensure_ascii=True` "for safety" changes bytes on disk for every Chinese payload), and
 because "append refuses a damaged chain" is now a contract the receipt path relies on.
+
+## D172 — Where a README command-line flow and the product disagreed, the product now does what the README documents
+
+**Date:** 2026-10-21. **Branch:** `fix/claims-round-1d`.
+
+**What was wrong.** A black-box acceptance run (`benchmarks/claims`, one project per
+README sentence, created by the documented `init` and driven by the documented commands
+against scripted fake providers) found README flows that could not be followed literally.
+Each ruling below names the claim it closes.
+
+RULINGS:
+
+1. **`doctor` writes nothing (C04).** `StateStore.capabilities()` — the admission probe
+   `doctor` and every console snapshot call — took the read-modify-write lock and wrote
+   `state.json` back, creating `.crossaudit/` on a fresh project. It now probes the same
+   `O_EXCL` acquisition on the real lock path when the state directory exists (reading the
+   state, never writing it, so a corrupt state file still reports as unlockable), and
+   before it exists probes `O_EXCL` in the nearest existing ancestor with a transient file
+   it removes. Considered and rejected: probing in the system temp directory (a different
+   filesystem proves nothing about the store's), and reporting `atomic: false` until the
+   directory exists (it would lower a fresh project's tier for no reason). `doctor --fix`
+   keeps its documented writes, and still only on a terminal.
+

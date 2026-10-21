@@ -16,6 +16,9 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   unverifiable and let the next appends fork the chain. Ledgers already written
   that way verify again, and an append onto a ledger that does not verify is now
   refused instead of forking it (D168).
+- **`crossaudit doctor` is read-only again.** On a fresh project it created
+  `.crossaudit/state.json` through its admission probe; it now writes nothing
+  unless you run `doctor --fix` in a terminal (D172).
 
 ## 4.17.0 — The activity stream
 
