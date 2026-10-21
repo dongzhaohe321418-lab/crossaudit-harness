@@ -846,10 +846,23 @@ crossaudit verify cycles/<cycle>/receipt.json --admit
 
 Admission is intentionally one-time. Reusing the same receipt is refused.
 
-Dry-run verification reports three distinct claims: `BINDINGS VERIFIED` means
-the receipt still matches its commit, Constitution, report, and report verdict;
-`RECORDED` means the controller observed that exact receipt; `ADMISSION READY`
-means it is also the latest unconsumed PASS. Only `--admit` consumes it.
+Dry-run verification reports distinct claims, one per line. `BINDINGS VERIFIED`
+means the committed record still matches: the audited commit and tree, every
+manifest file at that commit, the Constitution at its pinned commit, and the
+report as stored at the report commit the receipt names, with its verdict.
+`SIGNED` / `UNSIGNED` is the signature (below). `RECORDED` means the controller
+observed that exact receipt. `WORKING TREE MATCHES` means the cycle files on
+disk whose digest the receipt carries — `report.md`, and `reproduction.json`
+when the receipt has a reproduction block — are byte for byte the audited ones.
+A copy that differs (edited, or edited and committed on top) prints `WORKING
+TREE DRIFTED` and is refused with exit 21 naming the file, because the text a
+person opens is then not the text the audit produced. `checks.json` and
+`findings.json` are not covered by any receipt digest and are not checked; the
+project's own files and `AUDIT_RULES.md` are checked at their commits, since the
+working tree legitimately moves on after an audit. To verify the record alone,
+pass `--record-only`: the drift line is still printed, but not refused.
+`ADMISSION READY` means it is also the latest unconsumed PASS. Only `--admit`
+consumes it.
 
 #### Signed, externally verifiable receipts
 

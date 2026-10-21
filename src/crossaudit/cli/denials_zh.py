@@ -1067,6 +1067,13 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("a public key was pinned but the receipt carries no signature sidecar "
      "(receipt.dsse.json); a pinned verification requires a signature by that key",
      "已指定公钥，但收据旁没有签名文件（receipt.dsse.json）；指定公钥的验证要求有该密钥的签名"),
+    ("the report on disk is not the audited report: {} does not match the digest "
+     "the receipt binds (verify --record-only checks the committed record alone)",
+     "磁盘上的报告不是受审的报告：{} 与收据绑定的摘要不符（verify --record-only 只检查已提交的记录）"),
+    ("the reproduction bundle on disk is not the audited bundle: {} does not match "
+     "the digest the receipt binds (verify --record-only checks the committed "
+     "record alone)",
+     "磁盘上的复现包不是受审的复现包：{} 与收据绑定的摘要不符（verify --record-only 只检查已提交的记录）"),
     # ------------------------------------------------------------ router.py
     ("router returned an unknown lane {}", "路由器返回了未知的通道 {}"),
     ("name a recipient and include the instruction after it",

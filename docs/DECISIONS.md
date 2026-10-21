@@ -7786,3 +7786,29 @@ RULINGS:
       Additive: verification binds the statement's subject digest (the whole
       receipt), never the predicate, so envelopes minted with the empty fields
       still verify — tested by signing with the old `_predicate` verbatim.
+
+2. **The file on disk (C15).** `verify` re-reads `report.md` at the bound
+   `report_commit`, which is right for the record and silent about the file a person
+   opens: a byte flipped in `cycles/<id>/report.md`, uncommitted or committed on top,
+   still printed `BINDINGS VERIFIED`, exit 0. Now, after the record verifies,
+   `receipt/verify.working_tree_drift` compares the on-disk copy of every cycle file
+   whose digest the receipt carries — `report.md` (`ledger.report_sha256`) and
+   `reproduction.json` (`reproduction.bundle_sha256`, over canonical JSON, so
+   whitespace is not drift) — and `crossaudit verify` refuses a drifted one with exit
+   21 naming it. A file that is not on disk is reported (`WORKING TREE NOT ON DISK`),
+   not refused: nobody reads a wrong text from a file that is not there.
+   a. `BINDINGS VERIFIED` keeps its meaning (the committed record); the new fact is
+      its own line, `WORKING TREE MATCHES` / `WORKING TREE DRIFTED`, the fourth
+      after the bindings, signature and record lines.
+   b. **`--record-only`** verifies the record alone: the drift line is still
+      printed, with "(--record-only: …)", and does not refuse. Chosen over
+      `--ignore-working-tree` because it names what IS checked.
+   c. Not checked, by decision: `checks.json` and `findings.json` (no receipt digest
+      covers them — the comment at their write site says so), `sources.json` (bound
+      only through its source-id set), and the project's files and `AUDIT_RULES.md`,
+      which the receipt binds at their commits; the working tree legitimately moves
+      on after an audit, and `test_working_tree_constitution_drift_does_not_change_pinned_receipt`
+      pins that a later rulebook does not invalidate an earlier receipt.
+   d. Left open: the check lives in the CLI verb; `verify()` (used by admission in
+      the console) is unchanged, so the console's admit path does not yet compare
+      the on-disk report.

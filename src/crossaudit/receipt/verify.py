@@ -582,6 +582,74 @@ def verify(receipt: dict, *, science_root: Path, audit_root: Path,
     }
 
 
+#: The cycle files whose digest a receipt carries, and what each one is called
+#: when it is refused. Only these: ``checks.json`` and ``findings.json`` sit in
+#: the same directory but no receipt digest covers them, ``sources.json`` is
+#: bound only through its source-id set, and ``AUDIT_RULES.md`` /
+#: the manifest files are the project's living tree, which legitimately moves
+#: on after an audit (the receipt binds them at their commits instead).
+_BOUND_CYCLE_FILES = (
+    ("report.md",
+     "the report on disk is not the audited report: {} does not match the "
+     "digest the receipt binds (verify --record-only checks the committed "
+     "record alone)"),
+    ("reproduction.json",
+     "the reproduction bundle on disk is not the audited bundle: {} does not "
+     "match the digest the receipt binds (verify --record-only checks the "
+     "committed record alone)"),
+)
+
+
+def working_tree_drift(receipt: dict, *, audit_root: Path) -> list[dict]:
+    """Compare the ON-DISK copy of every cycle file the receipt binds with the
+    digest it binds. Read-only; never raises on a divergence — the caller
+    decides (``crossaudit verify`` refuses unless ``--record-only``).
+
+    :func:`verify` re-reads ``report.md`` at the bound ``report_commit``, which
+    is right for the record and says nothing about the file a person opens: a
+    byte flipped in the working tree, or committed on top, still verified. This
+    is the check for that file. Returns one row per bound file:
+    ``{"path", "state", "refusal"}`` with state ``match``, ``drifted`` or
+    ``absent`` (not on disk, so nothing anyone reads disagrees with the record)
+    and the sentence a refusal of that file would carry.
+    """
+    ledger = receipt["ledger"]
+    cycle_rel = str(ledger["cycle_path"]).rstrip("/")
+    cycle_dir = audit_root / cycle_rel
+    rows: list[dict] = []
+    for name, refusal in _BOUND_CYCLE_FILES:
+        if name == "report.md":
+            expected = str(ledger["report_sha256"])
+        else:
+            block = receipt.get("reproduction")
+            if block is None:
+                continue
+            expected = str(block["bundle_sha256"])
+        path = cycle_dir / name
+        rel = f"{cycle_rel}/{name}"
+        row = {"path": rel, "refusal": refusal.format(rel)}
+        if not path.is_file():
+            rows.append({**row, "state": "absent"})
+            continue
+        try:
+            data = path.read_bytes()
+        except OSError:
+            rows.append({**row, "state": "drifted"})
+            continue
+        if name == "report.md":
+            actual = _sha256(data)
+        else:
+            # The sidecar is pretty-printed; its digest is taken over the
+            # canonical form, exactly as the receipt's bundle_sha256 was.
+            from . import reproduction
+            try:
+                actual = reproduction.bundle_digest(json.loads(data.decode("utf-8")))
+            except (ValueError, UnicodeDecodeError):
+                actual = ""
+        rows.append({**row, "state": "match" if actual == expected else "drifted"})
+    return rows
+
+
 def admit(receipt: dict, store: StateStore, evidence: dict,
           cfg: Config | None = None) -> dict:
     """Consume the receipt once, in the controller's lock.

@@ -33,6 +33,7 @@ from ..receipt import load as load_receipt
 from ..receipt import verify as verify_receipt
 from ..receipt.sign import sign_receipt
 from ..receipt.verify import admit as admit_receipt
+from ..receipt.verify import working_tree_drift
 from ..receipt import reproduction as _reproduction
 from ..receipt import sources as _sources
 from . import i18n, tui, wizard
@@ -1223,6 +1224,26 @@ def _signature_refusal(sig: dict, pinned: bool) -> str:
     return ""
 
 
+def _drift_line(rows: list[dict], record_only: bool) -> tuple[str, str]:
+    """The working-tree line of ``verify``, and the refusal it implies ("" for
+    none). ``BINDINGS VERIFIED`` keeps meaning the committed record; this line
+    is about the copy a person opens."""
+    drifted = [r for r in rows if r["state"] == "drifted"]
+    present = [r for r in rows if r["state"] == "match"]
+    if drifted:
+        names = ", ".join(r["path"] for r in drifted)
+        line = (f"\nWORKING TREE DRIFTED  {names} on disk "
+                f"{'is' if len(drifted) == 1 else 'are'} not the audited bytes")
+        if record_only:
+            return line + " (--record-only: the record alone was verified)", ""
+        return line, drifted[0]["refusal"]
+    if present:
+        names = ", ".join(r["path"] for r in present)
+        return f"\nWORKING TREE MATCHES  {names} on disk are the audited bytes", ""
+    return ("\nWORKING TREE NOT ON DISK  no file the receipt binds is checked out "
+            "here; the record alone was verified"), ""
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     cfg = load()
     path = Path(args.receipt).resolve()
@@ -1230,9 +1251,10 @@ def cmd_verify(args: argparse.Namespace) -> int:
     # Parsed before anything is re-derived: a wrong key file is a configuration
     # problem, and it must not be reported after a page of verified bindings.
     pin = _pinned_public_key(args.pubkey) if getattr(args, "pubkey", None) else None
+    audit_root = Path(args.audit_root or cfg.root).resolve()
     evidence = verify_receipt(
         receipt, science_root=Path(args.science_root or cfg.root).resolve(),
-        audit_root=Path(args.audit_root or cfg.root).resolve(),
+        audit_root=audit_root,
         expect_repo=args.expect_repo or cfg.science_repo,
         expect_sha=args.expect_sha or receipt["subject"]["sha"], cfg=cfg)
     digest = evidence["receipt_digest"]
@@ -1252,12 +1274,23 @@ def cmd_verify(args: argparse.Namespace) -> int:
     sig_refusal = _signature_refusal(sig, pin is not None)
     if sig_refusal:
         ready = False
+    # D171: the committed record verified; now the copy on disk a person reads.
+    record_only = bool(getattr(args, "record_only", False))
+    drift_rows = working_tree_drift(receipt, audit_root=audit_root)
+    drift_line, drift_refusal = _drift_line(drift_rows, record_only)
+    if drift_refusal:
+        ready = False
     out = {"verified": True, **evidence, "recorded": recorded,
            "latest_recorded_receipt": latest, "admission_ready": ready,
            "admitted": False, "signed": sig["signed"],
            "signature_verified": sig["verified"],
            "signature_pinned": pin is not None,
-           "signature_keyid": sig["keyid"], "signature_reason": sig["reason"]}
+           "signature_keyid": sig["keyid"], "signature_reason": sig["reason"],
+           "working_tree": {"record_only": record_only,
+                            "files": [{"path": r["path"], "state": r["state"]}
+                                      for r in drift_rows],
+                            "matches": not any(r["state"] == "drifted"
+                                               for r in drift_rows)}}
     sig_line = ("\nSIGNED  " + sig["keyid"] + "  verifiable offline with the "
                 "project public key" if sig["verified"]
                 else "\nSIGNATURE INVALID  " + sig["reason"] if sig["signed"]
@@ -1274,13 +1307,22 @@ def cmd_verify(args: argparse.Namespace) -> int:
                               signature_keyid=sig["keyid"],
                               signature_reason=sig["reason"],
                               signature_pinned=pin is not None)
+    recorded_line = ("\nRECORDED  controller history contains this exact receipt"
+                     if recorded else
+                     "\nUNRECORDED  controller history does not contain this receipt")
+    if drift_refusal:
+        if not args.json:
+            print(head + sig_line + recorded_line + drift_line
+                  + "\nREFUSED  nothing consumed")
+        raise IntegrityDenial(
+            drift_refusal, drifted=[r["path"] for r in drift_rows
+                                    if r["state"] == "drifted"])
     if args.admit:
         out.update(admit_receipt(receipt, _state(cfg), evidence, cfg=cfg))
     human = (head
              + sig_line
-             + ("\nRECORDED  controller history contains this exact receipt"
-                if recorded else
-                "\nUNRECORDED  controller history does not contain this receipt")
+             + recorded_line
+             + drift_line
              + _derivation_lines(evidence)
              + ("\nADMISSION READY  latest recorded PASS"
                 if ready and not args.admit else "")
@@ -2134,7 +2176,11 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--expect-repo")
     v.add_argument("--expect-sha")
     v.add_argument("--pubkey", help="a public-key PEM to pin the signature "
-                                    "against (third-party offline verification)")
+                                    "against (third-party offline verification); "
+                                    "a pinned receipt must be signed by it")
+    v.add_argument("--record-only", action="store_true",
+                   help="verify the committed record alone; report, but do not "
+                        "refuse, cycle files on disk that differ from it")
     v.set_defaults(func=cmd_verify)
 
     ek = sub.add_parser("export-pubkey",

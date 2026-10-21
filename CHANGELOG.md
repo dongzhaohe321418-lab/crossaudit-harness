@@ -24,6 +24,12 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   pinned `--pubkey` verification refuses a receipt with no signature. The signed
   statement now carries the receipt's verdict and report digest, which it left
   empty; signatures made before still verify (D171).
+- **`crossaudit verify` checks the report you would open, not only the
+  committed one.** A `report.md` (or `reproduction.json`) on disk that differs
+  from the bytes the receipt binds — edited, or edited and committed on top —
+  now prints `WORKING TREE DRIFTED` and is refused with exit 21 naming the file;
+  before, it still printed `BINDINGS VERIFIED`. `--record-only` verifies the
+  committed record alone and still prints the drift line (D171).
 
 ## 4.17.0 — The activity stream
 
