@@ -414,11 +414,14 @@ def cmd_routing(args) -> int:
     """Open the box: every decision the router ever made."""
     cfg = load()
     rows = router_mod.history(_routing_path(cfg), limit=args.limit)
+    # `--json` is a contract with a parser: the same shape (a list of
+    # decisions) whether or not anything was routed yet. The empty case used
+    # to print the human sentence, which no parser can read (D172 ruling 4).
+    if getattr(args, "json", False):
+        print(json.dumps(rows, indent=2, ensure_ascii=False))
+        return 0
     if not rows:
         print("no routing decisions recorded yet")
-        return 0
-    if args.json:
-        print(json.dumps(rows, indent=2, ensure_ascii=False))
         return 0
     print(f"{'lane':<11}{'conf':>6}  utterance / what was done")
     print("-" * 76)

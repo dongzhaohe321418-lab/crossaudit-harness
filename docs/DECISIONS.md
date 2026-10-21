@@ -7806,4 +7806,10 @@ RULINGS:
    the final event counts: a park that was followed by more work is not reported as a
    provider failure. Unlisted codes, such as a refusal raised before the loop, pass
    through unchanged.
+4. **`--json routing` is always a JSON list (C21).** It is `[]` before anything is
+   routed, the same shape as the populated case, never the human sentence. Considered and
+   rejected: `{"decisions": [...]}`. It would change the populated shape scripts already
+   parse. The other commands the claim names (`status`, `doctor`, `check`, `verify`,
+   including `verify`'s denial path) already printed only JSON on an empty project, and a
+   sweep test now pins that.
 
