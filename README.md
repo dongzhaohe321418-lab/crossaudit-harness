@@ -1541,6 +1541,27 @@ Read the newest `cycles/*/report.md`. If the finding is objective, fix the
 artefact or let the next generator round do so. If the rule or finding requires
 human judgement, let the cycle escalate and use `crossaudit resolve`.
 
+## What has been checked, and what has not
+
+Every capability sentence in this README is a row in
+[`benchmarks/claims/CLAIMS.md`](benchmarks/claims/CLAIMS.md), and
+[`benchmarks/claims/run.py`](benchmarks/claims/run.py) installs the package the
+way this file says, drives the documented commands with two fake provider
+servers on loopback (only the model's text is faked), and records PASS, FAIL or
+PARTIAL with evidence. The latest results are committed beside it as
+`RESULTS-<ref>.md`, and [`LOOP.md`](benchmarks/claims/LOOP.md) says what each
+round fixed and what it cost.
+
+What that harness cannot reach, so a reader has to verify by other means: the
+macOS application itself (a DMG and a person at the screen, walked through
+[`docs/UX_TEST_PLAN.md`](docs/UX_TEST_PLAN.md)); the two-repository GitHub
+flow (an account); SSH, Slurm and MCP servers (a host); the benchmark sentences
+above (the archived runs and their cross-vendor review in
+[`benchmarks/`](benchmarks/CORRECTIONS.md)); and whether the auditor catches
+real defects in real work, which depends on live models and is measured, where
+it can be, in [`benchmarks/ai4s/`](benchmarks/ai4s/RESULTS.md) on the
+deterministic layer and left to a paid run for the model layer.
+
 ## Security model and limitations
 
 CrossAudit improves traceability and separation; it does not turn model output
