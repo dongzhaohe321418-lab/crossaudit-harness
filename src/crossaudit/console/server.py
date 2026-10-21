@@ -2046,7 +2046,10 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                     return
                 if parsed.path == "/api/escalation":
                     current = self._config()
-                    store = StateStore(
+                    # Its own name: `store` is an AuthorizationStore in the
+                    # /api/authorization branch of this same method, and the
+                    # shared name read to mypy as a call on that type (D169).
+                    state_store = StateStore(
                         current.root / current.state_dir / "state.json")
                     cycle_id = str(payload.get("cycle_id", ""))
                     action = str(payload.get("action", ""))
@@ -2062,7 +2065,7 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                             self._send(json.dumps(blocked).encode(),
                                        "application/json")
                             return
-                        prior = store.cycle(cycle_id)
+                        prior = state_store.cycle(cycle_id)
                         prior_kind = (str(prior.get("escalation_kind") or "")
                                       or classify_escalation_kind(
                                           str(prior.get("escalation_reason", "")))
@@ -2078,21 +2081,21 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                                 "composer and choose Revise and continue")
                         reason = (reason.strip() or
                                   "Retry after reviewing the provider connection.")
-                        result = store.resolve_escalation(
+                        result = state_store.resolve_escalation(
                             cycle_id, "reopen", reason)
                         try:
                             started = start_build(
                                 current, task, chat_id=str(prior.get("chat_id", "")),
                                 continuation_cycle=cycle_id)
                         except Denial as exc:
-                            store.escalate(
+                            state_store.escalate(
                                 cycle_id,
                                 f"generator provider failure retry could not start: "
                                 f"{exc.reason}",
                                 task=task, kind="provider")
                             raise
                     else:
-                        result = store.resolve_escalation(
+                        result = state_store.resolve_escalation(
                             cycle_id, action, reason)
                         started = None
                         if action == "close":

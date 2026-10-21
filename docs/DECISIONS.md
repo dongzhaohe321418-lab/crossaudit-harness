@@ -7834,3 +7834,19 @@ RULINGS:
    a locale is exactly the looseness it refuses; the generator can write `1.5`. The same
    function reads numbers out of source spans, so a source token with invalid grouping
    (`1234,567`) no longer matches anything; that can only turn a pass into a block.
+5. **F5 — The escalation ruling's `store.resolve_escalation` was a mypy false positive;
+   the variable is renamed and the path is pinned end to end.** In `console/server.py`
+   `do_POST`, `store` is an `AuthorizationStore` in the `/api/authorization` branch and is
+   rebound to a `StateStore` at the top of the `/api/escalation` branch; every branch
+   returns, so no request reaches `resolve_escalation` on the wrong object. mypy types a
+   name by its first binding in the function, hence the report. The escalation branch now
+   calls its variable `state_store` (no behaviour change), and a test drives `close` and
+   `reopen` through the tokened HTTP boundary after an `/api/authorization` request on the
+   same server, recording that `StateStore.resolve_escalation` is what answered. mypy is
+   not installed in this environment, so the absence of the warning was not re-measured;
+   the rename removes the name it was keyed on.
+
+Recorded because three of these settle boundaries a later reader could reopen by
+accident: what counts as an input the auditor saw (ruling 2), which loopback calls may
+ignore the user's proxy (ruling 1), and what a comma in a transcribed number means
+(ruling 4).
