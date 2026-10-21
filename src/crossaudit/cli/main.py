@@ -1385,7 +1385,7 @@ def _run_summary(cfg: Config) -> dict | None:
     elif state == "PROVIDER_UNAVAILABLE":
         waiting = row.get("waiting_reason") or {}
         note = str(waiting.get("detail") or "waiting for a provider")[:80]
-    elif state in ("INTERRUPTED", "FAILED"):
+    elif state in ("INTERRUPTED", "FAILED", "CANCELLED"):
         note = str(row.get("error", ""))[:80]
     return {"run_id": row["run_id"], "state": state,
             "outcome": row.get("outcome", ""),
@@ -1404,6 +1404,9 @@ def cmd_status(args: argparse.Namespace) -> int:
         cid, c = item
         return (int(c.get("opened_at") or 0), int(c.get("attempt") or 1), cid)
 
+    from .. import rulings as rulings_mod
+
+    ledger_rulings = rulings_mod.by_cycle(cfg)
     rows = []
     for cid, c in sorted(cycles.items(), key=opened):
         row = {"cycle_id": cid, "status": c["status"], "round": c["round"],
@@ -1411,13 +1414,29 @@ def cmd_status(args: argparse.Namespace) -> int:
                "consumed": len(c.get("consumed", []))}
         if c.get("reaudit_of"):
             row["reaudit_of"] = c["reaudit_of"]
+        if c.get("closed_by_human"):
+            # The controller keeps BLOCKED + closed_by_human (other readers
+            # key on both); `closed` says what that means.
+            row["closed"] = True
+        if ledger_rulings.get(cid):
+            row["rulings"] = [{k: r.get(k) for k in
+                               ("action", "by", "at", "reason")
+                               if r.get(k) is not None}
+                              for r in ledger_rulings[cid]]
         rows.append(row)
     human = ["cycle            status     round  sha           consumed",
              "-" * 60]
-    human += [f"{r['cycle_id']:16s} {r['status']:10s} {r['round']:5d}  "
-              f"{r['active_sha']}  {r['consumed']}"
-              + (f"   re-audit of {r['reaudit_of']}" if r.get("reaudit_of") else "")
-              for r in rows] or ["(no cycles yet)"]
+    for r in rows:
+        shown = "CLOSED" if r.get("closed") else r["status"]
+        human.append(f"{r['cycle_id']:16s} {shown:10s} {r['round']:5d}  "
+                     f"{r['active_sha']}  {r['consumed']}"
+                     + (f"   re-audit of {r['reaudit_of']}" if r.get("reaudit_of")
+                        else ""))
+        for ruling in r.get("rulings", []):
+            human.append(f"  ruling: {ruling.get('action')} by {ruling.get('by')} "
+                         f"at {ruling.get('at')} — {ruling.get('reason', '')[:160]}")
+    if not rows:
+        human.append("(no cycles yet)")
     run = _run_summary(cfg)
     if run is not None:
         human.append(f"run: {run['state']}"
@@ -1430,23 +1449,78 @@ def cmd_status(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------- resolve
 def cmd_resolve(args: argparse.Namespace) -> int:
     """The human principal rules on an escalated cycle. Interactive only: this
-    is a human act and must not be scriptable by the agents themselves."""
+    is a human act and must not be scriptable by the agents themselves.
+
+    D172 ruling 5: the ruling and its reason are committed to the audit
+    ledger (``<ledger>/rulings.jsonl``, append-only), not only kept in the
+    gitignored controller state, and a close settles the run that was
+    waiting for this decision.
+    """
     if not sys.stdin.isatty():
         raise ConfigDenial("resolve is a human act; it refuses to run without a terminal")
+    from .. import rulings as rulings_mod
+
     cfg = load()
     action = "reopen" if args.reopen else "close"
-    c = _state(cfg).resolve_escalation(args.cycle_id, action, args.because)
+    store = _state(cfg)
+    before = store.cycle(args.cycle_id) or {}
+    c = store.resolve_escalation(args.cycle_id, action, args.because)
+    row = rulings_mod.record(cfg, c, action, args.because)
     if action == "close":
         # The close ruling settles the parked run this escalation references:
         # a stopped task must not keep signalling "needs your decision".
         from ..console import daemon
 
         daemon.settle_closed_escalation(cfg, c)
+        _settle_human_wait(cfg, before, args.because)
     print(f"ruling recorded: {args.cycle_id} {action} — {args.because}")
-    print(f"cycle is now {c['status']} (round {c['round']}); "
-          + ("run `crossaudit run` to re-audit." if action == "reopen"
-             else "the increment stays out of the record."))
+    print(f"  committed to the ledger: {row['commit'][:12]} "
+          f"({cfg.ledger_dir}/{rulings_mod.RULINGS_LOG})")
+    if action == "close":
+        print(f"cycle is now closed (round {c['round']}); "
+              "the increment stays out of the record.")
+    else:
+        print(f"cycle is now {c['status']} (round {c['round']}); "
+              "run `crossaudit run` to re-audit.")
     return EXIT_OK
+
+
+def _settle_human_wait(cfg: Config, cycle: dict, reason: str) -> bool:
+    """End the run that was WAITING_FOR_HUMAN on the cycle a person closed.
+
+    ``daemon.settle_closed_escalation`` settles a PARKED (provider) run; a
+    content escalation leaves its run in WAITING_FOR_HUMAN, which then kept
+    reading as waiting after the person had ruled. WAITING_FOR_HUMAN ->
+    CANCELLED is the declared edge for exactly this. ``cycle`` is the record
+    as it was BEFORE the ruling.
+
+    Which run: the one the escalation references (``escalation_run_id``).
+    An escalation the audit ladder recorded (the round budget spent inside
+    ``cmd_run``) carries no reference, so the association must be
+    corroborated the way the daemon's reconciler does for legacy records:
+    the NEWEST run, still waiting, whose start the cycle's last recorded
+    activity does not precede, and the same chat when the cycle names one.
+    Anything less could cancel an unrelated run.
+    """
+    from ..runtime import RunJournal, journal_path
+
+    runtime = journal_path(cfg)
+    if not runtime.is_file():
+        return False
+    journal = RunJournal(runtime)
+    run_id = str(cycle.get("escalation_run_id") or "")
+    if not run_id:
+        latest = journal.latest()
+        if latest is None:
+            return False
+        touched = float(cycle.get("updated_at") or 0)
+        same_chat = (not cycle.get("chat_id")
+                     or str(cycle.get("chat_id")) == str(latest.get("chat_id", "")))
+        if touched < float(latest.get("started") or 0) - 1 or not same_chat:
+            return False
+        run_id = str(latest["run_id"])
+    return journal.settle_human_wait(
+        run_id, f"closed by a human ruling: {reason.strip()[:300]}")
 
 
 def cmd_skills(args: argparse.Namespace) -> int:

@@ -959,15 +959,20 @@ Choose **Revise and continue** to record correction guidance and unlock another
 audited attempt, or **Stop this task** to retain the current output as unadmitted.
 Both actions require a written explanation and enter the durable ledger.
 
-The equivalent CLI flow is available for automation and advanced users. View
-pending work with `crossaudit status`, then record a decision:
+The equivalent CLI flow works from a terminal. View pending work with
+`crossaudit status`, then record a decision:
 
 ```bash
 crossaudit resolve <cycle-id> --reopen --because "The source file is now available"
 crossaudit resolve <cycle-id> --close --because "The task is no longer required"
 ```
 
-The reason is committed to the ledger. Resolution requires an interactive
+The reason is committed to the ledger. Each ruling appends one line to
+`cycles/rulings.jsonl` (cycle, action, reason, who, and when) in a commit of its
+own, with the reason in the commit message. Lines are never rewritten, so a
+second ruling on the same cycle adds a line. `crossaudit status` lists every
+ruling under its cycle and shows a closed cycle as `CLOSED`. A close also ends
+the run that was waiting for the decision. Resolution requires an interactive
 human terminal and cannot be produced by either model.
 
 ## Configuration

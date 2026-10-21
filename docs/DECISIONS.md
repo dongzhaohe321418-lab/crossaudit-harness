@@ -7812,4 +7812,29 @@ RULINGS:
    parse. The other commands the claim names (`status`, `doctor`, `check`, `verify`,
    including `verify`'s denial path) already printed only JSON on an empty project, and a
    sweep test now pins that.
+5. **A ruling is committed to the ledger, `status` shows it, and a close reads as closed
+   (C25).** `resolve` kept the reason only in the gitignored `state.json`. Now each ruling
+   (from `resolve`, and from `talk`'s resolve lane, which also said "Your reason is in the
+   ledger") appends one JSON line to `<ledger>/rulings.jsonl` with these fields:
+   `cycle_id`, `action`, `reason`, `by` (the repository's git identity), `t`, `at`,
+   `round`, `active_sha`, `status_after` and `escalation_reason`. That file alone is
+   committed, as `ruling <cycle> <action>: <first line of the reason>`, with the full
+   reason, who and when in the commit body (`src/crossaudit/rulings.py`). The shape
+   copies `routing.jsonl` and `disputes.jsonl`: a flat append-only JSONL beside the
+   receipts, keyed by cycle id. A line is never rewritten, so a second ruling appends,
+   and no existing cycle file is touched. Considered and rejected: a `decision.json` in
+   the round directory. Escalations recorded before any audit (a provider stop in round
+   one) have no round directory, and a per-round file would split one cycle's rulings
+   across directories. `status` (human and `--json`) lists the rulings under their cycle.
+   A closed cycle keeps controller status `BLOCKED` plus `closed_by_human`, because the
+   daemon reconciler and the run command key on both, and is reported as `closed: true`
+   and shown as `CLOSED`. A close also ends the run that was `WAITING_FOR_HUMAN` on that
+   decision, through a new `RunJournal.settle_human_wait`
+   (WAITING_FOR_HUMAN -> CANCELLED, the declared edge, recorded as `run_cancelled`). It
+   picks the run the escalation references, or, for a ladder escalation that carries no
+   reference, the newest run, only when the cycle's last activity does not predate the
+   run's start and the chat matches: the daemon's legacy association rule. The TTY
+   requirement is unchanged. **Open:** the console's decision screen (`console/server.py`,
+   outside this slice) still calls `resolve_escalation` without writing the ledger, so the
+   README's sentence about the app's two actions is not yet true there.
 

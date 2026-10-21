@@ -356,7 +356,11 @@ def lane_resolve(cfg: Config, routing, *, assume_yes: bool) -> str:
     if not _confirm(f"Return {cid[:8]} to the loop for another audit?",
                     assume_yes=assume_yes):
         return "declined by user"
-    store.resolve_escalation(cid, "reopen", routing.utterance)
+    from .. import rulings as rulings_mod
+
+    resolved = store.resolve_escalation(cid, "reopen", routing.utterance)
+    # D172 ruling 5: "in the ledger" means committed, as `resolve` does.
+    rulings_mod.record(cfg, resolved, "reopen", routing.utterance)
     print(f"  Ruling recorded; {cid[:8]} is open again. Your reason is in the ledger.")
     return f"reopened {cid[:8]}"
 

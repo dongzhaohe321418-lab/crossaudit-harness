@@ -34,6 +34,11 @@ All notable changes to CrossAudit are recorded here. Versions follow the
 - **`crossaudit --json routing` prints JSON on a fresh project.** It printed
   the sentence `no routing decisions recorded yet`. It now prints `[]`, the
   same list shape it prints once decisions exist (D172).
+- **`crossaudit resolve` commits the ruling, as the README says.** The reason
+  was kept only in the local state file. Each ruling now appends a line to
+  `cycles/rulings.jsonl` in its own commit, with the reason in the commit
+  message. `status` lists every ruling and shows a closed cycle as `CLOSED`, and
+  closing ends the run that was waiting for the decision (D172).
 
 ## 4.17.0 — The activity stream
 
