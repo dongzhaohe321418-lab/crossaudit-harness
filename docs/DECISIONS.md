@@ -7768,4 +7768,30 @@ RULINGS:
    filesystem proves nothing about the store's), and reporting `atomic: false` until the
    directory exists (it would lower a fresh project's tier for no reason). `doctor --fix`
    keeps its documented writes, and still only on a terminal.
+2. **Without `--sha`, `audit` and `run` judge the latest increment, and a recorded cycle is
+   never overwritten (C10).** After `build`, `HEAD` is the loop's own `audit receipt …`
+   commit, so the README's `build` then `audit --offline` refused with exit 20. The default
+   is now the newest commit (within 200) that changed work by the definition `run` already
+   used (`_increment_paths`: the scope directories, minus rules, configuration, ledger,
+   state, CI and house skills). `audit` prints `auditing <sha> (<subject>) …` before it
+   runs, and `--json` carries `sha` and `sha_source` (`latest_increment`, `explicit`,
+   `head`). An explicit `--sha` is used as given, and a ledger-only one is still refused.
+   Making this the default exposed a data-loss defect that **already existed on `main`
+   with an explicit `--sha`**. A cycle's id is derived from its root sha, and
+   `open_or_advance` had no branch for a PASSED cycle at the same sha. So re-auditing a
+   commit that rooted a cycle (one that later PASSED, or that advanced to a later round)
+   wrote a fresh OPEN cycle over the recorded one: `audit --offline --sha <increment>`
+   after `build` turned a PASSED cycle into an ESCALATED one, and its receipt could no
+   longer be admitted. Now `open_or_advance` never overwrites. On an id collision it
+   derives `cycle_id_for(repo, sha + "\n<attempt>")`, which stays 16 hex because the
+   console's continuation check and progress redaction match that shape. The id is
+   deterministic, so the same command on the same tree always produces the same ids. The
+   new record carries `reaudit_of`, `attempt` and `opened_at`, and `status` lists cycles
+   in opening order with the re-audit after the cycle it follows. The earlier PASS stays
+   admissible: admission is keyed by the receipt's cycle id, and the new DCL_ONLY cycle
+   cannot shadow it (tested by admitting once after the re-audit). Considered and
+   rejected: refusing a re-audit of a PASSED commit as "already has a recorded decision",
+   as D36 clause 2 does for OPEN/BLOCKED cycles and `record_build_escalation` does for
+   PASSED ones. It is equally fail-closed, but the README's flow would exit 20 again, and a
+   deterministic re-check of passed work is a legitimate thing to ask for.
 

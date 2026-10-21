@@ -269,6 +269,43 @@ def _state(cfg: Config) -> StateStore:
     return StateStore(cfg.root / cfg.state_dir / "state.json")
 
 
+def _increment_paths(cfg: Config, sha: str) -> list[str]:
+    """The work a commit changed: its paths minus the loop's own artefacts
+    (rules, configuration, ledger, state, CI, house skills), and, when the
+    deployment names its science directories, only paths inside them."""
+    from .. import skills as skills_mod
+
+    own = {cfg.constitution, "crossaudit.yml", ".gitignore"}
+    prefix_own = (cfg.ledger_dir.rstrip("/") + "/", cfg.state_dir.rstrip("/") + "/",
+                  ".github/", skills_mod.SKILLS_DIR + "/")
+    picked = [f for f in changed_paths(cfg.root, sha)
+              if f not in own and not f.startswith(prefix_own)]
+    if cfg.scope_dirs:
+        picked = [f for f in picked if f.split("/", 1)[0] in cfg.scope_dirs]
+    return picked
+
+
+#: How far back the no-``--sha`` default looks for an increment. The loop's
+#: own bookkeeping adds two ledger commits per round, so this covers far more
+#: than any realistic run of ledger-only commits on top of the work.
+LATEST_INCREMENT_DEPTH = 200
+
+
+def _latest_increment(cfg: Config) -> str:
+    """The newest commit that changed work (D172 ruling 2), or "" if none.
+
+    `audit` and `run` without ``--sha`` mean "the work I just did". In local
+    mode HEAD is usually the loop's own ledger commit (`build` ends on
+    ``audit receipt ... (PASS)``), so HEAD is the wrong default: it is an
+    audit artefact, and auditing it was refused.
+    """
+    for cand in git("log", "--format=%H", "-n", str(LATEST_INCREMENT_DEPTH),
+                    cwd=cfg.root, check=False).splitlines():
+        if _increment_paths(cfg, cand):
+            return cand
+    return ""
+
+
 def _is_scaffold_template(path: str) -> bool:
     return "TEMPLATE" in Path(path).parts
 
@@ -1015,7 +1052,13 @@ def cmd_audit(args: argparse.Namespace) -> int:
     cfg = load()
     if not is_repo(cfg.root):
         raise ConfigDenial(f"{cfg.root} is not a git repository")
-    sha, tree = resolve(cfg.root, args.sha or "HEAD")
+    # D172 ruling 2: no --sha means the latest increment, not HEAD. An
+    # explicit --sha is taken as given, and a ledger-only one is still refused
+    # below. When nothing in reach changed work, HEAD is audited as before and
+    # the existing refusals say why.
+    explicit = getattr(args, "sha", None)
+    chosen = "" if explicit else _latest_increment(cfg)
+    sha, tree = resolve(cfg.root, explicit or chosen or "HEAD")
     # D149: the refusals below name the commit by its SUBJECT rather than
     # leading with a 12-hex id. The sha stays in --json, in the receipt and in
     # the ledger; it is not the first thing a person is asked to read.
@@ -1070,6 +1113,10 @@ def cmd_audit(args: argparse.Namespace) -> int:
             f"start a new increment to be judged afresh.",
             cycle_id=cycle["cycle_id"], status=cycle["status"])
 
+    if chosen and not getattr(args, "json", False):
+        # Said before the audit runs, so a person reads which commit is being
+        # judged before the verdict, not after.
+        print(i18n.t("audit.chose", sha=sha[:12], subject=subject))
     files, notes, scope_text = _materialise_tree_scope(cfg, sha, args.scope)
     # A cycle is judged against the standard it began under. Reading the working
     # tree instead let a constitution loosened mid-cycle re-judge work the cycle
@@ -1160,6 +1207,8 @@ def cmd_audit(args: argparse.Namespace) -> int:
     status = _record_round(store, cfg, cycle, sha, outcome, receipt_digest(receipt),
                            const_commit)
     result = {"verdict": outcome.verdict, "cycle_status": status,
+              "sha": sha, "sha_source": "explicit" if explicit else (
+                  "latest_increment" if chosen else "head"),
               "cycle_id": cycle["cycle_id"], "round": cycle["round"],
               "integrity": outcome.integrity, "receipt": str(ledger / "receipt.json"),
               "report": str(report_path),
@@ -1348,13 +1397,27 @@ def cmd_status(args: argparse.Namespace) -> int:
     cfg = load()
     snap = _state(cfg).snapshot()
     cycles = snap.get("cycles", {})
-    rows = [{"cycle_id": cid, "status": c["status"], "round": c["round"],
-             "active_sha": c["active_sha"][:12], "consumed": len(c.get("consumed", []))}
-            for cid, c in sorted(cycles.items())]
+    # Opening order, so a re-audit of a commit (D172 ruling 2: a fresh cycle
+    # beside the recorded one, never over it) lists after the cycle it
+    # follows. Cycles written before `opened_at` existed keep id order, first.
+    def opened(item: tuple[str, dict]) -> tuple:
+        cid, c = item
+        return (int(c.get("opened_at") or 0), int(c.get("attempt") or 1), cid)
+
+    rows = []
+    for cid, c in sorted(cycles.items(), key=opened):
+        row = {"cycle_id": cid, "status": c["status"], "round": c["round"],
+               "active_sha": c["active_sha"][:12],
+               "consumed": len(c.get("consumed", []))}
+        if c.get("reaudit_of"):
+            row["reaudit_of"] = c["reaudit_of"]
+        rows.append(row)
     human = ["cycle            status     round  sha           consumed",
              "-" * 60]
     human += [f"{r['cycle_id']:16s} {r['status']:10s} {r['round']:5d}  "
-              f"{r['active_sha']}  {r['consumed']}" for r in rows] or ["(no cycles yet)"]
+              f"{r['active_sha']}  {r['consumed']}"
+              + (f"   re-audit of {r['reaudit_of']}" if r.get("reaudit_of") else "")
+              for r in rows] or ["(no cycles yet)"]
     run = _run_summary(cfg)
     if run is not None:
         human.append(f"run: {run['state']}"
@@ -1686,16 +1749,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     prefix_own = (cfg.ledger_dir.rstrip("/") + "/", cfg.state_dir.rstrip("/") + "/",
                   ".github/", skills_dir + "/")
     def science_of(s: str) -> list[str]:
-        picked = [f for f in changed_paths(cfg.root, s)
-                  if f not in own and not f.startswith(prefix_own)]
-        if cfg.scope_dirs:
-            # The deployment names its science directories (the reference
-            # implementation always did: pushes under experiments/ trigger).
-            # Tooling and housekeeping commits outside them are not increments
-            # and are not forced through the experiment format.
-            picked = [f for f in picked
-                      if f.split("/", 1)[0] in cfg.scope_dirs]
-        return picked
+        # The deployment names its science directories (the reference
+        # implementation always did: pushes under experiments/ trigger).
+        # Tooling and housekeeping commits outside them are not increments
+        # and are not forced through the experiment format. One definition,
+        # shared with `audit`'s no-`--sha` default (D172 ruling 2).
+        return _increment_paths(cfg, s)
 
     def enclose(paths: list[str], s: str) -> list[str]:
         """Widen a diff to the increments it touched.
@@ -1721,18 +1780,15 @@ def cmd_run(args: argparse.Namespace) -> int:
         # HEAD is a ledger or config commit (the loop's own bookkeeping moves
         # HEAD in local mode). Walk back to the newest commit that actually
         # changed science, instead of asking the user to think about it.
-        for cand in git("log", "--format=%H", "-n", "50", cwd=cfg.root,
-                        check=False).splitlines()[1:]:
-            found = science_of(cand)
-            if found:
-                sha, tree = resolve(cfg.root, cand)
-                subject = git("log", "-1", "--format=%s", sha, cwd=cfg.root, check=False)
-                science = found
-                # Through the catalogue: this line was printed in raw English
-                # under `zh`, and "ledger bookkeeping" was wrong besides — a
-                # guidance commit is not the ledger. The key names both.
-                print("  " + i18n.t("run.walked_back", sha=sha[:12]))
-                break
+        cand = _latest_increment(cfg)
+        if cand:
+            sha, tree = resolve(cfg.root, cand)
+            subject = git("log", "-1", "--format=%s", sha, cwd=cfg.root, check=False)
+            science = science_of(sha)
+            # Through the catalogue: this line was printed in raw English
+            # under `zh`, and "ledger bookkeeping" was wrong besides — a
+            # guidance commit is not the ledger. The key names both.
+            print("  " + i18n.t("run.walked_back", sha=sha[:12]))
     if not science:
         # D149: the sentence a person reads names the commit by its subject.
         # The sha is not gone — it is the cycle's own `active_sha`, which the

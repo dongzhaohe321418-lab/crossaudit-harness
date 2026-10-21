@@ -1267,6 +1267,15 @@ crossaudit audit --offline
 An offline audit returns `DCL_ONLY`, never PASS, because no independent model
 review occurred.
 
+Without `--sha`, `audit` and `run` judge the latest increment: the newest
+commit that changed the configured scope directories. After `build`, `HEAD` is
+the loop's own receipt commit in the ledger, so that commit is skipped. Both
+commands print the commit they chose, and `--json` reports it as `sha`. An
+explicit `--sha` is used as given, and a commit that only touches the ledger is
+refused. Auditing a commit that already has a recorded decision opens a new
+cycle beside the old one and never overwrites it, so an earlier PASS stays
+admissible.
+
 ## Two-repository deployment
 
 Local mode keeps the work and audit ledger in one repository. For stronger

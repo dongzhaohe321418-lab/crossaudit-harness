@@ -236,9 +236,28 @@ class StateStore:
                         self._log(state, "advance", cycle=cid, sha=sha, round=c["round"])
                         return dict(c, cycle_id=cid)
             cid = cycle_id_for(repo, sha)
+            # Never overwrite a cycle (D172 ruling 2). The id is derived from
+            # the root sha, so re-auditing a commit that ROOTED a cycle which
+            # has since PASSED, or advanced to a later round, collided with it
+            # and replaced the recorded decision with a fresh OPEN cycle --
+            # `build` then `audit --offline` turned a PASSED cycle into an
+            # ESCALATED one. The new cycle gets its own id; the old record is
+            # left exactly as it was. The id stays 16 hex (the console's
+            # continuation check and the progress redaction match that shape)
+            # and is deterministic -- the same repo, sha and attempt number
+            # always give the same id -- and the record says which cycle it
+            # follows and which attempt it is, so it reads as a re-audit.
+            first, attempt = cid, 1
+            while cid in cycles:
+                attempt += 1
+                cid = cycle_id_for(repo, f"{sha}\n{attempt}")
             c = {"repo": repo, "root_sha": sha, "active_sha": sha, "parent_receipt": "",
                  "round": 1, "status": OPEN, "consumed": [], "awaiting_verdict": True,
-                 "constitution_commit": constitution_commit, "verdicts": []}
+                 "constitution_commit": constitution_commit, "verdicts": [],
+                 "opened_at": int(time.time())}
+            if attempt > 1:
+                c["reaudit_of"] = first
+                c["attempt"] = attempt
             cycles[cid] = c
             self._log(state, "open", cycle=cid, sha=sha)
             return dict(c, cycle_id=cid)

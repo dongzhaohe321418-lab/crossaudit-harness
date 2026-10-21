@@ -19,6 +19,15 @@ All notable changes to CrossAudit are recorded here. Versions follow the
 - **`crossaudit doctor` is read-only again.** On a fresh project it created
   `.crossaudit/state.json` through its admission probe; it now writes nothing
   unless you run `doctor --fix` in a terminal (D172).
+- **`build` then `audit --offline` (or `run`) works as the README shows.**
+  Without `--sha`, both now judge the latest commit that changed your work
+  instead of the ledger commit `build` leaves at `HEAD`, and say which commit
+  they chose (D172).
+- **Re-auditing a commit no longer overwrites its recorded cycle.** An explicit
+  `audit --sha <commit>` on a commit whose cycle had already PASSED replaced
+  that cycle with a new one, so the earlier receipt could no longer be admitted.
+  The re-audit now opens a new cycle beside the old one, and `status` lists both
+  (D172).
 
 ## 4.17.0 — The activity stream
 
