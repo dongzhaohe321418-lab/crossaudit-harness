@@ -127,3 +127,23 @@ was removed. Both are fixed on the integration branch in the next commit
 from `PYTHON_BIN`'s, and refuses an interpreter below 3.10 with a sentence).
 The built app still reports 4.17.0 although the tree carries D167–D172; a
 release from this tree needs the version bump the release checklist describes.
+
+### Round 2, item 2 — the offline halves of C33 and C34, 2026-10-22
+
+Seven rows added (`CLAIMS.md` section F; C33b and C34b stay untestable in G):
+`pair` in plan mode against a fake `gh` and local bare repositories (C33a), and
+a standard-library stdio MCP server (`fakemcp.py`) driven through the documented
+consent flow (C34a, C34c–C34g). On `fix/claims-round-1` at bc66e72: **37 PASS of
+38**. The six MCP rows pass — exact-path approval, allowlist, calls-per-task
+budget, a 256 KiB result bound (the README says "bounded" and names no number),
+a content-free hashed call ledger, an environment allowlist that lets no key
+through. C33a is PARTIAL: `--apply` pushes the local history, makes a pairing
+commit and adds an `origin` remote without the plan naming any of it; branch
+protection is a plan step that `--apply` does not do; plan mode needs a
+signed-in `gh` though both names are given; the signed-out warning contradicts
+itself. Two observations beside the rows: MCP calls never reach the hash-chained
+evidence ledger (the README's "governed actions go to an append-only
+hash-chained ledger" is not kept for them; only `.crossaudit/mcp/calls.json`
+exists), and the call arguments persist in plain text in the run journal.
+Both are round 2's items 3 and 4, on `fix/claims-round-2a` (pair) and
+`fix/claims-round-2b` (ledger).

@@ -93,7 +93,10 @@ disk.
 
 ## What is and is not tested
 
-Tested: C01–C31 as written in CLAIMS.md, with the deviations each record names.
+Tested: C01–C31, and from round 2 C33a (`pair` plan mode, with a logging fake
+`gh`) and C34a, C34c–C34g (a local stdio MCP server, `fakemcp.py`, registered
+through the console's `/api/mcp` and called by a `build`), as written in
+CLAIMS.md, with the deviations each record names.
 What the fakes cannot speak to is model *quality*: whether a real auditor
 catches real defects, and whether a real generator follows the envelope. The
 fakes also make every endpoint a "custom" one, so receipts truthfully record
@@ -101,6 +104,7 @@ that model-source (parametric) isolation cannot be asserted; C16/C17/C18 set the
 documented `isolation.minimum.parametric: false` so the admission mechanism
 can be exercised at all.
 
-Not tested here (C32–C36, listed in every results file): the macOS app and its
-DMG, the GitHub two-repository deployment, SSH/Slurm/MCP/Skills, the published
-benchmark numbers, and live-model audit quality.
+Not tested here (C32, C33b, C34b, C35, C36, listed in every results file): the
+macOS app and its DMG, the live GitHub two-repository deployment, SSH/Slurm,
+Streamable-HTTP MCP and the Skills UI, the published benchmark numbers, and
+live-model audit quality.

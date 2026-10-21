@@ -91,19 +91,40 @@ exercised here, with what it would take.
 | C30 | "The console shows current activity, latest task and cycle state, recent PASS/BLOCKED/ESCALATED cycles, findings and reports, receipt and admission status" | after C06–C08, read `/api/state` (or the documented state endpoint) with the token | the JSON names the cycles and verdicts produced by the scenarios |
 | C31 | "Closing the window / the server keeps running; `crossaudit console` manages it" | `console --stop` or the documented management verb | the server exits and the port closes |
 
-### F. Not testable in this harness
+### F. The offline halves of C33 and C34 (added in round 2)
+
+Each row was split out of a round-1 "untestable" row: what can be exercised
+with no account and no remote host is tested here; the remainder stays in G.
+`gh` is a logging fake on `PATH` (shell script written by `run.py`); the MCP
+server is `fakemcp.py`, a standard-library stdio JSON-RPC server with three
+tools (`echo`, `big` returning 1,000,000 bytes, and `secret`, which is
+advertised but never approved). C34b is the SSH/Slurm row in G, so the MCP
+rows run C34a, C34c–C34g.
+
+| id | README / SECURITY.md says | test | pass when |
+|---|---|---|---|
+| C33a | "Two-repository deployment": `crossaudit pair --science owner/work --audit owner/work-audit` — "Without `--apply`, `pair` prints the intended GitHub operations and changes nothing remotely" | in a project made by the documented `init`, run `pair` without `--apply` three times: `gh` absent from `PATH`, the fake `gh` answering `auth status` as signed out, and as signed in. Then, only to learn what the plan should have listed, `--apply` against the same fake with every `https://github.com/` URL rewritten to a local bare repository (`url.insteadOf` in the temp HOME, `GIT_ALLOW_PROTOCOL=file` so no other transport can be used). Also `init --github` with `gh` signed out, recorded as far as it goes (no device code is expected from the CLI: README says the device code is the app's **Connect GitHub**) | signed in: exit 0, both repositories and every step printed, the fake's log shows no repo-creating, cloning, secret-setting or protection call, the project tree, HEAD and remotes unchanged; absent / signed out: a non-zero documented exit (20, configuration) with a sentence saying what to do, nothing called or changed; and the printed steps are the GitHub operations `--apply` then performs (PARTIAL when it performs operations no step names, or skips a step the plan lists) |
+| C34a | "Local stdio starts one exact executable and argument vector without a shell. The complete command is visible and requires explicit approval." "Connect a new server with Generator access disabled … then approve exact tool names and a calls-per-task cap." "During a task the Generator may emit one `tools/call` request at a time … results return to the same Generator turn … never become instructions to the Auditor" | the product has no MCP CLI verb (recorded from `--help`), so register the way the Tools & Skills dialog does: start `crossaudit console` (with a `fakemcp` copy A first on `PATH`), POST `/api/mcp` with the token — once without `approve_local_code`, then step 1 (connect, approval ticked, no tools, disabled) by the bare name `fakemcp`, a second *new* server enabled with `allow_all_tools`, step 2 (approve `echo`, `big`; cap 3; enable), then the same server with a different executable path (copy B) and no approval. Then `crossaudit build` with copy B first on `PATH`, the fake generator emitting four documented MCP-TOOL envelopes (`echo`, `big`, `secret`, `echo`) before its files | no process starts and the request is refused without the approval; the stored command is the resolved absolute path of copy A; the new enabled allow-all server is refused; changing the path without a new approval is refused and the stored path is unchanged; the build launches copy A only; `echo` reaches the server once and its text is in the next generator prompt; no tool output in any auditor prompt; build exit 0 |
+| C34c | "approve exact tool names … New tools advertised later remain blocked until reviewed" / "per-tool allowlists" | in C34a's build, request 3 asks for `secret` (advertised, not approved) | the generator is told it was refused, the fake server never receives the call, the tool's marker text is in no prompt |
+| C34d | "The controller validates the server, exact tool name, JSON argument size and saved call budget" / "call budgets" | C34a's build, cap 3: request 4 is a fourth `echo` | request 4 is refused with the calls-per-task sentence; the server received at most 3 calls and `echo` once |
+| C34e | "Bounded text and structured results return to the same Generator turn" / "bounded results" | C34a's build, `big` returns 1,000,000 bytes of text | the generator prompt carries less than that, marked truncated (README states no number; the bound observed is recorded) |
+| C34f | "The private local call ledger retains only server/tool identity, timing, status, and hashes of arguments/results—not their contents" / "content-free hashed call records" | after C34a's build read `.crossaudit/mcp/calls.json`; recompute `arguments_sha256` and `result_sha256` from the arguments sent and the bounded result the generator received; grep the whole project (git objects excluded) for the tool result text; if `.crossaudit/evidence.jsonl` exists, run its own `EvidenceLedger.verify()` | one row per executed call, keys only identity/timing/status/hashes, both hashes recompute, mode 600, no result text in the file or anywhere in the project; the row records whether the hash-chained evidence ledger holds MCP calls (README does not say it does) |
+| C34g | "Local MCP processes receive a small sanitized environment" (README) / "MCP servers … receive their own reduced environments" (SECURITY.md) | `fakemcp` logs its environment variable names (never values) on every launch — the console's registration probes and the build's calls — while both parents hold `CROSSAUDIT_AUDITOR_KEY`/`CROSSAUDIT_GENERATOR_KEY` and the build also a decoy `OPENAI_API_KEY` | no `CROSSAUDIT_*`, `*KEY*`, `*TOKEN*`, `*SECRET*` name and no dummy key value in any launch; the names seen are recorded |
+
+### G. Not testable in this harness
 
 | id | README says | needs |
 |---|---|---|
 | C32 | The macOS app: DMG download, first-open flow, Keychain-held keys, menu-bar background operation, Environment Doctor UI | a built DMG (`packaging/macos/build_dmg.sh`, PyInstaller, network for the Codex runtime) and a GUI session; the release's DMG is attached to v4.17.0 — can be installed by a person and walked through `docs/UX_TEST_PLAN.md` |
-| C33 | Two-repository deployment with GitHub (`init --github`, `pair --apply`), device-code sign-in | a GitHub account willing to create repositories |
-| C34 | SSH workstation / Slurm compute, MCP tools over stdio/HTTP, Project Skills | an SSH host, an MCP server; the local stdio MCP path could be faked with a stdlib script in a later round |
+| C33b | Two-repository deployment, live: `pair --apply` creating real repositories, pushing, uploading the auditor secret; the app's device-code GitHub sign-in (**Connect GitHub**) | a GitHub account willing to create repositories (C33a covers plan mode, and `--apply` only against a fake `gh` with local bare repositories) |
+| C34b | SSH workstation / Slurm compute; MCP over Streamable HTTP with write-only Keychain bearer tokens and HTTPS/private-network controls; Project Skills managed in the UI | an SSH host and a scheduler; an HTTP MCP endpoint and the macOS Keychain (C34a, C34c–C34g cover local stdio MCP) |
 | C35 | The benchmark sentences ("severity, not sight"; precision 100% / recall 2%; "flags fewer correct solutions") | the archived run data (`~/Documents/Crossaudit/study-data/`, present on this machine) and the cross-vendor review they already had; re-running costs money |
 | C36 | The auditor catching real defects in real work | live models and a corpus with ground truth: `benchmarks/ai4s/run_auditor.py --live` on a one-seed subset (≈ $10) is the prepared path |
 
 ## Scoring
 
-A ref's score is the count of PASS over the testable rows (C01–C31), with
+A ref's score is the count of PASS over the testable rows (C01–C31, C33a,
+C34a, C34c–C34g from round 2 on), with
 PARTIAL and FAIL listed by id and each FAIL carrying the evidence path. "The
 project does what it says" is the state in which every testable row is PASS
 and every untestable row is honestly marked in the README as a thing the

@@ -55,10 +55,11 @@ TAIL = 1500
 UNTESTABLE = [
     ("C32", "macOS app: DMG, first-open flow, Keychain keys, menu-bar operation, Environment Doctor UI",
      "a built DMG and a GUI session (walk docs/UX_TEST_PLAN.md by hand)"),
-    ("C33", "Two-repository deployment with GitHub (init --github, pair --apply), device-code sign-in",
-     "a GitHub account willing to create repositories"),
-    ("C34", "SSH workstation / Slurm compute, MCP tools over stdio/HTTP, Project Skills",
-     "an SSH host and an MCP server (stdio MCP could be faked in a later round)"),
+    ("C33b", "Two-repository deployment, live: `pair --apply` creating real repositories and the secret; "
+             "the app's device-code GitHub sign-in",
+     "a GitHub account willing to create repositories (C33a covers plan mode and --apply against a fake gh)"),
+    ("C34b", "SSH workstation / Slurm compute, Streamable-HTTP MCP with Keychain bearer tokens, Project Skills UI",
+     "an SSH host and a scheduler; an HTTP MCP endpoint (C34a, C34c-C34g cover local stdio MCP)"),
     ("C35", "Benchmark sentences (severity not sight; precision 100% / recall 2%; fewer false flags)",
      "the archived run data and the cross-vendor review of it; re-running costs money"),
     ("C36", "The auditor catching real defects in real work",
@@ -1968,9 +1969,535 @@ def c31(h: Harness, rec: Record) -> Record:
     return finish(rec, "FAIL", f"{rec.details}")
 
 
+# ------------------------------------------------- F. offline halves (round 2)
+FAKE_GH = r"""#!/bin/sh
+# Fake GitHub CLI for the claims harness: logs every invocation, never touches
+# the network. Mode file: "absent" is never used (the binary is simply not on
+# PATH then); "unauth" fails `auth status`; "auth" succeeds and emulates the
+# few calls `pair` makes against file:// bare repositories under $DIR/remotes.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+printf '%s\n' "$*" >> "$DIR/gh.log"
+if [ -n "$CROSSAUDIT_AUDITOR_KEY$CROSSAUDIT_GENERATOR_KEY$OPENAI_API_KEY" ]; then
+  echo "  ^ provider key variable present in gh's environment" >> "$DIR/gh.log"
+fi
+MODE="$(cat "$DIR/mode")"
+case "$1 $2" in
+  "auth status")
+    if [ "$MODE" = auth ]; then
+      echo "github.com: Logged in to github.com account harness-bot (fake)" >&2; exit 0
+    fi
+    echo "You are not logged into any GitHub hosts. To log in, run: gh auth login" >&2; exit 1 ;;
+  "api user") echo '{"login":"harness-bot"}'; exit 0 ;;
+  "api -i") printf 'HTTP/2.0 200 OK\nX-Oauth-Scopes: repo, workflow\n\n{"login":"harness-bot"}\n'; exit 0 ;;
+  "repo view")
+    if [ -d "$DIR/remotes/$3.git" ]; then echo "name: $3"; exit 0; fi
+    echo "GraphQL: Could not resolve to a Repository with the name '$3'." >&2; exit 1 ;;
+  "repo create")
+    mkdir -p "$DIR/remotes/$3.git" && git init -q --bare "$DIR/remotes/$3.git" && echo "https://github.com/$3"; exit $? ;;
+  "repo clone")
+    git clone -q "file://$DIR/remotes/$3.git" "$4" 2>/dev/null; exit $? ;;
+  "secret set")
+    cat > /dev/null; echo "secret $3 set on $5 (fake; value discarded unread)" >> "$DIR/gh.log"; exit 0 ;;
+esac
+echo "fake gh: unscripted call: $*" >&2
+exit 1
+"""
+GH_MUTATING = re.compile(r"^(repo create|repo clone|secret set|api .*protection|repo edit|repo delete)")
+
+
+def tree_and_git(p: "Project") -> dict:
+    return {"tree": tree_hash(p.root), "head": p.head(),
+            "remotes": p.git("remote", "-v").strip()}
+
+
+@claim("C33a", "`pair` without `--apply` prints the GitHub plan and changes nothing remotely")
+def c33a(h: Harness, rec: Record) -> Record:
+    """README "Two-repository deployment": `crossaudit pair --science owner/work
+    --audit owner/work-audit` without `--apply` "prints the intended GitHub
+    operations and changes nothing remotely". `gh` is a logging fake; three
+    sub-runs (gh absent, gh not signed in, gh signed in), then `--apply`
+    against the same fake with every github.com URL rewritten to a local bare
+    repository (git `url.insteadOf` in the temp HOME, plus
+    GIT_ALLOW_PROTOCOL=file so no other transport can be used) — only to learn
+    what `--apply` actually does, so the plan can be compared with it.
+    Then `init --github` with gh signed out, as far as it goes."""
+    p = Project(h, rec, fp.Scenario(), tag="C33A")
+    p.init()
+    ghdir = p.base / "fakegh"
+    ghdir.mkdir()
+    (ghdir / "gh").write_text(FAKE_GH)
+    (ghdir / "gh").chmod(0o755)
+    (ghdir / "remotes").mkdir()
+    science, audit = "harness-bot/work", "harness-bot/work-audit"
+    argv = ["pair", "--science", science, "--audit", audit]
+    runs = {}
+    with_gh = {"PATH": f"{ghdir}:{h.venv}/bin:{BASE_PATH}", "GIT_ALLOW_PROTOCOL": "file"}
+
+    def gh_log() -> list[str]:
+        f = ghdir / "gh.log"
+        return f.read_text().splitlines() if f.exists() else []
+
+    for mode in ("absent", "unauth", "auth"):
+        (ghdir / "mode").write_text(mode)
+        n0 = len(gh_log())
+        before = tree_and_git(p)
+        c = p.ca(*argv, extra=None if mode == "absent" else with_gh, label=f"pair-plan-gh-{mode}")
+        after = tree_and_git(p)
+        calls = gh_log()[n0:]
+        runs[mode] = {"exit": c.rc, "stdout": c.stdout, "stderr": c.stderr.strip()[-600:],
+                      "gh_calls": calls,
+                      "mutating_gh_calls": [x for x in calls if GH_MUTATING.match(x)],
+                      "tree_unchanged": before == after,
+                      "changed_files": sorted(k for k in set(before["tree"]) | set(after["tree"])
+                                              if before["tree"].get(k) != after["tree"].get(k))}
+    plan_out = runs["auth"]["stdout"]
+    plan_steps = re.findall(r"^\s+(\d+)\. (.+)$", plan_out, re.M)
+    # --apply against the fake, to see what the plan should have named.
+    (p.home / ".gitconfig").write_text(
+        f'[url "file://{ghdir}/remotes/"]\n\tinsteadOf = https://github.com/\n'
+        "[user]\n\tname = harness\n\temail = harness@example.invalid\n")
+    (ghdir / "mode").write_text("auth")
+    n0 = len(gh_log())
+    head0 = p.head()
+    ap = p.ca(*argv, "--apply", extra=with_gh, label="pair-apply-against-fake-github")
+    apply_calls = gh_log()[n0:]
+    new_commits = p.git("log", "--format=%s", f"{head0}..HEAD").splitlines()
+
+    def bare(repo: str) -> list[str]:
+        d = ghdir / "remotes" / f"{repo}.git"
+        if not d.is_dir():
+            return []
+        r = subprocess.run(["git", "--git-dir", str(d), "log", "--all", "--format=%s"],
+                           capture_output=True, text=True)
+        return r.stdout.splitlines()
+    apply_obs = {"exit": ap.rc, "gh_calls": apply_calls,
+                 "local_commits_added": new_commits,
+                 "origin": p.git("remote", "get-url", "origin").strip(),
+                 "science_remote_commits": len(bare(science)),
+                 "audit_remote_commits": bare(audit),
+                 "branch_protection_call": any("protection" in x for x in apply_calls),
+                 "stdout_tail": ap.stdout[-1200:]}
+    # init --github, signed out.
+    (ghdir / "mode").write_text("unauth")
+    n0 = len(gh_log())
+    ig = p.ca("init", "gh-proj", "--github", "--no-console",
+              "--auditor-vendor", "openai", "--auditor-model", MODELS["openai"],
+              "--generator-vendor", "anthropic", "--generator-model", MODELS["anthropic"],
+              cwd=p.home, extra=with_gh, custom=False, label="init-github-signed-out")
+    yml = p.home / "gh-proj" / "crossaudit.yml"
+    init_obs = {"exit": ig.rc, "gh_calls": gh_log()[n0:],
+                "mentions_device_code": bool(re.search(r"device", ig.stdout + ig.stderr, re.I)),
+                "plan_printed": "gh repo create" in ig.stdout,
+                "gh_warning": [ln.strip() for ln in (ig.stdout + ig.stderr).splitlines()
+                               if "gh " in ln and ("install" in ln or "auth" in ln)][:3],
+                "repo_lines_in_yml": [ln for ln in (yml.read_text().splitlines() if yml.exists() else [])
+                                      if "_repo" in ln]}
+    key_leak = [x for x in gh_log() if "provider key variable present" in x]
+    rec.details = {"runs": {k: {kk: vv for kk, vv in v.items() if kk != "stdout"} for k, v in runs.items()},
+                   "plan_steps": plan_steps, "apply_against_fake": apply_obs,
+                   "init_github": init_obs, "gh_saw_provider_key": bool(key_leak)}
+    for k in runs:
+        rec.exit_codes[f"pair_plan_gh_{k}"] = runs[k]["exit"]
+    rec.exit_codes["pair_apply_fake"] = ap.rc
+    rec.exit_codes["init_github"] = ig.rc
+    rec.evidence.append(h.save(rec.id, "gh-invocations.log", "\n".join(gh_log()) + "\n"))
+    rec.evidence.append(h.save(rec.id, "plan-vs-apply.json", json.dumps(rec.details, indent=2)))
+
+    a = runs["auth"]
+    plan_ok = (a["exit"] == 0 and science in plan_out and audit in plan_out
+               and "nothing was created" in plan_out and not a["mutating_gh_calls"]
+               and a["tree_unchanged"] and len(plan_steps) >= 3)
+    refusals_ok = all(runs[m]["exit"] == 20 and not runs[m]["mutating_gh_calls"]
+                      and runs[m]["tree_unchanged"] and runs[m]["stderr"] for m in ("absent", "unauth"))
+    # What --apply did that no plan step names, and plan steps it did not do.
+    plan_text = " ".join(s for _n, s in plan_steps)
+    gaps = []
+    if apply_obs["science_remote_commits"] and not re.search(rf"push\b.* {re.escape(science)}(\s|$)", plan_text):
+        gaps.append(f"`--apply` pushed the local history ({apply_obs['science_remote_commits']} commits) "
+                    f"to {science} — its own progress line says so — but no plan step is that push "
+                    "(step 1's gloss 'the work and its history' is the only hint)")
+    if new_commits:
+        gaps.append(f"it also committed locally ({new_commits}) and added origin, not in the plan")
+    if "protection" in plan_text and not apply_obs["branch_protection_call"]:
+        gaps.append("plan step 5 'gh api …/branches/main/protection' is not performed by `--apply` "
+                    "(it prints it as a manual step), and `init --github`'s panel says "
+                    "'crossaudit pair --apply does all of it'")
+    extra = (f"gh absent → exit {runs['absent']['exit']} ({short(runs['absent']['stderr'], 90)}); "
+             f"gh signed out → exit {runs['unauth']['exit']} ({short(runs['unauth']['stderr'], 80)}): "
+             "plan mode needs a signed-in gh even with both names given (it calls `gh api user` first)")
+    init_note = (f"`init --github` signed out: exit {ig.rc}, plan printed={init_obs['plan_printed']}, "
+                 f"device code shown={init_obs['mentions_device_code']}")
+    if plan_ok and refusals_ok and not gaps:
+        return finish(rec, "PASS", f"signed in: exit 0, both repositories and {len(plan_steps)} steps "
+                      f"printed, gh saw only {a['gh_calls']}, tree unchanged; {extra}; {init_note}.")
+    if plan_ok and refusals_ok:
+        return finish(rec, "PARTIAL", f"plan mode changes nothing (signed in: exit 0, both repositories, "
+                      f"{len(plan_steps)} steps, gh saw only {a['gh_calls']}, tree unchanged), but the plan "
+                      f"is not the list of what `--apply` does: " + "; ".join(gaps) + f". {extra}; {init_note}.")
+    why = []
+    if not plan_ok:
+        why.append(f"signed-in plan run: exit {a['exit']}, mutating gh calls {a['mutating_gh_calls']}, "
+                   f"tree unchanged {a['tree_unchanged']}, {len(plan_steps)} steps")
+    if not refusals_ok:
+        why.append(f"refusals: absent {runs['absent']['exit']}, unauth {runs['unauth']['exit']}")
+    return finish(rec, "FAIL", "; ".join(why) + f"; {init_note}")
+
+
+MCP_ECHO_TEXT = "harness-echo-payload-5c1e"
+MCP_BUDGET = 3
+# The generator's MCP requests, in order. With a budget of 3 calls per task:
+# 1 echo and 2 big run; 3 `secret` is off the allowlist; 4 is over budget.
+MCP_SEQUENCE = [("echo", {"text": MCP_ECHO_TEXT}), ("big", {}), ("secret", {}),
+                ("echo", {"text": "over budget"})]
+
+
+class McpCalls(fp.Scenario):
+    name = "mcp-calls"
+
+    def __init__(self, server_id: str):
+        self.server_id = server_id
+
+    def generator(self, n, system, prompt):
+        if n <= len(MCP_SEQUENCE):
+            tool, args = MCP_SEQUENCE[n - 1]
+            req = {"server_id": self.server_id, "tool": tool, "arguments": args}
+            return fp.reply("<<<CROSSAUDIT-MCP-TOOL>>>\n" + json.dumps(req)
+                            + "\n<<<END-CROSSAUDIT-MCP-TOOL>>>")
+        return super().generator(n, system, prompt)
+
+
+def http_post_json(url: str, payload: dict, timeout: float = 60) -> tuple[int, dict | None, str]:
+    u = urllib.request.urlparse(url)
+    conn = http.client.HTTPConnection(u.hostname, u.port, timeout=timeout)
+    body = json.dumps(payload).encode()
+    try:
+        conn.request("POST", u.path + (("?" + u.query) if u.query else ""), body=body,
+                     headers={"Content-Type": "application/json"})
+        resp = conn.getresponse()
+        text = resp.read(2_000_000).decode("utf-8", "replace")
+        return resp.status, json_or_none(text), text
+    except OSError as exc:
+        return -1, None, f"{exc}"
+    finally:
+        conn.close()
+
+
+def mcp_results_block(prompt: str):
+    m = re.search(r"<<<MCP-RESULTS\n(.*?)\nMCP-RESULTS", prompt, re.S)
+    return json_or_none(m.group(1)) if m else None
+
+
+@claim("C34a", "A registered local stdio MCP server, consented to as an exact executable, is called through a build")
+def c34a(h: Harness, rec: Record) -> Record:
+    """README "Connect MCP tools and Project Skills": register through the
+    console's /api/mcp exactly as the Tools & Skills dialog does (step 1
+    connect with the local-code approval, generator access off; step 2 approve
+    exact tool names and a calls-per-task cap), then a `crossaudit build` whose
+    fake generator emits the documented MCP-TOOL envelope four times. The
+    product has no CLI verb for MCP (recorded from `--help`)."""
+    p = Project(h, rec, fp.Scenario(), tag="MCP")
+    h.projects["MCP"] = p
+    p.init()
+    p.configure()
+    log = p.base / "fakemcp.jsonl"
+    exe = {}
+    for ident in ("mcpA", "mcpB"):
+        d = p.base / ident
+        d.mkdir()
+        src = (HERE / "fakemcp.py").read_text(encoding="utf-8").split("\n", 1)[1]
+        (d / "fakemcp").write_text(f"#!{h.venv}/bin/python3\n" + src, encoding="utf-8")
+        (d / "fakemcp").chmod(0o755)
+        exe[ident] = str((d / "fakemcp").resolve())
+    path_a = {"PATH": f"{p.base / 'mcpA'}:{h.venv}/bin:{BASE_PATH}"}
+    path_b = {"PATH": f"{p.base / 'mcpB'}:{h.venv}/bin:{BASE_PATH}"}
+    helptext = p.ca("--help", label="help").stdout
+    rec.details["cli_has_mcp_verb"] = bool(re.search(r"^\s+mcp\b", helptext, re.M))
+
+    def launches() -> list[dict]:
+        if not log.exists():
+            return []
+        return [json.loads(ln) for ln in log.read_text().splitlines() if ln.strip()]
+
+    c = p.ca("console", extra=path_a, label="console-start")
+    p.console_started = True
+    m = re.search(r"(http://127\.0\.0\.1:(\d+)/\?t=(\S+))", c.stdout)
+    if not m:
+        return finish(rec, "FAIL", f"console printed no tokenized URL: {short(c.stdout + c.stderr)}")
+    api = f"http://127.0.0.1:{m.group(2)}/api/mcp?t={m.group(3)}"
+    state_url = f"http://127.0.0.1:{m.group(2)}/api/state?t={m.group(3)}"
+    exchanges = []
+
+    def post(label: str, payload: dict):
+        st, data, text = http_post_json(api, payload)
+        exchanges.append({"label": label, "request": payload, "status": st,
+                          "response": data if data is not None else text[:2000]})
+        return st, data, text
+
+    base_payload = {"action": "register", "name": "harness fake", "transport": "stdio",
+                    "command": "fakemcp", "args": [str(log)], "timeout": 30,
+                    "max_calls_per_task": MCP_BUDGET, "allow_private_network": False,
+                    "allowed_tools": [], "enabled": False}
+    n_before = len(launches())
+    st0, d0, _ = post("connect-without-approval", dict(base_payload))
+    started_without_approval = len(launches()) > n_before
+    st1, d1, _ = post("step1-connect", {**base_payload, "approve_local_code": True})
+    if st1 != 200 or not isinstance(d1, dict) or not d1.get("id"):
+        rec.evidence.append(h.save(rec.id, "api-mcp-exchanges.json", json.dumps(exchanges, indent=2)))
+        return finish(rec, "FAIL", f"step-1 registration refused: HTTP {st1} {short(str(d1), 200)}")
+    sid = d1["id"]
+    st_all, d_all, _ = post("new-server-enabled-allow-all", {
+        **base_payload, "name": "harness fake 2", "approve_local_code": True,
+        "allow_all_tools": True, "enabled": True})
+    st2, d2, _ = post("step2-approve-tools", {
+        **base_payload, "server_id": sid, "command": d1.get("command"),
+        "approve_local_code": True, "allowed_tools": ["echo", "big"], "enabled": True})
+    st3, d3, _ = post("swap-command-without-approval", {
+        **base_payload, "server_id": sid, "command": exe["mcpB"],
+        "allowed_tools": ["echo", "big"], "enabled": True})
+    sts, body = http_get(state_url)
+    snap = (json_or_none(body) or {}).get("mcp", {})
+    stored = next((s for s in snap.get("servers", []) if s.get("id") == sid), {})
+    # The second registration (allow-all) may have created a row; remove it so
+    # only the server under test is enabled.
+    if st_all == 200 and isinstance(d_all, dict) and d_all.get("id"):
+        post("remove-allow-all-row", {"action": "remove", "server_id": d_all["id"]})
+    rec.evidence.append(h.save(rec.id, "api-mcp-exchanges.json", json.dumps(exchanges, indent=2)))
+    reg_launches = len(launches())
+
+    # The build: PATH now puts a DIFFERENT `fakemcp` first, and a decoy
+    # *_API_KEY is in the environment, to see what the server inherits.
+    p.fakes.set_scenario(McpCalls(sid))
+    b = p.ca("build", TASK, extra={**path_b, "OPENAI_API_KEY": "decoy-openai-HARNESS-key"},
+             label="build-with-mcp-calls", timeout=240)
+    all_launch = launches()
+    build_launches = [e for e in all_launch[reg_launches:] if e.get("event") == "start"]
+    build_calls = [e for e in all_launch[reg_launches:] if e.get("method") == "tools/call"]
+    gens = p.fakes.captures("generator")
+    auds = p.fakes.captures("auditor")
+    last_results = None
+    for cap in gens:
+        r = mcp_results_block(cap.get("prompt", ""))
+        if r is not None:
+            last_results = r
+    p.mcp = {"sid": sid, "log": log, "launches": all_launch, "reg_launches": reg_launches,
+             "build_launches": build_launches, "build_calls": build_calls,
+             "results": last_results or [], "build": b, "gens": gens, "auds": auds,
+             "exe": exe, "stored": stored}
+    rec.exit_codes.update({"build": b.rc, "connect_without_approval": st0, "step1": st1,
+                           "new_enabled_allow_all": st_all, "step2": st2, "swap_without_approval": st3})
+    rec.evidence.append(h.save(rec.id, "fakemcp-log.jsonl",
+                               "\n".join(json.dumps(e) for e in all_launch) + "\n"))
+    rec.evidence.append(h.save(rec.id, "mcp-results-in-last-generator-prompt.json",
+                               json.dumps(last_results, indent=2)[:400000]))
+    echo_res = next((r for r in (last_results or []) if r.get("tool") == "echo"
+                     and r.get("status") == "completed"), None)
+    echo_text = "".join(b_.get("text", "") for b_ in (echo_res or {}).get("content", []))
+    in_auditor = any(MCP_ECHO_TEXT in a.get("prompt", "") or "B" * 1000 in a.get("prompt", "") for a in auds)
+    pinned_at_reg = d1.get("command") == exe["mcpA"]
+    pinned_at_build = bool(build_launches) and all(e.get("identity") == "mcpA" for e in build_launches)
+    rec.details.update({
+        "connect_without_approval": {"http": st0, "refusal": (d0 or {}).get("reason") if isinstance(d0, dict) else d0,
+                                     "process_started": started_without_approval},
+        "step1": {"http": st1, "command_stored": d1.get("command"), "expected_resolved": exe["mcpA"],
+                  "tools_seen": [t["name"] for t in d1.get("tools", [])], "enabled": d1.get("enabled")},
+        "new_server_enabled_allow_all": {"http": st_all, "response": (d_all or {}).get("reason", d_all)
+                                         if isinstance(d_all, dict) else d_all},
+        "step2": {"http": st2, "allowed_tools": (d2 or {}).get("allowed_tools"),
+                  "enabled": (d2 or {}).get("enabled"), "max_calls": (d2 or {}).get("max_calls_per_task")},
+        "swap_command_without_approval": {"http": st3, "response": (d3 or {}).get("reason", d3)
+                                          if isinstance(d3, dict) else d3},
+        "stored_after_swap_attempt": stored.get("command"),
+        "build_exit": b.rc, "build_launch_identities": [e.get("identity") for e in build_launches],
+        "build_tools_called_on_server": [e.get("tool") for e in build_calls],
+        "echo_result_to_generator": echo_text, "tool_output_in_auditor_prompt": in_auditor})
+    problems = []
+    if st0 == 200 or started_without_approval:
+        problems.append(f"registration without approve_local_code: HTTP {st0}, process started={started_without_approval}")
+    if not pinned_at_reg:
+        problems.append(f"stored command {d1.get('command')!r} is not the resolved path {exe['mcpA']!r}")
+    if st2 != 200 or (d2 or {}).get("allowed_tools") != ["big", "echo"]:
+        problems.append(f"step 2 (approve echo, big) → HTTP {st2} {short(str(d2), 160)}")
+    if st3 == 200 or stored.get("command") != exe["mcpA"]:
+        problems.append(f"changing the command without a new approval → HTTP {st3}; stored now {stored.get('command')!r}")
+    if not pinned_at_build:
+        problems.append(f"build launched {[e.get('argv0') for e in build_launches]} (PATH put mcpB first)")
+    if b.rc != 0:
+        problems.append(f"build exit {b.rc}")
+    if echo_text != "echo: " + MCP_ECHO_TEXT:
+        problems.append(f"echo result returned to the generator: {echo_text!r}")
+    if in_auditor:
+        problems.append("tool output reached the auditor's prompt")
+    note_all = (f"a NEW server registered enabled with allow_all_tools → HTTP {st_all}"
+                + (" (refused)" if st_all != 200 else " (accepted)"))
+    cli_note = "no `mcp` CLI verb (registration is the console API only)" if not rec.details["cli_has_mcp_verb"] else "CLI has an mcp verb"
+    if not problems:
+        return finish(rec, "PASS", f"/api/mcp without the local-code approval → {st0}, nothing started; step 1 stored "
+                      f"the resolved path; changing the command without re-approval → {st3}; the build ran the "
+                      f"pinned copy although PATH put another `fakemcp` first; `echo` ran once and its text came back "
+                      f"to the generator, never to the auditor; {note_all}; {cli_note}.")
+    return finish(rec, "FAIL" if (b.rc != 0 or not echo_text) else "PARTIAL", "; ".join(problems) + f"; {note_all}; {cli_note}")
+
+
+def _mcp(h: Harness, rec: Record):
+    p = h.projects.get("MCP")
+    info = getattr(p, "mcp", None) if p else None
+    if info:
+        p.rec = rec
+    return p, info
+
+
+@claim("C34c", "A tool not on the MCP allowlist is refused", deps=("C34a",))
+def c34c(h: Harness, rec: Record) -> Record:
+    p, info = _mcp(h, rec)
+    if not info:
+        return finish(rec, "UNTESTED", "needs C34a's registered server and build")
+    res = next((r for r in info["results"] if r.get("tool") == "secret"), None)
+    reached = "secret" in [e.get("tool") for e in info["build_calls"]]
+    marker_in_prompt = any("FAKEMCP-SECRET-TOOL-OUTPUT" in g.get("prompt", "") for g in info["gens"])
+    rec.details = {"generator_saw": res, "reached_server": reached, "marker_in_any_prompt": marker_in_prompt,
+                   "advertised": [t["name"] for t in info["stored"].get("tools", [])],
+                   "allowed": info["stored"].get("allowed_tools")}
+    if res and res.get("status") == "refused" and not reached and not marker_in_prompt:
+        return finish(rec, "PASS", f"`secret` (advertised, not approved) → refused before launch: "
+                      f"\"{short(res.get('message', ''), 90)}\"; the server never received the call.")
+    return finish(rec, "FAIL", f"{rec.details}")
+
+
+@claim("C34d", "The calls-per-task budget stops the call after the cap", deps=("C34a",))
+def c34d(h: Harness, rec: Record) -> Record:
+    p, info = _mcp(h, rec)
+    if not info:
+        return finish(rec, "UNTESTED", "needs C34a's registered server and build")
+    res = info["results"]
+    over = res[3] if len(res) >= 4 else None
+    on_server = [e.get("tool") for e in info["build_calls"]]
+    rec.details = {"budget": MCP_BUDGET, "requests_in_order": [s[0] for s in MCP_SEQUENCE],
+                   "statuses": [(r.get("tool"), r.get("status"), short(r.get("message", ""), 100)) for r in res],
+                   "calls_that_reached_server": on_server}
+    if (over and over.get("status") == "refused" and "limit" in over.get("message", "")
+            and len(on_server) <= MCP_BUDGET and on_server.count("echo") == 1):
+        return finish(rec, "PASS", f"cap {MCP_BUDGET}: request 4 refused (\"{short(over.get('message'), 80)}\"); "
+                      f"the server received {on_server}. A refused (off-allowlist) request counts toward the cap.")
+    return finish(rec, "FAIL", f"{rec.details}")
+
+
+@claim("C34e", "An oversized MCP result is bounded before it reaches the generator", deps=("C34a",))
+def c34e(h: Harness, rec: Record) -> Record:
+    p, info = _mcp(h, rec)
+    if not info:
+        return finish(rec, "UNTESTED", "needs C34a's registered server and build")
+    res = next((r for r in info["results"] if r.get("tool") == "big"), None)
+    blocks = (res or {}).get("content", [])
+    size = sum(len(b.get("text", "").encode()) for b in blocks)
+    truncated = any(b.get("truncated") for b in blocks)
+    readme_number = re.search(r"bounded[^.\n]{0,80}?(\d[\d,]*\s*(?:KiB|KB|MiB|MB|bytes))", readme_text(h), re.I)
+    rec.details = {"server_returned_bytes": 1_000_000, "generator_received_bytes": size,
+                   "truncated_flag": truncated, "status": (res or {}).get("status"),
+                   "readme_states_a_number": readme_number.group(1) if readme_number else None}
+    if res and 0 < size < 1_000_000 and truncated:
+        return finish(rec, "PASS", f"1,000,000-byte result → {size} bytes ({size // 1024} KiB) with "
+                      f"truncated=true in the generator's prompt; the README says \"bounded\" without a number"
+                      + (f" ({readme_number.group(1)})" if readme_number else "") + ".")
+    return finish(rec, "FAIL", f"{rec.details}")
+
+
+@claim("C34f", "MCP calls leave content-free hashed call records", deps=("C34a",))
+def c34f(h: Harness, rec: Record) -> Record:
+    p, info = _mcp(h, rec)
+    if not info:
+        return finish(rec, "UNTESTED", "needs C34a's registered server and build")
+    calls_path = p.root / ".crossaudit" / "mcp" / "calls.json"
+    rows = json_or_none(calls_path.read_text()) if calls_path.exists() else None
+    rows = rows if isinstance(rows, list) else []
+    raw = calls_path.read_text() if calls_path.exists() else ""
+    mode = oct(calls_path.stat().st_mode & 0o777) if calls_path.exists() else None
+    allowed_keys = {"id", "server_id", "server", "tool", "status", "chat_id", "started",
+                    "duration_ms", "arguments_sha256", "result_sha256"}
+    extra_keys = sorted({k for r in rows for k in r} - allowed_keys)
+    content_hits = [s for s in (MCP_ECHO_TEXT, "B" * 64, "FAKEMCP-SECRET-TOOL-OUTPUT") if s in raw]
+    # Recompute both hashes from what the generator was given.
+    by_id = {r.get("call_id"): r for r in info["results"] if r.get("call_id")}
+    recomputed = []
+    for row in rows:
+        res = by_id.get(row.get("id"))
+        if res is None:
+            recomputed.append((row.get("tool"), "no matching result"))
+            continue
+        bounded = {k: v for k, v in res.items() if k not in ("call_id", "server_id", "server", "tool", "status")}
+        rsha = hashlib.sha256(json.dumps(bounded, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+        args = {} if row.get("tool") == "big" else {"text": MCP_ECHO_TEXT}
+        asha = hashlib.sha256(json.dumps(args, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+        recomputed.append((row.get("tool"), rsha == row.get("result_sha256"), asha == row.get("arguments_sha256")))
+    hashes_ok = bool(rows) and all(len(t) == 3 and t[1] and t[2] for t in recomputed)
+    # Anywhere else in the project (tree, git objects excluded) holding tool output?
+    elsewhere, args_elsewhere = [], []
+    for f in p.root.rglob("*"):
+        if f.is_file() and ".git" not in f.parts and f != calls_path:
+            try:
+                t = f.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            if "echo: " + MCP_ECHO_TEXT in t or "B" * 4096 in t:
+                elsewhere.append(str(f.relative_to(p.root)))
+            elif MCP_ECHO_TEXT in t:
+                args_elsewhere.append(str(f.relative_to(p.root)))
+    ev = p.root / ".crossaudit" / "evidence.jsonl"
+    ev_info = {"present": ev.exists()}
+    if ev.exists():
+        txt = ev.read_text()
+        ev_info["mentions_mcp"] = "mcp" in txt.lower()
+        ev_info["holds_output"] = MCP_ECHO_TEXT in txt
+        v = h.sh(rec, [h.venv / "bin/python", "-c",
+                       "import json,sys;from crossaudit.ledger.chain import EvidenceLedger as L;"
+                       "r=L(sys.argv[1]).verify();print(json.dumps(r.__dict__))", ev],
+                 cwd=p.root, env=p.env(), label="evidence-ledger-verify")
+        ev_info["verify"] = json_or_none(v.stdout.strip())
+    rec.details = {"calls_json": str(calls_path.relative_to(p.root)), "mode": mode, "rows": rows,
+                   "extra_keys": extra_keys, "content_hits": content_hits, "recomputed": recomputed,
+                   "tool_output_elsewhere_in_tree": elsewhere,
+                   "call_arguments_elsewhere_in_tree": args_elsewhere, "evidence_ledger": ev_info}
+    if calls_path.exists():
+        rec.evidence.append(h.copy(rec.id, calls_path, "calls.json"))
+    ok = (len(rows) == 2 and not extra_keys and not content_hits and hashes_ok and mode == "0o600"
+          and not elsewhere and not (ev_info.get("holds_output")))
+    ev_note = ("the hash-chained evidence ledger holds no MCP record (evidence.jsonl "
+               + ("present, verify " + str((ev_info.get("verify") or {}).get("ok")) if ev.exists() else "absent")
+               + "); the call ledger is a plain JSON list, mode 600, last 200 rows, not chained")
+    if ok:
+        return finish(rec, "PASS", f".crossaudit/mcp/calls.json: one row per executed call ({[r['tool'] for r in rows]}), "
+                      f"keys = identity/timing/status/hashes only, both sha256s recompute from what the generator "
+                      f"received, no tool result text anywhere in the project"
+                      + (f" (the call's arguments do appear in {args_elsewhere}: the run's event log keeps "
+                         "the generator's streamed reply, which is the request envelope)" if args_elsewhere else "")
+                      + f"; {ev_note}.")
+    return finish(rec, "FAIL" if content_hits or elsewhere else "PARTIAL", f"{rec.details}"[:600])
+
+
+@claim("C34g", "A local MCP server gets a small sanitized environment, no provider keys", deps=("C34a",))
+def c34g(h: Harness, rec: Record) -> Record:
+    p, info = _mcp(h, rec)
+    if not info:
+        return finish(rec, "UNTESTED", "needs C34a's registered server and build")
+    starts = [e for e in info["launches"] if e.get("event") == "start"]
+    keyish = re.compile(r"(^CROSSAUDIT_|KEY|TOKEN|SECRET|PASSWORD)", re.I)
+    names = sorted({k for e in starts for k in e.get("env_keys", [])})
+    bad = sorted({k for k in names if keyish.search(k)})
+    dummy = any(e.get("dummy_value_present") for e in starts)
+    rec.details = {"launches": len(starts), "env_names_union": names, "key_like_names": bad,
+                   "dummy_value_present": dummy,
+                   "parent_env_had": ["CROSSAUDIT_AUDITOR_KEY", "CROSSAUDIT_GENERATOR_KEY",
+                                      "CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT", "OPENAI_API_KEY (build only)",
+                                      "BROWSER", "NO_COLOR", "TERM", "GIT_CONFIG_NOSYSTEM"]}
+    if starts and not bad and not dummy and len(names) <= 13:
+        return finish(rec, "PASS", f"{len(starts)} launches (registration probes and build calls) saw only "
+                      f"{names}; no CROSSAUDIT_* or *_KEY name, no dummy key value, although the parent "
+                      "processes held both provider keys and a decoy OPENAI_API_KEY.")
+    return finish(rec, "FAIL", f"{rec.details}")
+
+
 # ========================================================================= main
 def render(h: Harness, records: list[Record]) -> str:
-    testable = [r for r in records if r.id <= "C31"]
+    testable = list(records)   # every claim run here is testable; the rest are in UNTESTABLE
     passed = sum(1 for r in testable if r.verdict == "PASS")
     by = lambda v: [r.id for r in testable if r.verdict == v]  # noqa: E731
     lines = [f"# CrossAudit README acceptance — `{h.label}`", "",
@@ -2013,7 +2540,7 @@ def main(argv: list[str] | None = None) -> int:
     only = {x.strip().upper() for x in args.only.split(",") if x.strip()}
     wanted = set()
     for cid, _t, _f, deps in CLAIMS:
-        if not only or cid in only:
+        if not only or cid.upper() in only:
             wanted.add(cid)
             wanted.update(deps)
     if "C29" in wanted or "C30" in wanted or "C31" in wanted:
