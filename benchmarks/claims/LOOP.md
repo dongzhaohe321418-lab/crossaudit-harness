@@ -101,3 +101,29 @@ MCP server driven through the documented consent flow (C34a); (3) the
 (`~/Claude/crossaudit-dogfood/REPORT.md` §3: `where` on several columns,
 ratio / percent change / population sd / median, byte-exact unit comparison,
 trailing-zero `repr` in quotations), measured again on the AI4S test set.
+
+### Round 2, item 1 — the DMG (C32a), 2026-10-22
+
+Built from `fix/claims-round-1` at 1caddd3 on this Apple Silicon machine with
+`PYTHON_BIN=/opt/homebrew/opt/python@3.13/libexec/bin/python3 bash
+packaging/macos/build_dmg.sh`: PyInstaller froze the core, the pinned Codex
+runtime (97.8 MB) was fetched and its SHA-256 checked, the app was ad-hoc
+signed, the frozen core's self-test ran before signing, and
+`packaging/macos/verify_dmg.sh` reported "Verified CrossAudit 4.17.0 DMG,
+signature, architecture, and frozen runtime" (exit 0). Output:
+`dist/CrossAudit-4.17.0-arm64.dmg`, 152,216,936 bytes; its `.sha256` is in
+`records/round-2/evidence/C32a/` beside the full build log. **C32a (build +
+self-test) PASS.** C32b — a person installing it and walking
+`docs/UX_TEST_PLAN.md` — stays untested here.
+
+Two things the build found: (1) with `PYTHON_BIN` unset the script takes the
+system `python3`, which on this macOS is 3.9.6 and below the package's floor,
+so the build fails at `pip install` — the README's "./packaging/macos/
+build_dmg.sh" needs a 3.10+ interpreter named; (2) a `build/macos/venv` left by
+an earlier run with the wrong interpreter is reused silently, so the second
+attempt with the right `PYTHON_BIN` failed the same way until `build/macos`
+was removed. Both are fixed on the integration branch in the next commit
+(the script now recreates the venv when its interpreter's major.minor differs
+from `PYTHON_BIN`'s, and refuses an interpreter below 3.10 with a sentence).
+The built app still reports 4.17.0 although the tree carries D167–D172; a
+release from this tree needs the version bump the release checklist describes.
