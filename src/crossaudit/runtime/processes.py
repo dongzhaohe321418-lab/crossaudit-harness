@@ -5,6 +5,8 @@ import os
 import subprocess
 from pathlib import Path
 
+from ..app_keys import child_env
+
 
 def windows_pid_alive(pid: object) -> bool:
     """Query Windows without ``os.kill(pid, 0)``, which can emit Ctrl+C."""
@@ -125,7 +127,7 @@ def _start_marker(process_id: int) -> str | None:
         result = subprocess.run(
             ["ps", "-o", "lstart=", "-p", str(process_id)],
             capture_output=True, text=True, timeout=1.0, check=False,
-            env={**os.environ, "LC_ALL": "C", "LANG": "C", "TZ": "UTC"})
+            env=child_env(LC_ALL="C", LANG="C", TZ="UTC"))
         started = result.stdout.strip()
         if result.returncode == 0 and started:
             return started
@@ -145,7 +147,7 @@ def zombie(pid: int) -> bool:
                 ")", 1)[1].strip().startswith("Z")
         result = subprocess.run(
             ["ps", "-o", "stat=", "-p", str(pid)], capture_output=True,
-            text=True, timeout=0.5, check=False)
+            text=True, timeout=0.5, check=False, env=child_env())
         return result.returncode == 0 and result.stdout.strip().startswith("Z")
     except (OSError, subprocess.SubprocessError, IndexError):
         return False

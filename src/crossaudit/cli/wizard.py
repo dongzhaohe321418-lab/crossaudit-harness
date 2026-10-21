@@ -24,6 +24,7 @@ from pathlib import Path
 
 from . import i18n
 from .. import doctor_shared
+from ..app_keys import child_env
 from ..config import CONFIG_NAME
 from ..errors import ConfigDenial, Denial
 from ..scaffold import (AUDIT_TREE, CONFIG_TEMPLATE, GENERAL_CHECKS,
@@ -168,7 +169,8 @@ def write_keys(pairs: dict[str, str]) -> Path:
 def gh_available() -> tuple[bool, str]:
     if not shutil.which("gh"):
         return False, "gh CLI not installed"
-    proc = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True)
+    proc = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True,
+                          env=child_env())
     if proc.returncode != 0:
         return False, "gh installed but not authenticated (run: gh auth login)"
     return True, "gh authenticated"
@@ -198,7 +200,7 @@ def prepare(target: Path) -> list[str]:
         done.append(t("prepare.created", path=target))
     if not (target / ".git").is_dir():
         subprocess.run(["git", "init", "-q", "-b", "main"], cwd=str(target),
-                       check=True)
+                       check=True, env=child_env())
         done.append(t("prepare.git_init"))
     gitignore = target / ".gitignore"
     current = gitignore.read_text(encoding="utf-8") if gitignore.is_file() else ""
@@ -224,7 +226,7 @@ def tracked_paths(target: Path, paths: list[str]) -> list[str]:
     if not paths:
         return []
     listed = subprocess.run(["git", "ls-files", "--", *paths], cwd=str(target),
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, env=child_env())
     if listed.returncode != 0:
         return []
     known = {line for line in listed.stdout.splitlines() if line}
@@ -269,14 +271,14 @@ def commit_setup(target: Path, paths: list[str]) -> str:
     """
     owned = sorted(set(paths))
     add = subprocess.run(["git", "add", "--", *owned], cwd=str(target),
-                         capture_output=True, text=True)
+                         capture_output=True, text=True, env=child_env())
     if add.returncode != 0:
         raise ConfigDenial(f"could not stage the setup files: {add.stderr.strip()[:200]}")
 
     name = subprocess.run(["git", "config", "user.name"], cwd=str(target),
-                          capture_output=True, text=True).stdout.strip()
+                          capture_output=True, text=True, env=child_env()).stdout.strip()
     email = subprocess.run(["git", "config", "user.email"], cwd=str(target),
-                           capture_output=True, text=True).stdout.strip()
+                           capture_output=True, text=True, env=child_env()).stdout.strip()
     for key, current, fallback in (
         ("user.name", name, "CrossAudit"),
         ("user.email", email, "crossaudit@local.invalid"),
@@ -284,29 +286,30 @@ def commit_setup(target: Path, paths: list[str]) -> str:
         if current:
             continue
         configured = subprocess.run(["git", "config", key, fallback], cwd=str(target),
-                                    capture_output=True, text=True)
+                                    capture_output=True, text=True, env=child_env())
         if configured.returncode != 0:
             raise ConfigDenial(f"could not configure the local git identity: "
                                f"{configured.stderr.strip()[:200]}")
 
     changed = subprocess.run(["git", "diff", "--cached", "--quiet", "--", *owned],
-                             cwd=str(target))
+                             cwd=str(target), env=child_env())
     if changed.returncode == 0:
         # Re-running --force with byte-identical answers has nothing to version.
         return subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(target),
-                              capture_output=True, text=True).stdout.strip()
+                              capture_output=True, text=True, env=child_env()).stdout.strip()
     if changed.returncode != 1:
         raise ConfigDenial("could not inspect the staged setup files")
 
     commit = subprocess.run(
         ["git", "commit", "-q", "--only", "-m",
          "crossaudit: initialize supervised project", "--", *owned],
-        cwd=str(target), capture_output=True, text=True)
+        cwd=str(target), capture_output=True, text=True, env=child_env())
     if commit.returncode != 0:
         raise ConfigDenial(f"could not commit the setup files: "
                            f"{commit.stderr.strip()[:200]}")
     return subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(target),
-                          capture_output=True, text=True, check=True).stdout.strip()
+                          capture_output=True, text=True, check=True,
+                          env=child_env()).stdout.strip()
 
 
 #: The starting points a person chooses between, per SPEC 3 §4.2. Each carries
@@ -661,7 +664,7 @@ def _open_in_editor(path: Path) -> None:
         tui.note(t("editor.manual", path=path))
         return
     try:
-        subprocess.run([*editor.split(), str(path)], check=False)
+        subprocess.run([*editor.split(), str(path)], check=False, env=child_env())
     except OSError as exc:  # noqa: BLE001 -- an editor that will not start is not fatal
         tui.warn(t("editor.failed", editor=editor, error=exc))
         tui.note(t("editor.manual_instead", path=path))

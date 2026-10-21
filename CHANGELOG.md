@@ -16,6 +16,11 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   unverifiable and let the next appends fork the chain. Ledgers already written
   that way verify again, and an append onto a ledger that does not verify is now
   refused instead of forking it (D168).
+- **Provider keys stay in the core process.** Git, the GitHub CLI, OpenSSH and
+  the bundled Codex runtime used to inherit every provider key the app loaded
+  from the Keychain (and any `*_API_KEY` exported in the launching shell). They
+  are now started without them; only project workers, which call the providers
+  themselves, still receive keys (D170).
 
 ## 4.17.0 — The activity stream
 

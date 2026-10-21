@@ -148,10 +148,14 @@ class CodexAppServer:
                 if self._proc:
                     self._stop_process(self._proc)
                 path = self.path or executable()
+                # Imported here, not at module top: app_keys imports the
+                # provider registry, which imports this module.
+                from ..app_keys import child_env
                 try:
                     proc = subprocess.Popen(
                         [path, "app-server"], stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE, stderr=None, text=True, bufsize=1)
+                        stdout=subprocess.PIPE, stderr=None, text=True, bufsize=1,
+                        env=child_env())
                 except OSError as exc:
                     raise ConfigDenial(
                         f"could not start the official Codex runtime: {exc}") from exc

@@ -27,6 +27,7 @@ from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from typing import Callable
 
+from .app_keys import child_env
 from .config import Config
 from .errors import ConfigDenial
 
@@ -213,7 +214,7 @@ class OpenSSH:
         try:
             result = subprocess.run(
                 [self.path, "-G", alias], capture_output=True, text=True,
-                timeout=5, env={**os.environ, "LC_ALL": "C"})
+                timeout=5, env=child_env(LC_ALL="C"))
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise SSHFailure(str(exc), code="ssh_missing") from exc
         if result.returncode:
@@ -249,7 +250,7 @@ class OpenSSH:
             result = subprocess.run(
                 [self.path, *options, alias, command], input=input_text,
                 capture_output=True, text=True, timeout=timeout,
-                env={**os.environ, "LC_ALL": "C"})
+                env=child_env(LC_ALL="C"))
         except subprocess.TimeoutExpired as exc:
             raise SSHFailure("The remote operation timed out", code="host_unreachable") from exc
         except OSError as exc:
@@ -265,7 +266,7 @@ class OpenSSH:
         try:
             return subprocess.Popen(
                 [self.path, *_SSH_OPTIONS, alias, command], stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, env={**os.environ, "LC_ALL": "C"})
+                stderr=subprocess.PIPE, env=child_env(LC_ALL="C"))
         except OSError as exc:
             raise SSHFailure(str(exc), code="ssh_missing") from exc
 
@@ -286,7 +287,7 @@ class OpenSSH:
                 result = subprocess.run(
                     [self.path, *_SSH_OPTIONS, alias, command], stdin=handle,
                     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-                    timeout=timeout, env={**os.environ, "LC_ALL": "C"})
+                    timeout=timeout, env=child_env(LC_ALL="C"))
             error = result.stderr[:LOG_BYTES].decode("utf-8", "replace")
         except subprocess.TimeoutExpired as exc:
             raise SSHFailure("The remote input transfer timed out",

@@ -20,6 +20,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from .app_keys import child_env
 from .errors import ProviderDenial
 from .file_identity import AppliedFiles, apply_file_payloads
 from .gitio import OVERSIZE_DOCUMENT_MARKER
@@ -128,7 +129,7 @@ def _target_for(source: PurePosixPath, request: ExportRequest) -> PurePosixPath:
 def _owned_target(root: Path, relative: str) -> bool:
     result = subprocess.run(
         ["git", "log", "-1", "--format=%B", "--", relative], cwd=str(root),
-        capture_output=True, text=True)
+        capture_output=True, text=True, env=child_env())
     return result.returncode == 0 and "CrossAudit-Generator:" in result.stdout
 
 

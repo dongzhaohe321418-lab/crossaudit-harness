@@ -12,6 +12,7 @@ import os
 import subprocess
 from pathlib import Path
 
+from .app_keys import child_env
 from .errors import ConfigDenial, IntegrityDenial
 
 MAX_BLOB_BYTES = 512 * 1024
@@ -86,7 +87,7 @@ def git(*args: str, cwd: Path, check: bool = True) -> str:
     timeout = _git_timeout()
     try:
         proc = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True,
-                              timeout=timeout, **_TEXT)
+                              timeout=timeout, **_TEXT, env=child_env())
     except subprocess.TimeoutExpired as exc:
         # A timed-out git reaches a terminal outcome instead of wedging: the
         # loop treats ConfigDenial from the commit as ``commit_refused`` and
@@ -108,7 +109,7 @@ def git_bytes(*args: str, cwd: Path, input_data: bytes = b"",
     timeout = _git_timeout()
     try:
         proc = subprocess.run(["git", *args], cwd=str(cwd), input=input_data,
-                              capture_output=True, timeout=timeout)
+                              capture_output=True, timeout=timeout, env=child_env())
     except subprocess.TimeoutExpired as exc:
         raise ConfigDenial(
             f"git {' '.join(args)} did not finish within {timeout:.0f}s and was "
@@ -158,7 +159,7 @@ def read_committed_bytes(repo: Path, commit: str, path: str) -> bytes:
 
 def is_repo(path: Path) -> bool:
     return subprocess.run(["git", "-C", str(path), "rev-parse", "--git-dir"],
-                          capture_output=True).returncode == 0
+                          capture_output=True, env=child_env()).returncode == 0
 
 
 def resolve(repo: Path, rev: str) -> tuple[str, str]:
@@ -194,7 +195,8 @@ def entries(repo: Path, sha: str, prefix: str = "") -> list[tuple[str, str, str]
     args = ["ls-tree", "-r", "-z", sha]
     if prefix:
         args += ["--", prefix]
-    raw = subprocess.run(["git", *args], cwd=str(repo), capture_output=True, **_TEXT)
+    raw = subprocess.run(["git", *args], cwd=str(repo), capture_output=True, **_TEXT,
+                         env=child_env())
     if raw.returncode != 0:
         raise ConfigDenial(f"git ls-tree failed: {raw.stderr.strip()[:200]}", repo=str(repo))
     out = []
@@ -248,7 +250,7 @@ def _stream_blob(repo: Path, blob: str, cap: int) -> tuple[bytes, bool]:
     not exist raises ``IntegrityDenial`` exactly as the buffered read did.
     """
     proc = subprocess.Popen(["git", "cat-file", "blob", blob], cwd=str(repo),
-                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=child_env())
     want = cap + 1
     chunks: list[bytes] = []
     got = 0
@@ -350,9 +352,10 @@ def materialise(repo: Path, sha: str, prefix: str = "",
 
 def is_ancestor(repo: Path, ancestor: str, descendant: str) -> bool:
     return subprocess.run(["git", "-C", str(repo), "merge-base", "--is-ancestor",
-                           ancestor, descendant], capture_output=True).returncode == 0
+                           ancestor, descendant], capture_output=True,
+                           env=child_env()).returncode == 0
 
 
 def commit_exists(repo: Path, sha: str) -> bool:
     return subprocess.run(["git", "-C", str(repo), "cat-file", "-e", f"{sha}^{{commit}}"],
-                          capture_output=True).returncode == 0
+                          capture_output=True, env=child_env()).returncode == 0

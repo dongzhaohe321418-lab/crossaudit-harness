@@ -28,6 +28,7 @@ import subprocess
 from pathlib import Path
 
 from ..config import load
+from ..app_keys import child_env
 from ..errors import EXIT_CONFIG, EXIT_OK, ConfigDenial, RemediationAction as RA
 
 TIERS = {
@@ -69,7 +70,7 @@ def gh() -> str:
             url="https://cli.github.com")
     try:
         proc = subprocess.run([path, "auth", "status"], capture_output=True,
-                              text=True, timeout=GH_AUTH_TIMEOUT)
+                              text=True, timeout=GH_AUTH_TIMEOUT, env=child_env())
     except subprocess.TimeoutExpired as exc:
         raise _timed_out("GitHub", GH_AUTH_TIMEOUT) from exc
     if proc.returncode != 0:
@@ -85,7 +86,7 @@ def _gh(*args: str, check: bool = True,
         timeout: int = GH_COMMAND_TIMEOUT) -> str:
     try:
         proc = subprocess.run([gh(), *args], capture_output=True, text=True,
-                              timeout=timeout)
+                              timeout=timeout, env=child_env())
     except subprocess.TimeoutExpired as exc:
         raise _timed_out("GitHub", timeout) from exc
     if check and proc.returncode != 0:
@@ -127,7 +128,7 @@ def github_scopes() -> set[str]:
     """Read OAuth scope names from GitHub response headers without exposing the token."""
     try:
         proc = subprocess.run([gh(), "api", "-i", "user"], capture_output=True,
-                              text=True, timeout=GH_IDENTITY_TIMEOUT)
+                              text=True, timeout=GH_IDENTITY_TIMEOUT, env=child_env())
     except subprocess.TimeoutExpired as exc:
         raise _timed_out("GitHub", GH_IDENTITY_TIMEOUT) from exc
     if proc.returncode != 0:
@@ -145,7 +146,7 @@ def github_scopes() -> set[str]:
 def _exists(repo: str) -> bool:
     try:
         proc = subprocess.run([gh(), "repo", "view", repo], capture_output=True,
-                              text=True, timeout=GH_IDENTITY_TIMEOUT)
+                              text=True, timeout=GH_IDENTITY_TIMEOUT, env=child_env())
     except subprocess.TimeoutExpired as exc:
         raise _timed_out("GitHub", GH_IDENTITY_TIMEOUT) from exc
     if proc.returncode == 0:
@@ -162,7 +163,7 @@ def _exists(repo: str) -> bool:
 def _git(root: Path, *args: str, check: bool = True) -> str:
     try:
         proc = subprocess.run(["git", *args], cwd=str(root), capture_output=True,
-                              text=True, timeout=GIT_COMMAND_TIMEOUT)
+                              text=True, timeout=GIT_COMMAND_TIMEOUT, env=child_env())
     except subprocess.TimeoutExpired as exc:
         raise _timed_out("Git", GIT_COMMAND_TIMEOUT) from exc
     if check and proc.returncode != 0:
@@ -207,7 +208,8 @@ def _sync_existing_main(root: Path) -> None:
     """Bring an adopted remote main into the local history without discarding either side."""
     remote = subprocess.run(
         ["git", "ls-remote", "--exit-code", "--heads", "origin", "main"],
-        cwd=str(root), capture_output=True, text=True, timeout=GIT_COMMAND_TIMEOUT)
+        cwd=str(root), capture_output=True, text=True, timeout=GIT_COMMAND_TIMEOUT,
+        env=child_env())
     if remote.returncode == 2:
         return  # An accessible but empty repository has no main branch yet.
     if remote.returncode != 0:
@@ -231,25 +233,27 @@ def _sync_existing_main(root: Path) -> None:
     _git(root, "fetch", "-q", "origin", "main")
     head = subprocess.run(
         ["git", "rev-parse", "--verify", "HEAD"], cwd=str(root),
-        capture_output=True, text=True, timeout=GIT_COMMAND_TIMEOUT)
+        capture_output=True, text=True, timeout=GIT_COMMAND_TIMEOUT, env=child_env())
     if head.returncode != 0:
         _git(root, "checkout", "-q", "-B", "main", "origin/main")
         return
     ancestor = subprocess.run(
         ["git", "merge-base", "--is-ancestor", "origin/main", "HEAD"],
-        cwd=str(root), capture_output=True, text=True, timeout=GIT_COMMAND_TIMEOUT)
+        cwd=str(root), capture_output=True, text=True, timeout=GIT_COMMAND_TIMEOUT,
+        env=child_env())
     if ancestor.returncode == 0:
         return
     merged = subprocess.run(
         ["git", "-c", "user.name=CrossAudit", "-c",
          "user.email=crossaudit@local.invalid", "merge", "--no-edit",
          "--allow-unrelated-histories", "-X", "theirs", "origin/main"],
-        cwd=str(root), capture_output=True, text=True, timeout=GIT_COMMAND_TIMEOUT)
+        cwd=str(root), capture_output=True, text=True, timeout=GIT_COMMAND_TIMEOUT,
+        env=child_env())
     if merged.returncode == 0:
         _record_local_state_ignores(root)
         return
     subprocess.run(["git", "merge", "--abort"], cwd=str(root),
-                   capture_output=True, text=True, timeout=GIT_COMMAND_TIMEOUT)
+                   capture_output=True, text=True, timeout=GIT_COMMAND_TIMEOUT, env=child_env())
     raise ConfigDenial(
         "the local and remote working repository histories conflict; the merge was "
         "aborted without changing either history. Resolve the local files or choose "
@@ -307,7 +311,7 @@ def apply_pair(cfg, science: str, audit: str, *, private: bool,
         args.extend(["--quiet", "--", config_rel])
         try:
             clean = subprocess.run(args, cwd=str(cfg.root),
-                                   timeout=GIT_COMMAND_TIMEOUT).returncode
+                                   timeout=GIT_COMMAND_TIMEOUT, env=child_env()).returncode
         except subprocess.TimeoutExpired as exc:
             raise _timed_out("Git", GIT_COMMAND_TIMEOUT) from exc
         if clean != 0:
@@ -341,7 +345,7 @@ def apply_pair(cfg, science: str, audit: str, *, private: bool,
     try:
         pending_config = subprocess.run(
             ["git", "diff", "--cached", "--quiet", "--", config_rel],
-            cwd=str(cfg.root), timeout=GIT_COMMAND_TIMEOUT).returncode
+            cwd=str(cfg.root), timeout=GIT_COMMAND_TIMEOUT, env=child_env()).returncode
     except subprocess.TimeoutExpired as exc:
         raise _timed_out("Git", GIT_COMMAND_TIMEOUT) from exc
     if pending_config == 1:
@@ -381,7 +385,7 @@ def apply_pair(cfg, science: str, audit: str, *, private: bool,
         try:
             pending = subprocess.run(["git", "diff", "--cached", "--quiet"],
                                      cwd=str(staging),
-                                     timeout=GIT_COMMAND_TIMEOUT).returncode
+                                     timeout=GIT_COMMAND_TIMEOUT, env=child_env()).returncode
         except subprocess.TimeoutExpired as exc:
             raise _timed_out("Git", GIT_COMMAND_TIMEOUT) from exc
         if pending == 1:
@@ -400,7 +404,7 @@ def apply_pair(cfg, science: str, audit: str, *, private: bool,
         try:
             proc = subprocess.run([gh(), "secret", "set", cfg.auditor.key_env,
                                   "--repo", audit], input=key, text=True,
-                                  capture_output=True, timeout=GH_COMMAND_TIMEOUT)
+                                  capture_output=True, timeout=GH_COMMAND_TIMEOUT, env=child_env())
         except subprocess.TimeoutExpired as exc:
             raise _timed_out("GitHub", GH_COMMAND_TIMEOUT) from exc
         if proc.returncode != 0:
