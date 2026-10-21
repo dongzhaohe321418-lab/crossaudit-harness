@@ -30,6 +30,10 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   now allows the two script blocks it ships, by hash, instead of any inline
   script, so an injected `<script>` or `onclick=` attribute does not execute.
   The server's description of what the policy guarantees was corrected (D170).
+- **SECURITY.md says what the console token authorises.** Anyone holding the
+  token in the console URL can register a local MCP server or change the
+  allowed check commands, and so run programs as you; the policy now says so,
+  says where the token is kept, and says to treat it like a password (D170).
 
 ## 4.17.0 — The activity stream
 

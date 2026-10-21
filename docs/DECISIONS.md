@@ -7746,3 +7746,72 @@ RULINGS:
 Recorded because the escaping choice is a boundary a later reader could reopen (switching
 to `ensure_ascii=True` "for safety" changes bytes on disk for every Chinese payload), and
 because "append refuses a damaged chain" is now a contract the receipt path relies on.
+
+## D170 — Where SECURITY.md promised more than the code: keys stay out of non-provider children, a Codex tool event fails the round, the page CSP pins its scripts, and the token is named for what it authorises
+
+**Date:** 2026-10-21. **Branch:** `fix/claims-round-1b`.
+
+**What was wrong.** Four sentences in SECURITY.md and the console server's docstring were
+stronger than the code. (S1) Keys were said to be "injected only into the local core
+process", but every child the core launched — Git, the GitHub CLI, OpenSSH, the Codex
+app-server — inherited the whole environment. (S2) "Any command, file-change, web, or tool
+event makes the provider round fail closed", but the Codex bridge only recorded the event
+and returned the turn's text. (S3) "A strict inline-only CSP, so nothing on the page can
+fetch or exfiltrate", over a header carrying `script-src 'unsafe-inline'` and
+`connect-src 'self'`. (S4) SECURITY.md said the web view "cannot accept a command,
+executable" of Environment Doctor only, and was silent that the same token registers a
+local stdio MCP executable (started immediately) and replaces the allowed check commands.
+
+RULINGS:
+
+1. **One helper strips provider keys from non-provider children:**
+   `app_keys.child_env()`. It removes each vendor's primary and backup name, the legacy
+   role names, any `CROSSAUDIT_*_KEY` and any `*_API_KEY`, and leaves everything else
+   byte-identical (`GH_TOKEN`, `SSH_AUTH_SOCK`, `GIT_ASKPASS`, `CODEX_HOME` are tested as
+   kept). Every `subprocess` launch site in `src/` uses it except four that build their own
+   environment on purpose: stdio MCP servers (an eight-name allowlist), `run_check` (every
+   `*KEY*`/`*TOKEN*`/`*SECRET*` name stripped), project workers (they call the providers
+   and must have the keys), and `app.py` (below). A structural test fails on a new launch
+   site without it. Considered and rejected: a broad `*TOKEN*`/`*SECRET*` scrub for every
+   child — the GitHub CLI and Git credential helpers need `GH_TOKEN`/`GITHUB_TOKEN`.
+   The Codex runtime needs none of the stripped names (its ChatGPT login lives under
+   `HOME`/`CODEX_HOME`); an `OPENAI_API_KEY` or `CODEX_API_KEY` in its environment is the
+   one thing that could move it to API-key billing. Not verified against a live runtime.
+2. **A Codex turn with any tool event is refused**, category `response`, not retryable
+   (the empty-completion shape), with `blocked_tool_requests` in the detail; the text is
+   discarded unread. Both sources count: a completed item of a forbidden type and a
+   server-initiated tool/approval request (still answered `-32601` at once). The code was
+   moved to the stronger sentence, not the sentence to the code, because that is the
+   direction AGENTS.md §1 allows. Considered and rejected: interrupting the turn at the
+   first tool event — it saves tokens but adds a protocol path for no change in outcome.
+3. **The page CSP lists the SHA-256 of its two script blocks**, computed at import from
+   `PAGE` itself, and no `'unsafe-inline'` for scripts; the three inline handlers (Stop,
+   approval decisions, draft fold) became delegated listeners. Everything else in the
+   header is unchanged. The docstring now also says what the CSP does not do:
+   `connect-src 'self'` leaves every same-origin API reachable to script that runs, a CSP
+   does not stop top-level navigation, and the `innerHTML` sinks rely on escaping.
+4. **SECURITY.md names the token as a bearer credential for local code execution**: what
+   its holder can do (register and start a local MCP executable, replace allowed check
+   commands), that the MCP local-code approval is a field of the same request, where the
+   token lives (the URL and browser history; `.crossaudit/console.json`, mode 600), and
+   what the user should treat it as. Documentation only; no code gate was added, and no new
+   promise was made.
+
+OPEN (deliberately not taken here):
+
+- `app.py`'s bootstrap `git` calls and `mcp.py`'s Keychain `security` calls still inherit
+  the full environment: both files are owned by a sibling branch this round. Adding them to
+  `child_env` is mechanical; the structural test's exemption list names them.
+- A configured `key_env` that is neither `CROSSAUDIT_*_KEY` nor `*_API_KEY` is not
+  recognised by `child_env`.
+- A code gate on MCP registration and on allowed commands (a confirmation the native shell
+  holds, not the token) is the owner's decision; SECURITY.md now states the exposure
+  instead.
+- SECURITY.md's "CrossAudit does not execute generated commands automatically" reads
+  against `run_check`, which runs a generator-chosen argv whose `argv[0]` is on the
+  allowed list; worth an owner's wording pass.
+
+Recorded because each ruling closes a gap a later reader could reopen by accident: by
+launching a new child with the inherited environment, by relaxing the Codex refusal back
+to "recover with text", by putting `'unsafe-inline'` back for a quick inline handler, or by
+reading SECURITY.md as if the token authorised only reads.
