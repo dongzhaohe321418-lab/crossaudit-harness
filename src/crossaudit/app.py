@@ -15,7 +15,6 @@ import sys
 import tempfile
 import threading
 import urllib.error
-import urllib.request
 from pathlib import Path
 
 from . import __version__
@@ -25,6 +24,7 @@ from .console import daemon, serve
 from .console.server import PROJECT_IDLE_TIMEOUT_S
 from .dcl import describe as describe_checks
 from .errors import ConfigDenial, Denial
+from .netutil import open_loopback
 from .scaffold import CONFIG_TEMPLATE, GENERAL_CHECKS, read
 from .workspace import configured_workspace
 
@@ -140,11 +140,11 @@ def self_test() -> dict:
         thread = threading.Thread(target=httpd.serve_forever, daemon=True)
         thread.start()
         try:
-            with urllib.request.urlopen(url, timeout=5) as response:  # nosec B310
+            with open_loopback(url, timeout=5) as response:  # nosec B310
                 authenticated = response.status == 200 and b"CrossAudit" in response.read()
             bare = url.split("?", 1)[0]
             try:
-                urllib.request.urlopen(bare, timeout=5)  # nosec B310
+                open_loopback(bare, timeout=5)  # nosec B310
             except urllib.error.HTTPError as exc:
                 refused_without_token = exc.code == 403
             else:

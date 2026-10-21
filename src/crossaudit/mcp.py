@@ -29,11 +29,12 @@ from collections.abc import Callable
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, Request
 
 from . import __version__
 from .config import Config
 from .errors import ConfigDenial
+from .netutil import opener_for
 
 PROTOCOL_VERSION = "2025-11-25"
 SUPPORTED_VERSIONS = {PROTOCOL_VERSION, "2025-06-18", "2025-03-26"}
@@ -375,7 +376,10 @@ class _HTTPSession:
         self.sequence = 0
         self.session_id = ""
         self.protocol = PROTOCOL_VERSION
-        self.opener = build_opener(_NoRedirect())
+        # A loopback MCP server is reached directly, never through a proxy
+        # (the bearer token would otherwise go to the proxy); a remote one
+        # keeps honouring the user's proxy variables (D169).
+        self.opener = opener_for(row["url"], _NoRedirect())
 
     def _post(self, message: dict, *, initialization: bool = False) -> dict:
         body = _bounded_json(message, MAX_MESSAGE_BYTES, "MCP message")

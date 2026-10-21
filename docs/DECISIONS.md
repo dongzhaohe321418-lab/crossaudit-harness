@@ -7746,3 +7746,34 @@ RULINGS:
 Recorded because the escaping choice is a boundary a later reader could reopen (switching
 to `ensure_ascii=True` "for safety" changes bytes on disk for every Chinese payload), and
 because "append refuses a damaged chain" is now a contract the receipt path relies on.
+
+## D169 — Five confirmed defects closed in one round: loopback HTTP ignores proxies, unseen input escalates, the authorization store serialises its writes, a decimal comma is not a number, and the escalation-ruling path is pinned
+
+**Date:** 2026-10-21. **Branch:** `fix/claims-round-1a`. One commit per defect; each ruling
+below names its defect (F1–F5) so a later reader can find the commit.
+
+RULINGS:
+
+1. **F1 — Every request CrossAudit makes to its own loopback servers bypasses the proxy
+   variables.** `urllib.request.urlopen` installs a `ProxyHandler` from `HTTP_PROXY` /
+   `http_proxy` / `ALL_PROXY`; with a local proxy exported (common: `HTTP_PROXY=
+   http://127.0.0.1:7897`) the daemon health/state probes, the project-relay stream and
+   the app self-test were sent to the proxy, which saw the console session token in the
+   query string and could misreport liveness. One module, `crossaudit/netutil.py`, owns
+   the policy: `open_loopback` (refuses a non-loopback URL), `loopback_opener` (an opener
+   with `ProxyHandler({})`), and `opener_for(url, *handlers)`, which drops the proxy only
+   when the URL names a loopback host literally (`localhost`, `127.0.0.1`, `::1`; a name
+   that merely resolves to loopback is not looked up). **Remote MCP servers keep honouring
+   the user's proxy; a loopback MCP server (the HTTP-on-loopback case `mcp._safe_url`
+   already allows) is reached directly**, through `opener_for` with the existing
+   no-redirect handler — a proxy there would receive the server's bearer token and could
+   not reach the user's local server anyway. Considered and rejected: dropping proxies for
+   MCP altogether (breaks remote MCP behind a corporate proxy) and setting `NO_PROXY` in
+   the process (global, and leaks into every child process). The suite's own client is
+   scrubbed by an autouse conftest fixture (`_no_proxy_variables`) so the result no longer
+   depends on the developer's proxy; the product tests set a dead proxy back inside the
+   test. Left open, deliberately: the provider adapters' openers (`providers/base.py`)
+   still honour proxies for a loopback provider endpoint (`--allow-insecure-localhost`),
+   which would send that provider's key to the proxy; that is a provider-path change for
+   its own slice. A macOS system-level proxy (`scutil`) can still affect the suite's own
+   client (urllib consults it when no variable is set); the product helpers are immune.

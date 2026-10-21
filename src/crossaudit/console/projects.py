@@ -37,6 +37,7 @@ from ..controller import StateStore
 from ..dcl import describe as describe_checks
 from ..errors import ConfigDenial, Denial, ProviderDenial
 from ..gitio import git, is_repo
+from ..netutil import open_loopback
 from ..providers import codex_subscription
 from ..providers.catalog import list_models
 from ..providers.specs import EFFORT_HINTS, SPECS, capability_json, reasoning_efforts
@@ -601,7 +602,7 @@ class RuntimeRelays:
                f"?t={info['token']}")
         try:
             # Child console URLs are always generated from a local run record.
-            with urllib.request.urlopen(url, timeout=20) as response:  # nosec B310
+            with open_loopback(url, timeout=20) as response:  # nosec B310
                 for raw in response:
                     if raw.startswith(b"data:"):
                         _invalidate_runtime(cfg.root)

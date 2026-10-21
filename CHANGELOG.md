@@ -16,6 +16,12 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   unverifiable and let the next appends fork the chain. Ledgers already written
   that way verify again, and an append onto a ledger that does not verify is now
   refused instead of forking it (D168).
+- **A local proxy no longer intercepts CrossAudit's own loopback traffic.** With
+  `HTTP_PROXY` or `ALL_PROXY` pointing at a local proxy, the console's daemon
+  health checks, the project relay and the app self-test were sent to the proxy
+  (with the console's session token) and could report a running console as
+  dead. Requests to 127.0.0.1 now always go direct; remote MCP servers and
+  providers still use the proxy (D169).
 
 ## 4.17.0 — The activity stream
 

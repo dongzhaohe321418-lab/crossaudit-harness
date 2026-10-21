@@ -177,6 +177,34 @@ def _sandboxed_keys_file_and_no_in_process_network(monkeypatch, tmp_path_factory
     yield
 
 
+#: Every variable urllib (and requests, curl, git) reads to pick a proxy.
+PROXY_ENVS = ("HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy",
+              "ALL_PROXY", "all_proxy", "NO_PROXY", "no_proxy")
+
+
+@pytest.fixture(autouse=True)
+def _no_proxy_variables(monkeypatch):
+    """Removes the proxy environment variables for every test (D169).
+
+    The suite's own loopback fetches (`urllib.request.urlopen` against the
+    console it just started on 127.0.0.1) go through urllib's default
+    `ProxyHandler`, which reads these variables. On a developer machine that
+    exports a local proxy (`HTTP_PROXY=http://127.0.0.1:7897` is common) those
+    fetches were sent to the proxy instead of the test's server, and ten
+    console tests failed there and passed on CI. The suite's result must not
+    depend on the developer's proxy, so every test starts without one.
+
+    This scrub is for the TEST CLIENT. The product's own loopback calls are
+    proxy-proof by construction (`crossaudit.netutil`), and
+    tests/test_loopback_ignores_proxy.py sets a proxy back inside the test to
+    prove it; this fixture does not hide a product regression from that test.
+    """
+    for name in PROXY_ENVS:
+        # setenv first so teardown restores the developer's value.
+        monkeypatch.setenv(name, "")
+        monkeypatch.delenv(name, raising=False)
+
+
 @pytest.fixture(autouse=True)
 def _reset_progress_tracker():
     """The progress tracker is a process-global singleton. A test that leaves a
