@@ -1,0 +1,5 @@
+inputs:
+  - data/rates.csv@v1
+command: python scripts/analyse.py
+environment: python3.11 stdlib
+seed: 1

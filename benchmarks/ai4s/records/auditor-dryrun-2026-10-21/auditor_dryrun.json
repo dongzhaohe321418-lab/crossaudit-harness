@@ -1,0 +1,42 @@
+{
+ "bounded_instances": 0,
+ "corpus": "/Users/ericdong/Claude/crossaudit-harness-ai4s/benchmarks/ai4s/records/corpus",
+ "corpus_manifest_sha256": "89d39e8b02d7f8e2e67f6a0734916f1a70ec267a4a2c9b3cff04d0ddd77c7e0a",
+ "cost": [
+  {
+   "est_input_tokens": 19141608,
+   "est_output_tokens": 2970000,
+   "model": "gpt-5.6-terra",
+   "output_tokens_assumed_per_instance": 1500,
+   "price_snapshot": "2026-08-03",
+   "priced": true,
+   "usd": 92.404,
+   "usd_input": 47.854,
+   "usd_output": 44.55,
+   "usd_per_mtok_input": 2.5,
+   "usd_per_mtok_output": 15.0,
+   "vendor": "openai"
+  },
+  {
+   "est_input_tokens": 19141608,
+   "est_output_tokens": 2970000,
+   "model": "claude-sonnet-5",
+   "output_tokens_assumed_per_instance": 1500,
+   "price_snapshot": "2026-08-03",
+   "priced": true,
+   "usd": 101.9748,
+   "usd_input": 57.4248,
+   "usd_output": 44.55,
+   "usd_per_mtok_input": 3.0,
+   "usd_per_mtok_output": 15.0,
+   "vendor": "anthropic"
+  }
+ ],
+ "est_input_tokens": 19141608,
+ "instances": 1980,
+ "mode": "dry-run",
+ "profile": "science-ai4s",
+ "system_bytes": 2079,
+ "token_estimate": "ceil((prompt bytes + system bytes) / 4); not provider-counted",
+ "total_prompt_bytes": 72447040
+}

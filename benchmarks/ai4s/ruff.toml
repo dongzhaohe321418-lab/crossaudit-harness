@@ -1,0 +1,11 @@
+# benchmarks/ai4s is linted with the repository's settings. The files under
+# domains/analysis/ are SPLICE FRAGMENTS: generate.py concatenates
+# _helpers.py with one domain fragment to form each instance's
+# scripts/analyse.py, and only the spliced file is a complete module. Read on
+# their own they reference names the other half defines, which is F821 by
+# construction and not a defect; the spliced result is executed by
+# tests/test_corpus.py on every clean instance.
+extend = "../../pyproject.toml"
+
+[lint.per-file-ignores]
+"domains/analysis/*.py" = ["F821"]

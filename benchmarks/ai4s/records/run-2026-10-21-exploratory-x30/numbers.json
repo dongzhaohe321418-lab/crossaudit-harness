@@ -1,0 +1,2140 @@
+{
+ "advisory_only": {
+  "science": {
+   "k": 180,
+   "n": 5760,
+   "rate": 0.03125,
+   "wilson_high": 0.03606508768876443,
+   "wilson_low": 0.027059733044097575
+  },
+  "science-ai4s": {
+   "k": 1170,
+   "n": 5760,
+   "rate": 0.203125,
+   "wilson_high": 0.21371123576784135,
+   "wilson_low": 0.19293448402963798
+  }
+ },
+ "any_block": {
+  "by_class": {
+   "D01": {
+    "science": {
+     "k": 540,
+     "n": 540,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9929364362381928
+    },
+    "science-ai4s": {
+     "k": 540,
+     "n": 540,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9929364362381928
+    }
+   },
+   "D02": {
+    "science": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    },
+    "science-ai4s": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    }
+   },
+   "D03": {
+    "science": {
+     "k": 0,
+     "n": 180,
+     "rate": 0.0,
+     "wilson_high": 0.02089549792161305,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 180,
+     "n": 180,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9791045020783868
+    }
+   },
+   "D04": {
+    "science": {
+     "k": 360,
+     "n": 540,
+     "rate": 0.6666666666666666,
+     "wilson_high": 0.7051260907968896,
+     "wilson_low": 0.6258527212825079
+    },
+    "science-ai4s": {
+     "k": 360,
+     "n": 540,
+     "rate": 0.6666666666666666,
+     "wilson_high": 0.7051260907968896,
+     "wilson_low": 0.6258527212825079
+    }
+   },
+   "D05": {
+    "science": {
+     "k": 60,
+     "n": 60,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999998,
+     "wilson_low": 0.93982814785791
+    },
+    "science-ai4s": {
+     "k": 60,
+     "n": 60,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999998,
+     "wilson_low": 0.93982814785791
+    }
+   },
+   "D06": {
+    "science": {
+     "k": 180,
+     "n": 540,
+     "rate": 0.3333333333333333,
+     "wilson_high": 0.374147278717492,
+     "wilson_low": 0.2948739092031103
+    },
+    "science-ai4s": {
+     "k": 180,
+     "n": 540,
+     "rate": 0.3333333333333333,
+     "wilson_high": 0.374147278717492,
+     "wilson_low": 0.2948739092031103
+    }
+   },
+   "D07": {
+    "science": {
+     "k": 0,
+     "n": 90,
+     "rate": 0.0,
+     "wilson_high": 0.04093562556432678,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 90,
+     "n": 90,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9590643744356734
+    }
+   },
+   "D08": {
+    "science": {
+     "k": 0,
+     "n": 360,
+     "rate": 0.0,
+     "wilson_high": 0.010558056888693507,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    }
+   },
+   "D09": {
+    "science": {
+     "k": 0,
+     "n": 720,
+     "rate": 0.0,
+     "wilson_high": 0.005307044483128604,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 720,
+     "n": 720,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9946929555168715
+    }
+   },
+   "D10": {
+    "science": {
+     "k": 0,
+     "n": 420,
+     "rate": 0.0,
+     "wilson_high": 0.009063433368181315,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 420,
+     "n": 420,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9909365666318185
+    }
+   },
+   "D11": {
+    "science": {
+     "k": 0,
+     "n": 360,
+     "rate": 0.0,
+     "wilson_high": 0.010558056888693507,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    }
+   },
+   "D12": {
+    "science": {
+     "k": 0,
+     "n": 120,
+     "rate": 0.0,
+     "wilson_high": 0.031019166418703486,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 120,
+     "n": 120,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9689808335812966
+    }
+   },
+   "D13": {
+    "science": {
+     "k": 0,
+     "n": 120,
+     "rate": 0.0,
+     "wilson_high": 0.031019166418703486,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 120,
+     "n": 120,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9689808335812966
+    }
+   },
+   "D14": {
+    "science": {
+     "k": 0,
+     "n": 180,
+     "rate": 0.0,
+     "wilson_high": 0.02089549792161305,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 0,
+     "n": 180,
+     "rate": 0.0,
+     "wilson_high": 0.02089549792161305,
+     "wilson_low": 0.0
+    }
+   },
+   "D15": {
+    "science": {
+     "k": 180,
+     "n": 540,
+     "rate": 0.3333333333333333,
+     "wilson_high": 0.374147278717492,
+     "wilson_low": 0.2948739092031103
+    },
+    "science-ai4s": {
+     "k": 180,
+     "n": 540,
+     "rate": 0.3333333333333333,
+     "wilson_high": 0.374147278717492,
+     "wilson_low": 0.2948739092031103
+    }
+   },
+   "D16": {
+    "science": {
+     "k": 0,
+     "n": 450,
+     "rate": 0.0,
+     "wilson_high": 0.008464318862970662,
+     "wilson_low": 8.673617379884035e-19
+    },
+    "science-ai4s": {
+     "k": 0,
+     "n": 450,
+     "rate": 0.0,
+     "wilson_high": 0.008464318862970662,
+     "wilson_low": 8.673617379884035e-19
+    }
+   },
+   "D17": {
+    "science": {
+     "k": 0,
+     "n": 180,
+     "rate": 0.0,
+     "wilson_high": 0.02089549792161305,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 0,
+     "n": 180,
+     "rate": 0.0,
+     "wilson_high": 0.02089549792161305,
+     "wilson_low": 0.0
+    }
+   }
+  },
+  "overall": {
+   "science": {
+    "k": 1680,
+    "n": 5760,
+    "rate": 0.2916666666666667,
+    "wilson_high": 0.3035405596201236,
+    "wilson_low": 0.28007047181670397
+   },
+   "science-ai4s": {
+    "k": 4050,
+    "n": 5760,
+    "rate": 0.703125,
+    "wilson_high": 0.7147853234447945,
+    "wilson_low": 0.6911939209042985
+   }
+  }
+ },
+ "attribution": {
+  "by_class": {
+   "D01": {
+    "science": {
+     "k": 540,
+     "n": 540,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9929364362381928
+    },
+    "science-ai4s": {
+     "k": 540,
+     "n": 540,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9929364362381928
+    }
+   },
+   "D02": {
+    "science": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    },
+    "science-ai4s": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    }
+   },
+   "D03": {
+    "science": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    },
+    "science-ai4s": {
+     "k": 180,
+     "n": 180,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9791045020783868
+    }
+   },
+   "D04": {
+    "science": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    },
+    "science-ai4s": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    }
+   },
+   "D05": {
+    "science": {
+     "k": 60,
+     "n": 60,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999998,
+     "wilson_low": 0.93982814785791
+    },
+    "science-ai4s": {
+     "k": 60,
+     "n": 60,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999998,
+     "wilson_low": 0.93982814785791
+    }
+   },
+   "D06": {
+    "science": {
+     "k": 180,
+     "n": 180,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9791045020783868
+    },
+    "science-ai4s": {
+     "k": 180,
+     "n": 180,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9791045020783868
+    }
+   },
+   "D07": {
+    "science": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    },
+    "science-ai4s": {
+     "k": 90,
+     "n": 90,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9590643744356734
+    }
+   },
+   "D08": {
+    "science": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    },
+    "science-ai4s": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    }
+   },
+   "D09": {
+    "science": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    },
+    "science-ai4s": {
+     "k": 720,
+     "n": 720,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9946929555168715
+    }
+   },
+   "D10": {
+    "science": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    },
+    "science-ai4s": {
+     "k": 420,
+     "n": 420,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9909365666318185
+    }
+   },
+   "D11": {
+    "science": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    },
+    "science-ai4s": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    }
+   },
+   "D12": {
+    "science": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    },
+    "science-ai4s": {
+     "k": 120,
+     "n": 120,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9689808335812966
+    }
+   },
+   "D13": {
+    "science": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    },
+    "science-ai4s": {
+     "k": 120,
+     "n": 120,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9689808335812966
+    }
+   },
+   "D14": {
+    "science": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    },
+    "science-ai4s": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    }
+   },
+   "D15": {
+    "science": {
+     "k": 180,
+     "n": 180,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9791045020783868
+    },
+    "science-ai4s": {
+     "k": 180,
+     "n": 180,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9791045020783868
+    }
+   },
+   "D16": {
+    "science": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    },
+    "science-ai4s": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    }
+   },
+   "D17": {
+    "science": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    },
+    "science-ai4s": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "wilson_high": null,
+     "wilson_low": null
+    }
+   }
+  },
+  "definition": "among any-block planted instances, the fraction where an expected rule or check fired",
+  "overall": {
+   "science": {
+    "k": 1680,
+    "n": 1680,
+    "rate": 1.0,
+    "wilson_high": 0.9999999999999999,
+    "wilson_low": 0.9977186339007328
+   },
+   "science-ai4s": {
+    "k": 4050,
+    "n": 4050,
+    "rate": 1.0,
+    "wilson_high": 1.0,
+    "wilson_low": 0.9990523904647688
+   }
+  }
+ },
+ "claims": {
+  "H1": {
+   "decidable": true,
+   "holds": true,
+   "threshold": 0.5,
+   "value": 0.27450980392156865
+  },
+  "H2": {
+   "ci_low": 0.6274509803921569,
+   "ci_low_above_zero": true,
+   "decidable": true,
+   "delta": 0.6274509803921569,
+   "delta_threshold": 0.3,
+   "false_block_upper": 0.02089549792161305,
+   "false_block_upper_threshold": 0.025,
+   "holds": true
+  }
+ },
+ "classes": {
+  "D01": {
+   "checks": [
+    "schema"
+   ],
+   "name": "schema_missing_field",
+   "rules": [
+    "CA-META-001"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_existing",
+   "variant_tiers": {}
+  },
+  "D02": {
+   "checks": [
+    "units"
+   ],
+   "name": "unit_missing",
+   "rules": [
+    "CA-DATA-001"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_existing",
+   "variant_tiers": {}
+  },
+  "D03": {
+   "checks": [
+    "range_rules"
+   ],
+   "name": "unit_wrong",
+   "rules": [
+    "CA-PHYS-001"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_new",
+   "variant_tiers": {}
+  },
+  "D04": {
+   "checks": [
+    "provenance"
+   ],
+   "name": "provenance_broken",
+   "rules": [
+    "CA-DATA-003"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_existing",
+   "variant_tiers": {}
+  },
+  "D05": {
+   "checks": [
+    "convergence"
+   ],
+   "name": "unconverged_reported",
+   "rules": [
+    "CA-METH-002"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_existing",
+   "variant_tiers": {}
+  },
+  "D06": {
+   "checks": [
+    "number_source"
+   ],
+   "name": "prose_data_mismatch",
+   "rules": [
+    "CA-NUM-002",
+    "CA-DATA-002"
+   ],
+   "severity": "BLOCKER",
+   "tier": "mixed",
+   "variant_tiers": {
+    "annotated_digit_swap": "deterministic_existing",
+    "sign_word_flip": "referent",
+    "unannotated_digit_swap": "referent"
+   }
+  },
+  "D07": {
+   "checks": [
+    "range_rules"
+   ],
+   "name": "sign_flip",
+   "rules": [
+    "CA-PHYS-001"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_new",
+   "variant_tiers": {}
+  },
+  "D08": {
+   "checks": [
+    "range_rules"
+   ],
+   "name": "physical_range_violation",
+   "rules": [
+    "CA-PHYS-001"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_new",
+   "variant_tiers": {}
+  },
+  "D09": {
+   "checks": [
+    "numeric_validity"
+   ],
+   "name": "numeric_invalid",
+   "rules": [
+    "CA-NUM-005"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_new",
+   "variant_tiers": {}
+  },
+  "D10": {
+   "checks": [
+    "derivations"
+   ],
+   "name": "derivation_mismatch",
+   "rules": [
+    "CA-DERIV-001"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_new",
+   "variant_tiers": {}
+  },
+  "D11": {
+   "checks": [
+    "derivations"
+   ],
+   "name": "n_mismatch",
+   "rules": [
+    "CA-DERIV-001"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_new",
+   "variant_tiers": {}
+  },
+  "D12": {
+   "checks": [
+    "split_integrity"
+   ],
+   "name": "split_leakage",
+   "rules": [
+    "CA-ML-001"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_new",
+   "variant_tiers": {}
+  },
+  "D13": {
+   "checks": [
+    "claims"
+   ],
+   "name": "claim_false",
+   "rules": [
+    "CA-STAT-004"
+   ],
+   "severity": "BLOCKER",
+   "tier": "deterministic_new",
+   "variant_tiers": {}
+  },
+  "D14": {
+   "checks": [],
+   "name": "method_claim_mismatch",
+   "rules": [
+    "CA-DATA-002"
+   ],
+   "severity": "BLOCKER",
+   "tier": "judgement",
+   "variant_tiers": {}
+  },
+  "D15": {
+   "checks": [
+    "number_source"
+   ],
+   "name": "placeholder_or_truncated",
+   "rules": [
+    "CA-NUM-001"
+   ],
+   "severity": "BLOCKER",
+   "tier": "mixed",
+   "variant_tiers": {
+    "summary_truncated_mid_block": "deterministic_existing",
+    "template_placeholder": "deterministic_new",
+    "todo_left": "deterministic_new"
+   }
+  },
+  "D16": {
+   "checks": [
+    "repro_declared"
+   ],
+   "name": "reproducibility_missing",
+   "rules": [
+    "CA-REPRO-001"
+   ],
+   "severity": "ADVISORY",
+   "tier": "deterministic_new",
+   "variant_tiers": {}
+  },
+  "D17": {
+   "checks": [
+    "precision"
+   ],
+   "name": "precision_overclaim",
+   "rules": [
+    "CA-PREC-001"
+   ],
+   "severity": "ADVISORY",
+   "tier": "deterministic_new",
+   "variant_tiers": {}
+  }
+ },
+ "confidence": 0.95,
+ "counts": {
+  "by_class": {
+   "D01": 540,
+   "D02": 360,
+   "D03": 180,
+   "D04": 540,
+   "D05": 60,
+   "D06": 540,
+   "D07": 90,
+   "D08": 360,
+   "D09": 720,
+   "D10": 420,
+   "D11": 360,
+   "D12": 120,
+   "D13": 120,
+   "D14": 180,
+   "D15": 540,
+   "D16": 450,
+   "D17": 180
+  },
+  "clean": 180,
+  "instances": 5940,
+  "planted": 5760,
+  "rows": 11880,
+  "rows_by_profile": {
+   "science": 5940,
+   "science-ai4s": 5940
+  },
+  "templates": 180
+ },
+ "environment": {
+  "checks_contracts_sha256": "c5a196d402d9d761b711fd37171512ccc9c899a398c92fa6a6f8f47fab127827",
+  "corpus_manifest_sha256": "c92c3721a7cd082754bc794a57d70fdd0038b59eaaf509294a4e9639424e2a64",
+  "crossaudit_file": "/Users/ericdong/Claude/crossaudit-harness-ai4s/src/crossaudit/__init__.py",
+  "crossaudit_version": "4.17.0",
+  "generation_seed": 20261021,
+  "generation_seed_source": "taxonomy.json",
+  "git": {
+   "dirty": true,
+   "sha": "1f6120e103c7a08c43ef03ac5349814dc6d6db90"
+  },
+  "implementation": "CPython",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.13.14",
+  "rows_sha256": "426776bab2e57de32973d8baf92d4d9620704a410a709c3664f77d757b1f35aa",
+  "taxonomy_sha256": "f1b6783e3ecad9d225a24833d2280c8291e2e7af14bec53a43acd1b3f89c7854",
+  "utc_end": "2026-10-21T21:38:06+00:00",
+  "utc_start": "2026-10-21T21:37:40+00:00"
+ },
+ "errors": {
+  "by_profile": {
+   "science": 0,
+   "science-ai4s": 0
+  },
+  "run": []
+ },
+ "false_block": {
+  "science": {
+   "by_check": {},
+   "by_code": {},
+   "count": 0,
+   "instances": [],
+   "n": 180,
+   "rate": 0.0,
+   "wilson_high": 0.02089549792161305,
+   "wilson_low": 0.0
+  },
+  "science-ai4s": {
+   "by_check": {},
+   "by_code": {},
+   "count": 0,
+   "instances": [],
+   "n": 180,
+   "rate": 0.0,
+   "wilson_high": 0.02089549792161305,
+   "wilson_low": 0.0
+  }
+ },
+ "fired": {
+  "by_class": {
+   "D01": {
+    "science": {
+     "CA-DATA-003": 180,
+     "CA-META-001": 540
+    },
+    "science-ai4s": {
+     "CA-DATA-003": 180,
+     "CA-DERIV-001": 180,
+     "CA-META-001": 540,
+     "CA-STAT-004": 90
+    }
+   },
+   "D02": {
+    "science": {
+     "CA-DATA-001": 360
+    },
+    "science-ai4s": {
+     "CA-DATA-001": 360,
+     "CA-PHYS-001": 180
+    }
+   },
+   "D03": {
+    "science": {},
+    "science-ai4s": {
+     "CA-PHYS-001": 180
+    }
+   },
+   "D04": {
+    "science": {
+     "CA-DATA-003": 360,
+     "CA-DATA-003:ADVISORY": 180
+    },
+    "science-ai4s": {
+     "CA-DATA-003": 360,
+     "CA-DATA-003:ADVISORY": 180,
+     "CA-DERIV-001": 150,
+     "CA-ML-001": 30
+    }
+   },
+   "D05": {
+    "science": {
+     "CA-METH-002": 60
+    },
+    "science-ai4s": {
+     "CA-METH-002": 60
+    }
+   },
+   "D06": {
+    "science": {
+     "CA-NUM-002": 180
+    },
+    "science-ai4s": {
+     "CA-NUM-002": 180
+    }
+   },
+   "D07": {
+    "science": {},
+    "science-ai4s": {
+     "CA-DERIV-001": 90,
+     "CA-PHYS-001": 90
+    }
+   },
+   "D08": {
+    "science": {},
+    "science-ai4s": {
+     "CA-DERIV-001": 330,
+     "CA-PHYS-001": 360,
+     "CA-STAT-004": 60
+    }
+   },
+   "D09": {
+    "science": {},
+    "science-ai4s": {
+     "CA-DERIV-001": 720,
+     "CA-NUM-005": 720,
+     "CA-PHYS-001": 720,
+     "CA-STAT-004": 240
+    }
+   },
+   "D10": {
+    "science": {},
+    "science-ai4s": {
+     "CA-DERIV-001": 420,
+     "CA-STAT-004": 12
+    }
+   },
+   "D11": {
+    "science": {},
+    "science-ai4s": {
+     "CA-DERIV-001": 360
+    }
+   },
+   "D12": {
+    "science": {},
+    "science-ai4s": {
+     "CA-ML-001": 120
+    }
+   },
+   "D13": {
+    "science": {},
+    "science-ai4s": {
+     "CA-STAT-004": 120
+    }
+   },
+   "D14": {
+    "science": {},
+    "science-ai4s": {}
+   },
+   "D15": {
+    "science": {
+     "CA-NUM-001": 180
+    },
+    "science-ai4s": {
+     "CA-FILE-004:ADVISORY": 360,
+     "CA-NUM-001": 180
+    }
+   },
+   "D16": {
+    "science": {},
+    "science-ai4s": {
+     "CA-REPRO-001:ADVISORY": 450
+    }
+   },
+   "D17": {
+    "science": {},
+    "science-ai4s": {
+     "CA-PREC-001:ADVISORY": 180
+    }
+   }
+  }
+ },
+ "primary": {
+  "available": true,
+  "ci_high": 0.6274509803921569,
+  "ci_low": 0.6274509803921569,
+  "clusters": 180,
+  "coverage": {
+   "effect": {
+    "classes": 17,
+    "coverage": 0.95,
+    "resamples": 400,
+    "sims": 300,
+    "templates": 60,
+    "true_delta": 0.30021904380142905
+   },
+   "null": {
+    "classes": 17,
+    "coverage": 0.94,
+    "resamples": 400,
+    "sims": 300,
+    "templates": 60,
+    "true_delta": 0.0
+   }
+  },
+  "coverage_band": [
+   0.93,
+   0.97
+  ],
+  "coverage_checked": true,
+  "delta": 0.6274509803921569,
+  "method": "cluster bootstrap over pair_id, percentile interval",
+  "percentiles": [
+   2.5,
+   97.5
+  ],
+  "resamples": 2000,
+  "resamples_used": 2000,
+  "seed": 20261021
+ },
+ "profiles": {
+  "extended": "science-ai4s",
+  "run": [
+   "science",
+   "science-ai4s"
+  ],
+  "shipped": "science",
+  "unknown": []
+ },
+ "recall": {
+  "by_class": {
+   "D01": {
+    "science": {
+     "k": 540,
+     "n": 540,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9929364362381928
+    },
+    "science-ai4s": {
+     "k": 540,
+     "n": 540,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9929364362381928
+    }
+   },
+   "D02": {
+    "science": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    },
+    "science-ai4s": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    }
+   },
+   "D03": {
+    "science": {
+     "k": 0,
+     "n": 180,
+     "rate": 0.0,
+     "wilson_high": 0.02089549792161305,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 180,
+     "n": 180,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9791045020783868
+    }
+   },
+   "D04": {
+    "science": {
+     "k": 540,
+     "n": 540,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9929364362381928
+    },
+    "science-ai4s": {
+     "k": 540,
+     "n": 540,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9929364362381928
+    }
+   },
+   "D05": {
+    "science": {
+     "k": 60,
+     "n": 60,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999998,
+     "wilson_low": 0.93982814785791
+    },
+    "science-ai4s": {
+     "k": 60,
+     "n": 60,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999998,
+     "wilson_low": 0.93982814785791
+    }
+   },
+   "D06": {
+    "science": {
+     "k": 180,
+     "n": 540,
+     "rate": 0.3333333333333333,
+     "wilson_high": 0.374147278717492,
+     "wilson_low": 0.2948739092031103
+    },
+    "science-ai4s": {
+     "k": 180,
+     "n": 540,
+     "rate": 0.3333333333333333,
+     "wilson_high": 0.374147278717492,
+     "wilson_low": 0.2948739092031103
+    }
+   },
+   "D07": {
+    "science": {
+     "k": 0,
+     "n": 90,
+     "rate": 0.0,
+     "wilson_high": 0.04093562556432678,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 90,
+     "n": 90,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9590643744356734
+    }
+   },
+   "D08": {
+    "science": {
+     "k": 0,
+     "n": 360,
+     "rate": 0.0,
+     "wilson_high": 0.010558056888693507,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    }
+   },
+   "D09": {
+    "science": {
+     "k": 0,
+     "n": 720,
+     "rate": 0.0,
+     "wilson_high": 0.005307044483128604,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 720,
+     "n": 720,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9946929555168715
+    }
+   },
+   "D10": {
+    "science": {
+     "k": 0,
+     "n": 420,
+     "rate": 0.0,
+     "wilson_high": 0.009063433368181315,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 420,
+     "n": 420,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9909365666318185
+    }
+   },
+   "D11": {
+    "science": {
+     "k": 0,
+     "n": 360,
+     "rate": 0.0,
+     "wilson_high": 0.010558056888693507,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 360,
+     "n": 360,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9894419431113063
+    }
+   },
+   "D12": {
+    "science": {
+     "k": 0,
+     "n": 120,
+     "rate": 0.0,
+     "wilson_high": 0.031019166418703486,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 120,
+     "n": 120,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9689808335812966
+    }
+   },
+   "D13": {
+    "science": {
+     "k": 0,
+     "n": 120,
+     "rate": 0.0,
+     "wilson_high": 0.031019166418703486,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 120,
+     "n": 120,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9689808335812966
+    }
+   },
+   "D14": {
+    "science": {
+     "k": 0,
+     "n": 180,
+     "rate": 0.0,
+     "wilson_high": 0.02089549792161305,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 0,
+     "n": 180,
+     "rate": 0.0,
+     "wilson_high": 0.02089549792161305,
+     "wilson_low": 0.0
+    }
+   },
+   "D15": {
+    "science": {
+     "k": 180,
+     "n": 540,
+     "rate": 0.3333333333333333,
+     "wilson_high": 0.374147278717492,
+     "wilson_low": 0.2948739092031103
+    },
+    "science-ai4s": {
+     "k": 540,
+     "n": 540,
+     "rate": 1.0,
+     "wilson_high": 0.9999999999999999,
+     "wilson_low": 0.9929364362381928
+    }
+   },
+   "D16": {
+    "science": {
+     "k": 0,
+     "n": 450,
+     "rate": 0.0,
+     "wilson_high": 0.008464318862970662,
+     "wilson_low": 8.673617379884035e-19
+    },
+    "science-ai4s": {
+     "k": 450,
+     "n": 450,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9915356811370294
+    }
+   },
+   "D17": {
+    "science": {
+     "k": 0,
+     "n": 180,
+     "rate": 0.0,
+     "wilson_high": 0.02089549792161305,
+     "wilson_low": 0.0
+    },
+    "science-ai4s": {
+     "k": 180,
+     "n": 180,
+     "rate": 1.0,
+     "wilson_high": 1.0,
+     "wilson_low": 0.9791045020783868
+    }
+   }
+  },
+  "by_class_variant": {
+   "D01": {
+    "inputs_not_path_at_rev": {
+     "science": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "no_code_version": {
+     "science": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "no_quantities": {
+     "science": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    }
+   },
+   "D02": {
+    "empty_source": {
+     "science": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "empty_unit": {
+     "science": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    }
+   },
+   "D03": {
+    "label_swapped": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    }
+   },
+   "D04": {
+    "input_file_missing": {
+     "science": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "revision_mismatch": {
+     "science": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "source_not_declared": {
+     "science": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    }
+   },
+   "D05": {
+    "achieved_over_threshold": {
+     "science": {
+      "k": 30,
+      "n": 30,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999999,
+      "wilson_low": 0.8864866068260312
+     },
+     "science-ai4s": {
+      "k": 30,
+      "n": 30,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999999,
+      "wilson_low": 0.8864866068260312
+     }
+    },
+    "converged_false": {
+     "science": {
+      "k": 30,
+      "n": 30,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999999,
+      "wilson_low": 0.8864866068260312
+     },
+     "science-ai4s": {
+      "k": 30,
+      "n": 30,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999999,
+      "wilson_low": 0.8864866068260312
+     }
+    }
+   },
+   "D06": {
+    "annotated_digit_swap": {
+     "science": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "sign_word_flip": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     }
+    },
+    "unannotated_digit_swap": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     }
+    }
+   },
+   "D07": {
+    "value_negated": {
+     "science": {
+      "k": 0,
+      "n": 90,
+      "rate": 0.0,
+      "wilson_high": 0.04093562556432678,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 90,
+      "n": 90,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9590643744356734
+     }
+    }
+   },
+   "D08": {
+    "above_max": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "below_min": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    }
+   },
+   "D09": {
+    "inf": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "nan": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "null": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "string_value": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    }
+   },
+   "D10": {
+    "value_perturbed_10pct": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "value_perturbed_1pct": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "wrong_rows_used": {
+     "science": {
+      "k": 0,
+      "n": 60,
+      "rate": 0.0,
+      "wilson_high": 0.06017185214208986,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 60,
+      "n": 60,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999998,
+      "wilson_low": 0.93982814785791
+     }
+    }
+   },
+   "D11": {
+    "n_deflated": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "n_inflated": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    }
+   },
+   "D12": {
+    "duplicate_test_id": {
+     "science": {
+      "k": 0,
+      "n": 30,
+      "rate": 0.0,
+      "wilson_high": 0.11351339317396876,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 30,
+      "n": 30,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999999,
+      "wilson_low": 0.8864866068260312
+     }
+    },
+    "group_overlap": {
+     "science": {
+      "k": 0,
+      "n": 30,
+      "rate": 0.0,
+      "wilson_high": 0.11351339317396876,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 30,
+      "n": 30,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999999,
+      "wilson_low": 0.8864866068260312
+     }
+    },
+    "id_overlap": {
+     "science": {
+      "k": 0,
+      "n": 30,
+      "rate": 0.0,
+      "wilson_high": 0.11351339317396876,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 30,
+      "n": 30,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999999,
+      "wilson_low": 0.8864866068260312
+     }
+    },
+    "test_id_not_in_data": {
+     "science": {
+      "k": 0,
+      "n": 30,
+      "rate": 0.0,
+      "wilson_high": 0.11351339317396876,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 30,
+      "n": 30,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999999,
+      "wilson_low": 0.8864866068260312
+     }
+    }
+   },
+   "D13": {
+    "ci_claim_false": {
+     "science": {
+      "k": 0,
+      "n": 30,
+      "rate": 0.0,
+      "wilson_high": 0.11351339317396876,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 30,
+      "n": 30,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999999,
+      "wilson_low": 0.8864866068260312
+     }
+    },
+    "improvement_claim_false": {
+     "science": {
+      "k": 0,
+      "n": 60,
+      "rate": 0.0,
+      "wilson_high": 0.06017185214208986,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 60,
+      "n": 60,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999998,
+      "wilson_low": 0.93982814785791
+     }
+    },
+    "significance_overclaim": {
+     "science": {
+      "k": 0,
+      "n": 30,
+      "rate": 0.0,
+      "wilson_high": 0.11351339317396876,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 30,
+      "n": 30,
+      "rate": 1.0,
+      "wilson_high": 0.9999999999999999,
+      "wilson_low": 0.8864866068260312
+     }
+    }
+   },
+   "D14": {
+    "prose_method_differs": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     }
+    }
+   },
+   "D15": {
+    "summary_truncated_mid_block": {
+     "science": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "template_placeholder": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    },
+    "todo_left": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    }
+   },
+   "D16": {
+    "no_command": {
+     "science": {
+      "k": 0,
+      "n": 150,
+      "rate": 0.0,
+      "wilson_high": 0.0249702443680766,
+      "wilson_low": 1.734723475976807e-18
+     },
+     "science-ai4s": {
+      "k": 150,
+      "n": 150,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9750297556319235
+     }
+    },
+    "no_environment": {
+     "science": {
+      "k": 0,
+      "n": 150,
+      "rate": 0.0,
+      "wilson_high": 0.0249702443680766,
+      "wilson_low": 1.734723475976807e-18
+     },
+     "science-ai4s": {
+      "k": 150,
+      "n": 150,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9750297556319235
+     }
+    },
+    "no_seed": {
+     "science": {
+      "k": 0,
+      "n": 150,
+      "rate": 0.0,
+      "wilson_high": 0.0249702443680766,
+      "wilson_low": 1.734723475976807e-18
+     },
+     "science-ai4s": {
+      "k": 150,
+      "n": 150,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9750297556319235
+     }
+    }
+   },
+   "D17": {
+    "digits_beyond_uncertainty": {
+     "science": {
+      "k": 0,
+      "n": 180,
+      "rate": 0.0,
+      "wilson_high": 0.02089549792161305,
+      "wilson_low": 0.0
+     },
+     "science-ai4s": {
+      "k": 180,
+      "n": 180,
+      "rate": 1.0,
+      "wilson_high": 1.0,
+      "wilson_low": 0.9791045020783868
+     }
+    }
+   }
+  },
+  "class_avg": {
+   "science": {
+    "classes": [
+     "D01",
+     "D02",
+     "D03",
+     "D04",
+     "D05",
+     "D06",
+     "D07",
+     "D08",
+     "D09",
+     "D10",
+     "D11",
+     "D12",
+     "D13",
+     "D14",
+     "D15",
+     "D16",
+     "D17"
+    ],
+    "n_classes": 17,
+    "value": 0.27450980392156865
+   },
+   "science-ai4s": {
+    "classes": [
+     "D01",
+     "D02",
+     "D03",
+     "D04",
+     "D05",
+     "D06",
+     "D07",
+     "D08",
+     "D09",
+     "D10",
+     "D11",
+     "D12",
+     "D13",
+     "D14",
+     "D15",
+     "D16",
+     "D17"
+    ],
+    "n_classes": 17,
+    "value": 0.9019607843137255
+   }
+  },
+  "overall": {
+   "science": {
+    "k": 1860,
+    "n": 5760,
+    "rate": 0.3229166666666667,
+    "wilson_high": 0.3351066855541681,
+    "wilson_low": 0.3109626911671354
+   },
+   "science-ai4s": {
+    "k": 5220,
+    "n": 5760,
+    "rate": 0.90625,
+    "wilson_high": 0.9135090310351898,
+    "wilson_low": 0.8984494576629966
+   }
+  }
+ },
+ "replicate_identical": null,
+ "schema": 1,
+ "wall_ms": {
+  "science": {
+   "max": 20.2,
+   "mean": 1.14356632996633,
+   "n": 5940
+  },
+  "science-ai4s": {
+   "max": 4.685,
+   "mean": 2.113286531986532,
+   "n": 5940
+  }
+ },
+ "z": 1.959963984540054
+}

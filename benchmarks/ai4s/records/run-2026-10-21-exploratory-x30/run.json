@@ -1,0 +1,85 @@
+{
+ "checks_contracts_sha256": "c5a196d402d9d761b711fd37171512ccc9c899a398c92fa6a6f8f47fab127827",
+ "corpus": "/Users/ericdong/Claude/crossaudit-harness-ai4s/benchmarks/ai4s/records/corpus-x30",
+ "corpus_manifest_sha256": "c92c3721a7cd082754bc794a57d70fdd0038b59eaaf509294a4e9639424e2a64",
+ "counts": {
+  "by_class": {
+   "D01": 540,
+   "D02": 360,
+   "D03": 180,
+   "D04": 540,
+   "D05": 60,
+   "D06": 540,
+   "D07": 90,
+   "D08": 360,
+   "D09": 720,
+   "D10": 420,
+   "D11": 360,
+   "D12": 120,
+   "D13": 120,
+   "D14": 180,
+   "D15": 540,
+   "D16": 450,
+   "D17": 180
+  },
+  "clean": 180,
+  "instances": 5940,
+  "planted": 5760,
+  "templates": 180
+ },
+ "environment": {
+  "crossaudit_file": "/Users/ericdong/Claude/crossaudit-harness-ai4s/src/crossaudit/__init__.py",
+  "crossaudit_version": "4.17.0",
+  "git": {
+   "dirty": true,
+   "sha": "1f6120e103c7a08c43ef03ac5349814dc6d6db90"
+  },
+  "implementation": "CPython",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.13.14"
+ },
+ "errors": [],
+ "generation_seed": {
+  "source": "taxonomy.json",
+  "value": 20261021
+ },
+ "packs_loaded": [
+  "crossaudit.dcl.ai4s"
+ ],
+ "profiles": {
+  "science": [
+   "schema",
+   "units",
+   "convergence",
+   "provenance",
+   "number_source"
+  ],
+  "science-ai4s": [
+   "schema",
+   "units",
+   "convergence",
+   "provenance",
+   "number_source",
+   "complete",
+   "numeric_validity",
+   "range_rules",
+   "derivations",
+   "split_integrity",
+   "claims",
+   "repro_declared",
+   "precision"
+  ]
+ },
+ "profiles_requested": [
+  "science",
+  "science-ai4s"
+ ],
+ "repeat": 1,
+ "replicate_identical": null,
+ "rows": 11880,
+ "study": "ai4s-dcl",
+ "taxonomy_sha256": "f1b6783e3ecad9d225a24833d2280c8291e2e7af14bec53a43acd1b3f89c7854",
+ "unknown_profiles": [],
+ "utc_end": "2026-10-21T21:38:06+00:00",
+ "utc_start": "2026-10-21T21:37:40+00:00"
+}
