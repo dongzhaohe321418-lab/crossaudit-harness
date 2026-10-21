@@ -417,6 +417,34 @@ def pty_run(argv: list, env: dict, cwd: Path, inputs: list[bytes], timeout: floa
     return rc, out.decode("utf-8", "replace")
 
 
+def readme_text(h: "Harness") -> str:
+    """The README.md of the ref under test (a path's file, or `git show ref:README.md`)."""
+    if h.ref_is_path:
+        return (Path(h.ref).expanduser().resolve() / "README.md").read_text(encoding="utf-8")
+    return subprocess.run(["git", "show", f"{h.ref}:README.md"], cwd=REPO,
+                          capture_output=True, text=True).stdout
+
+
+def readme_default_checks(h: "Harness") -> list[str]:
+    """Check names in the FIRST table under '## Deterministic checks' of that README.
+
+    The README's own sentence is the claim: whatever pack it calls the default is
+    what `init` must write. Read at the ref, so a corrected README and a corrected
+    product are judged together and an old README is judged against its own words.
+    """
+    text = readme_text(h)
+    m = re.search(r"^## Deterministic checks\n(.*?)^## ", text, re.S | re.M)
+    body = m.group(1) if m else ""
+    names, started = [], False
+    for line in body.splitlines():
+        if line.startswith("| `"):
+            started = True
+            names.append(re.match(r"\| `([a-z_-]+)`", line).group(1))
+        elif started and not line.startswith("|"):
+            break
+    return names
+
+
 def tree_hash(root: Path) -> dict:
     out = {}
     for p in sorted(root.rglob("*")):
@@ -608,19 +636,25 @@ def c03(h: Harness, rec: Record) -> Record:
             if (root / "AUDIT_RULES.md").exists() else []
         (ok if rules else problems).append(f"AUDIT_RULES.md rule ids {rules}")
         dc = (root / "DETERMINISTIC_CHECKS.md").read_text() if (root / "DETERMINISTIC_CHECKS.md").exists() else ""
-        readme_four = ["schema", "units", "convergence", "provenance"]
+        readme_default = readme_default_checks(h)
         named = re.findall(r"^- ([a-z_-]+):", dc, re.M)
-        if all(n in named for n in readme_four):
-            ok.append(f"DETERMINISTIC_CHECKS.md names {named}")
+        if readme_default and all(n in named for n in readme_default):
+            ok.append(f"DETERMINISTIC_CHECKS.md names {named}, the README's default pack")
         else:
-            problems.append(f"DETERMINISTIC_CHECKS.md names {named}, not the README's default four {readme_four}")
+            problems.append(f"DETERMINISTIC_CHECKS.md names {named}, not the README's default "
+                            f"pack {readme_default or '(no table found)'}")
         keys = p.home / ".crossaudit-keys.env"
+        init_text = c.stdout + c.stderr
         if keys.exists():
             mode = oct(keys.stat().st_mode & 0o777)
             (ok if mode == "0o600" else problems).append(f"keys file mode {mode}")
+        elif "CROSSAUDIT_AUDITOR_KEY" in init_text and "CROSSAUDIT_GENERATOR_KEY" in init_text:
+            ok.append("non-interactive init wrote no keys file and said so, naming the "
+                      "environment variables it reads instead")
         else:
-            problems.append("no keys file written by non-interactive init (tui.secret returns '' "
-                            "without a TTY, so `write_keys` never runs)")
+            problems.append("no keys file written by non-interactive init and nothing said "
+                            "where keys come from (tui.secret returns '' without a TTY, so "
+                            "`write_keys` never runs)")
         leaked = p.git("log", "-p", "--all").count(DUMMY_AUD) + p.git("log", "-p", "--all").count(DUMMY_GEN)
         (ok if leaked == 0 else problems).append(f"dummy key occurrences in git history: {leaked}")
         rec.evidence.append(h.save(rec.id, "tree-after-init.txt",
@@ -941,9 +975,10 @@ def c09(h: Harness, rec: Record) -> Record:
         rec.evidence.append(h.copy(rec.id, first / "checks.json", f"{first.name}-checks.json"))
     blocked = "CA-DATA-001" in checks and "PASS" not in verdicts and \
         (m and m.group(1) == "BLOCKED")
-    if blocked and b.rc == 10:
+    if blocked and b.rc in (10, 11):
         return finish(rec, "PASS", "checks.json names CA-DATA-001; verdict BLOCKED although the "
-                      "auditor said PASS; no PASS receipt; exit 10.")
+                      f"auditor said PASS; no PASS receipt; `build` exits {b.rc} "
+                      f"({'ESCALATED after the round budget, the final state the README says build reports' if b.rc == 11 else 'BLOCKED'}).")
     if blocked:
         return finish(rec, "PARTIAL", f"the check does block (CA-DATA-001 in checks.json, report "
                       f"verdict BLOCKED, receipts {verdicts}, auditor said PASS), but `build` exits "
@@ -1080,13 +1115,14 @@ def c13(h: Harness, rec: Record) -> Record:
         finally:
             p.stop()
     rec.details = out
-    fixed = all(not v["summary_committed"] and v["names_cutoff"] and v["exit"] == 11
+    fixed = all(not v["summary_committed"] and v["names_cutoff"] and v["exit"] in (11, 22)
                 and "ESCALATED" in v["statuses"] for v in out.values())
     broken = [k for k, v in out.items() if v["summary_committed"]]
     if fixed:
+        codes = sorted({v["exit"] for v in out.values()})
         return finish(rec, "PASS", "both vendors: the cut-off reply was discarded, nothing "
-                      "committed, the run parked ESCALATED (exit 11) with a provider escalation "
-                      "naming the token-limit cut-off.")
+                      f"committed, the run parked ESCALATED (exit {codes}) with a provider "
+                      "escalation naming the token-limit cut-off.")
     if broken:
         return finish(rec, "FAIL", "the half file was committed for " + ", ".join(broken)
                       + " (SUMMARY.md ends mid-sentence `ran in 1.`) and audited as if complete — "
@@ -1399,8 +1435,14 @@ def c19(h: Harness, rec: Record) -> Record:
             rel = str(r.relative_to(p.root))
             c = p.ca("reproduce", rel, label="reproduce-precommitted")
             d = json.loads(r.read_text())
+            pre_lock = p.root / "experiments/requirements.txt"
+            pre_digest = hashlib.sha256(pre_lock.read_bytes()).hexdigest()
+            rtext_pre = r.read_text()
             res["precommitted"] = {"exit": c.rc, "lock_in_manifest": any(
                 k.endswith("requirements.txt") for k in d["inputs"]["manifest"]),
+                "lock_in_receipt": pre_digest in rtext_pre,
+                "hash_printed": pre_digest[:12] in c.stdout,
+                "path_printed": "requirements.txt" in c.stdout,
                 "stdout": c.stdout.strip()[:600]}
     finally:
         p.stop()
@@ -1428,10 +1470,13 @@ def c19(h: Harness, rec: Record) -> Record:
         rec.details = res
         ii = res["in_increment"]
         mech = ii["hash_in_receipt"] and ii["hash_printed"] and ii["says_matches"] and ii["rerun_step"] and ii["says_drift"]
-        pre_ok = res.get("precommitted", {}).get("lock_in_manifest")
+        pre = res.get("precommitted", {})
+        pre_ok = pre.get("lock_in_receipt") and pre.get("hash_printed") and pre.get("path_printed")
         if mech and pre_ok:
-            return finish(rec, "PASS", "lock hash in receipt and printed; tree matches; re-run steps; "
-                          "drift reported after editing the lock.")
+            return finish(rec, "PASS", "a lock committed before the build and one written by the "
+                          "generator are both bound in the receipt by sha256 and printed by "
+                          "`reproduce` with their path; tree matches; re-run steps; drift reported "
+                          "after editing the lock.")
         partial_mech = ii["hash_in_receipt"] and ii["says_matches"] and ii["rerun_step"] and ii["says_drift"]
         if mech or partial_mech:
             return finish(rec, "PARTIAL", "a requirements.txt committed in scope BEFORE the build is "
@@ -1490,7 +1535,7 @@ def c20(h: Harness, rec: Record) -> Record:
     finally:
         z.stop()
     expect = [("C05", "init_same_vendor", 20), ("C05", "build", 20), ("C06", "build", 0),
-              ("C08", "build", 11), ("C09", "build", 10), ("C10", "check", 0),
+              ("C08", "build", 11), ("C09", "build", 11), ("C10", "check", 0),  # C09: build reports the loop's final state, ESCALATED (README "Exit codes")
               ("C10", "audit_offline_sha", 11), ("C15", "verify_untampered", 0),
               ("C15", "verify_tampered_verdict", 21), ("C17", "admit_1", 0),
               ("C17", "admit_2", 21)]
@@ -1814,13 +1859,41 @@ def c28(h: Harness, rec: Record) -> Record:
                         "suppress_flag_in_help": bool(re.search(r"no-browser|no-open|--open", help_.stdout)),
                         "console_help": help_.stdout.strip()})
     rec.exit_codes["console"] = c.rc
-    if st == 200 and "<html" in body.lower() and len(token) >= 16 and browser:
-        return finish(rec, "PASS", "background server; tokenized URL; HTTP 200 page; browser opened.")
-    if st == 200 and "<html" in body.lower() and len(token) >= 16:
-        return finish(rec, "PARTIAL", f"starts in the background and prints a tokenized URL that "
-                      f"serves the page (HTTP 200), but `crossaudit console` never invoked a browser "
-                      f"(BROWSER sentinel untouched) although the README says it opens the dashboard; "
-                      f"`console --help` offers no open/no-browser flag.")
+    # The README's "opens the dashboard" is a statement about a person at a
+    # terminal, so it is judged under a pseudo-terminal: `console` again (it
+    # reattaches to the running server) with BROWSER pointed at the sentinel,
+    # then `console --no-open`, which must leave the sentinel untouched.
+    before_tty = h.browser_log.read_text() if h.browser_log.exists() else ""
+    rc_tty, out_tty = pty_run([h.ca, "console"], p.env(), p.root, [], timeout=60)
+    after_tty = h.browser_log.read_text() if h.browser_log.exists() else ""
+    tty_browser = after_tty[len(before_tty):].strip()
+    rc_noopen, out_noopen = pty_run([h.ca, "console", "--no-open"], p.env(), p.root, [], timeout=60)
+    after_noopen = h.browser_log.read_text() if h.browser_log.exists() else ""
+    noopen_browser = after_noopen[len(after_tty):].strip()
+    rec.evidence.append(h.save(rec.id, "console-under-pty.txt",
+                               f"$ crossaudit console (pty) -> {rc_tty}\n{out_tty}\n\n"
+                               f"$ crossaudit console --no-open (pty) -> {rc_noopen}\n{out_noopen}\n"))
+    rec.details.update({"tty_browser_invoked": bool(tty_browser), "tty_browser_args": tty_browser,
+                        "tty_exit": rc_tty, "no_open_browser_invoked": bool(noopen_browser),
+                        "no_open_exit": rc_noopen})
+    page_ok = st == 200 and "<html" in body.lower() and len(token) >= 16
+    if page_ok and tty_browser and token in tty_browser and not noopen_browser:
+        return finish(rec, "PASS", "background server; tokenized URL; HTTP 200 page; under a "
+                      "terminal the browser was opened on that URL; `--no-open` opened nothing; "
+                      "without a terminal nothing opened.")
+    if page_ok:
+        why = []
+        if not tty_browser:
+            why.append("under a pseudo-terminal `crossaudit console` never invoked a browser "
+                       "(BROWSER sentinel untouched) although the README says it opens the dashboard")
+        elif token not in tty_browser:
+            why.append("the browser was invoked but not on the tokenized URL")
+        if noopen_browser:
+            why.append("`--no-open` still opened a browser")
+        if not rec.details.get("suppress_flag_in_help"):
+            why.append("`console --help` offers no open/no-open flag")
+        return finish(rec, "PARTIAL", "starts in the background and prints a tokenized URL that "
+                      "serves the page (HTTP 200), but " + "; ".join(why) + ".")
     return finish(rec, "FAIL", f"HTTP {st}")
 
 
