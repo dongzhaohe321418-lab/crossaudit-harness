@@ -19,7 +19,7 @@
 {"kind": "ConfigDenial", "reason": "Application Doctor repairs are available in the macOS app"}
 {"kind": "ConfigDenial", "reason": "Authorize GitHub repository deletion, then submit this dialog again. CrossAudit will request only the delete_repo scope through the official GitHub device flow."}
 {"kind": "ConfigDenial", "reason": "ChatGPT subscription access uses the official Codex service and cannot be redirected to a custom endpoint"}
-{"kind": "ProviderDenial", "reason": "ChatGPT subscription returned an empty completion; its tool request was safely blocked, but it did not recover with a text answer"}
+{"kind": "ProviderDenial", "reason": "ChatGPT subscription completion was refused: the model requested commandExecution in a text-only role, so its reply was discarded"}
 {"kind": "ConfigDenial", "reason": "Choose folder is available in the CrossAudit macOS app"}
 {"kind": "ConfigDenial", "reason": "Connect Openai API key in Settings before creating this project"}
 {"kind": "ConfigDenial", "reason": "Credential checks are available in the macOS app"}

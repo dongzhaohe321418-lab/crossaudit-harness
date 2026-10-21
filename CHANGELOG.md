@@ -21,6 +21,11 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   from the Keychain (and any `*_API_KEY` exported in the launching shell). They
   are now started without them; only project workers, which call the providers
   themselves, still receive keys (D170).
+- **A ChatGPT-subscription turn that tries a tool is refused.** If the Codex
+  runtime reports a command, file change, web search, MCP or other tool event
+  for a turn, the reply is discarded and the round fails closed with a reason
+  naming what was requested, as SECURITY.md already said. Before, the tool was
+  blocked but the turn's text was still used (D170).
 
 ## 4.17.0 — The activity stream
 

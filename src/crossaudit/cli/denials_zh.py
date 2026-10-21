@@ -1398,9 +1398,9 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("ChatGPT subscription completion failed: {}", "ChatGPT 订阅请求失败：{}"),
     ("ChatGPT subscription returned an empty completion{}", "ChatGPT 订阅返回了空回复{}"),
     ("ChatGPT subscription returned an empty completion", "ChatGPT 订阅返回了空回复"),
-    ("ChatGPT subscription returned an empty completion; its tool request was "
-     "safely blocked, but it did not recover with a text answer",
-     "ChatGPT 订阅返回了空回复；它的工具请求已被安全拦截，但之后没有恢复为文本回答"),
+    ("ChatGPT subscription completion was refused: the model requested {} in a "
+     "text-only role, so its reply was discarded",
+     "ChatGPT 订阅回复被拒绝：模型在仅限文本的角色中请求了 {}，因此其回复已被丢弃"),
     # ------------------------------------------ console/daemon.py, runtime/commands.py
     # The escalation sentence the Decision Center leads with; its slot is the
     # provider refusal itself, translated in turn (COMPOSITE).
