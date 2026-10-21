@@ -7712,3 +7712,37 @@ RULINGS:
 Recorded because a later reader could otherwise remove the parser's END-marker tolerance
 "to be safe" (losing a recovery the suite pins) or add a retry for truncation (which
 cannot succeed with the same budget).
+
+## D168 — The evidence ledger frames an entry at "\n" only, escapes the three separators `splitlines` honours, and refuses to append onto a chain that does not verify
+
+**Date:** 2026-10-21. **Branch:** `fix/truncated-output-and-ledger-splitlines`.
+
+**What was wrong.** `ledger/chain.py` wrote `json.dumps(..., ensure_ascii=False) + "\n"`
+and read with `str.splitlines()`, which also splits on U+2028, U+2029 and U+0085 — left
+raw by `ensure_ascii=False` (every other separator `splitlines` honours is below U+0020
+and already escaped). One such character in a payload made `verify()` fail for good, and
+because `append` took its head from the last line that parsed, the next two appends shared
+a `seq` and a `prev`: a forked chain, after which every receipt's tool evidence was refused.
+
+RULINGS:
+
+1. **Readers split on `"\n"` only.** A line still carrying a `"\r"` is unparseable: the
+   writer never emits one raw, so CRLF is not silently accepted. Ledgers the old writer
+   left with a raw separator now verify (a recovery, tested).
+2. **The writer escapes exactly U+2028, U+2029 and U+0085** (` `, ` `, `\u0085`)
+   rather than switching to `ensure_ascii=True`. Considered and rejected: `ensure_ascii=True`
+   would also make new ledgers readable by old readers, but it rewrites the on-disk bytes
+   of every non-ASCII payload (all Chinese text), where the targeted escape leaves every
+   line without those three characters byte-identical. Digests are unaffected either way:
+   `digest(body)` is taken over `canonical(body)`, not over the line.
+3. **`append` refuses a ledger whose complete lines do not verify** (unparseable,
+   tampered, unchained or out of order), on every head-cache miss, with a `LedgerError`
+   naming the verifier's report. The torn-tail refusal is unchanged and runs first. A warm
+   instance whose file is still exactly the size its own last write left keeps trusting
+   its cache, as before (P10): a same-size external rewrite between two appends of one
+   instance is caught by `verify()`, not by `append` — left open, deliberately, because
+   closing it costs a full re-derivation per append.
+
+Recorded because the escaping choice is a boundary a later reader could reopen (switching
+to `ensure_ascii=True` "for safety" changes bytes on disk for every Chinese payload), and
+because "append refuses a damaged chain" is now a contract the receipt path relies on.

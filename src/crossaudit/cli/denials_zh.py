@@ -1201,6 +1201,10 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the evidence ledger has an incomplete final entry (a crash left a torn tail); "
      "refusing to append onto a damaged chain until it is recovered",
      "证据账本的最后一条记录不完整（崩溃留下了残缺的尾部）；在恢复之前拒绝向受损的链上追加记录"),
+    # The slot is the verifier's own report (line number / seq), carried through.
+    ("the evidence ledger does not verify ({}); refusing to append onto a damaged "
+     "chain until it is recovered",
+     "证据账本未通过校验（{}）；在恢复之前拒绝向受损的链上追加记录"),
     # ------------------------------------------ hpc.py (SSHFailure and labels)
     ("This host is not trusted yet. Verify the hostname, then choose Trust first "
      "key & connect. CrossAudit will use OpenSSH trust-on-first-use.",
