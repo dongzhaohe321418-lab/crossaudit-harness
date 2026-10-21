@@ -968,6 +968,16 @@ def run(target: Path, *, mode: str, force: bool = False,
         if written:
             rows.append(f"source {written}")
             rows.append(tui.dim("    " + t("next.source_keys.ready")))
+        else:
+            # D172 ruling 7: no key was entered (stdin is not a terminal, or
+            # the prompts were left blank) and the keys came from the
+            # environment. Say so: "Ready" alone read as if credentials had
+            # been stored, and the README promised a mode-600 keys file.
+            envs = ["CROSSAUDIT_AUDITOR_KEY"] + (
+                ["CROSSAUDIT_GENERATOR_KEY"] if generator_vendor != "human" else [])
+            rows.append(t("next.keys_from_env", envs=" and ".join(envs)))
+            rows.append(tui.dim("    " + t("next.keys_from_env.hint",
+                                           path=keys_file())))
         rows += [
             "crossaudit doctor",
             tui.dim("    " + t("next.doctor")),

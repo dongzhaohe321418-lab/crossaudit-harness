@@ -43,6 +43,16 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   only printed the URL. Run from a terminal, it now opens the tokenized URL in
   your browser. `--no-open` prints the URL only, and nothing opens under
   `--json` or when output is not a terminal (D172).
+- **A non-interactive `init` says where your keys come from.** Without a
+  terminal it cannot prompt for keys and writes no keys file. Its summary now
+  says the keys are read from `CROSSAUDIT_AUDITOR_KEY` and
+  `CROSSAUDIT_GENERATOR_KEY` (D172).
+- **The plain-HTTP refusal names a setting that exists.** It pointed at a
+  `--allow-insecure-localhost` flag that never existed. It now names a loopback
+  `base_url:` with `CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1` (D172).
+- **README corrections.** The default check pack is `general`, `amend --yes`
+  is documented for scripts, the `--version` line is shown as printed, and
+  verdicts (`PASS`) are kept apart from cycle states (`PASSED`) (D172).
 
 ## 4.17.0 — The activity stream
 

@@ -348,10 +348,11 @@ pipx install "git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@mai
 crossaudit --version
 ```
 
-Expected version output:
+Expected version output (the last two fields are the install mode and the path
+the command runs from, so a second, older copy on `PATH` is visible):
 
 ```text
-crossaudit 4.17.0 (receipt schema 2)
+crossaudit 4.17.0 (receipt schema 2) · wheel · /Users/you/.local/bin/crossaudit
 ```
 
 Use a virtual environment instead when developing CrossAudit, testing source
@@ -461,6 +462,11 @@ crossaudit init my-project --no-console \
 The exact model must be available to your provider account. Interactive model
 menus always include a manual-entry option, so CrossAudit does not prevent you
 from using a model released after this package.
+
+When standard input is not a terminal (a script or CI job), `init` cannot
+prompt for keys, so it writes no keys file. Export `CROSSAUDIT_AUDITOR_KEY`
+and `CROSSAUDIT_GENERATOR_KEY` instead. `init` says so in its closing summary,
+and every later command reads the keys from those variables.
 
 #### 2. Check the installation
 
@@ -911,14 +917,21 @@ audit report commit
 receipt commit
 ```
 
-A cycle can end in four meaningful states:
+Each audited round ends in a verdict, which the receipt records in its `verdict`
+field:
 
-| State | Meaning |
+| Verdict | Meaning |
 |---|---|
 | `PASS` | Deterministic checks passed and the independent auditor found no blocker. |
 | `BLOCKED` | At least one objective check or auditor finding prevents acceptance. |
-| `ESCALATED` | The loop cannot make a safe decision and needs a person. |
+| `ESCALATE` | The loop cannot make a safe decision and needs a person. |
 | `DCL_ONLY` | Deterministic checks ran without a model audit; this can never count as PASS. |
+
+`crossaudit status` lists cycles, not rounds. A cycle's state is `OPEN` while a
+round awaits its verdict, `PASSED` after a PASS, `BLOCKED` while a revision is
+due, and `ESCALATED` when it needs a person (an ESCALATE or DCL_ONLY verdict, or
+a spent round budget). It becomes `CONSUMED` once its receipt is admitted, and
+`CLOSED` when a person closes it with `resolve --close`.
 
 The report's `Evidence` section lists every finding with its tier and whether a
 deterministic check verified it, and the receipt binds that list. See
@@ -945,6 +958,14 @@ Change the rules between cycles with:
 
 ```bash
 crossaudit amend "Every benchmark must include the exact command and random seed"
+```
+
+`amend` shows the proposed change and asks for confirmation. Without a
+terminal it refuses with exit code `20` instead of guessing. A script that has
+already reviewed the wording passes `--yes`:
+
+```bash
+crossaudit amend --yes "Every benchmark must include the exact command and random seed"
 ```
 
 An audit always cites the committed rule version it used. Rules never change in
@@ -1045,7 +1066,7 @@ ledger:
 scope:
   dirs: [experiments]
 
-checks: [schema, units, convergence, provenance]
+checks: general        # the default pack; `science` for the laboratory pack
 ```
 
 ### How strict the deterministic layer is (a dial, not the identity)
@@ -1060,7 +1081,7 @@ name** or an explicit list:
 | --- | --- | --- |
 | `off` | core audit chain only | "give me a trustworthy record, never mind format" |
 | `general` (default) | the domain-neutral pack — parses, dangling declarations, broken links (advisory), leftover placeholders (advisory) | code · docs · web · contracts · everyday |
-| `science` | `schema` · `units` · `convergence` · `provenance` | structured computational science |
+| `science` | `schema` · `units` · `convergence` · `provenance` · `number_source` | structured computational science |
 | `research` | the general pack + `source_provenance` | literature reports whose citations must trace to governed retrieval |
 | a list, e.g. `[parseable, declared, complete-strict]` | exactly those checks | a custom mix |
 
@@ -1242,15 +1263,40 @@ offers a compatible request control. Unsupported custom IDs are also kept on
 Automatic so a model switch cannot introduce an avoidable HTTP 400.
 
 Custom origins are denied by default because a base URL controls where the key
-is sent. Opt in only after checking the endpoint:
+is sent. To use one, set `base_url:` on the role in `crossaudit.yml` and opt in
+only after checking the endpoint:
+
+```yaml
+auditor:
+  vendor: other
+  provider: openai_compat
+  model: my-model
+  key_env: CROSSAUDIT_AUDITOR_KEY
+  base_url: https://llm.example.internal/v1
+```
 
 ```bash
 export CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1
 ```
 
+Only HTTPS is accepted, with one exception: a loopback `base_url:` (for example
+`http://127.0.0.1:8080/v1` for a local server) may use plain HTTP. It still
+needs the opt-in.
+
 ## Deterministic checks
 
-The default project enables four objective checks before the model review:
+`crossaudit init` enables the domain-neutral `general` pack by default. It runs
+four objective checks before the model review:
+
+| Check | What it validates |
+|---|---|
+| `parseable` | Every UTF-8 JSON or YAML file parses as its extension promises (blocker). |
+| `declared` | Every local path listed under `inputs`, `sources`, `requires`, or `depends_on` exists in scope (blocker). |
+| `internal` | Every relative Markdown link resolves inside the audited scope (advisory). |
+| `complete` | No leftover TODO, TBD, FIXME, or placeholder text (advisory). |
+
+Structured computational science can opt into the laboratory pack with
+`checks: science` (or `init --profile science`):
 
 | Check | What it validates |
 |---|---|
@@ -1258,6 +1304,10 @@ The default project enables four objective checks before the model review:
 | `units` | Every result quantity declares both a unit and source. |
 | `convergence` | Final results do not claim failed or over-threshold convergence. |
 | `provenance` | Result sources agree with declared inputs and code versions. |
+| `number_source` | Every number a write-up annotates (a `crossaudit-numbers` block, or a `results.json` source citing a line span) appears at the cited location with the same value and unit. |
+
+The [strictness table](#how-strict-the-deterministic-layer-is-a-dial-not-the-identity)
+lists every profile.
 
 `crossaudit init` writes `DETERMINISTIC_CHECKS.md` from the live check
 implementations. The same exact contract is included in the generator prompt,

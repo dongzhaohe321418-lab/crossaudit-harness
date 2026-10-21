@@ -826,9 +826,13 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "another host)",
      "供应商试图重定向到 {}；已拒绝（重定向可能把密钥送到另一台主机）"),
     ("provider endpoint {} is not an absolute URL", "供应商端点 {} 不是绝对 URL"),
-    ("refusing plaintext {}:// to {}; only HTTPS is allowed (loopback needs "
-     "--allow-insecure-localhost)",
-     "拒绝以明文 {}:// 访问 {}；只允许 HTTPS（回环地址需要 --allow-insecure-localhost）"),
+    ("refusing plaintext {}:// to {}; only HTTPS is allowed, except to a loopback "
+     "address set as `base_url:` with CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1",
+     "拒绝以明文 {}:// 访问 {}；只允许 HTTPS，回环地址除外：需将其设为 `base_url:` "
+     "并设置 CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1"),
+    ("refusing plaintext {}:// to {}; this request accepts HTTPS only, even on "
+     "loopback",
+     "拒绝以明文 {}:// 访问 {}；此请求只接受 HTTPS，回环地址也不例外"),
     ("endpoint {} is not this provider's built-in origin ({}); pass "
      "--allow-custom-endpoint to send a key there",
      "端点 {} 不是此供应商的内置源（{}）；要把密钥发到那里，请传入 --allow-custom-endpoint"),

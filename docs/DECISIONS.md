@@ -7846,4 +7846,29 @@ RULINGS:
    non-interactive callers stay silent without having to know the flag, and a person
    always gets the page. A failed or refused open prints "Open that URL when you are
    ready." (the existing catalogue line), and setup is never failed for it.
+7. **Small README/product disagreements, settled toward the product's words unless the
+   product was wrong (C03 and others).** (a) "Deterministic checks" now describes the
+   `general` pack (parseable, declared, internal, complete), which is what `init`
+   writes, as the default, and the `science` pack (schema, units, convergence,
+   provenance, number_source) as `checks: science`. The strictness table's `science`
+   row gains `number_source`, and the configuration example ends `checks: general`.
+   (b) A non-interactive `init` (stdin not a terminal) writes no keys file. Its closing
+   summary now says "No keys file was written: keys are read from
+   CROSSAUDIT_AUDITOR_KEY and CROSSAUDIT_GENERATOR_KEY in the environment", and the
+   README's step 1 says the same. (c) `amend --yes` is documented for scripts, because
+   without a terminal `amend` exits 20. (d) The expected `--version` line shows the real
+   format, `crossaudit 4.17.0 (receipt schema 2) · <mode> · <path>`. (e) **The README
+   changed, not the product.** `status` says `PASSED` because it lists *cycle* states,
+   while `PASS` is a round's *verdict* and is the receipt's `verdict` value. Both words
+   are consistent in their own domain, so the README now has a verdict table (PASS,
+   BLOCKED, ESCALATE, DCL_ONLY) and a separate sentence naming the cycle states (OPEN,
+   PASSED, BLOCKED, ESCALATED, CONSUMED, CLOSED). (f) The plaintext refusal in
+   `providers/base.egress_check` named `--allow-insecure-localhost`, a flag that never
+   existed. It now names what does: a loopback `base_url:` with
+   `CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1` (the generation adapters accept plain HTTP to
+   loopback by themselves). The model-catalogue fetch, which accepts HTTPS only even on
+   loopback, gets its own sentence. Behaviour is unchanged. The README's provider
+   section shows `base_url:` with the variable. **Open:** the custom-origin refusal
+   still says "pass --allow-custom-endpoint", a flag that exists on `audit` and `run`
+   but not on `build`, where only the variable works.
 
