@@ -7808,3 +7808,17 @@ RULINGS:
    returns no structured cause rather than "bounds_exceeded", whose card says the task is
    too large); the report names the files. A dedicated card is a console slice
    (`console/page.py` is owned elsewhere this round).
+3. **F3 — `AuthorizationStore` serialises every load–modify–persist under one module
+   lock, and each write uses a random temp name.** `broker/approval.py` read, changed and
+   wrote `authorizations.json` with no lock, through `authorizations.json.tmp<pid>`, a name
+   every thread of the process shared: 40 threads calling `add_tool` raised 24
+   `FileNotFoundError` and kept 5 of 40 tools. The real trigger is a build thread approving
+   a tool "for this project" (`humanapproval`) while the settings UI toggles
+   `workspace_writes` (`/api/authorization`); a lost revoke there is fail-open. Now one
+   module-level `threading.Lock` covers `set`, `set_list` and `add_tool` (through one
+   `_update`), and the temp name carries `secrets.token_hex(8)` and is removed on any
+   failure, as `mcp._write` already did. One lock for every project rather than one per
+   path: writes are rare and tiny. Left open: the lock is per process. Two processes
+   writing the same project's authorizations (a CLI run beside the console) can still
+   lose an update; closing that needs a file lock like the controller's, and no
+   cross-process writer was found in this round's trigger.

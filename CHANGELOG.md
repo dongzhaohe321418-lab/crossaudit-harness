@@ -28,6 +28,11 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   round now escalates to you and the report lists the files the auditor was not
   shown; a `.csv`, `.json`, `.md` or other text file that is not UTF-8 is
   blocked by the `parseable` check (D169).
+- **Approving a tool "for this project" can no longer undo a revoke.** Two
+  changes to a project's standing authorizations made at the same moment (a
+  tool approved from a card while `workspace_writes` was switched off in
+  settings) could each overwrite the other, losing the revoke. Changes are now
+  applied one at a time (D169).
 
 ## 4.17.0 — The activity stream
 
