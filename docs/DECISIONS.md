@@ -7777,3 +7777,34 @@ RULINGS:
    which would send that provider's key to the proxy; that is a provider-path change for
    its own slice. A macOS system-level proxy (`scutil`) can still affect the suite's own
    client (urllib consults it when no variable is set); the product helpers are immune.
+2. **F2 — A file the auditor is not shown in full ESCALATEs the round, and a text suffix
+   that is not UTF-8 is a CA-FILE-001 BLOCKER.** `auditor/prompt.py` rendered a non-UTF-8
+   file that is not a `.pdf`/`.docx` as `<binary, N bytes, not shown>` without setting
+   `bounded`, and `dcl/neutral.check_parseable` skipped non-UTF-8 data silently: a UTF-16
+   `results.csv` beside an `.xlsx` passed the `general` profile on a model PASS,
+   contradicting I8 (`dcl/framework.py`: an input we could not fully read can never end in
+   PASS). The more fail-closed reading was chosen (AGENTS §1.1): **every** placeholder file
+   counts — an image or a spreadsheet as much as a mis-encoded CSV — because the auditor
+   cannot vouch for content it never read. `prompt.unseen_files` names them;
+   `render_increment` reports them as `bounded`; the new `build_audit_prompt` keeps the size
+   overflow and the unseen paths apart (`build` keeps its signature and bytes), and the
+   verdict ladder gains one branch after the size bound: `unseen -> ESCALATE`, integrity
+   **`INPUT_NOT_SHOWN`** (a new receipt integrity code, with its clause in
+   `INTEGRITY_IN_WORDS` and Chinese in `SENTENCES_ZH`; the old `BOUNDS_EXCEEDED` sentence
+   says the prompt overflowed, which is false here). The report gains a section,
+   *Files the auditor was not shown*, listing each path; it is not in the finding shape,
+   because nothing was judged. Prompt bytes are unchanged for every input, and a report
+   with no unseen file is byte-identical. `check_parseable` now reports a file whose
+   suffix is in `TEXT_SUFFIXES` (case-insensitive; a superset of the list in the defect
+   report — `.js`, `.ts`, `.toml`, `.html`, `.css`, `.sh` also promise text) but is not
+   UTF-8 as a BLOCKER under the existing **CA-FILE-001** (the suffix promises a format the
+   bytes do not keep; a new code would mean a new constitution row for the same rule).
+   Consequence, stated: the exact reproduction is **BLOCKED** under `general` (the
+   deterministic BLOCKER dominates the ladder), and ESCALATE where no check reads the CSV;
+   either way never PASS. Consequence, stated: an increment that commits a PNG figure or an
+   `.npz` now escalates to a person every round. That is the price of I8 read strictly; a
+   project that wants such files audited commits them in a readable form or a person rules.
+   Left open: the Decision Center has no card of its own for this cause (`escalation_cause`
+   returns no structured cause rather than "bounds_exceeded", whose card says the task is
+   too large); the report names the files. A dedicated card is a console slice
+   (`console/page.py` is owned elsewhere this round).

@@ -22,6 +22,12 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   (with the console's session token) and could report a running console as
   dead. Requests to 127.0.0.1 now always go direct; remote MCP servers and
   providers still use the proxy (D169).
+- **A file the auditor could not read can no longer pass.** A file that is not
+  UTF-8 text and not a PDF or DOCX (a UTF-16 CSV, a spreadsheet, an image) was
+  shown to the auditor only as its size, and the round could still pass. Such a
+  round now escalates to you and the report lists the files the auditor was not
+  shown; a `.csv`, `.json`, `.md` or other text file that is not UTF-8 is
+  blocked by the `parseable` check (D169).
 
 ## 4.17.0 — The activity stream
 

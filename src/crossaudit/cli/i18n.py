@@ -789,6 +789,8 @@ SENTENCES_ZH: tuple[tuple[str, str], ...] = (
      "没有审计任何内容：范围内尚无工作"),
     ("the audit prompt exceeded its size bound, so the auditor did not see everything",
      "审计提示超出了大小上限，因此审计者没有看到全部内容"),
+    ("a file was not shown to the auditor because it is not readable text",
+     "有文件不是可读的文本，因此未展示给审计者"),
     ("the auditor's reply was not valid", "审计者的回复无效"),
     ("the model audit could not run", "模型审计无法运行"),
     ("a fixture provider exercised the loop, and a fixture cannot bless a commit",

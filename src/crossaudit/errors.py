@@ -256,6 +256,12 @@ def escalation_cause(*, integrity: str, verdict: str, model_verdict: str = "",
         return "invalid_reply"
     if integrity == "BOUNDS_EXCEEDED":
         return "bounds_exceeded"
+    if integrity == "INPUT_NOT_SHOWN":
+        # D169. No structured cause yet: "bounds_exceeded" would tell the
+        # person the task is too large, and "auditor_escalated" that the
+        # auditor asked -- both false. The report names the unread files; a
+        # dedicated Decision Center card is a console slice of its own.
+        return ""
     if contested:
         return "auditor_concern"
     if model_verdict == "ESCALATE":
