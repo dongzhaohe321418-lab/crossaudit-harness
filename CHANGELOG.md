@@ -38,6 +38,24 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   "1,5 mg" passed against a source saying 15 mg. A comma is now accepted only
   as thousands grouping (`1,000`, `12,345.67`); any other comma is reported as
   not a number (D169).
+- **Provider keys stay in the core process.** Git, the GitHub CLI, OpenSSH and
+  the bundled Codex runtime used to inherit every provider key the app loaded
+  from the Keychain (and any `*_API_KEY` exported in the launching shell). They
+  are now started without them; only project workers, which call the providers
+  themselves, still receive keys (D170).
+- **A ChatGPT-subscription turn that tries a tool is refused.** If the Codex
+  runtime reports a command, file change, web search, MCP or other tool event
+  for a turn, the reply is discarded and the round fails closed with a reason
+  naming what was requested, as SECURITY.md already said. Before, the tool was
+  blocked but the turn's text was still used (D170).
+- **The console page runs only its own scripts.** Its Content-Security-Policy
+  now allows the two script blocks it ships, by hash, instead of any inline
+  script, so an injected `<script>` or `onclick=` attribute does not execute.
+  The server's description of what the policy guarantees was corrected (D170).
+- **SECURITY.md says what the console token authorises.** Anyone holding the
+  token in the console URL can register a local MCP server or change the
+  allowed check commands, and so run programs as you; the policy now says so,
+  says where the token is kept, and says to treat it like a password (D170).
 
 ## 4.17.0 — The activity stream
 

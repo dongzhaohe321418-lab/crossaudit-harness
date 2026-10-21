@@ -17,6 +17,7 @@ import os
 import subprocess
 
 from .. import gitio
+from ..app_keys import child_env
 from ..config import Config
 from ..policy.tokens import CapabilityToken
 from . import secretscan
@@ -98,7 +99,7 @@ def repo_create(cfg: Config, args: dict, token: CapabilityToken) -> dict:
         raise ToolError("repo_create needs a 'name'")
     gh = os.environ.get("CROSSAUDIT_BUNDLED_GH") or "gh"
     subprocess.run([gh, "repo", "create", name, "--private"], cwd=str(cfg.root),
-                   check=True, capture_output=True, text=True, timeout=60)
+                   check=True, capture_output=True, text=True, timeout=60, env=child_env())
     return {"repo": name, "created": True}
 
 

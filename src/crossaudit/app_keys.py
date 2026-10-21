@@ -3,8 +3,12 @@
 The desktop app stores provider keys in the user's login Keychain. The local
 HTTP console may ask whether a key exists and may replace or remove one, but it
 never receives a stored value back from this module. Environment variables are
-populated only inside the app's private core process so the existing provider
-boundary stays unchanged.
+populated inside the app's core process so the existing provider boundary stays
+unchanged; a child that is not a provider path (Git, GitHub CLI, OpenSSH, the
+Codex runtime) is launched with ``child_env()``, which removes every provider
+key name. Project workers, which run providers themselves, inherit the keys
+deliberately; MCP servers and ``run_check`` commands get their own, narrower
+environments (``mcp._stdio_environment``, ``tools_command._scrubbed_env``).
 """
 from __future__ import annotations
 
@@ -33,6 +37,43 @@ def backup_env_for_vendor(vendor: str) -> str:
     return f"CROSSAUDIT_{vendor.upper()}_BACKUP_KEY"
 
 
+def provider_key_names(environ=None) -> frozenset[str]:
+    """Every environment name that can hold a provider key in this process.
+
+    The names CrossAudit itself writes (each vendor's primary and backup slot
+    and the two legacy role variables), plus, from ``environ``, any
+    ``CROSSAUDIT_*_KEY`` (a key file or a configured ``key_env`` in our own
+    namespace) and any ``*_API_KEY`` (a vendor's conventional variable, such as
+    ``OPENAI_API_KEY``, exported in the shell that started us). A configured
+    ``key_env`` of any other shape is not recognised here.
+    """
+    environ = os.environ if environ is None else environ
+    names = set(PROVIDER_ENVS.values())
+    names |= {backup_env_for_vendor(vendor) for vendor in PROVIDER_ENVS}
+    names |= set(ROLE_FALLBACKS.values())
+    names |= {"CROSSAUDIT_AUDITOR_KEY", "CROSSAUDIT_GENERATOR_KEY"}
+    names |= {name for name in environ
+              if (name.startswith("CROSSAUDIT_") and name.endswith("_KEY"))
+              or name.endswith("_API_KEY")}
+    return frozenset(names)
+
+
+def child_env(base=None, **extra: str) -> dict[str, str]:
+    """A copy of ``base`` (default ``os.environ``) without any provider key.
+
+    For every child process that is not itself a provider path: Git, the
+    GitHub CLI, OpenSSH and the Codex runtime need none of these values, and
+    a key in a child's environment is readable by everything that child runs
+    (hooks, credential helpers, ``ProxyCommand``). ``extra`` (``LC_ALL`` and
+    the like) is applied after the removal; no caller passes a key through it.
+    """
+    base = os.environ if base is None else base
+    strip = provider_key_names(base)
+    env = {name: value for name, value in base.items() if name not in strip}
+    env.update(extra)
+    return env
+
+
 def _security() -> str:
     path = shutil.which("security") or "/usr/bin/security"
     if not Path(path).is_file():
@@ -58,7 +99,7 @@ def read(vendor: str, slot: str = "primary") -> str:
     proc = subprocess.run(
         [_security(), "find-generic-password", "-a", _account(),
          "-s", _service(vendor, slot), "-w"],
-        capture_output=True, text=True, timeout=10)
+        capture_output=True, text=True, timeout=10, env=child_env())
     return proc.stdout.rstrip("\r\n") if proc.returncode == 0 else ""
 
 
@@ -74,7 +115,7 @@ def write(vendor: str, secret: str, slot: str = "primary") -> None:
          "-s", _service(vendor, slot), "-l",
          f"CrossAudit {vendor.title()} {slot} API key",
          "-w"], input=secret + "\n" + secret + "\n",
-        capture_output=True, text=True, timeout=15)
+        capture_output=True, text=True, timeout=15, env=child_env())
     if proc.returncode != 0:
         raise ConfigDenial(
             f"macOS Keychain refused the {vendor} key: {proc.stderr.strip()[:240]}")
@@ -88,7 +129,8 @@ def write(vendor: str, secret: str, slot: str = "primary") -> None:
 def remove(vendor: str, slot: str = "primary") -> None:
     subprocess.run(
         [_security(), "delete-generic-password", "-a", _account(),
-         "-s", _service(vendor, slot)], capture_output=True, text=True, timeout=10)
+         "-s", _service(vendor, slot)], capture_output=True, text=True, timeout=10,
+         env=child_env())
     os.environ.pop(env_for_vendor(vendor) if slot == "primary"
                    else backup_env_for_vendor(vendor), None)
     fallback = ROLE_FALLBACKS.get(vendor) if slot == "primary" else None

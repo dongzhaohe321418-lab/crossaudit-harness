@@ -165,7 +165,8 @@ def test_the_live_draft_is_one_line_until_the_reader_opens_it():
                          ("zh", "生成者正在撰写 · 已写 8 字 · 尚未审计")):
         html = out["collapsed_" + locale]
         assert line in html, (locale, html)
-        assert 'class="draft-fold" ontoggle=' in html, locale
+        # D170: no inline ontoggle; the fold is wired by a delegated listener.
+        assert 'class="draft-fold">' in html, locale
         assert 'class="draft-fold" open' not in html, locale
         first_paint = re.sub(r"<details\b.*?</details>", "", html, flags=re.S)
         assert text not in first_paint, "the whole draft is not on the first paint"
@@ -173,7 +174,7 @@ def test_the_live_draft_is_one_line_until_the_reader_opens_it():
     # labelled unaudited and still wearing none of the audited furniture.
     for locale in ("en", "zh"):
         html = out["open_" + locale]
-        assert 'class="draft-fold" open ontoggle=' in html
+        assert 'class="draft-fold" open>' in html
         assert text in html
         for borrowed in ("file-card", "data-download", "delivery", "status PASS"):
             assert borrowed not in html

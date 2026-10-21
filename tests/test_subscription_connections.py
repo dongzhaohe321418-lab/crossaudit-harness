@@ -94,7 +94,11 @@ def test_server_tool_request_is_denied_without_failing_collector(monkeypatch):
     assert sent[0]["error"]["code"] == -32601
 
 
-def test_subscription_recovers_to_text_after_blocked_tool(tmp_path, monkeypatch):
+def test_subscription_refuses_text_produced_after_a_blocked_tool(tmp_path, monkeypatch):
+    """D170 contract change: this test used to pin that the text after a
+    blocked tool was returned with ``blocked_tool_requests`` attached.
+    SECURITY.md promises that any tool event makes the round fail closed, so
+    the same stream is now refused and the text is never returned."""
     server = codex_subscription.CodexAppServer("/fake/codex")
 
     def call(method, _params, **_kwargs):
@@ -113,12 +117,13 @@ def test_subscription_recovers_to_text_after_blocked_tool(tmp_path, monkeypatch)
         raise AssertionError(method)
 
     monkeypatch.setattr(server, "call", call)
-    reply = server._complete_in_workspace(
-        cwd=str(tmp_path), model="gpt-5.6-sol", system="Return JSON.",
-        prompt="Make one document.", reasoning_effort="medium", timeout=1)
+    with pytest.raises(ProviderDenial, match="requested commandExecution") as caught:
+        server._complete_in_workspace(
+            cwd=str(tmp_path), model="gpt-5.6-sol", system="Return JSON.",
+            prompt="Make one document.", reasoning_effort="medium", timeout=1)
 
-    assert reply.text == "safe text response"
-    assert reply.raw["blocked_tool_requests"] == ["commandExecution"]
+    assert "safe text response" not in str(caught.value.as_dict())
+    assert caught.value.detail["blocked_tool_requests"] == ["commandExecution"]
 
 
 def test_subscription_fails_closed_when_blocked_tool_has_no_text(
@@ -139,7 +144,7 @@ def test_subscription_fails_closed_when_blocked_tool_has_no_text(
         raise AssertionError(method)
 
     monkeypatch.setattr(server, "call", call)
-    with pytest.raises(ProviderDenial, match="safely blocked"):
+    with pytest.raises(ProviderDenial, match="requested fileChange in a text-only role"):
         server._complete_in_workspace(
             cwd=str(tmp_path), model="gpt-5.6-sol", system="Return JSON.",
             prompt="Make one document.", reasoning_effort=None, timeout=1)
