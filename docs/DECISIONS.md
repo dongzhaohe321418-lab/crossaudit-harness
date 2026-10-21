@@ -7746,3 +7746,43 @@ RULINGS:
 Recorded because the escaping choice is a boundary a later reader could reopen (switching
 to `ensure_ascii=True` "for safety" changes bytes on disk for every Chinese payload), and
 because "append refuses a damaged chain" is now a contract the receipt path relies on.
+
+## D171 — `verify` refuses what the README says it refuses: invalid or (when pinned) missing signatures, and a cycle file on disk that is not the audited one; the receipt names the dependency locks of the audited tree
+
+**Date:** 2026-10-21. **Branch:** `fix/claims-round-1c`. **Source:** the black-box
+acceptance run of the README's claims (C18 FAIL; C15, C19 PARTIAL).
+
+**What was wrong (C18).** `crossaudit export-pubkey > project.pem` wrote a `KEY <id>`
+line above the PEM block, and `verify --pubkey project.pem` base64-decoded every
+non-dash line, so the README's own next command died with a `binascii.Error`
+traceback (exit 1). A corrupted signature printed `SIGNATURE INVALID` and exited 0
+in a dry run; only `--admit` refused it. A deleted sidecar printed `UNSIGNED`,
+exit 0, even with a key pinned. The signed predicate read `receipt["verdict"]` and
+`subject["report_sha256"]`, which no minted receipt has, so both fields were
+always empty (and `tests/test_receipt_signing.py` used a fixture with the same
+misreading).
+
+RULINGS:
+
+1. **Signatures (C18).**
+   a. `export-pubkey` writes the PEM block and nothing else to stdout; the key id
+      goes to stderr (`--json` carries both). Considered: a `--with-id` flag;
+      rejected because the default must be the one the README redirects.
+   b. `crypto/keys.parse_public_key_pem` reads the one `BEGIN/END PUBLIC KEY`
+      block, ignores text outside it (as OpenSSL does, so files the old export
+      wrote still work), and holds the inside to strict base64 and the exact
+      Ed25519 SPKI form. A file that cannot be read or parsed is a `ConfigDenial`
+      (exit 20) naming the file — the person handed over the wrong file.
+   c. A present signature that does not verify is an `IntegrityDenial` (exit 21)
+      in a dry run as well as under `--admit`, and it refuses before admission is
+      attempted. The human output still shows the bindings line and the
+      `SIGNATURE INVALID` line before the refusal; `--json` emits the refusal alone
+      (one document) with the signature facts as detail.
+   d. **What pinning means:** `--pubkey` asks "does this receipt carry a valid
+      signature by this key?", so a missing `receipt.dsse.json` under a pin is
+      refused (exit 21). Without a pin, `UNSIGNED` stays informational, because
+      every receipt minted before A1 is unsigned and must keep verifying.
+   e. The predicate is read from `audit.verdict` and `ledger.report_sha256`.
+      Additive: verification binds the statement's subject digest (the whole
+      receipt), never the predicate, so envelopes minted with the empty fields
+      still verify — tested by signing with the old `_predicate` verbatim.

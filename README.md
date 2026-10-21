@@ -858,13 +858,23 @@ is stored beside it as a detached `receipt.dsse.json` sidecar (a standard DSSE
 envelope over an in-toto statement). The receipt bytes are untouched, so every
 receipt minted before signing existed still verifies exactly as before —
 `SIGNED` / `UNSIGNED` is reported as its own line, and a present-but-invalid
-signature is refused. Export the public key so anyone can verify offline without
-CrossAudit, and pin it when verifying a receipt you were handed:
+signature is refused (exit 21, in a dry run as well as with `--admit`). Export
+the public key so anyone can verify offline without CrossAudit, and pin it when
+verifying a receipt you were handed:
 
 ```bash
 crossaudit export-pubkey > project.pem
 crossaudit verify cycles/<cycle>/receipt.json --pubkey project.pem
 ```
+
+`export-pubkey` writes only the PEM block to standard output (the key id goes to
+standard error), so the redirected file is a plain public-key file any PEM
+reader accepts. A `--pubkey` file that is not an Ed25519 public key in PEM form
+is refused as a configuration error (exit 20). Pinning a key means "this receipt
+must carry a valid signature by this key": a pinned verification refuses a
+receipt whose `receipt.dsse.json` is missing (exit 21). Without `--pubkey`,
+`UNSIGNED` is informational — every receipt minted before signing existed is
+unsigned — and verification goes on.
 
 On one machine the operator holds the signing key, so a valid signature proves
 provenance and tamper-evidence — it is not a defence against the key holder, and

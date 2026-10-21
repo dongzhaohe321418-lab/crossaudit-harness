@@ -1183,10 +1183,53 @@ def cmd_audit(args: argparse.Namespace) -> int:
 
 
 # ----------------------------------------------------------------- verify
+def _pinned_public_key(path_text: str) -> bytes:
+    """The raw Ed25519 key in the PEM file ``--pubkey`` names.
+
+    A file that cannot be read or parsed is a configuration refusal naming the
+    file: the person handed us the wrong file, and a traceback (what
+    ``binascii.Error`` used to produce) tells them nothing.
+    """
+    from ..crypto import keys as _keys
+    try:
+        text = Path(path_text).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ConfigDenial(
+            f"the public key file {path_text} could not be read: {exc}",
+            path=path_text) from exc
+    try:
+        return _keys.parse_public_key_pem(text)
+    except ValueError as exc:
+        raise ConfigDenial(
+            f"the public key file {path_text} is not an Ed25519 public key in "
+            f"PEM form: {exc}", path=path_text) from exc
+
+
+def _signature_refusal(sig: dict, pinned: bool) -> str:
+    """Why the signature line refuses this receipt, or "" when it does not.
+
+    Fail-closed in dry run as well as under ``--admit``: a present signature
+    that does not verify means the receipt or its signature was altered. An
+    absent sidecar is informational (a pre-A1 or unsigned receipt) — unless a
+    key was pinned, because pinning a key IS asking for a signature by it.
+    """
+    if sig["signed"] and not sig["verified"]:
+        return (f"the receipt's signature does not verify: {sig['reason']}; the "
+                f"receipt or its signature was altered after it was minted")
+    if pinned and not sig["signed"]:
+        return ("a public key was pinned but the receipt carries no signature "
+                "sidecar (receipt.dsse.json); a pinned verification requires a "
+                "signature by that key")
+    return ""
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     cfg = load()
     path = Path(args.receipt).resolve()
     receipt = load_receipt(path)
+    # Parsed before anything is re-derived: a wrong key file is a configuration
+    # problem, and it must not be reported after a page of verified bindings.
+    pin = _pinned_public_key(args.pubkey) if getattr(args, "pubkey", None) else None
     evidence = verify_receipt(
         receipt, science_root=Path(args.science_root or cfg.root).resolve(),
         audit_root=Path(args.audit_root or cfg.root).resolve(),
@@ -1205,35 +1248,35 @@ def cmd_verify(args: argparse.Namespace) -> int:
                  and cycle and cycle.get("status") == "PASSED")
     # A1: report the detached signature, if any, as its own independent fact.
     from ..receipt.sign import verify_receipt as verify_receipt_sig
-    pin = None
-    if getattr(args, "pubkey", None):
-        import base64 as _b64
-        pem = Path(args.pubkey).read_text(encoding="utf-8")
-        body = "".join(line for line in pem.splitlines()
-                       if line and not line.startswith("-----"))
-        raw = _b64.b64decode(body)
-        pin = raw[-32:] if len(raw) >= 32 else raw   # last 32 bytes of SPKI = the key
     sig = verify_receipt_sig(receipt, path.parent, expected_pubkey=pin)
-    # A present-but-invalid signature is a hard failure: the record was altered.
-    if sig["signed"] and not sig["verified"]:
+    sig_refusal = _signature_refusal(sig, pin is not None)
+    if sig_refusal:
         ready = False
     out = {"verified": True, **evidence, "recorded": recorded,
            "latest_recorded_receipt": latest, "admission_ready": ready,
            "admitted": False, "signed": sig["signed"],
            "signature_verified": sig["verified"],
+           "signature_pinned": pin is not None,
            "signature_keyid": sig["keyid"], "signature_reason": sig["reason"]}
-    if args.admit and sig["signed"] and not sig["verified"]:
-        _emit(out, args.json,
-              "SIGNATURE INVALID  the receipt or its signature was altered; "
-              "refusing to admit")
-        return EXIT_INTEGRITY
-    if args.admit:
-        out.update(admit_receipt(receipt, _state(cfg), evidence, cfg=cfg))
     sig_line = ("\nSIGNED  " + sig["keyid"] + "  verifiable offline with the "
                 "project public key" if sig["verified"]
                 else "\nSIGNATURE INVALID  " + sig["reason"] if sig["signed"]
+                else "\nUNSIGNED  no signature sidecar, but a public key was pinned"
+                if pin is not None
                 else "\nUNSIGNED  no signature sidecar (pre-A1 or signing off)")
-    human = (f"BINDINGS VERIFIED  receipt {digest[:16]} for {evidence['sha'][:12]}"
+    head = f"BINDINGS VERIFIED  receipt {digest[:16]} for {evidence['sha'][:12]}"
+    if sig_refusal:
+        # The person sees which bindings held and which line failed; --json gets
+        # the refusal alone (one document on stdout), with the facts as detail.
+        if not args.json:
+            print(head + sig_line + "\nREFUSED  nothing consumed")
+        raise IntegrityDenial(sig_refusal, signed=sig["signed"],
+                              signature_keyid=sig["keyid"],
+                              signature_reason=sig["reason"],
+                              signature_pinned=pin is not None)
+    if args.admit:
+        out.update(admit_receipt(receipt, _state(cfg), evidence, cfg=cfg))
+    human = (head
              + sig_line
              + ("\nRECORDED  controller history contains this exact receipt"
                 if recorded else
@@ -1249,7 +1292,13 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 def cmd_export_pubkey(args: argparse.Namespace) -> int:
     """Print the project's signing public key so a third party can verify
-    receipts offline with openssl / ssh-keygen / cryptography — no key created."""
+    receipts offline with openssl / ssh-keygen / cryptography — no key created.
+
+    Standard output carries the PEM block and nothing else, so
+    ``crossaudit export-pubkey > project.pem`` writes a file every PEM reader
+    (and ``verify --pubkey``) parses. The key id is a note for the person and
+    goes to standard error; ``--json`` carries both fields.
+    """
     from ..crypto import keys as _keys
     cfg = load()
     got = _keys.public_key(cfg)
@@ -1260,8 +1309,11 @@ def cmd_export_pubkey(args: argparse.Namespace) -> int:
         return EXIT_CONFIG
     pub, keyid = got
     pem = _keys.public_key_pem(pub)
-    _emit({"key_id": keyid, "public_key_pem": pem}, args.json,
-          f"KEY {keyid}\n{pem.rstrip()}")
+    if args.json:
+        _emit({"key_id": keyid, "public_key_pem": pem}, True)
+        return EXIT_OK
+    print(f"KEY {keyid}", file=sys.stderr)
+    sys.stdout.write(pem)
     return EXIT_OK
 
 

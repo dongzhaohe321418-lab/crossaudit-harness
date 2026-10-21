@@ -16,6 +16,14 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   unverifiable and let the next appends fork the chain. Ledgers already written
   that way verify again, and an append onto a ledger that does not verify is now
   refused instead of forking it (D168).
+- **The README's export-then-verify pair works.** `crossaudit export-pubkey >
+  project.pem` now writes only the PEM block (the key id goes to standard
+  error), and a `--pubkey` file that is not an Ed25519 PEM key is refused with
+  exit 20 and its name instead of a traceback. A signature that does not verify
+  is refused (exit 21) in a dry-run `verify` too, not only with `--admit`, and a
+  pinned `--pubkey` verification refuses a receipt with no signature. The signed
+  statement now carries the receipt's verdict and report digest, which it left
+  empty; signatures made before still verify (D171).
 
 ## 4.17.0 — The activity stream
 

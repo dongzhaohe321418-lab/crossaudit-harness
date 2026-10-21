@@ -1057,6 +1057,16 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the verifier that minted this receipt is not the one admitting it; re-verify "
      "with the recorded version before admitting",
      "签发此收据的验证器与准入它的不是同一个；请先用记录的版本重新验证，再准入"),
+    # ------------------------------- cli/main.py (verify, export-pubkey, D171)
+    ("the public key file {} could not be read: {}", "无法读取公钥文件 {}：{}"),
+    ("the public key file {} is not an Ed25519 public key in PEM form: {}",
+     "公钥文件 {} 不是 PEM 格式的 Ed25519 公钥：{}"),
+    ("the receipt's signature does not verify: {}; the receipt or its signature "
+     "was altered after it was minted",
+     "收据的签名无法通过验证：{}；收据或其签名在签发之后被改动过"),
+    ("a public key was pinned but the receipt carries no signature sidecar "
+     "(receipt.dsse.json); a pinned verification requires a signature by that key",
+     "已指定公钥，但收据旁没有签名文件（receipt.dsse.json）；指定公钥的验证要求有该密钥的签名"),
     # ------------------------------------------------------------ router.py
     ("router returned an unknown lane {}", "路由器返回了未知的通道 {}"),
     ("name a recipient and include the instruction after it",

@@ -96,9 +96,43 @@ def public_key(cfg: Config) -> tuple[bytes, str] | None:
     return pub, key_id(pub)
 
 
+_SPKI_PREFIX = bytes.fromhex("302a300506032b6570032100")
+_PEM_BEGIN = "-----BEGIN PUBLIC KEY-----"
+_PEM_END = "-----END PUBLIC KEY-----"
+
+
 def public_key_pem(pubkey: bytes) -> str:
     """The public key as PEM SubjectPublicKeyInfo, so openssl / ssh-keygen -Y /
     cryptography can all verify offline without any CrossAudit code."""
-    spki = bytes.fromhex("302a300506032b6570032100") + pubkey   # Ed25519 SPKI prefix
+    spki = _SPKI_PREFIX + pubkey   # Ed25519 SPKI prefix
     body = base64.encodebytes(spki).decode("ascii").strip()
-    return "-----BEGIN PUBLIC KEY-----\n" + body + "\n-----END PUBLIC KEY-----\n"
+    return _PEM_BEGIN + "\n" + body + "\n" + _PEM_END + "\n"
+
+
+def parse_public_key_pem(text: str) -> bytes:
+    """The raw 32-byte Ed25519 key from a PEM SubjectPublicKeyInfo block.
+
+    The inverse of :func:`public_key_pem`. Text outside the one ``BEGIN/END
+    PUBLIC KEY`` block is ignored, as OpenSSL ignores it, so a file that an
+    older ``export-pubkey`` wrote with a ``KEY <id>`` line above the block still
+    parses. Everything inside the block is held to the exact form: strict
+    base64, exactly the Ed25519 SPKI prefix and 32 key bytes. Raises
+    ``ValueError`` with a short reason otherwise — never a ``binascii.Error``
+    reaching a person as a traceback.
+    """
+    lines = [line.strip() for line in str(text).splitlines()]
+    try:
+        start = lines.index(_PEM_BEGIN)
+        end = lines.index(_PEM_END, start + 1)
+    except ValueError:
+        raise ValueError("it holds no BEGIN/END PUBLIC KEY block") from None
+    if _PEM_BEGIN in lines[end + 1:]:
+        raise ValueError("it holds more than one PUBLIC KEY block")
+    body = "".join(lines[start + 1:end])
+    try:
+        der = base64.b64decode(body.encode("ascii"), validate=True)
+    except (ValueError, UnicodeEncodeError):
+        raise ValueError("the PUBLIC KEY block is not valid base64") from None
+    if len(der) != len(_SPKI_PREFIX) + 32 or not der.startswith(_SPKI_PREFIX):
+        raise ValueError("the PUBLIC KEY block is not an Ed25519 key")
+    return der[len(_SPKI_PREFIX):]
