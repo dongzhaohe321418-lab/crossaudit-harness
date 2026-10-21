@@ -410,3 +410,7 @@
 {"kind": "ToolError", "reason": "web_fetch needs a plain public https:// URL without credentials or fragment"}
 {"kind": "ConfigDenial", "reason": "workspace build capacity is 1; wait for proj"}
 {"kind": "ConfigDenial", "reason": "x"}
+{"kind": "ProviderDenial", "reason": "the reply from anthropic was cut off at a token limit before it finished (stop reason max_tokens, output limit 4096 tokens); the partial reply was discarded and nothing from it was used. Ask for a smaller change per round so the whole reply fits"}
+{"kind": "ProviderDenial", "reason": "the reply from openai was cut off at a token limit before it finished (stop reason length, output limit 4096 tokens); the partial reply was discarded and nothing from it was used. Ask for a smaller change per round so the whole reply fits"}
+{"kind": "ProviderDenial", "reason": "all configured generator provider routes failed. openai:gpt-fixture — the reply from openai was cut off at a token limit before it finished (stop reason length, output limit 4096 tokens); the partial reply was discarded and nothing from it was used. Ask for a smaller change per round so the whole reply fits"}
+{"kind": "LedgerError", "reason": "the evidence ledger does not verify (unparseable entry at line 2); refusing to append onto a damaged chain until it is recovered"}

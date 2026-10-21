@@ -145,6 +145,10 @@ PROVIDER_REMEDIATIONS: dict[str, tuple[RemediationAction, ...]] = {
     "transport":      (_A.RETRY, _A.USE_FALLBACK, _A.CONTINUE_LATER, _A.STOP),
     "tls":            (_A.VALIDATE_CREDENTIAL, _A.STOP),
     "response":       (_A.RETRY, _A.USE_FALLBACK, _A.STOP),
+    # The provider reported that it cut the completion off at a token limit.
+    # The same request truncates again, so RETRY is deliberately absent: the
+    # remedies are a different model or route, or stopping to narrow the task.
+    "truncated":      (_A.SELECT_MODEL, _A.USE_FALLBACK, _A.STOP),
     "budget":         (_A.OPEN_BILLING, _A.CONTINUE_LATER, _A.STOP),
     "circuit_open":   (_A.RETRY, _A.USE_FALLBACK, _A.CONTINUE_LATER, _A.STOP),
     "routes_exhausted": (_A.RETRY, _A.VALIDATE_CREDENTIAL, _A.SELECT_MODEL, _A.STOP),

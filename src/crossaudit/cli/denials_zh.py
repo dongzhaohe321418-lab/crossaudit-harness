@@ -877,6 +877,16 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("provider completion stream ended without a terminal marker",
      "供应商的回复流在没有结束标记的情况下结束了"),
     ("provider returned an empty completion", "供应商返回了空回复"),
+    # providers/base.py truncated_completion — the slot is the vendor id.
+    # The sentence opens with literal words, never the slot: a leading slot would
+    # swallow a composite prefix ("generator provider failure in round …") whole.
+    ("the reply from {} was cut off at a token limit before it finished (stop "
+     "reason {}, output limit {} tokens); the partial reply was discarded and "
+     "nothing from it was used. Ask for a smaller change per round so the whole "
+     "reply fits",
+     "来自 {} 的回复在完成之前被 token 上限截断（停止原因 {}，输出上限 {} 个 token）；"
+     "被截断的回复已丢弃，其中任何内容都没有被使用。请缩小每一轮要求的改动，"
+     "使完整的回复能够容纳在上限之内"),
     ("unexpected chat-completions response shape: {}",
      "chat-completions 返回了意料之外的响应结构：{}"),
     ("unknown provider {}; available: {}", "未知的供应商 {}；可用的有：{}"),
@@ -1191,6 +1201,10 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the evidence ledger has an incomplete final entry (a crash left a torn tail); "
      "refusing to append onto a damaged chain until it is recovered",
      "证据账本的最后一条记录不完整（崩溃留下了残缺的尾部）；在恢复之前拒绝向受损的链上追加记录"),
+    # The slot is the verifier's own report (line number / seq), carried through.
+    ("the evidence ledger does not verify ({}); refusing to append onto a damaged "
+     "chain until it is recovered",
+     "证据账本未通过校验（{}）；在恢复之前拒绝向受损的链上追加记录"),
     # ------------------------------------------ hpc.py (SSHFailure and labels)
     ("This host is not trusted yet. Verify the hostname, then choose Trust first "
      "key & connect. CrossAudit will use OpenSSH trust-on-first-use.",
