@@ -1,0 +1,8 @@
+{
+  "quantities": [
+    {"name": "activation_energy", "value": 84.21, "unit": "kJ/mol", "source": "data/rates.csv@v1", "display": "84.21 kJ/mol"},
+    {"name": "ln_prefactor", "value": 30.0, "unit": "", "source": "data/rates.csv@v1"},
+    {"name": "n", "value": 6, "unit": "1", "source": "data/rates.csv@v1"}
+  ],
+  "stochastic": true
+}

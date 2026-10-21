@@ -42,6 +42,14 @@ DEFAULT_CHECKS = SCIENCE_CHECKS
 ANNOTATION_SKILLS: dict[str, tuple[str, str]] = {
     "number_source": ("skills/provenance-numbers.md", "PROVENANCE_NUMBERS_SKILL.md"),
     "source_provenance": ("skills/provenance-sources.md", "PROVENANCE_SOURCES_SKILL.md"),
+    # The AI4S declaration pack reads two blocks the generator writes into
+    # results.json. One file serves both checks — they share a vocabulary
+    # (quantity names, literals) — and its front matter names both, so
+    # `skills.select` keeps it while EITHER check is on and drops it when
+    # neither is. Neither check is in `SCIENCE_CHECKS`, so no scaffolded
+    # project receives it unless its own `checks:` names one of them.
+    "derivations": ("skills/ai4s-declarations.md", "AI4S_DECLARATIONS_SKILL.md"),
+    "claims": ("skills/ai4s-declarations.md", "AI4S_DECLARATIONS_SKILL.md"),
 }
 ANNOTATION_CHECKS = tuple(ANNOTATION_SKILLS)
 

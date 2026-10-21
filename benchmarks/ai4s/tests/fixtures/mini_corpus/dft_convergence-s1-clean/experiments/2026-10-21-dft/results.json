@@ -1,0 +1,8 @@
+{
+  "quantities": [
+    {"name": "energy_per_atom", "value": -5.4112, "unit": "eV/atom", "source": "data/kpoints.csv@v1", "display": "-5.4112 eV/atom"},
+    {"name": "delta_last", "value": 0.2, "unit": "meV/atom", "source": "data/kpoints.csv@v1"},
+    {"name": "n_points", "value": 4, "unit": "1", "source": "data/kpoints.csv@v1"}
+  ],
+  "convergence": {"converged": true, "achieved": 0.2, "threshold": 1.0}
+}

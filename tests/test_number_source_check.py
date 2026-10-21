@@ -344,7 +344,9 @@ def test_the_check_is_registered_and_selectable_and_in_the_science_profile_only(
     annotations blocked, Wilson 0.39–2.56%**, the preregistered §8g PASS band,
     and D164 ruling 1 put it back into the science list — both lists together,
     so a science project gets the check, the skill and the blocker at once.
-    `general` and `research` are untouched."""
+    `general` and `research` are untouched. The opt-in `science-ai4s` profile
+    is `science` plus the AI4S declaration pack, so it carries the check too and
+    the membership loop below admits exactly those two names."""
     from crossaudit.dcl.framework import available
     from crossaudit.dcl.profiles import PROFILES, resolve
 
@@ -352,8 +354,11 @@ def test_the_check_is_registered_and_selectable_and_in_the_science_profile_only(
                                   "number_source"]
     assert resolve("research") == ["parseable", "declared", "internal", "complete",
                                    "source_provenance"]
+    # `science-ai4s` is `science` plus the AI4S pack (benchmarks/ai4s/DESIGN.md
+    # §4), so it carries the check by construction; every other profile still
+    # must not.
     for name, checks in PROFILES.items():
-        assert ("number_source" in checks) == (name == "science"), name
+        assert ("number_source" in checks) == (name in ("science", "science-ai4s")), name
 
     # Registered, described, and it still runs when it is asked for by name.
     assert "number_source" in available()

@@ -3,6 +3,15 @@
 All notable changes to CrossAudit are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH` scheme; the source on `main` is authoritative.
 
+## Unreleased
+
+### Added
+- `science-ai4s` check profile (opt-in; `science` is unchanged): numeric validity,
+  constitution-declared value ranges, derivations recomputed from committed
+  data, split integrity and declared statistical claims as blockers, with
+  reproducibility and precision as advisories. Measured on the synthetic AI4S
+  test set in `benchmarks/ai4s/` (`RESULTS.md`).
+
 ## 4.17.0 — The activity stream
 
 The conversation is now one chronological stream, in one visual language,

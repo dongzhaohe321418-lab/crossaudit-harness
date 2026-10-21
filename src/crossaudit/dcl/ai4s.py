@@ -1,0 +1,1107 @@
+"""The AI4S declaration pack: properties a generator declares and code decides.
+
+`benchmarks/ai4s/DESIGN.md` §4, under D155's surviving rule: **the generator
+names evidence; code decides what it says.** Every check here reads a
+declaration the increment itself makes — a range in the constitution, a
+derivation over a committed file, a split, a claim — and asks a mechanical
+question of it. None of them asks a model anything, and none of them judges
+whether a method is appropriate, whether a derivation is the *right* one for
+the claim, or whether an undeclared quantity should have been declared.
+
+Two rules hold for every check in the module, and they are the whole design:
+
+* **A declaration the generator did not make produces nothing.** These enforce
+  declared properties, never coverage. A results file with no `derivations`
+  passes `derivations` vacuously; a constitution with no ranges block passes
+  `range_rules` vacuously. Whether a quantity *should* have been declared is
+  the auditor's tier.
+* **A declaration that cannot be verified is not verified.** An unknown method,
+  a file that is not in scope, a missing column, a non-numeric cell, a claim
+  naming a quantity that does not exist, a malformed block — each is a
+  BLOCKER, the same fail-closed shape as CA-NUM-001. Silence over an
+  unreadable declaration would make the declaration a way to look checked.
+
+A results.json that does not parse is skipped here, exactly as `check_units`
+skips it: `schema` already reports it as CA-META-001, and reporting it again
+under every pack check would multiply one defect into eight findings.
+
+**The codes, and which failure wears which.**
+
+* CA-NUM-005 (BLOCKER, `numeric_validity`) — a quantity's `value` is not a
+  finite number: missing, `null`, a bool, NaN/Infinity (which Python's JSON
+  reader accepts), or a string that is not a decimal literal. A numeric string
+  such as `"0.125"` IS a number here (`quantities.is_number_shape`), because
+  `precision` reads a value as written and a string is how a writer preserves
+  trailing zeros.
+* CA-PHYS-001 (BLOCKER, `range_rules`) — a quantity matched by a declared range
+  has a unit that is not byte-equal to the declared one, a value outside the
+  inclusive bounds, or a value that cannot be compared at all; OR the
+  ```crossaudit-ranges block itself is malformed (not JSON, not a list of
+  entries with non-empty `name` and `unit`, a non-numeric bound, min > max, an
+  unclosed fence, two fences in one file).
+* CA-DERIV-001 (BLOCKER, `derivations`) — a declared derivation, recomputed
+  from the committed file, disagrees with the reported value under the
+  declared tolerance; or it cannot be recomputed (malformed row, unknown
+  method, missing argument, file not in scope, undecodable or unparseable CSV,
+  missing or duplicated column, empty or non-numeric cell, too few rows, a
+  quantity name that matches no row or more than one).
+* CA-DERIV-002 (ADVISORY, `derivations`) — a derivation whose file is declared
+  `uncommitted` and is indeed not in scope: the generator said where, the
+  project does not keep it, so the check says it could not look rather than
+  passing in silence. A file declared uncommitted that IS in scope is verified
+  like any other.
+* CA-ML-001 (BLOCKER, `split_integrity`) — a `splits.json` whose train/test
+  (and optional val/validation) id lists overlap, repeat an id, name an id the
+  data file does not hold, or share a group when `group_column` is set; or the
+  declaration cannot be read (unparseable, missing keys, data file or column
+  absent, an id the data file holds twice).
+* CA-REPRO-001 (ADVISORY, `repro_declared`) — a results.json that says
+  `"stochastic": true` sits beside a metadata.yml lacking a non-empty
+  `command`, a non-empty `environment`, or an integer `seed`. One finding per
+  missing key. Never blocks: the constitution's rule is advisory and this
+  keeps it so.
+* CA-STAT-004 (BLOCKER, `claims`) — a declared claim is false when its operands
+  are compared, or cannot be decided (unknown test, missing operand, an operand
+  naming no quantity or several, a non-numeric operand, an interval whose low
+  end exceeds its high end).
+* CA-PREC-001 (ADVISORY, `precision`) — a value written with more decimal
+  places than one beyond the first significant digit of its own numeric
+  `uncertainty`.
+
+**Which comparisons are exact and which are floating point.** Range bounds,
+claims and the `sig` tolerance compare canonical decimals (`Decimal` built from
+the literal as written, or from `repr` of a float — the shortest string that
+round-trips, which is what the JSON said), so no comparison there passes
+through binary rounding. Derivations are *computed* in IEEE double precision
+(`math.fsum` for sums, `math.lgamma` for the beta function), so an `abs` or
+`rel` tolerance is a float comparison and a relative tolerance below about
+1e-14 cannot be met reliably; the default `rel: 1e-9` is five orders above
+that, and an increment that rounds its reported values must declare a tolerance
+at least as wide as its rounding. `sig` rounds the computed double exactly (by
+its full binary value) and the reported literal exactly, then compares the two
+canonical decimals.
+"""
+from __future__ import annotations
+
+import csv
+import io
+import json
+import math
+import posixpath
+import re
+from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
+from fnmatch import fnmatchcase
+from typing import Callable, Mapping
+
+import yaml
+
+from .framework import ADVISORY, BLOCKER, Finding, register
+from .quantities import is_number_shape, normalise_number, results_files
+
+#: Joules per mole-kelvin, CODATA 2018 exact.
+GAS_CONSTANT = 8.314462618
+#: Cu K-alpha-1, in ångström. Used only when a Bragg derivation names none.
+DEFAULT_WAVELENGTH = 1.5406
+
+
+# ----------------------------------------------------------------- reading
+def _results_docs(files: Mapping[str, bytes]) -> list[tuple[str, dict]]:
+    """Every parseable results.json mapping, sorted by path.
+
+    Unparseable files are skipped: `schema` reports them as CA-META-001.
+    """
+    out: list[tuple[str, dict]] = []
+    for path in sorted(results_files(files)):
+        try:
+            doc = json.loads(files[path].decode("utf-8"))
+        except (UnicodeDecodeError, ValueError, RecursionError):
+            continue
+        if isinstance(doc, dict):
+            out.append((path, doc))
+    return out
+
+
+def _quantities(doc: dict) -> list:
+    raw = doc.get("quantities")
+    return raw if isinstance(raw, list) else []
+
+
+def _label(q, i: int) -> str:
+    name = q.get("name") if isinstance(q, dict) else None
+    return f"quantities[{i}] ({name})" if isinstance(name, str) else f"quantities[{i}]"
+
+
+def _decimal(value) -> Decimal | None:
+    """The exact decimal a JSON value spells, or None when it is not a number.
+
+    A float is read through `repr`, the shortest literal that round-trips —
+    which is the literal the JSON carried — so 0.1 is 0.1 and not the binary
+    expansion of the nearest double. A string must be a plain decimal literal
+    (`normalise_number`'s grammar), with a U+2212 minus folded and NO thousands
+    separator: `normalise_number` drops commas, which would read a decimal
+    comma `12,5` as 125, and a check that compares magnitudes must not.
+    """
+    if not is_number_shape(value):
+        return None
+    if isinstance(value, str):
+        text = value.strip().replace("−", "-")
+        if "," in text or normalise_number(text) is None:
+            return None
+    elif isinstance(value, float):
+        text = repr(value)
+    else:
+        text = str(value)
+    try:
+        d = Decimal(text)
+    except (InvalidOperation, ValueError):
+        return None
+    return d if d.is_finite() else None
+
+
+def _float(value) -> float | None:
+    d = _decimal(value)
+    if d is None:
+        return None
+    f = float(d)
+    return f if math.isfinite(f) else None
+
+
+def _lookup(doc: dict, name: str) -> tuple[dict | None, str]:
+    """The single quantity row called `name`, or (None, why)."""
+    rows = [q for q in _quantities(doc) if isinstance(q, dict) and q.get("name") == name]
+    if not rows:
+        return None, f"names quantity {name!r}, which no results row carries"
+    if len(rows) > 1:
+        return None, f"names quantity {name!r}, which {len(rows)} results rows carry"
+    return rows[0], ""
+
+
+# ------------------------------------------------------- numeric_validity
+def check_numeric_validity(files: Mapping[str, bytes]) -> list[Finding]:
+    """CA-NUM-005: every quantity value is a finite number."""
+    out: list[Finding] = []
+    for path, doc in _results_docs(files):
+        for i, q in enumerate(_quantities(doc)):
+            if not isinstance(q, dict):
+                continue                                   # reported by check_units
+            if "value" not in q:
+                out.append(Finding(BLOCKER, "CA-NUM-005", path,
+                                   f"{_label(q, i)} has no value"))
+                continue
+            value = q["value"]
+            if not is_number_shape(value):
+                out.append(Finding(
+                    BLOCKER, "CA-NUM-005", path,
+                    f"{_label(q, i)} value {value!r} is not a finite number"))
+    return out
+
+
+# ------------------------------------------------------------ range_rules
+_RANGES_OPEN = re.compile(r"```crossaudit-ranges[^\n]*(?:\n|\Z)")
+_RANGES = re.compile(r"```crossaudit-ranges[^\n]*\n(.*?)\n```", re.S)
+
+
+def _bound(entry: dict, key: str) -> tuple[bool, Decimal | None]:
+    """(ok, bound). A bound is an int or float, never a bool or a string."""
+    if key not in entry or entry[key] is None:
+        return True, None
+    raw = entry[key]
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        return False, None
+    d = _decimal(raw)
+    return (d is not None), d
+
+
+def _range_entries(files: Mapping[str, bytes]) -> tuple[list[dict], list[Finding]]:
+    """Every declared range, in (sorted path, block order); plus malformed-block
+    findings. A malformed block contributes NO entries: half a rulebook is not
+    a rulebook, and its failure is already a blocker."""
+    entries: list[dict] = []
+    out: list[Finding] = []
+    for path in sorted(p for p in files
+                       if p.endswith("AUDIT_RULES.md")):
+        try:
+            text = files[path].decode("utf-8")
+        except UnicodeDecodeError:
+            if b"crossaudit-ranges" in files[path]:
+                out.append(Finding(BLOCKER, "CA-PHYS-001", path,
+                                   "the file carrying a crossaudit-ranges block is "
+                                   "not UTF-8, so the ranges cannot be read"))
+            continue
+        text = text.replace("\r\n", "\n")
+        opened = _RANGES_OPEN.findall(text)
+        blocks = _RANGES.findall(text)
+        if not opened:
+            continue
+        if len(opened) != len(blocks):
+            out.append(Finding(BLOCKER, "CA-PHYS-001", path,
+                               "a crossaudit-ranges block is never closed"))
+            continue
+        if len(blocks) > 1:
+            out.append(Finding(BLOCKER, "CA-PHYS-001", path,
+                               f"{len(blocks)} crossaudit-ranges blocks in one file; "
+                               "the constitution carries one, so which rules apply "
+                               "is ambiguous"))
+            continue
+        try:
+            rows = json.loads(blocks[0])
+        except (ValueError, RecursionError) as exc:
+            out.append(Finding(BLOCKER, "CA-PHYS-001", path,
+                               f"the crossaudit-ranges block does not parse as JSON: {exc}"))
+            continue
+        if not isinstance(rows, list):
+            out.append(Finding(BLOCKER, "CA-PHYS-001", path,
+                               "the crossaudit-ranges block must be a JSON array of "
+                               "{name, unit, min?, max?} entries"))
+            continue
+        good: list[dict] = []
+        bad = False
+        for j, row in enumerate(rows):
+            problem = ""
+            if not isinstance(row, dict):
+                problem = "is not a mapping"
+            elif not isinstance(row.get("name"), str) or not row["name"]:
+                problem = "has no non-empty string name"
+            elif not isinstance(row.get("unit"), str) or not row["unit"]:
+                problem = "has no non-empty string unit"
+            else:
+                ok_lo, lo = _bound(row, "min")
+                ok_hi, hi = _bound(row, "max")
+                if not (ok_lo and ok_hi):
+                    problem = "has a min or max that is not a finite number"
+                elif lo is not None and hi is not None and lo > hi:
+                    problem = f"has min {row['min']!r} above max {row['max']!r}"
+                else:
+                    good.append({"name": row["name"], "unit": row["unit"],
+                                 "min": lo, "max": hi, "where": path})
+            if problem:
+                bad = True
+                out.append(Finding(BLOCKER, "CA-PHYS-001", path,
+                                   f"crossaudit-ranges entry [{j}] {problem}"))
+        if not bad:
+            entries.extend(good)
+    return entries, out
+
+
+def check_range_rules(files: Mapping[str, bytes]) -> list[Finding]:
+    """CA-PHYS-001: quantities obey the ranges the constitution declares."""
+    entries, out = _range_entries(files)
+    if not entries:
+        return out
+    for path, doc in _results_docs(files):
+        for i, q in enumerate(_quantities(doc)):
+            if not isinstance(q, dict) or not isinstance(q.get("name"), str):
+                continue
+            name = q["name"]
+            # Case-sensitive on every platform: `fnmatch.fnmatch` folds case
+            # through `os.path.normcase`, so the same rulebook would match
+            # differently on Windows.
+            rule = next((e for e in entries
+                         if name == e["name"] or fnmatchcase(name, e["name"])), None)
+            if rule is None:
+                continue
+            label = _label(q, i)
+            if q.get("unit") != rule["unit"]:
+                out.append(Finding(
+                    BLOCKER, "CA-PHYS-001", path,
+                    f"{label} unit {q.get('unit')!r} is not the declared unit "
+                    f"{rule['unit']!r} for {rule['name']!r} ({rule['where']})"))
+                continue
+            value = _decimal(q.get("value"))
+            if value is None:
+                out.append(Finding(
+                    BLOCKER, "CA-PHYS-001", path,
+                    f"{label} value {q.get('value')!r} is not a finite number, so "
+                    f"the declared range for {rule['name']!r} cannot be verified"))
+                continue
+            lo, hi = rule["min"], rule["max"]
+            if (lo is not None and value < lo) or (hi is not None and value > hi):
+                span = f"[{'-inf' if lo is None else lo}, {'inf' if hi is None else hi}]"
+                out.append(Finding(
+                    BLOCKER, "CA-PHYS-001", path,
+                    f"{label} value {q.get('value')!r} {rule['unit']} lies outside "
+                    f"the declared range {span} for {rule['name']!r} ({rule['where']})"))
+    return out
+
+
+# ------------------------------------------------------------ statistics
+class _Undecidable(Exception):
+    """A derivation that cannot be recomputed. Its message is the finding."""
+
+
+def _mean(v: list[float]) -> float:
+    if not v:
+        raise _Undecidable("needs at least one row")
+    return math.fsum(v) / len(v)
+
+
+def _var(v: list[float]) -> float:
+    if len(v) < 2:
+        raise _Undecidable("needs at least two rows for a sample variance")
+    m = _mean(v)
+    return math.fsum((x - m) ** 2 for x in v) / (len(v) - 1)
+
+
+def _betacf(a: float, b: float, x: float) -> float:
+    """Continued fraction for the incomplete beta, modified Lentz."""
+    tiny, eps = 1e-300, 1e-16
+    qab, qap, qam = a + b, a + 1.0, a - 1.0
+    c, d = 1.0, 1.0 - qab * x / qap
+    d = 1.0 / (d if abs(d) > tiny else tiny)
+    h = d
+    for m in range(1, 10001):
+        m2 = 2 * m
+        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
+        d = 1.0 + aa * d
+        d = 1.0 / (d if abs(d) > tiny else tiny)
+        c = 1.0 + aa / c
+        c = c if abs(c) > tiny else tiny
+        h *= d * c
+        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
+        d = 1.0 + aa * d
+        d = 1.0 / (d if abs(d) > tiny else tiny)
+        c = 1.0 + aa / c
+        c = c if abs(c) > tiny else tiny
+        delta = d * c
+        h *= delta
+        if abs(delta - 1.0) < eps:
+            return h
+    raise _Undecidable("the incomplete beta continued fraction did not converge")
+
+
+def betainc(a: float, b: float, x: float) -> float:
+    """Regularised incomplete beta I_x(a, b), pure Python."""
+    if not (a > 0 and b > 0) or not (0.0 <= x <= 1.0):
+        raise _Undecidable("incomplete beta outside its domain")
+    if x in (0.0, 1.0):
+        return x
+    ln_front = (math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
+                + a * math.log(x) + b * math.log1p(-x))
+    front = math.exp(ln_front)
+    if x < (a + 1.0) / (a + b + 2.0):
+        return front * _betacf(a, b, x) / a
+    return 1.0 - front * _betacf(b, a, 1.0 - x) / b
+
+
+def t_pvalue_two_sided(t: float, df: float) -> float:
+    """P(|T| >= |t|) for Student's t with `df` degrees of freedom."""
+    if not (math.isfinite(t) and math.isfinite(df)) or df <= 0:
+        raise _Undecidable("t and df must be finite with df > 0")
+    return betainc(df / 2.0, 0.5, df / (df + t * t))
+
+
+def t_quantile_two_sided(p: float, df: float) -> float:
+    """The q > 0 with t_pvalue_two_sided(q, df) == p, by bisection on the CDF."""
+    if not (0.0 < p < 1.0):
+        raise _Undecidable("a two-sided tail probability must lie in (0, 1)")
+    lo, hi = 0.0, 1.0
+    while t_pvalue_two_sided(hi, df) > p:
+        lo, hi = hi, hi * 2.0
+        if hi > 1e12:
+            raise _Undecidable("the t quantile is out of range")
+    for _ in range(200):
+        mid = (lo + hi) / 2.0
+        if mid in (lo, hi):
+            break
+        if t_pvalue_two_sided(mid, df) > p:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2.0
+
+
+def _welch(a: list[float], b: list[float]) -> tuple[float, float, float]:
+    """(difference of means, standard error, Welch–Satterthwaite df)."""
+    va, vb = _var(a) / len(a), _var(b) / len(b)
+    se2 = va + vb
+    denom = (va * va / (len(a) - 1)) + (vb * vb / (len(b) - 1))
+    if se2 <= 0 or denom <= 0:
+        raise _Undecidable("both groups have zero variance; Welch's t is undefined")
+    return _mean(a) - _mean(b), math.sqrt(se2), se2 * se2 / denom
+
+
+def _linfit(x: list[float], y: list[float]) -> tuple[float, float]:
+    if len(x) < 2:
+        raise _Undecidable("needs at least two rows for a line")
+    mx, my = _mean(x), _mean(y)
+    sxx = math.fsum((xi - mx) ** 2 for xi in x)
+    if sxx == 0:
+        raise _Undecidable("x has zero variance; the slope is undefined")
+    sxy = math.fsum((xi - mx) * (yi - my) for xi, yi in zip(x, y))
+    slope = sxy / sxx
+    return slope, my - slope * mx
+
+
+def _pearson(x: list[float], y: list[float]) -> float:
+    if len(x) < 2:
+        raise _Undecidable("needs at least two rows for a correlation")
+    mx, my = _mean(x), _mean(y)
+    sxx = math.fsum((xi - mx) ** 2 for xi in x)
+    syy = math.fsum((yi - my) ** 2 for yi in y)
+    if sxx == 0 or syy == 0:
+        raise _Undecidable("a column has zero variance; r is undefined")
+    return math.fsum((xi - mx) * (yi - my) for xi, yi in zip(x, y)) / math.sqrt(sxx * syy)
+
+
+def _r2(truth: list[float], pred: list[float]) -> float:
+    m = _mean(truth)
+    ss_tot = math.fsum((t - m) ** 2 for t in truth)
+    if ss_tot == 0:
+        raise _Undecidable("truth has zero variance; r2 is undefined")
+    return 1.0 - math.fsum((t - p) ** 2 for t, p in zip(truth, pred)) / ss_tot
+
+
+def _arrhenius(T: list[float], k: list[float]) -> tuple[float, float]:
+    if any(t <= 0 for t in T) or any(v <= 0 for v in k):
+        raise _Undecidable("Arrhenius needs every T_K and k strictly positive")
+    return _linfit([1.0 / t for t in T], [math.log(v) for v in k])
+
+
+def _bragg(tt: list[float], h: list[float], k: list[float], l: list[float],
+           wavelength: float) -> float:
+    if not tt:
+        raise _Undecidable("needs at least one peak")
+    values = []
+    for t, hh, kk, ll in zip(tt, h, k, l):
+        if not (0.0 < t < 180.0):
+            raise _Undecidable(f"two_theta {t} is not in (0, 180) degrees")
+        s = hh * hh + kk * kk + ll * ll
+        if s <= 0:
+            raise _Undecidable("a peak has h = k = l = 0")
+        d = wavelength / (2.0 * math.sin(math.radians(t / 2.0)))
+        values.append(d * math.sqrt(s))
+    return _mean(values)
+
+
+def _last(y: list[float]) -> float:
+    if not y:
+        raise _Undecidable("needs at least one row")
+    return y[-1]
+
+
+def _last_delta(y: list[float]) -> float:
+    if len(y) < 2:
+        raise _Undecidable("needs at least two rows")
+    return abs(y[-1] - y[-2])
+
+
+def _nonempty(fn):
+    def wrapped(v):
+        if not v:
+            raise _Undecidable("needs at least one row")
+        return fn(v)
+    return wrapped
+
+
+def _paired_mae(t, p):
+    return _mean([abs(a - b) for a, b in zip(t, p)])
+
+
+def _paired_rmse(t, p):
+    return math.sqrt(_mean([(a - b) ** 2 for a, b in zip(t, p)]))
+
+
+def _ci(sign: int):
+    def fn(a, b):
+        diff, se, df = _welch(a, b)
+        return diff + sign * t_quantile_two_sided(0.05, df) * se
+    return fn
+
+
+#: The registry, exactly DESIGN §4.3. Each entry: (kind, argument keys, fn).
+#: kind "single": one column vector; "two": two independent samples, each
+#: argument a column or {"column", "where"}; "paired": columns of the same
+#: rows; "scalar": operands are numeric literals or quantity names.
+_METHODS: dict[str, tuple[str, tuple[str, ...], Callable]] = {
+    "count": ("count", ("x",), len),
+    "mean": ("single", ("x",), _mean),
+    "sd": ("single", ("x",), lambda v: math.sqrt(_var(v))),
+    "sem": ("single", ("x",), lambda v: math.sqrt(_var(v) / len(v))),
+    "min": ("single", ("x",), _nonempty(min)),
+    "max": ("single", ("x",), _nonempty(max)),
+    "sum": ("single", ("x",), math.fsum),
+    "last": ("single", ("y",), _last),
+    "last_delta_abs": ("single", ("y",), _last_delta),
+    "difference": ("two", ("a", "b"), lambda a, b: _mean(a) - _mean(b)),
+    "welch_t": ("two", ("a", "b"), lambda a, b: (lambda w: w[0] / w[1])(_welch(a, b))),
+    "welch_df": ("two", ("a", "b"), lambda a, b: _welch(a, b)[2]),
+    "ci95_low": ("two", ("a", "b"), _ci(-1)),
+    "ci95_high": ("two", ("a", "b"), _ci(+1)),
+    "mae": ("paired", ("truth", "pred"), _paired_mae),
+    "rmse": ("paired", ("truth", "pred"), _paired_rmse),
+    "r2": ("paired", ("truth", "pred"), _r2),
+    "pearson_r": ("paired", ("x", "y"), _pearson),
+    "linfit_slope": ("paired", ("x", "y"), lambda x, y: _linfit(x, y)[0]),
+    "linfit_intercept": ("paired", ("x", "y"), lambda x, y: _linfit(x, y)[1]),
+    "arrhenius_ea_kj_per_mol": ("paired", ("T_K", "k"),
+                                lambda T, k: -_arrhenius(T, k)[0] * GAS_CONSTANT / 1000.0),
+    "arrhenius_ln_a": ("paired", ("T_K", "k"), lambda T, k: _arrhenius(T, k)[1]),
+    "bragg_cubic_a": ("bragg", ("two_theta_deg", "h", "k", "l"), _bragg),
+    "t_pvalue_two_sided": ("scalar", ("t", "df"), t_pvalue_two_sided),
+    "scale": ("scalar", ("x", "factor"), lambda x, f: x * f),
+}
+METHODS = tuple(_METHODS)
+
+
+# ------------------------------------------------------------- CSV access
+class _Table:
+    def __init__(self, path: str, header: list[str], rows: list[dict]):
+        self.path, self.header, self.rows = path, header, rows
+
+
+def _read_table(files: Mapping[str, bytes], path: str) -> _Table:
+    if path not in files:
+        raise _Undecidable(f"file {path!r} is not in the audited scope")
+    try:
+        # utf-8-sig: a byte-order mark is an export artefact, not part of the
+        # first column's name, and keeping it would block on a missing column.
+        text = files[path].decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise _Undecidable(f"file {path!r} is not UTF-8") from None
+    try:
+        raw = list(csv.reader(io.StringIO(text, newline="")))
+    except csv.Error as exc:
+        raise _Undecidable(f"file {path!r} does not parse as CSV: {exc}") from None
+    # `csv.reader` rather than `csv.DictReader`, because DictReader SKIPS a
+    # blank line — and in a one-column file a blank line is an empty cell, so
+    # a missing measurement vanished and the mean of the rest passed. Trailing
+    # blank lines are layout and are dropped; a blank line between data rows
+    # is a row whose every cell is empty, and it is kept so `_cell` refuses it.
+    while raw and not raw[-1]:
+        raw.pop()
+    if not raw:
+        raise _Undecidable(f"file {path!r} has no header row")
+    header, rows = raw[0], []
+    for n, cells in enumerate(raw[1:], start=2):
+        if len(cells) > len(header):
+            raise _Undecidable(f"file {path!r} row {n} has more fields than its header")
+        rows.append({h: (cells[i] if i < len(cells) else None)
+                     for i, h in enumerate(header)})
+    return _Table(path, header, rows)
+
+
+def _column(table: _Table, name) -> str:
+    if not isinstance(name, str) or not name:
+        raise _Undecidable(f"column {name!r} is not a non-empty string")
+    n = table.header.count(name)
+    if n == 0:
+        raise _Undecidable(f"{table.path!r} has no column {name!r}")
+    if n > 1:
+        # DictReader keeps the LAST duplicate silently; which one was meant is
+        # not something this check gets to guess.
+        raise _Undecidable(f"{table.path!r} has {n} columns named {name!r}")
+    return name
+
+
+def _filter(table: _Table, rows: list[dict], where) -> list[dict]:
+    if where is None:
+        return rows
+    if (not isinstance(where, dict) or set(where) != {"column", "equals"}):
+        raise _Undecidable("where must be exactly {\"column\", \"equals\"}")
+    col = _column(table, where["column"])
+    want = where["equals"]
+    if isinstance(want, bool) or not isinstance(want, (str, int)):
+        raise _Undecidable("where.equals must be a string or an integer")
+    want = str(want)
+    return [r for r in rows if r.get(col) == want]
+
+
+def _cell(table: _Table, row: dict, col: str) -> float:
+    raw = row.get(col)
+    text = raw.strip().replace("−", "-") if isinstance(raw, str) else ""
+    # The same grammar `normalise_number` accepts, minus the thousands
+    # separator: a decimal comma `12,5` would otherwise read as 125.
+    if not text or "," in text or normalise_number(text) is None:
+        raise _Undecidable(f"{table.path!r} column {col!r} has a non-numeric cell {raw!r}")
+    value = float(text)
+    if not math.isfinite(value):
+        raise _Undecidable(f"{table.path!r} column {col!r} has a non-finite cell {raw!r}")
+    return value
+
+
+def _vector(table: _Table, rows: list[dict], col: str) -> list[float]:
+    return [_cell(table, r, col) for r in rows]
+
+
+def _scalar_operand(doc: dict, raw, key: str) -> float:
+    if isinstance(raw, str):
+        q, why = _lookup(doc, raw)
+        if q is None:
+            raise _Undecidable(f"argument {key!r} {why}")
+        value = _float(q.get("value"))
+        if value is None:
+            raise _Undecidable(f"argument {key!r} names {raw!r}, whose value is not "
+                               "a finite number")
+        return value
+    value = None if isinstance(raw, bool) else _float(raw)
+    if value is None:
+        raise _Undecidable(f"argument {key!r} must be a number or a quantity name")
+    return value
+
+
+def _compute(files: Mapping[str, bytes], base: str, doc: dict, method: str,
+             spec: dict) -> float:
+    kind, keys, fn = _METHODS[method]
+    if kind in ("single", "count") and keys == ("x",) and "column" in spec:
+        # The coordinator's convention names a single-column argument "column";
+        # the pack's names it "x". Both are accepted, never both at once: two
+        # names for one argument that disagree are a declaration that cannot
+        # be read.
+        if "x" in spec:
+            raise _Undecidable("input gives both 'x' and 'column' for one argument")
+        spec = {**spec, "x": spec["column"]}
+    missing = [k for k in keys if k not in spec]
+    if missing:
+        raise _Undecidable(f"method {method!r} needs input {missing}")
+    if kind == "scalar":
+        return fn(*(_scalar_operand(doc, spec[k], k) for k in keys))
+    if not isinstance(spec.get("file"), str) or not spec["file"]:
+        raise _Undecidable("input names no file")
+    table = _read_table(files, posixpath.normpath(posixpath.join(base, spec["file"])))
+    rows = _filter(table, table.rows, spec.get("where"))
+    if kind == "count":
+        _column(table, spec["x"])
+        return float(len(rows))
+    if kind == "two":
+        samples = []
+        for k in keys:
+            arg = spec[k]
+            sub = rows
+            if isinstance(arg, dict):
+                if set(arg) - {"column", "where"} or "column" not in arg:
+                    raise _Undecidable(f"argument {k!r} must be a column name or "
+                                       "{\"column\", \"where\"}")
+                sub = _filter(table, rows, arg.get("where"))
+                arg = arg["column"]
+            samples.append(_vector(table, sub, _column(table, arg)))
+        return fn(*samples)
+    cols = [_column(table, spec[k]) for k in keys]
+    vectors = [_vector(table, rows, c) for c in cols]
+    if kind == "bragg":
+        wl = spec.get("wavelength", DEFAULT_WAVELENGTH)
+        wl = None if isinstance(wl, bool) else _float(wl)
+        if wl is None or wl <= 0:
+            raise _Undecidable("wavelength must be a positive number (Å)")
+        return fn(*vectors, wl)
+    return fn(*vectors)
+
+
+def _round_sig(d: Decimal, n: int) -> str | None:
+    if d == 0:
+        return "0"
+    q = Decimal(1).scaleb(d.adjusted() - n + 1)
+    return normalise_number(format(d.quantize(q, rounding=ROUND_HALF_EVEN), "f")
+                            if abs(d.adjusted()) < 400 else
+                            str(d.quantize(q, rounding=ROUND_HALF_EVEN)))
+
+
+def _tolerance(raw) -> tuple[str, float | int]:
+    if raw is None:
+        return "rel", 1e-9
+    if not isinstance(raw, dict) or len(raw) != 1:
+        raise _Undecidable("tolerance must be exactly one of {abs}, {rel}, {sig}")
+    (kind, value), = raw.items()
+    if kind in ("abs", "rel"):
+        v = None if isinstance(value, bool) else _float(value)
+        if v is None or v < 0 or not isinstance(value, (int, float)):
+            raise _Undecidable(f"tolerance {kind} must be a non-negative number")
+        return kind, v
+    if kind == "sig":
+        if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 17:
+            raise _Undecidable("tolerance sig must be an integer from 1 to 17")
+        return kind, value
+    raise _Undecidable(f"unknown tolerance kind {kind!r}")
+
+
+def agrees(computed: float, reported, tolerance) -> bool:
+    """Whether a reported value matches a computed one under a tolerance.
+
+    abs: |c - r| <= abs. rel: |c - r| <= rel * |c| (relative to the
+    recomputed value, so a computed zero demands an exact zero). sig: both
+    rounded half-even to n significant figures — the double by its exact
+    binary value, the report by its literal — compare as canonical decimals.
+    """
+    kind, tol = _tolerance(tolerance)
+    if kind == "sig":
+        rep = _decimal(reported)
+        if rep is None:
+            return False
+        return _round_sig(Decimal(computed), tol) == _round_sig(rep, tol)
+    r = _float(reported)
+    if r is None:
+        return False
+    diff = abs(computed - r)
+    return diff <= tol if kind == "abs" else diff <= tol * abs(computed)
+
+
+def _is_uncommitted(spec: dict) -> bool:
+    return spec.get("uncommitted") is True or spec.get("file") == "uncommitted"
+
+
+def check_derivations(files: Mapping[str, bytes]) -> list[Finding]:
+    """CA-DERIV-001/002: declared derivations recompute from committed files."""
+    out: list[Finding] = []
+    for path, doc in _results_docs(files):
+        if "derivations" not in doc:
+            continue
+        rows = doc["derivations"]
+        if not isinstance(rows, list):
+            out.append(Finding(BLOCKER, "CA-DERIV-001", path,
+                               "derivations must be a list"))
+            continue
+        base = posixpath.dirname(path)
+        for j, row in enumerate(rows):
+            where = f"derivations[{j}]"
+            try:
+                if not isinstance(row, dict):
+                    raise _Undecidable("is not a mapping")
+                name, method, spec = row.get("quantity"), row.get("method"), row.get("input")
+                if isinstance(name, str):
+                    where += f" ({name})"
+                if not isinstance(name, str) or not name:
+                    raise _Undecidable("names no quantity")
+                q, why = _lookup(doc, name)
+                if q is None:
+                    raise _Undecidable(why)
+                if method not in _METHODS:
+                    raise _Undecidable(f"method {method!r} is not one this check "
+                                       f"can recompute; known: {', '.join(METHODS)}")
+                if not isinstance(spec, dict):
+                    raise _Undecidable("input must be a mapping")
+                _tolerance(row.get("tolerance"))         # malformed blocks first
+                if _is_uncommitted(spec):
+                    target = spec.get("file")
+                    present = (isinstance(target, str) and target != "uncommitted"
+                               and posixpath.normpath(posixpath.join(base, target)) in files)
+                    if not present:
+                        out.append(Finding(
+                            ADVISORY, "CA-DERIV-002", path,
+                            f"{where} recomputes from a file declared uncommitted "
+                            f"({target!r}); this project does not keep it, so the "
+                            "derivation could not be checked"))
+                        continue
+                if _float(q.get("value")) is None:
+                    raise _Undecidable(f"reported value {q.get('value')!r} is not a "
+                                       "finite number")
+                computed = _compute(files, base, doc, method, spec)
+                if not math.isfinite(computed):
+                    raise _Undecidable("recomputed value is not finite")
+                if not agrees(computed, q.get("value"), row.get("tolerance")):
+                    tol = row.get("tolerance") or {"rel": 1e-9}
+                    out.append(Finding(
+                        BLOCKER, "CA-DERIV-001", path,
+                        f"{where}: {method} recomputed from the committed file gives "
+                        f"{computed!r}, the reported value is {q.get('value')!r}, which "
+                        f"does not agree under tolerance {tol}"))
+            except _Undecidable as exc:
+                out.append(Finding(BLOCKER, "CA-DERIV-001", path,
+                                   f"{where} cannot be verified: {exc}"))
+            except (ArithmeticError, ValueError) as exc:
+                out.append(Finding(BLOCKER, "CA-DERIV-001", path,
+                                   f"{where} cannot be verified: arithmetic failed ({exc})"))
+    return out
+
+
+# -------------------------------------------------------- split_integrity
+_SPLIT_KEYS = ("train", "test", "val", "validation")
+
+
+def _split_findings(files: Mapping[str, bytes], path: str) -> list[Finding]:
+    def block(msg: str) -> list[Finding]:
+        return [Finding(BLOCKER, "CA-ML-001", path, msg)]
+
+    try:
+        doc = json.loads(files[path].decode("utf-8"))
+    except (UnicodeDecodeError, ValueError, RecursionError) as exc:
+        return block(f"splits.json does not parse, so split integrity cannot be "
+                     f"verified: {exc}")
+    if not isinstance(doc, dict):
+        return block("splits.json must be a mapping")
+    for key in ("data", "id_column"):
+        if not isinstance(doc.get(key), str) or not doc[key]:
+            return block(f"splits.json has no non-empty string {key!r}")
+    group = doc.get("group_column")
+    if group is not None and (not isinstance(group, str) or not group):
+        return block("splits.json group_column must be a non-empty string or absent")
+    splits: dict[str, list[str]] = {}
+    for key in _SPLIT_KEYS:
+        if key not in doc:
+            if key in ("train", "test"):
+                return block(f"splits.json has no {key!r} list")
+            continue
+        ids = doc[key]
+        if not isinstance(ids, list) or any(
+                isinstance(i, bool) or not isinstance(i, (str, int)) for i in ids):
+            return block(f"splits.json {key!r} must be a list of string or integer ids")
+        splits[key] = [str(i) for i in ids]
+    data_path = posixpath.normpath(posixpath.join(posixpath.dirname(path), doc["data"]))
+    try:
+        table = _read_table(files, data_path)
+        id_col = _column(table, doc["id_column"])
+        group_col = _column(table, group) if group else None
+    except _Undecidable as exc:
+        return block(f"split integrity cannot be verified: {exc}")
+
+    out: list[Finding] = []
+    data_rows: dict[str, list[dict]] = {}
+    for r in table.rows:
+        data_rows.setdefault(r.get(id_col), []).append(r)
+    for key, ids in splits.items():
+        seen, dups = set(), []
+        for i in ids:
+            if i in seen and i not in dups:
+                dups.append(i)
+            seen.add(i)
+        if dups:
+            out += block(f"split {key!r} repeats ids {dups[:10]}"
+                         f"{' …' if len(dups) > 10 else ''}")
+    names = list(splits)
+    for x in range(len(names)):
+        for y in range(x + 1, len(names)):
+            both = sorted(set(splits[names[x]]) & set(splits[names[y]]))
+            if both:
+                out += block(f"splits {names[x]!r} and {names[y]!r} share ids "
+                             f"{both[:10]}{' …' if len(both) > 10 else ''}")
+    named = sorted({i for ids in splits.values() for i in ids})
+    absent = [i for i in named if i not in data_rows]
+    if absent:
+        out += block(f"split ids not in {data_path!r}: {absent[:10]}"
+                     f"{' …' if len(absent) > 10 else ''}")
+    twice = [i for i in named if len(data_rows.get(i, [])) > 1]
+    if twice:
+        out += block(f"split ids that {data_path!r} holds more than once, so their "
+                     f"rows are ambiguous: {twice[:10]}")
+    if group_col and not absent and not twice:
+        groups = {k: {data_rows[i][0].get(group_col) for i in ids}
+                  for k, ids in splits.items()}
+        for x in range(len(names)):
+            for y in range(x + 1, len(names)):
+                both = sorted(str(g) for g in groups[names[x]] & groups[names[y]])
+                if both:
+                    out += block(f"splits {names[x]!r} and {names[y]!r} share "
+                                 f"{group_col!r} groups {both[:10]}"
+                                 f"{' …' if len(both) > 10 else ''}")
+    return out
+
+
+def check_split_integrity(files: Mapping[str, bytes]) -> list[Finding]:
+    """CA-ML-001: a declared train/test split is disjoint and grounded."""
+    out: list[Finding] = []
+    for path in sorted(p for p in files
+                       if p == "splits.json" or p.endswith("/splits.json")):
+        out.extend(_split_findings(files, path))
+    return out
+
+
+# --------------------------------------------------------- repro_declared
+def check_repro_declared(files: Mapping[str, bytes]) -> list[Finding]:
+    """CA-REPRO-001 (advisory): a stochastic increment says how to re-run it."""
+    out: list[Finding] = []
+    for path, doc in _results_docs(files):
+        if doc.get("stochastic") is not True:
+            continue
+        base = posixpath.dirname(path)
+        meta_path = posixpath.join(base, "metadata.yml") if base else "metadata.yml"
+        meta = None
+        if meta_path in files:
+            try:
+                meta = yaml.safe_load(files[meta_path].decode("utf-8"))
+            except Exception:                              # reported by check_schema
+                meta = None
+        if not isinstance(meta, dict):
+            out.append(Finding(ADVISORY, "CA-REPRO-001", path,
+                               "results are declared stochastic but no readable "
+                               f"{meta_path} beside them says how to re-run them"))
+            continue
+        cmd, env, seed = meta.get("command"), meta.get("environment"), meta.get("seed")
+        if not (isinstance(cmd, str) and cmd.strip()):
+            out.append(Finding(ADVISORY, "CA-REPRO-001", meta_path,
+                               "stochastic results, but metadata declares no command"))
+        if not ((isinstance(env, str) and env.strip())
+                or (isinstance(env, dict) and env)):
+            out.append(Finding(ADVISORY, "CA-REPRO-001", meta_path,
+                               "stochastic results, but metadata declares no environment"))
+        if isinstance(seed, bool) or not isinstance(seed, int):
+            out.append(Finding(ADVISORY, "CA-REPRO-001", meta_path,
+                               "stochastic results, but metadata declares no integer seed"))
+    return out
+
+
+# ----------------------------------------------------------------- claims
+#: test -> (operand keys, predicate over Decimals).
+_TESTS: dict[str, tuple[tuple[str, ...], Callable[..., bool]]] = {
+    "p_below": (("quantity", "alpha"), lambda p, a: p < a),
+    "p_at_least": (("quantity", "alpha"), lambda p, a: p >= a),
+    "ci_excludes_zero": (("low", "high"), lambda lo, hi: lo > 0 or hi < 0),
+    "ci_contains": (("low", "high", "value"), lambda lo, hi, v: lo <= v <= hi),
+    "less_than": (("quantity", "than"), lambda q, t: q < t),
+    "greater_than": (("quantity", "than"), lambda q, t: q > t),
+    "within": (("quantity", "low", "high"), lambda q, lo, hi: lo <= q <= hi),
+}
+TESTS = tuple(_TESTS)
+
+
+def _claim_operand(doc: dict, raw, key: str) -> Decimal:
+    if isinstance(raw, str):
+        q, why = _lookup(doc, raw)
+        if q is None:
+            raise _Undecidable(f"operand {key!r} {why}")
+        d = _decimal(q.get("value"))
+        if d is None:
+            raise _Undecidable(f"operand {key!r} names {raw!r}, whose value is not a "
+                               "finite number")
+        return d
+    d = None if isinstance(raw, bool) or not isinstance(raw, (int, float)) else _decimal(raw)
+    if d is None:
+        raise _Undecidable(f"operand {key!r} must be a number or a quantity name")
+    return d
+
+
+def check_claims(files: Mapping[str, bytes]) -> list[Finding]:
+    """CA-STAT-004: declared statistical claims hold over the reported numbers."""
+    out: list[Finding] = []
+    for path, doc in _results_docs(files):
+        if "claims" not in doc:
+            continue
+        claims = doc["claims"]
+        if not isinstance(claims, list):
+            out.append(Finding(BLOCKER, "CA-STAT-004", path, "claims must be a list"))
+            continue
+        for j, claim in enumerate(claims):
+            label = f"claims[{j}]"
+            try:
+                if not isinstance(claim, dict):
+                    raise _Undecidable("is not a mapping")
+                if isinstance(claim.get("text"), str):
+                    label += f" ({claim['text']!r})"
+                test = claim.get("test")
+                if test not in _TESTS:
+                    raise _Undecidable(f"test {test!r} is not one this check can "
+                                       f"decide; known: {', '.join(TESTS)}")
+                keys, predicate = _TESTS[test]
+                missing = [k for k in keys if k not in claim]
+                if missing:
+                    raise _Undecidable(f"test {test!r} needs {missing}")
+                values = [_claim_operand(doc, claim[k], k) for k in keys]
+                if test in ("ci_excludes_zero", "ci_contains", "within"):
+                    lo, hi = (values[0], values[1]) if test != "within" else values[1:]
+                    if lo > hi:
+                        raise _Undecidable(f"its interval has low {lo} above high {hi}")
+                if not predicate(*values):
+                    shown = ", ".join(f"{k}={claim[k]!r}→{v}" for k, v in zip(keys, values))
+                    out.append(Finding(BLOCKER, "CA-STAT-004", path,
+                                       f"{label} is false: {test} does not hold for "
+                                       f"{shown}"))
+            except _Undecidable as exc:
+                out.append(Finding(BLOCKER, "CA-STAT-004", path,
+                                   f"{label} cannot be decided: {exc}"))
+    return out
+
+
+# -------------------------------------------------------------- precision
+def _decimal_places(literal: str) -> int | None:
+    """Decimal places as WRITTEN: digits after the point minus the exponent.
+    Trailing zeros count — they are what a writer uses to claim precision."""
+    text = literal.strip().replace("−", "-").lstrip("+-")
+    if "," in text or normalise_number(text) is None:
+        return None
+    mantissa, _, exponent = text.lower().partition("e")
+    frac = mantissa.partition(".")[2]
+    return max(0, len(frac) - (int(exponent) if exponent else 0))
+
+
+def check_precision(files: Mapping[str, bytes]) -> list[Finding]:
+    """CA-PREC-001 (advisory): no digits beyond what the uncertainty supports."""
+    out: list[Finding] = []
+    for path, doc in _results_docs(files):
+        for i, q in enumerate(_quantities(doc)):
+            if not isinstance(q, dict) or "uncertainty" not in q:
+                continue
+            u = _decimal(q.get("uncertainty"))
+            value = q.get("value")
+            if u is None or u == 0 or not is_number_shape(value):
+                continue
+            literal = value if isinstance(value, str) else repr(value)
+            places = _decimal_places(literal)
+            if places is None:
+                continue
+            allowed = -abs(u).adjusted() + 1
+            if places > allowed:
+                out.append(Finding(
+                    ADVISORY, "CA-PREC-001", path,
+                    f"{_label(q, i)} value {literal} carries {places} decimal places; "
+                    f"its uncertainty {q.get('uncertainty')!r} supports at most "
+                    f"{max(allowed, 0)}"))
+    return out
+
+
+_BOUNDARY = ("It never judges whether a method is appropriate, whether a derivation "
+             "is the right one for the claim, or whether an undeclared quantity "
+             "should have been declared.")
+
+register("numeric_validity", check_numeric_validity,
+         "Every results.json quantity has a value that is a finite number: an int, a "
+         "finite float, or a string holding a plain decimal literal. A missing value, "
+         "null, a bool, NaN or Infinity, and a non-numeric string each block. A "
+         "results.json that does not parse is left to schema. It says nothing about "
+         "whether a number is correct.")
+register("range_rules", check_range_rules,
+         "Reads the one ```crossaudit-ranges block in each AUDIT_RULES.md in the "
+         "audited scope (a JSON list of {name, unit, min?, max?}); for every "
+         "results.json quantity whose name equals or case-sensitively glob-matches "
+         "an entry (first match wins, files in path order), the unit must be "
+         "byte-equal to the declared unit and the value must lie within the "
+         "inclusive bounds, compared as exact decimals. A malformed block (bad JSON, "
+         "an entry without a non-empty name or unit, a non-numeric bound, min above "
+         "max, an unclosed fence, two fences in one file) blocks. A quantity no entry "
+         "matches is not checked, and a project with no block gets nothing: the "
+         "ranges are the project's rules, read and never invented. " + _BOUNDARY)
+register("derivations", check_derivations,
+         "For each row a results.json declares under derivations ({quantity, method, "
+         "input, tolerance?}), recomputes the method with the standard library over "
+         "the named CSV (path relative to the results.json directory, optional "
+         "where filter comparing cells as strings) or over named quantities, and "
+         "blocks if the reported value disagrees under the declared tolerance (abs, "
+         "rel relative to the recomputed value, or sig significant figures; default "
+         "rel 1e-9). Methods: " + ", ".join(METHODS) + ". Recomputation is IEEE "
+         "double arithmetic, so abs and rel are float comparisons and a relative "
+         "tolerance below about 1e-14 is not meaningful; sig compares exact "
+         "decimal roundings. An unknown method, a missing argument, a file not in "
+         "scope, a missing or duplicated column, an empty or non-numeric cell, too "
+         "few rows, or a quantity name matching no row or several blocks: what "
+         "cannot be verified is not verified. A file declared uncommitted and absent "
+         "is advisory. A quantity with no derivation row is not checked. " + _BOUNDARY)
+register("split_integrity", check_split_integrity,
+         "For every splits.json in the audited scope ({data, id_column, "
+         "group_column?, train, test, val?/validation?}, data relative to the "
+         "splits.json directory): the id lists must be pairwise disjoint, no list "
+         "may repeat an id, every id must name exactly one row of the data CSV, and "
+         "when group_column is set no group may appear in two lists. Any violation, "
+         "or a declaration that cannot be read, blocks. It checks the declared ids "
+         "only: it cannot tell whether predictions were actually made on the test "
+         "rows, or whether the grouping is the scientifically right one. With no "
+         "splits.json it does nothing.")
+register("repro_declared", check_repro_declared,
+         "Advisory only, never blocks: when results.json says \"stochastic\": true, "
+         "the metadata.yml beside it should declare a non-empty command, a non-empty "
+         "environment (string or mapping) and an integer seed; each missing key is "
+         "one advisory finding. It checks that the keys are declared, not that "
+         "running the command reproduces the results.")
+register("claims", check_claims,
+         "For each claim a results.json declares under claims ({text?, test, "
+         "operands}), decides it over the reported numbers as exact decimals: "
+         "p_below (quantity < alpha), p_at_least (quantity >= alpha), "
+         "ci_excludes_zero (low > 0 or high < 0), ci_contains (low <= value <= "
+         "high), less_than (quantity < than), greater_than (quantity > than), "
+         "within (low <= quantity <= high). An operand that is a string always names "
+         "a quantity; a number is a literal. A false claim, an unknown test, a "
+         "missing operand, an operand naming no quantity or several, or an interval "
+         "with low above high blocks. It decides only the declared comparison; "
+         "whether that comparison supports the prose, and whether the statistic was "
+         "computed by an appropriate test, is the auditor's question. " + _BOUNDARY)
+register("precision", check_precision,
+         "Advisory only, never blocks: a results.json quantity with a numeric "
+         "uncertainty whose value is written with more decimal places than one "
+         "beyond the first significant digit of that uncertainty is reported "
+         "(strings as written, floats through repr, so trailing zeros of a float "
+         "are invisible). It does not check whether the uncertainty itself is right.")
