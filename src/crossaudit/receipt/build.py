@@ -14,7 +14,7 @@ from pathlib import Path
 from .. import RECEIPT_SCHEMA, _selfid
 from ..config import Config, heterogeneity
 from ..constitution import projection_digests
-from ..errors import IntegrityDenial
+from ..errors import Denial, IntegrityDenial
 from ..providers.specs import source_independent
 
 #: The honest reason parametric is withheld from an otherwise heterogeneous
@@ -167,6 +167,22 @@ def _tool_evidence(cfg: Config) -> ToolEvidence:
                         block={"ledger_head": report.head, "entries": report.count})
 
 
+def _tree_locks(cfg: Config, sha: str, manifest: dict) -> dict:
+    """D171: the dependency locks at the audited commit that the manifest does
+    not carry (the root, plus the configured scope directories).
+
+    Fail-open like the reproduction sidecar: if the commit cannot be read here,
+    the receipt names no extra lock — exactly what every receipt before D171
+    did — rather than refusing an audit over a convenience field.
+    """
+    from . import reproduction
+    try:
+        return reproduction.detect_tree_locks(
+            cfg.root, sha, getattr(cfg, "scope_dirs", None), manifest)
+    except Denial:
+        return {}
+
+
 def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
           constitution_path: str, constitution_bytes: bytes, constitution_commit: str,
           dcl_source_sha256: str, prompt_sha256: str, checks: list[str],
@@ -252,7 +268,8 @@ def build(*, cfg: Config, subject: dict, cycle: dict, manifest: dict,
     # digest stay identical to a pre-A2 receipt. The bundle's own digest is bound
     # here; verify() re-derives it from the tree and refuses a mismatch.
     from . import reproduction
-    block = reproduction.receipt_block(receipt)
+    block = reproduction.receipt_block(
+        receipt, _tree_locks(cfg, subject["sha"], manifest))
     if block:
         receipt["reproduction"] = block
     # Optional, back-compatible governed-source provenance (A4): present ONLY when

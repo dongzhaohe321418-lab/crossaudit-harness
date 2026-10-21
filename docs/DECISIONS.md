@@ -7812,3 +7812,42 @@ RULINGS:
    d. Left open: the check lives in the CLI verb; `verify()` (used by admission in
       the console) is unchanged, so the console's admit path does not yet compare
       the on-disk report.
+
+3. **Dependency locks of the audited tree (C19).** `detect_locks` read only the
+   manifest, which is the increment's changed paths under `crossaudit build` and the
+   scope under `audit`, so a `requirements.txt` committed before the round (or at the
+   repository root) was never named, and `reproduce` said `NO DEPENDENCY LOCK
+   RECORDED`; it also never printed a lock's hash.
+   a. **Detection scope:** `reproduction.detect_tree_locks` lists the AUDITED COMMIT
+      through `gitio` (never the working tree) and takes regular-file entries whose
+      basename is a known lock, at the repository root or under `cfg.scope_dirs`
+      (the whole tree when no scope is configured). Paths the manifest already
+      lists are skipped — bound there, unchanged. Not recorded: `TEMPLATE` paths,
+      symlinks and submodules, and a lock over 16 MiB (`LOCK_READ_LIMIT`; hashed
+      whole or not at all, the same constant on both sides). It follows the
+      configured `scope.dirs`, not a one-off `audit --scope` flag (that flag does
+      not reach `receipt/build.py`; a lock elsewhere at the audited commit is still
+      a true statement about that commit).
+   b. **Binding:** the blob digests go in an optional `reproduction.tree_locks`
+      (`{path: sha256}`), present only when non-empty; `locks`, `lock_kinds` and the
+      bundle count both sources. `verify` re-reads each tree lock at the audited
+      commit (absent, non-lock or different bytes are refused) before recomputing
+      the bundle digest. Additive: a lock-free receipt has no block (byte-identical,
+      the existing guard), and a receipt whose locks are all in its manifest has no
+      `tree_locks` key, so it is byte-identical to one minted before D171. Forward
+      compatibility is not claimed: a verifier from before D171 refuses a receipt
+      that carries `tree_locks` (its bundle recomputation does not know them).
+   c. Detection is fail-open at mint time like the sidecar: a commit `receipt/build.py`
+      cannot read yields no tree locks, which is what every earlier receipt said.
+      `verify` does not re-run detection to find a lock the receipt omits, because
+      the scope at mint time is not recorded; it binds what is recorded.
+   d. `reproduce` prints each lock as `<path>  sha256 <digest>  MATCHES|DRIFTED|MISSING`
+      against the working tree (JSON gains `sha256` per lock), and `NO DEPENDENCY
+      LOCK RECORDED` now speaks of the receipt ("names no lock file"), not the tree,
+      since a receipt minted before D171 never looked outside its manifest.
+
+Recorded because three boundaries here are easy to reopen by accident: that a pinned
+`--pubkey` refuses an unsigned receipt while an unpinned verify does not; that the
+working-tree check covers exactly the cycle files a receipt digest covers (and why
+`AUDIT_RULES.md` and the project's files are not among them); and that lock
+detection reads the commit, over root plus `scope.dirs`, and is additive.

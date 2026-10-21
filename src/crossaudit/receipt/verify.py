@@ -537,11 +537,25 @@ def verify(receipt: dict, *, science_root: Path, audit_root: Path,
     rep = receipt.get("reproduction")
     if rep is not None:
         from . import reproduction
+        # D171: locks found in the audited tree outside the manifest are bound
+        # by blob digest; re-read each one at the audited commit, as the
+        # manifest is re-read above, never from the working tree.
+        for rel, declared in reproduction.tree_locks(receipt).items():
+            if reproduction._basename(rel) not in reproduction.LOCK_KINDS:
+                raise IntegrityDenial(
+                    f"reproduction names {rel} as a dependency lock, which it is not")
+            if rel not in blobs:
+                raise IntegrityDenial(
+                    f"reproduction names the lock {rel}, absent from the tree")
+            data, truncated = read_blob(science_root, blobs[rel],
+                                        limit=reproduction.LOCK_READ_LIMIT)
+            if truncated or _sha256(data) != declared:
+                raise IntegrityDenial(f"reproduction lock mismatch for {rel}")
         recomputed = reproduction.build_bundle(receipt)
         if reproduction.bundle_digest(recomputed) != rep["bundle_sha256"]:
             raise IntegrityDenial(
                 "reproduction bundle digest does not match the receipt")
-        locks = reproduction.detect_locks(inputs["manifest"])
+        locks = reproduction.all_locks(receipt)
         if len(locks) != rep["locks"]:
             raise IntegrityDenial(
                 "reproduction lock count does not match the audited manifest")

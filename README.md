@@ -900,12 +900,18 @@ is LibreSSL and too old for Ed25519).
 
 When the audited commit carries a dependency lock (`requirements.txt`,
 `poetry.lock`, `uv.lock`, `package-lock.json`, `Cargo.lock`, `go.sum`, and the
-like), the receipt also names that pinned environment and how to re-run. The lock
-hashes come straight from the already-verified input manifest, so they are bound
-into the receipt digest — and, under signing, the signature — for free; a
-`reproduction.json` sidecar expands them into a self-contained bundle. `crossaudit
-reproduce` shows the pinned locks, whether your working tree still matches them,
-and the concrete re-run steps:
+like), the receipt also names that pinned environment and how to re-run. Locks
+are looked for in the audited commit itself — never your working tree — at the
+repository root and under the configured scope directories (`scope.dirs`; the
+whole tree when none is configured), whether the round wrote them or they were
+committed long before. A lock the round's manifest already carries is bound
+there; any other is bound by its blob digest in the receipt's reproduction
+block, so either way it is covered by the receipt digest and, under signing, the
+signature, and `verify` re-reads it at the audited commit. A
+`reproduction.json` sidecar expands them into a self-contained bundle.
+`crossaudit reproduce` prints each pinned lock's path and sha256, whether your
+working-tree copy still matches it (`MATCHES` / `DRIFTED` / `MISSING`), and the
+concrete re-run steps:
 
 ```bash
 crossaudit reproduce cycles/<cycle>/receipt.json

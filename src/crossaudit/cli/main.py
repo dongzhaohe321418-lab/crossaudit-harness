@@ -1379,14 +1379,16 @@ def cmd_reproduce(args: argparse.Namespace) -> int:
             state = "missing"
         else:
             state = "match" if _sha256_file(p) == want else "changed"
-        drift.append({"path": rel, "state": state})
+        drift.append({"path": rel, "sha256": want, "state": state})
     env_matches = bool(recorded) and all(d["state"] == "match" for d in drift)
     out = {"cycle_id": receipt["cycle"]["cycle_id"], "commit": bundle["subject"]["commit"],
            "locks": drift, "lock_kinds": bundle["environment"]["kinds"],
            "environment_matches": env_matches, "rerun": bundle["rerun"]}
     if not recorded:
-        head = ("NO DEPENDENCY LOCK RECORDED  the audited scope carried no lock "
-                "file, so the environment is not pinned by this receipt")
+        # Worded about the receipt, not the tree: a receipt minted before D171
+        # did not look outside its manifest, so "the tree had none" could be false.
+        head = ("NO DEPENDENCY LOCK RECORDED  this receipt names no lock file, so "
+                "the environment is not pinned by it")
     elif env_matches:
         head = (f"ENVIRONMENT MATCHES  {len(recorded)} lock file(s) "
                 f"[{', '.join(bundle['environment']['kinds'])}] are byte-identical "
@@ -1395,6 +1397,10 @@ def cmd_reproduce(args: argparse.Namespace) -> int:
         changed = ", ".join(f"{d['path']} ({d['state']})" for d in drift
                             if d["state"] != "match")
         head = f"ENVIRONMENT DRIFTED  {changed}"
+    # D171: each pinned lock by path and digest, and how the copy here compares.
+    word = {"match": "MATCHES", "changed": "DRIFTED", "missing": "MISSING"}
+    head += "".join(f"\n  {d['path']}  sha256 {d['sha256']}  {word[d['state']]}"
+                    for d in drift)
     recipe = (f"\nTO REPRODUCE\n  1. {bundle['rerun']['checkout']}"
               f"\n  2. {bundle['rerun']['restore']}"
               f"\n  3. {bundle['rerun']['verify']}"

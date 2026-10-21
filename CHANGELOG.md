@@ -30,6 +30,12 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   now prints `WORKING TREE DRIFTED` and is refused with exit 21 naming the file;
   before, it still printed `BINDINGS VERIFIED`. `--record-only` verifies the
   committed record alone and still prints the drift line (D171).
+- **A dependency lock already in the project is named by the receipt.** A
+  `requirements.txt` (or any recognised lock) committed before the audited
+  round, or at the repository root, is now found in the audited commit and
+  bound in the receipt; before, only a lock the round itself changed was.
+  `crossaudit reproduce` prints each lock's path and sha256 and whether your
+  copy still matches it (D171).
 
 ## 4.17.0 — The activity stream
 
