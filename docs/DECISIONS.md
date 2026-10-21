@@ -7918,3 +7918,107 @@ Recorded because each ruling closes a gap a later reader could reopen by acciden
 launching a new child with the inherited environment, by relaxing the Codex refusal back
 to "recover with text", by putting `'unsafe-inline'` back for a quick inline handler, or by
 reading SECURITY.md as if the token authorised only reads.
+## D171 — `verify` refuses what the README says it refuses: invalid or (when pinned) missing signatures, and a cycle file on disk that is not the audited one; the receipt names the dependency locks of the audited tree
+
+**Date:** 2026-10-21. **Branch:** `fix/claims-round-1c`. **Source:** the black-box
+acceptance run of the README's claims (C18 FAIL; C15, C19 PARTIAL).
+
+**What was wrong (C18).** `crossaudit export-pubkey > project.pem` wrote a `KEY <id>`
+line above the PEM block, and `verify --pubkey project.pem` base64-decoded every
+non-dash line, so the README's own next command died with a `binascii.Error`
+traceback (exit 1). A corrupted signature printed `SIGNATURE INVALID` and exited 0
+in a dry run; only `--admit` refused it. A deleted sidecar printed `UNSIGNED`,
+exit 0, even with a key pinned. The signed predicate read `receipt["verdict"]` and
+`subject["report_sha256"]`, which no minted receipt has, so both fields were
+always empty (and `tests/test_receipt_signing.py` used a fixture with the same
+misreading).
+
+RULINGS:
+
+1. **Signatures (C18).**
+   a. `export-pubkey` writes the PEM block and nothing else to stdout; the key id
+      goes to stderr (`--json` carries both). Considered: a `--with-id` flag;
+      rejected because the default must be the one the README redirects.
+   b. `crypto/keys.parse_public_key_pem` reads the one `BEGIN/END PUBLIC KEY`
+      block, ignores text outside it (as OpenSSL does, so files the old export
+      wrote still work), and holds the inside to strict base64 and the exact
+      Ed25519 SPKI form. A file that cannot be read or parsed is a `ConfigDenial`
+      (exit 20) naming the file — the person handed over the wrong file.
+   c. A present signature that does not verify is an `IntegrityDenial` (exit 21)
+      in a dry run as well as under `--admit`, and it refuses before admission is
+      attempted. The human output still shows the bindings line and the
+      `SIGNATURE INVALID` line before the refusal; `--json` emits the refusal alone
+      (one document) with the signature facts as detail.
+   d. **What pinning means:** `--pubkey` asks "does this receipt carry a valid
+      signature by this key?", so a missing `receipt.dsse.json` under a pin is
+      refused (exit 21). Without a pin, `UNSIGNED` stays informational, because
+      every receipt minted before A1 is unsigned and must keep verifying.
+   e. The predicate is read from `audit.verdict` and `ledger.report_sha256`.
+      Additive: verification binds the statement's subject digest (the whole
+      receipt), never the predicate, so envelopes minted with the empty fields
+      still verify — tested by signing with the old `_predicate` verbatim.
+
+2. **The file on disk (C15).** `verify` re-reads `report.md` at the bound
+   `report_commit`, which is right for the record and silent about the file a person
+   opens: a byte flipped in `cycles/<id>/report.md`, uncommitted or committed on top,
+   still printed `BINDINGS VERIFIED`, exit 0. Now, after the record verifies,
+   `receipt/verify.working_tree_drift` compares the on-disk copy of every cycle file
+   whose digest the receipt carries — `report.md` (`ledger.report_sha256`) and
+   `reproduction.json` (`reproduction.bundle_sha256`, over canonical JSON, so
+   whitespace is not drift) — and `crossaudit verify` refuses a drifted one with exit
+   21 naming it. A file that is not on disk is reported (`WORKING TREE NOT ON DISK`),
+   not refused: nobody reads a wrong text from a file that is not there.
+   a. `BINDINGS VERIFIED` keeps its meaning (the committed record); the new fact is
+      its own line, `WORKING TREE MATCHES` / `WORKING TREE DRIFTED`, the fourth
+      after the bindings, signature and record lines.
+   b. **`--record-only`** verifies the record alone: the drift line is still
+      printed, with "(--record-only: …)", and does not refuse. Chosen over
+      `--ignore-working-tree` because it names what IS checked.
+   c. Not checked, by decision: `checks.json` and `findings.json` (no receipt digest
+      covers them — the comment at their write site says so), `sources.json` (bound
+      only through its source-id set), and the project's files and `AUDIT_RULES.md`,
+      which the receipt binds at their commits; the working tree legitimately moves
+      on after an audit, and `test_working_tree_constitution_drift_does_not_change_pinned_receipt`
+      pins that a later rulebook does not invalidate an earlier receipt.
+   d. Left open: the check lives in the CLI verb; `verify()` (used by admission in
+      the console) is unchanged, so the console's admit path does not yet compare
+      the on-disk report.
+
+3. **Dependency locks of the audited tree (C19).** `detect_locks` read only the
+   manifest, which is the increment's changed paths under `crossaudit build` and the
+   scope under `audit`, so a `requirements.txt` committed before the round (or at the
+   repository root) was never named, and `reproduce` said `NO DEPENDENCY LOCK
+   RECORDED`; it also never printed a lock's hash.
+   a. **Detection scope:** `reproduction.detect_tree_locks` lists the AUDITED COMMIT
+      through `gitio` (never the working tree) and takes regular-file entries whose
+      basename is a known lock, at the repository root or under `cfg.scope_dirs`
+      (the whole tree when no scope is configured). Paths the manifest already
+      lists are skipped — bound there, unchanged. Not recorded: `TEMPLATE` paths,
+      symlinks and submodules, and a lock over 16 MiB (`LOCK_READ_LIMIT`; hashed
+      whole or not at all, the same constant on both sides). It follows the
+      configured `scope.dirs`, not a one-off `audit --scope` flag (that flag does
+      not reach `receipt/build.py`; a lock elsewhere at the audited commit is still
+      a true statement about that commit).
+   b. **Binding:** the blob digests go in an optional `reproduction.tree_locks`
+      (`{path: sha256}`), present only when non-empty; `locks`, `lock_kinds` and the
+      bundle count both sources. `verify` re-reads each tree lock at the audited
+      commit (absent, non-lock or different bytes are refused) before recomputing
+      the bundle digest. Additive: a lock-free receipt has no block (byte-identical,
+      the existing guard), and a receipt whose locks are all in its manifest has no
+      `tree_locks` key, so it is byte-identical to one minted before D171. Forward
+      compatibility is not claimed: a verifier from before D171 refuses a receipt
+      that carries `tree_locks` (its bundle recomputation does not know them).
+   c. Detection is fail-open at mint time like the sidecar: a commit `receipt/build.py`
+      cannot read yields no tree locks, which is what every earlier receipt said.
+      `verify` does not re-run detection to find a lock the receipt omits, because
+      the scope at mint time is not recorded; it binds what is recorded.
+   d. `reproduce` prints each lock as `<path>  sha256 <digest>  MATCHES|DRIFTED|MISSING`
+      against the working tree (JSON gains `sha256` per lock), and `NO DEPENDENCY
+      LOCK RECORDED` now speaks of the receipt ("names no lock file"), not the tree,
+      since a receipt minted before D171 never looked outside its manifest.
+
+Recorded because three boundaries here are easy to reopen by accident: that a pinned
+`--pubkey` refuses an unsigned receipt while an unpinned verify does not; that the
+working-tree check covers exactly the cycle files a receipt digest covers (and why
+`AUDIT_RULES.md` and the project's files are not among them); and that lock
+detection reads the commit, over root plus `scope.dirs`, and is additive.

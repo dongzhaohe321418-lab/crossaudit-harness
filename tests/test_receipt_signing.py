@@ -33,11 +33,16 @@ def _cfg(tmp_path: Path) -> SimpleNamespace:
 
 
 def _receipt() -> dict:
+    # Shaped like a minted v2 receipt: the verdict lives at audit.verdict and
+    # the report digest at ledger.report_sha256 (D171 -- this fixture used to
+    # put them at the top level and under subject, the same misreading the
+    # signed predicate made).
     return {
         "version": 2,
         "cycle": {"cycle_id": "cyc-1", "round": 3},
-        "verdict": "PASS",
-        "subject": {"report_sha256": "a" * 64},
+        "audit": {"verdict": "PASS"},
+        "ledger": {"report_sha256": "a" * 64},
+        "subject": {"sha": "c" * 40},
         "verifier": {"project": "crossaudit", "version": "5",
                      "code_digest_sha256": "b" * 64, "install_mode": "frozen"},
     }
@@ -149,7 +154,7 @@ def test_tampering_the_receipt_breaks_verification(tmp_path):
     receipt = _receipt()
     sign_receipt(cfg, receipt, cyc)
     tampered = json.loads(json.dumps(receipt))
-    tampered["verdict"] = "BLOCKED"
+    tampered["audit"]["verdict"] = "BLOCKED"
     v = verify_receipt(tampered, cyc)
     assert v["signed"] is True and v["verified"] is False
     assert "different receipt" in v["reason"]
@@ -215,6 +220,10 @@ def test_signed_statement_binds_this_exact_receipt(tmp_path):
     env = json.loads((cyc / SIDECAR).read_text())
     statement = dsse.payload_json(env)
     assert statement["subject"][0]["digest"]["sha256"] == digest(receipt)
+    # Mutation (D171): read the predicate from receipt["verdict"] /
+    # subject["report_sha256"] again -> both fields come back empty.
+    assert statement["predicate"]["verdict"] == "PASS"
+    assert statement["predicate"]["report_sha256"] == "a" * 64
 
 
 def test_env_override_keyfile_location(tmp_path, monkeypatch):

@@ -987,6 +987,8 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "reproduction.bundle_sha256 必须是非空字符串"),
     ("reproduction.locks must be a positive integer", "reproduction.locks 必须是正整数"),
     ("reproduction.lock_kinds must be a list", "reproduction.lock_kinds 必须是列表"),
+    ("reproduction.tree_locks must map lock paths to sha256 digests",
+     "reproduction.tree_locks 必须把锁文件路径映射到 sha256 摘要"),
     ("sources must be a mapping", "sources 必须是映射"),
     ("sources.set_sha256 must be a non-empty string", "sources.set_sha256 必须是非空字符串"),
     ("sources.count must be a positive integer", "sources.count 必须是正整数"),
@@ -1042,6 +1044,11 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("reproduction bundle digest does not match the receipt", "复现包摘要与收据不匹配"),
     ("reproduction lock count does not match the audited manifest",
      "复现锁数量与受审清单不匹配"),
+    ("reproduction names {} as a dependency lock, which it is not",
+     "复现信息把 {} 列为依赖锁文件，但它不是"),
+    ("reproduction names the lock {}, absent from the tree",
+     "复现信息列出了锁文件 {}，但它不在受审的树中"),
+    ("reproduction lock mismatch for {}", "复现锁文件 {} 不匹配"),
     ("receipt claims governed sources but none re-derive from the evidence ledger",
      "收据声称有受管来源，但没有任何一个能从证据账本重新推导出来"),
     ("governed-source set does not match the evidence ledger", "受管来源集合与证据账本不匹配"),
@@ -1057,6 +1064,23 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the verifier that minted this receipt is not the one admitting it; re-verify "
      "with the recorded version before admitting",
      "签发此收据的验证器与准入它的不是同一个；请先用记录的版本重新验证，再准入"),
+    # ------------------------------- cli/main.py (verify, export-pubkey, D171)
+    ("the public key file {} could not be read: {}", "无法读取公钥文件 {}：{}"),
+    ("the public key file {} is not an Ed25519 public key in PEM form: {}",
+     "公钥文件 {} 不是 PEM 格式的 Ed25519 公钥：{}"),
+    ("the receipt's signature does not verify: {}; the receipt or its signature "
+     "was altered after it was minted",
+     "收据的签名无法通过验证：{}；收据或其签名在签发之后被改动过"),
+    ("a public key was pinned but the receipt carries no signature sidecar "
+     "(receipt.dsse.json); a pinned verification requires a signature by that key",
+     "已指定公钥，但收据旁没有签名文件（receipt.dsse.json）；指定公钥的验证要求有该密钥的签名"),
+    ("the report on disk is not the audited report: {} does not match the digest "
+     "the receipt binds (verify --record-only checks the committed record alone)",
+     "磁盘上的报告不是受审的报告：{} 与收据绑定的摘要不符（verify --record-only 只检查已提交的记录）"),
+    ("the reproduction bundle on disk is not the audited bundle: {} does not match "
+     "the digest the receipt binds (verify --record-only checks the committed "
+     "record alone)",
+     "磁盘上的复现包不是受审的复现包：{} 与收据绑定的摘要不符（verify --record-only 只检查已提交的记录）"),
     # ------------------------------------------------------------ router.py
     ("router returned an unknown lane {}", "路由器返回了未知的通道 {}"),
     ("name a recipient and include the instruction after it",

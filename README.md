@@ -846,10 +846,23 @@ crossaudit verify cycles/<cycle>/receipt.json --admit
 
 Admission is intentionally one-time. Reusing the same receipt is refused.
 
-Dry-run verification reports three distinct claims: `BINDINGS VERIFIED` means
-the receipt still matches its commit, Constitution, report, and report verdict;
-`RECORDED` means the controller observed that exact receipt; `ADMISSION READY`
-means it is also the latest unconsumed PASS. Only `--admit` consumes it.
+Dry-run verification reports distinct claims, one per line. `BINDINGS VERIFIED`
+means the committed record still matches: the audited commit and tree, every
+manifest file at that commit, the Constitution at its pinned commit, and the
+report as stored at the report commit the receipt names, with its verdict.
+`SIGNED` / `UNSIGNED` is the signature (below). `RECORDED` means the controller
+observed that exact receipt. `WORKING TREE MATCHES` means the cycle files on
+disk whose digest the receipt carries — `report.md`, and `reproduction.json`
+when the receipt has a reproduction block — are byte for byte the audited ones.
+A copy that differs (edited, or edited and committed on top) prints `WORKING
+TREE DRIFTED` and is refused with exit 21 naming the file, because the text a
+person opens is then not the text the audit produced. `checks.json` and
+`findings.json` are not covered by any receipt digest and are not checked; the
+project's own files and `AUDIT_RULES.md` are checked at their commits, since the
+working tree legitimately moves on after an audit. To verify the record alone,
+pass `--record-only`: the drift line is still printed, but not refused.
+`ADMISSION READY` means it is also the latest unconsumed PASS. Only `--admit`
+consumes it.
 
 #### Signed, externally verifiable receipts
 
@@ -858,13 +871,23 @@ is stored beside it as a detached `receipt.dsse.json` sidecar (a standard DSSE
 envelope over an in-toto statement). The receipt bytes are untouched, so every
 receipt minted before signing existed still verifies exactly as before —
 `SIGNED` / `UNSIGNED` is reported as its own line, and a present-but-invalid
-signature is refused. Export the public key so anyone can verify offline without
-CrossAudit, and pin it when verifying a receipt you were handed:
+signature is refused (exit 21, in a dry run as well as with `--admit`). Export
+the public key so anyone can verify offline without CrossAudit, and pin it when
+verifying a receipt you were handed:
 
 ```bash
 crossaudit export-pubkey > project.pem
 crossaudit verify cycles/<cycle>/receipt.json --pubkey project.pem
 ```
+
+`export-pubkey` writes only the PEM block to standard output (the key id goes to
+standard error), so the redirected file is a plain public-key file any PEM
+reader accepts. A `--pubkey` file that is not an Ed25519 public key in PEM form
+is refused as a configuration error (exit 20). Pinning a key means "this receipt
+must carry a valid signature by this key": a pinned verification refuses a
+receipt whose `receipt.dsse.json` is missing (exit 21). Without `--pubkey`,
+`UNSIGNED` is informational — every receipt minted before signing existed is
+unsigned — and verification goes on.
 
 On one machine the operator holds the signing key, so a valid signature proves
 provenance and tamper-evidence — it is not a defence against the key holder, and
@@ -877,12 +900,18 @@ is LibreSSL and too old for Ed25519).
 
 When the audited commit carries a dependency lock (`requirements.txt`,
 `poetry.lock`, `uv.lock`, `package-lock.json`, `Cargo.lock`, `go.sum`, and the
-like), the receipt also names that pinned environment and how to re-run. The lock
-hashes come straight from the already-verified input manifest, so they are bound
-into the receipt digest — and, under signing, the signature — for free; a
-`reproduction.json` sidecar expands them into a self-contained bundle. `crossaudit
-reproduce` shows the pinned locks, whether your working tree still matches them,
-and the concrete re-run steps:
+like), the receipt also names that pinned environment and how to re-run. Locks
+are looked for in the audited commit itself — never your working tree — at the
+repository root and under the configured scope directories (`scope.dirs`; the
+whole tree when none is configured), whether the round wrote them or they were
+committed long before. A lock the round's manifest already carries is bound
+there; any other is bound by its blob digest in the receipt's reproduction
+block, so either way it is covered by the receipt digest and, under signing, the
+signature, and `verify` re-reads it at the audited commit. A
+`reproduction.json` sidecar expands them into a self-contained bundle.
+`crossaudit reproduce` prints each pinned lock's path and sha256, whether your
+working-tree copy still matches it (`MATCHES` / `DRIFTED` / `MISSING`), and the
+concrete re-run steps:
 
 ```bash
 crossaudit reproduce cycles/<cycle>/receipt.json

@@ -24,16 +24,27 @@ SIDECAR = "receipt.dsse.json"
 
 
 def _predicate(receipt: dict) -> dict:
-    """A small, honest provenance predicate re-projected from the receipt."""
-    cycle = receipt.get("cycle", {}) if isinstance(receipt, dict) else {}
-    subject = receipt.get("subject", {}) if isinstance(receipt, dict) else {}
-    verifier = receipt.get("verifier", {}) if isinstance(receipt, dict) else {}
-    tool_ev = receipt.get("tool_evidence", {}) if isinstance(receipt, dict) else {}
+    """A small, honest provenance predicate re-projected from the receipt.
+
+    Read from where a v2 receipt actually carries each value: the verdict at
+    ``audit.verdict`` and the report digest at ``ledger.report_sha256``. (Until
+    D171 this read ``receipt["verdict"]`` and ``subject["report_sha256"]``,
+    neither of which a minted receipt has, so every signed predicate carried
+    two empty strings.) The predicate is informational: verification binds the
+    statement's SUBJECT digest, which is the whole receipt, so envelopes signed
+    with the empty fields still verify unchanged.
+    """
+    def section(name: str) -> dict:
+        value = receipt.get(name) if isinstance(receipt, dict) else None
+        return value if isinstance(value, dict) else {}
+
+    cycle, audit, ledger = section("cycle"), section("audit"), section("ledger")
+    verifier, tool_ev = section("verifier"), section("tool_evidence")
     return {
         "cycle_id": cycle.get("cycle_id", ""),
         "round": cycle.get("round"),
-        "verdict": receipt.get("verdict", ""),
-        "report_sha256": subject.get("report_sha256", ""),
+        "verdict": audit.get("verdict", ""),
+        "report_sha256": ledger.get("report_sha256", ""),
         "evidence_root": {"ledger_head": tool_ev.get("ledger_head", ""),
                           "entries": tool_ev.get("entries")},
         "verifier_code_digest": verifier.get("code_digest_sha256", ""),
@@ -63,7 +74,8 @@ def verify_receipt(receipt: dict, cycle_dir: Path, *,
     """Check the receipt's signature sidecar, if any.
 
     ``{"signed": bool, "verified": bool, "keyid": str, "reason": str}``. An
-    absent sidecar is ``signed=False`` (a legacy or unsigned receipt — allowed).
+    absent sidecar is ``signed=False`` (a legacy or unsigned receipt — allowed,
+    unless the caller pinned a key: `crossaudit verify --pubkey` refuses it, D171).
     A present sidecar must verify AND bind this exact receipt digest, or the
     caller should refuse.
     """
