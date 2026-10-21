@@ -1336,6 +1336,12 @@ Exit codes are stable so scripts do not need to parse prose:
 | `21` | Receipt, ledger, manifest, or verifier integrity failure. |
 | `22` | Provider, network, or model request failure. |
 
+`audit` and `run` report one cycle, so a BLOCKED round exits `10`. `build`
+reports the loop's final state instead. It exits `0` on PASS and `22` when the
+run stopped because every provider route failed. Any other escalation exits
+`11`, including a BLOCKED round that used up the round budget and a
+usage-guardrail pause. `crossaudit status` names the cause.
+
 ## Troubleshooting
 
 ### The OpenAI request says `max_tokens` is unsupported

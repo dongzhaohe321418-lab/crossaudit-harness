@@ -7794,4 +7794,16 @@ RULINGS:
    as D36 clause 2 does for OPEN/BLOCKED cycles and `record_build_escalation` does for
    PASSED ones. It is equally fail-closed, but the README's flow would exit 20 again, and a
    deterministic re-check of passed work is a legitimate thing to ask for.
+3. **`build` exits by the loop's final state, from one table (C20).** `run_loop` returns
+   0 or 11 for every stop (the console reads it that way, and that is unchanged). The
+   CLI's exit status now comes from `cli/build.BUILD_EXIT`, keyed by the loop's code and
+   the park kind of the run's final event. That kind is the same value the cycle side
+   records as `escalation_kind`. The rows: PASS is 0. A park because every provider route
+   failed, generator or auditor side, is 22. A usage-guardrail (`budget`) park is 11,
+   because a person raises the limit and nothing failed. Every other escalation is 11,
+   including a BLOCKED round that spent the round budget. There is no 10 row, because a
+   build never ends BLOCKED without escalating, while `audit` and `run` do return 10. Only
+   the final event counts: a park that was followed by more work is not reported as a
+   provider failure. Unlisted codes, such as a refusal raised before the loop, pass
+   through unchanged.
 

@@ -28,6 +28,9 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   that cycle with a new one, so the earlier receipt could no longer be admitted.
   The re-audit now opens a new cycle beside the old one, and `status` lists both
   (D172).
+- **`build` exits 22 when the provider failed.** A build that stopped because
+  every provider route failed (HTTP 5xx, network) exited 11 like any other
+  escalation. It now exits 22, as the README's exit-code table says (D172).
 
 ## 4.17.0 — The activity stream
 
