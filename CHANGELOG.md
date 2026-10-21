@@ -33,6 +33,11 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   tool approved from a card while `workspace_writes` was switched off in
   settings) could each overwrite the other, losing the revoke. Changes are now
   applied one at a time (D169).
+- **A decimal comma is no longer read as a thousands separator.** The
+  `number_source` check treated a transcribed `1,5` as `15`, so a citation of
+  "1,5 mg" passed against a source saying 15 mg. A comma is now accepted only
+  as thousands grouping (`1,000`, `12,345.67`); any other comma is reported as
+  not a number (D169).
 
 ## 4.17.0 — The activity stream
 

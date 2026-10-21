@@ -57,6 +57,12 @@ RESULTS_SUFFIX = "results.json"
 _MAX_EXPONENT_DIGITS = 5
 _DECIMAL = re.compile(r"[+-]?(?:[0-9]{1,512}(?:\.[0-9]{1,512})?|\.[0-9]{1,512})"
                       r"(?:[eE][+-]?[0-9]{1,512})?")
+#: The only comma a transcribed number may carry: thousands grouping, three
+#: ASCII digits per group after a leading group of one to three (D169). Any
+#: other comma makes the token not a number. Stripping every comma read a
+#: decimal comma as grouping, so a transcribed `1,5` equalled `15` and
+#: `1,0,0` equalled `100` -- the "wrong number accepted" direction.
+_GROUPED = re.compile(r"[+-]?[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 #: U+2212 MINUS SIGN is what a typesetter, a spreadsheet export and half the
 #: scientific literature write for a negative number. It is a minus.
 _MINUS = "−"
@@ -99,7 +105,8 @@ def normalise_number(token) -> str | None:
     megabyte of zeros inside the deterministic layer.
 
     Canonical means: a U+2212 minus folded onto `-`, thousands separators
-    dropped, exponent notation folded into the scale, a leading `+` dropped,
+    dropped (only where they group thousands -- `1,000`, `12,345.67`; a
+    decimal comma or any other comma is not a number, D169), exponent notation folded into the scale, a leading `+` dropped,
     leading and trailing insignificant zeros dropped, and a negative zero
     folded onto zero. **Trailing zeros are not significant here:** `1.50` and
     `1.5` are one number, which the check's contract string says out loud
@@ -110,7 +117,11 @@ def normalise_number(token) -> str | None:
     finding. There is no looser fallback anywhere: the substring one that used
     to exist ignored the unit entirely.
     """
-    text = str(token).strip().replace(",", "").replace(_MINUS, "-")
+    text = str(token).strip().replace(_MINUS, "-")
+    if "," in text:
+        if not _GROUPED.fullmatch(text):
+            return None
+        text = text.replace(",", "")
     if not _DECIMAL.fullmatch(text):
         return None
     negative = text.startswith("-")

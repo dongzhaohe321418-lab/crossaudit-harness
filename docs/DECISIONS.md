@@ -7822,3 +7822,15 @@ RULINGS:
    writing the same project's authorizations (a CLI run beside the console) can still
    lose an update; closing that needs a file lock like the controller's, and no
    cross-process writer was found in this round's trigger.
+4. **F4 — A comma in a transcribed number is thousands grouping or the token is not a
+   number.** `dcl/quantities.normalise_number` stripped every comma before matching, so a
+   transcribed `1,5` keyed as `15` and `1,0,0` as `100`, and `check_number_source`
+   accepted `{"v": "1,5", "u": "mg"}` against "Add 15 mg of salt." — the wrong-number-
+   accepted direction the module exists to prevent. Commas are now stripped only when the
+   whole token matches `[+-]?[0-9]{1,3}(,[0-9]{3})+(\.[0-9]+)?([eE][+-]?[0-9]+)?` (ASCII
+   digits, after the U+2212 fold); any other comma returns `None`, which every caller
+   already turns into CA-NUM-001. Considered and rejected: reading a lone comma as a
+   decimal point (`1,5` = 1.5). The layer compares transcriptions literally, and guessing
+   a locale is exactly the looseness it refuses; the generator can write `1.5`. The same
+   function reads numbers out of source spans, so a source token with invalid grouping
+   (`1234,567`) no longer matches anything; that can only turn a pass into a block.
