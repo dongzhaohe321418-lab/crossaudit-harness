@@ -1615,10 +1615,11 @@ source-tree test. The release CI tests real installed wheels on Python
 correctness gates, audits the installed dependency graph, and executes the
 credential-free packaged-runtime self-test.
 
-Build the native application and DMG on an Apple Silicon Mac:
+Build the native application and DMG on an Apple Silicon Mac with a Python
+3.10 or newer interpreter (macOS's own `python3` is 3.9, so name one):
 
 ```bash
-./packaging/macos/build_dmg.sh
+PYTHON_BIN=python3.13 ./packaging/macos/build_dmg.sh
 ```
 
 The V4 baseline includes automated tests covering the CLI, wizard, providers,
