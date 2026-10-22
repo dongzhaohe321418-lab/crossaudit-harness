@@ -558,3 +558,39 @@ EXPERIMENT_RECORD §10 prescribes; it is a point anyway (Amendment 2). The
 scorer tests assert that the committed flag equals the band test rather than
 that the band is met.
 
+
+**Amendment 4 (2026-10-22, external validation of v2's generator-facing
+changes; not yet independently reviewed).** A separate session ran the
+declaration question on live generators at zero API cost (Anthropic
+claude-haiku-4-5 through `claude -p`, OpenAI gpt-5.6-terra through
+`codex exec`), 30 templates per arm, with records and zero-model rescoring
+scripts under `~/Claude/crossaudit-dogfood/declarations-experiment/`
+(`RESULTS-DECLARATIONS.md`; per-run `RESULTS.md`, `rows.rescored.jsonl`,
+`numbers.rescored.json`, `numbers.executed.json`). Three arms: A, the
+constitution as shipped; B, the constitution plus the pack's contract text;
+C, the constitution plus the method/argument table generated from
+`_METHODS`, the three blocks' exact shapes and the path conventions — the
+material v2's skill template now carries (§4.3, gap 7).
+
+| arm | declared | verified as written | verified after the committed script was executed |
+|---|---|---|---|
+| A (both vendors) | 0 | — | — |
+| B gpt-5.6-terra | 55 of 158 rows | 17 | — |
+| B claude-haiku-4-5 | 76 of 115 rows | 1 | — |
+| C gpt-5.6-terra | 30 of 30 increments, 23 PASS | 21 increments with every declaration verified | 89 of 94 rows (95%, [89, 98]) |
+| C claude-haiku-4-5 | — | 37 of 120 rows | 67 of 99 rows |
+
+What this supports: a generator that is shown the exact shapes declares and
+mostly declares correctly; a generator that is not shown them guesses, and
+the pack (correctly) refuses the guesses. What the residual blocks were, per
+the experiment: a data file the model invented, a count off by one and the
+p-value derived from it, a false claim, and `inputs` written as mappings —
+every one a defect the pack exists to catch. What the "after execution"
+column says is the design's own limit (§0.1): a generator that cannot run
+its `analyse.py` writes plausible numbers, and the declarations catch them;
+honest declarations presuppose that the committed script was executed and
+wrote `results.json`, which in the product is the governed command tool's
+job, not the check layer's. The intervals are the experiment's own and have
+not been through the cross-vendor review `benchmarks/EXPERIMENT_RECORD.md`
+asks for; they are quoted here as the reason v2's skill carries the generated
+table, not as a result of this corpus.
