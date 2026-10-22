@@ -126,6 +126,11 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   The account is now needed only for `--apply`, or when `--science` is left out;
   a signed-out or missing `gh` adds one line saying what `--apply` will need
   (D173).
+- **`crossaudit init --github` no longer says `pair --apply` "does all of it",
+  and its GitHub warning says one thing.** The closing panel now lists `pair`'s
+  own steps and what is left to you; with `gh` installed but signed out the
+  warning says to run `gh auth login` instead of also telling you to install it
+  (D173).
 
 ## 4.17.0 — The activity stream
 

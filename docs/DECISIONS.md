@@ -8214,3 +8214,19 @@ RULINGS:
    out exit 20; the README sentence ("prints the intended GitHub operations and
    changes nothing remotely") is what the product now honours, and printing the plan
    with the one missing prerequisite named serves the reader that sentence addresses.
+3. **`init --github` prints `pair`'s steps and one warning (C33a, observation 4).**
+   The setup panel ended "crossaudit pair --apply   does all of it, after showing
+   you", false given ruling 1's branch protection, and with `gh` installed but signed
+   out the warning composed two states into one line: "gh installed but not
+   authenticated (run: gh auth login) — install from https://cli.github.com first".
+   The panel is now drawn from `pair.steps()` and `pair.afterwards()`: each step's
+   commands, a note on steps that run only in some cases, the `pair --apply` command
+   with "performs steps 1–N above, in this order, and nothing else", and the "You do
+   afterwards" commands. The names are `OWNER/<project>` unless `gh` is signed in, in
+   which case the account is used; `init` asks no more of GitHub than that. The warning
+   comes from `pair.gh_state()` and is one of three catalogue sentences (not installed
+   → the install URL then `gh auth login`; installed but signed out → `gh auth login`;
+   could not be checked → GitHub's words), in English and Chinese. `init` still exits
+   0: it set up the local project, and the device code is the app's **Connect
+   GitHub**, as the README says. `doctor --online` keeps `wizard.gh_available()`,
+   whose detail is a single state.

@@ -1387,7 +1387,9 @@ uploading the auditor key when it is loaded. A step that runs only in some cases
 says which. What `--apply` does not do, branch protection among it, is printed
 under **You do afterwards**. With both names given, the plan needs no GitHub
 sign-in and changes nothing locally either; `--apply` needs `gh auth login` and
-refuses without it.
+refuses without it. `crossaudit init --github` ends with the same steps and
+changes nothing on GitHub; it shows `OWNER` where the account name goes when
+`gh` is not signed in.
 
 ## Command reference
 
