@@ -560,37 +560,49 @@ that the band is met.
 
 
 **Amendment 4 (2026-10-22, external validation of v2's generator-facing
-changes; not yet independently reviewed).** A separate session ran the
-declaration question on live generators at zero API cost (Anthropic
-claude-haiku-4-5 through `claude -p`, OpenAI gpt-5.6-terra through
-`codex exec`), 30 templates per arm, with records and zero-model rescoring
-scripts under `~/Claude/crossaudit-dogfood/declarations-experiment/`
+changes; reviewed).** A separate session ran the declaration question on live
+generators at zero API cost (Anthropic claude-haiku-4-5 through `claude -p`,
+OpenAI gpt-5.6-terra through `codex exec`), 30 templates per arm, with
+records and zero-model rescoring scripts under
+`~/Claude/crossaudit-dogfood/declarations-experiment/`
 (`RESULTS-DECLARATIONS.md`; per-run `RESULTS.md`, `rows.rescored.jsonl`,
-`numbers.rescored.json`, `numbers.executed.json`). Three arms: A, the
+`numbers.rescored.json`, `numbers.executed.json`). It went through an
+independent cross-vendor review (gpt-5.6-terra as reviewer, archive
+`reviews/codex-review-decl1/`): round 1 NOT QUOTABLE with nine findings, all
+fixed — one of them (its amendment 2.1) changed arm C's numbers, because the
+runner had let a generator's re-sent `data/*.csv` overwrite the committed
+data in 15 replies; committed data now wins and everything was recomputed;
+round 2 QUOTABLE with named changes, the reviewer having independently
+recomputed every cell of its §1 and §3. The experiment's own word
+"preregistered" was withdrawn (its amendment 1 was written while arms A and
+B were running); its H3/H4 are row-level descriptions. Three arms: A, the
 constitution as shipped; B, the constitution plus the pack's contract text;
 C, the constitution plus the method/argument table generated from
 `_METHODS`, the three blocks' exact shapes and the path conventions — the
 material v2's skill template now carries (§4.3, gap 7).
 
-| arm | declared | verified as written | verified after the committed script was executed |
+| arm | declared | verified as written | after the committed script was executed |
 |---|---|---|---|
 | A (both vendors) | 0 | — | — |
-| B gpt-5.6-terra | 55 of 158 rows | 17 | — |
+| B gpt-5.6-terra | 55 of 158 rows | 17 (the experiment's H1 kill fires) | — |
 | B claude-haiku-4-5 | 76 of 115 rows | 1 | — |
-| C gpt-5.6-terra | 30 of 30 increments, 23 PASS | 21 increments with every declaration verified | 89 of 94 rows (95%, [89, 98]) |
-| C claude-haiku-4-5 | — | 37 of 120 rows | 67 of 99 rows |
+| C gpt-5.6-terra | 107 rows; 23 of 30 increments PASS | 97 of 107 (91%, [84, 95]; below the experiment's 95% bar) | 84 of 94 on the same subset |
+| C claude-haiku-4-5 | 120 rows | 37 of 120; the 36 values the reviewer's recomputation found wrong were all blocked | 67 of 99 |
 
 What this supports: a generator that is shown the exact shapes declares and
 mostly declares correctly; a generator that is not shown them guesses, and
-the pack (correctly) refuses the guesses. What the residual blocks were, per
-the experiment: a data file the model invented, a count off by one and the
+the pack (correctly) refuses the guesses. The residual blocks, per the
+experiment: a data file the model invented, a count off by one and the
 p-value derived from it, a false claim, and `inputs` written as mappings —
-every one a defect the pack exists to catch. What the "after execution"
-column says is the design's own limit (§0.1): a generator that cannot run
-its `analyse.py` writes plausible numbers, and the declarations catch them;
+every one a defect the pack exists to catch. The "after execution" column
+is the design's own limit (§0.1): a generator that cannot run its
+`analyse.py` writes plausible numbers and the declarations catch them;
 honest declarations presuppose that the committed script was executed and
 wrote `results.json`, which in the product is the governed command tool's
-job, not the check layer's. The intervals are the experiment's own and have
-not been through the cross-vendor review `benchmarks/EXPERIMENT_RECORD.md`
-asks for; they are quoted here as the reason v2's skill carries the generated
+job, not the check layer's. One more defect the experiment reported against
+v1 — unknown keys such as `where_a`/`where_b` or `a_where` beside a
+two-sample method's `a`/`b` were ignored (12 rows in arm C, 11 in arm B) —
+is closed by v2's strict input keys (gap 8): each now blocks with
+CA-DERIV-001 naming the keys the method takes (checked on this tree). These
+figures are quoted here as the reason v2's skill carries the generated
 table, not as a result of this corpus.
