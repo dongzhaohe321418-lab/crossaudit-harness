@@ -8147,3 +8147,54 @@ RULINGS:
    still says "pass --allow-custom-endpoint", a flag that exists on `audit` and `run`
    but not on `build`, where only the variable works.
 
+## D173 — `pair`'s plan is the list `--apply` runs, it needs no GitHub account, and `init --github` says the same thing
+
+**Date:** 2026-10-22. **Branch:** `fix/claims-round-2a`.
+
+**What was wrong.** README, "Two-repository deployment": "Without `--apply`, `pair`
+prints the intended GitHub operations and changes nothing remotely. Review the plan
+before creating repositories or secrets." The claims harness (row C33a: a fake `gh`
+that logs argv, every `https://github.com/` URL rewritten to a local bare repository)
+found the plan was a hand-written list kept beside the code that applied it, and the
+two had drifted.
+
+RULINGS:
+
+1. **One step table; the plan prints it and `--apply` runs it (C33a, observations 1
+   and 2).** `--apply` also pushed the local history to the work repository, made a
+   local commit recording the pair and added an `origin` remote, none of which the
+   five plan steps named; and plan step 5, branch protection, was never applied but
+   printed as a manual step afterwards. Now `pair.steps()` returns a list of `Step`s
+   (stage, sentence, reason, the argv of every command the step may run that changes
+   something, the case in which it runs them when it does not always, and the function
+   that runs it). `cmd_pair` prints that list with its commands under "`--apply` does
+   exactly this, in this order"; `apply_pair` runs that list, in order, after its
+   unchanged local preflights and the `gh auth status` check, and does nothing else
+   that changes anything. The order is the one `--apply` already had: create or adopt
+   the work repository, then the audit repository; commit `science_repo`/`audit_repo`
+   to `crossaudit.yml`; add `origin`; merge an adopted work repository's `main`; push
+   `HEAD` to `main`; seed the audit repository (clone into the state directory, commit
+   the Constitution and `cycles/README.md`, push, delete the clone); upload the auditor
+   key. Steps that would do nothing are left out of the table rather than printed and
+   skipped: the pair commit when the config already names the pair, `origin` when one
+   is set, the key upload when the key is not loaded. What `--apply` does not do is a
+   second list, `pair.afterwards()`, printed in both modes under "You do afterwards":
+   the key upload when it was left out, branch protection (admin rights, a paid plan
+   on some private tiers), and `crossaudit doctor --online`. The console's project
+   wizard calls the same `apply_pair`, so it runs the same table; its progress stages
+   are unchanged. Two small changes came with it. The audit seed commit passes the
+   CrossAudit identity as `-c` options when the clone names nobody, instead of writing
+   it into the clone's config. The `origin` check reads `remote.origin.url` instead of
+   `git remote get-url`, which applies `url.insteadOf` and so called a user's own
+   rewrite of the configured URL a conflict. Considered and rejected: generating the
+   plan text by running `--apply` against a dry-run shim (it would need GitHub's
+   answers to know which branch each step takes, and the plan must not need GitHub,
+   ruling 2); and listing only the GitHub calls, as the README sentence literally says
+   (the local commit and the push are the operations the harness found unannounced,
+   and a person reviewing the plan needs them most). The test
+   (`tests/test_pair_plan_is_apply.py`) puts a recording `gh` and a recording `git`
+   wrapper on `PATH`, runs `main(["pair", …, "--apply"])`, and asserts that the logged
+   commands that change something are, one for one and in order, the `$ ` lines the
+   same run printed, excluding the one step whose printed case ("already existed")
+   does not hold for fresh repositories. A re-run, which adopts both repositories,
+   must execute only printed commands in printed order.

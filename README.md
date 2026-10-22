@@ -1379,6 +1379,14 @@ crossaudit pair --science owner/work --audit owner/work-audit --apply
 Without `--apply`, `pair` prints the intended GitHub operations and changes
 nothing remotely. Review the plan before creating repositories or secrets.
 
+The plan is the list `--apply` runs, in the order it runs it, with each command
+shown: creating (or adopting) the two repositories, a local commit recording the
+pair in `crossaudit.yml`, an `origin` remote, a push of the local history to the
+work repository, seeding the audit repository with the Constitution, and
+uploading the auditor key when it is loaded. A step that runs only in some cases
+says which. What `--apply` does not do, branch protection among it, is printed
+under **You do afterwards**.
+
 ## Command reference
 
 | Command | Purpose |

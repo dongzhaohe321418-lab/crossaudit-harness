@@ -113,6 +113,13 @@ All notable changes to CrossAudit are recorded here. Versions follow the
 - **README corrections.** The default check pack is `general`, `amend --yes`
   is documented for scripts, the `--version` line is shown as printed, and
   verdicts (`PASS`) are kept apart from cycle states (`PASSED`) (D172).
+- **`crossaudit pair` prints what `--apply` does, all of it, in order.** The
+  plan left out the push of the local history, the local commit recording the
+  pair and the `origin` remote, and listed branch protection, which `--apply`
+  never did. The plan and `--apply` now come from one list of steps, each shown
+  with its commands; what `--apply` leaves to you (branch protection, the key
+  upload when the key is not loaded) is printed under "You do afterwards"
+  (D173).
 
 ## 4.17.0 — The activity stream
 
