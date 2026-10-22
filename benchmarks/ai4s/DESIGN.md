@@ -603,6 +603,14 @@ job, not the check layer's. One more defect the experiment reported against
 v1 — unknown keys such as `where_a`/`where_b` or `a_where` beside a
 two-sample method's `a`/`b` were ignored (12 rows in arm C, 11 in arm B) —
 is closed by v2's strict input keys (gap 8): each now blocks with
-CA-DERIV-001 naming the keys the method takes (checked on this tree). These
+CA-DERIV-001 naming the keys the method takes (checked on this tree), and
+the experiment's own rescoring of the same replies with this tree at dd12a97
+(`RESULTS-DECLARATIONS.md` §6, `records/v2-rescore/`, archive manifest
+`MANIFEST.sha256` over 8,888 files) confirms it: haiku arm C's
+cannot-verify / disagrees split moved from 36/55 to 48/43 with all twelve
+fail-open rows now reported as unverifiable and naming the unknown and the
+expected keys; haiku arm B from 92/17 to 96/13 (four invented-key rows
+refused); terra arm C from 9/1 to 10/1 with verified rows 97 → 96, one
+malformed input v2 refuses more strictly; every other cell unchanged. These
 figures are quoted here as the reason v2's skill carries the generated
 table, not as a result of this corpus.
