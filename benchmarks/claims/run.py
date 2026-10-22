@@ -2105,32 +2105,43 @@ def c33a(h: Harness, rec: Record) -> Record:
 
     a = runs["auth"]
     plan_ok = (a["exit"] == 0 and science in plan_out and audit in plan_out
-               and "nothing was created" in plan_out and not a["mutating_gh_calls"]
-               and a["tree_unchanged"] and len(plan_steps) >= 3)
-    refusals_ok = all(runs[m]["exit"] == 20 and not runs[m]["mutating_gh_calls"]
-                      and runs[m]["tree_unchanged"] and runs[m]["stderr"] for m in ("absent", "unauth"))
+               and not a["mutating_gh_calls"] and a["tree_unchanged"] and len(plan_steps) >= 3)
+    # The README's sentence is about the plan, not the account: without --apply the
+    # plan prints and nothing changes, whether or not gh is signed in (D173). A
+    # missing or signed-out gh is told what --apply will need, in one line.
+    no_account_ok = all(
+        runs[m]["exit"] == 0 and science in runs[m]["stdout"] and audit in runs[m]["stdout"]
+        and not runs[m]["mutating_gh_calls"] and runs[m]["tree_unchanged"]
+        and re.search(r"Before --apply|gh auth login|sign in", runs[m]["stdout"] + runs[m]["stderr"])
+        for m in ("absent", "unauth"))
     # What --apply did that no plan step names, and plan steps it did not do.
-    plan_text = " ".join(s for _n, s in plan_steps)
+    # The numbered steps and their `$ command` lines are the plan; what comes
+    # after "You do afterwards" is, by its own words, not something --apply does.
+    steps_region = plan_out.split("You do afterwards")[0]
+    plan_text = steps_region
     gaps = []
-    if apply_obs["science_remote_commits"] and not re.search(rf"push\b.* {re.escape(science)}(\s|$)", plan_text):
+    if apply_obs["science_remote_commits"] and not re.search(
+            rf"push\b.*\b{re.escape(science)}\b", plan_text, re.I | re.S):
         gaps.append(f"`--apply` pushed the local history ({apply_obs['science_remote_commits']} commits) "
                     f"to {science} — its own progress line says so — but no plan step is that push "
                     "(step 1's gloss 'the work and its history' is the only hint)")
-    if new_commits:
+    if new_commits and not (re.search(r"git commit", plan_text) and "remote add origin" in plan_text):
+        # both the local pairing commit and the origin remote must be planned steps
         gaps.append(f"it also committed locally ({new_commits}) and added origin, not in the plan")
     if "protection" in plan_text and not apply_obs["branch_protection_call"]:
         gaps.append("plan step 5 'gh api …/branches/main/protection' is not performed by `--apply` "
                     "(it prints it as a manual step), and `init --github`'s panel says "
                     "'crossaudit pair --apply does all of it'")
-    extra = (f"gh absent → exit {runs['absent']['exit']} ({short(runs['absent']['stderr'], 90)}); "
-             f"gh signed out → exit {runs['unauth']['exit']} ({short(runs['unauth']['stderr'], 80)}): "
-             "plan mode needs a signed-in gh even with both names given (it calls `gh api user` first)")
+    extra = (f"gh absent → exit {runs['absent']['exit']}, gh signed out → exit {runs['unauth']['exit']}"
+             + (" (the plan prints and names what --apply will need)" if no_account_ok else
+                f" ({short(runs['absent']['stderr'] or runs['unauth']['stderr'], 90)}): plan mode "
+                "needs a signed-in gh even with both names given"))
     init_note = (f"`init --github` signed out: exit {ig.rc}, plan printed={init_obs['plan_printed']}, "
                  f"device code shown={init_obs['mentions_device_code']}")
-    if plan_ok and refusals_ok and not gaps:
+    if plan_ok and no_account_ok and not gaps:
         return finish(rec, "PASS", f"signed in: exit 0, both repositories and {len(plan_steps)} steps "
                       f"printed, gh saw only {a['gh_calls']}, tree unchanged; {extra}; {init_note}.")
-    if plan_ok and refusals_ok:
+    if plan_ok and no_account_ok:
         return finish(rec, "PARTIAL", f"plan mode changes nothing (signed in: exit 0, both repositories, "
                       f"{len(plan_steps)} steps, gh saw only {a['gh_calls']}, tree unchanged), but the plan "
                       f"is not the list of what `--apply` does: " + "; ".join(gaps) + f". {extra}; {init_note}.")
@@ -2138,8 +2149,10 @@ def c33a(h: Harness, rec: Record) -> Record:
     if not plan_ok:
         why.append(f"signed-in plan run: exit {a['exit']}, mutating gh calls {a['mutating_gh_calls']}, "
                    f"tree unchanged {a['tree_unchanged']}, {len(plan_steps)} steps")
-    if not refusals_ok:
-        why.append(f"refusals: absent {runs['absent']['exit']}, unauth {runs['unauth']['exit']}")
+    if not no_account_ok:
+        why.append(f"plan without an account: absent → exit {runs['absent']['exit']}, signed out → exit "
+                   f"{runs['unauth']['exit']} (the plan should print, change nothing, and say what "
+                   "--apply will need)")
     return finish(rec, "FAIL", "; ".join(why) + f"; {init_note}")
 
 

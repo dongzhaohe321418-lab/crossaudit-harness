@@ -147,3 +147,28 @@ hash-chained ledger" is not kept for them; only `.crossaudit/mcp/calls.json`
 exists), and the call arguments persist in plain text in the run journal.
 Both are round 2's items 3 and 4, on `fix/claims-round-2a` (pair) and
 `fix/claims-round-2b` (ledger).
+
+### Round 2, items 3 and 4 — fixes, and the third run, 2026-10-22
+
+| branch | record | what it closed |
+|---|---|---|
+| `fix/claims-round-2a` | D173 | `pair`'s plan and `--apply` come from one step table (eight steps, each with its exact commands; steps that would do nothing are left out rather than printed and skipped); what `--apply` does not do (branch protection, `doctor --online`) is printed under "You do afterwards" in both modes; plan mode needs no GitHub account when both names are given, and a signed-out or absent `gh` gets one line saying what `--apply` will need; `init --github` shows the same table and its warning names one state |
+| `fix/claims-round-2b` | D174 | a build's MCP calls go through the broker's MCP path, which writes a `tool_call` entry before the server starts and a `tool_result` entry after (ids, hashes, budget position, status; never arguments or output); a ledger refusal stops the call; the receipt's `tool_evidence` binds them and `verify` re-checks the chain; refusals and failures are recorded too; SECURITY.md says the request text lives in the run journal while the ledger holds hashes, and gives the stdio environment allowlist's real size (13 names, 7 POSIX and 6 Windows) |
+
+Harness corrections, in the open: C33a's row had demanded exit 20 without an
+account; the README's sentence is about the plan, not the account, so the row
+now asks for the plan to print and change nothing in all three `gh` states and
+for one line naming what `--apply` will need. Its plan-versus-apply comparison
+also read only the numbered titles and matched `push` case-sensitively, so it
+mis-reported the new plan; it now reads the steps region (everything before
+"You do afterwards") and matches case-insensitively.
+
+| ref (same harness) | PASS / 38 |
+|---|---|
+| **`fix/claims-round-1` ebbfcd9** (rounds 1, 2a, 2b, DMG script, README) | **38** |
+
+Round 2's remaining untested rows need what the loop cannot make: C32b (a
+person at the app), C33b (a GitHub account), C34b (an SSH host, a scheduler,
+an HTTP MCP endpoint), C35 (the archived runs), C36 (live models and money —
+`benchmarks/ai4s/run_auditor.py --live` on a one-seed subset is the prepared
+path).
