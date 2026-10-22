@@ -1385,7 +1385,9 @@ pair in `crossaudit.yml`, an `origin` remote, a push of the local history to the
 work repository, seeding the audit repository with the Constitution, and
 uploading the auditor key when it is loaded. A step that runs only in some cases
 says which. What `--apply` does not do, branch protection among it, is printed
-under **You do afterwards**.
+under **You do afterwards**. With both names given, the plan needs no GitHub
+sign-in and changes nothing locally either; `--apply` needs `gh auth login` and
+refuses without it.
 
 ## Command reference
 

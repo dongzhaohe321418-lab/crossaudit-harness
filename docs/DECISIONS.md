@@ -8198,3 +8198,19 @@ RULINGS:
    same run printed, excluding the one step whose printed case ("already existed")
    does not hold for fresh repositories. A re-run, which adopts both repositories,
    must execute only printed commands in printed order.
+2. **The plan needs no GitHub account when both names are given (C33a, observation
+   3).** `cmd_pair` called `gh api user` before printing anything, so the plan the
+   README says to review was refused to anyone without a signed-in `gh`. The step
+   table reads only local state (the config file, `origin`, the environment), so the
+   account is now asked for only when `--science` is missing and the default name
+   needs the owner. A missing name with `gh` signed out or absent is refused (exit 20)
+   with a sentence saying to pass both names or run `gh auth login`. In plan mode
+   `pair` still runs `gh auth status` (read-only) and, when it is not signed in, adds
+   one line: "Before --apply: GitHub CLI is installed but not signed in — run `gh auth
+   login`." or "Before --apply: GitHub CLI is not installed — install it from
+   https://cli.github.com, then run `gh auth login`." `--apply` without a signed-in
+   `gh` is refused, as before, after the local preflights and before any change. This
+   departs from C33a's written expectation that plan mode with `gh` absent or signed
+   out exit 20; the README sentence ("prints the intended GitHub operations and
+   changes nothing remotely") is what the product now honours, and printing the plan
+   with the one missing prerequisite named serves the reader that sentence addresses.

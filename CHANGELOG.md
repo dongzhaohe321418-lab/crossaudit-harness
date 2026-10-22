@@ -120,6 +120,12 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   with its commands; what `--apply` leaves to you (branch protection, the key
   upload when the key is not loaded) is printed under "You do afterwards"
   (D173).
+- **`crossaudit pair --science … --audit …` shows its plan without a GitHub
+  account.** It asked GitHub for the account name before printing anything, so
+  the plan the README tells you to review was refused when `gh` was signed out.
+  The account is now needed only for `--apply`, or when `--science` is left out;
+  a signed-out or missing `gh` adds one line saying what `--apply` will need
+  (D173).
 
 ## 4.17.0 — The activity stream
 

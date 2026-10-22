@@ -4,9 +4,11 @@ README, "Two-repository deployment": "Without `--apply`, `pair` prints the
 intended GitHub operations and changes nothing remotely. Review the plan before
 creating repositories or secrets."
 
-The claims harness found that sentence untrue in two ways: `--apply` pushed
+The claims harness found that sentence untrue in three ways: `--apply` pushed
 the local history, committed the pair and added an `origin` remote although no
-plan step named them; and the plan's branch-protection step was never applied.
+plan step named them; the plan's branch-protection step was never applied; and
+the plan itself needed a signed-in `gh`, so a person without an account could
+not read what they were told to review.
 
 These tests run the real `pair` (through `main`, so exit codes are the CLI's)
 with a fake `gh` and a recording `git` wrapper on PATH, every
@@ -194,6 +196,60 @@ def world(tmp_path, monkeypatch):
 
 
 PAIR = ["pair", "--science", "owner/work", "--audit", "owner/work-audit"]
+
+
+@pytest.mark.parametrize("gh_mode,line", [
+    ("auth", None),
+    ("unauth", "Before --apply: GitHub CLI is installed but not signed in — run "
+               "`gh auth login`."),
+    ("absent", "Before --apply: GitHub CLI is not installed — install it from "
+               "https://cli.github.com, then run `gh auth login`."),
+])
+def test_the_plan_prints_without_signing_in_and_changes_nothing(
+        world, capsys, gh_mode, line):
+    world.mode(gh_mode)
+    before = world.snapshot()
+
+    assert cli_main.main(PAIR) == 0
+    out = capsys.readouterr().out
+
+    plan = _printed_plan(out)
+    assert [s["ops"][0][:3] for s in plan[:2]] == [
+        ["gh", "repo", "create"], ["gh", "repo", "create"]]
+    assert any(["git", "push", "-u", "origin", "HEAD:main"] in s["ops"] for s in plan)
+    assert "branch protection" in _afterwards(out)
+    if line:
+        assert line in out
+        # One thing said, never both (the init warning used to say both).
+        assert out.count("Before --apply") == 1
+    else:
+        assert "Before --apply" not in out
+    assert _mutations(world.log, world.cfg_root) == []
+    calls = [l.split("\t")[1:3] for l in world.log.read_text().splitlines()
+             if l.startswith("gh")]
+    assert all(c == ["auth", "status"] for c in calls), calls
+    assert world.snapshot() == before
+
+
+def test_apply_refuses_without_signing_in_before_changing_anything(world, capsys):
+    world.mode("unauth")
+    before = world.snapshot()
+
+    assert cli_main.main(PAIR + ["--apply"]) == 20
+    err = capsys.readouterr().err
+    assert "GitHub is not connected" in err
+    assert _mutations(world.log, world.cfg_root) == []
+    assert world.snapshot() == before
+
+
+def test_a_missing_name_needs_the_account_and_says_how_to_avoid_it(world, capsys):
+    world.mode("unauth")
+    before = world.snapshot()
+
+    assert cli_main.main(["pair"]) == 20
+    err = capsys.readouterr().err
+    assert "pass --science owner/name" in err and "gh auth login" in err
+    assert world.snapshot() == before
 
 
 def test_apply_performs_exactly_the_printed_operations_in_order(world, capsys):

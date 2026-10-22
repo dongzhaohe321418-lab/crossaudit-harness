@@ -646,10 +646,40 @@ def apply_pair(cfg, science: str, audit: str, *, private: bool,
             "tier": "paired", "branch_protection": "manual"}
 
 
+def gh_state() -> tuple[str, str]:
+    """('signed_in' | 'signed_out' | 'absent' | 'unknown', one sentence), never
+    raising: for saying what `--apply` will need without requiring it now."""
+    try:
+        gh()
+    except ConfigDenial as exc:
+        issue = exc.detail.get("issue")
+        if issue == "github_cli":
+            return "absent", ("GitHub CLI is not installed — install it from "
+                              "https://cli.github.com, then run `gh auth login`")
+        if issue == "github_auth":
+            return "signed_out", ("GitHub CLI is installed but not signed in — "
+                                  "run `gh auth login`")
+        return "unknown", exc.reason
+    return "signed_in", "GitHub CLI is signed in"
+
+
 def cmd_pair(args) -> int:
     cfg = load()
-    owner = _owner()
-    science = args.science or f"{owner}/{cfg.root.name}"
+    science = args.science
+    if not science:
+        # The only case that needs the account: the default name is yours.
+        try:
+            owner = _owner()
+        except ConfigDenial as exc:
+            if exc.detail.get("issue") not in ("github_cli", "github_auth"):
+                raise
+            raise ConfigDenial(
+                "pair needs your GitHub account name to choose the work repository's "
+                "name; pass --science owner/name (and --audit owner/name) to see the "
+                "plan without signing in, or run `gh auth login`",
+                issue=exc.detail.get("issue"), action=exc.detail.get("action"),
+                remediations=[RA.CONNECT_GITHUB]) from exc
+        science = f"{owner}/{cfg.root.name}"
     audit = args.audit or f"{science}-audit"
     private = not args.public
     _check_names(science, audit)
@@ -672,6 +702,9 @@ def cmd_pair(args) -> int:
         print(f"  {line}")
 
     if not args.apply:
+        state, sentence = gh_state()
+        if state != "signed_in":
+            print(f"\n  Before --apply: {sentence}.")
         print("\n  This was a plan; nothing was created or changed. Run again with --apply.")
         return EXIT_OK
 

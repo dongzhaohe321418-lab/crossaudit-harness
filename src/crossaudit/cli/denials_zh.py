@@ -203,6 +203,11 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "CrossAudit 有意不实现自己的 OAuth 流程，也不经手你的 token"),
     ("GitHub is not connected. Connect the account in CrossAudit and retry.",
      "尚未连接 GitHub。请在 CrossAudit 中连接账户后重试。"),
+    ("pair needs your GitHub account name to choose the work repository's name; "
+     "pass --science owner/name (and --audit owner/name) to see the plan without "
+     "signing in, or run `gh auth login`",
+     "pair 需要你的 GitHub 账户名来确定工作仓库的名称；传入 --science owner/name"
+     "（以及 --audit owner/name）即可在不登录的情况下查看计划，或者运行 `gh auth login`"),
     ("GitHub could not verify authorization scopes: {}", "GitHub 无法核实授权范围：{}"),
     ("GitHub could not check {}: {}", "GitHub 无法检查 {}：{}"),
     ("git {} failed: {}", "git {} 失败：{}"),
