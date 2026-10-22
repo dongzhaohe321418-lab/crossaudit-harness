@@ -8147,6 +8147,89 @@ RULINGS:
    still says "pass --allow-custom-endpoint", a flag that exists on `audit` and `run`
    but not on `build`, where only the variable works.
 
+## D173 — `pair`'s plan is the list `--apply` runs, it needs no GitHub account, and `init --github` says the same thing
+
+**Date:** 2026-10-22. **Branch:** `fix/claims-round-2a`.
+
+**What was wrong.** README, "Two-repository deployment": "Without `--apply`, `pair`
+prints the intended GitHub operations and changes nothing remotely. Review the plan
+before creating repositories or secrets." The claims harness (row C33a: a fake `gh`
+that logs argv, every `https://github.com/` URL rewritten to a local bare repository)
+found the plan was a hand-written list kept beside the code that applied it, and the
+two had drifted.
+
+RULINGS:
+
+1. **One step table; the plan prints it and `--apply` runs it (C33a, observations 1
+   and 2).** `--apply` also pushed the local history to the work repository, made a
+   local commit recording the pair and added an `origin` remote, none of which the
+   five plan steps named; and plan step 5, branch protection, was never applied but
+   printed as a manual step afterwards. Now `pair.steps()` returns a list of `Step`s
+   (stage, sentence, reason, the argv of every command the step may run that changes
+   something, the case in which it runs them when it does not always, and the function
+   that runs it). `cmd_pair` prints that list with its commands under "`--apply` does
+   exactly this, in this order"; `apply_pair` runs that list, in order, after its
+   unchanged local preflights and the `gh auth status` check, and does nothing else
+   that changes anything. The order is the one `--apply` already had: create or adopt
+   the work repository, then the audit repository; commit `science_repo`/`audit_repo`
+   to `crossaudit.yml`; add `origin`; merge an adopted work repository's `main`; push
+   `HEAD` to `main`; seed the audit repository (clone into the state directory, commit
+   the Constitution and `cycles/README.md`, push, delete the clone); upload the auditor
+   key. Steps that would do nothing are left out of the table rather than printed and
+   skipped: the pair commit when the config already names the pair, `origin` when one
+   is set, the key upload when the key is not loaded. What `--apply` does not do is a
+   second list, `pair.afterwards()`, printed in both modes under "You do afterwards":
+   the key upload when it was left out, branch protection (admin rights, a paid plan
+   on some private tiers), and `crossaudit doctor --online`. The console's project
+   wizard calls the same `apply_pair`, so it runs the same table; its progress stages
+   are unchanged. Two small changes came with it. The audit seed commit passes the
+   CrossAudit identity as `-c` options when the clone names nobody, instead of writing
+   it into the clone's config. The `origin` check reads `remote.origin.url` instead of
+   `git remote get-url`, which applies `url.insteadOf` and so called a user's own
+   rewrite of the configured URL a conflict. Considered and rejected: generating the
+   plan text by running `--apply` against a dry-run shim (it would need GitHub's
+   answers to know which branch each step takes, and the plan must not need GitHub,
+   ruling 2); and listing only the GitHub calls, as the README sentence literally says
+   (the local commit and the push are the operations the harness found unannounced,
+   and a person reviewing the plan needs them most). The test
+   (`tests/test_pair_plan_is_apply.py`) puts a recording `gh` and a recording `git`
+   wrapper on `PATH`, runs `main(["pair", …, "--apply"])`, and asserts that the logged
+   commands that change something are, one for one and in order, the `$ ` lines the
+   same run printed, excluding the one step whose printed case ("already existed")
+   does not hold for fresh repositories. A re-run, which adopts both repositories,
+   must execute only printed commands in printed order.
+2. **The plan needs no GitHub account when both names are given (C33a, observation
+   3).** `cmd_pair` called `gh api user` before printing anything, so the plan the
+   README says to review was refused to anyone without a signed-in `gh`. The step
+   table reads only local state (the config file, `origin`, the environment), so the
+   account is now asked for only when `--science` is missing and the default name
+   needs the owner. A missing name with `gh` signed out or absent is refused (exit 20)
+   with a sentence saying to pass both names or run `gh auth login`. In plan mode
+   `pair` still runs `gh auth status` (read-only) and, when it is not signed in, adds
+   one line: "Before --apply: GitHub CLI is installed but not signed in — run `gh auth
+   login`." or "Before --apply: GitHub CLI is not installed — install it from
+   https://cli.github.com, then run `gh auth login`." `--apply` without a signed-in
+   `gh` is refused, as before, after the local preflights and before any change. This
+   departs from C33a's written expectation that plan mode with `gh` absent or signed
+   out exit 20; the README sentence ("prints the intended GitHub operations and
+   changes nothing remotely") is what the product now honours, and printing the plan
+   with the one missing prerequisite named serves the reader that sentence addresses.
+3. **`init --github` prints `pair`'s steps and one warning (C33a, observation 4).**
+   The setup panel ended "crossaudit pair --apply   does all of it, after showing
+   you", false given ruling 1's branch protection, and with `gh` installed but signed
+   out the warning composed two states into one line: "gh installed but not
+   authenticated (run: gh auth login) — install from https://cli.github.com first".
+   The panel is now drawn from `pair.steps()` and `pair.afterwards()`: each step's
+   commands, a note on steps that run only in some cases, the `pair --apply` command
+   with "performs steps 1–N above, in this order, and nothing else", and the "You do
+   afterwards" commands. The names are `OWNER/<project>` unless `gh` is signed in, in
+   which case the account is used; `init` asks no more of GitHub than that. The warning
+   comes from `pair.gh_state()` and is one of three catalogue sentences (not installed
+   → the install URL then `gh auth login`; installed but signed out → `gh auth login`;
+   could not be checked → GitHub's words), in English and Chinese. `init` still exits
+   0: it set up the local project, and the device code is the app's **Connect
+   GitHub**, as the README says. `doctor --online` keeps `wizard.gh_available()`,
+   whose detail is a single state.
 
 ## D174 — A build's MCP calls go through the broker's MCP path, which writes each one to the evidence ledger before and after it runs; the receipt binds them
 

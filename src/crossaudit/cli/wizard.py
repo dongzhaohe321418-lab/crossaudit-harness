@@ -176,15 +176,42 @@ def gh_available() -> tuple[bool, str]:
     return True, "gh authenticated"
 
 
-def github_plan(science: str, audit: str) -> list[str]:
-    """What pairing would do. Printed for review; `pair --apply` performs it."""
-    return [
-        f"gh repo create {science} --private",
-        f"gh repo create {audit} --private        rules and reports live here",
-        f"gh secret set CROSSAUDIT_AUDITOR_KEY --repo {audit}",
-        f"gh api repos/{science}/branches/main/protection -X PUT",
-        "crossaudit pair --apply                  does all of it, after showing you",
-    ]
+def github_plan(cfg, science: str, audit: str) -> list[str]:
+    """What `crossaudit pair --apply` would do, drawn from the step table that
+    command runs (D173), then what it leaves to the person. Commands only: they
+    are typed, not read, so they stay Latin on a Chinese screen."""
+    from . import pair
+
+    todo = pair.steps(cfg, science, audit, private=True)
+    rows: list[str] = []
+    for i, step in enumerate(todo, 1):
+        for j, op in enumerate(step.ops):
+            rows.append(f"{(str(i) + '.') if j == 0 else '':<4}{pair.show(op, cfg.root)}")
+        if step.when:
+            rows.append(tui.dim("    " + t("done.two_repos.conditional")))
+    rows.append(f"crossaudit pair --science {science} --audit {audit} --apply")
+    rows.append(tui.dim("    " + t("done.two_repos.apply", n=len(todo))))
+    rows.append(t("done.two_repos.afterwards"))
+    for _sentence, commands in pair.afterwards(cfg, science, audit):
+        rows += ["    " + line.strip() for line in commands]
+    return rows
+
+
+def github_names(science_repo: str) -> tuple[str, str]:
+    """The owner/name pair `crossaudit pair` would choose. The owner is asked
+    of GitHub only when `gh` is signed in; otherwise it is left as OWNER for
+    the person to fill in, because the plan must not need an account."""
+    from . import pair
+
+    if "/" not in science_repo:
+        owner = "OWNER"
+        if pair.gh_state()[0] == "signed_in":
+            try:
+                owner = pair._owner()
+            except (Denial, ValueError, KeyError):
+                pass
+        science_repo = f"{owner}/{science_repo}"
+    return science_repo, f"{science_repo}-audit"
 
 
 def prepare(target: Path) -> list[str]:
@@ -998,11 +1025,21 @@ def run(target: Path, *, mode: str, force: bool = False,
     tui.panel(t("done.next"), rows)
 
     if mode != "local":
+        from . import pair
+        from ..config import load as load_config
+
+        science, audit = github_names(science_repo)
         tui.panel(t("done.two_repos"),
-                  github_plan(science_repo, audit_repo or f"{science_repo}-audit"))
-        gh_ok, detail = gh_available()
-        if not gh_ok:
-            tui.warn(t("done.gh_missing", detail=detail))
+                  github_plan(load_config(cfg_path), science, audit))
+        # One sentence for one state: installed but signed out is a sign-in,
+        # not an install (the old warning said both).
+        state, detail = pair.gh_state()
+        if state == "absent":
+            tui.warn(t("done.gh_not_installed"))
+        elif state == "signed_out":
+            tui.warn(t("done.gh_signed_out"))
+        elif state != "signed_in":
+            tui.warn(t("done.gh_unknown", detail=detail))
 
     return {"config": str(cfg_path), "constitution": str(const_path),
             "keys_file": str(written) if written else None, "mode": mode,

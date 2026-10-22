@@ -23,9 +23,12 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Callable
 
 from ..config import load
 from ..app_keys import child_env
@@ -261,11 +264,13 @@ def _sync_existing_main(root: Path) -> None:
         issue="remote_history", action="retry", remediations=[RA.RETRY])
 
 
-def _write_pair_config(cfg, science: str, audit: str) -> None:
-    """Persist the exact adopted repositories without flattening user comments."""
-    body = cfg.path.read_text(encoding="utf-8")
+def _paired_config_body(cfg, science: str, audit: str) -> tuple[str, str]:
+    """(current, paired) text of crossaudit.yml; equal when nothing would change.
+
+    Edits the two lines in place so the person's comments survive."""
+    current = cfg.path.read_text(encoding="utf-8")
     body, science_count = re.subn(r"(?m)^science_repo:\s*.*$",
-                                  f"science_repo: {science}", body, count=1)
+                                  f"science_repo: {science}", current, count=1)
     body, audit_count = re.subn(r"(?m)^(?:#\s*)?audit_repo:\s*.*$",
                                 f"audit_repo: {audit}", body, count=1)
     if not science_count:
@@ -273,32 +278,337 @@ def _write_pair_config(cfg, science: str, audit: str) -> None:
     if not audit_count:
         body = body.replace(f"science_repo: {science}\n",
                             f"science_repo: {science}\naudit_repo: {audit}\n", 1)
+    return current, body
+
+
+def _write_pair_config(cfg, science: str, audit: str) -> None:
+    """Persist the exact adopted repositories without flattening user comments."""
+    _current, body = _paired_config_body(cfg, science, audit)
     tmp = cfg.path.with_suffix(".yml.tmp")
     tmp.write_text(body, encoding="utf-8", newline="\n")
     tmp.replace(cfg.path)
 
 
-def apply_pair(cfg, science: str, audit: str, *, private: bool,
-               progress=None, allow_existing: bool = True) -> dict:
-    """Create, connect and seed the two repositories, checking every mutation.
-
-    This is shared by the CLI and the browser project wizard.  It is idempotent:
-    an existing repository is adopted, but an unrelated local ``origin`` is
-    never overwritten.
-    """
-    tell = progress or (lambda _stage, _detail: None)
+def _check_names(science: str, audit: str) -> None:
     if science == audit:
         raise ConfigDenial("science and audit repositories must be different")
     for label, repo in (("science", science), ("audit", audit)):
         if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
             raise ConfigDenial(f"{label} repository must be owner/name, got {repo!r}")
 
+
+# ------------------------------------------------------------------ the steps
+#
+# D173. The plan used to be a hand-written list beside the code that applied
+# it, and the two drifted: `--apply` pushed the local history, committed the
+# pair and added an `origin` remote, none of which the plan named, while the
+# plan's branch-protection step was never applied. Now there is one table.
+# `steps()` returns it; `cmd_pair` prints it and `apply_pair` runs it, in the
+# same order, and what `--apply` does not do is a separate list, `afterwards()`.
+
+@dataclass(frozen=True)
+class Step:
+    """One thing `--apply` does, and what the plan says about it.
+
+    `ops` names every command the step may run that changes something — a
+    GitHub call, a commit, a remote, a push — as an argv whose first word is
+    the tool. `when` is empty for a step that always runs its commands, and
+    otherwise names the one case in which it does (the rest of the time it
+    runs none of them)."""
+    stage: str
+    says: str
+    why: str
+    ops: tuple[tuple[str, ...], ...]
+    run: Callable[["_Pairing"], None]
+    when: str = ""
+
+
+@dataclass
+class _Pairing:
+    cfg: Any
+    science: str
+    audit: str
+    private: bool
+    allow_existing: bool
+    tell: Callable[[str, str], None]
+    created: list = field(default_factory=list)
+    adopted: set = field(default_factory=set)
+    secret_uploaded: bool = False
+
+
+def _staging(cfg) -> Path:
+    return cfg.root / cfg.state_dir / "pair-staging"
+
+
+def _create_or_adopt(repo: str, visibility: str) -> Callable[[_Pairing], None]:
+    def run(p: _Pairing) -> None:
+        if _exists(repo):
+            if not p.allow_existing:
+                raise ConfigDenial(
+                    f"repository {repo} already exists; edit the name or explicitly "
+                    "allow CrossAudit to use repositories you can access",
+                    issue="repo_exists", action="edit_repositories",
+                    remediations=[RA.EDIT_REPOSITORIES], repositories=[repo])
+            p.adopted.add(repo)
+            p.tell("github", f"Adopting existing {repo}")
+        else:
+            _gh("repo", "create", repo, visibility)
+            p.created.append(repo)
+            p.tell("github", f"Created {repo}")
+    return run
+
+
+def _record_pair(p: _Pairing) -> None:
+    # The repository identities are part of the governed project, so publish
+    # them in the science history rather than leaving a local-only config edit.
+    cfg = p.cfg
+    config_rel = cfg.path.relative_to(cfg.root).as_posix()
+    _write_pair_config(cfg, p.science, p.audit)
+    _git(cfg.root, "add", "--", config_rel)
+    try:
+        pending = subprocess.run(
+            ["git", "diff", "--cached", "--quiet", "--", config_rel],
+            cwd=str(cfg.root), timeout=GIT_COMMAND_TIMEOUT, env=child_env()).returncode
+    except subprocess.TimeoutExpired as exc:
+        raise _timed_out("Git", GIT_COMMAND_TIMEOUT) from exc
+    if pending == 1:
+        _git(cfg.root, "commit", "-q", "-m", "crossaudit: record repository pair",
+             "--", config_rel)
+    elif pending != 0:
+        raise ConfigDenial("could not inspect the repository configuration change")
+    p.tell("config", f"Recorded the repository pair in {config_rel}")
+
+
+def _add_origin(p: _Pairing) -> None:
+    _git(p.cfg.root, "remote", "add", "origin", _github_url(p.science))
+    p.tell("science", f"Added origin {_github_url(p.science)}")
+
+
+def _sync(p: _Pairing) -> None:
+    if p.science in p.adopted:
+        p.tell("github", f"Synchronizing existing history from {p.science}")
+        _sync_existing_main(p.cfg.root)
+
+
+def _push(p: _Pairing) -> None:
+    _git(p.cfg.root, "push", "-u", "origin", "HEAD:main")
+    p.tell("science", f"Pushed the local project to {p.science}")
+
+
+def _identity(repo: Path) -> list[str]:
+    """`-c` options naming CrossAudit only where the repository names nobody,
+    so a configured identity is kept and no config file is written."""
+    out = []
+    if not _git(repo, "config", "user.name", check=False):
+        out += ["-c", "user.name=CrossAudit"]
+    if not _git(repo, "config", "user.email", check=False):
+        out += ["-c", "user.email=crossaudit@local.invalid"]
+    return out
+
+
+def _seed(p: _Pairing) -> None:
+    cfg = p.cfg
+    const = cfg.root / cfg.constitution
+    staging = _staging(cfg)
+    if staging.exists():
+        shutil.rmtree(staging)
+    staging.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        _gh("repo", "clone", p.audit, str(staging), "--", "-q")
+        shutil.copyfile(const, staging / const.name)
+        (staging / "cycles").mkdir(exist_ok=True)
+        (staging / "cycles" / "README.md").write_text(
+            "# Ledger\n\nOne directory per audit cycle: the report, the deterministic\n"
+            "check output, and the receipt that binds them to a commit. Append-only:\n"
+            "a re-audit adds an attempt, it never rewrites one.\n",
+            encoding="utf-8", newline="\n")
+        _git(staging, "add", "-A")
+        try:
+            pending = subprocess.run(["git", "diff", "--cached", "--quiet"],
+                                     cwd=str(staging),
+                                     timeout=GIT_COMMAND_TIMEOUT, env=child_env()).returncode
+        except subprocess.TimeoutExpired as exc:
+            raise _timed_out("Git", GIT_COMMAND_TIMEOUT) from exc
+        if pending == 1:
+            _git(staging, *_identity(staging), "commit", "-q", "-m",
+                 "seed: constitution and ledger")
+            _git(staging, "push", "-q", "origin", "HEAD:main")
+        elif pending != 0:
+            raise ConfigDenial("could not inspect the audit repository staging area")
+    finally:
+        if staging.exists():
+            shutil.rmtree(staging)
+    p.tell("audit", f"Seeded {p.audit} with the Constitution and ledger")
+
+
+def _secret(p: _Pairing) -> None:
+    cfg = p.cfg
+    key = os.environ.get(cfg.auditor.key_env, "").strip()
+    if not key:
+        return  # loaded when the steps were drawn up, gone now: upload nothing
+    try:
+        proc = subprocess.run([gh(), "secret", "set", cfg.auditor.key_env,
+                              "--repo", p.audit], input=key, text=True,
+                              capture_output=True, timeout=GH_COMMAND_TIMEOUT,
+                              env=child_env())
+    except subprocess.TimeoutExpired as exc:
+        raise _timed_out("GitHub", GH_COMMAND_TIMEOUT) from exc
+    if proc.returncode != 0:
+        raise ConfigDenial(f"could not upload {cfg.auditor.key_env}: "
+                           f"{proc.stderr.strip()[:240]}",
+                           issue="github_secret_permission",
+                           action="open_github", remediations=[RA.OPEN_GITHUB],
+                           url=f"https://github.com/{p.audit}/settings/secrets/actions")
+    p.secret_uploaded = True
+    p.tell("secret", f"Uploaded {cfg.auditor.key_env} to the audit repository")
+
+
+def steps(cfg, science: str, audit: str, *, private: bool) -> list[Step]:
+    """Everything `--apply` does, in the order it does it.
+
+    Read only from local state (the config file, the `origin` remote, the
+    environment), so the plan needs no network and no GitHub sign-in."""
+    vis = "--private" if private else "--public"
+    config_rel = cfg.path.relative_to(cfg.root).as_posix()
+    staging = str(_staging(cfg))
+    key_env = cfg.auditor.key_env
+    out = [
+        Step("github", f"Create {science} on GitHub",
+             "the work and its history",
+             (("gh", "repo", "create", science, vis),),
+             _create_or_adopt(science, vis),
+             when=f"{science} does not exist yet (one this account can see is "
+                  "adopted instead)"),
+        Step("github", f"Create {audit} on GitHub",
+             "the rules and every report: the generator has no write path here",
+             (("gh", "repo", "create", audit, vis),),
+             _create_or_adopt(audit, vis),
+             when=f"{audit} does not exist yet (one this account can see is "
+                  "adopted instead)"),
+    ]
+    current, paired = _paired_config_body(cfg, science, audit)
+    if paired != current:
+        out.append(Step(
+            "config", f"Commit the repository pair to {config_rel} (a local commit)",
+            "the pair is part of the governed project, so it travels with the history",
+            (("git", "add", "--", config_rel),
+             ("git", "commit", "-q", "-m", "crossaudit: record repository pair",
+              "--", config_rel)),
+            _record_pair))
+    if not _git(cfg.root, "config", "--get", "remote.origin.url", check=False):
+        out.append(Step(
+            "science", f"Add the local remote origin -> {_github_url(science)}",
+            "where the work's history is pushed",
+            (("git", "remote", "add", "origin", _github_url(science)),),
+            _add_origin))
+    out += [
+        Step("github", f"Merge the existing main of {science} into the local history",
+             "an adopted repository's history is kept, never overwritten",
+             (("git", "fetch", "-q", "origin", "main"),
+              ("git", "checkout", "-q", "-B", "main", "origin/main"),
+              ("git", "merge", "--no-edit", "--allow-unrelated-histories",
+               "-X", "theirs", "origin/main"),
+              ("git", "merge", "--abort"),
+              ("git", "add", "--", ".gitignore"),
+              ("git", "commit", "-q", "--amend", "--no-edit"),
+              ("git", "commit", "-q", "-m", "crossaudit: ignore local state",
+               "--", ".gitignore")),
+             _sync,
+             when=f"{science} already existed with a main branch the local history "
+                  "does not contain (an aborted merge changes nothing)"),
+        Step("science", f"Push the local history (every commit on HEAD) to {science} "
+             "as main",
+             "the work's record leaves your sole control",
+             (("git", "push", "-u", "origin", "HEAD:main"),),
+             _push),
+        Step("audit", f"Seed {audit} with {cfg.constitution} and cycles/README.md",
+             "the Constitution lives where the audited party cannot edit it; the "
+             "temporary clone is deleted afterwards",
+             (("gh", "repo", "clone", audit, staging, "--", "-q"),
+              ("git", "add", "-A"),
+              ("git", "commit", "-q", "-m", "seed: constitution and ledger"),
+              ("git", "push", "-q", "origin", "HEAD:main")),
+             _seed,
+             when=f"{audit} does not hold these files yet, for the commit and "
+                  "push (the clone always runs)"),
+    ]
+    if os.environ.get(key_env, "").strip():
+        out.append(Step(
+            "secret", f"Upload ${key_env} as a secret of {audit}",
+            "the auditor's key, readable only by the audit side",
+            (("gh", "secret", "set", key_env, "--repo", audit),),
+            _secret))
+    return out
+
+
+def afterwards(cfg, science: str, audit: str) -> list[tuple[str, tuple[str, ...]]]:
+    """What `--apply` does NOT do, as (sentence, commands) for the person."""
+    key_env = cfg.auditor.key_env
+    rows: list[tuple[str, tuple[str, ...]]] = []
+    if not os.environ.get(key_env, "").strip():
+        rows.append((f"upload the auditor key: ${key_env} is not loaded here, so "
+                     "--apply skips it",
+                     (f"gh secret set {key_env} --repo {audit}",)))
+    rows.append((
+        "branch protection: make admission a required check. It needs admin "
+        "rights and, on private repositories, a paid plan on some tiers",
+        (f"gh api repos/{science}/branches/main/protection -X PUT \\",
+         "  -f 'required_status_checks[strict]=true' \\",
+         "  -f 'required_status_checks[contexts][]=crossaudit/admission'")))
+    rows.append(("read the rules that actually exist and the tier you are really "
+                 "at; plan text is not evidence",
+                 ("crossaudit doctor --online",)))
+    return rows
+
+
+def show(argv: tuple[str, ...], root: Path) -> str:
+    """A step's command as a person would type it, paths under the project
+    shown relative to it."""
+    prefix = str(root).rstrip(os.sep) + os.sep
+    words = [w[len(prefix):] if w.startswith(prefix) else w for w in argv]
+    return shlex.join(words)
+
+
+def plan_lines(cfg, science: str, audit: str, *, private: bool,
+               todo: list[Step] | None = None) -> tuple[list[str], list[str]]:
+    """(the steps `--apply` performs, what you do afterwards) as printable
+    lines. The `$ ` lines are exactly the commands, in order."""
+    todo = steps(cfg, science, audit, private=private) if todo is None else todo
+    does: list[str] = []
+    for i, step in enumerate(todo, 1):
+        does.append(f"{i}. {step.says}")
+        does.append(f"   {step.why}")
+        if step.when:
+            does.append(f"   only if: {step.when}")
+        does += [f"   $ {show(op, cfg.root)}" for op in step.ops]
+    after: list[str] = []
+    for sentence, commands in afterwards(cfg, science, audit):
+        after.append(f"- {sentence}")
+        after += [f"  $ {line}" if not line.startswith("  ") else f"    {line.strip()}"
+                  for line in commands]
+    return does, after
+
+
+def apply_pair(cfg, science: str, audit: str, *, private: bool,
+               progress=None, allow_existing: bool = True,
+               on_step=None) -> dict:
+    """Create, connect and seed the two repositories, checking every mutation.
+
+    This is shared by the CLI and the browser project wizard.  It runs the
+    list `steps()` returns, in order, and nothing else that changes anything
+    (D173). It is idempotent: an existing repository is adopted, but an
+    unrelated local ``origin`` is never overwritten. ``on_step(i, n, step)``
+    is called as each step begins.
+    """
+    tell = progress or (lambda _stage, _detail: None)
+    _check_names(science, audit)
+
     const = cfg.root / cfg.constitution
     if not const.is_file():
         raise ConfigDenial(f"no Constitution at {const}; run `crossaudit init` first")
 
     expected = _github_url(science)
-    current = _git(cfg.root, "remote", "get-url", "origin", check=False)
+    current = _git(cfg.root, "config", "--get", "remote.origin.url", check=False)
     if current and _normalise_remote(current) != _normalise_remote(expected):
         raise ConfigDenial(
             f"local origin is {current}, not {expected}; refusing to replace it",
@@ -321,133 +631,58 @@ def apply_pair(cfg, science: str, audit: str, *, private: bool,
 
     gh()  # all local preflights passed; remote mutations may now begin
     tell("github", "GitHub authentication verified")
-    created = []
-    adopted = set()
-    for repo in (science, audit):
-        if _exists(repo):
-            if not allow_existing:
-                raise ConfigDenial(
-                    f"repository {repo} already exists; edit the name or explicitly "
-                    "allow CrossAudit to use repositories you can access",
-                    issue="repo_exists", action="edit_repositories",
-                    remediations=[RA.EDIT_REPOSITORIES], repositories=[repo])
-            adopted.add(repo)
-            tell("github", f"Adopting existing {repo}")
-        else:
-            _gh("repo", "create", repo, "--private" if private else "--public")
-            created.append(repo)
-            tell("github", f"Created {repo}")
-
-    # The repository identities are part of the governed project, so publish
-    # them in the science history rather than leaving a local-only config edit.
-    _write_pair_config(cfg, science, audit)
-    _git(cfg.root, "add", "--", config_rel)
-    try:
-        pending_config = subprocess.run(
-            ["git", "diff", "--cached", "--quiet", "--", config_rel],
-            cwd=str(cfg.root), timeout=GIT_COMMAND_TIMEOUT, env=child_env()).returncode
-    except subprocess.TimeoutExpired as exc:
-        raise _timed_out("Git", GIT_COMMAND_TIMEOUT) from exc
-    if pending_config == 1:
-        _git(cfg.root, "commit", "-q", "-m", "crossaudit: record repository pair",
-             "--", config_rel)
-    elif pending_config != 0:
-        raise ConfigDenial("could not inspect the repository configuration change")
-
-    if not current:
-        _git(cfg.root, "remote", "add", "origin", expected)
-    if science in adopted:
-        tell("github", f"Synchronizing existing history from {science}")
-        _sync_existing_main(cfg.root)
-    _git(cfg.root, "push", "-u", "origin", "HEAD:main")
-    tell("science", f"Pushed the local project to {science}")
-
-    staging = cfg.root / cfg.state_dir / "pair-staging"
-    if staging.exists():
-        shutil.rmtree(staging)
-    staging.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        _gh("repo", "clone", audit, str(staging), "--", "-q")
-        shutil.copyfile(const, staging / const.name)
-        (staging / "cycles").mkdir(exist_ok=True)
-        (staging / "cycles" / "README.md").write_text(
-            "# Ledger\n\nOne directory per audit cycle: the report, the deterministic\n"
-            "check output, and the receipt that binds them to a commit. Append-only:\n"
-            "a re-audit adds an attempt, it never rewrites one.\n",
-            encoding="utf-8", newline="\n")
-        name = _git(staging, "config", "user.name", check=False)
-        email = _git(staging, "config", "user.email", check=False)
-        if not name:
-            _git(staging, "config", "user.name", "CrossAudit")
-        if not email:
-            _git(staging, "config", "user.email", "crossaudit@local.invalid")
-        _git(staging, "add", "-A")
-        try:
-            pending = subprocess.run(["git", "diff", "--cached", "--quiet"],
-                                     cwd=str(staging),
-                                     timeout=GIT_COMMAND_TIMEOUT, env=child_env()).returncode
-        except subprocess.TimeoutExpired as exc:
-            raise _timed_out("Git", GIT_COMMAND_TIMEOUT) from exc
-        if pending == 1:
-            _git(staging, "commit", "-q", "-m", "seed: constitution and ledger")
-            _git(staging, "push", "-q", "origin", "HEAD:main")
-        elif pending != 0:
-            raise ConfigDenial("could not inspect the audit repository staging area")
-    finally:
-        if staging.exists():
-            shutil.rmtree(staging)
-    tell("audit", f"Seeded {audit} with the Constitution and ledger")
-
-    secret_uploaded = False
-    key = os.environ.get(cfg.auditor.key_env, "").strip()
-    if key:
-        try:
-            proc = subprocess.run([gh(), "secret", "set", cfg.auditor.key_env,
-                                  "--repo", audit], input=key, text=True,
-                                  capture_output=True, timeout=GH_COMMAND_TIMEOUT, env=child_env())
-        except subprocess.TimeoutExpired as exc:
-            raise _timed_out("GitHub", GH_COMMAND_TIMEOUT) from exc
-        if proc.returncode != 0:
-            raise ConfigDenial(f"could not upload {cfg.auditor.key_env}: "
-                               f"{proc.stderr.strip()[:240]}",
-                               issue="github_secret_permission",
-                               action="open_github", remediations=[RA.OPEN_GITHUB],
-                               url=f"https://github.com/{audit}/settings/secrets/actions")
-        secret_uploaded = True
-        tell("secret", f"Uploaded {cfg.auditor.key_env} to the audit repository")
-    else:
+    todo = steps(cfg, science, audit, private=private)
+    state = _Pairing(cfg, science, audit, private, allow_existing, tell)
+    for i, step in enumerate(todo, 1):
+        if on_step:
+            on_step(i, len(todo), step)
+        step.run(state)
+    if not state.secret_uploaded:
         tell("secret", f"{cfg.auditor.key_env} is not loaded; secret upload skipped")
 
     tell("config", "Saved the exact repository pair in crossaudit.yml")
-    return {"science": science, "audit": audit, "created": created,
-            "secret_uploaded": secret_uploaded,
+    return {"science": science, "audit": audit, "created": state.created,
+            "secret_uploaded": state.secret_uploaded,
             "tier": "paired", "branch_protection": "manual"}
 
 
-def plan(science: str, audit: str, *, private: bool) -> list[tuple[str, str]]:
-    """(action, why) pairs, in the order they would run."""
-    vis = "--private" if private else "--public"
-    return [
-        (f"gh repo create {science} {vis}",
-         "the work and its history"),
-        (f"gh repo create {audit} {vis}",
-         "the rules and every report: the generator has no write path here"),
-        (f"push AUDIT_RULES.md to {audit}",
-         "the Constitution lives where the audited party cannot edit it"),
-        (f"gh secret set CROSSAUDIT_AUDITOR_KEY --repo {audit}",
-         "the auditor's key, readable only by the audit side"),
-        (f"gh api repos/{science}/branches/main/protection",
-         "admission as a required check — a deployer toggle, and paid on private "
-         "repositories under some plans"),
-    ]
+def gh_state() -> tuple[str, str]:
+    """('signed_in' | 'signed_out' | 'absent' | 'unknown', one sentence), never
+    raising: for saying what `--apply` will need without requiring it now."""
+    try:
+        gh()
+    except ConfigDenial as exc:
+        issue = exc.detail.get("issue")
+        if issue == "github_cli":
+            return "absent", ("GitHub CLI is not installed — install it from "
+                              "https://cli.github.com, then run `gh auth login`")
+        if issue == "github_auth":
+            return "signed_out", ("GitHub CLI is installed but not signed in — "
+                                  "run `gh auth login`")
+        return "unknown", exc.reason
+    return "signed_in", "GitHub CLI is signed in"
 
 
 def cmd_pair(args) -> int:
     cfg = load()
-    owner = _owner()
-    science = args.science or f"{owner}/{cfg.root.name}"
+    science = args.science
+    if not science:
+        # The only case that needs the account: the default name is yours.
+        try:
+            owner = _owner()
+        except ConfigDenial as exc:
+            if exc.detail.get("issue") not in ("github_cli", "github_auth"):
+                raise
+            raise ConfigDenial(
+                "pair needs your GitHub account name to choose the work repository's "
+                "name; pass --science owner/name (and --audit owner/name) to see the "
+                "plan without signing in, or run `gh auth login`",
+                issue=exc.detail.get("issue"), action=exc.detail.get("action"),
+                remediations=[RA.CONNECT_GITHUB]) from exc
+        science = f"{owner}/{cfg.root.name}"
     audit = args.audit or f"{science}-audit"
     private = not args.public
+    _check_names(science, audit)
 
     print("\nCrossAudit — pairing the repositories")
     print("=" * 66)
@@ -457,28 +692,28 @@ def cmd_pair(args) -> int:
     print(f"  not      {TIERS['enforced']} — that needs a controller and an App")
     print()
 
-    for i, (action, why) in enumerate(plan(science, audit, private=private), 1):
-        print(f"  {i}. {action}")
-        print(f"     {why}")
+    todo = steps(cfg, science, audit, private=private)
+    does, after = plan_lines(cfg, science, audit, private=private, todo=todo)
+    print("  --apply does exactly this, in this order:")
+    for line in does:
+        print(f"  {line}")
+    print("\n  You do afterwards (--apply does not do these):")
+    for line in after:
+        print(f"  {line}")
 
     if not args.apply:
-        print("\n  This was a plan; nothing was created. Run again with --apply.")
+        state, sentence = gh_state()
+        if state != "signed_in":
+            print(f"\n  Before --apply: {sentence}.")
+        print("\n  This was a plan; nothing was created or changed. Run again with --apply.")
         return EXIT_OK
 
     print("\n  Applying…")
     result = apply_pair(
         cfg, science, audit, private=private,
-        progress=lambda _stage, detail: print(f"  · {detail}"))
+        progress=lambda _stage, detail: print(f"  · {detail}"),
+        on_step=lambda i, n, step: print(f"  [{i}/{n}] {step.says}"))
 
-    if not result["secret_uploaded"]:
-        print(f"\n  ${cfg.auditor.key_env} is not loaded; upload it with "
-              f"`gh secret set {cfg.auditor.key_env} --repo {audit}`")
-    print("\n  Branch protection is the one step left, and it is yours: it needs")
-    print("  admin rights and, on private repositories, a paid plan on some tiers.")
-    print(f"    gh api repos/{science}/branches/main/protection -X PUT \\")
-    print("      -f 'required_status_checks[strict]=true' \\")
-    print("      -f 'required_status_checks[contexts][]=crossaudit/admission'")
-    print("\n  Then `crossaudit doctor --online` reads the rules that actually")
-    print("  exist and tells you which tier you are really at — plan text is not")
-    print("  evidence.")
+    print(f"\n  Done: {result['science']} and {result['audit']} are paired. The steps "
+          "under \"You do afterwards\" above are still yours.")
     return EXIT_OK

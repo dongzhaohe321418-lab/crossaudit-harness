@@ -120,6 +120,24 @@ All notable changes to CrossAudit are recorded here. Versions follow the
 - **README corrections.** The default check pack is `general`, `amend --yes`
   is documented for scripts, the `--version` line is shown as printed, and
   verdicts (`PASS`) are kept apart from cycle states (`PASSED`) (D172).
+- **`crossaudit pair` prints what `--apply` does, all of it, in order.** The
+  plan left out the push of the local history, the local commit recording the
+  pair and the `origin` remote, and listed branch protection, which `--apply`
+  never did. The plan and `--apply` now come from one list of steps, each shown
+  with its commands; what `--apply` leaves to you (branch protection, the key
+  upload when the key is not loaded) is printed under "You do afterwards"
+  (D173).
+- **`crossaudit pair --science … --audit …` shows its plan without a GitHub
+  account.** It asked GitHub for the account name before printing anything, so
+  the plan the README tells you to review was refused when `gh` was signed out.
+  The account is now needed only for `--apply`, or when `--science` is left out;
+  a signed-out or missing `gh` adds one line saying what `--apply` will need
+  (D173).
+- **`crossaudit init --github` no longer says `pair --apply` "does all of it",
+  and its GitHub warning says one thing.** The closing panel now lists `pair`'s
+  own steps and what is left to you; with `gh` installed but signed out the
+  warning says to run `gh auth login` instead of also telling you to install it
+  (D173).
 
 ## 4.17.0 — The activity stream
 
