@@ -306,6 +306,10 @@ Method registry (all pure functions over column vectors; `where` filters rows):
 `arrhenius_ln_a(T_K, k)`, `bragg_cubic_a(two_theta_deg, h, k, l; wavelength)`
 (mean over peaks of d·√(h²+k²+l²), d = λ/(2 sin θ)), `last_delta_abs(y)`
 (|y[−1] − y[−2]|), `last(y)`, `scale(x, factor)`.
+v2 additions (2026-10-22, §9 Amendment 3; not preregistered): `sd_population`
+and `sem_population` (n divisor), `median`, `ratio(a, b)` and
+`percent_change(new, old)` = 100·(new − old)/|old| (over the means of two
+selected samples with a file, over quantities or literals without one).
 Every method has its own unit test with a hand-computed value.
 
 ### 4.4 `split_integrity` — CA-ML-001, BLOCKER
@@ -487,3 +491,70 @@ run. A future corpus that wants an informative interval needs within-class
 heterogeneity that the checks can actually be sensitive to (different
 tolerances, noise levels, declaration coverage) — or should state up front
 that the deterministic rung's recall is a count, not an estimate.
+
+**Amendment 3 (2026-10-22) — the v2 pack and corpus.** Written after the first
+dogfood audit of real reports (`~/Claude/crossaudit-dogfood/REPORT.md` §3) and
+the live-generator declarations experiment
+(`~/Claude/crossaudit-dogfood/declarations-experiment/`, including
+`records/run-2026-10-22-claude-haiku-4-5-armC/`). The preregistered sections
+above are unchanged except the one registry sentence added to §4.3, which this
+amendment covers. Nothing here re-scores the 2026-10-21 run; its record stands.
+
+*Pack (`src/crossaudit/dcl/ai4s.py`).* (1) `where` may be a non-empty list of
+`{column, equals}` clauses, all of which must hold; any other shape blocks.
+(2) New methods `sd_population`, `sem_population`, `median`, `ratio`,
+`percent_change`. (3) A `t_pvalue_two_sided` row whose `t` or `df` is not
+recomputed from a committed file says, in its CA-DERIV-001 message, that they
+are reported values and to declare `welch_t`/`welch_df`; new ADVISORY
+CA-DERIV-003 marks a derivation that agrees but (a) reads a quantity no
+derivation chain grounds in a committed file ("verified against a reported
+number") or (b) was declared with the one accepted alias, `filter: {<column>:
+<value>}` (one column, one value, one-sample or paired forms only). (4)
+`range_rules` units are byte-exact (no folding, trimming or synonyms);
+documented and swept. (7) The skill's method table is generated from the
+registry (`ai4s.method_table`) and written into the scaffolded skill; a test
+follows it into the generator prompt. (8) **Contract change, more
+fail-closed:** a derivation `input` key the method does not take now blocks,
+naming the keys it takes; v1 ignored it, so a filter under another name ran
+over every row and was reported as a value mismatch (Arm C). Paths outside the
+experiment directory say what paths are relative to. Gaps (5) trailing zeros
+and (6) multi-revision inputs needed no code: the corpus writer quotes
+results.txt with the same `json.dumps` that writes it (consistent with
+`number_source`, whose `v` is compared as a number and `quote` as characters),
+and the existing `path@revision` + `source` convention answers multi-version
+inputs; both are documented in `AI4S_DECLARATIONS_SKILL.md` with tests that
+run the documented behaviour.
+
+*Corpus.* New class **D18 `aggregate_mismatch`** (tier deterministic_new,
+CA-DERIV-001, BLOCKER; a class of its own rather than D10 variants, so the
+preregistered D10 figure stays comparable): `ratio_inverted`,
+`percent_sign_flipped` (crystal_bandgap_ml, biostat_two_group),
+`sd_population_as_sd` (biostat), `sd_as_sd_population` (xrd_bragg),
+`median_perturbed_1pct` (biostat, xrd) — 80 instances. To carry them, clean
+templates gained `error_ratio`/`improvement_pct` (crystal, column form over
+new per-row absolute-error columns in predictions.csv), `median_control`/
+`ratio_means`/`change_pct` (biostat), and `a_median`/`a_spread` (population
+sd, over a new per_peak.csv) for xrd, each with a derivation, a range entry and
+one prose sentence. The v2 corpus's clean controls would false-block under the
+v1 pack (unknown methods), so the two runs are not interchangeable records.
+
+*Result* (`records/run-2026-10-22-v2/`, seed 20261021, 2,060 instances, two
+byte-identical passes). Clean false blocks stayed **0/60** under both
+profiles; the 60 clean controls carry zero findings of any severity under
+both in the full run, and `tests/test_corpus.py` checks zero findings under
+`science`, `science`+`complete` and `science-ai4s` on its reduced corpus. D18: `science` 0/80, `science-ai4s` 80/80
+(Wilson 95.4–100%); per variant 20/20, 20/20, 10/10, 10/10, 20/20. On the 3,960
+instance×profile rows shared with the 2026-10-21 run, verdict, caught,
+any-block and attribution are identical (only finding counts grew, from the
+new derivations). No CA-DERIV-003 fired anywhere in the corpus. Class-averaged
+recall over 18 classes: shipped 0.259, extended 0.907 (delta 0.648); over the
+17 preregistered classes it is unchanged at 0.275 / 0.902. Instance recall
+620/2000 and 1820/2000.
+
+*Coverage.* With 18 classes the coverage simulation gives 0.927 (null) and
+0.900 (effect), outside the 0.93–0.97 band, so `coverage_check.json` now
+records `passed: false` and the v2 interval is reported uncalibrated, as
+EXPERIMENT_RECORD §10 prescribes; it is a point anyway (Amendment 2). The
+scorer tests assert that the committed flag equals the band test rather than
+that the band is met.
+

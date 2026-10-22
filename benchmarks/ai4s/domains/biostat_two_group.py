@@ -41,6 +41,9 @@ RANGES = [
     {"name": "t_statistic", "unit": "1", "min": -1000, "max": 1000},
     {"name": "df", "unit": "1", "min": 1, "max": 10000},
     {"name": "p_value", "unit": "1", "min": 0, "max": 1},
+    {"name": "median_*", "unit": U, "min": 0, "max": 50},
+    {"name": "ratio_means", "unit": "1", "min": 0},
+    {"name": "change_pct", "unit": "%", "min": -100},
 ]
 
 
@@ -114,7 +117,9 @@ def summary(p, inst: Instance) -> str:
         f"from {p.n('ci95_low')} to {p.n('ci95_high')}.\n\n"
         f"Welch's unequal-variance t-test gives t = {p.n('t_statistic')} with {p.n('df')} degrees "
         f"of freedom and p = {p.n('p_value')}. The difference is statistically significant at the "
-        "0.05 level, and the 95% confidence interval excludes zero.\n")
+        "0.05 level, and the 95% confidence interval excludes zero.\n\n"
+        f"The control median was {p.n('median_control')}. The treated mean is "
+        f"{p.n('ratio_means')} times the control mean, a change of {p.n('change_pct')}.\n")
 
 
 SPEC = {
@@ -128,4 +133,6 @@ SPEC = {
     "method": ("Welch's unequal-variance t-test", "Student's pooled-variance t-test"),
     "d13": ["significance_overclaim", "ci_claim_false"],
     "has_split": False,
+    "d18": {"ratio_inverted": "ratio_means", "percent_sign_flipped": "change_pct",
+            "sd_population_as_sd": "sd_control", "median_perturbed_1pct": "median_control"},
 }

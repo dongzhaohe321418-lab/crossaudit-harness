@@ -123,7 +123,11 @@ def test_two_profile_report_is_bound_and_states_the_contrast(tmp_path):
     above = "is" if h2["ci_low_above_zero"] else "is not"
     assert (f"the bootstrap interval's lower bound {rp.fmt(p['ci_low'], 'p')} {above} "
             "above 0.") in text
-    assert "Coverage status: calibrated" in text
+    # The committed coverage record decides the status line (Amendment 3: the
+    # 18-class simulation falls outside its band, so it reads uncalibrated).
+    calibrated = bool(p["coverage_checked"])
+    assert ("Coverage status: calibrated" in text) is calibrated
+    assert ("Coverage status: **uncalibrated**" in text) is not calibrated
     assert "the calibration does not transfer" in text      # 12 templates, not 60
 
 

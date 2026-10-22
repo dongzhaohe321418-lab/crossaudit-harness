@@ -4,12 +4,12 @@
   0.97
  ],
  "method": "cluster bootstrap over templates, percentile interval 2.5/97.5",
- "passed": true,
+ "passed": false,
  "runs": [
   {
-   "classes": 17,
-   "coverage": 0.94,
-   "mean_width": 0.05523130952036861,
+   "classes": 18,
+   "coverage": 0.9266666666666666,
+   "mean_width": 0.05193168689020601,
    "resamples": 400,
    "scenario": "null",
    "seed": 20261021,
@@ -19,16 +19,16 @@
    "true_delta": 0.0
   },
   {
-   "classes": 17,
-   "coverage": 0.95,
-   "mean_width": 0.06039867301222402,
+   "classes": 18,
+   "coverage": 0.9,
+   "mean_width": 0.06108953856487685,
    "resamples": 400,
    "scenario": "effect",
    "seed": 20261021,
    "sigma": 1.0,
    "sims": 300,
    "templates": 60,
-   "true_delta": 0.30021904380142905
+   "true_delta": 0.3118942288381513
   }
  ]
 }

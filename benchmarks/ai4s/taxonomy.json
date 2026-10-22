@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "tiers": {
     "deterministic_existing": "a shipped check in the science profile should block it today",
     "deterministic_new": "blockable by code once the increment carries a declaration the generator can honestly make (the science-ai4s pack)",
@@ -88,7 +88,14 @@
     {"id": "D17", "name": "precision_overclaim", "tier": "deterministic_new",
      "rules": ["CA-PREC-001"], "checks": ["precision"], "severity": "ADVISORY",
      "domains": "all",
-     "variants": ["digits_beyond_uncertainty"]}
+     "variants": ["digits_beyond_uncertainty"]},
+    {"id": "D18", "name": "aggregate_mismatch", "tier": "deterministic_new",
+     "rules": ["CA-DERIV-001"], "checks": ["derivations"], "severity": "BLOCKER",
+     "domains": ["crystal_bandgap_ml", "biostat_two_group", "xrd_bragg"],
+     "variants": ["ratio_inverted", "percent_sign_flipped", "sd_population_as_sd",
+                  "sd_as_sd_population", "median_perturbed_1pct"],
+     "added": "v2, DESIGN.md section 9 Amendment 3 (2026-10-22); not part of the preregistration",
+     "notes": "An aggregate the v2 pack can recompute, reported wrong in the way the first dogfood audit found real reports get it wrong: a ratio written the wrong way up, a percent change with the wrong sign, numpy's population sd (ddof=0) reported where the declaration says sample sd and the reverse, a median off by 1%. A class of its own rather than more D10 variants, so the preregistered D10 figure stays comparable across the two runs. Narrowed per variant by each domain's SPEC['d18']."}
   ],
   "domains": ["crystal_bandgap_ml", "nmr_shift_calibration", "arrhenius_kinetics",
               "dft_convergence", "xrd_bragg", "biostat_two_group"],

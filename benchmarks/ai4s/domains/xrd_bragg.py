@@ -39,6 +39,8 @@ RANGES = [
     {"name": "lattice_a", "unit": "Å", "min": 2, "max": 20},
     {"name": "d_111", "unit": "Å", "min": 0.5, "max": 15},
     {"name": "n_peaks", "unit": "1", "min": 1},
+    {"name": "a_median", "unit": "Å", "min": 2, "max": 20},
+    {"name": "a_spread", "unit": "Å", "min": 0},
 ]
 
 
@@ -73,7 +75,9 @@ def summary(p, inst: Instance) -> str:
         "reflections were used, and as Bragg's law requires, the d-spacing decreases as the "
         "diffraction angle increases. The lattice parameter, averaged over all indexed "
         f"reflections, is a = {p.n('lattice_a')} (bootstrap standard error {unc} Å), which "
-        f"implies a (111) spacing of {p.n('d_111')}.\n")
+        f"implies a (111) spacing of {p.n('d_111')}. The per-reflection estimates have a median "
+        f"of {p.n('a_median')} and a population standard deviation (over every indexed "
+        f"reflection) of {p.n('a_spread')}.\n")
 
 
 SPEC = {
@@ -87,4 +91,5 @@ SPEC = {
     "method": ("averaged over all indexed reflections", "taken from the (111) reflection alone"),
     "d13": [],
     "has_split": False,
+    "d18": {"sd_as_sd_population": "a_spread", "median_perturbed_1pct": "a_median"},
 }

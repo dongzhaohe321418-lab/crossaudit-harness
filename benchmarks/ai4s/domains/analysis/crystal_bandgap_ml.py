@@ -3,7 +3,9 @@
 Reads data/compounds.csv and splits.json (train/test ids, held out by chemical
 system), fits a ridge model on standardised features (lambda = 1.0, intercept
 unpenalised) on the train rows, predicts every row, and compares the test error
-with a baseline that predicts the train mean. Writes predictions.csv,
+with a baseline that predicts the train mean, as a ratio of the two MAEs and as
+a percent change from the baseline's. Writes predictions.csv (with the
+per-row absolute errors of model and baseline),
 results.json and results.txt beside scripts/ and prints results.json.
 The uncertainty on mae_test is a bootstrap standard error over test rows
 (400 resamples, seeded by --seed). Standard library only.
@@ -68,14 +70,16 @@ def run(read, seed):
     predict = fit_ridge(xs, ys, LAMBDA)
     baseline = mean(ys)
 
-    lines = ["id,system,split,%s,pred_ev,baseline_ev" % TARGET]
+    lines = ["id,system,split,%s,pred_ev,baseline_ev,abs_err_ev,baseline_abs_err_ev" % TARGET]
     truth, pred, base = {"train": [], "test": []}, {"train": [], "test": []}, {"train": [], "test": []}
     for r in rows:
         split = "train" if r["id"] in train_ids else "test" if r["id"] in test_ids else None
         if split is None:
             continue
         p = predict([float(r[f]) for f in FEATURES])
-        lines.append("%s,%s,%s,%s,%r,%r" % (r["id"], r["system"], split, r[TARGET], p, baseline))
+        g = float(r[TARGET])
+        lines.append("%s,%s,%s,%s,%r,%r,%r,%r" % (r["id"], r["system"], split, r[TARGET], p, baseline,
+                                                abs(g - p), abs(g - baseline)))
         truth[split].append(float(r[TARGET]))
         pred[split].append(p)
         base[split].append(baseline)
@@ -94,6 +98,10 @@ def run(read, seed):
         quantity("mae_baseline", rounded(mae(t, base["test"]), 4), "eV", src),
         quantity("n_train", len(truth["train"]), "1", src),
         quantity("n_test", len(t), "1", src),
+        quantity("error_ratio", rounded(mae(t, p) / mae(t, base["test"]), 4), "1", src),
+        quantity("improvement_pct",
+                 rounded(100.0 * (mae(t, p) - mae(t, base["test"])) / abs(mae(t, base["test"])), 2),
+                 "%", src),
     ]
     pf = "predictions.csv"
     ders = [
@@ -103,6 +111,10 @@ def run(read, seed):
         derivation("mae_baseline", "mae", {"file": pf, "truth": TARGET, "pred": "baseline_ev", "where": test}, 4),
         derivation("n_train", "count", {"file": pf, "x": "id", "where": train_w}, 0),
         derivation("n_test", "count", {"file": pf, "x": "id", "where": test}, 0),
+        derivation("error_ratio", "ratio", {"file": pf, "a": "abs_err_ev", "b": "baseline_abs_err_ev",
+                                          "where": test}, 4),
+        derivation("improvement_pct", "percent_change",
+                   {"file": pf, "new": "abs_err_ev", "old": "baseline_abs_err_ev", "where": test}, 2),
     ]
     claims = [{"text": "the model's test MAE is lower than that of the train-mean baseline",
                "test": "less_than", "quantity": "mae_test", "than": "mae_baseline"}]

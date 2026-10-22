@@ -268,12 +268,19 @@ def test_bootstrap_is_seeded_and_brackets_the_point():
 def test_bootstrap_interval_coverage_at_corpus_design():
     """EXPERIMENT_RECORD §10: the interval's coverage is simulated, not assumed.
 
-    60 templates (6 domains x 10 seeds), the 17 taxonomy classes with their real
+    60 templates (6 domains x 10 seeds), every taxonomy class with its real
     domain restrictions and variant counts, a logit-scale template random effect
     (sigma 1), 300 simulated corpora with 400 resamples each, under a null delta
     and a delta near 0.30. The committed coverage_check.json must equal this
     measurement exactly, so the flag score.py copies into numbers.json cannot go
-    stale.
+    stale, and `passed` must be exactly "both coverages inside the band".
+
+    The band itself is no longer asserted (DESIGN.md §9 Amendment 3): at the
+    preregistered 17 classes coverage was 0.94 / 0.95 and passed; with the v2
+    class D18 the same simulation gives 0.927 / 0.900, outside 0.93-0.97, so
+    the interval is reported UNCALIBRATED, exactly as EXPERIMENT_RECORD §10
+    prescribes for a failed simulation. The last assertion pins that outcome,
+    so a change to the design that moves it is seen rather than absorbed.
     """
     rec = sc.coverage_record()
     by = {r["scenario"]: r for r in rec["runs"]}
@@ -281,9 +288,11 @@ def test_bootstrap_interval_coverage_at_corpus_design():
     assert 0.27 <= by["effect"]["true_delta"] <= 0.33
     committed = json.loads(sc.COVERAGE_RECORD.read_text(encoding="utf-8"))
     assert json.loads(json.dumps(rec)) == committed
-    for r in rec["runs"]:
-        assert sc.COVERAGE_BAND[0] <= r["coverage"] <= sc.COVERAGE_BAND[1], r
-    assert rec["passed"] is True
+    inside = all(sc.COVERAGE_BAND[0] <= r["coverage"] <= sc.COVERAGE_BAND[1]
+                 for r in rec["runs"])
+    assert rec["passed"] is inside
+    assert [r["classes"] for r in rec["runs"]] == [len(sc._taxonomy()["classes"])] * 2
+    assert (rec["passed"], by["null"]["classes"]) == (False, 18)
 
 
 # ------------------------------------------------------------------ scoring

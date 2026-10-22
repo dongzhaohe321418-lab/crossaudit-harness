@@ -455,6 +455,63 @@ def d15_summary_truncated_mid_block(inst, rng):
     return new, _record(new.path("SUMMARY.md"), f"truncated at char {cut}", text[cut:], None)
 
 
+def _d18_target(inst, variant):
+    """(name, value, decimals, tolerance) of the quantity a D18 variant edits."""
+    doc = inst.results()
+    name = domains.get(inst.domain).SPEC["d18"][variant]
+    d, tol = _decimals(doc, name)
+    return doc, name, domains.qvalue(doc, name), d, tol
+
+
+def _d18_set(inst, name, v, nv, tol, why):
+    if abs(nv - v) <= 2 * tol:
+        raise ValueError(f"{inst.domain}: {why} leaves {name} within its tolerance")
+    return _edit_results(inst, _set_q(name, "value", lambda b, dd: nv))
+
+
+def _d18_column(inst, doc, name):
+    """The values a single-column derivation of `name` reads, recomputed here
+    from the committed CSV with its declared where filter (one clause or a list)."""
+    import csv
+    import io
+    spec = next(r["input"] for r in doc["derivations"] if r["quantity"] == name)
+    where = spec.get("where")
+    clauses = [] if where is None else [where] if isinstance(where, dict) else list(where)
+    rows = csv.DictReader(io.StringIO(inst.text(spec["file"])))
+    return [float(r[spec["x"]]) for r in rows
+            if all(r[c["column"]] == str(c["equals"]) for c in clauses)]
+
+
+def d18_ratio_inverted(inst, rng):
+    """The ratio written the wrong way up: b / a reported for a declared a / b."""
+    doc, name, v, d, tol = _d18_target(inst, "ratio_inverted")
+    return _d18_set(inst, name, v, round(1.0 / v, d), tol, "inverting the ratio")
+
+
+def d18_percent_sign_flipped(inst, rng):
+    """A percent change reported with the opposite sign (old - new over |old|)."""
+    doc, name, v, d, tol = _d18_target(inst, "percent_sign_flipped")
+    return _d18_set(inst, name, v, -v, tol, "flipping the sign")
+
+
+def _d18_sd(variant, ddof):
+    def plant(inst, rng):
+        """The other standard deviation of the same rows: the population sd
+        (ddof 0, numpy's default) reported for a declared sample sd, or the
+        sample sd (ddof 1) reported for a declared population sd."""
+        doc, name, v, d, tol = _d18_target(inst, variant)
+        xs = _d18_column(inst, doc, name)
+        m = math.fsum(xs) / len(xs)
+        alt = math.sqrt(math.fsum((x - m) ** 2 for x in xs) / (len(xs) - ddof))
+        return _d18_set(inst, name, v, round(alt, d), tol, f"the ddof={ddof} sd")
+    return plant
+
+
+def d18_median_perturbed_1pct(inst, rng):
+    doc, name, v, d, tol = _d18_target(inst, "median_perturbed_1pct")
+    return _d18_set(inst, name, v, round(v * 1.01, d), tol, "a 1% perturbation")
+
+
 def _d16(key):
     def plant(inst, rng):
         return _drop_meta_key(inst, key)
@@ -511,6 +568,11 @@ PLANTERS = {
     ("D16", "no_command"): _d16("command"),
     ("D16", "no_environment"): _d16("environment"),
     ("D17", "digits_beyond_uncertainty"): d17_digits_beyond_uncertainty,
+    ("D18", "ratio_inverted"): d18_ratio_inverted,
+    ("D18", "percent_sign_flipped"): d18_percent_sign_flipped,
+    ("D18", "sd_population_as_sd"): _d18_sd("sd_population_as_sd", 0),
+    ("D18", "sd_as_sd_population"): _d18_sd("sd_as_sd_population", 1),
+    ("D18", "median_perturbed_1pct"): d18_median_perturbed_1pct,
 }
 
 
@@ -527,7 +589,9 @@ def applicable(cls: str, variant: str, inst) -> bool:
     calibration-quality claim is false"); D16 only where results.json says
     `"stochastic": true` (the check is gated on it), which is every domain
     except dft_convergence; D17 where a quantity carries numeric uncertainty
-    (all six).
+    (all six); D18 per variant where the domain's SPEC names the aggregate it
+    reports (ratio and percent change: crystal, biostat; a declared sample sd:
+    biostat; a declared population sd: xrd; a median: biostat, xrd).
     """
     c = CLASSES[cls]
     if c["domains"] != "all" and inst.domain not in c["domains"]:
@@ -546,6 +610,8 @@ def applicable(cls: str, variant: str, inst) -> bool:
         return variant in spec.get("d13", [])
     if cls == "D16":
         return doc.get("stochastic") is True
+    if cls == "D18":
+        return variant in spec.get("d18", {})
     if cls == "D17":
         return any(isinstance(q.get("uncertainty"), (int, float)) for q in doc["quantities"])
     return True

@@ -105,6 +105,31 @@ def test_false_claims_are_false_against_the_committed_data(corpus):
         assert codes == {"CA-STAT-004"}, (row["instance_id"], result["findings"])
 
 
+def test_aggregate_plants_are_caught_by_the_derivation_alone(corpus):
+    """A D18 plant (v2, DESIGN.md §9 Amendment 3) edits one reported aggregate
+    in results.json: under science-ai4s exactly one finding comes back, the
+    CA-DERIV-001 of that aggregate's own derivation (no other check, and no
+    other derivation, notices); under `science` there is nothing, because the
+    shipped profile does not recompute anything."""
+    from crossaudit.dcl import run_checks
+    from crossaudit.dcl.profiles import resolve
+    names = _ai4s_profile()
+    out, rows = corpus
+    seen = set()
+    for row in rows:
+        if row["defect_class"] != "D18":
+            continue
+        files = instance_files(out, row)
+        result = run_checks(files, names).as_dict()
+        got = [(f["severity"], f["implementation_code"]) for f in result["findings"]]
+        assert got == [("BLOCKER", "CA-DERIV-001")], (row["instance_id"], result["findings"])
+        name = domains.get(row["domain"]).SPEC["d18"][row["variant"]]
+        assert f"({name})" in result["findings"][0]["observation"], row["instance_id"]
+        assert run_checks(files, resolve("science")).as_dict()["findings"] == []
+        seen.add(row["variant"])
+    assert seen == set(planted.CLASSES["D18"]["variants"])
+
+
 # (d) ----------------------------------------------------------------------
 _PATH = __import__("re").compile(r"([A-Za-z_][\w]*)|\[(\d+)\]")
 
@@ -197,6 +222,11 @@ NARROWED = {
     ("D16", "no_seed"): set(domains.DOMAIN_NAMES) - {"dft_convergence"},
     ("D16", "no_command"): set(domains.DOMAIN_NAMES) - {"dft_convergence"},
     ("D16", "no_environment"): set(domains.DOMAIN_NAMES) - {"dft_convergence"},
+    ("D18", "ratio_inverted"): {"crystal_bandgap_ml", "biostat_two_group"},
+    ("D18", "percent_sign_flipped"): {"crystal_bandgap_ml", "biostat_two_group"},
+    ("D18", "sd_population_as_sd"): {"biostat_two_group"},
+    ("D18", "sd_as_sd_population"): {"xrd_bragg"},
+    ("D18", "median_perturbed_1pct"): {"biostat_two_group", "xrd_bragg"},
 }
 
 

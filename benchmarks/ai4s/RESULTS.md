@@ -1,20 +1,20 @@
 # AI4S audit test set — results
 
-<!-- numbers: 18a13eddb463a68eaa8b74ebdfc54464b88e65160a8203eb8433d9e8e2f60e72 -->
+<!-- numbers: 131236b578fd5decebc027867e8add44084b4501ec92fd4ecf1fb3e19056de42 -->
 
 Rendered by `report.py` from `numbers.json` only; the design and the preregistered claims are in `DESIGN.md`. Every rate below is quoted as count/n with its 95% Wilson score interval.
 
 ## Claims
 
-- **H1 holds on this corpus.** The shipped profile `science` has class-averaged deterministic recall 0.275 over 17 classes; H1 requires below 0.500.
-- **H2 does not hold on this corpus.** Extended minus shipped class-averaged recall is 0.627 (required at least 0.300), and the extended profile's false-block Wilson upper bound is 6.0% (required at most 2.5%).
-  Secondary condition, stated alongside and not part of the preregistered decision rule: the bootstrap interval's lower bound 0.627 is above 0.
+- **H1 holds on this corpus.** The shipped profile `science` has class-averaged deterministic recall 0.259 over 18 classes; H1 requires below 0.500.
+- **H2 does not hold on this corpus.** Extended minus shipped class-averaged recall is 0.648 (required at least 0.300), and the extended profile's false-block Wilson upper bound is 6.0% (required at most 2.5%).
+  Secondary condition, stated alongside and not part of the preregistered decision rule: the bootstrap interval's lower bound 0.648 is above 0.
 
 ## Primary outcome
 
-Extended (`science-ai4s`) minus shipped (`science`) class-averaged recall: **0.627**, 95% cluster-bootstrap percentile interval [0.627, 0.627] for the class-averaged recall difference, resampling 60 templates (`pair_id`) with replacement, 2000 resamples, percentiles 2.5/97.5, seed 20261021.
+Extended (`science-ai4s`) minus shipped (`science`) class-averaged recall: **0.648**, 95% cluster-bootstrap percentile interval [0.648, 0.648] for the class-averaged recall difference, resampling 60 templates (`pair_id`) with replacement, 2000 resamples, percentiles 2.5/97.5, seed 20261021.
 
-Coverage status: calibrated. Simulated at the corpus design (60 templates, 17 classes, 300 simulations of 400 resamples each), the interval covered the true delta in 94.0% of corpora under a null delta and 95.0% under a delta of 0.300; the required band is 93.0%–97.0%.
+Coverage status: **uncalibrated**. Simulated at the corpus design (60 templates, 18 classes, 300 simulations of 400 resamples each), the interval covered the true delta in 92.7% of corpora under a null delta and 90.0% under a delta of 0.312; the required band is 93.0%–97.0%.
 
 ## Recall per class
 
@@ -39,8 +39,9 @@ Caught = BLOCKED with a BLOCKER finding from an expected rule or check; for an i
 | D15 | placeholder_or_truncated | mixed | 180 | 60/180 (33.3% [26.9%, 40.5%]) | 180/180 (100.0% [97.9%, 100.0%]) | `CA-NUM-001` | `CA-NUM-001` ×60 | `CA-FILE-004:ADVISORY` ×120, `CA-NUM-001` ×60 |
 | D16 | reproducibility_missing | deterministic_new | 150 | 0/150 (0.0% [0.0%, 2.5%]) | 150/150 (100.0% [97.5%, 100.0%]) | `CA-REPRO-001` | nothing | `CA-REPRO-001:ADVISORY` ×150 |
 | D17 | precision_overclaim | deterministic_new | 60 | 0/60 (0.0% [0.0%, 6.0%]) | 60/60 (100.0% [94.0%, 100.0%]) | `CA-PREC-001` | nothing | `CA-PREC-001:ADVISORY` ×60 |
+| D18 | aggregate_mismatch | deterministic_new | 80 | 0/80 (0.0% [0.0%, 4.6%]) | 80/80 (100.0% [95.4%, 100.0%]) | `CA-DERIV-001` | nothing | `CA-DERIV-001` ×80 |
 
-Class-averaged recall (unweighted over the classes present): shipped 0.275, extended 0.902.
+Class-averaged recall (unweighted over the classes present): shipped 0.259, extended 0.907.
 
 ### Recall per variant
 
@@ -89,6 +90,11 @@ D06's variants carry different tiers, so its class rate mixes a deterministic va
 | D16 | no_environment | deterministic_new | 0/50 (0.0% [0.0%, 7.1%]) | 50/50 (100.0% [92.9%, 100.0%]) |
 | D16 | no_seed | deterministic_new | 0/50 (0.0% [0.0%, 7.1%]) | 50/50 (100.0% [92.9%, 100.0%]) |
 | D17 | digits_beyond_uncertainty | deterministic_new | 0/60 (0.0% [0.0%, 6.0%]) | 60/60 (100.0% [94.0%, 100.0%]) |
+| D18 | median_perturbed_1pct | deterministic_new | 0/20 (0.0% [0.0%, 16.1%]) | 20/20 (100.0% [83.9%, 100.0%]) |
+| D18 | percent_sign_flipped | deterministic_new | 0/20 (0.0% [0.0%, 16.1%]) | 20/20 (100.0% [83.9%, 100.0%]) |
+| D18 | ratio_inverted | deterministic_new | 0/20 (0.0% [0.0%, 16.1%]) | 20/20 (100.0% [83.9%, 100.0%]) |
+| D18 | sd_as_sd_population | deterministic_new | 0/10 (0.0% [0.0%, 27.8%]) | 10/10 (100.0% [72.2%, 100.0%]) |
+| D18 | sd_population_as_sd | deterministic_new | 0/10 (0.0% [0.0%, 27.8%]) | 10/10 (100.0% [72.2%, 100.0%]) |
 
 ## False blocks on clean controls
 
@@ -101,8 +107,8 @@ D06's variants carry different tiers, so its class rate mixes a deterministic va
 
 | profile | recall (all planted) | any-blocker recall | attribution accuracy | advisory-only detections |
 |---|---|---|---|---|
-| `science` | 620/1920 (32.3% [30.2%, 34.4%]) | 560/1920 (29.2% [27.2%, 31.2%]) | 560/560 (100.0% [99.3%, 100.0%]) | 60/1920 (3.1% [2.4%, 4.0%]) |
-| `science-ai4s` | 1740/1920 (90.6% [89.2%, 91.8%]) | 1350/1920 (70.3% [68.2%, 72.3%]) | 1350/1350 (100.0% [99.7%, 100.0%]) | 390/1920 (20.3% [18.6%, 22.2%]) |
+| `science` | 620/2000 (31.0% [29.0%, 33.1%]) | 560/2000 (28.0% [26.1%, 30.0%]) | 560/560 (100.0% [99.3%, 100.0%]) | 60/2000 (3.0% [2.3%, 3.8%]) |
+| `science-ai4s` | 1820/2000 (91.0% [89.7%, 92.2%]) | 1430/2000 (71.5% [69.5%, 73.4%]) | 1430/1430 (100.0% [99.7%, 100.0%]) | 390/2000 (19.5% [17.8%, 21.3%]) |
 
 Attribution accuracy is computed among planted instances that were blocked for any rule: the fraction where an expected rule or check fired.
 
@@ -110,8 +116,8 @@ Attribution accuracy is computed among planted instances that were blocked for a
 
 | profile | mean ms per instance | max ms | n |
 |---|---|---|---|
-| `science` | 1.20 | 18.09 | 1980 |
-| `science-ai4s` | 2.20 | 4.96 | 1980 |
+| `science` | 1.26 | 15.32 | 2060 |
+| `science-ai4s` | 2.51 | 5.46 | 2060 |
 
 The layer was run twice on the same bytes and the two row files were byte-identical apart from wall time: run-to-run spread is zero by measurement, not quoted as an interval.
 
@@ -120,16 +126,16 @@ The layer was run twice on the same bytes and the two row files were byte-identi
 ```
 python:                   3.13.14
 platform:                 macOS-26.6.2-arm64-arm-64bit-Mach-O
-git sha:                  1f6120e103c7a08c43ef03ac5349814dc6d6db90
+git sha:                  966a218f0033b0cf8aacea000caff784f7c0e0ef
 tree dirty:               True
-crossaudit:               /Users/ericdong/Claude/crossaudit-harness-ai4s/src/crossaudit/__init__.py
+crossaudit:               /Users/ericdong/Claude/crossaudit-harness-ai4s-v2/src/crossaudit/__init__.py
 generation seed:          20261021 (from taxonomy.json)
-corpus manifest sha256:   89d39e8b02d7f8e2e67f6a0734916f1a70ec267a4a2c9b3cff04d0ddd77c7e0a
-taxonomy sha256:          f1b6783e3ecad9d225a24833d2280c8291e2e7af14bec53a43acd1b3f89c7854
-checks contracts sha256:  c5a196d402d9d761b711fd37171512ccc9c899a398c92fa6a6f8f47fab127827
-rows sha256:              de3acebd6bf9f413c52cb68d7434fc118e1da06208c2331ade4710de70b90d36
-utc start:                2026-10-21T21:35:42+00:00
-utc end:                  2026-10-21T21:35:58+00:00
+corpus manifest sha256:   726da406a435ff32c838193786e73cb86072d1b8d45dc139f2ecd2425ac66aca
+taxonomy sha256:          d70b5f1c1dd8fab314819dcb6c700008c02337e0f4ce890ad949a95abcd33916
+checks contracts sha256:  4e7d565a57bdfd772a41b169d0e5ec7b72dd97d6a9646aa772ada9e6d3676e8d
+rows sha256:              24d31e658da682e37a014f7c01784d1e350d2712adeccf3011f4a6d5e60b3f2f
+utc start:                2026-10-22T00:05:21+00:00
+utc end:                  2026-10-22T00:05:40+00:00
 ```
 
 ## Deviations
@@ -146,21 +152,3 @@ Fixed text; the full statement is DESIGN.md §6, which binds this record.
 - **Deterministic layer only.** The model rung is prepared (`run_auditor.py`) but not run in this record.
 - **Declarations are honest by construction.** The corpus writes the declarations a compliant generator would; whether real generators do is a separate study.
 - **One author, one vendor.** The pack and the corpus were written by the same agent line; cross-vendor review of the measurement code has not happened.
-
-## Deviations recorded after the run
-
-Added by the lead, not rendered by `report.py`; the full numbered list is
-`records/run-2026-10-21/DEVIATIONS.md`. Two change how the lines above should
-be read:
-
-- **H2's false-block condition was unsatisfiable at the preregistered n.**
-  0 of 60 clean controls has a Wilson upper bound of 6.0%; the 2.5% bound
-  needs n ≥ 150. The preregistered decision ("does not hold") stands. An
-  exploratory run with 180 clean controls
-  (`records/run-2026-10-21-exploratory-x30/`, post hoc, labelled) gives 0 of
-  180 false blocks for both profiles, Wilson upper bound 2.1%, with the same
-  class-averaged recall (shipped 0.275, extended 0.902, delta 0.627).
-- **The bootstrap interval [0.627, 0.627] is a point because the layer is
-  deterministic across templates**; the coverage simulation does not
-  describe this run, and the interval is uncalibrated here. The point
-  estimate is exact for this corpus.

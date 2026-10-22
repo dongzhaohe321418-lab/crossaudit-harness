@@ -32,6 +32,18 @@ def sd(x):
     return math.sqrt(math.fsum((v - m) ** 2 for v in x) / (len(x) - 1))
 
 
+def sd_population(x):
+    """Population standard deviation (n): numpy.std's default, ddof=0."""
+    m = mean(x)
+    return math.sqrt(math.fsum((v - m) ** 2 for v in x) / len(x))
+
+
+def median(x):
+    s = sorted(x)
+    mid = len(s) // 2
+    return s[mid] if len(s) % 2 else (s[mid - 1] + s[mid]) / 2.0
+
+
 def linfit(x, y):
     """Ordinary least squares y = slope * x + intercept."""
     mx, my = mean(x), mean(y)
@@ -152,6 +164,11 @@ def decimals_for(u):
 
 def rounded(v, d):
     return int(round(v)) if d <= 0 else round(v, d)
+
+
+def sig_decimals(v, figures):
+    """Decimals that keep `figures` significant figures of v."""
+    return max(0, first_sig_place(v) + figures - 1)
 
 
 def tolerance(d):

@@ -3,7 +3,9 @@
 Reads data/measurements.csv (subject_id, group, response), reports per-group
 means, standard deviations and sizes, the difference treated - control with
 its Welch 95% confidence interval, Welch t, Welch-Satterthwaite df and the
-two-sided p-value (computed from the reported t and df). The uncertainty on
+two-sided p-value (computed from the reported t and df), the control median,
+and the treated mean as a ratio of and a percent change from the control
+mean. The uncertainty on
 the difference is a bootstrap standard error (400 resamples within each group,
 seeded by --seed). Writes results.json and results.txt beside scripts/ and
 prints results.json. Standard library only.
@@ -54,6 +56,9 @@ def run(read, seed):
         quantity("t_statistic", t_rep, "1", src),
         quantity("df", df_rep, "1", src),
         quantity("p_value", p_rep, "1", src),
+        quantity("median_control", rounded(median(ctl), 3), UNIT, src),
+        quantity("ratio_means", rounded(mean(trt) / mean(ctl), 4), "1", src),
+        quantity("change_pct", rounded(100.0 * (mean(trt) - mean(ctl)) / abs(mean(ctl)), 2), "%", src),
     ]
     c = {"column": "group", "equals": "control"}
     tr = {"column": "group", "equals": "treated"}
@@ -72,6 +77,9 @@ def run(read, seed):
         derivation("t_statistic", "welch_t", {"file": DATA, "a": a, "b": b}, 3),
         derivation("df", "welch_df", {"file": DATA, "a": a, "b": b}, 2),
         derivation("p_value", "t_pvalue_two_sided", {"t": "t_statistic", "df": "df"}, 4),
+        derivation("median_control", "median", {"file": DATA, "x": "response", "where": c}, 3),
+        derivation("ratio_means", "ratio", {"file": DATA, "a": a, "b": b}, 4),
+        derivation("change_pct", "percent_change", {"file": DATA, "new": a, "old": b}, 2),
     ]
     claims = [
         {"text": "the difference between groups is significant at the 0.05 level",

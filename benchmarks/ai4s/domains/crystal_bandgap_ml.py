@@ -41,6 +41,8 @@ RANGES = [
     {"name": "rmse_*", "unit": "eV", "min": 0, "max": 15},
     {"name": "r2_*", "unit": "1", "min": -1, "max": 1},
     {"name": "n_*", "unit": "1", "min": 1},
+    {"name": "error_ratio", "unit": "1", "min": 0},
+    {"name": "improvement_pct", "unit": "%", "min": -100},
 ]
 SYSTEMS = ["Li-F", "Na-Cl", "K-Br", "Mg-O", "Ca-S", "Zn-S", "Ga-N", "Ga-As",
            "In-P", "Cd-Te", "Al-N", "Si-C"]
@@ -156,7 +158,9 @@ def summary(p, inst: Instance) -> str:
         f"(bootstrap standard error {unc} eV) and a root-mean-square error of "
         f"{p.n('rmse_test')}, with r2 = {p.n('r2_test')}.\n\n"
         "A baseline that predicts the training-set mean band gap has a test MAE of "
-        f"{p.n('mae_baseline')}, so the model's error is lower than that of the baseline.\n")
+        f"{p.n('mae_baseline')}, so the model's error is lower than that of the baseline: the "
+        f"ratio of the two test MAEs is {p.n('error_ratio')}, a change of "
+        f"{p.n('improvement_pct')} from the baseline's.\n")
 
 
 SPEC = {
@@ -171,4 +175,5 @@ SPEC = {
                "using 5-fold random cross-validation"),
     "d13": ["improvement_claim_false"],
     "has_split": True,
+    "d18": {"ratio_inverted": "error_ratio", "percent_sign_flipped": "improvement_pct"},
 }
