@@ -34,7 +34,9 @@ under every pack check would multiply one defect into eight findings.
   `precision` reads a value as written and a string is how a writer preserves
   trailing zeros.
 * CA-PHYS-001 (BLOCKER, `range_rules`) — a quantity matched by a declared range
-  has a unit that is not byte-equal to the declared one, a value outside the
+  has a unit that is not byte-equal to the declared one (no case folding, no
+  whitespace stripping, no synonym table: `kJ/mol`, `kJ mol⁻¹` and `kJ/mol `
+  are three different units here, unlike in `number_source`), a value outside the
   inclusive bounds, or a value that cannot be compared at all; OR the
   ```crossaudit-ranges block itself is malformed (not JSON, not a list of
   entries with non-empty `name` and `unit`, a non-numeric bound, min > max, an
@@ -44,12 +46,40 @@ under every pack check would multiply one defect into eight findings.
   declared tolerance; or it cannot be recomputed (malformed row, unknown
   method, missing argument, file not in scope, undecodable or unparseable CSV,
   missing or duplicated column, empty or non-numeric cell, too few rows, a
-  quantity name that matches no row or more than one).
+  quantity name that matches no row or more than one, a `where` clause of the
+  wrong shape, a zero divisor in `ratio` or `percent_change`, an input key the
+  method does not take — the message names the keys it does take, so a
+  guessed argument name reads "`mae` takes truth, pred; got x, y" and an
+  ignored filter is a shape error rather than a "value disagrees"). When the row is
+  `t_pvalue_two_sided` and its `t` or `df` is not a quantity grounded by a
+  derivation chain of its own (below), the message adds one sentence: `t` and
+  `df` are read as REPORTED values, never as columns, so declare `welch_t` /
+  `welch_df` rows for them to verify the chain end to end. A sentence, not a
+  separate finding.
 * CA-DERIV-002 (ADVISORY, `derivations`) — a derivation whose file is declared
   `uncommitted` and is indeed not in scope: the generator said where, the
   project does not keep it, so the check says it could not look rather than
   passing in silence. A file declared uncommitted that IS in scope is verified
   like any other.
+* CA-DERIV-003 (ADVISORY, `derivations`) — a derivation that AGREES, with a
+  caveat about its declaration; two shapes. (a) It was declared with the one
+  accepted alias, `filter: {<column>: <value>}` (one column, one value, and
+  only in a one-sample or paired form) for `where`, and the
+  finding gives the canonical form; an alias selects the same rows and is
+  reported, so reading it is not fail-open, and an alias that could mean two
+  things (beside a `where`, shaped like a where clause, empty, a non-text
+  value) blocks under CA-DERIV-001. (b) It is computed from scalar
+  operands (`t_pvalue_two_sided`, `scale`, and `ratio` / `percent_change` in
+  their scalar form) that AGREES with its reported value, but reads a quantity
+  that is not grounded: no derivation row recomputes that quantity from a
+  committed file, directly or through a chain of scalar rows whose own
+  operands are grounded. The arithmetic was checked; the input to it is a
+  reported number nobody checked, so the row is "verified against a reported
+  number", not "verified", and says so. A numeric literal operand is part of
+  the declaration itself and needs no grounding. A row that already blocks
+  under CA-DERIV-001 gets no CA-DERIV-003 as well. Never blocks: whether the
+  operand should have been declared is coverage, and coverage is the
+  auditor's tier.
 * CA-ML-001 (BLOCKER, `split_integrity`) — a `splits.json` whose train/test
   (and optional val/validation) id lists overlap, repeat an id, name an id the
   data file does not hold, or share a group when `group_column` is set; or the
@@ -67,6 +97,30 @@ under every pack check would multiply one defect into eight findings.
 * CA-PREC-001 (ADVISORY, `precision`) — a value written with more decimal
   places than one beyond the first significant digit of its own numeric
   `uncertainty`.
+
+**The derivation methods** (`_METHODS`; DESIGN §4.3, v2 additions in §9
+Amendment 3). Column vectors: count, mean, sd and sem (n − 1), sd_population
+and sem_population (n — numpy's `std` default, which the first dogfood audit
+found reported as sample sds), median, min, max, sum, last, last_delta_abs.
+Two samples: difference, welch_t, welch_df, ci95_low, ci95_high. Paired
+columns: mae, rmse, r2, pearson_r, linfit_slope, linfit_intercept,
+arrhenius_ea_kj_per_mol, arrhenius_ln_a; bragg_cubic_a. Scalar operands only:
+t_pvalue_two_sided, scale. Either form, decided by the presence of `file`:
+ratio(a, b) = a / b and percent_change(new, old) = 100 · (new − old) / |old| —
+over the MEANS of two selected samples with a file, over quantity names or
+literals without one. `where` is one `{"column", "equals"}` clause or a
+non-empty list of them, all of which must hold; any other shape blocks.
+
+**An unrecognised declaration key is a declaration that cannot be read.** A
+derivation's `input` may carry only `file`, the method's own argument keys,
+`where`, `uncommitted`, `column` (the alias of a single-column `x`),
+`wavelength` (bragg_cubic_a only) and the one alias `filter`; a two-sample
+argument mapping is exactly `{"column", "where"}`; a where clause is exactly
+`{"column", "equals"}`. Anything else is CA-DERIV-001 naming the keys the
+method takes — never ignored. v1 ignored unknown `input` keys, so a filter
+under another name ran over every row and came back as "value disagrees"
+(the live-generator experiment's Arm C, records under
+`~/Claude/crossaudit-dogfood/declarations-experiment/`).
 
 **Which comparisons are exact and which are floating point.** Range bounds,
 claims and the `sig` tolerance compare canonical decimals (`Decimal` built from
@@ -342,6 +396,35 @@ def _var(v: list[float]) -> float:
     return math.fsum((x - m) ** 2 for x in v) / (len(v) - 1)
 
 
+def _var_population(v: list[float]) -> float:
+    """The n-divisor variance — `numpy.std`'s default (`ddof=0`), which the
+    first dogfood audit found reported as a sample sd in two real repositories.
+    Declaring it is how a generator says honestly which one it computed."""
+    m = _mean(v)
+    return math.fsum((x - m) ** 2 for x in v) / len(v)
+
+
+def _median(v: list[float]) -> float:
+    if not v:
+        raise _Undecidable("needs at least one row")
+    s = sorted(v)
+    mid = len(s) // 2
+    return s[mid] if len(s) % 2 else (s[mid - 1] + s[mid]) / 2.0
+
+
+def _ratio(a: float, b: float) -> float:
+    if b == 0:
+        raise _Undecidable("the divisor b is zero; the ratio is undefined")
+    return a / b
+
+
+def _percent_change(new: float, old: float) -> float:
+    """100 * (new - old) / |old|: the sign follows the change, whatever old's sign."""
+    if old == 0:
+        raise _Undecidable("the reference value old is zero; a percent change is undefined")
+    return 100.0 * (new - old) / abs(old)
+
+
 def _betacf(a: float, b: float, x: float) -> float:
     """Continued fraction for the incomplete beta, modified Lentz."""
     tiny, eps = 1e-300, 1e-16
@@ -508,15 +591,23 @@ def _ci(sign: int):
     return fn
 
 
-#: The registry, exactly DESIGN §4.3. Each entry: (kind, argument keys, fn).
-#: kind "single": one column vector; "two": two independent samples, each
-#: argument a column or {"column", "where"}; "paired": columns of the same
-#: rows; "scalar": operands are numeric literals or quantity names.
+#: The registry, exactly DESIGN §4.3 (v2 additions: Amendment 3). Each entry:
+#: (kind, argument keys, fn). kind "single": one column vector; "two": two
+#: independent samples, each argument a column or {"column", "where"};
+#: "paired": columns of the same rows; "scalar": operands are numeric literals
+#: or quantity names; "mixed": with a `file`, each operand is a sample exactly
+#: as for "two" and fn receives the two sample MEANS; without one, each operand
+#: is a scalar exactly as for "scalar". Which form a row uses is decided by the
+#: presence of `file` and nothing else.
 _METHODS: dict[str, tuple[str, tuple[str, ...], Callable]] = {
     "count": ("count", ("x",), len),
     "mean": ("single", ("x",), _mean),
     "sd": ("single", ("x",), lambda v: math.sqrt(_var(v))),
     "sem": ("single", ("x",), lambda v: math.sqrt(_var(v) / len(v))),
+    "sd_population": ("single", ("x",), lambda v: math.sqrt(_var_population(v))),
+    "sem_population": ("single", ("x",),
+                       lambda v: math.sqrt(_var_population(v)) / math.sqrt(len(v))),
+    "median": ("single", ("x",), _median),
     "min": ("single", ("x",), _nonempty(min)),
     "max": ("single", ("x",), _nonempty(max)),
     "sum": ("single", ("x",), math.fsum),
@@ -539,8 +630,183 @@ _METHODS: dict[str, tuple[str, tuple[str, ...], Callable]] = {
     "bragg_cubic_a": ("bragg", ("two_theta_deg", "h", "k", "l"), _bragg),
     "t_pvalue_two_sided": ("scalar", ("t", "df"), t_pvalue_two_sided),
     "scale": ("scalar", ("x", "factor"), lambda x, f: x * f),
+    "ratio": ("mixed", ("a", "b"), _ratio),
+    "percent_change": ("mixed", ("new", "old"), _percent_change),
 }
 METHODS = tuple(_METHODS)
+
+#: One line per method: what it computes. With `_METHODS` this is the single
+#: source of the generator-facing table (`method_table`), which the scaffold
+#: writes into skills/ai4s-declarations.md — so the table a generator reads and
+#: the keys this check accepts cannot drift apart. A method registered without
+#: a line here fails `method_table` (and its test), never silently.
+_MEANINGS: dict[str, str] = {
+    "count": "number of selected rows",
+    "mean": "arithmetic mean",
+    "sd": "sample standard deviation (n − 1)",
+    "sem": "sample standard error, sd / √n",
+    "sd_population": "population standard deviation (n; numpy.std's default, ddof=0)",
+    "sem_population": "population sd / √n",
+    "median": "median (mean of the two middle values for an even count)",
+    "min": "smallest value",
+    "max": "largest value",
+    "sum": "sum",
+    "last": "value in the last selected row",
+    "last_delta_abs": "abs(y[−1] − y[−2]) over the last two selected rows",
+    "difference": "mean(a) − mean(b)",
+    "welch_t": "Welch's t statistic of a against b",
+    "welch_df": "Welch–Satterthwaite degrees of freedom",
+    "ci95_low": "lower end of the Welch 95% interval for mean(a) − mean(b)",
+    "ci95_high": "upper end of the Welch 95% interval for mean(a) − mean(b)",
+    "mae": "mean of abs(truth − pred)",
+    "rmse": "√mean (truth − pred)²",
+    "r2": "1 − SS_res / SS_tot of pred against truth",
+    "pearson_r": "Pearson correlation of x and y",
+    "linfit_slope": "least-squares slope of y on x",
+    "linfit_intercept": "least-squares intercept of y on x",
+    "arrhenius_ea_kj_per_mol": "−R × slope of ln k on 1/T_K, in kJ/mol",
+    "arrhenius_ln_a": "intercept of ln k on 1/T_K",
+    "bragg_cubic_a": "mean over peaks of d·√(h²+k²+l²), d = λ / (2 sin θ); λ in Å, default 1.5406",
+    "t_pvalue_two_sided": "two-sided Student-t p-value of t with df degrees of freedom",
+    "scale": "x × factor",
+    "ratio": "a / b (with a file: mean(a) / mean(b))",
+    "percent_change": "100 × (new − old) / abs(old) (with a file: over the means)",
+}
+
+_FORMS = {
+    "count": "columns", "single": "columns", "paired": "columns (same rows)",
+    "bragg": "columns (same rows)", "two": "two samples",
+    "scalar": "quantities", "mixed": "samples or quantities",
+}
+
+
+def _allowed_keys(method: str) -> set[str]:
+    """Every input key a row for `method` may carry. Anything else blocks."""
+    kind, keys, _fn = _METHODS[method]
+    if kind == "scalar":
+        return set(keys)
+    allowed = set(keys) | {"file", "where", "uncommitted"}
+    if kind in ("single", "count") and keys == ("x",):
+        allowed.add("column")
+    if kind == "bragg":
+        allowed.add("wavelength")
+    return allowed
+
+
+def _key_spec(method: str) -> str:
+    kind, keys, _fn = _METHODS[method]
+    names = ", ".join(f"`{k}`" for k in keys)
+    if kind == "scalar":
+        return f"{names} — each a quantity name or a number (no file)"
+    if kind == "mixed":
+        return (f"{names} — with `file`: each a column or `{{\"column\", \"where\"}}`; "
+                "without: each a quantity name or a number")
+    if kind == "two":
+        return f"`file`, {names} — each a column or `{{\"column\", \"where\"}}`"
+    extra = " (or `column`)" if "column" in _allowed_keys(method) else ""
+    extra += ", optional `wavelength`" if kind == "bragg" else ""
+    return f"`file`, {names}{extra} — column names"
+
+
+def method_table() -> str:
+    """The generator-facing derivation table, rendered from `_METHODS`.
+
+    Markdown, one row per registered method: name, form, the EXACT input keys,
+    and what it computes. `where` (optional for every file-reading form) is
+    described once, under the table, rather than in every row.
+    """
+    missing = [m for m in METHODS if m not in _MEANINGS]
+    if missing:
+        raise RuntimeError(f"no meaning recorded for methods {missing}")
+    bad = [m for m, text in _MEANINGS.items() if "|" in text]
+    if bad:
+        raise RuntimeError(f"a table cell may not hold '|': {bad}")
+    rows = ["| method | form | input keys (exactly these) | computes |",
+            "|---|---|---|---|"]
+    for m in METHODS:
+        rows.append(f"| `{m}` | {_FORMS[_METHODS[m][0]]} | {_key_spec(m)} | {_MEANINGS[m]} |")
+    rows.append("")
+    rows.append("Every form that reads a `file` also takes an optional `where`: one "
+                "`{\"column\": …, \"equals\": …}` clause or a non-empty list of them "
+                "(all must hold), cells compared as strings. Any other input key "
+                "blocks; the message names the keys the method takes.")
+    return "\n".join(rows)
+
+
+#: Where the `filter` alias is read. Only forms whose top-level `where` selects
+#: THE rows the method reads (one sample, or one set of paired rows). In a
+#: two-sample form a top-level filter beside `a`/`b` could mean "both samples
+#: from these rows" or "this is how a differs from b" — the shape the second
+#: live-generator run wrote, which then ran Welch's t over every row and was
+#: reported as a value mismatch — so there `filter` is an unknown key and blocks.
+_ALIAS_KINDS = ("single", "count", "paired", "bragg")
+
+#: Keys a generator writes for a filter that is not `where`, and what to say.
+_FILTER_WORDS = ("filter", "filters", "select", "subset", "rows", "group", "split",
+                 "condition", "where_column")
+
+
+def _normalise_input(method: str, spec: dict) -> tuple[dict, str]:
+    """Check a row's input keys against the method; read the one alias.
+
+    Returns (input, note): `note` is non-empty when the `filter` alias was read,
+    and is what the CA-DERIV-003 advisory says. `filter: {<column>: <value>, …}`
+    — the shape the first live-generator experiment wrote 17 times — is read as
+    `where: [{"column": <column>, "equals": <value>}, …]`. An alias is not a
+    truth claim: the same rows are selected either way, the arithmetic is the
+    check's own, and the reading is reported, so accepting it is not fail-open.
+    Everything that could mean two things still blocks: `filter` beside
+    `where`, a `filter` shaped like a where clause, an empty one, a non-string
+    value. Any other key the method does not take blocks, naming the keys it
+    does take — an ignored filter used to run the mean over every row and
+    report "value disagrees" for what was a shape error.
+    """
+    kind, keys, _fn = _METHODS[method]
+    note = ""
+    if "filter" in spec and kind in _ALIAS_KINDS:
+        raw = spec["filter"]
+        if "where" in spec:
+            raise _Undecidable("input gives both 'filter' and 'where'; write one where")
+        if (not isinstance(raw, dict) or len(raw) != 1 or "column" in raw or "equals" in raw
+                or any(not isinstance(c, str) or not c for c in raw)
+                or any(isinstance(v, bool) or not isinstance(v, (str, int))
+                       for v in raw.values())):
+            raise _Undecidable(
+                f"input 'filter' {raw!r} cannot be read; the alias is accepted only as "
+                "one column and one value, {<column>: <value>}; write where: "
+                "{\"column\": <name>, \"equals\": <value>} (or a list of such clauses)")
+        (col, val), = raw.items()
+        spec = {k: v for k, v in spec.items() if k != "filter"}
+        spec["where"] = {"column": col, "equals": val}
+        note = (f"read 'filter': {json.dumps(raw, ensure_ascii=False)} as 'where': "
+                f"{json.dumps(spec['where'], ensure_ascii=False)}; write the where form")
+    allowed = _allowed_keys(method)
+    unknown = sorted(k for k in spec if k not in allowed)
+    given = sorted(k for k in spec if k not in ("file", "where", "uncommitted"))
+    takes = ", ".join(keys) + ("" if kind == "scalar" else " and optional where")
+    if unknown:
+        hints = []
+        for k in unknown:
+            if k in _FILTER_WORDS:
+                hints.append(f"to keep rows by a column write where: {{\"column\": ..., "
+                             f"\"equals\": ...}} instead of {k!r}")
+            elif k in ("file", "where") and kind in ("scalar", "mixed"):
+                hints.append(f"{method} reads quantities, not a file, here")
+            else:
+                users = [m for m in METHODS if k in _METHODS[m][1] and m != method]
+                if users:
+                    hints.append(f"{k!r} is an argument of {', '.join(users[:4])}"
+                                 f"{', …' if len(users) > 4 else ''}")
+        raise _Undecidable(
+            f"input has a key this method does not take "
+            f"({', '.join(repr(k) for k in unknown)}); {method} takes {takes}; got "
+            f"{', '.join(given) or 'nothing'}" + (f" ({'; '.join(hints)})" if hints else ""))
+    present = set(spec) | ({"x"} if "column" in spec else set())
+    missing = [k for k in keys if k not in present]
+    if missing:
+        raise _Undecidable(f"{method} takes {takes}; got {', '.join(given) or 'nothing'} "
+                           f"(missing {', '.join(missing)})")
+    return spec, note
 
 
 # ------------------------------------------------------------- CSV access
@@ -593,17 +859,31 @@ def _column(table: _Table, name) -> str:
     return name
 
 
+def _clauses(where) -> list[dict]:
+    """`where` as a list of clauses: one {"column", "equals"} mapping, or a
+    non-empty list of them (all must hold). Anything else cannot be read."""
+    if isinstance(where, dict):
+        where = [where]
+    elif not isinstance(where, list) or not where:
+        raise _Undecidable("where must be {\"column\", \"equals\"} or a non-empty list "
+                           "of them")
+    for n, clause in enumerate(where):
+        if not isinstance(clause, dict) or set(clause) != {"column", "equals"}:
+            raise _Undecidable(f"where clause [{n}] must be exactly "
+                               "{\"column\", \"equals\"}")
+        want = clause["equals"]
+        if isinstance(want, bool) or not isinstance(want, (str, int)):
+            raise _Undecidable(f"where clause [{n}] equals must be a string or an integer")
+    return where
+
+
 def _filter(table: _Table, rows: list[dict], where) -> list[dict]:
     if where is None:
         return rows
-    if (not isinstance(where, dict) or set(where) != {"column", "equals"}):
-        raise _Undecidable("where must be exactly {\"column\", \"equals\"}")
-    col = _column(table, where["column"])
-    want = where["equals"]
-    if isinstance(want, bool) or not isinstance(want, (str, int)):
-        raise _Undecidable("where.equals must be a string or an integer")
-    want = str(want)
-    return [r for r in rows if r.get(col) == want]
+    # Every clause is read (shape AND column) before any row is kept, so a
+    # malformed second clause blocks even when the first selects nothing.
+    tests = [(_column(table, c["column"]), str(c["equals"])) for c in _clauses(where)]
+    return [r for r in rows if all(r.get(col) == want for col, want in tests)]
 
 
 def _cell(table: _Table, row: dict, col: str) -> float:
@@ -653,16 +933,29 @@ def _compute(files: Mapping[str, bytes], base: str, doc: dict, method: str,
     missing = [k for k in keys if k not in spec]
     if missing:
         raise _Undecidable(f"method {method!r} needs input {missing}")
-    if kind == "scalar":
+    if kind == "mixed" and "file" not in spec and (
+            "where" in spec or any(isinstance(spec[k], dict) for k in keys)):
+        # A row-filter with no file is a column-form row that lost its file;
+        # reading its strings as quantity names instead would be a guess.
+        raise _Undecidable(f"method {method!r} has a where filter but no file; give "
+                           "the file for the column form, or plain quantity names or "
+                           "numbers for the scalar form")
+    if _scalar_form(method, spec):
         return fn(*(_scalar_operand(doc, spec[k], k) for k in keys))
     if not isinstance(spec.get("file"), str) or not spec["file"]:
         raise _Undecidable("input names no file")
-    table = _read_table(files, posixpath.normpath(posixpath.join(base, spec["file"])))
+    target = posixpath.normpath(posixpath.join(base, spec["file"]))
+    if target not in files:
+        raise _Undecidable(
+            f"file {spec['file']!r} resolves to {target!r}, which is not in the audited "
+            f"scope; input files are named relative to {base or 'the scope root'!r}, the "
+            "directory holding this results.json")
+    table = _read_table(files, target)
     rows = _filter(table, table.rows, spec.get("where"))
     if kind == "count":
         _column(table, spec["x"])
         return float(len(rows))
-    if kind == "two":
+    if kind in ("two", "mixed"):
         samples = []
         for k in keys:
             arg = spec[k]
@@ -674,6 +967,8 @@ def _compute(files: Mapping[str, bytes], base: str, doc: dict, method: str,
                 sub = _filter(table, rows, arg.get("where"))
                 arg = arg["column"]
             samples.append(_vector(table, sub, _column(table, arg)))
+        if kind == "mixed":
+            return fn(*(_mean(v) for v in samples))
         return fn(*samples)
     cols = [_column(table, spec[k]) for k in keys]
     vectors = [_vector(table, rows, c) for c in cols]
@@ -684,6 +979,83 @@ def _compute(files: Mapping[str, bytes], base: str, doc: dict, method: str,
             raise _Undecidable("wavelength must be a positive number (Å)")
         return fn(*vectors, wl)
     return fn(*vectors)
+
+
+def _scalar_form(method: str, spec: dict) -> bool:
+    """Whether this row reads its operands from the quantities list."""
+    kind = _METHODS[method][0]
+    return kind == "scalar" or (kind == "mixed" and "file" not in spec)
+
+
+def _grounded(files: Mapping[str, bytes], base: str, rows: list) -> set[str]:
+    """The quantity names a derivation chain recomputes from a committed file.
+
+    A row in column form grounds its quantity when its file is not declared
+    uncommitted-and-absent; a scalar-form row grounds its quantity when every
+    operand that names a quantity is itself grounded (numeric literals need
+    nothing). Iterated to a fixed point, so a chain of scalar rows grounds only
+    if its first link reads a file, and a cycle grounds nothing. Whether each
+    row AGREES is CA-DERIV-001's business; grounding asks only whether a
+    committed file stands at the root of the chain.
+    """
+    usable = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        name, method, spec = row.get("quantity"), row.get("method"), row.get("input")
+        if isinstance(name, str) and method in _METHODS and isinstance(spec, dict):
+            usable.append((name, method, spec))
+    grounded: set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        for name, method, spec in usable:
+            if name in grounded:
+                continue
+            if _scalar_form(method, spec):
+                ops = [spec.get(k) for k in _METHODS[method][1]]
+                ok = all(isinstance(o, str) and o in grounded
+                         or (not isinstance(o, (str, bool)) and _float(o) is not None)
+                         for o in ops)
+            elif _is_uncommitted(spec):
+                target = spec.get("file")
+                ok = (isinstance(target, str) and target != "uncommitted"
+                      and posixpath.normpath(posixpath.join(base, target)) in files)
+            else:
+                ok = True
+            if ok:
+                grounded.add(name)
+                changed = True
+    return grounded
+
+
+def _ungrounded_operands(method: str, spec: dict, grounded: set[str]) -> list[str]:
+    """The quantity names a scalar-form row reads that no chain grounds."""
+    return [spec[k] for k in _METHODS[method][1]
+            if isinstance(spec.get(k), str) and spec[k] not in grounded]
+
+
+def _pvalue_hint(spec, grounded: set[str]) -> str:
+    """The sentence a t_pvalue_two_sided CA-DERIV-001 carries when its t or df
+    is not a grounded quantity — the first dogfood audit declared them as
+    columns and got only "cannot be verified" back."""
+    if not isinstance(spec, dict):
+        spec = {}
+    loose = []
+    for k in ("t", "df"):
+        raw = spec.get(k)
+        if isinstance(raw, str):
+            if raw not in grounded:
+                loose.append(f"{k!r} names {raw!r}, which no derivation row verifies")
+        elif isinstance(raw, bool) or _float(raw) is None:
+            loose.append(f"{k!r} is " + ("missing" if k not in spec
+                                         else "neither a quantity name nor a number"))
+    if not loose:
+        return ""
+    return (" t_pvalue_two_sided reads t and df as REPORTED values (a quantity name "
+            "or a number), never as columns; here " + "; ".join(loose) + ". Declare "
+            "the t statistic with method welch_t and the degrees of freedom with "
+            "welch_df over the committed file, so the chain is verified end to end.")
 
 
 def _round_sig(d: Decimal, n: int) -> str | None:
@@ -739,7 +1111,7 @@ def _is_uncommitted(spec: dict) -> bool:
 
 
 def check_derivations(files: Mapping[str, bytes]) -> list[Finding]:
-    """CA-DERIV-001/002: declared derivations recompute from committed files."""
+    """CA-DERIV-001/002/003: declared derivations recompute from committed files."""
     out: list[Finding] = []
     for path, doc in _results_docs(files):
         if "derivations" not in doc:
@@ -750,8 +1122,12 @@ def check_derivations(files: Mapping[str, bytes]) -> list[Finding]:
                                "derivations must be a list"))
             continue
         base = posixpath.dirname(path)
+        grounded = _grounded(files, base, rows)
         for j, row in enumerate(rows):
             where = f"derivations[{j}]"
+            method = row.get("method") if isinstance(row, dict) else None
+            hint = (_pvalue_hint(row.get("input"), grounded)
+                    if method == "t_pvalue_two_sided" else "")
             try:
                 if not isinstance(row, dict):
                     raise _Undecidable("is not a mapping")
@@ -769,6 +1145,7 @@ def check_derivations(files: Mapping[str, bytes]) -> list[Finding]:
                 if not isinstance(spec, dict):
                     raise _Undecidable("input must be a mapping")
                 _tolerance(row.get("tolerance"))         # malformed blocks first
+                spec, alias = _normalise_input(method, spec)
                 if _is_uncommitted(spec):
                     target = spec.get("file")
                     present = (isinstance(target, str) and target != "uncommitted"
@@ -788,17 +1165,37 @@ def check_derivations(files: Mapping[str, bytes]) -> list[Finding]:
                     raise _Undecidable("recomputed value is not finite")
                 if not agrees(computed, q.get("value"), row.get("tolerance")):
                     tol = row.get("tolerance") or {"rel": 1e-9}
+                    origin = ("from the quantities it names" if _scalar_form(method, spec)
+                              else "from the committed file")
                     out.append(Finding(
                         BLOCKER, "CA-DERIV-001", path,
-                        f"{where}: {method} recomputed from the committed file gives "
+                        f"{where}: {method} recomputed {origin} gives "
                         f"{computed!r}, the reported value is {q.get('value')!r}, which "
-                        f"does not agree under tolerance {tol}"))
+                        f"does not agree under tolerance {tol}"
+                        + (f" ({alias})" if alias else "") + (f".{hint}" if hint else "")))
+                    continue
+                if alias:
+                    out.append(Finding(
+                        ADVISORY, "CA-DERIV-003", path,
+                        f"{where}: {method} agrees with the reported value, but the "
+                        f"declaration is not in the canonical form: {alias}"))
+                if _scalar_form(method, spec):
+                    loose = _ungrounded_operands(method, spec, grounded)
+                    if loose:
+                        out.append(Finding(
+                            ADVISORY, "CA-DERIV-003", path,
+                            f"{where}: {method} agrees with the reported value, but it "
+                            f"reads {', '.join(repr(n) for n in loose)}, which no "
+                            "derivation chain recomputes from a committed file; it is "
+                            "verified against a reported number, not end to end"))
             except _Undecidable as exc:
                 out.append(Finding(BLOCKER, "CA-DERIV-001", path,
-                                   f"{where} cannot be verified: {exc}"))
+                                   f"{where} cannot be verified: {exc}"
+                                   + (f".{hint}" if hint else "")))
             except (ArithmeticError, ValueError) as exc:
                 out.append(Finding(BLOCKER, "CA-DERIV-001", path,
-                                   f"{where} cannot be verified: arithmetic failed ({exc})"))
+                                   f"{where} cannot be verified: arithmetic failed "
+                                   f"({exc})" + (f".{hint}" if hint else "")))
     return out
 
 
@@ -1050,7 +1447,10 @@ register("range_rules", check_range_rules,
          "audited scope (a JSON list of {name, unit, min?, max?}); for every "
          "results.json quantity whose name equals or case-sensitively glob-matches "
          "an entry (first match wins, files in path order), the unit must be "
-         "byte-equal to the declared unit and the value must lie within the "
+         "byte-equal to the declared unit (no case folding, no whitespace "
+         "stripping and no synonym table, unlike number_source: 'kJ/mol', "
+         "'kJ mol⁻¹' and 'kJ/mol ' with a trailing space are three different "
+         "units, and a quantity carrying the wrong one blocks) and the value must lie within the "
          "inclusive bounds, compared as exact decimals. A malformed block (bad JSON, "
          "an entry without a non-empty name or unit, a non-numeric bound, min above "
          "max, an unclosed fence, two fences in one file) blocks. A quantity no entry "
@@ -1060,17 +1460,36 @@ register("derivations", check_derivations,
          "For each row a results.json declares under derivations ({quantity, method, "
          "input, tolerance?}), recomputes the method with the standard library over "
          "the named CSV (path relative to the results.json directory, optional "
-         "where filter comparing cells as strings) or over named quantities, and "
+         "where filter comparing cells as strings: one {column, equals} clause or "
+         "a non-empty list of them, all of which must hold) or over named "
+         "quantities, and "
          "blocks if the reported value disagrees under the declared tolerance (abs, "
          "rel relative to the recomputed value, or sig significant figures; default "
-         "rel 1e-9). Methods: " + ", ".join(METHODS) + ". Recomputation is IEEE "
+         "rel 1e-9). Methods: " + ", ".join(METHODS) + ". sd and sem divide by "
+         "n-1; sd_population and sem_population divide by n (numpy's default). "
+         "ratio(a, b) is a/b and percent_change(new, old) is 100*(new-old)/|old|; "
+         "with a file each operand is a column (or {column, where}) and the "
+         "means of the selected rows are used, without one each operand is a "
+         "quantity name or a number. t_pvalue_two_sided and scale take quantity "
+         "names or numbers only, never columns. Recomputation is IEEE "
          "double arithmetic, so abs and rel are float comparisons and a relative "
          "tolerance below about 1e-14 is not meaningful; sig compares exact "
          "decimal roundings. An unknown method, a missing argument, a file not in "
          "scope, a missing or duplicated column, an empty or non-numeric cell, too "
-         "few rows, or a quantity name matching no row or several blocks: what "
-         "cannot be verified is not verified. A file declared uncommitted and absent "
-         "is advisory. A quantity with no derivation row is not checked. " + _BOUNDARY)
+         "few rows, a malformed where clause, a zero divisor, an input key the "
+         "method does not take (the message names the keys it does take), or a "
+         "quantity name "
+         "matching no row or several blocks: what cannot be verified is not "
+         "verified. A file declared uncommitted and absent is advisory "
+         "(CA-DERIV-002). In a one-sample or paired form, filter: {column_name: "
+         "value} (one column, one value) is read as the where clause it spells "
+         "and reported as advisory CA-DERIV-003 with the canonical form; any "
+         "other filter, and any key the method does not take, blocks. A row "
+         "computed from "
+         "quantity operands that agrees, but "
+         "reads a quantity no derivation chain recomputes from a committed file, "
+         "is advisory (CA-DERIV-003): verified against a reported number, not end "
+         "to end. A quantity with no derivation row is not checked. " + _BOUNDARY)
 register("split_integrity", check_split_integrity,
          "For every splits.json in the audited scope ({data, id_column, "
          "group_column?, train, test, val?/validation?}, data relative to the "
