@@ -24,6 +24,7 @@ from pathlib import Path
 
 from . import i18n
 from .. import doctor_shared
+from ..app_keys import child_env
 from ..config import CONFIG_NAME
 from ..errors import ConfigDenial, Denial
 from ..scaffold import (AUDIT_TREE, CONFIG_TEMPLATE, GENERAL_CHECKS,
@@ -168,21 +169,49 @@ def write_keys(pairs: dict[str, str]) -> Path:
 def gh_available() -> tuple[bool, str]:
     if not shutil.which("gh"):
         return False, "gh CLI not installed"
-    proc = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True)
+    proc = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True,
+                          env=child_env())
     if proc.returncode != 0:
         return False, "gh installed but not authenticated (run: gh auth login)"
     return True, "gh authenticated"
 
 
-def github_plan(science: str, audit: str) -> list[str]:
-    """What pairing would do. Printed for review; `pair --apply` performs it."""
-    return [
-        f"gh repo create {science} --private",
-        f"gh repo create {audit} --private        rules and reports live here",
-        f"gh secret set CROSSAUDIT_AUDITOR_KEY --repo {audit}",
-        f"gh api repos/{science}/branches/main/protection -X PUT",
-        "crossaudit pair --apply                  does all of it, after showing you",
-    ]
+def github_plan(cfg, science: str, audit: str) -> list[str]:
+    """What `crossaudit pair --apply` would do, drawn from the step table that
+    command runs (D173), then what it leaves to the person. Commands only: they
+    are typed, not read, so they stay Latin on a Chinese screen."""
+    from . import pair
+
+    todo = pair.steps(cfg, science, audit, private=True)
+    rows: list[str] = []
+    for i, step in enumerate(todo, 1):
+        for j, op in enumerate(step.ops):
+            rows.append(f"{(str(i) + '.') if j == 0 else '':<4}{pair.show(op, cfg.root)}")
+        if step.when:
+            rows.append(tui.dim("    " + t("done.two_repos.conditional")))
+    rows.append(f"crossaudit pair --science {science} --audit {audit} --apply")
+    rows.append(tui.dim("    " + t("done.two_repos.apply", n=len(todo))))
+    rows.append(t("done.two_repos.afterwards"))
+    for _sentence, commands in pair.afterwards(cfg, science, audit):
+        rows += ["    " + line.strip() for line in commands]
+    return rows
+
+
+def github_names(science_repo: str) -> tuple[str, str]:
+    """The owner/name pair `crossaudit pair` would choose. The owner is asked
+    of GitHub only when `gh` is signed in; otherwise it is left as OWNER for
+    the person to fill in, because the plan must not need an account."""
+    from . import pair
+
+    if "/" not in science_repo:
+        owner = "OWNER"
+        if pair.gh_state()[0] == "signed_in":
+            try:
+                owner = pair._owner()
+            except (Denial, ValueError, KeyError):
+                pass
+        science_repo = f"{owner}/{science_repo}"
+    return science_repo, f"{science_repo}-audit"
 
 
 def prepare(target: Path) -> list[str]:
@@ -198,7 +227,7 @@ def prepare(target: Path) -> list[str]:
         done.append(t("prepare.created", path=target))
     if not (target / ".git").is_dir():
         subprocess.run(["git", "init", "-q", "-b", "main"], cwd=str(target),
-                       check=True)
+                       check=True, env=child_env())
         done.append(t("prepare.git_init"))
     gitignore = target / ".gitignore"
     current = gitignore.read_text(encoding="utf-8") if gitignore.is_file() else ""
@@ -224,7 +253,7 @@ def tracked_paths(target: Path, paths: list[str]) -> list[str]:
     if not paths:
         return []
     listed = subprocess.run(["git", "ls-files", "--", *paths], cwd=str(target),
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, env=child_env())
     if listed.returncode != 0:
         return []
     known = {line for line in listed.stdout.splitlines() if line}
@@ -269,14 +298,14 @@ def commit_setup(target: Path, paths: list[str]) -> str:
     """
     owned = sorted(set(paths))
     add = subprocess.run(["git", "add", "--", *owned], cwd=str(target),
-                         capture_output=True, text=True)
+                         capture_output=True, text=True, env=child_env())
     if add.returncode != 0:
         raise ConfigDenial(f"could not stage the setup files: {add.stderr.strip()[:200]}")
 
     name = subprocess.run(["git", "config", "user.name"], cwd=str(target),
-                          capture_output=True, text=True).stdout.strip()
+                          capture_output=True, text=True, env=child_env()).stdout.strip()
     email = subprocess.run(["git", "config", "user.email"], cwd=str(target),
-                           capture_output=True, text=True).stdout.strip()
+                           capture_output=True, text=True, env=child_env()).stdout.strip()
     for key, current, fallback in (
         ("user.name", name, "CrossAudit"),
         ("user.email", email, "crossaudit@local.invalid"),
@@ -284,29 +313,30 @@ def commit_setup(target: Path, paths: list[str]) -> str:
         if current:
             continue
         configured = subprocess.run(["git", "config", key, fallback], cwd=str(target),
-                                    capture_output=True, text=True)
+                                    capture_output=True, text=True, env=child_env())
         if configured.returncode != 0:
             raise ConfigDenial(f"could not configure the local git identity: "
                                f"{configured.stderr.strip()[:200]}")
 
     changed = subprocess.run(["git", "diff", "--cached", "--quiet", "--", *owned],
-                             cwd=str(target))
+                             cwd=str(target), env=child_env())
     if changed.returncode == 0:
         # Re-running --force with byte-identical answers has nothing to version.
         return subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(target),
-                              capture_output=True, text=True).stdout.strip()
+                              capture_output=True, text=True, env=child_env()).stdout.strip()
     if changed.returncode != 1:
         raise ConfigDenial("could not inspect the staged setup files")
 
     commit = subprocess.run(
         ["git", "commit", "-q", "--only", "-m",
          "crossaudit: initialize supervised project", "--", *owned],
-        cwd=str(target), capture_output=True, text=True)
+        cwd=str(target), capture_output=True, text=True, env=child_env())
     if commit.returncode != 0:
         raise ConfigDenial(f"could not commit the setup files: "
                            f"{commit.stderr.strip()[:200]}")
     return subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(target),
-                          capture_output=True, text=True, check=True).stdout.strip()
+                          capture_output=True, text=True, check=True,
+                          env=child_env()).stdout.strip()
 
 
 #: The starting points a person chooses between, per SPEC 3 §4.2. Each carries
@@ -661,7 +691,7 @@ def _open_in_editor(path: Path) -> None:
         tui.note(t("editor.manual", path=path))
         return
     try:
-        subprocess.run([*editor.split(), str(path)], check=False)
+        subprocess.run([*editor.split(), str(path)], check=False, env=child_env())
     except OSError as exc:  # noqa: BLE001 -- an editor that will not start is not fatal
         tui.warn(t("editor.failed", editor=editor, error=exc))
         tui.note(t("editor.manual_instead", path=path))
@@ -968,6 +998,16 @@ def run(target: Path, *, mode: str, force: bool = False,
         if written:
             rows.append(f"source {written}")
             rows.append(tui.dim("    " + t("next.source_keys.ready")))
+        else:
+            # D172 ruling 7: no key was entered (stdin is not a terminal, or
+            # the prompts were left blank) and the keys came from the
+            # environment. Say so: "Ready" alone read as if credentials had
+            # been stored, and the README promised a mode-600 keys file.
+            envs = ["CROSSAUDIT_AUDITOR_KEY"] + (
+                ["CROSSAUDIT_GENERATOR_KEY"] if generator_vendor != "human" else [])
+            rows.append(t("next.keys_from_env", envs=" and ".join(envs)))
+            rows.append(tui.dim("    " + t("next.keys_from_env.hint",
+                                           path=keys_file())))
         rows += [
             "crossaudit doctor",
             tui.dim("    " + t("next.doctor")),
@@ -985,11 +1025,21 @@ def run(target: Path, *, mode: str, force: bool = False,
     tui.panel(t("done.next"), rows)
 
     if mode != "local":
+        from . import pair
+        from ..config import load as load_config
+
+        science, audit = github_names(science_repo)
         tui.panel(t("done.two_repos"),
-                  github_plan(science_repo, audit_repo or f"{science_repo}-audit"))
-        gh_ok, detail = gh_available()
-        if not gh_ok:
-            tui.warn(t("done.gh_missing", detail=detail))
+                  github_plan(load_config(cfg_path), science, audit))
+        # One sentence for one state: installed but signed out is a sign-in,
+        # not an install (the old warning said both).
+        state, detail = pair.gh_state()
+        if state == "absent":
+            tui.warn(t("done.gh_not_installed"))
+        elif state == "signed_out":
+            tui.warn(t("done.gh_signed_out"))
+        elif state != "signed_in":
+            tui.warn(t("done.gh_unknown", detail=detail))
 
     return {"config": str(cfg_path), "constitution": str(const_path),
             "keys_file": str(written) if written else None, "mode": mode,

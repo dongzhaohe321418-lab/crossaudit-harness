@@ -50,11 +50,24 @@ def _text(data: bytes) -> str | None:
 
 
 def check_parseable(files: Mapping[str, bytes]) -> list[Finding]:
-    """A file whose name promises a format must keep the promise."""
+    """A file whose name promises a format must keep the promise.
+
+    A text suffix (`TEXT_SUFFIXES`) promises UTF-8 text. A file that breaks
+    that promise -- UTF-16, Latin-1, cp1252, raw bytes -- is a BLOCKER under
+    the same rule (D169): it used to be skipped silently, so a UTF-16
+    `results.csv` was neither parsed here nor shown to the auditor, and the
+    round could PASS on content nobody read.
+    """
     out: list[Finding] = []
     for path, data in files.items():
         text = _text(data)
         if text is None:
+            if path.lower().endswith(TEXT_SUFFIXES):
+                out.append(Finding(
+                    BLOCKER, "CA-FILE-001", path,
+                    f"declares itself {path.rsplit('.', 1)[-1]} text but is not "
+                    f"UTF-8, so neither the checks nor the auditor can read it; "
+                    f"save it as UTF-8"))
             continue
         try:
             if path.endswith(".json"):

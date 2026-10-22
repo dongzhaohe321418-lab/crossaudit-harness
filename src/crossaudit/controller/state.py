@@ -118,27 +118,31 @@ class StateStore:
             finally:
                 os.close(dir_fd)
 
-    @contextmanager
-    def _locked(self) -> Iterator[dict]:
-        """Exclusive read-modify-write. Yields state; writes it back on clean exit."""
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+    def _acquire(self, lock_path: Path) -> None:
+        """Take the O_EXCL lock at ``lock_path``, breaking a stale one."""
         deadline = time.monotonic() + LOCK_TIMEOUT_S
         while True:
             try:
-                fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
                 os.write(fd, f"{os.getpid()} {time.time():.0f}".encode())
                 os.close(fd)
-                break
+                return
             except FileExistsError:
-                age = time.time() - self.lock_path.stat().st_mtime if self.lock_path.exists() else 0
+                age = time.time() - lock_path.stat().st_mtime if lock_path.exists() else 0
                 if age > LOCK_STALE_S:
-                    self.lock_path.unlink(missing_ok=True)   # holder died; break it
+                    lock_path.unlink(missing_ok=True)   # holder died; break it
                     continue
                 if time.monotonic() > deadline:
                     raise ConfigDenial(
                         "could not acquire the controller lock; another verifier is "
-                        "mid-transaction", lock=str(self.lock_path))
+                        "mid-transaction", lock=str(lock_path))
                 time.sleep(0.05)
+
+    @contextmanager
+    def _locked(self) -> Iterator[dict]:
+        """Exclusive read-modify-write. Yields state; writes it back on clean exit."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._acquire(self.lock_path)
         try:
             state = self._read()
             yield state
@@ -232,9 +236,28 @@ class StateStore:
                         self._log(state, "advance", cycle=cid, sha=sha, round=c["round"])
                         return dict(c, cycle_id=cid)
             cid = cycle_id_for(repo, sha)
+            # Never overwrite a cycle (D172 ruling 2). The id is derived from
+            # the root sha, so re-auditing a commit that ROOTED a cycle which
+            # has since PASSED, or advanced to a later round, collided with it
+            # and replaced the recorded decision with a fresh OPEN cycle --
+            # `build` then `audit --offline` turned a PASSED cycle into an
+            # ESCALATED one. The new cycle gets its own id; the old record is
+            # left exactly as it was. The id stays 16 hex (the console's
+            # continuation check and the progress redaction match that shape)
+            # and is deterministic -- the same repo, sha and attempt number
+            # always give the same id -- and the record says which cycle it
+            # follows and which attempt it is, so it reads as a re-audit.
+            first, attempt = cid, 1
+            while cid in cycles:
+                attempt += 1
+                cid = cycle_id_for(repo, f"{sha}\n{attempt}")
             c = {"repo": repo, "root_sha": sha, "active_sha": sha, "parent_receipt": "",
                  "round": 1, "status": OPEN, "consumed": [], "awaiting_verdict": True,
-                 "constitution_commit": constitution_commit, "verdicts": []}
+                 "constitution_commit": constitution_commit, "verdicts": [],
+                 "opened_at": int(time.time())}
+            if attempt > 1:
+                c["reaudit_of"] = first
+                c["attempt"] = attempt
             cycles[cid] = c
             self._log(state, "open", cycle=cid, sha=sha)
             return dict(c, cycle_id=cid)
@@ -557,19 +580,42 @@ class StateStore:
         persistent = not in_system_temp and not any(
             marker in path.replace("\\", "/") for marker in ephemeral_markers)
 
+        # Read-only (D172): this probe runs under `doctor`, which promises to
+        # write nothing, and on every console snapshot. It used to take the
+        # read-modify-write lock, which wrote state.json back (creating it,
+        # and the state directory, on a fresh project). Now it exercises the
+        # SAME O_EXCL acquisition on the real lock path when the state
+        # directory exists, and reads the state without writing it, so a
+        # corrupt state file still reports as unlockable. Before the directory
+        # exists it probes O_EXCL on the same filesystem, in the nearest
+        # existing ancestor, with a transient file it removes again; nothing
+        # is created that outlives the call.
         atomic = False
         detail = ""
         try:
-            with self._locked() as state:
-                state.setdefault("cycles", {})
+            if self.path.parent.is_dir():
+                lock_path = self.lock_path
+                self._acquire(lock_path)
+            else:
+                anchor = self.path.parent
+                while not anchor.is_dir() and anchor != anchor.parent:
+                    anchor = anchor.parent
+                lock_path = anchor / f".crossaudit-lock-probe-{os.getpid()}"
+                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.close(fd)
+            try:
+                if lock_path == self.lock_path:
+                    self._read()
                 # If the lock is real, a second acquisition from this process
                 # must fail while we hold it.
                 try:
-                    fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                    fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
                     os.close(fd)
                     detail = "the lock did not exclude a second holder"
                 except FileExistsError:
                     atomic = True
+            finally:
+                lock_path.unlink(missing_ok=True)
         except Exception as exc:                       # noqa: BLE001
             detail = f"the store could not be locked: {exc}"
 

@@ -26,7 +26,8 @@ from .test_evidence_authority import DCL_BLOCKER, MODEL_BLOCKED, _decide, _recor
 
 CJK = re.compile(r"[一-鿿]")
 LATIN_WORD = re.compile(r"[A-Za-z]{2,}")
-INTEGRITIES = ["OK", "NOTHING_AUDITED", "BOUNDS_EXCEEDED", "INVALID_REPLY",
+INTEGRITIES = ["OK", "NOTHING_AUDITED", "BOUNDS_EXCEEDED", "INPUT_NOT_SHOWN",
+               "INVALID_REPLY",
                "PROVIDER_FAILURE", "NON_EVIDENTIAL_PROVIDER", "SOMETHING_NEW"]
 VERDICTS = ["PASS", "BLOCKED", "ESCALATE", "DCL_ONLY"]
 FLAG_SETS = [dict(), dict(escalation_lock=True), dict(scope_started=False),

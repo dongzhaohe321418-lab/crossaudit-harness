@@ -18,6 +18,7 @@ import re
 from pathlib import Path
 
 from ..config import Config
+from ..app_keys import child_env
 from ..dispute import DISPUTES_LOG, parse_findings
 from ..router import history as routing_history
 from .chats import LEGACY_CHAT_ID, canonical_id
@@ -66,7 +67,7 @@ def _commits(root: Path, limit: int = 200) -> list[dict]:
         ["git", "log", f"-{limit}",
          "--format=%x1e%H%x1f%ct%x1f%s%x1f%(trailers:key=CrossAudit-Chat,valueonly)",
          "--name-only"],
-        cwd=str(root), capture_output=True, text=True)
+        cwd=str(root), capture_output=True, text=True, env=child_env())
     if out.returncode != 0:
         return []
     rows = []
@@ -98,7 +99,7 @@ def _chat_map(root: Path, limit: int = 200) -> dict[str, str]:
     result = subprocess.run(
         ["git", "log", f"-{limit}",
          "--format=%H%x1f%(trailers:key=CrossAudit-Chat,valueonly)"],
-        cwd=str(root), capture_output=True, text=True)
+        cwd=str(root), capture_output=True, text=True, env=child_env())
     if result.returncode != 0:
         return {}
     rows = {}

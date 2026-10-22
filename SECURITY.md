@@ -18,15 +18,41 @@ the current native-app release.
 The native shell embeds a loopback-only Python core. Every HTTP request must
 carry an unguessable process token and an allowed localhost `Host` header. The
 browser layer cannot retrieve stored credentials. Provider keys are kept in the
-macOS login Keychain and injected only into the local core process.
+macOS login Keychain and loaded into the environment of the local core process
+and of the project workers it starts, which call the providers. Other child
+processes (Git, the GitHub CLI, OpenSSH, and the Codex runtime) are started
+with provider key variables removed; MCP servers and allowed check commands
+receive their own reduced environments. A stdio MCP server gets only the
+thirteen variables `mcp._stdio_environment` names (seven POSIX ones such as
+`PATH` and `HOME`, and six Windows runtime ones such as `SYSTEMROOT`) that are
+set. Each MCP call the Generator makes is recorded in the project's evidence
+ledger (`.crossaudit/evidence.jsonl`, mode 600) as its server, tool, argument
+and result hashes, status, size and timing; the request text itself, which is
+part of the Generator's streamed reply, stays in the project-private run
+journal (`.crossaudit/runtime.sqlite3`, mode 600) that the console replays.
+
+The process token is a bearer credential for running code on this Mac as you;
+treat it like your account password. Whoever holds it can do anything the web
+view can, including registering a local stdio MCP server, which starts the
+named executable with the given arguments immediately, and replacing the
+project's allowed check commands, whose entries become programs a build may
+run. Nothing but the token gates either: the local-code approval on an MCP
+registration is a field of the same request. The token travels in the console
+URL, so it can appear in browser history, and while the console runs it is
+written to the project's state directory (`.crossaudit/console.json` by
+default, mode 600). A new token is issued each time the console starts. Do not
+share the URL, paste it into an issue or a screenshot, or open it on a shared
+account.
 
 OpenAI subscription authentication is delegated to the pinned official Codex
 runtime through its documented App Server protocol. CrossAudit never receives,
 parses, logs, or serves OAuth tokens. Only allowlisted non-secret account state
 is exposed to the UI. Subscription completions run in ephemeral, read-only,
-network-disabled threads, and any command, file-change, web, or tool event makes
-the provider round fail closed. Anthropic consumer credentials are never
-captured or reused; Claude access remains API/approved-enterprise only.
+network-disabled threads. Tool requests are refused at the protocol boundary,
+and any command, file-change, web, or other tool event in a turn makes the
+provider round fail closed: the turn's text is discarded, never used.
+Anthropic consumer credentials are never captured or reused; Claude access
+remains API/approved-enterprise only.
 
 Project workers are independent processes with separate repositories, tokens,
 locks, ledgers, and scoped write directories. Chats inside a Project share that
@@ -38,9 +64,11 @@ generated commands automatically.
 Environment Doctor exposes only tool paths, public version strings, readiness,
 and local project paths. Its write API accepts a fixed action allowlist: open
 Apple's Git installer, initialize the current project ledger, or save validated
-project-local Git identity fields. It cannot accept a command, executable, or
-arbitrary working directory from the web view. Update discovery calls only the
-public GitHub latest-release endpoint and sends no project or credential data.
+project-local Git identity fields. Environment Doctor itself cannot accept a
+command, executable, or arbitrary working directory from the web view; the MCP
+and allowed-command settings described above can. Update discovery calls only
+the public GitHub latest-release endpoint and sends no project or credential
+data.
 
 Closing the main window orders it out without terminating the native shell or
 local core. The menu-bar item exposes the background state and an explicit Quit

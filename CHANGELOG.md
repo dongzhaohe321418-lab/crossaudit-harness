@@ -3,6 +3,142 @@
 All notable changes to CrossAudit are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH` scheme; the source on `main` is authoritative.
 
+## Unreleased
+
+### Fixed
+- **MCP tool calls made during a build are now in the evidence ledger.** Each call
+  the Generator makes to a registered MCP tool, from `crossaudit build` or a console
+  chat, writes a `tool_call` entry before it runs and a `tool_result` entry after it
+  (hashes, status, size, timing; never the arguments or the output). The audit receipt
+  binds them and `crossaudit verify` re-checks them. Before this, those calls went
+  only to `.crossaudit/mcp/calls.json`. If the ledger cannot record a call, the call
+  does not run (D174).
+- **A reply cut off by the output-token limit is refused, not committed.** When
+  Anthropic reports `stop_reason: max_tokens` or an OpenAI-compatible provider
+  reports `finish_reason: length`, the reply is discarded and the run stops with
+  a legible reason instead of committing a half-written file as the round's work
+  (D167).
+- **One character no longer breaks the evidence ledger.** A payload holding
+  U+2028, U+2029 or U+0085 (common in text extracted from PDFs) made the ledger
+  unverifiable and let the next appends fork the chain. Ledgers already written
+  that way verify again, and an append onto a ledger that does not verify is now
+  refused instead of forking it (D168).
+- **A local proxy no longer intercepts CrossAudit's own loopback traffic.** With
+  `HTTP_PROXY` or `ALL_PROXY` pointing at a local proxy, the console's daemon
+  health checks, the project relay and the app self-test were sent to the proxy
+  (with the console's session token) and could report a running console as
+  dead. Requests to 127.0.0.1 now always go direct; remote MCP servers and
+  providers still use the proxy (D169).
+- **A file the auditor could not read can no longer pass.** A file that is not
+  UTF-8 text and not a PDF or DOCX (a UTF-16 CSV, a spreadsheet, an image) was
+  shown to the auditor only as its size, and the round could still pass. Such a
+  round now escalates to you and the report lists the files the auditor was not
+  shown; a `.csv`, `.json`, `.md` or other text file that is not UTF-8 is
+  blocked by the `parseable` check (D169).
+- **Approving a tool "for this project" can no longer undo a revoke.** Two
+  changes to a project's standing authorizations made at the same moment (a
+  tool approved from a card while `workspace_writes` was switched off in
+  settings) could each overwrite the other, losing the revoke. Changes are now
+  applied one at a time (D169).
+- **A decimal comma is no longer read as a thousands separator.** The
+  `number_source` check treated a transcribed `1,5` as `15`, so a citation of
+  "1,5 mg" passed against a source saying 15 mg. A comma is now accepted only
+  as thousands grouping (`1,000`, `12,345.67`); any other comma is reported as
+  not a number (D169).
+- **Provider keys stay in the core process.** Git, the GitHub CLI, OpenSSH and
+  the bundled Codex runtime used to inherit every provider key the app loaded
+  from the Keychain (and any `*_API_KEY` exported in the launching shell). They
+  are now started without them; only project workers, which call the providers
+  themselves, still receive keys (D170).
+- **A ChatGPT-subscription turn that tries a tool is refused.** If the Codex
+  runtime reports a command, file change, web search, MCP or other tool event
+  for a turn, the reply is discarded and the round fails closed with a reason
+  naming what was requested, as SECURITY.md already said. Before, the tool was
+  blocked but the turn's text was still used (D170).
+- **The console page runs only its own scripts.** Its Content-Security-Policy
+  now allows the two script blocks it ships, by hash, instead of any inline
+  script, so an injected `<script>` or `onclick=` attribute does not execute.
+  The server's description of what the policy guarantees was corrected (D170).
+- **SECURITY.md says what the console token authorises.** Anyone holding the
+  token in the console URL can register a local MCP server or change the
+  allowed check commands, and so run programs as you; the policy now says so,
+  says where the token is kept, and says to treat it like a password (D170).
+- **The README's export-then-verify pair works.** `crossaudit export-pubkey >
+  project.pem` now writes only the PEM block (the key id goes to standard
+  error), and a `--pubkey` file that is not an Ed25519 PEM key is refused with
+  exit 20 and its name instead of a traceback. A signature that does not verify
+  is refused (exit 21) in a dry-run `verify` too, not only with `--admit`, and a
+  pinned `--pubkey` verification refuses a receipt with no signature. The signed
+  statement now carries the receipt's verdict and report digest, which it left
+  empty; signatures made before still verify (D171).
+- **`crossaudit verify` checks the report you would open, not only the
+  committed one.** A `report.md` (or `reproduction.json`) on disk that differs
+  from the bytes the receipt binds — edited, or edited and committed on top —
+  now prints `WORKING TREE DRIFTED` and is refused with exit 21 naming the file;
+  before, it still printed `BINDINGS VERIFIED`. `--record-only` verifies the
+  committed record alone and still prints the drift line (D171).
+- **A dependency lock already in the project is named by the receipt.** A
+  `requirements.txt` (or any recognised lock) committed before the audited
+  round, or at the repository root, is now found in the audited commit and
+  bound in the receipt; before, only a lock the round itself changed was.
+  `crossaudit reproduce` prints each lock's path and sha256 and whether your
+  copy still matches it (D171).
+- **`crossaudit doctor` is read-only again.** On a fresh project it created
+  `.crossaudit/state.json` through its admission probe; it now writes nothing
+  unless you run `doctor --fix` in a terminal (D172).
+- **`build` then `audit --offline` (or `run`) works as the README shows.**
+  Without `--sha`, both now judge the latest commit that changed your work
+  instead of the ledger commit `build` leaves at `HEAD`, and say which commit
+  they chose (D172).
+- **Re-auditing a commit no longer overwrites its recorded cycle.** An explicit
+  `audit --sha <commit>` on a commit whose cycle had already PASSED replaced
+  that cycle with a new one, so the earlier receipt could no longer be admitted.
+  The re-audit now opens a new cycle beside the old one, and `status` lists both
+  (D172).
+- **`build` exits 22 when the provider failed.** A build that stopped because
+  every provider route failed (HTTP 5xx, network) exited 11 like any other
+  escalation. It now exits 22, as the README's exit-code table says (D172).
+- **`crossaudit --json routing` prints JSON on a fresh project.** It printed
+  the sentence `no routing decisions recorded yet`. It now prints `[]`, the
+  same list shape it prints once decisions exist (D172).
+- **`crossaudit resolve` commits the ruling, as the README says.** The reason
+  was kept only in the local state file. Each ruling now appends a line to
+  `cycles/rulings.jsonl` in its own commit, with the reason in the commit
+  message. `status` lists every ruling and shows a closed cycle as `CLOSED`, and
+  closing ends the run that was waiting for the decision (D172).
+- **`crossaudit console` opens the dashboard.** The README said it did, but it
+  only printed the URL. Run from a terminal, it now opens the tokenized URL in
+  your browser. `--no-open` prints the URL only, and nothing opens under
+  `--json` or when output is not a terminal (D172).
+- **A non-interactive `init` says where your keys come from.** Without a
+  terminal it cannot prompt for keys and writes no keys file. Its summary now
+  says the keys are read from `CROSSAUDIT_AUDITOR_KEY` and
+  `CROSSAUDIT_GENERATOR_KEY` (D172).
+- **The plain-HTTP refusal names a setting that exists.** It pointed at a
+  `--allow-insecure-localhost` flag that never existed. It now names a loopback
+  `base_url:` with `CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1` (D172).
+- **README corrections.** The default check pack is `general`, `amend --yes`
+  is documented for scripts, the `--version` line is shown as printed, and
+  verdicts (`PASS`) are kept apart from cycle states (`PASSED`) (D172).
+- **`crossaudit pair` prints what `--apply` does, all of it, in order.** The
+  plan left out the push of the local history, the local commit recording the
+  pair and the `origin` remote, and listed branch protection, which `--apply`
+  never did. The plan and `--apply` now come from one list of steps, each shown
+  with its commands; what `--apply` leaves to you (branch protection, the key
+  upload when the key is not loaded) is printed under "You do afterwards"
+  (D173).
+- **`crossaudit pair --science … --audit …` shows its plan without a GitHub
+  account.** It asked GitHub for the account name before printing anything, so
+  the plan the README tells you to review was refused when `gh` was signed out.
+  The account is now needed only for `--apply`, or when `--science` is left out;
+  a signed-out or missing `gh` adds one line saying what `--apply` will need
+  (D173).
+- **`crossaudit init --github` no longer says `pair --apply` "does all of it",
+  and its GitHub warning says one thing.** The closing panel now lists `pair`'s
+  own steps and what is left to you; with `gh` installed but signed out the
+  warning says to run `gh auth login` instead of also telling you to install it
+  (D173).
+
 ## 4.17.0 — The activity stream
 
 The conversation is now one chronological stream, in one visual language,

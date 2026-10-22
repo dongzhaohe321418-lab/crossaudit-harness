@@ -7,6 +7,8 @@ a clean, valid, model-backed PASS lands somewhere other than PASS (I8):
     DCL hard failure           -> BLOCKED    (dominates any model opinion)
     invalid or failed audit    -> ESCALATE
     prompt bound exceeded      -> ESCALATE   (the model did not see everything)
+    a file not shown           -> ESCALATE   (INPUT_NOT_SHOWN: undecodable, not a
+                                  recovered document; the report names it, D169)
     unstarted scope            -> ESCALATE   (NOTHING_AUDITED: an empty scope is not clean)
     no model ran               -> DCL_ONLY   (never a conforming PASS)
     otherwise                  -> the model's own verdict
@@ -163,7 +165,8 @@ def render_report(*, cfg: Config, sha: str, round_: int, verdict: str, dcl: dict
                   provider: str, model: str, vendor: str | None = None,
                   reasoning_effort: str | None = None,
                   provider_failure: str | None = None,
-                  authority: dict | None = None) -> str:
+                  authority: dict | None = None,
+                  unseen: tuple[str, ...] = ()) -> str:
     lines = [
         f"# Audit Report — {cfg.science_repo}@{sha[:12]}",
         "",
@@ -182,8 +185,19 @@ def render_report(*, cfg: Config, sha: str, round_: int, verdict: str, dcl: dict
         # receipt, where a verifier reads it, and out of the report.
         from .authority import ROUTE_LABELS
         lines += [f"| evidence route | **{ROUTE_LABELS[authority['route']]}** |"]
+    lines.append("")
+    if unseen:
+        # Not a finding: nothing here was judged. It is the reason the round
+        # cannot pass, said with the paths a person has to look at (D169).
+        lines += ["## Files the auditor was not shown", "",
+                  "These files are not UTF-8 text and are not a PDF or DOCX "
+                  "CrossAudit can read, so the auditor saw only their size. A "
+                  "round with an unread file is never a PASS; a person reviews "
+                  "them, or they are committed in a readable form "
+                  "(UTF-8 text, PDF or DOCX).", ""]
+        lines += [f"- `{path}`" for path in unseen]
+        lines.append("")
     lines += [
-        "",
         "## Deterministic findings",
         "",
     ]
@@ -277,9 +291,10 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
     dcl = run_checks(files, cfg.checks, notes, cfg.plugins, context=ctx,
                      on_check=on_check).as_dict()
     from ..broker.routing import evidence_view
-    prompt, bounded, prompt_sha = prompt_mod.build(
+    built = prompt_mod.build_audit_prompt(
         constitution, constitution_commit, dcl, files, task,
         tool_evidence=evidence_view(cfg))
+    prompt, prompt_sha = built.prompt, built.sha256
     reply: dict | None = None
     invalid: str | None = None
     provider_failure: str | None = None
@@ -452,9 +467,14 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
     elif invalid:
         verdict = "ESCALATE"
         integrity = integrity if integrity != "OK" else "INVALID_REPLY"
-    elif bounded:
+    elif built.overflow:
         verdict = "ESCALATE"
         integrity = "BOUNDS_EXCEEDED"
+    elif built.unseen:
+        # I8 (D169): the auditor was shown a placeholder, not the content, so
+        # whatever it replied it cannot have reviewed these files.
+        verdict = "ESCALATE"
+        integrity = "INPUT_NOT_SHOWN"
     elif reply:
         verdict = reply["verdict"]
         model_decided = True
@@ -492,7 +512,7 @@ def run_audit(*, cfg: Config, sha: str, round_: int, files: Mapping[str, bytes],
                            vendor=actual.vendor,
                            reasoning_effort=actual.reasoning_effort,
                            provider_failure=provider_failure,
-                           authority=authority)
+                           authority=authority, unseen=built.unseen)
     return AuditOutcome(verdict=verdict, dcl=dcl, model_reply=reply,
                         invalid_reason=invalid, integrity=integrity, exchange=exchange,
                         prompt_sha256=prompt_sha, report=report, authority=authority)

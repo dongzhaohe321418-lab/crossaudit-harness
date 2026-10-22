@@ -33,6 +33,7 @@ from ..receipt import load as load_receipt
 from ..receipt import verify as verify_receipt
 from ..receipt.sign import sign_receipt
 from ..receipt.verify import admit as admit_receipt
+from ..receipt.verify import working_tree_drift
 from ..receipt import reproduction as _reproduction
 from ..receipt import sources as _sources
 from . import i18n, tui, wizard
@@ -267,6 +268,43 @@ def _write_sources(cfg: Config, receipt: dict, cycle_dir: Path) -> bool:
 def _state(cfg: Config) -> StateStore:
     """The state store lives beside the configuration, never in site-packages."""
     return StateStore(cfg.root / cfg.state_dir / "state.json")
+
+
+def _increment_paths(cfg: Config, sha: str) -> list[str]:
+    """The work a commit changed: its paths minus the loop's own artefacts
+    (rules, configuration, ledger, state, CI, house skills), and, when the
+    deployment names its science directories, only paths inside them."""
+    from .. import skills as skills_mod
+
+    own = {cfg.constitution, "crossaudit.yml", ".gitignore"}
+    prefix_own = (cfg.ledger_dir.rstrip("/") + "/", cfg.state_dir.rstrip("/") + "/",
+                  ".github/", skills_mod.SKILLS_DIR + "/")
+    picked = [f for f in changed_paths(cfg.root, sha)
+              if f not in own and not f.startswith(prefix_own)]
+    if cfg.scope_dirs:
+        picked = [f for f in picked if f.split("/", 1)[0] in cfg.scope_dirs]
+    return picked
+
+
+#: How far back the no-``--sha`` default looks for an increment. The loop's
+#: own bookkeeping adds two ledger commits per round, so this covers far more
+#: than any realistic run of ledger-only commits on top of the work.
+LATEST_INCREMENT_DEPTH = 200
+
+
+def _latest_increment(cfg: Config) -> str:
+    """The newest commit that changed work (D172 ruling 2), or "" if none.
+
+    `audit` and `run` without ``--sha`` mean "the work I just did". In local
+    mode HEAD is usually the loop's own ledger commit (`build` ends on
+    ``audit receipt ... (PASS)``), so HEAD is the wrong default: it is an
+    audit artefact, and auditing it was refused.
+    """
+    for cand in git("log", "--format=%H", "-n", str(LATEST_INCREMENT_DEPTH),
+                    cwd=cfg.root, check=False).splitlines():
+        if _increment_paths(cfg, cand):
+            return cand
+    return ""
 
 
 def _is_scaffold_template(path: str) -> bool:
@@ -1015,7 +1053,13 @@ def cmd_audit(args: argparse.Namespace) -> int:
     cfg = load()
     if not is_repo(cfg.root):
         raise ConfigDenial(f"{cfg.root} is not a git repository")
-    sha, tree = resolve(cfg.root, args.sha or "HEAD")
+    # D172 ruling 2: no --sha means the latest increment, not HEAD. An
+    # explicit --sha is taken as given, and a ledger-only one is still refused
+    # below. When nothing in reach changed work, HEAD is audited as before and
+    # the existing refusals say why.
+    explicit = getattr(args, "sha", None)
+    chosen = "" if explicit else _latest_increment(cfg)
+    sha, tree = resolve(cfg.root, explicit or chosen or "HEAD")
     # D149: the refusals below name the commit by its SUBJECT rather than
     # leading with a 12-hex id. The sha stays in --json, in the receipt and in
     # the ledger; it is not the first thing a person is asked to read.
@@ -1070,6 +1114,10 @@ def cmd_audit(args: argparse.Namespace) -> int:
             f"start a new increment to be judged afresh.",
             cycle_id=cycle["cycle_id"], status=cycle["status"])
 
+    if chosen and not getattr(args, "json", False):
+        # Said before the audit runs, so a person reads which commit is being
+        # judged before the verdict, not after.
+        print(i18n.t("audit.chose", sha=sha[:12], subject=subject))
     files, notes, scope_text = _materialise_tree_scope(cfg, sha, args.scope)
     # A cycle is judged against the standard it began under. Reading the working
     # tree instead let a constitution loosened mid-cycle re-judge work the cycle
@@ -1160,6 +1208,8 @@ def cmd_audit(args: argparse.Namespace) -> int:
     status = _record_round(store, cfg, cycle, sha, outcome, receipt_digest(receipt),
                            const_commit)
     result = {"verdict": outcome.verdict, "cycle_status": status,
+              "sha": sha, "sha_source": "explicit" if explicit else (
+                  "latest_increment" if chosen else "head"),
               "cycle_id": cycle["cycle_id"], "round": cycle["round"],
               "integrity": outcome.integrity, "receipt": str(ledger / "receipt.json"),
               "report": str(report_path),
@@ -1183,13 +1233,77 @@ def cmd_audit(args: argparse.Namespace) -> int:
 
 
 # ----------------------------------------------------------------- verify
+def _pinned_public_key(path_text: str) -> bytes:
+    """The raw Ed25519 key in the PEM file ``--pubkey`` names.
+
+    A file that cannot be read or parsed is a configuration refusal naming the
+    file: the person handed us the wrong file, and a traceback (what
+    ``binascii.Error`` used to produce) tells them nothing.
+    """
+    from ..crypto import keys as _keys
+    try:
+        text = Path(path_text).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ConfigDenial(
+            f"the public key file {path_text} could not be read: {exc}",
+            path=path_text) from exc
+    try:
+        return _keys.parse_public_key_pem(text)
+    except ValueError as exc:
+        raise ConfigDenial(
+            f"the public key file {path_text} is not an Ed25519 public key in "
+            f"PEM form: {exc}", path=path_text) from exc
+
+
+def _signature_refusal(sig: dict, pinned: bool) -> str:
+    """Why the signature line refuses this receipt, or "" when it does not.
+
+    Fail-closed in dry run as well as under ``--admit``: a present signature
+    that does not verify means the receipt or its signature was altered. An
+    absent sidecar is informational (a pre-A1 or unsigned receipt) — unless a
+    key was pinned, because pinning a key IS asking for a signature by it.
+    """
+    if sig["signed"] and not sig["verified"]:
+        return (f"the receipt's signature does not verify: {sig['reason']}; the "
+                f"receipt or its signature was altered after it was minted")
+    if pinned and not sig["signed"]:
+        return ("a public key was pinned but the receipt carries no signature "
+                "sidecar (receipt.dsse.json); a pinned verification requires a "
+                "signature by that key")
+    return ""
+
+
+def _drift_line(rows: list[dict], record_only: bool) -> tuple[str, str]:
+    """The working-tree line of ``verify``, and the refusal it implies ("" for
+    none). ``BINDINGS VERIFIED`` keeps meaning the committed record; this line
+    is about the copy a person opens."""
+    drifted = [r for r in rows if r["state"] == "drifted"]
+    present = [r for r in rows if r["state"] == "match"]
+    if drifted:
+        names = ", ".join(r["path"] for r in drifted)
+        line = (f"\nWORKING TREE DRIFTED  {names} on disk "
+                f"{'is' if len(drifted) == 1 else 'are'} not the audited bytes")
+        if record_only:
+            return line + " (--record-only: the record alone was verified)", ""
+        return line, drifted[0]["refusal"]
+    if present:
+        names = ", ".join(r["path"] for r in present)
+        return f"\nWORKING TREE MATCHES  {names} on disk are the audited bytes", ""
+    return ("\nWORKING TREE NOT ON DISK  no file the receipt binds is checked out "
+            "here; the record alone was verified"), ""
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     cfg = load()
     path = Path(args.receipt).resolve()
     receipt = load_receipt(path)
+    # Parsed before anything is re-derived: a wrong key file is a configuration
+    # problem, and it must not be reported after a page of verified bindings.
+    pin = _pinned_public_key(args.pubkey) if getattr(args, "pubkey", None) else None
+    audit_root = Path(args.audit_root or cfg.root).resolve()
     evidence = verify_receipt(
         receipt, science_root=Path(args.science_root or cfg.root).resolve(),
-        audit_root=Path(args.audit_root or cfg.root).resolve(),
+        audit_root=audit_root,
         expect_repo=args.expect_repo or cfg.science_repo,
         expect_sha=args.expect_sha or receipt["subject"]["sha"], cfg=cfg)
     digest = evidence["receipt_digest"]
@@ -1205,39 +1319,59 @@ def cmd_verify(args: argparse.Namespace) -> int:
                  and cycle and cycle.get("status") == "PASSED")
     # A1: report the detached signature, if any, as its own independent fact.
     from ..receipt.sign import verify_receipt as verify_receipt_sig
-    pin = None
-    if getattr(args, "pubkey", None):
-        import base64 as _b64
-        pem = Path(args.pubkey).read_text(encoding="utf-8")
-        body = "".join(line for line in pem.splitlines()
-                       if line and not line.startswith("-----"))
-        raw = _b64.b64decode(body)
-        pin = raw[-32:] if len(raw) >= 32 else raw   # last 32 bytes of SPKI = the key
     sig = verify_receipt_sig(receipt, path.parent, expected_pubkey=pin)
-    # A present-but-invalid signature is a hard failure: the record was altered.
-    if sig["signed"] and not sig["verified"]:
+    sig_refusal = _signature_refusal(sig, pin is not None)
+    if sig_refusal:
+        ready = False
+    # D171: the committed record verified; now the copy on disk a person reads.
+    record_only = bool(getattr(args, "record_only", False))
+    drift_rows = working_tree_drift(receipt, audit_root=audit_root)
+    drift_line, drift_refusal = _drift_line(drift_rows, record_only)
+    if drift_refusal:
         ready = False
     out = {"verified": True, **evidence, "recorded": recorded,
            "latest_recorded_receipt": latest, "admission_ready": ready,
            "admitted": False, "signed": sig["signed"],
            "signature_verified": sig["verified"],
-           "signature_keyid": sig["keyid"], "signature_reason": sig["reason"]}
-    if args.admit and sig["signed"] and not sig["verified"]:
-        _emit(out, args.json,
-              "SIGNATURE INVALID  the receipt or its signature was altered; "
-              "refusing to admit")
-        return EXIT_INTEGRITY
-    if args.admit:
-        out.update(admit_receipt(receipt, _state(cfg), evidence, cfg=cfg))
+           "signature_pinned": pin is not None,
+           "signature_keyid": sig["keyid"], "signature_reason": sig["reason"],
+           "working_tree": {"record_only": record_only,
+                            "files": [{"path": r["path"], "state": r["state"]}
+                                      for r in drift_rows],
+                            "matches": not any(r["state"] == "drifted"
+                                               for r in drift_rows)}}
     sig_line = ("\nSIGNED  " + sig["keyid"] + "  verifiable offline with the "
                 "project public key" if sig["verified"]
                 else "\nSIGNATURE INVALID  " + sig["reason"] if sig["signed"]
+                else "\nUNSIGNED  no signature sidecar, but a public key was pinned"
+                if pin is not None
                 else "\nUNSIGNED  no signature sidecar (pre-A1 or signing off)")
-    human = (f"BINDINGS VERIFIED  receipt {digest[:16]} for {evidence['sha'][:12]}"
+    head = f"BINDINGS VERIFIED  receipt {digest[:16]} for {evidence['sha'][:12]}"
+    if sig_refusal:
+        # The person sees which bindings held and which line failed; --json gets
+        # the refusal alone (one document on stdout), with the facts as detail.
+        if not args.json:
+            print(head + sig_line + "\nREFUSED  nothing consumed")
+        raise IntegrityDenial(sig_refusal, signed=sig["signed"],
+                              signature_keyid=sig["keyid"],
+                              signature_reason=sig["reason"],
+                              signature_pinned=pin is not None)
+    recorded_line = ("\nRECORDED  controller history contains this exact receipt"
+                     if recorded else
+                     "\nUNRECORDED  controller history does not contain this receipt")
+    if drift_refusal:
+        if not args.json:
+            print(head + sig_line + recorded_line + drift_line
+                  + "\nREFUSED  nothing consumed")
+        raise IntegrityDenial(
+            drift_refusal, drifted=[r["path"] for r in drift_rows
+                                    if r["state"] == "drifted"])
+    if args.admit:
+        out.update(admit_receipt(receipt, _state(cfg), evidence, cfg=cfg))
+    human = (head
              + sig_line
-             + ("\nRECORDED  controller history contains this exact receipt"
-                if recorded else
-                "\nUNRECORDED  controller history does not contain this receipt")
+             + recorded_line
+             + drift_line
              + _derivation_lines(evidence)
              + ("\nADMISSION READY  latest recorded PASS"
                 if ready and not args.admit else "")
@@ -1249,7 +1383,13 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 def cmd_export_pubkey(args: argparse.Namespace) -> int:
     """Print the project's signing public key so a third party can verify
-    receipts offline with openssl / ssh-keygen / cryptography — no key created."""
+    receipts offline with openssl / ssh-keygen / cryptography — no key created.
+
+    Standard output carries the PEM block and nothing else, so
+    ``crossaudit export-pubkey > project.pem`` writes a file every PEM reader
+    (and ``verify --pubkey``) parses. The key id is a note for the person and
+    goes to standard error; ``--json`` carries both fields.
+    """
     from ..crypto import keys as _keys
     cfg = load()
     got = _keys.public_key(cfg)
@@ -1260,8 +1400,11 @@ def cmd_export_pubkey(args: argparse.Namespace) -> int:
         return EXIT_CONFIG
     pub, keyid = got
     pem = _keys.public_key_pem(pub)
-    _emit({"key_id": keyid, "public_key_pem": pem}, args.json,
-          f"KEY {keyid}\n{pem.rstrip()}")
+    if args.json:
+        _emit({"key_id": keyid, "public_key_pem": pem}, True)
+        return EXIT_OK
+    print(f"KEY {keyid}", file=sys.stderr)
+    sys.stdout.write(pem)
     return EXIT_OK
 
 
@@ -1285,14 +1428,16 @@ def cmd_reproduce(args: argparse.Namespace) -> int:
             state = "missing"
         else:
             state = "match" if _sha256_file(p) == want else "changed"
-        drift.append({"path": rel, "state": state})
+        drift.append({"path": rel, "sha256": want, "state": state})
     env_matches = bool(recorded) and all(d["state"] == "match" for d in drift)
     out = {"cycle_id": receipt["cycle"]["cycle_id"], "commit": bundle["subject"]["commit"],
            "locks": drift, "lock_kinds": bundle["environment"]["kinds"],
            "environment_matches": env_matches, "rerun": bundle["rerun"]}
     if not recorded:
-        head = ("NO DEPENDENCY LOCK RECORDED  the audited scope carried no lock "
-                "file, so the environment is not pinned by this receipt")
+        # Worded about the receipt, not the tree: a receipt minted before D171
+        # did not look outside its manifest, so "the tree had none" could be false.
+        head = ("NO DEPENDENCY LOCK RECORDED  this receipt names no lock file, so "
+                "the environment is not pinned by it")
     elif env_matches:
         head = (f"ENVIRONMENT MATCHES  {len(recorded)} lock file(s) "
                 f"[{', '.join(bundle['environment']['kinds'])}] are byte-identical "
@@ -1301,6 +1446,10 @@ def cmd_reproduce(args: argparse.Namespace) -> int:
         changed = ", ".join(f"{d['path']} ({d['state']})" for d in drift
                             if d["state"] != "match")
         head = f"ENVIRONMENT DRIFTED  {changed}"
+    # D171: each pinned lock by path and digest, and how the copy here compares.
+    word = {"match": "MATCHES", "changed": "DRIFTED", "missing": "MISSING"}
+    head += "".join(f"\n  {d['path']}  sha256 {d['sha256']}  {word[d['state']]}"
+                    for d in drift)
     recipe = (f"\nTO REPRODUCE\n  1. {bundle['rerun']['checkout']}"
               f"\n  2. {bundle['rerun']['restore']}"
               f"\n  3. {bundle['rerun']['verify']}"
@@ -1336,7 +1485,7 @@ def _run_summary(cfg: Config) -> dict | None:
     elif state == "PROVIDER_UNAVAILABLE":
         waiting = row.get("waiting_reason") or {}
         note = str(waiting.get("detail") or "waiting for a provider")[:80]
-    elif state in ("INTERRUPTED", "FAILED"):
+    elif state in ("INTERRUPTED", "FAILED", "CANCELLED"):
         note = str(row.get("error", ""))[:80]
     return {"run_id": row["run_id"], "state": state,
             "outcome": row.get("outcome", ""),
@@ -1348,13 +1497,46 @@ def cmd_status(args: argparse.Namespace) -> int:
     cfg = load()
     snap = _state(cfg).snapshot()
     cycles = snap.get("cycles", {})
-    rows = [{"cycle_id": cid, "status": c["status"], "round": c["round"],
-             "active_sha": c["active_sha"][:12], "consumed": len(c.get("consumed", []))}
-            for cid, c in sorted(cycles.items())]
+    # Opening order, so a re-audit of a commit (D172 ruling 2: a fresh cycle
+    # beside the recorded one, never over it) lists after the cycle it
+    # follows. Cycles written before `opened_at` existed keep id order, first.
+    def opened(item: tuple[str, dict]) -> tuple:
+        cid, c = item
+        return (int(c.get("opened_at") or 0), int(c.get("attempt") or 1), cid)
+
+    from .. import rulings as rulings_mod
+
+    ledger_rulings = rulings_mod.by_cycle(cfg)
+    rows = []
+    for cid, c in sorted(cycles.items(), key=opened):
+        row = {"cycle_id": cid, "status": c["status"], "round": c["round"],
+               "active_sha": c["active_sha"][:12],
+               "consumed": len(c.get("consumed", []))}
+        if c.get("reaudit_of"):
+            row["reaudit_of"] = c["reaudit_of"]
+        if c.get("closed_by_human"):
+            # The controller keeps BLOCKED + closed_by_human (other readers
+            # key on both); `closed` says what that means.
+            row["closed"] = True
+        if ledger_rulings.get(cid):
+            row["rulings"] = [{k: r.get(k) for k in
+                               ("action", "by", "at", "reason")
+                               if r.get(k) is not None}
+                              for r in ledger_rulings[cid]]
+        rows.append(row)
     human = ["cycle            status     round  sha           consumed",
              "-" * 60]
-    human += [f"{r['cycle_id']:16s} {r['status']:10s} {r['round']:5d}  "
-              f"{r['active_sha']}  {r['consumed']}" for r in rows] or ["(no cycles yet)"]
+    for r in rows:
+        shown = "CLOSED" if r.get("closed") else r["status"]
+        human.append(f"{r['cycle_id']:16s} {shown:10s} {r['round']:5d}  "
+                     f"{r['active_sha']}  {r['consumed']}"
+                     + (f"   re-audit of {r['reaudit_of']}" if r.get("reaudit_of")
+                        else ""))
+        for ruling in r.get("rulings", []):
+            human.append(f"  ruling: {ruling.get('action')} by {ruling.get('by')} "
+                         f"at {ruling.get('at')} — {ruling.get('reason', '')[:160]}")
+    if not rows:
+        human.append("(no cycles yet)")
     run = _run_summary(cfg)
     if run is not None:
         human.append(f"run: {run['state']}"
@@ -1367,23 +1549,78 @@ def cmd_status(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------- resolve
 def cmd_resolve(args: argparse.Namespace) -> int:
     """The human principal rules on an escalated cycle. Interactive only: this
-    is a human act and must not be scriptable by the agents themselves."""
+    is a human act and must not be scriptable by the agents themselves.
+
+    D172 ruling 5: the ruling and its reason are committed to the audit
+    ledger (``<ledger>/rulings.jsonl``, append-only), not only kept in the
+    gitignored controller state, and a close settles the run that was
+    waiting for this decision.
+    """
     if not sys.stdin.isatty():
         raise ConfigDenial("resolve is a human act; it refuses to run without a terminal")
+    from .. import rulings as rulings_mod
+
     cfg = load()
     action = "reopen" if args.reopen else "close"
-    c = _state(cfg).resolve_escalation(args.cycle_id, action, args.because)
+    store = _state(cfg)
+    before = store.cycle(args.cycle_id) or {}
+    c = store.resolve_escalation(args.cycle_id, action, args.because)
+    row = rulings_mod.record(cfg, c, action, args.because)
     if action == "close":
         # The close ruling settles the parked run this escalation references:
         # a stopped task must not keep signalling "needs your decision".
         from ..console import daemon
 
         daemon.settle_closed_escalation(cfg, c)
+        _settle_human_wait(cfg, before, args.because)
     print(f"ruling recorded: {args.cycle_id} {action} — {args.because}")
-    print(f"cycle is now {c['status']} (round {c['round']}); "
-          + ("run `crossaudit run` to re-audit." if action == "reopen"
-             else "the increment stays out of the record."))
+    print(f"  committed to the ledger: {row['commit'][:12]} "
+          f"({cfg.ledger_dir}/{rulings_mod.RULINGS_LOG})")
+    if action == "close":
+        print(f"cycle is now closed (round {c['round']}); "
+              "the increment stays out of the record.")
+    else:
+        print(f"cycle is now {c['status']} (round {c['round']}); "
+              "run `crossaudit run` to re-audit.")
     return EXIT_OK
+
+
+def _settle_human_wait(cfg: Config, cycle: dict, reason: str) -> bool:
+    """End the run that was WAITING_FOR_HUMAN on the cycle a person closed.
+
+    ``daemon.settle_closed_escalation`` settles a PARKED (provider) run; a
+    content escalation leaves its run in WAITING_FOR_HUMAN, which then kept
+    reading as waiting after the person had ruled. WAITING_FOR_HUMAN ->
+    CANCELLED is the declared edge for exactly this. ``cycle`` is the record
+    as it was BEFORE the ruling.
+
+    Which run: the one the escalation references (``escalation_run_id``).
+    An escalation the audit ladder recorded (the round budget spent inside
+    ``cmd_run``) carries no reference, so the association must be
+    corroborated the way the daemon's reconciler does for legacy records:
+    the NEWEST run, still waiting, whose start the cycle's last recorded
+    activity does not precede, and the same chat when the cycle names one.
+    Anything less could cancel an unrelated run.
+    """
+    from ..runtime import RunJournal, journal_path
+
+    runtime = journal_path(cfg)
+    if not runtime.is_file():
+        return False
+    journal = RunJournal(runtime)
+    run_id = str(cycle.get("escalation_run_id") or "")
+    if not run_id:
+        latest = journal.latest()
+        if latest is None:
+            return False
+        touched = float(cycle.get("updated_at") or 0)
+        same_chat = (not cycle.get("chat_id")
+                     or str(cycle.get("chat_id")) == str(latest.get("chat_id", "")))
+        if touched < float(latest.get("started") or 0) - 1 or not same_chat:
+            return False
+        run_id = str(latest["run_id"])
+    return journal.settle_human_wait(
+        run_id, f"closed by a human ruling: {reason.strip()[:300]}")
 
 
 def cmd_skills(args: argparse.Namespace) -> int:
@@ -1457,6 +1694,7 @@ def cmd_console(args: argparse.Namespace) -> int:
         print(f"\n  A console is already running for this project (pid "
               f"{running['pid']}).\n  {daemon.url_for(running)}\n\n"
               f"  Stop it with `crossaudit console --stop`.", flush=True)
+        _open_dashboard(args, daemon.url_for(running))
         return EXIT_OK
 
     if not args.foreground:
@@ -1469,6 +1707,7 @@ def cmd_console(args: argparse.Namespace) -> int:
               "  It keeps running when you close this window, and a build keeps\n"
               "  going with it. Come back with `crossaudit console` for the URL,\n"
               "  or end it with `crossaudit console --stop`.", flush=True)
+        _open_dashboard(args, daemon.url_for(info))
         return EXIT_OK
 
     # Foreground: this is the process the daemon actually runs.
@@ -1498,6 +1737,44 @@ def cmd_console(args: argparse.Namespace) -> int:
         # the one record that could find this process, before it had died.
         daemon.clear_run(cfg)
     return EXIT_OK
+
+
+def _should_open_browser(args: argparse.Namespace) -> bool:
+    """The rule for `crossaudit console` opening the dashboard (D172 ruling 6).
+
+    Open only for a person at a terminal: never with ``--no-open``, never
+    under ``--json`` (a script asked for data), never from the foreground
+    server process (that is the daemon child, or someone who chose to keep
+    the server in this window), and only when stdout is a terminal -- so
+    CI, pipes, the test suite and every non-interactive caller stay silent
+    without having to know about the flag.
+    """
+    if getattr(args, "no_open", False) or getattr(args, "json", False):
+        return False
+    if getattr(args, "foreground", False) or os.environ.get("CROSSAUDIT_CONSOLE_CHILD"):
+        return False
+    try:
+        return sys.stdout.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
+def _open_dashboard(args: argparse.Namespace, url: str) -> bool:
+    """Hand the printed, tokenized URL to the browser when the rule allows."""
+    if not _should_open_browser(args):
+        return False
+    import webbrowser
+
+    try:
+        # webbrowser can hand a URL to a text browser or block on a headless
+        # box, so it gets its own guard rather than the benefit of the doubt
+        # (the same guard `init`'s console tail uses).
+        opened = bool(webbrowser.open(url))
+    except Exception:                                        # noqa: BLE001
+        opened = False
+    print("  " + i18n.t("console.opened" if opened else "console.open_yourself"),
+          flush=True)
+    return opened
 
 
 def _cmd_pair(args: argparse.Namespace) -> int:
@@ -1686,16 +1963,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     prefix_own = (cfg.ledger_dir.rstrip("/") + "/", cfg.state_dir.rstrip("/") + "/",
                   ".github/", skills_dir + "/")
     def science_of(s: str) -> list[str]:
-        picked = [f for f in changed_paths(cfg.root, s)
-                  if f not in own and not f.startswith(prefix_own)]
-        if cfg.scope_dirs:
-            # The deployment names its science directories (the reference
-            # implementation always did: pushes under experiments/ trigger).
-            # Tooling and housekeeping commits outside them are not increments
-            # and are not forced through the experiment format.
-            picked = [f for f in picked
-                      if f.split("/", 1)[0] in cfg.scope_dirs]
-        return picked
+        # The deployment names its science directories (the reference
+        # implementation always did: pushes under experiments/ trigger).
+        # Tooling and housekeeping commits outside them are not increments
+        # and are not forced through the experiment format. One definition,
+        # shared with `audit`'s no-`--sha` default (D172 ruling 2).
+        return _increment_paths(cfg, s)
 
     def enclose(paths: list[str], s: str) -> list[str]:
         """Widen a diff to the increments it touched.
@@ -1721,18 +1994,15 @@ def cmd_run(args: argparse.Namespace) -> int:
         # HEAD is a ledger or config commit (the loop's own bookkeeping moves
         # HEAD in local mode). Walk back to the newest commit that actually
         # changed science, instead of asking the user to think about it.
-        for cand in git("log", "--format=%H", "-n", "50", cwd=cfg.root,
-                        check=False).splitlines()[1:]:
-            found = science_of(cand)
-            if found:
-                sha, tree = resolve(cfg.root, cand)
-                subject = git("log", "-1", "--format=%s", sha, cwd=cfg.root, check=False)
-                science = found
-                # Through the catalogue: this line was printed in raw English
-                # under `zh`, and "ledger bookkeeping" was wrong besides — a
-                # guidance commit is not the ledger. The key names both.
-                print("  " + i18n.t("run.walked_back", sha=sha[:12]))
-                break
+        cand = _latest_increment(cfg)
+        if cand:
+            sha, tree = resolve(cfg.root, cand)
+            subject = git("log", "-1", "--format=%s", sha, cwd=cfg.root, check=False)
+            science = science_of(sha)
+            # Through the catalogue: this line was printed in raw English
+            # under `zh`, and "ledger bookkeeping" was wrong besides — a
+            # guidance commit is not the ledger. The key names both.
+            print("  " + i18n.t("run.walked_back", sha=sha[:12]))
     if not science:
         # D149: the sentence a person reads names the commit by its subject.
         # The sha is not gone — it is the cycle's own `active_sha`, which the
@@ -2082,7 +2352,11 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--expect-repo")
     v.add_argument("--expect-sha")
     v.add_argument("--pubkey", help="a public-key PEM to pin the signature "
-                                    "against (third-party offline verification)")
+                                    "against (third-party offline verification); "
+                                    "a pinned receipt must be signed by it")
+    v.add_argument("--record-only", action="store_true",
+                   help="verify the committed record alone; report, but do not "
+                        "refuse, cycle files on disk that differ from it")
     v.set_defaults(func=cmd_verify)
 
     ek = sub.add_parser("export-pubkey",
@@ -2106,12 +2380,17 @@ def build_parser() -> argparse.ArgumentParser:
     sk.add_argument("--new", metavar="NAME", help="write a starter skill")
     sk.set_defaults(func=cmd_skills)
 
-    co = sub.add_parser("console", help="the dashboard in a browser; runs in the background")
+    co = sub.add_parser("console", help="the dashboard in a browser; runs in the background "
+                        "and opens it when run from a terminal")
     co.add_argument("--port", type=int, default=0, help="0 picks a free port")
     co.add_argument("--foreground", action="store_true",
                     help="run here and stop when this window closes")
     co.add_argument("--stop", action="store_true", help="stop the running console")
     co.add_argument("--status", action="store_true", help="is one running?")
+    co.add_argument("--no-open", action="store_true",
+                    help="print the URL without opening a browser (the browser "
+                         "opens only when output is a terminal and --json is "
+                         "not given)")
     co.set_defaults(func=cmd_console)
 
     pr = sub.add_parser("pair", help="create the two repositories (plan, then --apply)")

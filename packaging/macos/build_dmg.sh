@@ -69,6 +69,23 @@ fi
 rm -rf "$BUILD/pyinstaller-dist" "$BUILD/pyinstaller-work" "$BUILD/icon.iconset" \
        "$DIST/CrossAudit.app" "$DIST/CrossAudit-$VERSION-arm64.dmg"
 
+# The build interpreter must meet the package's floor (pyproject
+# requires-python >= 3.10): with PYTHON_BIN unset, macOS's own python3 is 3.9
+# and the build died at `pip install` with pip's one-line error. A venv left by
+# an earlier run with another interpreter is recreated rather than reused —
+# reusing it silently repeated that failure after PYTHON_BIN was corrected.
+PY_MM="$("$PYTHON_BIN" -c 'import sys;print("%d.%d" % sys.version_info[:2])' 2>/dev/null || echo none)"
+if [[ "$PY_MM" == "none" ]] || [[ "$(printf '%s\n' 3.10 "$PY_MM" | sort -V | head -1)" != "3.10" ]]; then
+  echo "PYTHON_BIN=$PYTHON_BIN is Python $PY_MM; the build needs 3.10 or newer (set PYTHON_BIN to one)." >&2
+  exit 9
+fi
+if [[ -x "$BUILD/venv/bin/python" ]]; then
+  VENV_MM="$("$BUILD/venv/bin/python" -c 'import sys;print("%d.%d" % sys.version_info[:2])' 2>/dev/null || echo none)"
+  if [[ "$VENV_MM" != "$PY_MM" ]]; then
+    echo "recreating $BUILD/venv: it was Python $VENV_MM, PYTHON_BIN is $PY_MM"
+    rm -rf "$BUILD/venv"
+  fi
+fi
 if [[ ! -x "$BUILD/venv/bin/python" ]]; then
   "$PYTHON_BIN" -m venv "$BUILD/venv"
 fi

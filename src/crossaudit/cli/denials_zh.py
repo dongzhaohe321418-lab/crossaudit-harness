@@ -203,6 +203,11 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "CrossAudit 有意不实现自己的 OAuth 流程，也不经手你的 token"),
     ("GitHub is not connected. Connect the account in CrossAudit and retry.",
      "尚未连接 GitHub。请在 CrossAudit 中连接账户后重试。"),
+    ("pair needs your GitHub account name to choose the work repository's name; "
+     "pass --science owner/name (and --audit owner/name) to see the plan without "
+     "signing in, or run `gh auth login`",
+     "pair 需要你的 GitHub 账户名来确定工作仓库的名称；传入 --science owner/name"
+     "（以及 --audit owner/name）即可在不登录的情况下查看计划，或者运行 `gh auth login`"),
     ("GitHub could not verify authorization scopes: {}", "GitHub 无法核实授权范围：{}"),
     ("GitHub could not check {}: {}", "GitHub 无法检查 {}：{}"),
     ("git {} failed: {}", "git {} 失败：{}"),
@@ -826,9 +831,13 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "another host)",
      "供应商试图重定向到 {}；已拒绝（重定向可能把密钥送到另一台主机）"),
     ("provider endpoint {} is not an absolute URL", "供应商端点 {} 不是绝对 URL"),
-    ("refusing plaintext {}:// to {}; only HTTPS is allowed (loopback needs "
-     "--allow-insecure-localhost)",
-     "拒绝以明文 {}:// 访问 {}；只允许 HTTPS（回环地址需要 --allow-insecure-localhost）"),
+    ("refusing plaintext {}:// to {}; only HTTPS is allowed, except to a loopback "
+     "address set as `base_url:` with CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1",
+     "拒绝以明文 {}:// 访问 {}；只允许 HTTPS，回环地址除外：需将其设为 `base_url:` "
+     "并设置 CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1"),
+    ("refusing plaintext {}:// to {}; this request accepts HTTPS only, even on "
+     "loopback",
+     "拒绝以明文 {}:// 访问 {}；此请求只接受 HTTPS，回环地址也不例外"),
     ("endpoint {} is not this provider's built-in origin ({}); pass "
      "--allow-custom-endpoint to send a key there",
      "端点 {} 不是此供应商的内置源（{}）；要把密钥发到那里，请传入 --allow-custom-endpoint"),
@@ -877,6 +886,16 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("provider completion stream ended without a terminal marker",
      "供应商的回复流在没有结束标记的情况下结束了"),
     ("provider returned an empty completion", "供应商返回了空回复"),
+    # providers/base.py truncated_completion — the slot is the vendor id.
+    # The sentence opens with literal words, never the slot: a leading slot would
+    # swallow a composite prefix ("generator provider failure in round …") whole.
+    ("the reply from {} was cut off at a token limit before it finished (stop "
+     "reason {}, output limit {} tokens); the partial reply was discarded and "
+     "nothing from it was used. Ask for a smaller change per round so the whole "
+     "reply fits",
+     "来自 {} 的回复在完成之前被 token 上限截断（停止原因 {}，输出上限 {} 个 token）；"
+     "被截断的回复已丢弃，其中任何内容都没有被使用。请缩小每一轮要求的改动，"
+     "使完整的回复能够容纳在上限之内"),
     ("unexpected chat-completions response shape: {}",
      "chat-completions 返回了意料之外的响应结构：{}"),
     ("unknown provider {}; available: {}", "未知的供应商 {}；可用的有：{}"),
@@ -977,6 +996,8 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "reproduction.bundle_sha256 必须是非空字符串"),
     ("reproduction.locks must be a positive integer", "reproduction.locks 必须是正整数"),
     ("reproduction.lock_kinds must be a list", "reproduction.lock_kinds 必须是列表"),
+    ("reproduction.tree_locks must map lock paths to sha256 digests",
+     "reproduction.tree_locks 必须把锁文件路径映射到 sha256 摘要"),
     ("sources must be a mapping", "sources 必须是映射"),
     ("sources.set_sha256 must be a non-empty string", "sources.set_sha256 必须是非空字符串"),
     ("sources.count must be a positive integer", "sources.count 必须是正整数"),
@@ -1032,6 +1053,11 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("reproduction bundle digest does not match the receipt", "复现包摘要与收据不匹配"),
     ("reproduction lock count does not match the audited manifest",
      "复现锁数量与受审清单不匹配"),
+    ("reproduction names {} as a dependency lock, which it is not",
+     "复现信息把 {} 列为依赖锁文件，但它不是"),
+    ("reproduction names the lock {}, absent from the tree",
+     "复现信息列出了锁文件 {}，但它不在受审的树中"),
+    ("reproduction lock mismatch for {}", "复现锁文件 {} 不匹配"),
     ("receipt claims governed sources but none re-derive from the evidence ledger",
      "收据声称有受管来源，但没有任何一个能从证据账本重新推导出来"),
     ("governed-source set does not match the evidence ledger", "受管来源集合与证据账本不匹配"),
@@ -1047,6 +1073,23 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the verifier that minted this receipt is not the one admitting it; re-verify "
      "with the recorded version before admitting",
      "签发此收据的验证器与准入它的不是同一个；请先用记录的版本重新验证，再准入"),
+    # ------------------------------- cli/main.py (verify, export-pubkey, D171)
+    ("the public key file {} could not be read: {}", "无法读取公钥文件 {}：{}"),
+    ("the public key file {} is not an Ed25519 public key in PEM form: {}",
+     "公钥文件 {} 不是 PEM 格式的 Ed25519 公钥：{}"),
+    ("the receipt's signature does not verify: {}; the receipt or its signature "
+     "was altered after it was minted",
+     "收据的签名无法通过验证：{}；收据或其签名在签发之后被改动过"),
+    ("a public key was pinned but the receipt carries no signature sidecar "
+     "(receipt.dsse.json); a pinned verification requires a signature by that key",
+     "已指定公钥，但收据旁没有签名文件（receipt.dsse.json）；指定公钥的验证要求有该密钥的签名"),
+    ("the report on disk is not the audited report: {} does not match the digest "
+     "the receipt binds (verify --record-only checks the committed record alone)",
+     "磁盘上的报告不是受审的报告：{} 与收据绑定的摘要不符（verify --record-only 只检查已提交的记录）"),
+    ("the reproduction bundle on disk is not the audited bundle: {} does not match "
+     "the digest the receipt binds (verify --record-only checks the committed "
+     "record alone)",
+     "磁盘上的复现包不是受审的复现包：{} 与收据绑定的摘要不符（verify --record-only 只检查已提交的记录）"),
     # ------------------------------------------------------------ router.py
     ("router returned an unknown lane {}", "路由器返回了未知的通道 {}"),
     ("name a recipient and include the instruction after it",
@@ -1191,6 +1234,10 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the evidence ledger has an incomplete final entry (a crash left a torn tail); "
      "refusing to append onto a damaged chain until it is recovered",
      "证据账本的最后一条记录不完整（崩溃留下了残缺的尾部）；在恢复之前拒绝向受损的链上追加记录"),
+    # The slot is the verifier's own report (line number / seq), carried through.
+    ("the evidence ledger does not verify ({}); refusing to append onto a damaged "
+     "chain until it is recovered",
+     "证据账本未通过校验（{}）；在恢复之前拒绝向受损的链上追加记录"),
     # ------------------------------------------ hpc.py (SSHFailure and labels)
     ("This host is not trusted yet. Verify the hostname, then choose Trust first "
      "key & connect. CrossAudit will use OpenSSH trust-on-first-use.",
@@ -1384,9 +1431,9 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("ChatGPT subscription completion failed: {}", "ChatGPT 订阅请求失败：{}"),
     ("ChatGPT subscription returned an empty completion{}", "ChatGPT 订阅返回了空回复{}"),
     ("ChatGPT subscription returned an empty completion", "ChatGPT 订阅返回了空回复"),
-    ("ChatGPT subscription returned an empty completion; its tool request was "
-     "safely blocked, but it did not recover with a text answer",
-     "ChatGPT 订阅返回了空回复；它的工具请求已被安全拦截，但之后没有恢复为文本回答"),
+    ("ChatGPT subscription completion was refused: the model requested {} in a "
+     "text-only role, so its reply was discarded",
+     "ChatGPT 订阅回复被拒绝：模型在仅限文本的角色中请求了 {}，因此其回复已被丢弃"),
     # ------------------------------------------ console/daemon.py, runtime/commands.py
     # The escalation sentence the Decision Center leads with; its slot is the
     # provider refusal itself, translated in turn (COMPOSITE).

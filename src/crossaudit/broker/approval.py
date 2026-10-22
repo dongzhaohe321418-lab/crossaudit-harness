@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,6 +35,14 @@ WORKSPACE_WRITES = "workspace_writes"
 APPROVED_TOOLS = "approved_tools"
 
 AUTHORIZATIONS_FILE = "authorizations.json"
+
+#: Serialises every load -> modify -> persist of an authorizations file in this
+#: process (D169). Without it a build thread approving a tool "for this
+#: project" and the settings UI revoking `workspace_writes` each read the old
+#: file and the later write erased the earlier one -- a lost revoke is
+#: fail-open. One lock for every project: writes are rare and tiny, and a
+#: per-path lock table would be one more thing to get wrong.
+_LOCK = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -62,24 +72,34 @@ class AuthorizationStore:
 
     def _persist(self, data: dict) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_name(self.path.name + f".tmp{os.getpid()}")
-        with open(tmp, "w", encoding="utf-8") as fh:
-            json.dump(data, fh, indent=2, sort_keys=True)
-            fh.flush()
-            os.fsync(fh.fileno())
-        os.replace(tmp, self.path)
+        # A random temp name per write (as mcp._write does): the old
+        # `.tmp<pid>` was shared by every thread of the process, so one
+        # thread's os.replace consumed another's file mid-write.
+        tmp = self.path.with_name(f"{self.path.name}.tmp{secrets.token_hex(8)}")
+        try:
+            with open(tmp, "w", encoding="utf-8") as fh:
+                json.dump(data, fh, indent=2, sort_keys=True)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp, self.path)
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def _update(self, change) -> None:
+        """Apply ``change(data)`` to the stored mapping under the module lock."""
+        with _LOCK:
+            data = self.load()
+            change(data)
+            self._persist(data)
 
     def set(self, key: str, value: bool) -> None:
         """Record a user's explicit grant/revoke (called by the settings UI)."""
-        data = self.load()
-        data[str(key)] = bool(value)
-        self._persist(data)
+        self._update(lambda data: data.__setitem__(str(key), bool(value)))
 
     def set_list(self, key: str, values) -> None:
         """Record a per-project string list the user approved (e.g. check commands)."""
-        data = self.load()
-        data[str(key)] = [str(v) for v in values]
-        self._persist(data)
+        items = [str(v) for v in values]
+        self._update(lambda data: data.__setitem__(str(key), items))
 
     def authorized_tool(self, tool: str) -> bool:
         """Whether the user approved this tool "for this project" from a card."""
@@ -88,13 +108,14 @@ class AuthorizationStore:
 
     def add_tool(self, tool: str) -> None:
         """Persist a tool the user approved "for this project" (idempotent)."""
-        data = self.load()
-        current = data.get(APPROVED_TOOLS)
-        current = [str(v) for v in current] if isinstance(current, list) else []
-        if str(tool) not in current:
-            current.append(str(tool))
-        data[APPROVED_TOOLS] = current
-        self._persist(data)
+        def change(data: dict) -> None:
+            current = data.get(APPROVED_TOOLS)
+            current = [str(v) for v in current] if isinstance(current, list) else []
+            if str(tool) not in current:
+                current.append(str(tool))
+            data[APPROVED_TOOLS] = current
+
+        self._update(change)
 
 
 def approve(proposal: dict, decision, cfg: Config) -> Approval:

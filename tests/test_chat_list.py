@@ -98,6 +98,11 @@ def test_the_legacy_thread_is_dated_by_the_evidence_that_carries_no_chat_id(
     assert legacy["updated"] < now - DAY, "and it is not dated 'just now'"
 
 
+# 45 later commits and their reports are built through git, one subprocess
+# each: ~10 s on a developer Mac, and past the suite's 30 s per-test cap on
+# a loaded macOS CI runner (PR #6 saw 1 failed of 4,904 for exactly this).
+# The cap is for hangs; this is work, so the test carries its own budget.
+@pytest.mark.timeout(120)
 def test_the_legacy_date_survives_the_stream_window_moving_past_it(tmp_path):
     """The state the owner actually had: newer threads fill the window.
 

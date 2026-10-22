@@ -34,14 +34,16 @@ from ..context import shape_work
 from ..broker.humanapproval import INBOX, HumanApprovalGate
 from ..broker.routing import (
     BROKER_SERVER_ID, broker_tool_call, build_broker_and_token, build_catalog,
-    compute_authorized, run_commands_authorized, writes_authorized)
+    compute_authorized, evidence_path, run_commands_authorized, writes_authorized)
+from ..broker.tools_mcp import governed_mcp_call
+from ..ledger import EvidenceLedger
 from .. import generator as gen_mod
 from .. import skills as skills_mod
 from ..config import Config, heterogeneity, load
 from ..controller import StateStore
 from ..dcl import describe as describe_checks
-from ..errors import (EXIT_ESCALATED, EXIT_OK, ConfigDenial, Denial,
-                      ProviderDenial, park_escalation_kind)
+from ..errors import (EXIT_ESCALATED, EXIT_OK, EXIT_PROVIDER, ConfigDenial, Denial,
+                      IntegrityDenial, ProviderDenial, park_escalation_kind)
 from ..file_identity import AppliedFiles
 from ..gitio import git, git_bytes, is_repo
 from . import i18n as _i18n
@@ -717,6 +719,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     total_tool_calls = 0
     broker_token = None                   # broker + token built lazily on 1st tool
     broker_obj = None
+    mcp_ledger = None                     # the evidence ledger, opened on 1st MCP call
     # Read-only tools always; write tools too, but only for a project whose user
     # authorized recoverable edits (build_catalog / build_broker_and_token decide).
     builtin_tools = build_catalog(cfg)
@@ -879,13 +882,23 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     tool_name = str(outcome.request.get("tool", "MCP tool"))
                     emit("capability_requested", "tool", "calling MCP tool",
                          tool_name[:200], state=RunState.WAITING_FOR_CAPABILITY)
+                    # D174: through the broker's MCP path, which writes a
+                    # tool_call entry to the evidence ledger before the call
+                    # and a tool_result entry after it (hashes only).
+                    if mcp_ledger is None:
+                        mcp_ledger = EvidenceLedger(evidence_path(cfg))
                     try:
-                        result = mcp.MANAGER.call_agent(
-                            cfg, outcome.request, chat_id=chat_id,
+                        result = governed_mcp_call(
+                            cfg, outcome.request, ledger=mcp_ledger,
+                            run_id=run_id, chat_id=chat_id,
                             ordinal=tool_counts[server_id],
                             notify=lambda status, detail: emit(
                                 "capability_progress", "tool", status, detail,
                                 state=RunState.WAITING_FOR_CAPABILITY))
+                    except IntegrityDenial:
+                        # The ledger refused to record the call: never fed
+                        # back as a refused tool result (D168, D174).
+                        raise
                     except Denial as exc:
                         result = {"status": "refused", "message": exc.reason,
                                   "server_id": server_id, "tool": tool_name}
@@ -1434,6 +1447,37 @@ def _missing_role_keys(cfg) -> list[str]:
     return missing
 
 
+#: How `crossaudit build` reports the loop's FINAL state (D172 ruling 3). The
+#: loop itself (`run_loop`) returns EXIT_OK or EXIT_ESCALATED for every stop,
+#: and the console reads it that way; only the CLI's exit status separates a
+#: stop that a provider caused. Keyed by (loop code, park kind), where the
+#: park kind is the ``waiting_reason.kind`` of the run's final event --
+#: the same value the cycle side records as ``escalation_kind``
+#: (``errors.park_escalation_kind``) -- or "" when the run did not park.
+#:
+#: - PASS                                   -> 0
+#: - parked: every provider route failed    -> 22 (README: provider failure)
+#: - parked: a usage guardrail (budget)     -> 11 (a person raises the limit)
+#: - any other escalation, including a
+#:   BLOCKED round that spent the budget    -> 11 (`status` names the cause)
+#:
+#: There is no "10" row: a build never ends BLOCKED without escalating -- a
+#: BLOCKED round either goes back to the generator or, on the last round,
+#: escalates. `audit` and `run` report one cycle and do return 10.
+BUILD_EXIT: dict[tuple[int, str], int] = {
+    (EXIT_OK, ""): EXIT_OK,
+    (EXIT_ESCALATED, "provider"): EXIT_PROVIDER,
+    (EXIT_ESCALATED, "budget"): EXIT_ESCALATED,
+    (EXIT_ESCALATED, ""): EXIT_ESCALATED,
+}
+
+
+def build_exit_code(loop_code: int, park_kind: str = "") -> int:
+    """The exit status for a finished build; anything unlisted passes through."""
+    return BUILD_EXIT.get((loop_code, park_kind or ""),
+                          BUILD_EXIT.get((loop_code, ""), loop_code))
+
+
 def cmd_build(args) -> int:
     _i18n.set_language(getattr(args, "lang", "en") or "en")
     _i18n.reset_fallbacks()
@@ -1444,6 +1488,8 @@ def cmd_build(args) -> int:
     #: Whether any round reached the auditor. Nothing reaching it means nothing
     #: was committed, which is what makes the closing sentence true.
     produced: set[str] = set()
+    #: The final event's park kind; a later event that does not park clears it.
+    final_park: list[str] = [""]
     prepared_task = resolve_task(cfg, args.words)
 
     def prepare() -> PreparedRun:
@@ -1464,6 +1510,7 @@ def cmd_build(args) -> int:
 
         def on_event(event: RunEvent) -> None:
             emit(event)
+            final_park[0] = str((event.waiting_reason or {}).get("kind", "") or "")
             # The source-mode console consumes chunks through named SSE events.
             # A raw edit envelope on stdout has no live-draft affordance yet, so
             # the CLI keeps its existing phase narration rather than presenting
@@ -1503,6 +1550,7 @@ def cmd_build(args) -> int:
 
     code = service.start(prepare, worker, background=False)
     assert isinstance(code, int)
+    code = build_exit_code(code, final_park[0])
     if code == EXIT_OK:
         print("\n  " + t("build.done"))
         print("  " + t("build.done.read"))

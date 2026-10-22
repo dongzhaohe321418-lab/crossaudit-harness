@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from typing import Any
 
 from .. import RECEIPT_SCHEMA
@@ -118,6 +119,15 @@ def validate(raw: Any) -> dict:
             raise IntegrityDenial("reproduction.locks must be a positive integer")
         if not isinstance(rep["lock_kinds"], list):
             raise IntegrityDenial("reproduction.lock_kinds must be a list")
+        # D171, optional: locks in the audited tree outside the manifest.
+        if "tree_locks" in rep:
+            tl = rep["tree_locks"]
+            if (not isinstance(tl, dict) or not tl
+                    or not all(isinstance(k, str) and k and isinstance(v, str)
+                               and re.fullmatch(r"[0-9a-f]{64}", v)
+                               for k, v in tl.items())):
+                raise IntegrityDenial(
+                    "reproduction.tree_locks must map lock paths to sha256 digests")
 
     # Optional governed-source provenance (A4): present only on cycles that ran a
     # governed research retrieval. Validated when present; absence keeps the

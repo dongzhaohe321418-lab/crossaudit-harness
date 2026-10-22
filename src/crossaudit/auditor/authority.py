@@ -70,6 +70,8 @@ INTEGRITY_IN_WORDS = {
     "NOTHING_AUDITED": "nothing was audited: the scope holds no work yet",
     "BOUNDS_EXCEEDED": ("the audit prompt exceeded its size bound, so the auditor "
                         "did not see everything"),
+    "INPUT_NOT_SHOWN": ("a file was not shown to the auditor because it is not "
+                        "readable text"),
     "INVALID_REPLY": "the auditor's reply was not valid",
     "PROVIDER_FAILURE": "the model audit could not run",
     "NON_EVIDENTIAL_PROVIDER": ("a fixture provider exercised the loop, and a "
