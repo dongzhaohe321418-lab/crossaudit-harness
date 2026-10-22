@@ -22,7 +22,14 @@ macOS login Keychain and loaded into the environment of the local core process
 and of the project workers it starts, which call the providers. Other child
 processes (Git, the GitHub CLI, OpenSSH, and the Codex runtime) are started
 with provider key variables removed; MCP servers and allowed check commands
-receive their own reduced environments.
+receive their own reduced environments. A stdio MCP server gets only the
+thirteen variables `mcp._stdio_environment` names (seven POSIX ones such as
+`PATH` and `HOME`, and six Windows runtime ones such as `SYSTEMROOT`) that are
+set. Each MCP call the Generator makes is recorded in the project's evidence
+ledger (`.crossaudit/evidence.jsonl`, mode 600) as its server, tool, argument
+and result hashes, status, size and timing; the request text itself, which is
+part of the Generator's streamed reply, stays in the project-private run
+journal (`.crossaudit/runtime.sqlite3`, mode 600) that the console replays.
 
 The process token is a bearer credential for running code on this Mac as you;
 treat it like your account password. Whoever holds it can do anything the web

@@ -436,6 +436,12 @@ def test_build_loop_returns_mcp_tool_data_to_generator_before_audit(
     monkeypatch.setattr(build_mod.gen_mod, "generate", fake_generate)
     monkeypatch.setattr(build_mod.mcp.MANAGER, "agent_context", lambda _cfg: [{
         "server_id": "c" * 16, "tools": [{"name": "lookup"}]}])
+    # D174: the build reaches the manager through the broker's governed path,
+    # which asks the owner's policy first; this fake grants it.
+    monkeypatch.setattr(build_mod.mcp.MANAGER, "authorize", lambda *_a, **_k: {
+        "server": {"id": "c" * 16}, "tool": "lookup",
+        "arguments": {"query": "evidence"}, "arguments_sha256": "a" * 64,
+        "allowlist_sha256": "b" * 64, "call_ordinal": 1, "call_budget": 5})
     monkeypatch.setattr(build_mod.mcp.MANAGER, "call_agent", lambda *_a, **_k: {
         "call_id": "d" * 16, "status": "completed", "tool": "lookup",
         "content": [{"type": "text", "text": "value: 42"}],

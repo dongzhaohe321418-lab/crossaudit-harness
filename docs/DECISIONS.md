@@ -7872,7 +7872,7 @@ RULINGS:
    role names, any `CROSSAUDIT_*_KEY` and any `*_API_KEY`, and leaves everything else
    byte-identical (`GH_TOKEN`, `SSH_AUTH_SOCK`, `GIT_ASKPASS`, `CODEX_HOME` are tested as
    kept). Every `subprocess` launch site in `src/` uses it except four that build their own
-   environment on purpose: stdio MCP servers (an eight-name allowlist), `run_check` (every
+   environment on purpose: stdio MCP servers (an eight-name allowlist [COUNT CORRECTED BY D174: thirteen names, six of them Windows runtime names]), `run_check` (every
    `*KEY*`/`*TOKEN*`/`*SECRET*` name stripped), project workers (they call the providers
    and must have the keys), and `app.py` (below). A structural test fails on a new launch
    site without it. Considered and rejected: a broad `*TOKEN*`/`*SECRET*` scrub for every
@@ -8147,3 +8147,78 @@ RULINGS:
    still says "pass --allow-custom-endpoint", a flag that exists on `audit` and `run`
    but not on `build`, where only the variable works.
 
+
+## D174 — A build's MCP calls go through the broker's MCP path, which writes each one to the evidence ledger before and after it runs; the receipt binds them
+
+**Date:** 2026-10-22. **Branch:** `fix/claims-round-2b`.
+
+**What was wrong.** The README says governed actions go to the append-only hash-chained
+ledger, and `broker/tools_mcp.py` said the ledger records an MCP call's result hash. The
+claims harness (C34a–C34g) found that a registered stdio MCP tool the Generator called
+during `crossaudit build` was allowlisted, budgeted, bounded and written to
+`.crossaudit/mcp/calls.json`, but never reached the ledger: `cli/build.py` called
+`mcp.MANAGER.call_agent` directly, so `evidence.jsonl` was not even created and the
+receipt carried no `tool_evidence` block. The same module docstring also said "the build
+never calls one", which was false.
+
+RULINGS:
+
+1. **The build reaches MCP only through `broker/tools_mcp.governed_mcp_call`, and that
+   function is the one place an MCP call is ledgered.** Before the call it appends a
+   `tool_call` entry; after it, a `tool_result` entry. Console chats run the same build
+   loop (`run_loop`), so they take the same path, and no other caller of `call_agent`
+   exists outside `tools_mcp.py`. Chosen over having `mcp.Manager` append to the ledger
+   because the broker owns the ledger and its vocabulary (`tool_call` / `tool_result`,
+   `tool`, `args_sha256`, `result_sha256`, `status`, the fields the Auditor's evidence view
+   and the audit panel already read), and because it makes the `tools_mcp.py` comment true
+   as rewritten: one module records both MCP entry points. The manager stays a protocol
+   client with no ledger dependency. Considered and rejected: sending the build's MCP
+   requests through `ToolBroker.execute` with the Level-4 `mcp_call` spec. Policy flags
+   Level 4 for approval and the standing Approval Service never grants it, so every MCP
+   call in a non-interactive build would be refused. That would remove a flow the README
+   documents, and it would ask a person to approve, call by call, tools they already
+   approved by name at registration. Per-call approval of build MCP calls remains possible
+   later; it is not part of this change.
+2. **Entry shapes (additive; `LEDGER_SCHEMA` is unchanged).** `tool_call` payload:
+   `tool: "mcp_call"`, `server_id`, `mcp_tool`, `args_sha256` (the same value as
+   `calls.json`'s `arguments_sha256`: sha256 of the bounded JSON arguments), `approval:
+   "owner_allowlist"`, `allowlisted`, `allowlist_sha256` (sha256 of the server's sorted
+   allowlist as it stood), `call_ordinal` and `call_budget` (the per-task budget position).
+   `tool_result` payload: `tool`, `server_id`, `mcp_tool`, `call_id` (the `calls.json`
+   row's id), `status`, `result_sha256` (equal to `calls.json`'s), `bytes`, `truncated`,
+   `duration_ms`. No argument value and no tool output enter the ledger. `calls.json` is
+   unchanged byte for byte; its result hash now comes from `mcp.result_evidence`, which
+   hashes the same serialisation of the same three fields.
+3. **A refusal is recorded too.** When the owner's policy refuses (server not registered
+   or not enabled, tool not allowlisted, budget spent, arguments not an object or too
+   large), `mcp.Manager.authorize` raises before anything runs. The ledger gets
+   `tool_call` with `allowlisted: false` and an empty argument hash, and `tool_result` with
+   `status: "refused"` and the policy's own sentence. A model-supplied server id or tool
+   name that does not have the registered shape is recorded as `""`, not copied. A
+   transport or protocol failure is recorded as `status: "failed"` without its reason,
+   because that reason can quote the server's stderr. `call_agent` runs the same
+   `authorize` first, so its refusals are unchanged.
+4. **The ledger refusing an append fails the call closed.** The first append happens before
+   the server is started, so a ledger that does not verify (D168) means the tool never
+   runs. If the second append is refused, the result is never handed back. The build loop
+   re-raises `IntegrityDenial` ahead of its `except Denial` branch, which turns a refused
+   tool call into a tool result the Generator works around. So the run stops; it does not
+   carry on without evidence.
+5. **The receipt and `verify` needed no change.** `receipt/build._tool_evidence` already
+   binds the ledger's head and count once the ledger exists, and `verify` re-derives the
+   chain and checks the bound prefix. An end-to-end test (`tests/test_mcp_evidence_ledger.py`)
+   registers a real stdio server, runs `run_loop` with a scripted Generator and the replay
+   auditor, and checks that the receipt's `tool_evidence.entries` is 2 and `cmd_verify`
+   passes. It then edits one ledger line and checks that `verify` refuses.
+6. **The request text in the run journal is documented, not removed.** The Generator's
+   streamed reply, which contains the MCP request, is kept in the run's event log in
+   `.crossaudit/runtime.sqlite3` (mode 600), which the console replays. Changing what that
+   journal keeps is a different decision. SECURITY.md now says where the text lives and
+   that the ledger holds hashes. It also gives the stdio environment allowlist's real size,
+   thirteen names (seven POSIX, six Windows runtime). D170's "eight-name allowlist" is
+   marked corrected.
+
+**Open.** Build MCP calls are approved by the owner's registration, not call by call
+(ruling 1). The evidence view the Auditor sees still projects only its existing fields, so
+the Auditor sees MCP calls as `mcp_call` rows with hashes and status, without server or
+tool names.

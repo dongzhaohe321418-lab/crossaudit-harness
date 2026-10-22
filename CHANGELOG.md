@@ -6,6 +6,13 @@ All notable changes to CrossAudit are recorded here. Versions follow the
 ## Unreleased
 
 ### Fixed
+- **MCP tool calls made during a build are now in the evidence ledger.** Each call
+  the Generator makes to a registered MCP tool, from `crossaudit build` or a console
+  chat, writes a `tool_call` entry before it runs and a `tool_result` entry after it
+  (hashes, status, size, timing; never the arguments or the output). The audit receipt
+  binds them and `crossaudit verify` re-checks them. Before this, those calls went
+  only to `.crossaudit/mcp/calls.json`. If the ledger cannot record a call, the call
+  does not run (D174).
 - **A reply cut off by the output-token limit is refused, not committed.** When
   Anthropic reports `stop_reason: max_tokens` or an OpenAI-compatible provider
   reports `finish_reason: length`, the reply is discarded and the run stops with

@@ -246,7 +246,9 @@ uncomfortable number rather than burying it.
 - Project-scoped MCP tools over local stdio or Streamable HTTP, with exact
   executable consent, HTTPS/private-network controls, write-only Keychain
   bearer tokens, per-tool allowlists, call budgets, live progress, bounded
-  results, and content-free hashed call records.
+  results, and content-free hashed call records; each call the Generator makes
+  is also a governed action in the hash-chained evidence ledger, which the
+  audit receipt binds.
 - Local token metering for every Generator and Auditor call, with a live Usage
   view, cache-aware counts, role/model breakdowns, and clearly labelled public
   API-value estimates.

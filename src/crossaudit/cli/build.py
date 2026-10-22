@@ -34,14 +34,16 @@ from ..context import shape_work
 from ..broker.humanapproval import INBOX, HumanApprovalGate
 from ..broker.routing import (
     BROKER_SERVER_ID, broker_tool_call, build_broker_and_token, build_catalog,
-    compute_authorized, run_commands_authorized, writes_authorized)
+    compute_authorized, evidence_path, run_commands_authorized, writes_authorized)
+from ..broker.tools_mcp import governed_mcp_call
+from ..ledger import EvidenceLedger
 from .. import generator as gen_mod
 from .. import skills as skills_mod
 from ..config import Config, heterogeneity, load
 from ..controller import StateStore
 from ..dcl import describe as describe_checks
 from ..errors import (EXIT_ESCALATED, EXIT_OK, EXIT_PROVIDER, ConfigDenial, Denial,
-                      ProviderDenial, park_escalation_kind)
+                      IntegrityDenial, ProviderDenial, park_escalation_kind)
 from ..file_identity import AppliedFiles
 from ..gitio import git, git_bytes, is_repo
 from . import i18n as _i18n
@@ -717,6 +719,7 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
     total_tool_calls = 0
     broker_token = None                   # broker + token built lazily on 1st tool
     broker_obj = None
+    mcp_ledger = None                     # the evidence ledger, opened on 1st MCP call
     # Read-only tools always; write tools too, but only for a project whose user
     # authorized recoverable edits (build_catalog / build_broker_and_token decide).
     builtin_tools = build_catalog(cfg)
@@ -879,13 +882,23 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
                     tool_name = str(outcome.request.get("tool", "MCP tool"))
                     emit("capability_requested", "tool", "calling MCP tool",
                          tool_name[:200], state=RunState.WAITING_FOR_CAPABILITY)
+                    # D174: through the broker's MCP path, which writes a
+                    # tool_call entry to the evidence ledger before the call
+                    # and a tool_result entry after it (hashes only).
+                    if mcp_ledger is None:
+                        mcp_ledger = EvidenceLedger(evidence_path(cfg))
                     try:
-                        result = mcp.MANAGER.call_agent(
-                            cfg, outcome.request, chat_id=chat_id,
+                        result = governed_mcp_call(
+                            cfg, outcome.request, ledger=mcp_ledger,
+                            run_id=run_id, chat_id=chat_id,
                             ordinal=tool_counts[server_id],
                             notify=lambda status, detail: emit(
                                 "capability_progress", "tool", status, detail,
                                 state=RunState.WAITING_FOR_CAPABILITY))
+                    except IntegrityDenial:
+                        # The ledger refused to record the call: never fed
+                        # back as a refused tool result (D168, D174).
+                        raise
                     except Denial as exc:
                         result = {"status": "refused", "message": exc.reason,
                                   "server_id": server_id, "tool": tool_name}
