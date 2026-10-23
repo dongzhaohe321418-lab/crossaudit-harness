@@ -2224,6 +2224,13 @@ def serve(cfg: Config, port: int = 0, *,
           idle_timeout: float = IDLE_TIMEOUT_S,
           register: bool = False) -> tuple[str, ThreadingHTTPServer]:
     """Start the console. Returns (url carrying the session token, server)."""
+    # TUI_FIRST.md §5: every completion this process makes from here on (say,
+    # chat, routing, and the builds `start_build` runs on threads of this same
+    # process) is the console's, or the native app's in app mode. `crossaudit
+    # console --foreground` reached here through `main()`, which declared
+    # `cli`; this entry point is the more specific one, so it overrides.
+    usage.set_surface(
+        "app" if os.environ.get("CROSSAUDIT_APP_MODE") == "1" else "console")
     # Recovery is a command-side responsibility. The tracker below remains a
     # pure projection and cannot mutate state merely because a view opened.
     RunCommandService(cfg, alive=daemon._pid_alive, on_change=TRACKER.notify)
