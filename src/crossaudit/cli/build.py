@@ -1478,6 +1478,80 @@ def build_exit_code(loop_code: int, park_kind: str = "") -> int:
                           BUILD_EXIT.get((loop_code, ""), loop_code))
 
 
+def _event_field(event, name: str, default=""):
+    """One field of a run event, whether it is a live ``RunEvent`` or the
+    journal's projection of one (a dict with the same keys)."""
+    if isinstance(event, dict):
+        value = event.get(name, default)
+    else:
+        value = getattr(event, name, default)
+    return default if value is None else value
+
+
+def narration_line(event, *, verbose: bool) -> str | None:
+    """The text `crossaudit build` prints for one run event, or None.
+
+    Pure, so every surface that narrates a run (`build` on stdout, the
+    terminal UI's activity pane) says exactly the same thing for the same
+    event. ``event`` is a ``RunEvent`` or the journal's dict projection of one.
+    The returned text may span lines (a separator opens with a blank line, a
+    detail sits on its own line); a caller that prints it prints it whole.
+    """
+    kind = str(_event_field(event, "kind", ""))
+    # The source-mode console consumes chunks through named SSE events.
+    # A raw edit envelope on stdout has no live-draft affordance yet, so
+    # the CLI keeps its existing phase narration rather than presenting
+    # unaudited structured bytes as a finished-looking result.
+    if kind in ("generation_chunk", "thinking_chunk"):
+        return None
+    if kind == "round_started":
+        label = (f"round {_event_field(event, 'round_no', 0)} of "
+                 f"{_event_field(event, 'round_limit', 0)}")
+        return f"\n  ── {label} " + "─" * max(0, 44 - len(label))
+    # 1. Never print a raw payload. The goal event carries the run's
+    #    JSON goal as detail; truncated at 96 characters it reads as
+    #    corrupted output, and it is internal state either way.
+    detail = str(_event_field(event, "detail", "") or "")
+    if detail.lstrip().startswith(("{", "[")):
+        detail = "" if not verbose else detail
+    # 2. Do not say "waiting" and then exit. In the console a parked run
+    #    genuinely waits and can be resumed; a foreground build exits, so
+    #    the CLI says what actually happened. The event is unchanged —
+    #    only this renderer differs, because only here is it untrue.
+    text = str(_event_field(event, "text", ""))
+    if kind == "provider_unavailable":
+        text = "stopped: " + (detail or text)
+        detail = ""
+    line = f"  {_event_field(event, 'actor', '')!s:10s} {text}"
+    return line if not detail else f"{line}\n  {'':10s} {detail[:96]}"
+
+
+def outcome_lines(cfg, code: int, *, produced: bool, task: str) -> list[str]:
+    """What `crossaudit build` prints once the loop has stopped, line by line
+    (each exactly as printed, leading blank line included). Shared with the
+    terminal UI so its outcome line is the same sentence."""
+    if code == EXIT_OK:
+        return ["\n  " + t("build.done"), "  " + t("build.done.read")]
+    if not produced:
+        # 3. State the outcome, then the remedy. "It is yours now" is a handoff
+        #    after a success; nothing was produced. The blunt sentence is
+        #    deliberate — it is what stops someone hunting for a partial result
+        #    that does not exist.
+        out = ["\n  " + t("build.nothing")]
+        missing = _missing_role_keys(cfg)
+        if missing:
+            from . import wizard as _wizard
+            out.append("\n  " + t("build.nothing.fix", path=_wizard.keys_file(),
+                                    envs=" and ".join(missing)))
+        # The task is reprinted verbatim so the person does not have to
+        # reconstruct what they typed.
+        out.append("  " + t("build.nothing.then", task=task))
+        return out
+    # Something exists. The sentence above would be false, so say what is
+    # there instead of claiming nothing is.
+    return ["\n  " + t("build.partial")]
+
+
 def cmd_build(args) -> int:
     _i18n.set_language(getattr(args, "lang", "en") or "en")
     _i18n.reset_fallbacks()
@@ -1511,35 +1585,11 @@ def cmd_build(args) -> int:
         def on_event(event: RunEvent) -> None:
             emit(event)
             final_park[0] = str((event.waiting_reason or {}).get("kind", "") or "")
-            # The source-mode console consumes chunks through named SSE events.
-            # A raw edit envelope on stdout has no live-draft affordance yet, so
-            # the CLI keeps its existing phase narration rather than presenting
-            # unaudited structured bytes as a finished-looking result.
-            if event.kind in ("generation_chunk", "thinking_chunk"):
-                return
-            if event.kind == "round_started":
-                label = f"round {event.round_no} of {event.round_limit}"
-                print(f"\n  ── {label} " + "─" * max(0, 44 - len(label)))
-                return
-            # 1. Never print a raw payload. The goal event carries the run's
-            #    JSON goal as detail; truncated at 96 characters it reads as
-            #    corrupted output, and it is internal state either way.
-            detail = event.detail or ""
-            if detail.lstrip().startswith(("{", "[")):
-                detail = "" if not verbose else detail
-            # 2. Do not say "waiting" and then exit. In the console a parked run
-            #    genuinely waits and can be resumed; a foreground build exits, so
-            #    the CLI says what actually happened. The event is unchanged —
-            #    only this renderer differs, because only here is it untrue.
-            text = event.text
-            if event.kind == "provider_unavailable":
-                text = "stopped: " + (detail or text)
-                detail = ""
             if event.kind == "audit_started":
                 produced.add("yes")
-            line = f"  {event.actor:10s} {text}"
-            print(line if not detail
-                  else f"{line}\n  {'':10s} {detail[:96]}")
+            line = narration_line(event, verbose=verbose)
+            if line is not None:
+                print(line)
 
         # The CLI narrator wraps the shell's emit; carry the lease-renewal
         # handle and the run identity across the wrapper so foreground
@@ -1551,25 +1601,7 @@ def cmd_build(args) -> int:
     code = service.start(prepare, worker, background=False)
     assert isinstance(code, int)
     code = build_exit_code(code, final_park[0])
-    if code == EXIT_OK:
-        print("\n  " + t("build.done"))
-        print("  " + t("build.done.read"))
-    elif not produced:
-        # 3. State the outcome, then the remedy. "It is yours now" is a handoff
-        #    after a success; nothing was produced. The blunt sentence is
-        #    deliberate — it is what stops someone hunting for a partial result
-        #    that does not exist.
-        print("\n  " + t("build.nothing"))
-        missing = _missing_role_keys(cfg)
-        if missing:
-            from . import wizard as _wizard
-            print("\n  " + t("build.nothing.fix", path=_wizard.keys_file(),
-                                envs=" and ".join(missing)))
-        # The task is reprinted verbatim so the person does not have to
-        # reconstruct what they typed.
-        print("  " + t("build.nothing.then", task=prepared_task))
-    else:
-        # Something exists. The sentence above would be false, so say what is
-        # there instead of claiming nothing is.
-        print("\n  " + t("build.partial"))
+    for line in outcome_lines(cfg, code, produced=bool(produced),
+                              task=prepared_task):
+        print(line)
     return code

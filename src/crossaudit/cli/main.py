@@ -1586,17 +1586,8 @@ def cmd_resolve(args: argparse.Namespace) -> int:
 
     cfg = load()
     action = "reopen" if args.reopen else "close"
-    store = _state(cfg)
-    before = store.cycle(args.cycle_id) or {}
-    c = store.resolve_escalation(args.cycle_id, action, args.because)
-    row = rulings_mod.record(cfg, c, action, args.because)
-    if action == "close":
-        # The close ruling settles the parked run this escalation references:
-        # a stopped task must not keep signalling "needs your decision".
-        from ..console import daemon
-
-        daemon.settle_closed_escalation(cfg, c)
-        _settle_human_wait(cfg, before, args.because)
+    result = resolve_cycle(cfg, args.cycle_id, action, args.because)
+    row, c = result["ruling"], result["cycle"]
     print(f"ruling recorded: {args.cycle_id} {action} — {args.because}")
     print(f"  committed to the ledger: {row['commit'][:12]} "
           f"({cfg.ledger_dir}/{rulings_mod.RULINGS_LOG})")
@@ -1607,6 +1598,33 @@ def cmd_resolve(args: argparse.Namespace) -> int:
         print(f"cycle is now {c['status']} (round {c['round']}); "
               "run `crossaudit run` to re-audit.")
     return EXIT_OK
+
+
+def resolve_cycle(cfg: Config, cycle_id: str, action: str, because: str) -> dict:
+    """Record a human ruling on an escalated cycle: the body of `resolve`.
+
+    ``action`` is "reopen" or "close". The ruling goes through the controller
+    (which refuses a cycle that is not ESCALATED and a reason that is empty),
+    is appended to ``<ledger>/rulings.jsonl`` and committed, and a close settles
+    the run that was waiting for this decision. Returns ``{"ruling": row,
+    "cycle": cycle}``: the committed row (with ``commit``) and the cycle record
+    after the ruling. The terminal check stays in `cmd_resolve`; a caller of
+    this function is responsible for having a person at the keyboard.
+    """
+    from .. import rulings as rulings_mod
+
+    store = _state(cfg)
+    before = store.cycle(cycle_id) or {}
+    c = store.resolve_escalation(cycle_id, action, because)
+    row = rulings_mod.record(cfg, c, action, because)
+    if action == "close":
+        # The close ruling settles the parked run this escalation references:
+        # a stopped task must not keep signalling "needs your decision".
+        from ..console import daemon
+
+        daemon.settle_closed_escalation(cfg, c)
+        _settle_human_wait(cfg, before, because)
+    return {"ruling": row, "cycle": c}
 
 
 def _settle_human_wait(cfg: Config, cycle: dict, reason: str) -> bool:
@@ -1837,6 +1855,20 @@ def cmd_watch(args: argparse.Namespace) -> int:
     from .watch import run_watch
 
     return run_watch(load())
+
+
+# -------------------------------------------------------------------- tui
+def cmd_tui(args: argparse.Namespace) -> int:
+    """The interactive terminal loop (docs/design/TUI_FIRST.md §2)."""
+    from .. import usage as usage_module
+    from .tuiapp import run_tui
+
+    _speak(args)
+    cfg = load()
+    set_surface = getattr(usage_module, "set_surface", None)
+    if callable(set_surface):
+        set_surface("tui")
+    return run_tui(cfg, once=bool(getattr(args, "once", False)))
 
 
 # ------------------------------------------------------------------- init
@@ -2397,8 +2429,17 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("status", help="where each cycle stands")
     s.set_defaults(func=cmd_status)
 
-    w = sub.add_parser("watch", help="live view: generator, auditor, and their conversation")
+    w = sub.add_parser("watch", help="live view: generator, auditor, and their "
+                       "conversation (read-only; `crossaudit tui` is the "
+                       "interactive loop)")
     w.set_defaults(func=cmd_watch)
+
+    tu = sub.add_parser("tui", help="the loop, live, in the terminal, and the "
+                        "place to act on it: new task, decisions, verify")
+    tu.add_argument("--once", action="store_true",
+                    help="print one frame and exit (also what happens "
+                         "without a terminal)")
+    tu.set_defaults(func=cmd_tui)
 
     sk = sub.add_parser("skills", help="house guidance for the generator")
     sk.add_argument("--new", metavar="NAME", help="write a starter skill")

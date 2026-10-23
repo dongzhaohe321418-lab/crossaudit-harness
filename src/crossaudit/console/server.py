@@ -67,7 +67,7 @@ from ..config import Config, load
 from ..controller import StateStore
 from ..dispute import DISPUTES_LOG
 from ..errors import ConfigDenial, Denial, classify_escalation_kind
-from ..gitio import is_ancestor
+from ..gitio import git as _git_run, is_ancestor
 from ..providers import codex_subscription
 from ..providers import resilience as provider_resilience
 from ..receipt.verify import admit as admit_receipt
@@ -551,10 +551,13 @@ def _ordered_cycles(state: dict, commit_chats: dict[str, str] | None = None) -> 
     # D2: only the most-recent cycles ride in each frame (mirrors the stream
     # windows). The list is oldest-first, so the tail keeps the newest cycles —
     # exactly the ones the live view renders.
+    # ``closed`` is additive and present only when true: a BLOCKED cycle a
+    # person closed by ruling, which `crossaudit status` prints as CLOSED.
     return [{"id": cid, "status": cycle["status"], "round": cycle["round"],
              "sha": cycle["active_sha"], "updated": when(cid, cycle),
              "chat_id": chats.canonical_id(
-                 cycle.get("chat_id") or chat_map.get(cycle["active_sha"]))}
+                 cycle.get("chat_id") or chat_map.get(cycle["active_sha"])),
+             **({"closed": True} if cycle.get("closed_by_human") else {})}
             for cid, cycle in ordered][-CYCLES_WINDOW:]
 
 
@@ -701,6 +704,15 @@ def _memoized_snapshot(cfg: Config, cache: dict) -> dict:
     return state
 
 
+def _rules_commit(cfg: Config) -> str:
+    """The commit that last changed the rules file, or "" when none can say."""
+    try:
+        return _git_run("log", "-1", "--format=%H", "--", cfg.constitution,
+                        cwd=cfg.root, check=False).strip()
+    except Denial:
+        return ""
+
+
 def snapshot(cfg: Config) -> dict:
     from .. import __version__
     from .. import admission as adm
@@ -833,6 +845,17 @@ def snapshot(cfg: Config) -> dict:
                   (f" · {cfg.generator_reasoning_effort}" if
                    cfg.generator_reasoning_effort else ""))
         ),
+        # Additive: the two roles as vendor:model, and the commit that last
+        # changed the rules, for surfaces with one line to say it in (the
+        # terminal UI's header). "" when the rules are not committed.
+        "roles": {
+            "auditor": f"{cfg.auditor.vendor}:{cfg.auditor.model}",
+            "generator": (
+                "human" if (cfg.generator_vendor or "").lower() == "human"
+                else f"{cfg.generator_vendor or 'unset'}:"
+                     f"{cfg.generator_model or 'unset'}"),
+        },
+        "rules_commit": _rules_commit(cfg),
         "runtime_config": projects.runtime_options(cfg),
         "check_contracts": check_contracts(cfg.checks),
         "max_rounds": cfg.max_rounds,

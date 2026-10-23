@@ -285,6 +285,30 @@ def annotate_findings(findings: list[dict], authority: dict) -> list[dict]:
     return findings
 
 
+#: The words the console shows beside a finding for its evidence tier
+#: (page.py `tierWord`), keyed so a surface can translate them. A finding the
+#: receipt's authority block does not know has no tier and gets no word.
+TIER_WORDS = {
+    "check": "verified by a check",
+    "auditor_verified": "raised by the auditor, verified",
+    "auditor": "raised by the auditor, not yet reproduced",
+}
+
+
+def tier_key(finding: dict) -> str:
+    """Which of TIER_WORDS describes ``finding``, or "" when it has no tier.
+
+    The same decision as the console page's ``tierWord``: deterministic is a
+    check; a model finding is "verified" only when ``annotate_findings`` set
+    ``verified``."""
+    tier = finding.get("tier") if isinstance(finding, dict) else None
+    if not tier:
+        return ""
+    if tier == "deterministic":
+        return "check"
+    return "auditor_verified" if finding.get("verified") else "auditor"
+
+
 def _derived_report_commit(root: Path, rel: str) -> str:
     """Fallback for a cycle whose receipt cites no commit — legacy receipts and
     `--no-write-ledger` runs both produce that. Deliberately a FALLBACK for the
@@ -514,6 +538,22 @@ def _is_auditor_concern(stop_reason: str, latest: Cycle | None) -> bool:
     return stop_reason.strip() == CONTESTED_MODEL_BLOCKER_REASON
 
 
+def related_cycles(cycle_id: str, record: dict, history: list[dict],
+                   cycles: list[Cycle]) -> list[Cycle]:
+    """The audit rounds the ledger holds for one controller cycle, in round
+    order: every report whose commit is one the cycle opened on, moved to, or
+    recorded in its history. The one matcher `escalations` and the terminal
+    UI share, so the decision card and the cycle row cannot disagree about
+    which reports belong to a cycle."""
+    shas = {str(record.get("root_sha", "")), str(record.get("active_sha", ""))}
+    shas.update(str(row.get("sha", "")) for row in history
+                if row.get("cycle") == cycle_id and row.get("sha"))
+    related = [c for c in cycles if any(
+        sha.startswith(c.sha) or c.sha.startswith(sha) for sha in shas if sha)]
+    related.sort(key=lambda c: (c.round, c.at, c.directory))
+    return related
+
+
 def escalations(cfg: Config) -> list[dict]:
     """What is waiting on a person, with enough evidence to make a decision.
 
@@ -538,12 +578,7 @@ def escalations(cfg: Config) -> list[dict]:
         # marker, and only for legacy state.
         kind = s.get("escalation_kind") or classify_escalation_kind(stop_reason)
         provider_failure = kind == "provider"
-        shas = {str(s.get("root_sha", "")), str(s.get("active_sha", ""))}
-        shas.update(str(row.get("sha", "")) for row in history
-                    if row.get("cycle") == cid and row.get("sha"))
-        related = [c for c in cycles if any(
-            sha.startswith(c.sha) or c.sha.startswith(sha) for sha in shas if sha)]
-        related.sort(key=lambda c: (c.round, c.at, c.directory))
+        related = related_cycles(cid, s, history, cycles)
         latest = related[-1] if related else None
         issues = list(latest.findings[:8]) if latest else []
         cause = str(s.get("escalation_cause", "") or "")
@@ -641,6 +676,11 @@ def escalations(cfg: Config) -> list[dict]:
                     **({"earlier_cycle_id": holder} if holder else {}),
                     "remediations": escalation_remediations(kind),
                     "task": str(s.get("task", ""))[:12000],
+                    # Additive: the artifacts the remaining issues name,
+                    # once each, in the order they are first named.
+                    "files": list(dict.fromkeys(
+                        str(f.get("artifact", "")) for f in issues
+                        if f.get("artifact"))),
                     "attempts": [{"round": c.round, "verdict": c.verdict,
                                   "findings": len(c.findings)} for c in related],
                     "requested": requested})
