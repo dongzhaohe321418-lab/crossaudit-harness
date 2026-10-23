@@ -22,6 +22,7 @@ in what the commands *say to a person*, which only running them can show.
 from __future__ import annotations
 
 import argparse
+import io
 import re
 
 import pytest
@@ -250,6 +251,48 @@ def test_the_front_door_names_the_generation_half_of_the_product(capsys):
     assert "crossaudit run" in out, "auditing an existing commit is still offered"
     # build is introduced before run: it is what most people arrive wanting.
     assert out.index("crossaudit build") < out.index("crossaudit run")
+
+
+def test_inside_a_project_the_front_door_leads_with_tui(cfg, monkeypatch, capsys):
+    """D175: with a project here, bare `crossaudit` suggests `tui` first and no
+    longer says that nothing is configured."""
+    monkeypatch.chdir(cfg.root)
+    assert main.main(["--lang", "en"]) == EXIT_OK
+    out = capsys.readouterr().out
+    commands = re.findall(r"^\s+(crossaudit [a-z]+)", out, re.MULTILINE)
+    assert commands[0] == "crossaudit tui", commands
+    assert "Nothing is configured" not in out
+    assert "this directory is a CrossAudit project" in out
+    # The generation half is still there, build before run.
+    assert out.index("crossaudit build") < out.index("crossaudit run")
+    assert "crossaudit console" in out
+
+
+def test_the_project_front_door_speaks_chinese(cfg, monkeypatch, capsys):
+    from crossaudit.cli import i18n
+
+    monkeypatch.chdir(cfg.root)
+    try:
+        assert main.main(["--lang", "zh"]) == EXIT_OK
+    finally:
+        i18n.set_language("en")
+    out = capsys.readouterr().out
+    assert "这个目录是一个 CrossAudit 项目" in out
+    assert "在这个终端里实时查看循环" in out
+    assert "this directory is a CrossAudit project" not in out
+
+
+def test_outside_a_project_the_front_door_still_starts_with_init(tmp_path, monkeypatch,
+                                                                 capsys):
+    empty = tmp_path / "bare"
+    empty.mkdir()
+    monkeypatch.chdir(empty)
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))  # not a terminal: no prompt
+    assert main.main([]) == EXIT_OK
+    out = capsys.readouterr().out
+    commands = re.findall(r"^\s+(crossaudit [a-z]+)", out, re.MULTILINE)
+    assert commands[0] == "crossaudit init", commands
+    assert "crossaudit tui" not in out
 
 
 # ===================== SPEC 6: the CLI's first three screens =================
