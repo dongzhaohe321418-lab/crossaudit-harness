@@ -1523,9 +1523,7 @@ PARTIAL with evidence. The latest results are committed beside it as
 `RESULTS-<ref>.md`, and [`LOOP.md`](benchmarks/claims/LOOP.md) says what each
 round fixed and what it cost.
 
-The sentences about `crossaudit tui` and the usage ledger's `surface` field
-are not rows yet; the rows that will check them (C37–C41) are specified in
-[`docs/design/TUI_FIRST.md`](docs/design/TUI_FIRST.md) §6.
+The sentences about `crossaudit tui` and the usage ledger's `surface` field are rows C37–C41 of that harness (added in its round 3, on branch `bench/claims-loop`): one frame from `tui --once` naming a PASSED and an ESCALATED cycle with their findings' tiers, no provider request and no browser; the keys under a pseudo-terminal with the terminal restored; a ruling recorded from the decision card and reopened again; the 60-second tour above run as written, ending in `BINDINGS VERIFIED`; and `surface` rows from `build` and from the TUI with `by_surface` in `--json status`. All five pass against this branch; the round's record is `benchmarks/claims/RESULTS-tui-first.md` there.
 
 What that harness cannot reach, so a reader has to verify by other means: the
 native macOS app, which is not on the main line (a DMG and a person at the
