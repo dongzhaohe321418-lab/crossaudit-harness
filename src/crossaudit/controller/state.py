@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import secrets
 import tempfile
 import time
 from collections.abc import Callable, Iterator
@@ -123,17 +124,30 @@ class StateStore:
             finally:
                 os.close(dir_fd)
 
-    def _acquire(self, lock_path: Path) -> None:
-        """Take the O_EXCL lock at ``lock_path``, breaking a stale one."""
+    def _acquire(self, lock_path: Path) -> str:
+        """Take the O_EXCL lock at ``lock_path``, breaking a stale one.
+
+        Returns the owner token written into the lock file (pid, time and a
+        random nonce): the holder checks it before writing state back and
+        before releasing (:meth:`_owns`), so a holder whose lock was broken as
+        stale can neither overwrite newer state nor unlink its successor's
+        lock (review 2026-10-23 round 2, finding 2).
+        """
         deadline = time.monotonic() + LOCK_TIMEOUT_S
+        token = f"{os.getpid()} {time.time():.0f} {secrets.token_hex(8)}"
         while True:
             try:
                 fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(fd, f"{os.getpid()} {time.time():.0f}".encode())
-                os.close(fd)
-                return
+                try:
+                    os.write(fd, token.encode())
+                finally:
+                    os.close(fd)
+                return token
             except FileExistsError:
-                age = time.time() - lock_path.stat().st_mtime if lock_path.exists() else 0
+                try:
+                    age = time.time() - lock_path.stat().st_mtime
+                except FileNotFoundError:
+                    continue                            # released meanwhile; retry
                 if age > LOCK_STALE_S:
                     lock_path.unlink(missing_ok=True)   # holder died; break it
                     continue
@@ -143,17 +157,46 @@ class StateStore:
                         "mid-transaction", lock=str(lock_path))
                 time.sleep(0.05)
 
+    @staticmethod
+    def _owns(lock_path: Path, token: str) -> bool:
+        """Whether the lock file at ``lock_path`` still carries ``token``."""
+        try:
+            return lock_path.read_text(encoding="utf-8", errors="replace") == token
+        except OSError:
+            return False
+
+    def _release(self, lock_path: Path, token: str) -> None:
+        """Remove the lock only if it is still this holder's."""
+        if self._owns(lock_path, token):
+            lock_path.unlink(missing_ok=True)
+
     @contextmanager
     def _locked(self) -> Iterator[dict]:
-        """Exclusive read-modify-write. Yields state; writes it back on clean exit."""
+        """Exclusive read-modify-write. Yields state; writes it back on clean exit.
+
+        Ownership-aware: if the lock was broken as stale and taken by another
+        process while this one held it (a transaction that outlived
+        ``LOCK_STALE_S``), the snapshot this holder read is out of date, so it
+        is NOT written back, the successor's lock is NOT removed, and
+        ``IntegrityDenial`` (issue ``lock_taken_over``) says the change was
+        discarded. The check and the write are not one atomic step; the
+        window is the few microseconds between them, against a takeover that
+        needs the holder to have overrun the stale threshold first.
+        """
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._acquire(self.lock_path)
+        token = self._acquire(self.lock_path)
         try:
             state = self._read()
             yield state
+            if not self._owns(self.lock_path, token):
+                raise IntegrityDenial(
+                    f"the controller lock was taken over by another process while this "
+                    f"one held it (longer than the {LOCK_STALE_S:g}s stale limit); "
+                    f"this process's state change was discarded",
+                    issue="lock_taken_over")
             self._write(state)
         finally:
-            self.lock_path.unlink(missing_ok=True)
+            self._release(self.lock_path, token)
 
     @staticmethod
     def _log(state: dict, event: str, **kw: object) -> None:
@@ -637,10 +680,11 @@ class StateStore:
         # is created that outlives the call.
         atomic = False
         detail = ""
+        token = ""
         try:
             if self.path.parent.is_dir():
                 lock_path = self.lock_path
-                self._acquire(lock_path)
+                token = self._acquire(lock_path)
             else:
                 anchor = self.path.parent
                 while not anchor.is_dir() and anchor != anchor.parent:
@@ -660,7 +704,10 @@ class StateStore:
                 except FileExistsError:
                     atomic = True
             finally:
-                lock_path.unlink(missing_ok=True)
+                if token:
+                    self._release(lock_path, token)
+                else:
+                    lock_path.unlink(missing_ok=True)
         except Exception as exc:                       # noqa: BLE001
             detail = f"the store could not be locked: {exc}"
 
