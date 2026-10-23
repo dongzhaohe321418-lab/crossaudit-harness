@@ -1503,6 +1503,17 @@ source ~/.crossaudit-keys.env
 Use the complete tokenized URL printed by `crossaudit console --status`. The
 server accepts localhost hosts only and rejects requests without its token.
 
+### `crossaudit` says the controller lock is held by a process that is not running
+
+A process that was killed while it held the project's controller lock
+(`.crossaudit/state.json.lock`) leaves the lock behind. The lock is not
+broken automatically: breaking it by age could delete a lock a live process
+had just taken, so every state change refuses with a sentence naming the
+lock, its holder's pid and its age until a person removes it. `crossaudit
+doctor` reports the lock and whether that pid is alive; `crossaudit doctor
+--fix`, at a terminal, removes it when the holder is not running and refuses
+when it is (D176).
+
 ### The verdict is DCL_ONLY
 
 The deterministic layer ran, but no model audit occurred. Add the auditor key
