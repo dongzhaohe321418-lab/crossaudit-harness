@@ -43,8 +43,9 @@ stays as it is (the read-only viewfinder) and its help text points at `tui`.
   terminal truncating gracefully, Chinese width-2 characters measured with
   `unicodedata.east_asian_width` as `tui.py` already does).
 - A thin **loop** draws frames with ANSI (home, clear-to-end-of-screen), reads
-  keys with the existing `tui.read_key()` in raw mode, and refreshes on a
-  timer (2 s, like `watch`) or on an event. Colour follows `tui.coloured()`;
+  keys with the existing `tui.read_key()` in cbreak mode (Ctrl-C still
+  interrupts; the terminal is restored on every exit path), and refreshes on
+  a timer (2 s, like `watch`) or on an event. Colour follows `tui.coloured()`;
   glyphs fall back through `tui.glyph()`; the whole thing degrades to plain
   ASCII under a strict GBK stream like the wizard does.
 - **Not a TTY** (a script, CI, the harness): `crossaudit tui --once` prints
@@ -77,11 +78,14 @@ not derived in the TUI.
    `status` prints it (PASSED, BLOCKED, ESCALATED, CLOSED, CONSUMED, DCL_ONLY),
    round/max, verdict, sha, any ruling (kind, when). The selected row expands
    to its **findings**: severity, rule id, artifact, observation, and the tier
-   word the console shows ("verified by a check" / "raised by the auditor"),
-   plus the receipt line (BINDINGS VERIFIED / SIGNED / ADMISSION READY) when
-   a receipt exists.
-4. **Decision card** (replaces the cycles pane while a cycle waits for a
-   person): the cause in plain words, the round limit and verdict history,
+   word the console shows ("verified by a check" / "raised by the auditor,
+   verified" / "raised by the auditor, not yet reproduced"), plus, for the
+   expanded cycle, the lines `verify` (dry run) actually printed for its
+   receipt (BINDINGS VERIFIED / SIGNED / ADMISSION READY), cached until the
+   receipt or the state changes. A collapsed cycle shows only its receipt
+   path. The TUI never computes a receipt status itself.
+4. **Decision card** (drawn above the cycles pane while a cycle waits for a
+   person, so one frame still names every cycle): the cause in plain words, the round limit and verdict history,
    remaining blockers, affected files, and the two actions the README
    documents: **Revise and continue** (`r`) and **Stop this task** (`c`),
    each asking for the written reason with `tui.text` and recording it
@@ -96,7 +100,10 @@ not derived in the TUI.
    with an `on_event` that feeds the activity pane exactly as `cmd_build`'s
    does (reuse its event handling by extracting it into a function both
    call, if it is inline today). Exit codes do not apply inside the TUI; the
-   outcome line is the same sentence `build` prints.
+   outcome line is the same sentence `build` prints. While a task started
+   from this window runs, `n`, `v`, `a`, `r` and `c` say to wait or press
+   `x`, and `o` shows the console URL without opening a browser: the build
+   owns the terminal's output until it ends.
 
 Every string shown to a person exists in English and Chinese
 (`cli/i18n.py`, the `t()` table), including the help bar, and the
