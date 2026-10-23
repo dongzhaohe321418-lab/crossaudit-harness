@@ -212,12 +212,13 @@ failure-atomic, `child_env` leaking a nonconventional configured key; one P3),
 repaired and recorded as D176; the `science-ai4s` pack came back DO NOT MERGE
 (six fail-open declaration shapes), repaired on `bench/ai4s-pack-v2` (DESIGN.md
 Amendment 5) and MERGE in its round 2; the stack's round 2 found two more P1 (the
-ruling restore, the lock), a P2 and a P3, repaired and verified in round 3. Those
+ruling restore, the lock), a P2 and a P3, repaired; round 3 verified them and found two more P1 (a symlinked
+ruling log; stale-lock breaking), repaired and verified in round 4. Those
 repairs are in the ref below.
 
 | ref (same harness, `e338d0e` + the placeholder fill) | PASS / 43 |
 |---|---|
-| **`feat/tui-first` fa5127d** (D175; D176 repairs from both review rounds, incl. Stop's committed close ruling, the exact-bytes ruling restore and the owned controller lock) | **43** |
+| **`feat/tui-first` a121ab7** (D175; D176 repairs from three review rounds: Stop's committed close ruling, the exact-bytes ruling restore, the owned locks that are never broken automatically, the symlink refusal and committed-blob check) | **43** |
 
 The record is `records/tui-first/claims.jsonl` and `RESULTS-tui-first.md`. Still
 untestable here, as before: C32 (now also "not on the main line"), C33b, C34b,
