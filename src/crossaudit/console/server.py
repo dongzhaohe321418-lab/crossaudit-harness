@@ -2106,15 +2106,9 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                             raise ConfigDenial(
                                 "the stopped task predates direct retry; copy it into the "
                                 "composer and choose Revise and continue")
-                        reason = (reason.strip() or
-                                  "Retry after reviewing the provider connection.")
-                        # The reopen is a human ruling like any other: it is
-                        # committed to the ledger before the cycle reopens,
-                        # and a failed commit refuses the retry (D172 ruling
-                        # 5; review 2026-10-23 finding 1).
-                        result = rulings.rule(
-                            current, state_store, cycle_id, "reopen",
-                            reason)["cycle"]
+                        reason = reason.strip() or "Retry after reviewing the provider connection."
+                        result = rulings.rule(current, state_store, cycle_id, "reopen", reason)
+                        result = result["cycle"]
                         try:
                             started = start_build(
                                 current, task, chat_id=str(prior.get("chat_id", "")),
@@ -2127,10 +2121,11 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                                 task=task, kind="provider")
                             raise
                     else:
-                        # The one ruling transaction `resolve` and the TUI
-                        # use: committed to the ledger first, the state
-                        # changed only after, and a close settles the waiting
-                        # run (D172 ruling 5; review 2026-10-23 finding 1).
+                        # The one ruling transaction every surface uses, as
+                        # does the retry's reopen above: committed to the
+                        # ledger first, the state changed only after, and a
+                        # close settles the waiting run (D172 ruling 5;
+                        # review 2026-10-23 finding 1).
                         result = rulings.rule(
                             current, state_store, cycle_id, action,
                             reason)["cycle"]
