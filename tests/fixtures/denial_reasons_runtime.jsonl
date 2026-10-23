@@ -421,3 +421,6 @@
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 15183f6f385b9273 could not be committed to the ledger (pre-commit: refused by policy); the cycle stays ESCALATED and nothing was recorded"}
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 73766c874ca63d81 could not be committed to the ledger (git commit failed and said nothing); the cycle stays ESCALATED and nothing was recorded"}
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 2c9e0b7d41f6a853 could not be committed to the ledger (git commit timed out after 2s); the cycle stays ESCALATED and nothing was recorded"}
+{"kind": "IntegrityDenial", "reason": "the controller lock was taken over by another process while this one held it (longer than the 1s stale limit); this process's state change was discarded"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle 2addcab17a511d04 could not be committed to the ledger (pre-commit: refused), and cycles/rulings.jsonl could not be restored (No space left on device); the cycle stays ESCALATED, but check cycles/rulings.jsonl against git before ruling again"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle a8dd94e35d7d89a3 was committed to the ledger (8d1948226606), but the controller lock was taken over before the cycle's state could change, so the cycle stays ESCALATED; rule on it again"}
