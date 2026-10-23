@@ -1833,6 +1833,20 @@ def cmd_watch(args: argparse.Namespace) -> int:
     return run_watch(load())
 
 
+# -------------------------------------------------------------------- tui
+def cmd_tui(args: argparse.Namespace) -> int:
+    """The interactive terminal loop (docs/design/TUI_FIRST.md §2)."""
+    from .. import usage as usage_module
+    from .tuiapp import run_tui
+
+    _speak(args)
+    cfg = load()
+    set_surface = getattr(usage_module, "set_surface", None)
+    if callable(set_surface):
+        set_surface("tui")
+    return run_tui(cfg, once=bool(getattr(args, "once", False)))
+
+
 # ------------------------------------------------------------------- init
 def cmd_init(args: argparse.Namespace) -> int:
     _speak(args)
@@ -2391,8 +2405,17 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("status", help="where each cycle stands")
     s.set_defaults(func=cmd_status)
 
-    w = sub.add_parser("watch", help="live view: generator, auditor, and their conversation")
+    w = sub.add_parser("watch", help="live view: generator, auditor, and their "
+                       "conversation (read-only; `crossaudit tui` is the "
+                       "interactive loop)")
     w.set_defaults(func=cmd_watch)
+
+    tu = sub.add_parser("tui", help="the loop, live, in the terminal, and the "
+                        "place to act on it: new task, decisions, verify")
+    tu.add_argument("--once", action="store_true",
+                    help="print one frame and exit (also what happens "
+                         "without a terminal)")
+    tu.set_defaults(func=cmd_tui)
 
     sk = sub.add_parser("skills", help="house guidance for the generator")
     sk.add_argument("--new", metavar="NAME", help="write a starter skill")

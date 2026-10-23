@@ -224,7 +224,7 @@ def test_every_public_cli_command_reaches_the_existing_cli_main(
     assert observed == [[verb] for verb in verbs]
     assert set(verbs) == {
         "init", "run", "doctor", "check", "audit", "verify",
-        "export-pubkey", "reproduce", "status", "watch", "skills",
+        "export-pubkey", "reproduce", "status", "watch", "tui", "skills",
         "console", "pair", "build", "talk", "routing", "amend", "resolve",
     }
     assert capsys.readouterr().err == ""
