@@ -597,14 +597,18 @@ def _expanded_index(fr: dict, selected: int, expanded_id: str | None) -> bool:
 
 
 def _attach_verification(cfg: Config, fr: dict, cycle_id: str | None,
-                         session: Session) -> None:
+                         session: Session, *, compute: bool = True) -> bool:
     """Under the expanded cycle, the head lines `verify` printed for its
-    receipt — run by `verify` itself, dry, cached until the state moves."""
+    receipt — run by `verify` itself, dry, cached until the state moves.
+
+    With ``compute`` False only a cached answer is attached, so a keypress can
+    be drawn at once. Returns whether an answer is still owed (a receipt whose
+    lines are not cached yet)."""
     if not cycle_id:
-        return
+        return False
     cycle = next((c for c in fr.get("cycles", []) if c["id"] == cycle_id), None)
     if not cycle or not cycle.get("receipt"):
-        return
+        return False
     rel = cycle["receipt"]["path"]
 
     def sig(path) -> int:
@@ -614,8 +618,11 @@ def _attach_verification(cfg: Config, fr: dict, cycle_id: str | None,
             return 0
     key = (rel, sig(cfg.root / rel), sig(cfg.root / cfg.state_dir / "state.json"))
     if key not in session.verified:
+        if not compute:
+            return True
         session.verified[key] = receipt_heads(verify_lines(cfg, rel))
     cycle["verified"] = session.verified[key]
+    return False
 
 
 def _mode(fr: dict, session: Session, helping: bool) -> str:
@@ -629,15 +636,20 @@ def _mode(fr: dict, session: Session, helping: bool) -> str:
     return "cycles"
 
 
-def _compose(cfg: Config, session: Session, selected: int,
-             expanded_id: str | None) -> dict:
-    fr = frame(cfg)
+def _overlay(data: dict, session: Session) -> dict:
+    """The last gathered frame with this window's own state laid over it.
+
+    A copy deep enough that attaching `verify` lines or narrowing the
+    escalations never edits the gathered frame, which is reused between
+    data refreshes so a keypress is drawn without gathering again."""
+    fr = dict(data)
+    fr["cycles"] = [dict(c) for c in data.get("cycles", [])]
+    fr["escalations"] = list(data.get("escalations", []))
     if session.lines and (session.busy or session.thread is not None):
         with session.lock:
-            fr["run"] = dict(fr["run"], lines=list(session.lines))
+            fr["run"] = dict(fr.get("run") or {}, lines=list(session.lines))
     fr["panel"] = session.panel
     fr["message"] = session.message
-    _attach_verification(cfg, fr, expanded_id, session)
     return fr
 
 
@@ -685,25 +697,94 @@ def _loop(cfg: Config, session: Session) -> int:
     helping = False
     fr: dict = {}
 
-    def draw() -> None:
-        nonlocal fr, expanded_id, first, selected
-        fr = _compose(cfg, session, selected, expanded_id)
+    data: dict = {}
+    #: The timer's gathering runs off the key loop, so a key pressed while
+    #: the projections are being read is answered at once. ``generation``
+    #: moves when an action gathers synchronously, and a background result
+    #: started before it is dropped rather than drawn over the newer one.
+    background: dict = {"thread": None, "result": None, "generation": 0}
+
+    def gather_in_background() -> None:
+        if background["thread"] is not None and background["thread"].is_alive():
+            return
+        started = background["generation"]
+
+        def work() -> None:
+            try:
+                result = frame(cfg)
+            except Exception:                                # noqa: BLE001
+                return            # keep showing the last frame; retry next tick
+            if background["generation"] == started:
+                background["result"] = result
+
+        background["thread"] = threading.Thread(
+            target=work, name="crossaudit-tui-gather", daemon=True)
+        background["thread"].start()
+
+    def draw(*, fresh: bool = False, compute: bool = True) -> bool:
+        """Draw one frame. ``fresh`` gathers the projections again (the timer,
+        and after an action that changed something); otherwise the last
+        gathered frame is re-rendered, which is what makes a keypress instant.
+        Returns whether `verify` lines for the open cycle are still owed."""
+        nonlocal fr, expanded_id, first, selected, data
+        if fresh or not data:
+            background["generation"] += 1
+            background["result"] = None
+            data = frame(cfg)
+        fr = _overlay(data, session)
         cycles = fr.get("cycles") or []
         if first:
             # The first frame shows the newest cycle open, as `--once` does.
             expanded_id = cycles[0]["id"] if cycles else None
             first = False
-            fr = _compose(cfg, session, selected, expanded_id)
         selected = max(0, min(selected, len(cycles) - 1)) if cycles else 0
+        owed = _attach_verification(cfg, fr, expanded_id, session,
+                                    compute=False)
+        if owed and compute and not session.busy:
+            # `verify` swaps sys.stdout to capture itself, so it never runs
+            # beside the warmer or a task's own audit (which does the same).
+            settle()
+            owed = _attach_verification(cfg, fr, expanded_id, session)
         width, rows = _size()
         text = render(fr, width, rows, selected=selected,
                       expanded=_expanded_index(fr, selected, expanded_id),
                       mode=_mode(fr, session, helping))
         out.write("\x1b[H" + text.replace("\n", "\x1b[K\n") + "\x1b[K\x1b[J")
         out.flush()
+        return owed
+
+    warmer: dict = {"thread": None}
+
+    def warm() -> None:
+        """Off the key loop, run `verify` for every listed receipt not yet
+        cached, so Enter opens a row with its lines already known."""
+        if session.busy or (warmer["thread"] is not None
+                            and warmer["thread"].is_alive()):
+            return
+        cycles = [dict(c) for c in data.get("cycles", []) if c.get("receipt")]
+
+        def work() -> None:
+            for cycle in cycles:
+                try:
+                    _attach_verification(cfg, {"cycles": [cycle]}, cycle["id"],
+                                         session)
+                except Exception:                            # noqa: BLE001
+                    return
+
+        warmer["thread"] = threading.Thread(target=work, daemon=True,
+                                            name="crossaudit-tui-verify")
+        warmer["thread"].start()
+
+    def settle() -> None:
+        """Wait for the verify warmer: `verify` captures stdout by swapping
+        ``sys.stdout``, so nothing that prints to it (a prompt, a verify of
+        our own) may run beside it."""
+        if warmer["thread"] is not None:
+            warmer["thread"].join()
 
     def prompt(ask):
         """Leave cbreak for one line of input with `tui.text`/`tui.confirm`."""
+        settle()
         termios.tcsetattr(fd, termios.TCSADRAIN, saved)
         out.write("\x1b[?25h\x1b[H\x1b[J")
         out.flush()
@@ -723,19 +804,31 @@ def _loop(cfg: Config, session: Session) -> int:
         out.write("\x1b[?25l\x1b[2J")
         out.flush()
         draw()
+        warm()
         last = time.monotonic()
         while True:
             interval = LIVE_REFRESH_S if session.busy else REFRESH_S
-            wait = max(0.0, interval - (time.monotonic() - last))
-            if not select.select([fd], [], [], wait)[0]:
-                draw()
+            if time.monotonic() - last >= interval:
+                gather_in_background()
                 last = time.monotonic()
+            if background["result"] is not None:
+                data, background["result"] = background["result"], None
+                draw()
+                warm()
+                continue
+            if not select.select([fd], [], [], 0.1)[0]:
                 continue
             raw = _read_key(fd)
+            if not raw:
+                # A read of nothing after select() said "readable" is the
+                # terminal hanging up (cbreak reads block for one byte), not
+                # a key: there is no one left to draw for.
+                break
             key = tui.decode(raw)
             ch = raw.decode("utf-8", "ignore") if len(raw) == 1 else ""
             mode = _mode(fr, session, helping)
             handled = True
+            changed = False          # did the action change the record?
             if ch == "q":
                 break
             if helping:
@@ -757,6 +850,7 @@ def _loop(cfg: Config, session: Session) -> int:
                 helping = True
             elif ch == "n":
                 session.panel, session.message = None, ""
+                changed = True
                 if session.busy:
                     session.message = t("tui.busy")
                 else:
@@ -771,12 +865,14 @@ def _loop(cfg: Config, session: Session) -> int:
                                                 reason=i18n.denial_text(exc.reason))
             elif ch in ("v", "a"):
                 session.panel, session.message = None, ""
+                changed = True
                 cycle = current_cycle()
                 if session.busy:
                     session.message = t("tui.busy")
                 elif not cycle or not cycle.get("receipt"):
                     session.message = t("tui.verify.none")
                 elif ch == "v":
+                    settle()
                     rel = cycle["receipt"]["path"]
                     session.panel = {"title": t("tui.verify.title", path=rel),
                                      "lines": verify_lines(cfg, rel)}
@@ -790,12 +886,14 @@ def _loop(cfg: Config, session: Session) -> int:
                         session.message = t("tui.admit.declined")
             elif ch == "x":
                 session.panel = None
+                changed = True
                 run_id = session.run_id if session.busy else str(
                     (fr.get("run") or {}).get("run_id", ""))
                 session.message = (stop_run(cfg, run_id)
                                    if (fr.get("run") or {}).get("state") == "running"
                                    or session.busy else t("tui.stop.none"))
             elif ch == "o":
+                settle()
                 session.message = ""
                 session.panel = {"title": t("tui.help.console"),
                                  "lines": console_lines(
@@ -809,6 +907,7 @@ def _loop(cfg: Config, session: Session) -> int:
                 elif session.busy:
                     session.message = t("tui.busy")
                 else:
+                    changed = True
                     action = "reopen" if ch == "r" else "close"
                     question = t("tui.reason.reopen" if ch == "r"
                                  else "tui.reason.close")
@@ -818,8 +917,15 @@ def _loop(cfg: Config, session: Session) -> int:
             else:
                 handled = False          # a key the help bar does not list
             if handled:
-                draw()
-                last = time.monotonic()
+                # Drawn at once from the last gathered frame; an action that
+                # changed the record gathers again. `verify` lines for a row
+                # Enter just opened follow in a second draw, so the row opens
+                # without waiting for them.
+                if draw(fresh=changed, compute=False):
+                    draw()               # settles the warmer, then verifies
+                warm()
+                if changed:
+                    last = time.monotonic()
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, saved)
         # BSD kernels (macOS) mark a switch back to canonical input with
