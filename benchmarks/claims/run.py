@@ -372,8 +372,16 @@ class Project:
 
 # ======================================================================= helpers
 def pty_run(argv: list, env: dict, cwd: Path, inputs: list[bytes], timeout: float = 60,
-            idle: float = 0.8) -> tuple[int, str]:
-    """Run under a pseudo-terminal, typing each input when output goes idle."""
+            idle: float = 0.8, gates: list | None = None,
+            marks: list | None = None) -> tuple[int, str]:
+    """Run under a pseudo-terminal, typing each input when output goes idle.
+
+    ``gates[i]`` (optional) is a predicate on the output so far: input ``i``
+    is typed as soon as it holds instead of on idle — for a screen that
+    redraws on a timer and is therefore never idle. ``marks`` (optional)
+    receives the output offset at which each input was typed, so a test can
+    say what was on screen before a key and what came after it.
+    """
     import pty
     pid, fd = pty.fork()
     if pid == 0:  # child
@@ -384,8 +392,22 @@ def pty_run(argv: list, env: dict, cwd: Path, inputs: list[bytes], timeout: floa
             os._exit(127)
     out = b""
     pending = list(inputs)
+    pending_gates = list(gates or [])
+    pending_gates += [None] * (len(pending) - len(pending_gates))
     last = time.time()
     deadline = time.time() + timeout
+
+    def type_next() -> None:
+        nonlocal last
+        pending_gates.pop(0)
+        if marks is not None:
+            marks.append(len(out))
+        try:
+            os.write(fd, pending.pop(0))
+        except OSError:
+            pending.clear()
+        last = time.time()
+
     while True:
         try:
             r, _, _ = select.select([fd], [], [], 0.2)
@@ -400,12 +422,17 @@ def pty_run(argv: list, env: dict, cwd: Path, inputs: list[bytes], timeout: floa
                 break
             out += data
             last = time.time()
-        elif pending and time.time() - last > idle:
-            try:
-                os.write(fd, pending.pop(0))
-            except OSError:
-                pending = []
-            last = time.time()
+        if pending:
+            gate = pending_gates[0]
+            if gate is not None:
+                try:
+                    ready = bool(gate(out.decode("utf-8", "replace")))
+                except Exception:  # a gate that crashes never types
+                    ready = False
+                if ready:
+                    type_next()
+            elif not r and time.time() - last > idle:
+                type_next()
         if time.time() > deadline:
             os.kill(pid, signal.SIGKILL)
             break
@@ -2509,6 +2536,381 @@ def c34g(h: Harness, rec: Record) -> Record:
 
 
 # ========================================================================= main
+# ------------------------------------------------- H. the terminal surface (round 3)
+TIER_WORDS = ("verified by a check", "raised by the auditor, verified",
+              "raised by the auditor, not yet reproduced")
+RECEIPT_WORDS = ("BINDINGS VERIFIED", "ADMISSION READY", "SIGNED")
+
+
+class PassThenBlock(fp.Scenario):
+    """Task one passes on its first audit; every later audit is blocked, so a
+    later task escalates at the round limit. One project, both outcomes."""
+    name = "pass-then-block"
+
+    def generator(self, n, system, prompt):
+        return fp.reply(fp.envelope(fp.increment(value=round(1.5 + n / 10, 2)),
+                                    summary=f"attempt {n}"))
+
+    def auditor(self, n, system, prompt):
+        if n == 1:
+            return fp.reply(fp.audit_json(prompt, "PASS"))
+        return fp.reply(fp.audit_json(prompt, "BLOCKED", f"the claim is unsupported (attempt {n})"))
+
+
+def tty_env(p: Project, extra: dict | None = None) -> dict:
+    """A person's terminal: TERM names a real terminal (the base env says
+    `dumb`); NO_COLOR stays, so transcripts carry no colour codes."""
+    return p.env({"TERM": "xterm-256color", **(extra or {})})
+
+
+def usage_rows(p: Project) -> list[dict]:
+    path = p.root / ".crossaudit" / "usage.jsonl"
+    rows = []
+    if path.is_file():
+        for ln in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            row = json_or_none(ln)
+            if isinstance(row, dict):
+                rows.append(row)
+    return rows
+
+
+def rulings_rows(p: Project) -> list[dict]:
+    rows = []
+    for path in p.root.glob("**/rulings.jsonl"):
+        if ".git" in path.parts:
+            continue
+        for ln in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            row = json_or_none(ln)
+            if isinstance(row, dict):
+                rows.append(row)
+    return rows
+
+
+def browser_calls(h: Harness) -> str:
+    return h.browser_log.read_text(encoding="utf-8") if h.browser_log.exists() else ""
+
+
+@claim("C37", "`crossaudit tui --once` prints one frame: cycles, statuses, the newest cycle's findings with their tier; no terminal needed")
+def c37(h: Harness, rec: Record) -> Record:
+    p = Project(h, rec, PassThenBlock())
+    h.projects["TUI"] = p
+    p.init()
+    p.configure(max_rounds=2)
+    b1 = p.build("Task one: report the benchmark time", label="build-one")
+    b2 = p.build("Task two: report it again", label="build-two")
+    st = p.status_json()
+    statuses = {c["cycle_id"]: c["status"] for c in st.get("cycles", [])}
+    rec.exit_codes = {"build_one": b1.rc, "build_two": b2.rc}
+    if not (b1.rc == 0 and b2.rc == 11 and "PASSED" in statuses.values()
+            and "ESCALATED" in statuses.values()):
+        rec.details = {"statuses": statuses}
+        return finish(rec, "UNTESTED", f"fixture: build one exit {b1.rc}, build two exit {b2.rc}, "
+                      f"statuses {sorted(statuses.values())} (needs one PASSED and one ESCALATED)")
+    requests_before = len(p.fakes.requests())
+    browser_before = browser_calls(h)
+    once = p.ca("tui", "--once", label="tui-once")
+    plain = p.ca("tui", label="tui-no-tty")
+    requests_after = len(p.fakes.requests())
+    browser_after = browser_calls(h)
+    rec.evidence.append(h.save(rec.id, "tui-once-frame.txt", once.stdout))
+    rec.evidence.append(h.save(rec.id, "tui-no-tty-frame.txt", plain.stdout + "\n--- stderr ---\n" + plain.stderr))
+    ids_named = {cid: (cid[:8] in once.stdout) for cid in statuses}
+    words_named = {w: (w in once.stdout) for w in sorted(set(statuses.values()))}
+    tiers = [w for w in TIER_WORDS if w in once.stdout]
+    rec.exit_codes.update({"tui_once": once.rc, "tui_no_tty": plain.rc})
+    rec.details = {"statuses": statuses, "cycle_ids_in_frame": ids_named,
+                   "status_words_in_frame": words_named, "tier_words_in_frame": tiers,
+                   "provider_requests_during_tui": requests_after - requests_before,
+                   "browser_invoked": browser_after != browser_before,
+                   "no_tty_stderr": short(plain.stderr, 200),
+                   "frame_lines": len(once.stdout.splitlines())}
+    quiet = requests_after == requests_before and browser_after == browser_before
+    frame_ok = once.rc == 0 and all(ids_named.values()) and all(words_named.values())
+    plain_ok = plain.rc == 0 and bool(plain.stderr.strip()) and plain.stdout.strip() == once.stdout.strip()
+    if frame_ok and tiers and quiet and plain_ok:
+        return finish(rec, "PASS", f"one frame, exit 0, names {len(statuses)} cycles and "
+                      f"{sorted(words_named)}; tier words {tiers}; no provider request, no browser; "
+                      "without --once the same frame and one stderr sentence.")
+    if frame_ok and quiet:
+        return finish(rec, "PARTIAL", f"the frame names the cycles and statuses (exit {once.rc}) but "
+                      f"tier words {tiers or 'absent'}; without --once: exit {plain.rc}, "
+                      f"stderr \"{short(plain.stderr, 80)}\", same frame={plain.stdout.strip() == once.stdout.strip()}")
+    return finish(rec, "FAIL", f"tui --once exit {once.rc}; ids {ids_named}; statuses {words_named}; "
+                  f"tiers {tiers}; provider requests {requests_after - requests_before}; "
+                  f"browser {browser_after != browser_before}; stderr \"{short(once.stderr, 120)}\"")
+
+
+@claim("C38", "At a terminal `crossaudit tui` draws; j/k and Enter expand a cycle; `q` exits and restores the terminal", deps=("C37",))
+def c38(h: Harness, rec: Record) -> Record:
+    p = h.projects.get("TUI")
+    if p is None:
+        return finish(rec, "UNTESTED", "needs C37's project")
+    p.rec = rec
+    script = ('echo "STTY-BEFORE=$(stty -g)"; crossaudit tui; echo "TUI-EXIT=$?"; '
+              'echo "STTY-AFTER=$(stty -g)"')
+    marks: list[int] = []
+    gates = [lambda out: "ESCALATED" in out,                      # the first frame is up
+             None,                                                 # Enter once the screen settles
+             lambda out: any(w in out for w in RECEIPT_WORDS)]     # the PASSED cycle expanded
+    rc, out = pty_run(["/bin/sh", "-c", script], tty_env(p), p.root, [b"j", b"\r", b"q"],
+                      timeout=60, gates=gates, marks=marks)
+    rec.evidence.append(h.save(rec.id, "tui-pty-transcript.txt", f"exit {rc}\nmarks {marks}\n{out}"))
+    before = re.search(r"STTY-BEFORE=(\S+)", out)
+    after = re.search(r"STTY-AFTER=(\S+)", out)
+    tui_exit = re.search(r"TUI-EXIT=(-?\d+)", out)
+    enter_at = marks[1] if len(marks) > 1 else len(out)
+    receipt_before_enter = any(w in out[:enter_at] for w in RECEIPT_WORDS)
+    receipt_after_enter = any(w in out[enter_at:] for w in RECEIPT_WORDS)
+    rec.exit_codes = {"shell": rc, "tui": int(tui_exit.group(1)) if tui_exit else None}
+    rec.details = {"keys_typed": len(marks), "stty_before": before.group(1) if before else None,
+                   "stty_after": after.group(1) if after else None,
+                   "receipt_line_before_enter": receipt_before_enter,
+                   "receipt_line_after_enter": receipt_after_enter,
+                   "transcript_tail": short(out[-400:], 300)}
+    restored = bool(before and after and before.group(1) == after.group(1))
+    exited = bool(tui_exit and tui_exit.group(1) == "0")
+    if exited and restored and len(marks) == 3 and receipt_after_enter:
+        return finish(rec, "PASS", "the TUI drew, j + Enter showed the PASSED cycle's receipt line, "
+                      "q exited 0 and stty is identical before and after.")
+    if exited and restored:
+        return finish(rec, "PARTIAL", f"exit 0 and the terminal is restored, but keys typed {len(marks)}/3 "
+                      f"and the receipt line after Enter={receipt_after_enter} "
+                      f"(before Enter={receipt_before_enter})")
+    return finish(rec, "FAIL", f"tui exit {rec.exit_codes['tui']} (shell {rc}); terminal restored={restored}; "
+                  f"keys typed {len(marks)}/3; receipt line after Enter={receipt_after_enter}")
+
+
+@claim("C39", "The decision card: `c` stops the task and `r` revises and continues, each with a written reason recorded as a ruling in the ledger", deps=("C37",))
+def c39(h: Harness, rec: Record) -> Record:
+    p = h.projects.get("TUI")
+    if p is None:
+        return finish(rec, "UNTESTED", "needs C37's project")
+    p.rec = rec
+
+    def escalated() -> list[str]:
+        return [c["cycle_id"] for c in p.status_json().get("cycles", []) if c["status"] == "ESCALATED"]
+
+    esc = escalated()
+    if not esc:
+        return finish(rec, "UNTESTED", "C37 left no ESCALATED cycle")
+    closed_id = esc[0]
+    reason_c = "The harness human stops task two after review C39"
+    before_close = len(p.fakes.requests())
+    rc1, out1 = pty_run([h.ca, "tui"], tty_env(p), p.root,
+                        [b"c", reason_c.encode() + b"\r", b"q"], timeout=60,
+                        gates=[lambda out: "ESCALATED" in out, None,
+                               lambda out: reason_c in out or "ruling" in out.lower() or "CLOSED" in out])
+    rec.evidence.append(h.save(rec.id, "tui-close-transcript.txt", f"exit {rc1}\n{out1}"))
+    tui_requests = len(p.fakes.requests()) - before_close
+    st1 = {c["cycle_id"]: c for c in p.status_json().get("cycles", [])}
+    close_row = st1.get(closed_id, {})
+    close_rulings = [r.get("action") for r in close_row.get("rulings", [])]
+    file_rows = rulings_rows(p)
+    close_in_file = any(r.get("action") == "close" and r.get("reason") == reason_c for r in file_rows) \
+        or any(reason_c in json.dumps(r) and "close" in json.dumps(r) for r in file_rows)
+    close_in_git = reason_c in p.git("log", "-p", "--all")
+    human_status = p.ca("status", label="status-after-close")
+
+    b3 = p.build("Task three: report it a third time", label="build-three")
+    esc3 = [cid for cid in escalated() if cid != closed_id]
+    reason_r = "The harness human sends task three back for revision C39"
+    rc2, out2, reopen_row, reopen_in_file, reopen_in_git = None, "", {}, False, False
+    if esc3:
+        before_reopen = len(p.fakes.requests())
+        rc2, out2 = pty_run([h.ca, "tui"], tty_env(p), p.root,
+                            [b"r", reason_r.encode() + b"\r", b"q"], timeout=60,
+                            gates=[lambda out: "ESCALATED" in out, None,
+                                   lambda out: reason_r in out or "ruling" in out.lower()])
+        rec.evidence.append(h.save(rec.id, "tui-reopen-transcript.txt", f"exit {rc2}\n{out2}"))
+        tui_requests += len(p.fakes.requests()) - before_reopen
+        st2 = {c["cycle_id"]: c for c in p.status_json().get("cycles", [])}
+        reopen_row = st2.get(esc3[0], {})
+        file_rows = rulings_rows(p)
+        reopen_in_file = any(reason_r in json.dumps(r) and "reopen" in json.dumps(r) for r in file_rows)
+        reopen_in_git = reason_r in p.git("log", "-p", "--all")
+    rec.exit_codes = {"tui_close": rc1, "build_three": b3.rc, "tui_reopen": rc2}
+    rec.details = {"closed_cycle": closed_id, "closed_flag": close_row.get("closed"),
+                   "closed_status": close_row.get("status"), "close_rulings": close_rulings,
+                   "close_reason_in_rulings_file": close_in_file, "close_reason_in_git": close_in_git,
+                   "status_mentions_closed": "CLOSED" in human_status.stdout.upper(),
+                   "reopened_cycle": esc3[0] if esc3 else None,
+                   "reopened_status": reopen_row.get("status"),
+                   "reopen_rulings": [r.get("action") for r in reopen_row.get("rulings", [])],
+                   "reopen_reason_in_rulings_file": reopen_in_file, "reopen_reason_in_git": reopen_in_git,
+                   "provider_requests_during_tui_sessions": tui_requests}
+    # A ruling is a human act: neither TUI session may call a model (build three does).
+    closed_ok = bool(close_row.get("closed")) and "close" in close_rulings and close_in_file and close_in_git \
+        and rc1 == 0 and tui_requests == 0
+    reopen_ok = bool(esc3) and reopen_row.get("status") not in ("ESCALATED", None) \
+        and "reopen" in [r.get("action") for r in reopen_row.get("rulings", [])] \
+        and reopen_in_file and reopen_in_git and rc2 == 0
+    if closed_ok and reopen_ok:
+        return finish(rec, "PASS", f"`c` closed {closed_id[:8]} with its reason in cycles/rulings.jsonl and a "
+                      f"ledger commit (status shows CLOSED); `r` reopened {esc3[0][:8]} "
+                      f"(now {reopen_row.get('status')}) with its reason recorded the same way.")
+    if closed_ok or reopen_ok:
+        return finish(rec, "PARTIAL", f"close ok={closed_ok} (exit {rc1}, closed={close_row.get('closed')}, "
+                      f"rulings {close_rulings}, file {close_in_file}, git {close_in_git}); "
+                      f"reopen ok={reopen_ok} (escalated again={bool(esc3)}, exit {rc2}, "
+                      f"status {reopen_row.get('status')}, file {reopen_in_file}, git {reopen_in_git})")
+    return finish(rec, "FAIL", f"close: exit {rc1}, closed={close_row.get('closed')}, rulings {close_rulings}, "
+                  f"reason in file {close_in_file}, in git {close_in_git}; reopen: escalated again={bool(esc3)}, "
+                  f"exit {rc2}, status {reopen_row.get('status')}, file {reopen_in_file}, git {reopen_in_git}")
+
+
+def point_tour_project_at_fakes(p: Project, root: Path) -> tuple[dict | None, str]:
+    """The README's own `init` chose the vendors and key variables. Add the
+    documented `base_url` under each role so the fakes answer, commit it the
+    way `Project.configure` does, and return the key variables to export.
+    (None, why) when a role's vendor has no fake."""
+    yml = root / "crossaudit.yml"
+    if not yml.is_file():
+        return None, "init wrote no crossaudit.yml"
+    section, out, keys, vendors, bad = "", [], {}, {}, []
+    for ln in yml.read_text(encoding="utf-8").splitlines(keepends=True):
+        if ln and not ln[0].isspace() and ln.rstrip().endswith(":"):
+            section = ln.strip()[:-1]
+        out.append(ln)
+        if section in ("auditor", "generator"):
+            m = re.match(r"^\s+vendor:\s*(\S+)", ln)
+            if m:
+                vendors[section] = m.group(1)
+            m = re.match(r"^\s+key_env:\s*(\S+)", ln)
+            if m:
+                keys[section] = m.group(1)
+                vendor = vendors.get(section, "")
+                base = (p.fakes.openai_base if vendor == "openai"
+                        else p.fakes.anthropic_base if vendor == "anthropic" else None)
+                if base is None:
+                    bad.append(f"{section} vendor {vendor or '?'} has no fake here")
+                else:
+                    out.append(f"  base_url: {base}\n")
+    if bad or len(keys) < 2:
+        return None, "; ".join(bad) or f"could not find both roles' key_env in crossaudit.yml ({sorted(keys)})"
+    yml.write_text("".join(out), encoding="utf-8")
+    p.root = root
+    p.git("add", "crossaudit.yml")
+    p.git("commit", "-q", "-m", "harness: point roles at the fake providers")
+    return {keys["auditor"]: DUMMY_AUD, keys["generator"]: DUMMY_GEN}, ""
+
+
+@claim("C40", "The README's 60-second tour, run as written, ends with `verify` printing BINDINGS VERIFIED")
+def c40(h: Harness, rec: Record) -> Record:
+    text = readme_text(h)
+    m = re.search(r"^## 60-second tour\n(.*?)^## ", text, re.S | re.M)
+    block = re.search(r"```(?:bash|sh|shell|console)?\n(.*?)```", m.group(1), re.S) if m else None
+    if not block:
+        return finish(rec, "FAIL", "the README has no fenced commands under '## 60-second tour'")
+    lines = []
+    for ln in block.group(1).splitlines():
+        ln = ln.strip()
+        if not ln or ln.startswith("#"):
+            continue
+        lines.append(ln[2:] if ln.startswith("$ ") else ln)
+    rec.evidence.append(h.save(rec.id, "tour-commands.txt", "\n".join(lines) + "\n"))
+    p = Project(h, rec, fp.Scenario())
+    h.projects["TOUR"] = p
+    cwd, keys_env, ran, skipped, substituted = p.home, {}, [], [], []
+    verify_out, failed = "", None
+    for ln in lines:
+        if re.match(r"^(python3? -m )?pip(x)?\b", ln):
+            skipped.append(ln)          # the harness installed this very ref already
+            continue
+        if ln.startswith("cd "):
+            cwd = (cwd / ln[3:].strip()).resolve()
+            ran.append((ln, 0))
+            continue
+        if "<" in ln and "verify" in ln:
+            newest = p.receipts()[-1] if p.receipts() else None
+            if newest is not None:
+                ln2 = re.sub(r"<[^>]+>", str(newest.relative_to(cwd)) if newest.is_relative_to(cwd) else str(newest), ln)
+                substituted.append(f"{ln} -> {ln2}")
+                ln = ln2
+        label = "tour-" + re.sub(r"[^a-z0-9]+", "-", ln.lower())[:28]
+        c = h.sh(rec, ["/bin/sh", "-c", ln], cwd=cwd, env=p.env(keys_env, custom=bool(keys_env)),
+                 timeout=240, label=label)
+        ran.append((ln, c.rc))
+        if ln.startswith("crossaudit init"):
+            name = next((a for a in ln.split()[2:] if not a.startswith("-")), None)
+            root = (cwd / name).resolve() if name else None
+            keys_env, why = point_tour_project_at_fakes(p, root) if root and root.is_dir() else (None, "init made no directory")
+            if keys_env is None:
+                rec.details = {"ran": ran, "skipped": skipped}
+                return finish(rec, "UNTESTED", f"after the README's init: {why}")
+        if "verify" in ln:
+            verify_out += c.stdout
+        if c.rc != 0:
+            failed = (ln, c.rc, short(c.stderr or c.stdout, 200))
+            break
+    rec.details = {"ran": ran, "skipped": skipped, "substituted": substituted,
+                   "verify_says_bindings_verified": "BINDINGS VERIFIED" in verify_out,
+                   "has_tui_line": any(ln.startswith("crossaudit tui") for ln in lines),
+                   "has_verify_line": any("verify" in ln for ln in lines)}
+    rec.exit_codes = {re.sub(r"[^a-z0-9]+", "_", ln.lower())[:30]: rc for ln, rc in ran}
+    if failed:
+        return finish(rec, "FAIL", f"`{failed[0]}` exited {failed[1]}: {failed[2]}")
+    if "BINDINGS VERIFIED" in verify_out and rec.details["has_tui_line"]:
+        return finish(rec, "PASS", f"{len(ran)} tour commands ran as written (install skipped: this harness "
+                      f"installed the same ref; {len(substituted)} placeholder substituted) and `verify` "
+                      "printed BINDINGS VERIFIED.")
+    return finish(rec, "PARTIAL", f"every tour command exited 0 but verify printed BINDINGS VERIFIED="
+                  f"{'BINDINGS VERIFIED' in verify_out}; the tour has a tui line={rec.details['has_tui_line']}, "
+                  f"a verify line={rec.details['has_verify_line']}")
+
+
+@claim("C41", "The usage ledger records which surface each call came from; `status --json` shows `by_surface`")
+def c41(h: Harness, rec: Record) -> Record:
+    p = Project(h, rec, fp.Scenario())
+    h.projects["USAGE"] = p
+    p.init()
+    p.configure()
+    b = p.build("Task one from the command line", label="build-cli")
+    cli_rows = usage_rows(p)
+    cli_surfaces = sorted({str(r.get("surface", "<absent>")) for r in cli_rows})
+    task = "Task two from the terminal screen"
+    settled = {"since": 0.0}
+
+    def built(_out: str) -> bool:
+        tui_rows = [r for r in usage_rows(p) if r.get("surface") == "tui"]
+        ok = len(tui_rows) >= 2 and len(p.receipts()) >= 2
+        if not ok:
+            settled["since"] = 0.0
+            return False
+        if not settled["since"]:
+            settled["since"] = time.time()
+            return False
+        return time.time() - settled["since"] >= 3.0
+
+    marks: list[int] = []
+    rc, out = pty_run([h.ca, "tui"], tty_env(p), p.root, [b"n", task.encode() + b"\r", b"q"],
+                      timeout=180, gates=[lambda o: "PASSED" in o, None, built], marks=marks)
+    rec.evidence.append(h.save(rec.id, "tui-new-task-transcript.txt", f"exit {rc}\nmarks {marks}\n{out}"))
+    rows = usage_rows(p)
+    tui_rows = [r for r in rows if r.get("surface") == "tui"]
+    absent = [r for r in rows if "surface" not in r]
+    st = p.status_json()
+    by_surface = (st.get("usage") or {}).get("by_surface") if isinstance(st.get("usage"), dict) else None
+    counts = {k: (v.get("calls") if isinstance(v, dict) else v) for k, v in (by_surface or {}).items()}
+    statuses = [c["status"] for c in st.get("cycles", [])]
+    rec.exit_codes = {"build_cli": b.rc, "tui": rc}
+    rec.details = {"cli_rows": len(cli_rows), "cli_surfaces": cli_surfaces, "rows_total": len(rows),
+                   "tui_rows": len(tui_rows), "rows_without_surface": len(absent),
+                   "by_surface_calls": counts, "statuses": statuses, "keys_typed": len(marks)}
+    cli_ok = b.rc == 0 and cli_rows and cli_surfaces == ["cli"]
+    tui_ok = rc == 0 and len(tui_rows) >= 2 and statuses.count("PASSED") == 2
+    sum_ok = isinstance(by_surface, dict) and counts.get("cli") == len(cli_rows) \
+        and counts.get("tui") == len(tui_rows) and not absent
+    if cli_ok and tui_ok and sum_ok:
+        return finish(rec, "PASS", f"build rows say cli ({len(cli_rows)}), the TUI task's rows say tui "
+                      f"({len(tui_rows)}), no row lacks a surface, and status --json by_surface counts match.")
+    if cli_ok and tui_ok:
+        return finish(rec, "PARTIAL", f"rows carry cli/tui as expected but status --json by_surface="
+                      f"{counts or by_surface}; rows without surface {len(absent)}")
+    return finish(rec, "FAIL", f"build exit {b.rc} rows {len(cli_rows)} surfaces {cli_surfaces}; "
+                  f"tui exit {rc} tui rows {len(tui_rows)} statuses {statuses}; by_surface {counts or by_surface}; "
+                  f"rows without surface {len(absent)}")
+
+
 def render(h: Harness, records: list[Record]) -> str:
     testable = list(records)   # every claim run here is testable; the rest are in UNTESTABLE
     passed = sum(1 for r in testable if r.verdict == "PASS")

@@ -115,11 +115,30 @@ rows run C34a, C34c–C34g.
 
 | id | README says | needs |
 |---|---|---|
-| C32 | The macOS app: DMG download, first-open flow, Keychain-held keys, menu-bar background operation, Environment Doctor UI | a built DMG (`packaging/macos/build_dmg.sh`, PyInstaller, network for the Codex runtime) and a GUI session; the release's DMG is attached to v4.17.0 — can be installed by a person and walked through `docs/UX_TEST_PLAN.md` |
+| C32 | The macOS app: DMG download, first-open flow, Keychain-held keys, menu-bar background operation, Environment Doctor UI | a built DMG (`packaging/macos/build_dmg.sh`, PyInstaller, network for the Codex runtime) and a GUI session; the release's DMG is attached to v4.17.0 — can be installed by a person and walked through `docs/UX_TEST_PLAN.md`. Since round 3 the README says the app is not on the main line (code kept under `packaging/macos/`, not built or released from `main`), so this row stays untested until a release carries a DMG again |
 | C33b | Two-repository deployment, live: `pair --apply` creating real repositories, pushing, uploading the auditor secret; the app's device-code GitHub sign-in (**Connect GitHub**) | a GitHub account willing to create repositories (C33a covers plan mode, and `--apply` only against a fake `gh` with local bare repositories) |
 | C34b | SSH workstation / Slurm compute; MCP over Streamable HTTP with write-only Keychain bearer tokens and HTTPS/private-network controls; Project Skills managed in the UI | an SSH host and a scheduler; an HTTP MCP endpoint and the macOS Keychain (C34a, C34c–C34g cover local stdio MCP) |
 | C35 | The benchmark sentences ("severity, not sight"; precision 100% / recall 2%; "flags fewer correct solutions") | the archived run data (`~/Documents/Crossaudit/study-data/`, present on this machine) and the cross-vendor review they already had; re-running costs money |
 | C36 | The auditor catching real defects in real work | live models and a corpus with ground truth: `benchmarks/ai4s/run_auditor.py --live` on a one-seed subset (≈ $10) is the prepared path |
+
+### H. The terminal surface (added in round 3)
+
+Round 3 is the owner's decision of 2026-10-23 (`docs/design/TUI_FIRST.md`): the
+README's front door is the terminal — `init` → `build` → `tui` → `verify` —
+and the native app leaves the main line. These rows are written from that
+document's §2 and §5 and the README sentences that carry them, before the
+implementation landed. As everywhere above, the shipped CLI is driven with the
+fake providers; the TUI is driven under a pseudo-terminal the way C25 and C28
+drive `resolve` and `console`, each key typed only once the screen shows what
+it should (the screen redraws on a timer, so "idle" is not a signal there).
+
+| id | README says | test | pass when |
+|---|---|---|---|
+| C37 | "`crossaudit tui` … `--once` prints one frame and exits, no terminal needed"; the frame shows the cycles with their status, the newest cycle's findings with their tier, and its receipt line | a project with one PASSED and one ESCALATED cycle (a scenario that passes its first audit and blocks every later one; round limit 2); `tui --once` without a terminal, then `tui` without a terminal | exit 0 both times; the frame names both cycle ids and both status words as `status` prints them, and at least one tier word (the console's own: "verified by a check" / "raised by the auditor, …"); no provider request and no browser invocation during either; without `--once` the same frame and one stderr sentence saying there is no terminal |
+| C38 | "At a terminal `tui` is the live loop: `↑/↓` or `j/k` select, Enter expands a cycle to its findings and receipt line, `q` quits" | under a pseudo-terminal, `sh -c 'stty -g; crossaudit tui; stty -g'`, typing `j`, Enter, `q` — each key once the screen shows what it should | the TUI exits 0; the terminal settings before and after are identical; after Enter the PASSED cycle's receipt line (BINDINGS VERIFIED / SIGNED / ADMISSION READY) is on screen |
+| C39 | "When a cycle waits for you, the decision card offers **Revise and continue** (`r`) and **Stop this task** (`c`); each asks for your written reason and records it as a ruling in the ledger" (the D172 path C25 checks for `resolve`) | on C37's escalated cycle under a pseudo-terminal: `c`, a reason, Enter, `q`; then a third task that escalates again: `r`, a reason, Enter, `q` | after `c`: `status --json` shows the cycle closed with a `close` ruling, the reason is in `cycles/rulings.jsonl` and in a ledger commit; after `r`: the cycle is no longer ESCALATED and a `reopen` ruling with its reason is in the file and in a commit |
+| C40 | The README's "60-second tour", run as written | the fenced commands of that section, in order, in a fresh HOME: the install line is skipped (this harness installs the same ref itself), the documented `base_url` points the README's own vendors at the fakes right after `init`, and a `<placeholder>` in the `verify` line is filled with the newest receipt (each substitution recorded) | every command exits 0 (`tui` without a terminal included) and the `verify` output contains `BINDINGS VERIFIED` |
+| C41 | "Each usage-ledger row records the surface the call came from (`cli`, `tui`, `console`, `app`); `status --json` shows `by_surface`" | `build` from the command line, then a task started from the TUI (`n`, the task, Enter, `q` once the receipt exists) under a pseudo-terminal; read `.crossaudit/usage.jsonl` and `status --json` | every row has a `surface`; the command-line build's rows say `cli`, the TUI task's rows say `tui`; `usage.by_surface` in `status --json` has `cli` and `tui` entries whose call counts equal the rows |
 
 ## Scoring
 
