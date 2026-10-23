@@ -19,12 +19,25 @@ D10 mutations run by hand: `child_env` returning `dict(base)` -> every
 behavioural test red; dropping `env=child_env()` from `gitio.git` -> the gitio
 case and the structural sweep red; dropping the `_API_KEY` rule from
 `provider_key_names` -> the OPENAI_API_KEY / ANTHROPIC_API_KEY assertions red.
+
+Configured names of any shape (review terra-r1, finding 3). `config.py`
+accepts any non-empty `key_env`, so a key exported as, say,
+`PROJECT_PROVIDER_SECRET` matched neither rule above and reached every child.
+`config.load()` now registers every configured name with `app_keys`, and
+`provider_key_names()` unions that registry. D10 mutation run by hand:
+removing `names |= configured_key_names()` from `provider_key_names` -> the
+four `test_configured_*` tests below red (each asserts a name is stripped
+only because a loaded configuration declared it); removing the
+`_register_key_names(...)` call from `config.load` -> the same four red.
 """
 from __future__ import annotations
 
 import ast
 import io
+import json
+import shlex
 import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -312,6 +325,130 @@ def test_child_env_does_not_mutate_the_parent_environment(monkeypatch):
 def test_child_env_extra_is_applied_after_the_scrub():
     env = app_keys.child_env({"PATH": "/p", "OPENAI_API_KEY": "x"}, LC_ALL="C")
     assert env == {"PATH": "/p", "LC_ALL": "C"}
+
+
+# ------------------------------------------------------------------ configured names
+
+#: Names a project may configure that match neither `CROSSAUDIT_*_KEY` nor
+#: `*_API_KEY`: the auditor, an auditor fallback row, the generator and a
+#: generator fallback row each hold one.
+ODD_KEYS = {
+    "PROJECT_PROVIDER_SECRET": "dummy-auditor-secret-must-not-reach-a-child",
+    "LAB_RELAY_TOKEN_B": "dummy-auditor-fallback-must-not-reach-a-child",
+    "GEN_CREDENTIAL": "dummy-generator-secret-must-not-reach-a-child",
+    "SPARE_GEN_PASS": "dummy-generator-fallback-must-not-reach-a-child",
+}
+
+ODD_CONFIG = """\
+version: 1
+science_repo: lab/science
+constitution: AUDIT_RULES.md
+max_rounds: {rounds}
+auditor:
+  vendor: anthropic
+  provider: replay
+  model: claude-fable-5
+  key_env: PROJECT_PROVIDER_SECRET
+  fallbacks:
+    - vendor: deepseek
+      provider: replay
+      model: deepseek-x
+      key_env: LAB_RELAY_TOKEN_B
+generator:
+  vendor: openai
+  provider: replay
+  model: gpt-x
+  key_env: GEN_CREDENTIAL
+  fallbacks:
+    - vendor: zhipu
+      provider: replay
+      model: glm-x
+      key_env: SPARE_GEN_PASS
+"""
+
+
+def _write_odd_config(tmp_path, rounds="3"):
+    path = tmp_path / "crossaudit.yml"
+    path.write_text(ODD_CONFIG.format(rounds=rounds), encoding="utf-8")
+    return path
+
+
+@pytest.fixture
+def odd_keys(monkeypatch):
+    for name, value in ODD_KEYS.items():
+        monkeypatch.setenv(name, value)
+    return ODD_KEYS
+
+
+def test_configured_nonconventional_key_names_are_stripped(odd_keys, tmp_path):
+    from crossaudit import config
+    # Precondition: before any configuration is loaded, these names have no
+    # recognisable shape, so the scrub keeps them (the reviewed gap).
+    before = app_keys.child_env()
+    assert set(odd_keys) <= set(before), "precondition: the names look ordinary"
+
+    config.load(_write_odd_config(tmp_path))
+
+    env = app_keys.child_env()
+    leaked = sorted(set(env) & set(odd_keys))
+    assert not leaked, f"configured provider keys reached a child: {leaked}"
+    for value in odd_keys.values():
+        assert value not in env.values()
+    for name in ("PATH", "HOME"):
+        assert name in env
+    names = app_keys.provider_key_names()
+    assert set(odd_keys) <= names
+    # Each configured vendor's backup slot is registered too, including the
+    # vendors no built-in spec knows.
+    assert {"CROSSAUDIT_DEEPSEEK_BACKUP_KEY", "CROSSAUDIT_ZHIPU_BACKUP_KEY",
+            "CROSSAUDIT_ANTHROPIC_BACKUP_KEY", "CROSSAUDIT_OPENAI_BACKUP_KEY"} \
+        <= app_keys.configured_key_names()
+
+
+def test_configured_key_names_never_reach_a_real_git_child(odd_keys, tmp_path):
+    """A real `git` launched through `gitio.git` runs a shell alias that prints
+    the names in its own environment: what a hook or credential helper sees."""
+    from crossaudit import config, gitio
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True,
+                   env=app_keys.child_env())
+    config.load(_write_odd_config(tmp_path))
+    dump = (f"{shlex.quote(sys.executable)} -c "
+            + shlex.quote("import json, os; print(json.dumps(sorted(os.environ)))"))
+    out = gitio.git("-c", f"alias.envdump=!{dump}", "envdump", cwd=tmp_path)
+    seen = set(json.loads(out.splitlines()[-1]))
+    assert "PATH" in seen, "the child printed no environment; nothing was observed"
+    leaked = sorted(seen & set(odd_keys))
+    assert not leaked, f"a real Git child saw configured provider keys: {leaked}"
+
+
+def test_configured_key_names_are_registered_even_if_load_is_refused_later(
+        odd_keys, tmp_path):
+    """Registration happens once the roles parse, before the rest of the file
+    is validated: a refused load still means these names hold keys."""
+    from crossaudit import config
+    from crossaudit.errors import ConfigDenial
+    with pytest.raises(ConfigDenial):
+        config.load(_write_odd_config(tmp_path, rounds="0"))
+    assert set(odd_keys) <= app_keys.provider_key_names()
+    assert not set(app_keys.child_env()) & set(odd_keys)
+
+
+def test_configured_key_names_are_stripped_through_document_export(
+        odd_keys, launched, tmp_path):
+    """A caller that holds no Config (document_export) strips them too."""
+    from crossaudit import config, document_export
+    config.load(_write_odd_config(tmp_path))
+    _quiet(lambda: document_export._owned_target(tmp_path, "a.md"))
+    _assert_clean(launched)
+    for env in launched:
+        assert not set(env) & set(odd_keys)
+
+
+def test_register_key_names_ignores_empty_and_non_string_values():
+    app_keys.register_key_names("", "   ", None, 7, "  REAL_NAME  ")
+    assert app_keys.configured_key_names() == frozenset({"REAL_NAME"})
+    app_keys.reset_key_names()
+    assert app_keys.configured_key_names() == frozenset()
 
 
 # ------------------------------------------------------------------ structural sweep
