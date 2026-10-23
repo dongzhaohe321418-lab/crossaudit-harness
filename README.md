@@ -1503,16 +1503,16 @@ source ~/.crossaudit-keys.env
 Use the complete tokenized URL printed by `crossaudit console --status`. The
 server accepts localhost hosts only and rejects requests without its token.
 
-### `crossaudit` says the controller lock is held by a process that is not running
+### `crossaudit` says the controller lock or the evidence ledger is locked
 
-A process that was killed while it held the project's controller lock
-(`.crossaudit/state.json.lock`) leaves the lock behind. The lock is not
-broken automatically: breaking it by age could delete a lock a live process
-had just taken, so every state change refuses with a sentence naming the
-lock, its holder's pid and its age until a person removes it. `crossaudit
-doctor` reports the lock and whether that pid is alive; `crossaudit doctor
---fix`, at a terminal, removes it when the holder is not running and refuses
-when it is (D176).
+The controller lock (`.crossaudit/state.json.lock`) and the evidence ledger's
+lock (`.crossaudit/evidence.jsonl.lock`) are held by the operating system for
+as long as the process that took them is running, and are released when it
+exits or is killed, so a lock is only ever held by a live process. The files
+themselves stay on disk between holders and mean nothing on their own; do not
+delete them. A command that waits too long for a lock refuses with a sentence
+naming the holder's pid. `crossaudit doctor` shows who holds each lock right
+now; if that process is hung, stop it and the lock is released (D176).
 
 ### The verdict is DCL_ONLY
 

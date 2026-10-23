@@ -11,16 +11,16 @@ would put it inside a throwaway checkout — where "consumed" survives nothing.
 
 **Every mutation is a read-modify-write inside an exclusive lock.** Admission
 is a single-use claim; two concurrent verifiers must not both see an unconsumed
-receipt. The lock is an `O_EXCL` file carrying the holder's pid and an owner
-token, and the state file is replaced by atomic rename after fsync, so a
-crash mid-write leaves the previous state intact rather than a truncated file.
+receipt. The lock is a kernel-held ``flock`` on ``state.json.lock``
+(``crossaudit.locks``), and the state file is replaced by atomic rename after
+fsync, so a crash mid-write leaves the previous state intact rather than a
+truncated file.
 
-A lock older than ``LOCK_STALE_S`` is never broken automatically (review
-2026-10-23 round 3, finding 2): "observe stale, then unlink" can delete a
-fresh owner's lock when the old holder releases and a new one acquires in
-between, and no token can close that window. Such a lock is refused with a
-sentence naming its pid; ``crossaudit doctor --fix`` removes it only when that
-pid is not alive (:meth:`StateStore.remove_stale_lock`, ``crossaudit.locks``).
+The lock file is never deleted, and holding the lock is holding the open file
+(review 2026-10-23 round 4, finding 1): every earlier scheme that judged
+ownership from the file and then unlinked it by pathname could delete a fresh
+owner's lock. A holder that dies releases the lock with its process, so a
+"stale" lock no longer exists and nothing ever breaks or removes one.
 """
 from __future__ import annotations
 
@@ -38,7 +38,6 @@ from ..errors import ConfigDenial, IntegrityDenial, classify_escalation_kind
 
 STATE_FILENAME = "state.json"
 LOCK_TIMEOUT_S = 30.0
-LOCK_STALE_S = 120.0
 
 #: The operational ``history`` list is read whole every render frame and only
 #: ever used to derive a per-cycle "updated" timestamp (server._ordered_cycles)
@@ -131,101 +130,37 @@ class StateStore:
             finally:
                 os.close(dir_fd)
 
-    def _acquire(self, lock_path: Path) -> str:
-        """Take the O_EXCL lock at ``lock_path``; never break someone else's.
-
-        Returns the owner token written into the lock file (pid, time and a
-        random nonce): the holder checks it before writing state back and
-        before releasing (:meth:`_owns`), so a holder whose lock was removed
-        while it held it can neither overwrite newer state nor unlink its
-        successor's lock (review 2026-10-23 round 2, finding 2).
-
-        A lock held longer than ``LOCK_STALE_S`` is refused with
-        ``IntegrityDenial`` (issue ``stale_lock``) instead of being deleted:
-        deleting it raced a fresh owner (round 3, finding 2). A younger lock is
-        waited on for up to ``LOCK_TIMEOUT_S``.
-        """
-        deadline = time.monotonic() + LOCK_TIMEOUT_S
-        token = locks.new_token()
-        while True:
-            try:
-                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                try:
-                    os.write(fd, token.encode())
-                finally:
-                    os.close(fd)
-                return token
-            except FileExistsError:
-                holder = self._lock_holder(lock_path)
-                if holder is None:
-                    continue                            # released meanwhile; retry
-                if holder["age"] > LOCK_STALE_S:
-                    raise self._stale_denial(lock_path, holder)
-                if time.monotonic() > deadline:
-                    raise ConfigDenial(
-                        "could not acquire the controller lock; another verifier is "
-                        "mid-transaction", lock=str(lock_path))
-                time.sleep(0.05)
-
-    @staticmethod
-    def _lock_holder(lock_path: Path) -> dict | None:
-        """Who holds the lock (``locks.holder``)."""
-        return locks.holder(lock_path)
-
-    @staticmethod
-    def _stale_denial(lock_path: Path, holder: dict) -> IntegrityDenial:
-        pid = holder["pid"] if holder["pid"] is not None else "?"
-        return IntegrityDenial(
-            f"the controller lock {lock_path} has been held by pid {pid} for "
-            f"{holder['age']:.0f}s, longer than the {LOCK_STALE_S:g}s stale limit, "
-            f"and is not broken automatically; if no crossaudit process is running "
-            f"for this project, `crossaudit doctor --fix` removes it",
-            issue="stale_lock", lock=str(lock_path))
+    def _acquire(self, lock_path: Path) -> locks.HeldLock:
+        """Take the controller lock (``locks.acquire``), waiting up to
+        ``LOCK_TIMEOUT_S`` for a live holder; then refuse naming its pid."""
+        def busy(pid: int | None) -> ConfigDenial:
+            return ConfigDenial(
+                f"could not acquire the controller lock; another process (pid "
+                f"{pid if pid is not None else '?'}) is mid-transaction",
+                lock=str(lock_path))
+        return locks.acquire(lock_path, LOCK_TIMEOUT_S, busy)
 
     def lock_status(self) -> dict | None:
-        """The controller lock as `doctor` reports it (``locks.status``)."""
-        return locks.status(self.lock_path, LOCK_STALE_S)
-
-    def remove_stale_lock(self) -> str:
-        """``doctor --fix`` for the controller lock (``locks.remove_stale``):
-        removed only when stale and its pid is not alive."""
-        return locks.remove_stale(self.lock_path, LOCK_STALE_S)
-
-    @staticmethod
-    def _owns(lock_path: Path, token: str) -> bool:
-        """Whether the lock file at ``lock_path`` still carries ``token``."""
-        return locks.owns(lock_path, token)
-
-    def _release(self, lock_path: Path, token: str) -> None:
-        """Remove the lock only if it is still this holder's."""
-        if self._owns(lock_path, token):
-            lock_path.unlink(missing_ok=True)
+        """Who holds the controller lock right now, for `doctor`
+        (``locks.status``): None when free."""
+        return locks.status(self.lock_path)
 
     @contextmanager
     def _locked(self) -> Iterator[dict]:
         """Exclusive read-modify-write. Yields state; writes it back on clean exit.
 
-        Ownership-aware: if the lock was removed (by a person, or by
-        ``doctor --fix`` on a pid it wrongly judged dead) and possibly taken by
-        another process while this one held it, the snapshot this holder read
-        may be out of date, so it is NOT written back, the successor's lock is
-        NOT removed, and ``IntegrityDenial`` (issue ``lock_taken_over``) says
-        the change was discarded. The check and the write are not one atomic
-        step; the window is the few microseconds between them.
+        The kernel holds the lock for as long as this process keeps the lock
+        file open, and no code path removes the file, so no other process can
+        take the lock while this one holds it (and none can write state).
         """
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        token = self._acquire(self.lock_path)
+        held = self._acquire(self.lock_path)
         try:
             state = self._read()
             yield state
-            if not self._owns(self.lock_path, token):
-                raise IntegrityDenial(
-                    "the controller lock was removed or replaced while this process "
-                    "held it; this process's state change was discarded",
-                    issue="lock_taken_over")
             self._write(state)
         finally:
-            self._release(self.lock_path, token)
+            held.release()
 
     @staticmethod
     def _log(state: dict, event: str, **kw: object) -> None:
@@ -701,42 +636,52 @@ class StateStore:
         # write nothing, and on every console snapshot. It used to take the
         # read-modify-write lock, which wrote state.json back (creating it,
         # and the state directory, on a fresh project). Now it exercises the
-        # SAME O_EXCL acquisition on the real lock path when the state
+        # SAME flock acquisition (crossaudit.locks) on the real lock path when the state
         # directory exists, and reads the state without writing it, so a
         # corrupt state file still reports as unlockable. Before the directory
-        # exists it probes O_EXCL on the same filesystem, in the nearest
+        # exists it probes flock on the same filesystem, in the nearest
         # existing ancestor, with a transient file it removes again; nothing
         # is created that outlives the call.
         atomic = False
         detail = ""
-        token = ""
+        held = None
+        probe = None
         try:
-            if self.path.parent.is_dir():
-                lock_path = self.lock_path
-                token = self._acquire(lock_path)
-            else:
-                anchor = self.path.parent
-                while not anchor.is_dir() and anchor != anchor.parent:
-                    anchor = anchor.parent
-                lock_path = anchor / f".crossaudit-lock-probe-{os.getpid()}"
-                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.close(fd)
             try:
-                if lock_path == self.lock_path:
+                # The real lock file only when it already exists: the lock
+                # file persists once created, and this probe creates nothing
+                # that outlives it.
+                if self.path.parent.is_dir() and self.lock_path.exists():
+                    lock_path = self.lock_path
+                    # One attempt, never a wait: doctor and the console call
+                    # this, and a live holder already shows the lock excludes.
+                    try:
+                        held = locks.acquire(lock_path, 0.0, lambda _pid: RuntimeError(
+                            "held by another process"))
+                    except RuntimeError:
+                        held = None
                     self._read()
-                # If the lock is real, a second acquisition from this process
-                # must fail while we hold it.
-                try:
-                    fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                    os.close(fd)
-                    detail = "the lock did not exclude a second holder"
-                except FileExistsError:
-                    atomic = True
-            finally:
-                if token:
-                    self._release(lock_path, token)
                 else:
-                    lock_path.unlink(missing_ok=True)
+                    anchor = self.path.parent
+                    while not anchor.is_dir() and anchor != anchor.parent:
+                        anchor = anchor.parent
+                    probe = anchor / f".crossaudit-lock-probe-{os.getpid()}"
+                    lock_path = probe
+                    held = locks.acquire(probe, 1.0, lambda _pid: RuntimeError(
+                        "the lock probe is busy"))
+                    if self.path.exists():
+                        self._read()            # a corrupt store is unlockable
+                # If the lock is real, a second open file must not obtain it
+                # while we hold it.
+                if locks.status(lock_path) is not None:
+                    atomic = True
+                else:
+                    detail = "the lock did not exclude a second holder"
+            finally:
+                if held is not None:
+                    held.release()
+                if probe is not None:
+                    probe.unlink(missing_ok=True)   # our own transient probe
         except Exception as exc:                       # noqa: BLE001
             detail = f"the store could not be locked: {exc}"
 

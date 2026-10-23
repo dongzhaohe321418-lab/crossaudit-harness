@@ -8467,7 +8467,7 @@ two P1, one P2, one P3, each reproduced by the reviewer and each repaired:
    and shared by every git step (`config`, `add`, `commit`, `rev-parse`); a step with
    nothing left fails at once; the cleanup after a failure gets `CLEANUP_TIMEOUT_S` (5 s)
    per step on top; a test asserts budget plus cleanup stay below `LOCK_STALE_S`.
-8. **The controller lock is owned.** The lock file carries a token (pid, time, random
+8. **The controller lock is owned** *(superseded by ruling 16: the locks are now kernel-held)*. The lock file carries a token (pid, time, random
    nonce); the holder re-reads it before writing state back and before releasing. A
    holder whose lock was broken as stale and taken by another process does not write
    its stale snapshot, does not unlink its successor's lock, and raises "the controller
@@ -8504,7 +8504,7 @@ each reproduced and each repaired:
     file), the state is not changed, the working file is set to the committed bytes, and
     the refusal says the commit exists but could not be confirmed to contain the ruling;
     the commit is not undone, since the ledger is append-only.
-12. **A stale controller lock is never broken automatically.** Breaking a lock by age with
+12. **A stale controller lock is never broken automatically** *(superseded by ruling 16: stale locks no longer exist)*. Breaking a lock by age with
     an unconditional unlink could delete a lock a live process had just taken (the
     reviewer forced the interleaving: A sees B's lock as stale, B releases, C acquires, A
     unlinks C's), and no ownership token repairs that. A lock older than `LOCK_STALE_S`
@@ -8526,7 +8526,7 @@ each reproduced and each repaired:
 14. **The module docstring says when its claim holds.** "A line that is in the file is a
     line that is in git" is true once `record()` has returned; during a ruling,
     `history()` may read the provisional line. The sentence now says so.
-15. **The evidence ledger's own lock follows the same policy.** `ledger/chain.py` broke
+15. **The evidence ledger's own lock follows the same policy** *(superseded by ruling 16)*. `ledger/chain.py` broke
     its lock after 30 s by the same unlink, the same race, inside the audit core. Its
     lock file now carries the owner token, release is ownership-aware, a stale lock is
     refused with the same sentence shape (`LedgerError`), and `doctor`/`doctor --fix`
@@ -8534,8 +8534,39 @@ each reproduced and each repaired:
     removal). A writer that crashes leaves the ledger refusing appends until `doctor
     --fix` is run; the append still verifies the chain first (D168).
 
+**Round 4** (`…-r4.md`): the round-3 repairs verified, then one P1 and one P2, both in the
+lock primitive, both repaired:
+
+16. **The controller lock and the evidence-ledger lock are held by the kernel.** Every
+    scheme that checks a token and then unlinks a lock file by pathname (release,
+    `doctor --fix`'s removal) has a window in which another process has released and a
+    third has created a fresh lock that is then deleted; the reviewer forced all three
+    interleavings. So the primitive changed: one module, `locks.py`, opens the lock file
+    (`O_CREAT|O_RDWR`, never deleted; it persists inert between holders), takes
+    `fcntl.flock(LOCK_EX|LOCK_NB)` (POSIX; `msvcrt.locking` on Windows, unverified here)
+    with retries up to the existing timeouts, then requires `fstat` of the fd and `stat`
+    of the path to name the same file (a lock file replaced between open and flock is
+    released and retried), and writes the pid token for `doctor`'s report only; the
+    kernel decides ownership. Release is unlock-and-close; a holder that dies releases
+    with its process, so stale locks do not exist: `LOCK_STALE_S`, the stale refusals,
+    `remove_stale`, `doctor --fix`'s lock removal, the pre-write ownership check and the
+    "taken over" refusals are all gone (rulings 8, 12 and 15 are superseded). A live
+    holder makes an acquirer wait up to the timeout and then refuse, naming the holder's
+    pid ("could not acquire the controller lock; another process (pid N) is
+    mid-transaction"; "the evidence ledger is locked by another writer (pid N)").
+    `doctor` only reports who holds each lock. A test scans `src/` so that no delete of a
+    lock path can return.
+17. **CrossAudit never removes Git's `index.lock`.** After a killed Git, another writer may
+    already hold a new `index.lock`; only `next-index-<pid>.lock`, named by the killed
+    process, is removed. If `index.lock` remains, the timed-out refusal says it may have
+    been left by the killed git and how to recover by hand (remove it when no git is
+    running, then `git reset -q -- cycles/rulings.jsonl`, since our own unstaging could
+    not run while it existed).
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
-paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 and 4 verified the
-repairs (`…-r3.md`, `…-r4.md`).
+paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 5 verified the
+repairs (`…-r3.md` to `…-r5.md`). The Windows lock branch (`msvcrt.locking`) has not
+run on Windows; a plain `os.fork()` without exec would share a held lock with the
+child, and nothing in CrossAudit forks while holding one.

@@ -338,25 +338,23 @@ def test_a_silent_hook_still_yields_a_legible_reason(escalated):
 
 def test_a_hook_slower_than_the_commit_timeout_fails_the_ruling_inside_the_lock(
         escalated, monkeypatch):
-    """The ruling's commit runs under the controller lock, whose stale
-    threshold is 120 s, so it has its own bound (`rulings.COMMIT_TIMEOUT_S`,
-    90 s; 2 s here) instead of git's 240 s. A hook that sleeps past it: the
-    ruling is refused saying it timed out, the hook is killed rather than
-    waited for, nothing is recorded or staged, the cycle stays ESCALATED,
-    and git's index lock is gone, so the next ruling commits.
+    """The ruling's commit runs under the controller lock, so it has its own
+    bound (`rulings.COMMIT_TIMEOUT_S`, 90 s; 2 s here) instead of git's
+    240 s. A hook that sleeps past it: the ruling is refused saying it timed
+    out, the hook is killed rather than waited for, nothing is recorded, and
+    the cycle stays ESCALATED. Since round 4 the killed git's `index.lock`
+    is never deleted (it names no owner): the refusal says so, the recovery
+    it describes is done here by hand, and the next ruling commits.
 
     Mutations caught: the commit bounded by git's general timeout (the hook
     finishes after 5 s, exits 0 and the ruling lands -- no denial); killing
-    only git and not its process group, or leaving `index.lock` behind (the
-    later ruling fails with "Unable to create index.lock")."""
+    only git and not its process group (the ruling waits out the hook)."""
     import time
 
     from crossaudit import rulings
     from crossaudit.config import load
-    from crossaudit.controller.state import LOCK_STALE_S
     from crossaudit.errors import IntegrityDenial
 
-    assert rulings.COMMIT_TIMEOUT_S < LOCK_STALE_S
     root, cid = escalated
     monkeypatch.setattr(rulings, "COMMIT_TIMEOUT_S", 2.0)
     install_hook(root, "#!/bin/sh\nsleep 5\nexit 0\n")
@@ -368,10 +366,14 @@ def test_a_hook_slower_than_the_commit_timeout_fails_the_ruling_inside_the_lock(
     assert denied.value.reason == (
         f"the ruling on cycle {cid} could not be committed to the ledger "
         f"(git commit timed out after 2s); the cycle stays ESCALATED and "
-        f"nothing was recorded")
-    assert_nothing_was_ruled(root, cid, None, head)
+        f"nothing was recorded; .git/index.lock may have been left by the killed "
+        f"git — if no git process is running, remove it by hand and run "
+        f"`git reset -q -- cycles/rulings.jsonl`")
     gitdir = Path(git("rev-parse", "--absolute-git-dir", cwd=root))
-    assert not list(gitdir.glob("*index*.lock"))
+    (gitdir / "index.lock").unlink()
+    git("reset", "-q", "--", "cycles/rulings.jsonl", cwd=root)
+    assert_nothing_was_ruled(root, cid, None, head)
+    assert not list(gitdir.glob("next-index-*.lock"))
     install_hook(root, "#!/bin/sh\nexit 0\n")
     result = main.resolve_cycle(load(), cid, "close", REASON)
     assert result["cycle"]["status"] == "BLOCKED"
