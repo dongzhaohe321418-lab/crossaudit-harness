@@ -111,14 +111,27 @@ def test_the_dmg_window_says_how_to_open_the_app_in_both_languages():
     assert 'DMG is missing the note' in verifier
 
 
-def test_the_readme_leads_the_install_section_with_first_open_and_says_how_to_leave():
+def test_the_readme_installs_from_the_terminal_and_keeps_the_app_off_the_front_door():
+    """D175: the install section is the Python package; the DMG lives only in
+    the native-app section near the end."""
     readme = (ROOT / "README.md").read_text()
-    install = readme.split("## Install", 1)[1].split("## Five-minute quick start", 1)[0]
-    first_open = install.index("**First open.** macOS may say the app can't be verified")
-    assert first_open < install.index("1. Download `CrossAudit-"), (
+    install = readme.split("\n## Install\n", 1)[1].split("\n## How it works\n", 1)[0]
+    assert "pip install" in install and "pipx install" in install
+    assert "DMG" not in install and ".dmg" not in install
+    front = readme.split("\n## The native macOS app (not on the main line)\n", 1)[0]
+    assert "DMG" not in front.split("\n## Why CrossAudit\n", 1)[0], (
+        "the top of the README and its tour must not send people to the DMG")
+
+
+def test_the_readme_app_section_leads_with_first_open_and_says_how_to_leave():
+    readme = (ROOT / "README.md").read_text()
+    app = readme.split("\n## The native macOS app (not on the main line)\n", 1)[1].split(
+        "\n## Development\n", 1)[0]
+    first_open = app.index("**First open.** macOS may say the app can't be verified")
+    assert first_open < app.index("1. Download `CrossAudit-"), (
         "the Gatekeeper instruction must come before the download steps")
-    assert "right-click\n> **CrossAudit.app** → **Open** → **Open**. This happens once." in install
-    uninstall = install.split("### Uninstall / remove all data", 1)[1]
+    assert "right-click\n> **CrossAudit.app** → **Open** → **Open**. This happens once." in app
+    uninstall = app.split("### Removing it", 1)[1]
     for location in ("~/Library/Application Support/CrossAudit", "`.crossaudit/`",
                      "io.crossaudit.app.provider.<vendor>"):
         assert location in uninstall, location
