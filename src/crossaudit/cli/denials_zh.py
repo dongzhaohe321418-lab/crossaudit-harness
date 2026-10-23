@@ -581,11 +581,28 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "裁定必须说明理由；它会被记入账本"),
     ("cycle is {}, not ESCALATED; only an escalated cycle needs a human ruling",
      "周期状态是 {}，不是 ESCALATED；只有已升级的周期才需要人工裁决"),
-    ("the controller lock was taken over by another process while this one held it "
-     "(longer than the {}s stale limit); this process's state change was discarded",
-     "控制器锁在本进程持有期间被另一个进程接管（持有时间超过 {} 秒的失效上限）；"
-     "本进程的状态更改已被丢弃"),
+    ("the controller lock was removed or replaced while this process held it; this "
+     "process's state change was discarded",
+     "控制器锁在本进程持有期间被移除或替换；本进程的状态更改已被丢弃"),
+    ("the controller lock {} has been held by pid {} for {}s, longer than the {}s stale "
+     "limit, and is not broken automatically; if no crossaudit process is running for "
+     "this project, `crossaudit doctor --fix` removes it",
+     "控制器锁 {} 已被 pid {} 持有 {} 秒，超过 {} 秒的失效上限，不会被自动解除；"
+     "如果此项目没有正在运行的 crossaudit 进程，`crossaudit doctor --fix` 会将其移除"),
     # ------------------------------------------------------------ rulings.py
+    ("{} (or its directory) is a symbolic link; the rulings log must be a regular "
+     "file inside the repository, so the ruling was not recorded",
+     "{}（或其所在目录）是符号链接；裁决日志必须是仓库内的普通文件，因此该裁决未被记录"),
+    ("the ruling on cycle {} was committed as {}, but the committed {} could not be "
+     "confirmed to contain it (a filter or hook changed the file); the cycle stays "
+     "ESCALATED — check the repository's filters and hooks before ruling again",
+     "周期 {} 的裁决已作为 {} 提交，但无法确认已提交的 {} 包含它（过滤器或钩子更改了该文件）；"
+     "该周期仍为 ESCALATED —— 再次裁决前请检查仓库的过滤器和钩子"),
+    ("the ruling on cycle {} was committed as {}, but the committed {} could not be "
+     "confirmed to contain it (it could not be read back: {}); the cycle stays "
+     "ESCALATED — check the repository's filters and hooks before ruling again",
+     "周期 {} 的裁决已作为 {} 提交，但无法确认已提交的 {} 包含它（无法读回：{}）；"
+     "该周期仍为 ESCALATED —— 再次裁决前请检查仓库的过滤器和钩子"),
     ("the ruling on cycle {} could not be committed to the ledger ({}), and {} could "
      "not be restored ({}); the cycle stays ESCALATED, but check {} against git "
      "before ruling again",

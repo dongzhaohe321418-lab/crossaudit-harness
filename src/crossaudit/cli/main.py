@@ -647,6 +647,31 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         "the controller must be able to persist consumed receipts",
         copy="doctor.state", slots={"path": state_dir / "state.json"})
 
+    # A controller lock past its stale limit is refused to every process and
+    # never broken automatically (review 2026-10-23 round 3, finding 2), so
+    # this is where a person learns of it. Read-only unless --fix, and --fix
+    # removes it only when its pid is not alive.
+    lock = _state(cfg).lock_status()
+    if lock is not None and lock["stale"]:
+        pid = lock["pid"] if lock["pid"] is not None else "?"
+        liveness = "alive" if lock["alive"] else "not running"
+        removed = False
+        if not lock["alive"] and _offer(
+                args, f"remove the stale controller lock held by pid {pid}"):
+            removed = _state(cfg).remove_stale_lock() == "removed"
+        if removed:
+            note("controller lock", f"removed the stale lock {lock['path']} "
+                 f"(pid {pid} was not running)")
+        else:
+            refusal = (f"; pid {pid} is alive, so --fix leaves it alone"
+                       if lock["alive"] else "")
+            add("controller lock", False,
+                f"{lock['path']} held by pid {pid} ({liveness}) for "
+                f"{lock['age']:.0f}s{refusal}",
+                "if no crossaudit process is running for this project, run "
+                "`crossaudit doctor --fix`", copy="doctor.controller_lock",
+                slots={"path": lock["path"], "pid": pid})
+
     repo_ok = is_repo(cfg.root)
     if not repo_ok and _offer(args, f"run git init in {cfg.root}"):
         git("init", "-q", "-b", "main", cwd=cfg.root)

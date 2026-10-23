@@ -11,9 +11,16 @@ would put it inside a throwaway checkout — where "consumed" survives nothing.
 
 **Every mutation is a read-modify-write inside an exclusive lock.** Admission
 is a single-use claim; two concurrent verifiers must not both see an unconsumed
-receipt. The lock is an `O_EXCL` file with the holder's pid and a stale-break
-timeout, and the state file is replaced by atomic rename after fsync, so a
+receipt. The lock is an `O_EXCL` file carrying the holder's pid and an owner
+token, and the state file is replaced by atomic rename after fsync, so a
 crash mid-write leaves the previous state intact rather than a truncated file.
+
+A lock older than ``LOCK_STALE_S`` is never broken automatically (review
+2026-10-23 round 3, finding 2): "observe stale, then unlink" can delete a
+fresh owner's lock when the old holder releases and a new one acquires in
+between, and no token can close that window. Such a lock is refused with a
+sentence naming its pid; ``crossaudit doctor --fix`` removes it only when that
+pid is not alive (:meth:`StateStore.remove_stale_lock`).
 """
 from __future__ import annotations
 
@@ -125,13 +132,18 @@ class StateStore:
                 os.close(dir_fd)
 
     def _acquire(self, lock_path: Path) -> str:
-        """Take the O_EXCL lock at ``lock_path``, breaking a stale one.
+        """Take the O_EXCL lock at ``lock_path``; never break someone else's.
 
         Returns the owner token written into the lock file (pid, time and a
         random nonce): the holder checks it before writing state back and
-        before releasing (:meth:`_owns`), so a holder whose lock was broken as
-        stale can neither overwrite newer state nor unlink its successor's
-        lock (review 2026-10-23 round 2, finding 2).
+        before releasing (:meth:`_owns`), so a holder whose lock was removed
+        while it held it can neither overwrite newer state nor unlink its
+        successor's lock (review 2026-10-23 round 2, finding 2).
+
+        A lock held longer than ``LOCK_STALE_S`` is refused with
+        ``IntegrityDenial`` (issue ``stale_lock``) instead of being deleted:
+        deleting it raced a fresh owner (round 3, finding 2). A younger lock is
+        waited on for up to ``LOCK_TIMEOUT_S``.
         """
         deadline = time.monotonic() + LOCK_TIMEOUT_S
         token = f"{os.getpid()} {time.time():.0f} {secrets.token_hex(8)}"
@@ -144,18 +156,85 @@ class StateStore:
                     os.close(fd)
                 return token
             except FileExistsError:
-                try:
-                    age = time.time() - lock_path.stat().st_mtime
-                except FileNotFoundError:
+                holder = self._lock_holder(lock_path)
+                if holder is None:
                     continue                            # released meanwhile; retry
-                if age > LOCK_STALE_S:
-                    lock_path.unlink(missing_ok=True)   # holder died; break it
-                    continue
+                if holder["age"] > LOCK_STALE_S:
+                    raise self._stale_denial(lock_path, holder)
                 if time.monotonic() > deadline:
                     raise ConfigDenial(
                         "could not acquire the controller lock; another verifier is "
                         "mid-transaction", lock=str(lock_path))
                 time.sleep(0.05)
+
+    @staticmethod
+    def _lock_holder(lock_path: Path) -> dict | None:
+        """Who holds the lock at ``lock_path`` and for how long, or None when
+        there is no lock. ``pid`` is None when the file names none."""
+        try:
+            age = time.time() - lock_path.stat().st_mtime
+            text = lock_path.read_text(encoding="utf-8", errors="replace")
+        except FileNotFoundError:
+            return None
+        except OSError:
+            return {"pid": None, "age": 0.0, "token": ""}
+        head = text.split(" ", 1)[0].strip()
+        pid = int(head) if head.isdigit() else None
+        return {"pid": pid, "age": age, "token": text}
+
+    @staticmethod
+    def _stale_denial(lock_path: Path, holder: dict) -> IntegrityDenial:
+        pid = holder["pid"] if holder["pid"] is not None else "?"
+        return IntegrityDenial(
+            f"the controller lock {lock_path} has been held by pid {pid} for "
+            f"{holder['age']:.0f}s, longer than the {LOCK_STALE_S:g}s stale limit, "
+            f"and is not broken automatically; if no crossaudit process is running "
+            f"for this project, `crossaudit doctor --fix` removes it",
+            issue="stale_lock", lock=str(lock_path))
+
+    @staticmethod
+    def _pid_alive(pid: int | None) -> bool:
+        """``os.kill(pid, 0)``: only ESRCH counts as dead. A pid we may not
+        signal (EPERM) is alive; an unreadable pid is treated as alive, so
+        nothing is removed on a guess."""
+        if pid is None or pid <= 0:
+            return True
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except OSError:
+            return True
+        return True
+
+    def lock_status(self) -> dict | None:
+        """The controller lock as `doctor` reports it, or None when free:
+        ``{"path", "pid", "age", "stale", "alive"}``."""
+        holder = self._lock_holder(self.lock_path)
+        if holder is None:
+            return None
+        return {"path": str(self.lock_path), "pid": holder["pid"],
+                "age": holder["age"], "stale": holder["age"] > LOCK_STALE_S,
+                "alive": self._pid_alive(holder["pid"])}
+
+    def remove_stale_lock(self) -> str:
+        """Remove the controller lock only if it is stale AND its pid is not
+        alive (``doctor --fix``). Returns ``"absent"``, ``"fresh"``,
+        ``"alive"`` or ``"removed"``. The file is re-read just before the
+        unlink and left alone if it changed, so a lock taken meanwhile by a
+        live process is not deleted on the strength of the old reading.
+        """
+        holder = self._lock_holder(self.lock_path)
+        if holder is None:
+            return "absent"
+        if holder["age"] <= LOCK_STALE_S:
+            return "fresh"
+        if self._pid_alive(holder["pid"]):
+            return "alive"
+        if not self._owns(self.lock_path, holder["token"]):
+            return "fresh"
+        self.lock_path.unlink(missing_ok=True)
+        return "removed"
 
     @staticmethod
     def _owns(lock_path: Path, token: str) -> bool:
@@ -174,14 +253,13 @@ class StateStore:
     def _locked(self) -> Iterator[dict]:
         """Exclusive read-modify-write. Yields state; writes it back on clean exit.
 
-        Ownership-aware: if the lock was broken as stale and taken by another
-        process while this one held it (a transaction that outlived
-        ``LOCK_STALE_S``), the snapshot this holder read is out of date, so it
-        is NOT written back, the successor's lock is NOT removed, and
-        ``IntegrityDenial`` (issue ``lock_taken_over``) says the change was
-        discarded. The check and the write are not one atomic step; the
-        window is the few microseconds between them, against a takeover that
-        needs the holder to have overrun the stale threshold first.
+        Ownership-aware: if the lock was removed (by a person, or by
+        ``doctor --fix`` on a pid it wrongly judged dead) and possibly taken by
+        another process while this one held it, the snapshot this holder read
+        may be out of date, so it is NOT written back, the successor's lock is
+        NOT removed, and ``IntegrityDenial`` (issue ``lock_taken_over``) says
+        the change was discarded. The check and the write are not one atomic
+        step; the window is the few microseconds between them.
         """
         self.path.parent.mkdir(parents=True, exist_ok=True)
         token = self._acquire(self.lock_path)
@@ -190,9 +268,8 @@ class StateStore:
             yield state
             if not self._owns(self.lock_path, token):
                 raise IntegrityDenial(
-                    f"the controller lock was taken over by another process while this "
-                    f"one held it (longer than the {LOCK_STALE_S:g}s stale limit); "
-                    f"this process's state change was discarded",
+                    "the controller lock was removed or replaced while this process "
+                    "held it; this process's state change was discarded",
                     issue="lock_taken_over")
             self._write(state)
         finally:
