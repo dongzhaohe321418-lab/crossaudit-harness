@@ -256,9 +256,11 @@ same fail-closed shape as CA-NUM-001.
 
 ### 4.1 `numeric_validity` — CA-NUM-005, BLOCKER
 Every `quantities[i].value` must be a finite number (`quantities.is_number_shape`
-after JSON parsing; JSON cannot carry NaN/Infinity, so a non-finite value
-arrives as `null`, a string such as `"nan"`/`"inf"`, or fails to parse —
-all four shapes block). A bool is not a number.
+after JSON parsing). Strict JSON has no NaN/Infinity literals, but Python's
+parser accepts them, so a non-finite value arrives as `null`, a string such
+as `"nan"`/`"inf"`, or a parsed `NaN`/`Infinity` constant — every one of these
+shapes blocks under CA-NUM-005 (the file does not fail to parse; it is
+parsed and then refused). A bool is not a number.
 
 ### 4.2 `range_rules` — CA-PHYS-001, BLOCKER
 `AUDIT_RULES.md` may carry one fenced block:
