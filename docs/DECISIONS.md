@@ -8370,3 +8370,79 @@ Keychain storage remains the app's path only; the CLI and the console read keys
 from the environment or the mode-600 keys file. (Remote MCP bearer tokens are still
 stored as macOS Keychain items by `mcp.py` on every surface; that is unchanged
 here.) The TUI has not yet had a cross-vendor review (AGENTS §0).
+
+## D176 — The first cross-vendor review of this release's changes found four defects, and they are repaired: every human ruling is one failure-atomic transaction on every surface, every configured key name leaves non-provider children, the ledger head cache is bound to the file's identity, and a `key_env` that is not a key is refused
+
+**Date:** 2026-10-23. **Branch:** `feat/tui-first` (repairs on `fix/review-r1-keys-cache`
+and `fix/review-r1-rulings`, merged). **Evidence:**
+`benchmarks/reviews/2026-10-23-claims-rounds-1-2-terra-r1.md` (the review: DO NOT MERGE,
+three P1 and one P3) and `…-r2.md` (the second round, over the repairs and the TUI).
+
+**Why.** AGENTS.md §0 is the one law: no agent merges a change it wrote without an
+independent review by the other agent. The claims-loop rounds 1–2 (D167–D174) had
+reached 38 of 38 harness rows without that review. It was run on 2026-10-23 with the
+OpenAI side (`gpt-5.6-terra` through the Codex CLI, the subscription route, no API spend)
+over the diff `main..05e78f7` for `src/` and `tests/` and the decision records. It found
+what the harness, which checks README sentences from the outside, cannot see: three ways
+the audit record could disagree with the controller state or a child process could see a
+key, and one docstring that claimed more than the code did. The same day the same
+reviewer found six fail-open declaration shapes in the `science-ai4s` pack
+(`bench/ai4s-pack-v2`, recorded there in DESIGN.md Amendment 5 and
+`2026-10-23-ai4s-pack-v2-terra-r{1,2}.md`; round 2: MERGE).
+
+RULINGS:
+
+1. **A human ruling is one transaction, the same on every surface, and the ledger comes
+   first.** `StateStore.rule_escalation` validates under the store's lock without writing
+   (known cycle, ESCALATED, non-empty reason, reopen or close), calls the commit step,
+   and only then applies the state change and the `human_resolution` entry.
+   `rulings.record` appends the row to `cycles/rulings.jsonl` and commits exactly that
+   file; if the append, `git add` or `git commit` fails it restores the log byte for byte
+   (or removes it), runs `git reset -- <path>` so nothing stays staged, and raises
+   `IntegrityDenial`: "the ruling on cycle … could not be committed to the ledger (…);
+   the cycle stays ESCALATED and nothing was recorded" (Chinese parity in
+   `denials_zh`). `rulings.rule` wraps the two and performs the after-close settling
+   (`daemon.settle_closed_escalation`, `settle_human_wait`, moved out of the CLI) so a
+   close from any surface ends the run that was waiting. Callers: `cmd_resolve`,
+   `resolve_cycle` (the TUI), `talk`'s resolve lane, and both console branches of
+   `/api/escalation` (the provider-failure retry reopens through it before it starts a
+   build). Stop on a parked run closes the escalations that name it through the same
+   transaction; when that commit is refused the run is still cancelled and the cycle
+   stays ESCALATED for an explicit ruling. The row's `status_after` is derived from the
+   action, since the row is written before the state changes. `resolve_escalation`
+   remains for state-only callers (tests) and is no longer used for a human ruling by
+   shipped code. The ruling commit has its own 90 s timeout, inside the store lock's
+   120 s abandonment window.
+2. **Every configured key name leaves non-provider children.** `config.load` registers,
+   as soon as the roles parse, the `key_env` of the auditor, the generator and every
+   fallback row, and each named vendor's backup slot (`app_keys.register_key_names`);
+   `provider_key_names` unions that registry, so `child_env()` strips a key held under
+   `key_env: PROJECT_PROVIDER_SECRET` from Git, `gh`, OpenSSH and the Codex runtime
+   whether or not the caller holds a `Config`. A real Git child proves it in the test.
+   D170's open item on this point is closed for every name a loaded configuration
+   declares; a key under a name no loaded configuration declared is still not
+   recognised, and the docstring says so.
+3. **A `key_env` that is not a key variable is refused at load.** Because every
+   configured name is now stripped from children, `key_env: PATH` would take `PATH` away
+   from Git. The loader refuses a name that is not an identifier or that is one of the
+   variables every child needs (`PATH`, `HOME`, `TMPDIR`, `LANG`, `TERM`, `PYTHONPATH`,
+   the Windows equivalents, …) with "<role>.key_env must name a variable that holds only
+   a key; '<name>' is not one" (Chinese parity). Ordinary nonconventional names load.
+4. **The evidence ledger's head cache is keyed on the file's identity, and its docstring
+   is true.** The cache was trusted whenever the file had the size of the instance's
+   last write, so a same-size rewrite by another process was appended onto without
+   re-verification, while the docstring said correctness "never depends on the cache".
+   The key is now `(st_size, st_mtime_ns, st_ino)`; a rewrite in place, a truncation or
+   a file replaced by rename misses the cache and forces the authoritative scan. The
+   docstring states what remains: a rewrite that keeps the size, restores `st_mtime_ns`
+   exactly and stays on the same inode is appended onto, and the next `verify()`, which
+   never consults the cache, reports it. D168's "exactly the size its own last write
+   left" sentence is superseded by this record.
+5. **The review is the evidence, not the summary of it.** Each round's text is kept
+   verbatim under `benchmarks/reviews/` with the reviewer, the tree, the brief and the
+   verdict in a header; a decision record cites it rather than paraphrasing it.
+
+**Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
+is now committed, but the README's sentence that neither model can produce a
+resolution rests on the token staying with the person (SECURITY.md's console
+paragraph). The TUI itself (D175) is reviewed in round 2 of this same review.

@@ -1003,8 +1003,12 @@ The reason is committed to the ledger. Each ruling appends one line to
 own, with the reason in the commit message. Lines are never rewritten, so a
 second ruling on the same cycle adds a line. `crossaudit status` lists every
 ruling under its cycle and shows a closed cycle as `CLOSED`. A close also ends
-the run that was waiting for the decision. Resolution requires an interactive
-human terminal and cannot be produced by either model.
+the run that was waiting for the decision. Resolution is a human act that
+neither model can produce: at the command line `resolve` refuses to run
+without a terminal; in the console it is the decision screen, which rules
+through the same committed path (D176). Either way the ruling is one
+transaction: if its ledger commit fails, the cycle stays ESCALATED and
+nothing is recorded.
 
 ## Configuration
 

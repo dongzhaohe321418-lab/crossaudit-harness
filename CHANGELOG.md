@@ -35,6 +35,25 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   the packaging scripts with `bash -n` (D175).
 
 ### Fixed
+- **A ruling made from the console is committed to the ledger, like one made
+  with `crossaudit resolve`.** The console's decision screen (close, revise and
+  continue, and the provider-failure retry) used to change only the local
+  controller state; every surface now rules through one transaction that
+  appends to `cycles/rulings.jsonl` and commits it first, then changes the
+  state. If the commit fails (a rejecting hook, a full disk), the cycle stays
+  ESCALATED, the log is restored byte for byte, nothing stays staged, and the
+  refusal says so, in English and Chinese. Found by the first independent
+  cross-vendor review of this release's changes (D176).
+- **A provider key held under a nonconventional configured name no longer
+  reaches Git, `gh`, SSH or the Codex runtime.** `child_env()` stripped only
+  `CROSSAUDIT_*_KEY` and `*_API_KEY` names; it now also strips every `key_env`
+  a loaded configuration declares (roles, fallbacks, backup slots). A `key_env`
+  that is not a key variable at all (`PATH`, `HOME`, a malformed name) is
+  refused when the configuration loads (D176).
+- **The evidence ledger's head cache is bound to the file's identity.** It was
+  keyed on size alone, so a same-size rewrite by another process was appended
+  onto without re-verification; it is now keyed on size, mtime and inode, and
+  its docstring states the one case that remains undetected (D176).
 - **MCP tool calls made during a build are now in the evidence ledger.** Each call
   the Generator makes to a registered MCP tool, from `crossaudit build` or a console
   chat, writes a `tool_call` entry before it runs and a `tool_result` entry after it
