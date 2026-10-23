@@ -33,6 +33,10 @@ from .runs import (
 )
 from .workspaces import acquire_workspace_slot, release_workspace_slot
 
+#: The reason a Stop on a parked run records when it closes the escalation
+#: that names the run (a human ruling, committed to the ledger).
+STOP_RULING_REASON = "the user stopped this task while it was parked"
+
 
 @dataclass(frozen=True, slots=True)
 class PreparedRun:
@@ -365,33 +369,50 @@ class RunCommandService:
         if selected.get("state") == RunState.CANCELLED.value:
             # A parked run lands directly in CANCELLED; the user's Stop is
             # the human ruling on its escalation, so the pending decision
-            # object it references must not go on demanding one.
-            self._close_park_escalations(str(selected.get("run_id", "")))
+            # object it references must not go on demanding one. The run is
+            # stopped whatever happens to that ruling; a ruling that could
+            # not be committed is reported in ``note`` and its cycle stays
+            # ESCALATED for an explicit ruling.
+            refused = self._close_park_escalations(str(selected.get("run_id", "")))
+            if refused:
+                selected = dict(selected, note=" ".join(refused),
+                                ruling_refused=refused)
         return selected
 
-    def _close_park_escalations(self, run_id: str) -> None:
+    def _close_park_escalations(self, run_id: str) -> list[str]:
         """Close pending escalations referencing a run the user just stopped.
 
         Only escalations that name this exact run are touched: the reference
         is the association evidence, and a legacy escalation without one is
         left for the human to rule on explicitly.
+
+        Each close is a human ruling (D172 ruling 5), so it goes through the
+        one ruling transaction (``rulings.rule``): committed to the ledger
+        first, the cycle closed only after. A close that cannot be committed
+        leaves its cycle ESCALATED -- never closed silently, never closed in
+        the state alone -- and its refusal sentence is returned so the stop
+        can say the cycle still needs a ruling.
         """
         if not run_id:
-            return
+            return []
+        from .. import rulings
         from ..controller import ESCALATED, StateStore
 
         store = StateStore(Path(self.cfg.root) / self.cfg.state_dir /
                            "state.json")
         try:
             cycles = store.snapshot().get("cycles", {})
-            for cid, cycle in cycles.items():
-                if (cycle.get("status") == ESCALATED
-                        and str(cycle.get("escalation_run_id", "")) == run_id):
-                    store.resolve_escalation(
-                        cid, "close",
-                        "the user stopped this task while it was parked")
-        except Denial:
-            return
+        except Denial as exc:
+            return [exc.reason]
+        refused: list[str] = []
+        for cid, cycle in cycles.items():
+            if (cycle.get("status") == ESCALATED
+                    and str(cycle.get("escalation_run_id", "")) == run_id):
+                try:
+                    rulings.rule(self.cfg, store, cid, "close", STOP_RULING_REASON)
+                except Denial as exc:
+                    refused.append(exc.reason)
+        return refused
 
     def dismiss_interruption(self, run_id: str | None = None) -> bool:
         dismissed = self.journal.dismiss_interruption(run_id)

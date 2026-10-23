@@ -2068,6 +2068,11 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                         current, alive=daemon._pid_alive,
                         on_change=TRACKER.notify).request_cancel(
                             str(payload.get("run_id", "")) or None)
+                    if result.get("ruling_refused"):
+                        # The run stopped; the escalation it names did not
+                        # close (its ruling could not be committed).
+                        result["note_zh"] = " ".join(
+                            i18n.denial_zh(r) or r for r in result["ruling_refused"])
                     STREAM_CHANGES.notify()
                     self._send(json.dumps(result).encode(), "application/json")
                     return
