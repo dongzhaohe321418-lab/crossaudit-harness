@@ -645,6 +645,8 @@ def test_under_a_pty_c_with_a_typed_reason_commits_the_ruling(project, capsys):
         screen.drain(0.3)
         os.write(leader, REASON.encode() + b"\r")
         screen.read_until("Ruling recorded")
+        screen.drain(0.5)
+        assert proc.poll() is None, "recording the ruling ended the loop"
         os.write(leader, b"q")
         code = _finish(proc, screen, leader, follower)
     finally:
@@ -691,3 +693,39 @@ def test_the_new_task_key_runs_builds_own_loop_in_a_thread_and_says_its_outcome(
     assert latest["run_id"] == session.run_id and latest["state"] == "PASSED"
     assert "task: Create a small reproducible benchmark" in git(
         "log", "--format=%s", cwd=root)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="pty does not exist on Windows")
+@pytest.mark.timeout(120)
+def test_under_a_pty_j_only_moves_and_enter_opens_the_row_without_quitting(project):
+    """The C38 harness defect: `j` must move the cursor and nothing else, and
+    Enter must open the selected row and leave the loop running. Typed at the
+    harness's pace (Enter, then 0.5 s, then the check). D10: make Enter break
+    the loop, or let moving the cursor expand the row, and this goes red."""
+    root, passed, _escalated = project
+    proc, leader, follower, _before = _spawn_tui(root)
+    screen = _Screen(leader)
+    try:
+        screen.read_until("q quit")
+        os.write(leader, b"j")
+        moved = screen.read_until("❯ " + passed[:12])
+        moved += screen.drain(0.5)
+        assert "The latest report has no findings." not in moved
+        assert "ADMISSION READY" not in moved
+        os.write(leader, b"\r")
+        opened = screen.drain(0.5)
+        assert proc.poll() is None, "Enter ended the loop"
+        assert "The latest report has no findings." in opened
+        assert "ADMISSION READY" in opened
+        os.write(leader, b"\r")             # Enter again closes the row ...
+        closed = screen.drain(0.5)
+        assert proc.poll() is None, "a second Enter ended the loop"
+        assert "q quit" in closed and "ADMISSION READY" not in closed
+        os.write(leader, b"q")              # ... and only q quits
+        code = _finish(proc, screen, leader, follower)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        os.close(leader)
+        os.close(follower)
+    assert code == 0, screen.seen[-2000:]
