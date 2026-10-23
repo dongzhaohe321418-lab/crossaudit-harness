@@ -584,6 +584,11 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the controller lock was removed or replaced while this process held it; this "
      "process's state change was discarded",
      "控制器锁在本进程持有期间被移除或替换；本进程的状态更改已被丢弃"),
+    ("the evidence ledger lock {} has been held by pid {} for {}s, longer than the {}s "
+     "stale limit, and is not broken automatically; if no crossaudit process is running "
+     "for this project, `crossaudit doctor --fix` removes it",
+     "证据账本锁 {} 已被 pid {} 持有 {} 秒，超过 {} 秒的失效上限，不会被自动解除；"
+     "如果此项目没有正在运行的 crossaudit 进程，`crossaudit doctor --fix` 会将其移除"),
     ("the controller lock {} has been held by pid {} for {}s, longer than the {}s stale "
      "limit, and is not broken automatically; if no crossaudit process is running for "
      "this project, `crossaudit doctor --fix` removes it",

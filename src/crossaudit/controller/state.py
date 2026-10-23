@@ -20,20 +20,20 @@ A lock older than ``LOCK_STALE_S`` is never broken automatically (review
 fresh owner's lock when the old holder releases and a new one acquires in
 between, and no token can close that window. Such a lock is refused with a
 sentence naming its pid; ``crossaudit doctor --fix`` removes it only when that
-pid is not alive (:meth:`StateStore.remove_stale_lock`).
+pid is not alive (:meth:`StateStore.remove_stale_lock`, ``crossaudit.locks``).
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import os
-import secrets
 import tempfile
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from .. import locks
 from ..errors import ConfigDenial, IntegrityDenial, classify_escalation_kind
 
 STATE_FILENAME = "state.json"
@@ -146,7 +146,7 @@ class StateStore:
         waited on for up to ``LOCK_TIMEOUT_S``.
         """
         deadline = time.monotonic() + LOCK_TIMEOUT_S
-        token = f"{os.getpid()} {time.time():.0f} {secrets.token_hex(8)}"
+        token = locks.new_token()
         while True:
             try:
                 fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
@@ -169,18 +169,8 @@ class StateStore:
 
     @staticmethod
     def _lock_holder(lock_path: Path) -> dict | None:
-        """Who holds the lock at ``lock_path`` and for how long, or None when
-        there is no lock. ``pid`` is None when the file names none."""
-        try:
-            age = time.time() - lock_path.stat().st_mtime
-            text = lock_path.read_text(encoding="utf-8", errors="replace")
-        except FileNotFoundError:
-            return None
-        except OSError:
-            return {"pid": None, "age": 0.0, "token": ""}
-        head = text.split(" ", 1)[0].strip()
-        pid = int(head) if head.isdigit() else None
-        return {"pid": pid, "age": age, "token": text}
+        """Who holds the lock (``locks.holder``)."""
+        return locks.holder(lock_path)
 
     @staticmethod
     def _stale_denial(lock_path: Path, holder: dict) -> IntegrityDenial:
@@ -192,57 +182,19 @@ class StateStore:
             f"for this project, `crossaudit doctor --fix` removes it",
             issue="stale_lock", lock=str(lock_path))
 
-    @staticmethod
-    def _pid_alive(pid: int | None) -> bool:
-        """``os.kill(pid, 0)``: only ESRCH counts as dead. A pid we may not
-        signal (EPERM) is alive; an unreadable pid is treated as alive, so
-        nothing is removed on a guess."""
-        if pid is None or pid <= 0:
-            return True
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return False
-        except OSError:
-            return True
-        return True
-
     def lock_status(self) -> dict | None:
-        """The controller lock as `doctor` reports it, or None when free:
-        ``{"path", "pid", "age", "stale", "alive"}``."""
-        holder = self._lock_holder(self.lock_path)
-        if holder is None:
-            return None
-        return {"path": str(self.lock_path), "pid": holder["pid"],
-                "age": holder["age"], "stale": holder["age"] > LOCK_STALE_S,
-                "alive": self._pid_alive(holder["pid"])}
+        """The controller lock as `doctor` reports it (``locks.status``)."""
+        return locks.status(self.lock_path, LOCK_STALE_S)
 
     def remove_stale_lock(self) -> str:
-        """Remove the controller lock only if it is stale AND its pid is not
-        alive (``doctor --fix``). Returns ``"absent"``, ``"fresh"``,
-        ``"alive"`` or ``"removed"``. The file is re-read just before the
-        unlink and left alone if it changed, so a lock taken meanwhile by a
-        live process is not deleted on the strength of the old reading.
-        """
-        holder = self._lock_holder(self.lock_path)
-        if holder is None:
-            return "absent"
-        if holder["age"] <= LOCK_STALE_S:
-            return "fresh"
-        if self._pid_alive(holder["pid"]):
-            return "alive"
-        if not self._owns(self.lock_path, holder["token"]):
-            return "fresh"
-        self.lock_path.unlink(missing_ok=True)
-        return "removed"
+        """``doctor --fix`` for the controller lock (``locks.remove_stale``):
+        removed only when stale and its pid is not alive."""
+        return locks.remove_stale(self.lock_path, LOCK_STALE_S)
 
     @staticmethod
     def _owns(lock_path: Path, token: str) -> bool:
         """Whether the lock file at ``lock_path`` still carries ``token``."""
-        try:
-            return lock_path.read_text(encoding="utf-8", errors="replace") == token
-        except OSError:
-            return False
+        return locks.owns(lock_path, token)
 
     def _release(self, lock_path: Path, token: str) -> None:
         """Remove the lock only if it is still this holder's."""

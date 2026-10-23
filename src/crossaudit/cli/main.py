@@ -647,29 +647,41 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         "the controller must be able to persist consumed receipts",
         copy="doctor.state", slots={"path": state_dir / "state.json"})
 
-    # A controller lock past its stale limit is refused to every process and
-    # never broken automatically (review 2026-10-23 round 3, finding 2), so
-    # this is where a person learns of it. Read-only unless --fix, and --fix
-    # removes it only when its pid is not alive.
-    lock = _state(cfg).lock_status()
-    if lock is not None and lock["stale"]:
+    # A lock past its stale limit -- the controller's or the evidence
+    # ledger's -- is refused to every process and never broken automatically
+    # (review 2026-10-23 round 3, finding 2), so this is where a person learns
+    # of it. Read-only unless --fix, and --fix removes one only when its pid is
+    # not alive. One code path for both locks (``crossaudit.locks``).
+    from ..broker.routing import evidence_path
+    from ..ledger import chain as ledger_chain
+
+    controller = _state(cfg)
+    for name, copy, status_of, remove in (
+            ("controller lock", "doctor.controller_lock",
+             controller.lock_status, controller.remove_stale_lock),
+            ("evidence ledger lock", "doctor.ledger_lock",
+             lambda: ledger_chain.lock_status(evidence_path(cfg)),
+             lambda: ledger_chain.remove_stale_lock(evidence_path(cfg)))):
+        lock = status_of()
+        if lock is None or not lock["stale"]:
+            continue
         pid = lock["pid"] if lock["pid"] is not None else "?"
         liveness = "alive" if lock["alive"] else "not running"
         removed = False
         if not lock["alive"] and _offer(
-                args, f"remove the stale controller lock held by pid {pid}"):
-            removed = _state(cfg).remove_stale_lock() == "removed"
+                args, f"remove the stale {name} held by pid {pid}"):
+            removed = remove() == "removed"
         if removed:
-            note("controller lock", f"removed the stale lock {lock['path']} "
+            note(name, f"removed the stale lock {lock['path']} "
                  f"(pid {pid} was not running)")
         else:
             refusal = (f"; pid {pid} is alive, so --fix leaves it alone"
                        if lock["alive"] else "")
-            add("controller lock", False,
+            add(name, False,
                 f"{lock['path']} held by pid {pid} ({liveness}) for "
                 f"{lock['age']:.0f}s{refusal}",
                 "if no crossaudit process is running for this project, run "
-                "`crossaudit doctor --fix`", copy="doctor.controller_lock",
+                "`crossaudit doctor --fix`", copy=copy,
                 slots={"path": lock["path"], "pid": pid})
 
     repo_ok = is_repo(cfg.root)
