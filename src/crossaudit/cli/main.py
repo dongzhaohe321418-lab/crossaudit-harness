@@ -136,6 +136,23 @@ Docs: README.md in the repository.
 """
 
 
+def _project_front_door(args: argparse.Namespace) -> str:
+    """Bare `crossaudit` inside a project (D175): the first suggestion is `tui`.
+
+    GETTING_STARTED opens with "Nothing is configured yet in this directory",
+    which is false here, so a project gets its own short door.
+    """
+    i18n.set_language(_language_for(args))
+    rows = (("crossaudit tui", "front_door.tui"),
+            ('crossaudit build "..."', "next.build"),
+            ("crossaudit console", "next.console"),
+            ("crossaudit run", "front_door.run"),
+            ("crossaudit status", "front_door.status"))
+    lines = [i18n.t("front_door.project", version=__version__), ""]
+    lines += [f"    {command:<28} {i18n.t(key)}" for command, key in rows]
+    return "\n".join(lines) + "\n"
+
+
 #: One sentence about the language wave, said identically everywhere it is
 #: said. init and doctor previously stated DIFFERENT scopes in their help, which
 #: is a contradiction a person meets before they meet the limitation itself.
@@ -2477,7 +2494,7 @@ def main(argv: list[str] | None = None) -> int:
             print(GETTING_STARTED.format(version=__version__))
             _print_origin()
             return EXIT_OK
-        print(GETTING_STARTED.format(version=__version__))
+        print(_project_front_door(args))
         _print_origin()
         return EXIT_OK
     try:

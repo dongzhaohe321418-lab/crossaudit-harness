@@ -50,8 +50,9 @@ The website under `website/` has its own toolchain; see `website/README.md`.
 Windows is **advisory**: the two `windows-latest` jobs run on every pull
 request and their result is visible, but they do not block a merge
 (`continue-on-error` in `.github/workflows/ci.yml`). CrossAudit's product is
-the macOS app; the Python package's Windows port is a separate, unfinished
-slice, and what is left is portability rather than flakiness:
+the command line and `crossaudit tui` (the native macOS app is not on the main
+line, D175); the Python package's Windows port is an unfinished slice, and what
+is left is portability rather than flakiness:
 
 - `file_identity` establishes which directory entry a path names by comparing
   `(st_dev, st_ino)`. Windows `os.scandir()` reports `st_ino` as `0`, so

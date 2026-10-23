@@ -3,8 +3,7 @@
 [![Version 4.17.0](https://img.shields.io/badge/version-4.17.0-6d5dfc)](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.17.0)
 [![Latest release](https://img.shields.io/github/v/release/dongzhaohe321418-lab/crossaudit-harness?label=release&color=1f883d)](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/latest)
 [![CI](https://github.com/dongzhaohe321418-lab/crossaudit-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/dongzhaohe321418-lab/crossaudit-harness/actions/workflows/ci.yml)
-[![macOS 13+](https://img.shields.io/badge/macOS-13%2B%20Apple%20Silicon-111111)](https://github.com/dongzhaohe321418-lab/crossaudit-harness#download-and-install)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab)](https://github.com/dongzhaohe321418-lab/crossaudit-harness#command-line-installation)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab)](https://github.com/dongzhaohe321418-lab/crossaudit-harness#install)
 [![MIT license](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
 
 CrossAudit is a local, dual-source audit harness for AI-generated work. One
@@ -33,37 +32,70 @@ published one. The measurements, the withdrawals and an independent
 cross-vendor review of the measurement code itself are in
 [`benchmarks/`](benchmarks/CORRECTIONS.md).
 
-**Latest release: CrossAudit 4.17.0.** The source on `main` is authoritative
-until the matching DMG is attached to a GitHub release.
+**Latest release: CrossAudit 4.17.0** (the `v4.17.0` tag). The source on `main`
+is authoritative. CrossAudit runs in a terminal: the command line and
+`crossaudit tui` are the product, and the browser console is an optional local
+viewer.
 
 ## 60-second tour
 
-1. **Install.** Download the DMG from the
-   [latest release](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/latest)
-   and drag CrossAudit to Applications. The build is ad-hoc signed, so macOS
-   asks you to right-click the app and choose **Open** the first time.
-   Command-line users: `pipx install "git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"`.
-2. **Connect two vendors, or none.** Settings takes an OpenAI sign-in or API
-   key and any second first-party provider; keys go to the macOS Keychain and
-   never reach the web view. Or press **Explore a local demo** on the first
-   screen: a seeded project that needs no credentials and labels itself a
-   sample on every surface.
-3. **Describe the deliverable once.** Progress narrates from the first
-   millisecond, generator output streams into the conversation, and a
-   missing credential shows a setup card before anything starts.
-4. **Checks, then the auditor.** Deterministic checks run over the committed
-   files first; the auditor model reads the same commit and returns findings,
-   each carrying its tier: verified by a check, or raised by the model.
-5. **Passed, Needs changes, or Needs you.** Passed binds a receipt over the
-   verdict, the rules, the commit, and the evidence set. Needs changes sends
-   the generator back for a bounded, guarded revision. Needs you asks one
-   question and waits.
+1. **Install.** CrossAudit is a Python package (Python 3.10 or newer, and Git).
+   It is not on PyPI; install it from this repository:
 
-| The conversation | The same conversation with audit context open |
-| --- | --- |
-| ![The CrossAudit workspace: project rail, conversation, and composer](website/public/crossaudit-workspace-1600.png) | ![The same conversation with independent audit context expanded](website/public/crossaudit-audit-1600.png) |
+   ```bash
+   pip install "crossaudit @ git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"
+   ```
 
-Both captures are the 4.17.0 console showing the credential-free local demo.
+   or `pipx install "git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"`.
+   Installing asks for nothing and contacts no provider.
+2. **Create a project.** Two models from different vendors: one generates, one
+   audits. Same-vendor pairs are refused.
+
+   ```bash
+   crossaudit init my-project --no-console \
+     --auditor-vendor openai \
+     --auditor-model gpt-5.6-terra \
+     --generator-vendor anthropic \
+     --generator-model claude-sonnet-4-6
+   cd my-project
+   ```
+
+   At a terminal, `init` asks for the two API keys (leave them blank to export
+   them yourself) and writes any you enter to a mode-600 file outside the
+   repository, then asks for your quality requirements in plain language. In a
+   script or CI job it writes no keys file; export `CROSSAUDIT_AUDITOR_KEY` and
+   `CROSSAUDIT_GENERATOR_KEY`.
+3. **Describe the deliverable once.**
+
+   ```bash
+   crossaudit build "Create a small reproducible benchmark and summarize its result"
+   ```
+
+   The generator writes and commits files, deterministic checks run over the
+   commit, then the auditor reads the same commit. A blocker sends the
+   generator back for a bounded, guarded revision; an exhausted budget waits for
+   you instead of passing.
+4. **Watch it and act on it.**
+
+   ```bash
+   crossaudit tui
+   ```
+
+   The loop, live, in this terminal: each cycle with its status and findings,
+   each finding with its tier (verified by a check, or raised by the auditor),
+   a decision card when a cycle waits for you, and keys to verify or admit a
+   receipt. Without a terminal, `crossaudit tui --once` prints one frame and
+   exits.
+5. **Verify the result.**
+
+   ```bash
+   crossaudit verify cycles/<cycle>/receipt.json
+   ```
+
+   `crossaudit status` names the cycle. A PASS receipt binds the verdict, the
+   rules, the commit and the evidence set; `verify` re-derives every binding and
+   prints `BINDINGS VERIFIED` when the committed record still matches. Add
+   `--admit` to consume it once.
 
 ## Why CrossAudit
 
@@ -102,25 +134,48 @@ acceptance criteria can be stated as rules.
 - PASS creates a cryptographically bound receipt that can be verified later.
 - Ambiguous or unresolved cases escalate to a human instead of looping forever.
 
-## Download and install
+## Install
 
-**macOS app (Apple Silicon, macOS 13 or later).** Download
-`CrossAudit-4.17.0-arm64.dmg` from the
-[latest release](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/latest)
-and drag CrossAudit to Applications. The DMG is ad-hoc signed and not
-Apple-notarized: the first time, right-click **CrossAudit.app**, choose
-**Open**, then **Open** again. This happens once. The full steps, the checksum,
-and how to remove every trace are under [Install](#install).
+CrossAudit needs Python 3.10 or newer and Git. The package is not on PyPI; it
+installs from this repository. In a virtual environment:
 
-**Command line (Python 3.10 or newer).**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install "crossaudit @ git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"
+crossaudit --version
+```
+
+Or, with [`pipx`](https://pipx.pypa.io/stable/installation/), which keeps
+CrossAudit and its Python dependencies isolated while making the `crossaudit`
+command available from any directory:
 
 ```bash
 pipx install "git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"
 crossaudit --version
 ```
 
-Installing asks for nothing and contacts no provider; setup begins with
+From a clone of the repository, `python -m pip install .` installs the same
+package.
+
+Expected version output (the last two fields are the install mode and the path
+the command runs from, so a second, older copy on `PATH` is visible):
+
+```text
+crossaudit 4.17.0 (receipt schema 2) · wheel · /Users/you/.local/bin/crossaudit
+```
+
+Installing the package does not ask for credentials, open a browser, create a
+project, or contact a model provider. Setup begins only when you run
 `crossaudit init`.
+
+To remove the command, run `pip uninstall crossaudit` (or
+`pipx uninstall crossaudit`). A project's private state (run journal, provider
+circuit state, drafts, usage ledger) is the `.crossaudit/` directory inside the
+project; the audit ledger stays in `cycles/` because it is part of the
+repository. The keys file `crossaudit init` writes is `~/.crossaudit-keys.env`
+(or the path in `CROSSAUDIT_KEYS_FILE`).
 
 ## How it works
 
@@ -167,8 +222,9 @@ catch-all handler, a deleted assertion, or a skipped test on added code is
 flagged to the auditor for the next round. The complete design is in
 [docs/EVIDENCE_AUTHORITY.md](docs/EVIDENCE_AUTHORITY.md).
 
-The browser console shows this process live. It uses event-driven updates, so a
-new task, commit, finding, or verdict appears as soon as the state changes.
+`crossaudit tui` shows this process live in the terminal. The optional browser
+console shows it too; it uses event-driven updates, so a new task, commit,
+finding, or verdict appears as soon as the state changes.
 
 ## Does the second opinion actually help?
 
@@ -202,33 +258,15 @@ uncomfortable number rather than burying it.
 
 ## What V4 includes
 
-- A native Apple Silicon macOS application: no terminal or separate browser is
-  required for normal use.
-- An Apple-style spatial interface with translucent navigation and transient
-  controls, calm opaque work and evidence surfaces, native system typography,
-  light/dark themes, and explicit reduced-transparency, reduced-motion,
-  high-contrast, and narrow-window fallbacks.
-- Standard macOS editing commands—including Undo, Cut, Copy, Paste, and Select
-  All—work in task, configuration, and write-only API-key fields.
-- The complete app interface switches between English and Simplified Chinese;
-  the choice persists across workspaces and launches without rewriting project
-  data, file names, model IDs, or audit evidence.
-- Real background operation: closing the main window keeps the local core and
-  Project workers alive, with a menu-bar entry to restore or explicitly quit.
-- An in-app Environment Doctor that checks required software, versions, TLS,
-  workspace access, the Git ledger, build identity, and available updates. Safe
-  repairs and official installation guidance stay inside Settings.
-- A complete Projects screen, guided project creation, provider settings,
+- A command line and a terminal UI (`crossaudit tui`) that run the whole loop:
+  setup, generation, checks, audit, escalation decisions, verification and
+  admission.
+- An optional local browser console (`crossaudit console`) with a complete
+  Projects screen, guided project creation, provider settings,
   GitHub connection, task conversation, file transfer, audit-loop progress,
   human escalation, and result download in one UI.
 - Codex-style organization: each Project is a real local folder containing
   multiple independent Chats, and both Projects and Chats can be pinned.
-- API credentials stored in the macOS login Keychain and never returned to the
-  web view.
-- OpenAI access through either a write-only API key or official **Sign in with
-  ChatGPT** subscription authentication. The bundled OpenAI Codex runtime owns
-  the browser flow and tokens; CrossAudit receives only account status and
-  model output.
 - Independent background workers per project and immediate event-driven UI
   updates through Server-Sent Events.
 - Safe autonomy by default: one plain-language request is enough. The Generator
@@ -252,7 +290,6 @@ uncomfortable number rather than burying it.
 - Local token metering for every Generator and Auditor call, with a live Usage
   view, cache-aware counts, role/model breakdowns, and clearly labelled public
   API-value estimates.
-- A command-line interface for automation and development.
 - First-party OpenAI, Anthropic, Google Gemini, DeepSeek, Zhipu GLM, Moonshot
   Kimi, MiniMax, Alibaba Qwen, xAI, and Mistral connections, plus an explicitly
   trusted custom OpenAI-compatible endpoint for CLI deployments.
@@ -282,156 +319,18 @@ uncomfortable number rather than burying it.
 
 ## Requirements
 
-- An Apple Silicon Mac running macOS 13 or later for the desktop application
-- Git (the application reports clearly when the Xcode Command Line Tools are
-  missing)
+- Python 3.10 or newer
+- Git
 - Two independent model-provider connections. OpenAI can use a ChatGPT plan or
   an API key. Every other built-in provider currently uses its official
   developer API credential in CrossAudit.
 - A GitHub account only when you choose the optional two-repository workflow
 - OpenSSH 8.1 or later only when you use the optional remote Compute workspace
 
-Python 3.10 or newer is required only for the optional command-line/source
-installation. The `.dmg` bundles its own Python core, GitHub CLI, and the pinned
-official OpenAI Codex runtime.
-
-## Install
-
-### macOS application
-
-> **First open.** macOS may say the app can't be verified — right-click
-> **CrossAudit.app** → **Open** → **Open**. This happens once.
->
-> This community build is ad-hoc signed but not Apple-notarized because the
-> project does not yet have an Apple Developer ID certificate; the same
-> instruction, in English and Chinese, sits beside the app in the DMG window
-> as the `How to open` note. The
-> checksum below verifies the downloaded bytes; it is not a substitute for
-> notarization. A production distribution should use Developer ID Application
-> signing, hardened runtime, notarization, and stapling.
-
-1. Download `CrossAudit-4.17.0-arm64.dmg` and its checksum from the
-   [V4.17.0 release](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.17.0).
-2. Optionally verify it in Terminal:
-
-   ```bash
-   shasum -a 256 -c CrossAudit-4.17.0-arm64.dmg.sha256
-   ```
-
-3. Open the DMG and drag **CrossAudit** to **Applications**.
-4. Open CrossAudit, then open **Settings**. For OpenAI, choose **Connect** to
-   complete the official ChatGPT browser login or enter an API key. Connect any
-   second first-party provider from the same screen. API keys go to the macOS
-   login Keychain; ChatGPT credentials remain owned by the official Codex runtime.
-
-### Uninstall / remove all data
-
-CrossAudit keeps everything it stores in three places. Removing them removes
-every trace; nothing else is written to the system.
-
-| What | Where | Remove with |
-| --- | --- | --- |
-| The app and its workspace of projects | `~/Library/Application Support/CrossAudit` (or the folder `CROSSAUDIT_APP_SUPPORT` points to) | Drag **CrossAudit.app** from Applications to the Trash, then delete this folder. |
-| A project's private state (run journal, provider circuit state, drafts) | `.crossaudit/` inside each project folder; the audit ledger stays in `cycles/` because it is part of the repository | Delete the project folder, or just `.crossaudit/` to keep the repository and its ledger. |
-| API keys | macOS login Keychain items named `io.crossaudit.app.provider.<vendor>` (and `.backup` for a backup key) | **Settings → Providers → Remove** in the app, or delete the items in Keychain Access. |
-
-A ChatGPT subscription sign-in is owned by the bundled Codex runtime, not by
-CrossAudit; sign out from **Settings → Providers**. The same three locations
-are listed in the app under **Settings → Security & privacy**.
-
-### Command-line installation
-
-For users who want shell automation, [`pipx`](https://pipx.pypa.io/stable/installation/)
-keeps CrossAudit and its Python dependencies isolated while making the
-`crossaudit` command available from any directory:
-
-```bash
-pipx install "git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"
-crossaudit --version
-```
-
-Expected version output (the last two fields are the install mode and the path
-the command runs from, so a second, older copy on `PATH` is visible):
-
-```text
-crossaudit 4.17.0 (receipt schema 2) · wheel · /Users/you/.local/bin/crossaudit
-```
-
-Use a virtual environment instead when developing CrossAudit, testing source
-changes, or intentionally keeping the command inside one project:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install "crossaudit @ git+https://github.com/dongzhaohe321418-lab/crossaudit-harness@main"
-```
-
-Installing the package does not ask for credentials, open a browser, create a
-project, or contact a model provider. Setup begins only when you run
-`crossaudit init`.
+The native macOS app, which is not on the main line, has its own requirements;
+see [its section](#the-native-macos-app-not-on-the-main-line).
 
 ## Five-minute quick start
-
-### Desktop application
-
-1. Open CrossAudit and connect both providers in **Settings**. Every normal
-   application setting—including write-only API-key entry—is available in the
-   UI; no YAML or environment-variable editing is required.
-2. Select **New project**, describe the intended output and choose different
-   vendors for Generator and Auditor.
-3. Leave GitHub off for a local project, or select the two-repository option and
-   use **Connect GitHub**. CrossAudit shows GitHub's official device code and
-   resumes automatically after authorization.
-4. Open the new workspace, type the request, attach any inputs, and select
-   **Run task**. State a format only when it matters; otherwise the Generator
-   chooses the simplest useful one automatically.
-5. Watch the generator, deterministic checks, auditor, and correction rounds
-   update live. Download only the final
-   user-facing artifacts from their conversation cards. After PASS, select
-   **Admit result** to re-verify and consume the receipt once; a second attempt
-   is refused.
-
-The Projects button returns to the portfolio view. Every project has its own
-background process and live progress bar, so switching workspaces does not stop
-other loops.
-
-Each Project is the real local folder selected during setup—not a cosmetic
-label or hidden cloud container. Inside it, **New chat** starts an independent
-task thread that shares the Project's files, configuration, Git repository, and
-auditor Constitution. The sidebar separates pinned and recent Chats; the star
-in the top bar pins the whole Project in the Projects list. Chat message,
-deliverable, audit, and live-loop views are filtered to the selected Chat.
-Existing pre-4.7 evidence appears automatically as **Project history**.
-
-The delete controls keep those boundaries explicit. Deleting one Chat removes
-it from Project navigation but never rewrites shared Git commits, audit reports,
-receipts, or admitted files; a private tombstone prevents old ledger IDs from
-silently recreating the Chat. Deleting a whole Project is available from the
-main Projects view only when setup, audited work, and remote compute are idle.
-By default CrossAudit atomically moves the complete local folder—including
-uncommitted and unpushed work—into that workspace's hidden
-`.crossaudit-trash/` recovery directory and shows the exact recovery path.
-Connected GitHub repositories remain untouched. The working and audit
-repositories have separate permanent-delete choices, both off by default, so a
-user can remove only the audit ledger while preserving the delivered working
-repository. Either irreversible choice requires both the exact Project name and
-the phrase `DELETE GITHUB`. GitHub additionally requires its `delete_repo`
-scope; CrossAudit exposes the official device flow when that permission is
-missing. Partial remote failures never remove the recoverable local archive.
-
-Closing the main CrossAudit window does **not** stop the application or an
-active loop. CrossAudit remains visible as a diamond in the macOS menu bar;
-choose **Open CrossAudit**, click its Dock icon, or open the application again
-to restore the same live workspace. Choose **Quit CrossAudit** from the app or
-menu-bar menu only when you intend to stop the local controller. Project work
-already committed to Git remains durable across a later restart.
-
-The **Automatic revision limit** in New Project is a cost and termination
-guardrail, not an audit score. It controls how many generator → auditor
-correction rounds may run automatically. If the result still has blockers at
-the limit, CrossAudit pauses and escalates to the user; it never converts a
-failure into PASS. The default is three and the UI offers 1, 3, 5, or 10.
 
 ### Command-line workflow
 
@@ -481,15 +380,6 @@ crossaudit doctor
 credentials, vendor separation, the rule file, state storage, and the current
 admission tier. It is read-only unless you explicitly run `doctor --fix` in an
 interactive terminal.
-
-The native app exposes the desktop equivalent at **Settings → Environment
-Doctor**. It runs asynchronously and updates in real time. It distinguishes a
-missing tool from an outdated one, shows the installed and minimum versions,
-and blocks project creation only for required failures. On macOS it can open
-Apple's Command Line Tools installer, initialize a missing local Git ledger,
-save a project-local Git identity, choose a writable workspace, or take the
-user to the verified CrossAudit update. It never runs arbitrary commands from
-the web view.
 
 #### Connect an SSH workstation or HPC cluster
 
@@ -623,6 +513,43 @@ default maximum is three rounds.
 #### 4. Watch the loop live
 
 ```bash
+crossaudit tui
+```
+
+`tui` is the loop, live, in this terminal, and the place where you act on it.
+The header names the project, the generator and auditor, the rules commit, the
+admission tier, today's and this month's usage as an `≈ API value`, and the run
+state. While a run is live, the activity pane narrates its phases as `build`
+does. Below it, one row per cycle, newest first, with its status as
+`crossaudit status` prints it, round, verdict, commit and any ruling; the
+selected row expands to its findings (severity, rule, artifact, observation,
+and the tier: "verified by a check" or "raised by the auditor") and its receipt
+line. When a cycle waits for a person, a decision card takes the list's place:
+the cause, the round limit and verdict history, the remaining blockers and the
+affected files, with **Revise and continue** (`r`) and **Stop this task** (`c`).
+Each asks for a written reason and records it as the same committed ruling
+`crossaudit resolve` records; `l` leaves the decision pending and the project
+stays paused.
+
+The keys: `↑`/`↓` or `j`/`k` select, `Enter` expands, `n` starts a new task
+through the same loop `build` runs, `v` verifies the selected receipt (a dry
+run), `a` admits it after a confirmation (`verify --admit`), `x` stops the
+running task, `o` opens the console (it prints the tokenized URL, and opens a
+browser only at a terminal), `?` shows help, `q` quits; any other key does
+nothing. `tui` acts only through the engine verbs the CLI already has: it never
+reads a provider key itself, never changes the rules, and a task started with
+`n` makes exactly the model calls `build` would. The screen follows the CLI
+language, English or Chinese.
+
+Without a terminal (a script, a CI job), `crossaudit tui --once` prints exactly
+one frame and exits 0; `crossaudit tui` without a terminal does the same and
+says so on stderr. `crossaudit watch` remains the read-only view of the loop's
+progress, and its help points at `tui`.
+
+For rich content (reports, diffs, file previews), the browser console is an
+optional local viewer:
+
+```bash
 crossaudit console
 ```
 
@@ -640,6 +567,12 @@ URL. The console shows:
 - receipt and admission status;
 - pending human decisions;
 - the command conversation and routing history.
+
+| The conversation | The same conversation with audit context open |
+| --- | --- |
+| ![The CrossAudit workspace: project rail, conversation, and composer](website/public/crossaudit-workspace-1600.png) | ![The same conversation with independent audit context expanded](website/public/crossaudit-audit-1600.png) |
+
+Both captures are the 4.17.0 console showing the credential-free local demo.
 
 The conversation behaves like a supervised three-person group: you, the
 Generator, and the Auditor. Speak normally and the auditor-side router assigns
@@ -686,9 +619,13 @@ equivalent public API value.
 
 Usage data stays in the project's gitignored `.crossaudit/usage.jsonl` file. It
 uses mode 600 on macOS/Linux and the project directory's inherited user ACL on
-Windows. Each line contains counts, time, role, phase, provider, and model only;
-prompts, generated text, provider request IDs, API keys, and OAuth material are
-never written. The aggregation and charts run locally and send no telemetry.
+Windows. Each line contains counts, time, role, phase, provider, model, and the
+surface the call came from only; prompts, generated text, provider request IDs, API keys, and OAuth material are
+never written. The surface is one of `cli` (`build`, `talk`, `audit`, `run`),
+`tui`, `console` (the console's own calls) or `app` (the native app's core
+process); rows written before the field existed read as `unknown`, and
+`crossaudit --json status` shows the calls and API value `by_surface`. The
+aggregation and charts run locally and send no telemetry.
 The local-first event normalization and explicit `≈ API value` presentation are
 informed by the MIT-licensed [Agent Island](https://github.com/tristan666666/agent-island)
 project; CrossAudit maintains its own provider adapters and price snapshot.
@@ -723,6 +660,36 @@ projects by default) so independent daemons cannot accidentally exhaust the
 machine or provider quota together. The Projects header shows active/available
 capacity live; `CROSSAUDIT_MAX_ACTIVE_PROJECTS` changes the limit. Stale slots
 left by a crashed process are reclaimed automatically.
+
+Each Project is the real local folder selected during setup—not a cosmetic
+label or hidden cloud container. Inside it, **New chat** starts an independent
+task thread that shares the Project's files, configuration, Git repository, and
+auditor Constitution. The sidebar separates pinned and recent Chats; the star
+in the top bar pins the whole Project in the Projects list. Chat message,
+deliverable, audit, and live-loop views are filtered to the selected Chat.
+Existing pre-4.7 evidence appears automatically as **Project history**.
+
+The delete controls keep those boundaries explicit. Deleting one Chat removes
+it from Project navigation but never rewrites shared Git commits, audit reports,
+receipts, or admitted files; a private tombstone prevents old ledger IDs from
+silently recreating the Chat. Deleting a whole Project is available from the
+main Projects view only when setup, audited work, and remote compute are idle.
+By default CrossAudit atomically moves the complete local folder—including
+uncommitted and unpushed work—into that workspace's hidden
+`.crossaudit-trash/` recovery directory and shows the exact recovery path.
+Connected GitHub repositories remain untouched. The working and audit
+repositories have separate permanent-delete choices, both off by default, so a
+user can remove only the audit ledger while preserving the delivered working
+repository. Either irreversible choice requires both the exact Project name and
+the phrase `DELETE GITHUB`. GitHub additionally requires its `delete_repo`
+scope; CrossAudit exposes the official device flow when that permission is
+missing. Partial remote failures never remove the recoverable local archive.
+
+The **Automatic revision limit** in New Project is a cost and termination
+guardrail, not an audit score. It controls how many generator → auditor
+correction rounds may run automatically. If the result still has blockers at
+the limit, CrossAudit pauses and escalates to the user; it never converts a
+failure into PASS. The default is three and the UI offers 1, 3, 5, or 10.
 
 **New project** opens the complete setup flow in the app: project name and
 description, local parent folder, round budget, independent generator and
@@ -1005,15 +972,19 @@ the middle of a cycle.
 ## Human escalation
 
 CrossAudit stops and asks for a human decision when the round budget is spent or
-the models cannot safely resolve a conflict. In the app, an explicit decision
-screen opens in the affected conversation. It shows the configured round limit,
-the verdict history, remaining audit findings, affected files, and concrete
+the models cannot safely resolve a conflict. In the browser console, an
+explicit decision screen opens in the affected conversation. It shows the
+configured round limit, the verdict history, remaining audit findings, affected files, and concrete
 next-step guidance. Closing it with **Review later** does not clear the warning:
 the project remains visibly paused and no output can be admitted.
 
 Choose **Revise and continue** to record correction guidance and unlock another
 audited attempt, or **Stop this task** to retain the current output as unadmitted.
 Both actions require a written explanation and enter the durable ledger.
+
+In `crossaudit tui` the same decision is a card in the terminal: `r` is
+**Revise and continue**, `c` is **Stop this task**, each asks for the written
+explanation, and `l` leaves it pending.
 
 The equivalent CLI flow works from a terminal. View pending work with
 `crossaudit status`, then record a decision:
@@ -1184,16 +1155,12 @@ organizational separation, use the two-repository deployment described below.
 
 ## Credentials and environment variables
 
-The macOS app exposes provider connection settings in the UI. API keys are
-stored in the current user's login Keychain. The UI can add, replace, or remove
-them, but it can query only whether a credential exists; it never reads a secret
-back into JavaScript.
-
-Each provider has independent **primary** and optional **backup** Keychain
-slots. A fallback route must explicitly select the backup slot before it can be
-used; merely saving a second key never causes silent rotation. Keys remain
-write-only, paste works in both fields, and route/circuit state stores only the
-environment-variable name—not the credential value.
+The CLI setup wizard writes role credentials to `~/.crossaudit-keys.env` with
+file mode 600. The file is parsed as data; CrossAudit does not execute arbitrary
+content from it. An already-exported environment variable takes precedence.
+A console started by `crossaudit console` inherits the same keys. The native
+macOS app, which is not on the main line, keeps them in the macOS login
+Keychain instead; see [its section](#the-native-macos-app-not-on-the-main-line).
 
 For OpenAI, **Connect ChatGPT** uses the documented Codex App Server browser
 flow. OpenAI documents both ChatGPT subscription and API-key sign-in for Codex,
@@ -1211,10 +1178,6 @@ browser-cookie import, or token scraping. Use an Anthropic API key or an
 organization-approved enterprise-cloud connection. See Anthropic's
 [subscription/API explanation](https://support.anthropic.com/en/articles/9876003-i-subscribe-to-a-paid-claude-ai-plan-why-do-i-have-to-pay-separately-for-api-usage-on-console)
 and [consumer terms](https://www.anthropic.com/legal/consumer-terms).
-
-The CLI setup wizard writes role credentials to `~/.crossaudit-keys.env` with
-file mode 600. The file is parsed as data; CrossAudit does not execute arbitrary
-content from it. An already-exported environment variable takes precedence.
 
 | Variable | Purpose |
 |---|---|
@@ -1408,8 +1371,9 @@ changes nothing on GitHub; it shows `OWNER` where the account name goes when
 | `crossaudit export-pubkey` | Print the project's receipt-signing public key (PEM) for offline third-party verification. |
 | `crossaudit reproduce <receipt>` | Show a receipt's pinned dependency locks, working-tree drift, and re-run steps. |
 | `crossaudit status` | List cycle states. |
-| `crossaudit watch` | Show live terminal progress. |
-| `crossaudit console` | Start or manage the browser dashboard. |
+| `crossaudit tui` | The loop, live, in the terminal, and where you act on it: cycles and findings, decision cards, verify and admit. `--once` prints one frame without a terminal. |
+| `crossaudit watch` | Show live terminal progress (read-only). |
+| `crossaudit console` | Start or manage the optional browser console. |
 | `crossaudit routing` | Show recorded conversation-routing decisions. |
 | `crossaudit amend "change"` | Propose and version a rule change. |
 | `crossaudit resolve <cycle>` | Record a human escalation decision. |
@@ -1454,26 +1418,10 @@ once when a compatible endpoint explicitly asks for that field. Confirm that
 on your PATH. Restart a background console after upgrading because an existing
 daemon keeps the Python code that was loaded when it started.
 
-### The macOS app is blocked on first launch
-
-Right-click **CrossAudit.app** → **Open** → **Open**; macOS asks once. V4.17.0
-is structurally signed with the hardened runtime but is not notarized, so
-verify the published SHA-256 checksum first (see [Install](#install)). An Apple
-Developer ID signed and notarized build is required before broad
-organizational deployment.
-
-### Settings says Git is unavailable
-
-Open **Settings → Environment Doctor** and choose **Install Git tools**. macOS
-opens Apple's Command Line Tools installer; finish the system dialog and choose
-**Run check**. The app bundles GitHub CLI and Codex but uses the system Git for
-project history and commits. If Git is installed but too old, Doctor shows the
-installed/minimum versions and opens the official update guidance.
-
 ### A project does not appear to update
 
-The UI reconnects its event stream automatically. Use **View > Reload** if the
-web view was suspended for a long time. Project activity and cycle state are
+The console reconnects its event stream automatically. Reload the page (in the
+native app, **View > Reload**) if it was suspended for a long time. Project activity and cycle state are
 durable, so reloading or returning from Projects does not restart the work.
 
 If the background process itself is killed during a task, the workspace shows
@@ -1566,10 +1514,14 @@ PARTIAL with evidence. The latest results are committed beside it as
 `RESULTS-<ref>.md`, and [`LOOP.md`](benchmarks/claims/LOOP.md) says what each
 round fixed and what it cost.
 
+The sentences about `crossaudit tui` and the usage ledger's `surface` field
+are not rows yet; the rows that will check them (C37–C41) are specified in
+[`docs/design/TUI_FIRST.md`](docs/design/TUI_FIRST.md) §6.
+
 What that harness cannot reach, so a reader has to verify by other means: the
-macOS application itself (a DMG and a person at the screen, walked through
-[`docs/UX_TEST_PLAN.md`](docs/UX_TEST_PLAN.md)); the two-repository GitHub
-flow (an account); SSH, Slurm and MCP servers (a host); the benchmark sentences
+native macOS app, which is not on the main line (a DMG and a person at the
+screen, walked through [`docs/UX_TEST_PLAN.md`](docs/UX_TEST_PLAN.md)); the
+two-repository GitHub flow (an account); SSH, Slurm and MCP servers (a host); the benchmark sentences
 above (the archived runs and their cross-vendor review in
 [`benchmarks/`](benchmarks/CORRECTIONS.md)); and whether the auditor catches
 real defects in real work, which depends on live models and is measured, where
@@ -1584,11 +1536,13 @@ into a mathematical proof.
 - A model audit can miss defects.
 - Local Git history can be rewritten by the repository owner.
 - Provider accounts and infrastructure remain external trust dependencies.
-- The macOS application listens only on loopback and every UI/API request uses
-  an unguessable per-process token; forged hosts and missing or incorrect tokens
-  are rejected.
-- Desktop provider credentials live in the macOS login Keychain. They are
-  injected only into the local core process and are never written to a project.
+- The browser console (and the native app built around it) listens only on
+  loopback and every UI/API request uses an unguessable per-process token;
+  forged hosts and missing or incorrect tokens are rejected.
+- The CLI reads provider keys from the environment or its mode-600 keys file.
+  In the native app, provider credentials live in the macOS login Keychain;
+  they are injected only into the local core process and are never written to
+  a project.
 - The generator writes files but does not execute arbitrary generated commands.
 - Remote Compute runs only scripts the user explicitly reviews and approves.
   Jobs execute with the user's remote account permissions, outside the local
@@ -1608,6 +1562,120 @@ provider request, and model context limits still apply. Uploads are streamed in
 bounded chunks, validated, staged with restrictive permissions, consumed once,
 and never treated as executable instructions. Binary storage support does not
 imply that a text-only model can understand every format.
+
+## The native macOS app (not on the main line)
+
+CrossAudit also has a native Apple Silicon macOS app (macOS 13 or later): a
+WebKit shell around the same local console `crossaudit console` serves, with
+provider API keys kept in the macOS login Keychain. It is not built or released
+from the main line; the terminal is the product. The code stays in
+[`packaging/macos/`](packaging/macos/) for whoever wants to build it, and the
+last released DMG is `CrossAudit-4.17.0-arm64.dmg`, with its checksum, on the
+[v4.17.0 GitHub release](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.17.0).
+Its security boundary is SECURITY.md's "Desktop trust boundary".
+
+What the app provides:
+
+- Provider API keys in the current user's login Keychain. The interface can
+  add, replace, or remove them, but it can query only whether a credential
+  exists; it never reads a secret back into JavaScript. Each provider has
+  independent **primary** and optional **backup** slots. A fallback route must
+  explicitly select the backup slot before it can be used; merely saving a
+  second key never causes silent rotation, and route/circuit state stores only
+  the environment-variable name, not the credential value.
+- A bundled GitHub CLI and the pinned official OpenAI Codex runtime, which owns
+  the **Sign in with ChatGPT** browser flow and its tokens; CrossAudit receives
+  only account status and model output. The app uses the system Git for
+  project history and commits.
+- Native macOS editing commands (Undo, Cut, Copy, Paste, Select All) in task,
+  configuration, and write-only API-key fields; light/dark themes with
+  reduced-transparency, reduced-motion, high-contrast, and narrow-window
+  fallbacks; and the whole interface in English or Simplified Chinese.
+- Background operation. Closing the main CrossAudit window does **not** stop
+  the application or an active loop. CrossAudit remains visible as a diamond
+  in the macOS menu bar; choose **Open CrossAudit**, click its Dock icon, or
+  open the application again to restore the same live workspace. Choose
+  **Quit CrossAudit** from the app or menu-bar menu only when you intend to
+  stop the local controller. Project work already committed to Git remains
+  durable across a later restart.
+- An Environment Doctor at **Settings → Environment Doctor**, the app's
+  counterpart of `crossaudit doctor`. It runs asynchronously and updates in
+  real time. It distinguishes a missing tool from an outdated one, shows the
+  installed and minimum versions, and blocks project creation only for
+  required failures. It can open Apple's Command Line Tools installer,
+  initialize a missing local Git ledger, save a project-local Git identity,
+  choose a writable workspace, or take the user to the verified CrossAudit
+  update. It never runs arbitrary commands from the web view.
+
+### Installing the last release
+
+> **First open.** macOS may say the app can't be verified — right-click
+> **CrossAudit.app** → **Open** → **Open**. This happens once.
+>
+> This community build is ad-hoc signed but not Apple-notarized because the
+> project does not yet have an Apple Developer ID certificate; the same
+> instruction, in English and Chinese, sits beside the app in the DMG window
+> as the `How to open` note. The
+> checksum below verifies the downloaded bytes; it is not a substitute for
+> notarization. A production distribution should use Developer ID Application
+> signing, hardened runtime, notarization, and stapling.
+
+1. Download `CrossAudit-4.17.0-arm64.dmg` and its checksum from the
+   [V4.17.0 release](https://github.com/dongzhaohe321418-lab/crossaudit-harness/releases/tag/v4.17.0).
+2. Optionally verify it in Terminal:
+
+   ```bash
+   shasum -a 256 -c CrossAudit-4.17.0-arm64.dmg.sha256
+   ```
+
+3. Open the DMG and drag **CrossAudit** to **Applications**.
+4. Open CrossAudit, then open **Settings**. For OpenAI, choose **Connect** to
+   complete the official ChatGPT browser login or enter an API key. Connect any
+   second first-party provider from the same screen. API keys go to the macOS
+   login Keychain; ChatGPT credentials remain owned by the official Codex runtime.
+
+### Removing it
+
+CrossAudit keeps everything it stores in three places. Removing them removes
+every trace; nothing else is written to the system.
+
+| What | Where | Remove with |
+| --- | --- | --- |
+| The app and its workspace of projects | `~/Library/Application Support/CrossAudit` (or the folder `CROSSAUDIT_APP_SUPPORT` points to) | Drag **CrossAudit.app** from Applications to the Trash, then delete this folder. |
+| A project's private state (run journal, provider circuit state, drafts) | `.crossaudit/` inside each project folder; the audit ledger stays in `cycles/` because it is part of the repository | Delete the project folder, or just `.crossaudit/` to keep the repository and its ledger. |
+| API keys | macOS login Keychain items named `io.crossaudit.app.provider.<vendor>` (and `.backup` for a backup key) | **Settings → Providers → Remove** in the app, or delete the items in Keychain Access. |
+
+A ChatGPT subscription sign-in is owned by the bundled Codex runtime, not by
+CrossAudit; sign out from **Settings → Providers**. The same three locations
+are listed in the app under **Settings → Security & privacy**.
+
+### If macOS blocks the first launch
+
+Right-click **CrossAudit.app** → **Open** → **Open**; macOS asks once. V4.17.0
+is structurally signed with the hardened runtime but is not notarized, so
+verify the published SHA-256 checksum first (step 2 above). An Apple
+Developer ID signed and notarized build is required before broad
+organizational deployment.
+
+### If Settings says Git is unavailable
+
+Open **Settings → Environment Doctor** and choose **Install Git tools**. macOS
+opens Apple's Command Line Tools installer; finish the system dialog and choose
+**Run check**. The app bundles GitHub CLI and Codex but uses the system Git for
+project history and commits. If Git is installed but too old, Doctor shows the
+installed/minimum versions and opens the official update guidance.
+
+### Building it
+
+Build the native application and DMG on an Apple Silicon Mac with a Python
+3.10 or newer interpreter (macOS's own `python3` is 3.9, so name one):
+
+```bash
+PYTHON_BIN=python3.13 ./packaging/macos/build_dmg.sh
+```
+
+The release steps for the app are the optional appendix of
+[`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
 
 ## Development
 
@@ -1629,18 +1697,12 @@ source-tree test. The release CI tests real installed wheels on Python
 correctness gates, audits the installed dependency graph, and executes the
 credential-free packaged-runtime self-test.
 
-Build the native application and DMG on an Apple Silicon Mac with a Python
-3.10 or newer interpreter (macOS's own `python3` is 3.9, so name one):
-
-```bash
-PYTHON_BIN=python3.13 ./packaging/macos/build_dmg.sh
-```
-
 The V4 baseline includes automated tests covering the CLI, wizard, providers,
 deterministic checks, correction loop, receipts, admission, Keychain boundary,
 real-time console, independent daemon lifecycle, chunked transfers, frozen-app
-identity, GitHub setup recovery, and documentation contracts. The release
-process additionally verifies the app signature structure, plist, executable
+identity, GitHub setup recovery, and documentation contracts. The native app's
+optional release appendix in [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md)
+additionally verifies the app signature structure, plist, executable
 architectures, mounted DMG contents, first-launch bootstrap, token security,
 and an opt-in real-provider workflow.
 

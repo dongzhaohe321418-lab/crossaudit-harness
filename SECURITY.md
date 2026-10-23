@@ -11,11 +11,13 @@ mitigation. Do not include real API keys or user data.
 ## Supported version
 
 Security fixes are made against the latest `main` release. CrossAudit 4.17.0 is
-the current native-app release.
+the current release; its GitHub release also carries the last native-app DMG.
 
 ## Desktop trust boundary
 
-The native shell embeds a loopback-only Python core. Every HTTP request must
+The native macOS app is not on the main line (D175): it is not built or
+released from `main`, and this paragraph describes it for whoever builds it
+from `packaging/macos/`. The native shell embeds a loopback-only Python core. Every HTTP request must
 carry an unguessable process token and an allowed localhost `Host` header. The
 browser layer cannot retrieve stored credentials. Provider keys are kept in the
 macOS login Keychain and loaded into the environment of the local core process
@@ -96,6 +98,10 @@ streaming through the token-protected loopback endpoint.
 
 ## Distribution status
 
-The 4.17.0 community DMG is ad-hoc signed and is not Apple-notarized. Verify the
-published SHA-256 checksum before first launch. Organization-wide distribution
-should wait for a Developer ID signed, notarized, and stapled artifact.
+CrossAudit is distributed as source: the Python package installs from this
+repository (it is not on PyPI), and each release is a GitHub release made from
+its version tag. The native macOS app is not on the main line. Its last DMG,
+on the v4.17.0 GitHub release, is ad-hoc signed and is not Apple-notarized.
+Verify the published SHA-256 checksum before first launch. Organization-wide
+distribution of the app should wait for a Developer ID signed, notarized, and
+stapled artifact.
