@@ -8488,8 +8488,54 @@ two P1, one P2, one P3, each reproduced by the reviewer and each repaired:
     the variable is removed. The README says the field is declared by the process's
     entry point and that the usage ledger is local analytics, not evidence.
 
+**Round 3** (`…-r3.md`): the round-2 repairs verified, then two P1, one P2 and one P3,
+each reproduced and each repaired:
+
+11. **The rulings log must be a regular file inside the repository, and the committed
+    blob is checked.** `open(path, "a")` followed a symlinked `cycles/rulings.jsonl`
+    while `git add` committed the symlink itself, so a cycle closed with the ruling
+    written outside the repository and no row in the committed ledger. `record` now
+    checks every path component below the root down to the log without following links
+    and refuses a symlink anywhere there ("… is a symbolic link; the rulings log must be
+    a regular file inside the repository, so the ruling was not recorded"), opens the
+    log with `O_NOFOLLOW`, and after the commit reads the committed blob back
+    (`git cat-file blob HEAD:<rel>`, inside the deadline) and requires its last line to
+    parse to this ruling. If it cannot be confirmed (a clean filter or hook rewrote the
+    file), the state is not changed, the working file is set to the committed bytes, and
+    the refusal says the commit exists but could not be confirmed to contain the ruling;
+    the commit is not undone, since the ledger is append-only.
+12. **A stale controller lock is never broken automatically.** Breaking a lock by age with
+    an unconditional unlink could delete a lock a live process had just taken (the
+    reviewer forced the interleaving: A sees B's lock as stale, B releases, C acquires, A
+    unlinks C's), and no ownership token repairs that. A lock older than `LOCK_STALE_S`
+    now refuses every state change with one sentence naming the lock, its holder's pid,
+    its age and the limit, and that `crossaudit doctor --fix` removes it when no
+    crossaudit process is running. `doctor` reports a stale lock and whether its pid is
+    alive; `doctor --fix`, interactive, removes it only when `os.kill(pid, 0)` says the
+    holder does not exist, re-reading the lock file just before. The trade-off, accepted:
+    a process killed while holding the lock no longer heals after 120 s; the next command
+    refuses until a person runs `doctor --fix` at a terminal (the console shows the
+    refusal; the README's troubleshooting says what to do). The ownership checks of
+    ruling 8 stay, reworded: a lock removed or replaced under its holder discards that
+    holder's state change.
+13. **A detached hook child cannot hold the ruling past its deadline.** A hook that
+    started a `setsid` child keeping Git's stdout and stderr made the post-kill
+    `communicate()` wait for that child. Git's output now goes to temporary files, its
+    stdin is `/dev/null`, and only Git's own exit is awaited, bounded; a child that
+    outlives Git neither delays the ruling nor misreports a Git that succeeded.
+14. **The module docstring says when its claim holds.** "A line that is in the file is a
+    line that is in git" is true once `record()` has returned; during a ruling,
+    `history()` may read the provisional line. The sentence now says so.
+15. **The evidence ledger's own lock follows the same policy.** `ledger/chain.py` broke
+    its lock after 30 s by the same unlink, the same race, inside the audit core. Its
+    lock file now carries the owner token, release is ownership-aware, a stale lock is
+    refused with the same sentence shape (`LedgerError`), and `doctor`/`doctor --fix`
+    cover both locks through one module, `locks.py` (token, holder, liveness, stale
+    removal). A writer that crashes leaves the ledger refusing appends until `doctor
+    --fix` is run; the append still verifies the chain first (D168).
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
-paragraph). The TUI (D175) was reviewed cold in round 2; round 3 verified these
-repairs (`…-r3.md`).
+paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 and 4 verified the
+repairs (`…-r3.md`, `…-r4.md`).

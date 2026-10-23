@@ -9,8 +9,11 @@ and committed on its own, with the reason in the commit message.
 
 Append-only: a line is never rewritten or removed, so a second ruling on the
 same cycle adds a line and both stay readable, in order. The one exception is
-a line whose commit failed: :func:`record` takes it back out before it raises,
-so a line that is in the file is a line that is in git. Readers split on
+a line whose commit failed: :func:`record` puts the log's prior bytes back
+before it raises. So once :func:`record` has returned, every line in the file
+is in git; DURING a ruling the file holds the new line before it is committed
+(the append precedes ``git add``), and a concurrent :func:`history` may read
+that provisional line. Readers split on
 "\\n" only (see D168: ``str.splitlines`` also splits on U+2028/U+2029/U+0085,
 which a reason may carry).
 
@@ -26,13 +29,22 @@ way whichever surface it came from.
 The commit runs while the controller lock is held, so it is bounded by
 :data:`COMMIT_TIMEOUT_S`, well inside the lock's stale threshold
 (``controller.state.LOCK_STALE_S``): a hook slower than that is a broken hook,
-and the ruling fails rather than letting another process break the lock.
+and the ruling fails rather than outliving the lock (a lock past the threshold
+is refused to everyone else, never broken; see ``controller.state``).
+
+The log must be a regular file inside the repository (review round 3,
+finding 1): ``open()`` follows a symlink while ``git add`` commits the link
+itself, so a symlinked log or directory committed only a pathname. Both are
+refused, the log is opened with ``O_NOFOLLOW`` where the platform has it, and
+after the commit lands the committed blob is read back and must end with this
+ruling's row before the state changes.
 """
 from __future__ import annotations
 
 import json
 import os
 import signal
+import stat
 import subprocess
 import time
 from pathlib import Path
@@ -49,8 +61,9 @@ RULINGS_LOG = "rulings.jsonl"
 #: what remains, and a step with nothing left fails at once as timed out. The
 #: cleanup after a failure (unstaging, dropping a killed git's index locks)
 #: gets :data:`CLEANUP_TIMEOUT_S` per step on top. Together they must stay
-#: below ``controller.state.LOCK_STALE_S`` (120 s), or another process could
-#: break the lock mid-ruling (review 2026-10-23 round 2, finding 2: the bound
+#: below ``controller.state.LOCK_STALE_S`` (120 s), so a live ruling never
+#: holds a lock that other processes see as stale (since round 3 they refuse
+#: such a lock rather than break it; review 2026-10-23 round 2, finding 2: the bound
 #: used to apply to each step separately, so a slow clean filter plus a slow
 #: hook held the lock past it). Not ``CROSSAUDIT_GIT_TIMEOUT``, which may
 #: legitimately be raised for large trees.
@@ -75,40 +88,60 @@ def _remaining(deadline: float) -> float:
 
 
 def _bounded(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, str, str]:
+    """:func:`_bounded_bytes` with stdout and stderr decoded as UTF-8."""
+    code, out, err = _bounded_bytes(cfg, args, deadline)
+    return code, out.decode("utf-8", "replace"), err
+
+
+def _bounded_bytes(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, bytes, str]:
     """Run one git step with whatever is left until ``deadline``.
 
-    Returns ``(returncode, stdout, stderr)``. Raises ``_StepFailed`` when the
-    step cannot run or runs out of time; a step with no time left fails
-    without starting. A timed-out step is killed with its whole process group
-    (git and the hook or filter it is running), and the index locks that git
-    held are removed: a killed ``git commit`` otherwise leaves ``index.lock``
-    behind and every later git write in the repository fails.
+    Returns ``(returncode, stdout bytes, stderr text)``. Raises
+    ``_StepFailed`` when the step cannot run or runs out of time; a step with
+    no time left fails without starting. A timed-out step is killed with its
+    whole process group (git and the hook or filter it is running), and the
+    index locks that git held are removed: a killed ``git commit`` otherwise
+    leaves ``index.lock`` behind and every later git write in the repository
+    fails.
+
+    Output goes to temporary files, not pipes, and the bound is on the
+    process's exit, not on end-of-file: a hook may leave a detached (setsid)
+    child holding git's stdout/stderr, and reading a pipe to its end waited
+    for that child long after git was gone (review round 3, finding 3).
     """
+    import tempfile
+
     timeout = _remaining(deadline)
     if timeout <= 0:
         raise _StepFailed(f"git {args[0]} timed out after {COMMIT_TIMEOUT_S:g}s")
     posix = os.name != "nt"
-    try:
-        proc = subprocess.Popen(
-            ["git", *args], cwd=str(cfg.root), stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace",
-            env=child_env(), start_new_session=posix)
-    except OSError as exc:
-        raise _StepFailed(f"git {args[0]} could not run: {exc.strerror or exc}") from exc
-    try:
-        out, err = proc.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired as exc:
+    with tempfile.TemporaryFile() as out_f, tempfile.TemporaryFile() as err_f:
         try:
-            if posix:
-                os.killpg(proc.pid, signal.SIGKILL)
-            else:
-                proc.kill()
-        except OSError:
-            pass
-        proc.communicate()
-        _drop_index_locks(cfg, proc.pid)
-        raise _StepFailed(f"git {args[0]} timed out after {COMMIT_TIMEOUT_S:g}s") from exc
-    return proc.returncode, out or "", err or ""
+            proc = subprocess.Popen(
+                ["git", *args], cwd=str(cfg.root), stdin=subprocess.DEVNULL,
+                stdout=out_f, stderr=err_f, env=child_env(), start_new_session=posix)
+        except OSError as exc:
+            raise _StepFailed(f"git {args[0]} could not run: {exc.strerror or exc}") from exc
+        try:
+            proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            try:
+                if posix:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                else:
+                    proc.kill()
+            except OSError:
+                pass
+            try:
+                proc.wait(timeout=CLEANUP_TIMEOUT_S)
+            except subprocess.TimeoutExpired:
+                pass
+            _drop_index_locks(cfg, proc.pid)
+            raise _StepFailed(f"git {args[0]} timed out after {COMMIT_TIMEOUT_S:g}s") from exc
+        out_f.seek(0)
+        err_f.seek(0)
+        return (proc.returncode, out_f.read(),
+                err_f.read().decode("utf-8", "replace"))
 
 
 def _git_step(cfg, deadline: float, *args: str) -> None:
@@ -190,6 +223,109 @@ def _restore(path: Path, prior: bytes | None) -> None:
             os.close(dir_fd)
 
 
+#: ``O_NOFOLLOW`` where the platform has it (POSIX); 0 elsewhere, where the
+#: lstat check in :func:`_refuse_symlinks` is the only guard.
+_NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
+
+
+def _is_loop(exc: OSError) -> bool:
+    import errno
+
+    return exc.errno in (errno.ELOOP, getattr(errno, "EMLINK", -1)) and bool(_NOFOLLOW)
+
+
+def _symlink_denial(rel: str, cid: str) -> IntegrityDenial:
+    return IntegrityDenial(
+        f"{rel} (or its directory) is a symbolic link; the rulings log must be a "
+        f"regular file inside the repository, so the ruling was not recorded",
+        cycle_id=cid, issue="symlinked_log")
+
+
+def _refuse_symlinks(cfg, rel: str, cid: str) -> None:
+    """``os.lstat`` every component below ``cfg.root`` down to the log; a
+    symlink anywhere there is refused before anything is read or written.
+    (``cfg.root`` itself may be reached through a link, e.g. macOS's
+    ``/tmp``; that is the repository, not a component of the log's path.)"""
+    current = Path(cfg.root)
+    for part in Path(rel).parts:
+        current = current / part
+        try:
+            mode = os.lstat(current).st_mode
+        except FileNotFoundError:
+            return
+        if stat.S_ISLNK(mode):
+            raise _symlink_denial(rel, cid)
+
+
+def _read_nofollow(path: Path) -> bytes | None:
+    """The log's bytes, or None when it does not exist; never via a link."""
+    try:
+        fd = os.open(path, os.O_RDONLY | _NOFOLLOW)
+    except FileNotFoundError:
+        return None
+    try:
+        chunks = []
+        while True:
+            chunk = os.read(fd, 1 << 16)
+            if not chunk:
+                return b"".join(chunks)
+            chunks.append(chunk)
+    finally:
+        os.close(fd)
+
+
+def _confirm_committed(cfg, path: Path, rel: str, row: dict, deadline: float) -> None:
+    """The committed blob must end with this ruling's row.
+
+    A clean filter, or a hook that rewrote and re-staged the file, can make
+    the commit carry something other than the line that was appended. The
+    blob is read raw (``git cat-file blob HEAD:<rel>``: no filters, no
+    textconv), bounded by what remains of the deadline but never less than
+    :data:`CLEANUP_TIMEOUT_S`. If its last line is not this row (same
+    ``cycle_id``, ``action``, ``reason``, ``t``), ``IntegrityDenial`` is raised
+    and the controller state is not changed. The commit is NOT undone (the
+    ledger is append-only); the working file is set to the committed bytes so
+    it carries no line git does not have.
+    """
+    floor = time.monotonic() + CLEANUP_TIMEOUT_S
+    changed = "a filter or hook changed the file"
+    why = changed
+    blob = b""
+    try:
+        code, blob, err = _bounded_bytes(
+            cfg, ("cat-file", "blob", f"HEAD:{rel}"), max(deadline, floor))
+        if code != 0:
+            said = err.strip().split("\n")[0][:120] if err.strip() else "git said nothing"
+            why = f"it could not be read back: {said}"
+        else:
+            lines = [ln for ln in blob.decode("utf-8").split("\n") if ln.strip()]
+            got = json.loads(lines[-1]) if lines else None
+            if isinstance(got, dict) and all(
+                    got.get(k) == row[k] for k in ("cycle_id", "action", "reason", "t")):
+                return
+    except _StepFailed as exc:
+        why = f"it could not be read back: {exc.why}"
+    except (ValueError, UnicodeDecodeError):
+        pass
+    cid, sha = row["cycle_id"], str(row.get("commit", ""))[:12]
+    if why == changed:
+        try:
+            _restore(path, blob)
+        except OSError:
+            pass
+        raise IntegrityDenial(
+            f"the ruling on cycle {cid} was committed as {sha}, but the committed "
+            f"{rel} could not be confirmed to contain it (a filter or hook changed "
+            f"the file); the cycle stays ESCALATED — check the repository's filters "
+            f"and hooks before ruling again", cycle_id=cid, issue="ruling_not_in_commit")
+    raise IntegrityDenial(
+        f"the ruling on cycle {cid} was committed as {sha}, but the committed "
+        f"{rel} could not be confirmed to contain it (it could not be read back: "
+        f"{why.removeprefix('it could not be read back: ')}); the cycle stays "
+        f"ESCALATED — check the repository's filters and hooks before ruling again",
+        cycle_id=cid, issue="ruling_not_in_commit")
+
+
 def record(cfg, cycle: dict, action: str, reason: str, *,
            deadline: float | None = None) -> dict:
     """Append one ruling and commit exactly that file. Returns the row,
@@ -219,9 +355,12 @@ def record(cfg, cycle: dict, action: str, reason: str, *,
     path = log_path(cfg)
     rel = path.relative_to(cfg.root).as_posix()
     cid = cycle["cycle_id"]
+    _refuse_symlinks(cfg, rel, cid)
     try:
-        prior = path.read_bytes() if path.is_file() else None
+        prior = _read_nofollow(path)
     except OSError as exc:
+        if _is_loop(exc):
+            raise _symlink_denial(rel, cid) from exc
         # Nothing has been written yet, so nothing needs restoring.
         raise IntegrityDenial(
             f"the ruling on cycle {cid} could not be committed to the ledger "
@@ -245,11 +384,17 @@ def record(cfg, cycle: dict, action: str, reason: str, *,
             "status_after": RESOLUTION_STATUS.get(action, ""),
             "escalation_reason": str(cycle.get("escalation_reason", ""))[:400],
         }
+        line = (json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, "a", encoding="utf-8", newline="\n") as fh:
-                fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+            fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | _NOFOLLOW, 0o644)
+            try:
+                os.write(fd, line)
+            finally:
+                os.close(fd)
         except OSError as exc:
+            if _is_loop(exc):
+                raise _symlink_denial(rel, cid) from exc
             raise _StepFailed(f"the log could not be written: {exc.strerror or exc}") from exc
         _git_step(cfg, deadline, "add", "--", rel)
         # Only this file: anything else the person has staged stays staged.
@@ -276,6 +421,7 @@ def record(cfg, cycle: dict, action: str, reason: str, *,
     # The commit has landed; reading its hash is cleanup-bounded, not
     # deadline-bounded, so a transaction that used its budget still reports it.
     row["commit"] = _cleanup_git(cfg, "rev-parse", "HEAD")
+    _confirm_committed(cfg, path, rel, row, deadline)
     return row
 
 

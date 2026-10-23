@@ -12,6 +12,9 @@ Review 2026-10-23 round 2:
   another process could then break the lock, and the old holder wrote its
   stale snapshot over the newer state and unlinked the newer lock. There is
   now one deadline for the transaction, and the lock is ownership-aware.
+  (Since round 3 a stale lock is never broken automatically; the takeover
+  tests below remove the lock by hand -- as a person, or `doctor --fix` on a
+  pid it judged dead, would -- instead of relying on auto-breaking.)
 
 Time is scaled: the budget and the stale threshold are monkeypatched to a few
 seconds, and hooks and filters sleep. Each test names the mutation it catches.
@@ -173,23 +176,23 @@ def test_a_slow_filter_plus_a_slow_hook_share_one_deadline(escalated, monkeypatc
 
 def test_a_holder_that_overran_never_writes_over_the_lock_s_new_owner(
         escalated, monkeypatch):
-    """The stale threshold scaled to 1 s and the budget to 6 s, so the ruling
-    deliberately outlives the lock: while its hook sleeps, a second holder
-    breaks the "stale" lock, records a new escalation and takes the lock
-    again. The first holder's commit then lands, and it must neither write
-    its old snapshot (which would erase the new escalation) nor unlink the
-    second holder's lock.
+    """While a ruling's hook sleeps, its lock is removed by hand and a second
+    holder records a new escalation and takes the lock. (This used to happen
+    by the second holder breaking the "stale" lock; round 3 removed
+    auto-breaking, so the removal is explicit here -- the only way left for
+    a lock to vanish under its holder.) The first holder's commit then lands,
+    and it must neither write its old snapshot (which would erase the new
+    escalation) nor unlink the second holder's lock.
 
     Mutation caught: `_locked` writing back and unlinking without checking
     its owner token -- the concurrent escalation is lost and the second
     holder's lock vanishes under it."""
     root, cid = escalated
-    monkeypatch.setattr(state_mod, "LOCK_STALE_S", 1.0)
     monkeypatch.setattr(rulings, "COMMIT_TIMEOUT_S", 6.0)
     store = _store(root)
     other = store.open_or_advance("t/p", "a" * 40, None)["cycle_id"]
     marker = root.parent / "hook-started"
-    install_hook(root, f"#!/bin/sh\ntouch '{marker}'\nsleep 2.5\nexit 0\n")
+    install_hook(root, f"#!/bin/sh\ntouch '{marker}'\nsleep 2\nexit 0\n")
     first_done = threading.Event()
     seen: dict = {}
 
@@ -198,7 +201,7 @@ def test_a_holder_that_overran_never_writes_over_the_lock_s_new_owner(
         deadline = time.monotonic() + 20
         while not marker.exists() and time.monotonic() < deadline:
             time.sleep(0.02)
-        time.sleep(1.2)                       # the first holder's lock is now "stale"
+        rival.lock_path.unlink()              # removed by hand mid-ruling
         rival.escalate(other, "a concurrent escalation", kind="audit")
         held = rival._locked()
         held.__enter__()
@@ -229,21 +232,19 @@ def test_a_holder_that_overran_never_writes_over_the_lock_s_new_owner(
     assert [r["cycle_id"] for r in rulings.history(load())] == [cid]
 
 
-def test_a_holder_whose_lock_was_taken_says_so_in_its_own_words(tmp_path, monkeypatch):
-    """The store-level sentence, without git: a `_locked` body that outlives
-    the scaled stale threshold while another store takes the lock. Mutation
-    caught: the same as above, at the store, with no ruling in between."""
-    monkeypatch.setattr(state_mod, "LOCK_STALE_S", 0.3)
+def test_a_holder_whose_lock_was_taken_says_so_in_its_own_words(tmp_path):
+    """The store-level sentence, without git: a `_locked` body whose lock is
+    removed by hand and taken by another store meanwhile. Mutation caught:
+    the same as above, at the store, with no ruling in between."""
     store = StateStore(tmp_path / "state.json")
     cycle = store.open_or_advance("t/p", "b" * 40, None)
     rival = StateStore(tmp_path / "state.json")
     with pytest.raises(IntegrityDenial) as denied:
         with store._locked() as state:
             state["cycles"][cycle["cycle_id"]]["status"] = "BLOCKED"
-            time.sleep(0.5)
+            store.lock_path.unlink()
             rival.escalate(cycle["cycle_id"], "taken meanwhile")
     assert denied.value.reason == (
-        "the controller lock was taken over by another process while this one "
-        "held it (longer than the 0.3s stale limit); this process's state change "
-        "was discarded")
+        "the controller lock was removed or replaced while this process held it; "
+        "this process's state change was discarded")
     assert store.cycle(cycle["cycle_id"])["status"] == "ESCALATED"

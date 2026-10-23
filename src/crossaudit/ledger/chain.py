@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .. import locks
 from ..errors import ConfigDenial, IntegrityDenial
 from ..receipt.schema import canonical, digest
 
@@ -355,32 +356,67 @@ def _utc_now() -> str:
 
 
 class _FileLock:
-    """Exclusive O_EXCL advisory lock with stale-break, mirroring state.py."""
+    """Exclusive O_EXCL advisory lock, the same policy as the controller's.
+
+    The lock file carries an owner token (pid, time, nonce; ``locks``), and
+    release removes it only while it is still this holder's. A lock older
+    than ``_LOCK_STALE_S`` is never broken automatically (review 2026-10-23
+    round 3, finding 2, applied to this lock too): "observe stale, then
+    unlink" could delete a fresh writer's lock. It is refused with a
+    ``LedgerError`` naming the pid, and ``crossaudit doctor --fix`` removes it
+    only when that pid is not alive.
+    """
 
     def __init__(self, lock_path: Path) -> None:
         self.lock_path = lock_path
+        self.token = ""
 
     def __enter__(self) -> "_FileLock":
         self.lock_path.parent.mkdir(parents=True, exist_ok=True)
         deadline = time.monotonic() + _LOCK_TIMEOUT_S
+        token = locks.new_token()
         while True:
             try:
                 fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(fd, f"{os.getpid()} {time.time():.0f}".encode())
-                os.close(fd)
+                try:
+                    os.write(fd, token.encode())
+                finally:
+                    os.close(fd)
+                self.token = token
                 return self
             except FileExistsError:
-                try:
-                    age = time.time() - self.lock_path.stat().st_mtime
-                except OSError:
-                    age = 0
-                if age > _LOCK_STALE_S:
-                    self.lock_path.unlink(missing_ok=True)
-                    continue
+                holder = locks.holder(self.lock_path)
+                if holder is None:
+                    continue                    # released meanwhile; retry
+                if holder["age"] > _LOCK_STALE_S:
+                    pid = holder["pid"] if holder["pid"] is not None else "?"
+                    raise LedgerError(
+                        f"the evidence ledger lock {self.lock_path} has been held by "
+                        f"pid {pid} for {holder['age']:.0f}s, longer than the "
+                        f"{_LOCK_STALE_S:g}s stale limit, and is not broken "
+                        f"automatically; if no crossaudit process is running for "
+                        f"this project, `crossaudit doctor --fix` removes it",
+                        issue="stale_lock", lock=str(self.lock_path))
                 if time.monotonic() > deadline:
                     raise ConfigDenial(
                         "the evidence ledger is locked by another writer")
                 time.sleep(0.02)
 
     def __exit__(self, *exc: Any) -> None:
-        self.lock_path.unlink(missing_ok=True)
+        if locks.owns(self.lock_path, self.token):
+            self.lock_path.unlink(missing_ok=True)
+
+
+def lock_status(ledger_path: Path) -> dict | None:
+    """The ledger's lock as `doctor` reports it (``locks.status``)."""
+    ledger_path = Path(ledger_path)
+    return locks.status(ledger_path.with_suffix(ledger_path.suffix + ".lock"),
+                        _LOCK_STALE_S)
+
+
+def remove_stale_lock(ledger_path: Path) -> str:
+    """``doctor --fix`` for the ledger's lock: removed only when stale and its
+    pid is not alive (``locks.remove_stale``)."""
+    ledger_path = Path(ledger_path)
+    return locks.remove_stale(ledger_path.with_suffix(ledger_path.suffix + ".lock"),
+                              _LOCK_STALE_S)
