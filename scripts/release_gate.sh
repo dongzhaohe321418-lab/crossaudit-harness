@@ -19,7 +19,12 @@ echo "[1/7] Static correctness"
 $PYTHON_BIN -m ruff check --select E9,F63,F7,F82 src tests packaging/verify_python_package.py
 $PYTHON_BIN -m compileall -q src tests packaging/verify_python_package.py
 bash -n packaging/macos/build_dmg.sh packaging/macos/verify_dmg.sh
-if [[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
+# The native macOS app is not on the main line (D175): its Swift shell is
+# type-checked only where a Swift compiler exists, and its absence is said, not
+# treated as a failure.
+if ! command -v swiftc >/dev/null 2>&1; then
+  echo "swiftc not found; skipping the Swift type-check (the native macOS app is not on the main line)."
+elif [[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
   swiftc -typecheck -target arm64-apple-macos13.0 -framework AppKit -framework WebKit \
     packaging/macos/CrossAuditApp.swift
 fi
