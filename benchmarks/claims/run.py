@@ -2542,6 +2542,18 @@ TIER_WORDS = ("verified by a check", "raised by the auditor, verified",
 RECEIPT_WORDS = ("BINDINGS VERIFIED", "ADMISSION READY", "SIGNED")
 
 
+class CleanVarying(fp.Scenario):
+    """The clean scenario, but each generator call writes a different value:
+    a second task whose increment is byte-identical to the first is refused by
+    the product as a reproduced round, which is right, and not what C41 is
+    about."""
+    name = "clean-varying"
+
+    def generator(self, n, system, prompt):
+        return fp.reply(fp.envelope(fp.increment(value=round(1.5 + n / 10, 2)),
+                                    summary=f"attempt {n}"))
+
+
 class PassThenBlock(fp.Scenario):
     """Task one passes on its first audit; every later audit is blocked, so a
     later task escalates at the round limit. One project, both outcomes."""
@@ -2646,12 +2658,21 @@ def c38(h: Harness, rec: Record) -> Record:
     if p is None:
         return finish(rec, "UNTESTED", "needs C37's project")
     p.rec = rec
+    # The PASSED cycle is the older row (the newest, ESCALATED, is selected and
+    # expanded in the first frame, receipt and all). `j` moves to it; Enter
+    # expands it; its own receipt line names its commit, so the check is on that
+    # line and not on any receipt word already on screen.
+    passed = [c for c in p.status_json().get("cycles", []) if c["status"] == "PASSED"]
+    if not passed:
+        return finish(rec, "UNTESTED", "C37's project has no PASSED cycle")
+    passed_sha = str(passed[0].get("active_sha") or passed[0].get("sha") or "")[:12]
+    passed_line = f"for {passed_sha}"            # "BINDINGS VERIFIED  receipt … for <sha>"
     script = ('echo "STTY-BEFORE=$(stty -g)"; crossaudit tui; echo "TUI-EXIT=$?"; '
               'echo "STTY-AFTER=$(stty -g)"')
     marks: list[int] = []
     gates = [lambda out: "ESCALATED" in out,                      # the first frame is up
-             None,                                                 # Enter once the screen settles
-             lambda out: any(w in out for w in RECEIPT_WORDS)]     # the PASSED cycle expanded
+             lambda out: f"❯ {passed[0]['cycle_id'][:12]}" in out,  # the cursor reached the PASSED row
+             lambda out: passed_line in out]                      # its receipt line is on screen
     rc, out = pty_run(["/bin/sh", "-c", script], tty_env(p), p.root, [b"j", b"\r", b"q"],
                       timeout=60, gates=gates, marks=marks)
     rec.evidence.append(h.save(rec.id, "tui-pty-transcript.txt", f"exit {rc}\nmarks {marks}\n{out}"))
@@ -2659,10 +2680,11 @@ def c38(h: Harness, rec: Record) -> Record:
     after = re.search(r"STTY-AFTER=(\S+)", out)
     tui_exit = re.search(r"TUI-EXIT=(-?\d+)", out)
     enter_at = marks[1] if len(marks) > 1 else len(out)
-    receipt_before_enter = any(w in out[:enter_at] for w in RECEIPT_WORDS)
-    receipt_after_enter = any(w in out[enter_at:] for w in RECEIPT_WORDS)
+    receipt_before_enter = passed_line in out[:enter_at]
+    receipt_after_enter = passed_line in out[enter_at:]
     rec.exit_codes = {"shell": rc, "tui": int(tui_exit.group(1)) if tui_exit else None}
-    rec.details = {"keys_typed": len(marks), "stty_before": before.group(1) if before else None,
+    rec.details = {"keys_typed": len(marks), "passed_cycle_receipt_line": passed_line,
+                   "stty_before": before.group(1) if before else None,
                    "stty_after": after.group(1) if after else None,
                    "receipt_line_before_enter": receipt_before_enter,
                    "receipt_line_after_enter": receipt_after_enter,
@@ -2699,7 +2721,7 @@ def c39(h: Harness, rec: Record) -> Record:
     rc1, out1 = pty_run([h.ca, "tui"], tty_env(p), p.root,
                         [b"c", reason_c.encode() + b"\r", b"q"], timeout=60,
                         gates=[lambda out: "ESCALATED" in out, None,
-                               lambda out: reason_c in out or "ruling" in out.lower() or "CLOSED" in out])
+                               lambda out: "Ruling recorded" in out or "裁定已记录" in out])
     rec.evidence.append(h.save(rec.id, "tui-close-transcript.txt", f"exit {rc1}\n{out1}"))
     tui_requests = len(p.fakes.requests()) - before_close
     st1 = {c["cycle_id"]: c for c in p.status_json().get("cycles", [])}
@@ -2720,7 +2742,7 @@ def c39(h: Harness, rec: Record) -> Record:
         rc2, out2 = pty_run([h.ca, "tui"], tty_env(p), p.root,
                             [b"r", reason_r.encode() + b"\r", b"q"], timeout=60,
                             gates=[lambda out: "ESCALATED" in out, None,
-                                   lambda out: reason_r in out or "ruling" in out.lower()])
+                                   lambda out: "Ruling recorded" in out or "裁定已记录" in out])
         rec.evidence.append(h.save(rec.id, "tui-reopen-transcript.txt", f"exit {rc2}\n{out2}"))
         tui_requests += len(p.fakes.requests()) - before_reopen
         st2 = {c["cycle_id"]: c for c in p.status_json().get("cycles", [])}
@@ -2798,15 +2820,22 @@ def point_tour_project_at_fakes(p: Project, root: Path) -> tuple[dict | None, st
 def c40(h: Harness, rec: Record) -> Record:
     text = readme_text(h)
     m = re.search(r"^## 60-second tour\n(.*?)^## ", text, re.S | re.M)
-    block = re.search(r"```(?:bash|sh|shell|console)?\n(.*?)```", m.group(1), re.S) if m else None
-    if not block:
+    blocks = re.findall(r"```(?:bash|sh|shell|console)?\n(.*?)```", m.group(1), re.S) if m else []
+    if not blocks:
         return finish(rec, "FAIL", "the README has no fenced commands under '## 60-second tour'")
-    lines = []
-    for ln in block.group(1).splitlines():
+    lines, carry = [], ""
+    for ln in "\n".join(blocks).splitlines():
         ln = ln.strip()
         if not ln or ln.startswith("#"):
             continue
-        lines.append(ln[2:] if ln.startswith("$ ") else ln)
+        ln = ln[2:] if ln.startswith("$ ") else ln
+        if ln.endswith("\\"):                 # a shell continuation: one command over several lines
+            carry += ln[:-1].rstrip() + " "
+            continue
+        lines.append((carry + ln).strip())
+        carry = ""
+    if carry:
+        lines.append(carry.strip())
     rec.evidence.append(h.save(rec.id, "tour-commands.txt", "\n".join(lines) + "\n"))
     p = Project(h, rec, fp.Scenario())
     h.projects["TOUR"] = p
@@ -2860,7 +2889,7 @@ def c40(h: Harness, rec: Record) -> Record:
 
 @claim("C41", "The usage ledger records which surface each call came from; `status --json` shows `by_surface`")
 def c41(h: Harness, rec: Record) -> Record:
-    p = Project(h, rec, fp.Scenario())
+    p = Project(h, rec, CleanVarying())
     h.projects["USAGE"] = p
     p.init()
     p.configure()
@@ -2870,9 +2899,10 @@ def c41(h: Harness, rec: Record) -> Record:
     task = "Task two from the terminal screen"
     settled = {"since": 0.0}
 
-    def built(_out: str) -> bool:
+    def built(out: str) -> bool:
         tui_rows = [r for r in usage_rows(p) if r.get("surface") == "tui"]
-        ok = len(tui_rows) >= 2 and len(p.receipts()) >= 2
+        settled_screen = "state: idle" in out or "state: waiting for you" in out
+        ok = len(tui_rows) >= 2 and (len(p.receipts()) >= 2 or settled_screen)
         if not ok:
             settled["since"] = 0.0
             return False
