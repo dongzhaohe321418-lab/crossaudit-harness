@@ -8526,6 +8526,13 @@ each reproduced and each repaired:
 14. **The module docstring says when its claim holds.** "A line that is in the file is a
     line that is in git" is true once `record()` has returned; during a ruling,
     `history()` may read the provisional line. The sentence now says so.
+15. **The evidence ledger's own lock follows the same policy.** `ledger/chain.py` broke
+    its lock after 30 s by the same unlink, the same race, inside the audit core. Its
+    lock file now carries the owner token, release is ownership-aware, a stale lock is
+    refused with the same sentence shape (`LedgerError`), and `doctor`/`doctor --fix`
+    cover both locks through one module, `locks.py` (token, holder, liveness, stale
+    removal). A writer that crashes leaves the ledger refusing appends until `doctor
+    --fix` is run; the append still verifies the chain first (D168).
 
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
