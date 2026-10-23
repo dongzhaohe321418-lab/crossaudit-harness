@@ -61,6 +61,11 @@ _LOCK_STALE_S = 30.0
 _LINE_SEPARATOR_ESCAPES = {0x2028: "\\u2028", 0x2029: "\\u2029", 0x85: "\\u0085"}
 
 
+def _stamp_of(st: os.stat_result) -> tuple[int, int, int]:
+    """What the head cache is keyed on: size, mtime in ns, inode."""
+    return (st.st_size, st.st_mtime_ns, st.st_ino)
+
+
 class LedgerError(IntegrityDenial):
     """A ledger read found tampering, corruption, or a broken chain."""
 
@@ -84,18 +89,21 @@ class EvidenceLedger:
 
     path: Path
     _lock_path: Path = field(init=False)
-    #: A size-guarded head cache so a build's many appends stay O(1) instead of
-    #: re-scanning the whole file each time. It is trusted ONLY when the file
-    #: size still matches what we last saw; any change on disk (another writer,
-    #: truncation) misses the cache and forces a full, authoritative re-derive.
+    #: A head cache so a build's many appends stay O(1) instead of re-scanning
+    #: the whole file each time. It is trusted ONLY when the file's identity
+    #: stamp -- ``(st_size, st_mtime_ns, st_ino)`` -- still matches what this
+    #: instance recorded after its own write or scan; a change in any one of
+    #: the three (another writer, truncation, an in-place rewrite, a file
+    #: replaced by rename) misses the cache and forces a full, authoritative
+    #: re-derive. What it cannot see is spelled out in ``_head_locked``.
     _cached_head: tuple[int, str] | None = field(default=None, init=False)
-    _cached_size: int = field(default=-1, init=False)
+    _cached_stamp: tuple[int, int, int] | None = field(default=None, init=False)
 
     def __post_init__(self) -> None:
         self.path = Path(self.path)
         self._lock_path = self.path.with_suffix(self.path.suffix + ".lock")
         self._cached_head = None
-        self._cached_size = -1
+        self._cached_stamp = None
 
     # -- append ---------------------------------------------------------------
     def append(self, kind: str, *, run_id: str, payload: dict,
@@ -134,13 +142,14 @@ class EvidenceLedger:
             try:
                 os.write(fd, line.encode("utf-8"))
                 os.fsync(fd)
-                new_size = os.fstat(fd).st_size
+                new_stamp = _stamp_of(os.fstat(fd))
             finally:
                 os.close(fd)
             # We just wrote the new head; remember it (guarded by the resulting
-            # file size) so the next append does not have to re-scan the file.
+            # file's size, mtime and inode) so the next append does not have to
+            # re-scan the file.
             self._cached_head = (body["seq"], entry_digest)
-            self._cached_size = new_size
+            self._cached_stamp = new_stamp
             return entry_digest
 
     # -- read -----------------------------------------------------------------
@@ -243,19 +252,16 @@ class EvidenceLedger:
         the entry before it, with the same ``seq`` and ``prev`` -- a forked
         chain no verifier can repair. So on any cache miss the whole chain is
         re-derived first and an append onto a damaged chain is refused. The
-        size-guarded cache is trusted exactly as ``_head_locked`` trusts it:
-        the file is the size this instance left it after its own verified
-        write, under the lock. (The torn-tail refusal runs before this and is
-        unchanged.)
+        cache is trusted exactly as ``_head_locked`` trusts it, with the same
+        stated blind spot: the file still has the size, mtime and inode this
+        instance recorded after its own verified write or scan, under the
+        lock. (The torn-tail refusal runs before this and is unchanged.)
         """
-        try:
-            size = self.path.stat().st_size if self.path.exists() else 0
-        except OSError:
-            size = 0
-        if size == 0:
-            self._cached_head, self._cached_size = (-1, ""), 0
+        stamp = self._stamp()
+        if stamp is None:
+            self._cached_head, self._cached_stamp = (-1, ""), None
             return (-1, "")
-        if self._cached_head is not None and size == self._cached_size:
+        if self._cached_head is not None and stamp == self._cached_stamp:
             return self._cached_head
         report = self.verify()
         if not report.ok:
@@ -264,25 +270,27 @@ class EvidenceLedger:
                 f"to append onto a damaged chain until it is recovered",
                 at_seq=report.at_seq)
         head = (report.count - 1, report.head) if report.count else (-1, "")
-        self._cached_head, self._cached_size = head, size
+        self._cached_head, self._cached_stamp = head, stamp
         return head
 
     def _head_locked(self) -> tuple[int, str]:
         """(seq, digest) of the last complete entry; (-1, "") when empty.
 
-        Fast path: if the file is exactly the size we last recorded, the cached
-        head is authoritative (we hold the append lock, and no size change means
-        no writer appended). Otherwise fall back to an authoritative full scan
-        and refresh the cache — so correctness never depends on the cache.
+        Fast path: if the file has exactly the ``(st_size, st_mtime_ns,
+        st_ino)`` this instance last recorded, the cached head is used without
+        re-reading the file. A change in any one of the three falls back to an
+        authoritative full scan and refreshes the cache. What the fast path
+        does NOT detect: a rewrite by another process that keeps the size,
+        restores ``st_mtime_ns`` exactly (``os.utime`` can) and stays on the
+        same inode. An append then chains onto the cached head without
+        re-verifying the file; the next ``verify()``, which never consults the
+        cache, reports the rewrite.
         """
-        try:
-            size = self.path.stat().st_size if self.path.exists() else 0
-        except OSError:
-            size = 0
-        if size == 0:
-            self._cached_head, self._cached_size = (-1, ""), 0
+        stamp = self._stamp()
+        if stamp is None:
+            self._cached_head, self._cached_stamp = (-1, ""), None
             return (-1, "")
-        if self._cached_head is not None and size == self._cached_size:
+        if self._cached_head is not None and stamp == self._cached_stamp:
             return self._cached_head
         last_obj = None
         for _lineno, obj, complete in self._iter_lines():
@@ -294,8 +302,16 @@ class EvidenceLedger:
             seq = last_obj.get("seq")
             head = (seq if isinstance(seq, int) else -1,
                     str(last_obj.get("digest", "")))
-        self._cached_head, self._cached_size = head, size
+        self._cached_head, self._cached_stamp = head, stamp
         return head
+
+    def _stamp(self) -> tuple[int, int, int] | None:
+        """The file's identity stamp, or None when it is missing or empty."""
+        try:
+            st = self.path.stat()
+        except OSError:
+            return None
+        return _stamp_of(st) if st.st_size else None
 
     def _iter_lines(self):
         """Yield (lineno, parsed_obj_or_None, complete_bool) for each line.

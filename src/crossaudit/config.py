@@ -182,6 +182,31 @@ def _role(raw: dict, name: str, where: Path, *, allow_fallbacks: bool = True) ->
                 reasoning_effort=effort, fallbacks=fallbacks)
 
 
+def _register_key_names(auditor: Role, generator_vendor: object,
+                        generator_key_env: object,
+                        generator_fallbacks: tuple[Role, ...]) -> None:
+    """Tell ``app_keys`` every variable name this file says holds a key.
+
+    ``key_env`` accepts any non-empty name, so ``app_keys.child_env()`` cannot
+    recognise a configured key by its shape alone. Registering the names here,
+    as soon as the roles are parsed (before the rest of the file is validated,
+    so a load that is refused later still registers them), means every
+    non-provider child launched afterwards in this process is started without
+    them, whether or not its caller holds this ``Config``. Covered: the
+    ``key_env`` of the auditor, the generator and every fallback row, and the
+    backup slot of every vendor named by any of them.
+    """
+    from . import app_keys
+    roles = (auditor, *auditor.fallbacks, *generator_fallbacks)
+    vendors = {role.vendor for role in roles}
+    if isinstance(generator_vendor, str):
+        vendors.add(generator_vendor)
+    app_keys.register_key_names(
+        *(role.key_env for role in roles), generator_key_env,
+        *(app_keys.backup_env_for_vendor(vendor.strip().lower())
+          for vendor in vendors if isinstance(vendor, str) and vendor.strip()))
+
+
 def _number(raw: dict, key: str, default: float, low: float, high: float,
             where: Path) -> float:
     value = raw.get(key, default)
@@ -365,6 +390,8 @@ def load(path: Path | None = None) -> Config:
         for i, item in enumerate(generator_fallbacks_raw) if isinstance(item, dict))
     if len(generator_fallbacks) != len(generator_fallbacks_raw):
         raise ConfigDenial("generator.fallbacks entries must be mappings", file=str(p))
+    _register_key_names(auditor, generator_vendor, gen.get("key_env"),
+                        generator_fallbacks)
 
     iso_raw = raw.get("isolation") or {}
     minimum = iso_raw.get("minimum") or {}

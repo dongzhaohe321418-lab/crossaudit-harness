@@ -230,6 +230,19 @@ def _reset_usage_surface(monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True)
+def _reset_configured_key_names():
+    """`config.load()` registers every configured `key_env` with `app_keys`
+    so `child_env()` strips it (process-global, like the usage surface).
+    Start and end every test with an empty registry, so a config loaded in
+    one test cannot widen (or, by its absence, narrow) another's scrub set."""
+    from crossaudit import app_keys
+
+    app_keys.reset_key_names()
+    yield
+    app_keys.reset_key_names()
+
+
 GOOD_RESULTS = {
     "quantities": [
         {"name": "binding_energy", "value": -3.65, "unit": "kcal/mol",
