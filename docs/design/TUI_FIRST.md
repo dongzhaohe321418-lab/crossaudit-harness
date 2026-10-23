@@ -49,7 +49,10 @@ stays as it is (the read-only viewfinder) and its help text points at `tui`.
   ASCII under a strict GBK stream like the wizard does.
 - **Not a TTY** (a script, CI, the harness): `crossaudit tui --once` prints
   exactly one frame and exits 0; `crossaudit tui` without a TTY does the same
-  and says so on stderr. This is what makes the surface testable.
+  and says so on stderr. This is what makes the surface testable. The one
+  frame has the newest cycle selected and expanded, so a reader (or the
+  harness) sees that cycle's findings and tier words without pressing a key;
+  at a terminal the same first frame is drawn, and keys move on from it.
 - `--json` is not added here; `status --json` and `/api/state` already carry
   the data.
 
