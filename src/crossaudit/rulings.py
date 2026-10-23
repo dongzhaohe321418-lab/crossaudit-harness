@@ -10,28 +10,45 @@ and committed on its own, with the reason in the commit message.
 Append-only: a line is never rewritten or removed, so a second ruling on the
 same cycle adds a line and both stay readable, in order. The one exception is
 a line whose commit failed: :func:`record` takes it back out before it raises,
-so a line that is in the file is a line that is in git.
-
-One transaction, every surface (review 2026-10-23, findings 1 and 2):
-:func:`rule` is how `resolve`, the TUI, `talk` and the console's
-``/api/escalation`` (close, reopen, and the provider retry's reopen) rule on
-an escalation. It commits the ruling first and changes the controller state
-only once the commit has landed (``StateStore.rule_escalation``), so a failing
-commit leaves the cycle ESCALATED with nothing recorded, and a close settles
-the waiting run the same way whichever surface it came from. Readers split on
+so a line that is in the file is a line that is in git. Readers split on
 "\\n" only (see D168: ``str.splitlines`` also splits on U+2028/U+2029/U+0085,
 which a reason may carry).
+
+One transaction, every surface (review 2026-10-23, findings 1 and 2):
+:func:`rule` is how `resolve`, the TUI, `talk`, the console's
+``/api/escalation`` (close, reopen, and the provider retry's reopen) and Stop
+on a parked run rule on an escalation. It commits the ruling first and changes
+the controller state only once the commit has landed
+(``StateStore.rule_escalation``), so a failing commit leaves the cycle
+ESCALATED with nothing recorded, and a close settles the waiting run the same
+way whichever surface it came from.
+
+The commit runs while the controller lock is held, so it is bounded by
+:data:`COMMIT_TIMEOUT_S`, well inside the lock's stale threshold
+(``controller.state.LOCK_STALE_S``): a hook slower than that is a broken hook,
+and the ruling fails rather than letting another process break the lock.
 """
 from __future__ import annotations
 
 import json
+import os
+import signal
+import subprocess
 import time
 from pathlib import Path
 
+from .app_keys import child_env
 from .errors import Denial, IntegrityDenial
 from .gitio import git
 
 RULINGS_LOG = "rulings.jsonl"
+
+#: The bound on each git step of a ruling's commit (seconds). It must stay
+#: below ``controller.state.LOCK_STALE_S`` (120 s): the commit runs under the
+#: controller lock, and a step that outlived the stale threshold would let
+#: another process break the lock mid-ruling. Not ``CROSSAUDIT_GIT_TIMEOUT``,
+#: which may legitimately be raised for large trees.
+COMMIT_TIMEOUT_S = 90.0
 
 
 def log_path(cfg) -> Path:
@@ -45,18 +62,58 @@ def _who(cfg) -> str:
 
 
 def _git_step(cfg, *args: str) -> None:
-    """Run one git step of the commit; on failure raise ``_StepFailed`` with
-    the first line of git's own stderr (trimmed), or a plain stand-in when
-    git said nothing (a hook that exits 1 silently)."""
+    """Run one git step of the commit, bounded by :data:`COMMIT_TIMEOUT_S`.
+
+    On failure raise ``_StepFailed`` with the first line of git's own stderr
+    (trimmed), a plain stand-in when git said nothing (a hook that exits 1
+    silently), or that it timed out. A timed-out step is killed with its whole
+    process group (git and the hook it is running), and the index locks that
+    git held are removed: a killed ``git commit`` otherwise leaves
+    ``index.lock`` behind and every later git write in the repository fails.
+    """
+    timeout = COMMIT_TIMEOUT_S
+    posix = os.name != "nt"
     try:
-        git(*args, cwd=cfg.root)
-    except Denial as exc:
-        prefix = f"git {' '.join(args)} failed: "
-        said = exc.reason[len(prefix):] if exc.reason.startswith(prefix) else exc.reason
-        first = said.strip().split("\n")[0].strip()[:160]
-        raise _StepFailed(first or f"git {args[0]} failed and said nothing") from exc
+        proc = subprocess.Popen(
+            ["git", *args], cwd=str(cfg.root), stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace",
+            env=child_env(), start_new_session=posix)
     except OSError as exc:
         raise _StepFailed(f"git {args[0]} could not run: {exc.strerror or exc}") from exc
+    try:
+        _out, err = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        try:
+            if posix:
+                os.killpg(proc.pid, signal.SIGKILL)
+            else:
+                proc.kill()
+        except OSError:
+            pass
+        proc.communicate()
+        _drop_index_locks(cfg, proc.pid)
+        raise _StepFailed(f"git {args[0]} timed out after {timeout:g}s") from exc
+    if proc.returncode != 0:
+        first = (err or "").strip().split("\n")[0].strip()[:160]
+        raise _StepFailed(first or f"git {args[0]} failed and said nothing")
+
+
+def _drop_index_locks(cfg, pid: int) -> None:
+    """Remove the locks a git process we just killed was holding.
+
+    ``index.lock`` is held by ``git add``/``git commit`` for their whole run
+    (hooks included), so right after killing ours it is ours; a ``git commit
+    -- <path>`` also holds ``next-index-<pid>.lock``, named by its pid.
+    """
+    try:
+        gitdir = Path(git("rev-parse", "--absolute-git-dir", cwd=cfg.root))
+    except (Denial, OSError):
+        return
+    for name in ("index.lock", f"next-index-{pid}.lock"):
+        try:
+            (gitdir / name).unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 class _StepFailed(Exception):
