@@ -8448,7 +8448,48 @@ RULINGS:
    verbatim under `benchmarks/reviews/` with the reviewer, the tree, the brief and the
    verdict in a header; a decision record cites it rather than paraphrasing it.
 
+**Round 2** (`…-r2.md`, over the repairs above and the D175 work): DO NOT MERGE again,
+two P1, one P2, one P3, each reproduced by the reviewer and each repaired:
+
+6. **The restore after a failed commit puts back the exact prior bytes.** It had kept
+   only the prior length and truncated, so a rejecting hook that rewrote the log with
+   same-length bytes (or deleted or appended to it) left it changed while the refusal
+   said nothing was recorded. `rulings.record` now keeps the log's bytes before the
+   append and, on failure, writes them to a sibling temporary file, fsyncs it and
+   `os.replace`s it over the log (or removes the log if it did not exist), then unstages.
+   If that restore itself fails, the refusal says so and claims no atomicity: "… could
+   not be committed to the ledger (…), and cycles/rulings.jsonl could not be restored
+   (…); the cycle stays ESCALATED, but check it against git before ruling again".
+7. **One deadline for the whole ruling transaction, inside the lock's window.** The
+   90 s bound applied to each git step separately, so a slow clean filter on `git add`
+   plus a slow hook on `git commit` could hold the controller lock past its 120 s stale
+   threshold. `COMMIT_TIMEOUT_S` is now one budget started when the transaction starts
+   and shared by every git step (`config`, `add`, `commit`, `rev-parse`); a step with
+   nothing left fails at once; the cleanup after a failure gets `CLEANUP_TIMEOUT_S` (5 s)
+   per step on top; a test asserts budget plus cleanup stay below `LOCK_STALE_S`.
+8. **The controller lock is owned.** The lock file carries a token (pid, time, random
+   nonce); the holder re-reads it before writing state back and before releasing. A
+   holder whose lock was broken as stale and taken by another process does not write
+   its stale snapshot, does not unlink its successor's lock, and raises "the controller
+   lock was taken over by another process while this one held it (longer than the 120s
+   stale limit); this process's state change was discarded". When that happens after
+   the ruling's commit has landed, the ruling is in the ledger but the cycle's state did
+   not change, and the sentence says to rule on it again. The check and the write are
+   not one atomic step; the window is the microseconds between them, and it opens only
+   after the holder has already overrun the stale threshold.
+9. **The direct generator row is validated like every other role row.** `generator.key_env`
+   at the top level bypassed `_role()`, so `PATH` was accepted and registered (and then
+   stripped from every Git child) and a non-string value crashed later; one validator
+   (`_key_env_name`) now serves both paths. An absent `generator.key_env` still loads
+   with the default; an empty string is refused.
+10. **`surface` is declared by the entry point only.** `CROSSAUDIT_USAGE_SURFACE` let a
+    caller relabel a CLI invocation as `app`; no child `crossaudit` process writes usage
+    rows for another surface (the console and the TUI complete in their own process), so
+    the variable is removed. The README says the field is declared by the process's
+    entry point and that the usage ledger is local analytics, not evidence.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
-paragraph). The TUI itself (D175) is reviewed in round 2 of this same review.
+paragraph). The TUI (D175) was reviewed cold in round 2; round 3 verified these
+repairs (`…-r3.md`).

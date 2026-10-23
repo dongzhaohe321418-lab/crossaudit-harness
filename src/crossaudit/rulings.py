@@ -39,39 +39,54 @@ from pathlib import Path
 
 from .app_keys import child_env
 from .errors import Denial, IntegrityDenial
-from .gitio import git
 
 RULINGS_LOG = "rulings.jsonl"
 
-#: The bound on each git step of a ruling's commit (seconds). It must stay
-#: below ``controller.state.LOCK_STALE_S`` (120 s): the commit runs under the
-#: controller lock, and a step that outlived the stale threshold would let
-#: another process break the lock mid-ruling. Not ``CROSSAUDIT_GIT_TIMEOUT``,
-#: which may legitimately be raised for large trees.
+#: The budget for a ruling's whole commit transaction (seconds): one
+#: deadline, started when the transaction starts under the controller lock,
+#: shared by every git step that can run a hook or a filter (``git config``
+#: for the author, ``git add``, ``git commit``, ``rev-parse``); each step gets
+#: what remains, and a step with nothing left fails at once as timed out. The
+#: cleanup after a failure (unstaging, dropping a killed git's index locks)
+#: gets :data:`CLEANUP_TIMEOUT_S` per step on top. Together they must stay
+#: below ``controller.state.LOCK_STALE_S`` (120 s), or another process could
+#: break the lock mid-ruling (review 2026-10-23 round 2, finding 2: the bound
+#: used to apply to each step separately, so a slow clean filter plus a slow
+#: hook held the lock past it). Not ``CROSSAUDIT_GIT_TIMEOUT``, which may
+#: legitimately be raised for large trees.
 COMMIT_TIMEOUT_S = 90.0
+
+#: Per-step bound on the cleanup after a failed commit (two steps at most).
+CLEANUP_TIMEOUT_S = 5.0
 
 
 def log_path(cfg) -> Path:
     return Path(cfg.root) / cfg.ledger_dir / RULINGS_LOG
 
 
-def _who(cfg) -> str:
-    name = git("config", "user.name", cwd=cfg.root, check=False).strip()
-    email = git("config", "user.email", cwd=cfg.root, check=False).strip()
+def _who(cfg, deadline: float) -> str:
+    name = _bounded(cfg, ("config", "user.name"), deadline)[1].strip()
+    email = _bounded(cfg, ("config", "user.email"), deadline)[1].strip()
     return f"{name} <{email}>" if email else name
 
 
-def _git_step(cfg, *args: str) -> None:
-    """Run one git step of the commit, bounded by :data:`COMMIT_TIMEOUT_S`.
+def _remaining(deadline: float) -> float:
+    return deadline - time.monotonic()
 
-    On failure raise ``_StepFailed`` with the first line of git's own stderr
-    (trimmed), a plain stand-in when git said nothing (a hook that exits 1
-    silently), or that it timed out. A timed-out step is killed with its whole
-    process group (git and the hook it is running), and the index locks that
-    git held are removed: a killed ``git commit`` otherwise leaves
-    ``index.lock`` behind and every later git write in the repository fails.
+
+def _bounded(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, str, str]:
+    """Run one git step with whatever is left until ``deadline``.
+
+    Returns ``(returncode, stdout, stderr)``. Raises ``_StepFailed`` when the
+    step cannot run or runs out of time; a step with no time left fails
+    without starting. A timed-out step is killed with its whole process group
+    (git and the hook or filter it is running), and the index locks that git
+    held are removed: a killed ``git commit`` otherwise leaves ``index.lock``
+    behind and every later git write in the repository fails.
     """
-    timeout = COMMIT_TIMEOUT_S
+    timeout = _remaining(deadline)
+    if timeout <= 0:
+        raise _StepFailed(f"git {args[0]} timed out after {COMMIT_TIMEOUT_S:g}s")
     posix = os.name != "nt"
     try:
         proc = subprocess.Popen(
@@ -81,7 +96,7 @@ def _git_step(cfg, *args: str) -> None:
     except OSError as exc:
         raise _StepFailed(f"git {args[0]} could not run: {exc.strerror or exc}") from exc
     try:
-        _out, err = proc.communicate(timeout=timeout)
+        out, err = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired as exc:
         try:
             if posix:
@@ -92,10 +107,26 @@ def _git_step(cfg, *args: str) -> None:
             pass
         proc.communicate()
         _drop_index_locks(cfg, proc.pid)
-        raise _StepFailed(f"git {args[0]} timed out after {timeout:g}s") from exc
-    if proc.returncode != 0:
-        first = (err or "").strip().split("\n")[0].strip()[:160]
+        raise _StepFailed(f"git {args[0]} timed out after {COMMIT_TIMEOUT_S:g}s") from exc
+    return proc.returncode, out or "", err or ""
+
+
+def _git_step(cfg, deadline: float, *args: str) -> None:
+    """One git step of the commit; a non-zero exit raises ``_StepFailed``
+    with the first line of git's own stderr (trimmed), or a plain stand-in
+    when git said nothing (a hook that exits 1 silently)."""
+    code, _out, err = _bounded(cfg, args, deadline)
+    if code != 0:
+        first = err.strip().split("\n")[0].strip()[:160]
         raise _StepFailed(first or f"git {args[0]} failed and said nothing")
+
+
+def _cleanup_git(cfg, *args: str) -> str:
+    """A cleanup step after a failure, bounded on its own (CLEANUP_TIMEOUT_S)."""
+    try:
+        return _bounded(cfg, args, time.monotonic() + CLEANUP_TIMEOUT_S)[1].strip()
+    except _StepFailed:
+        return ""
 
 
 def _drop_index_locks(cfg, pid: int) -> None:
@@ -106,9 +137,15 @@ def _drop_index_locks(cfg, pid: int) -> None:
     -- <path>`` also holds ``next-index-<pid>.lock``, named by its pid.
     """
     try:
-        gitdir = Path(git("rev-parse", "--absolute-git-dir", cwd=cfg.root))
-    except (Denial, OSError):
+        found = subprocess.run(
+            ["git", "rev-parse", "--absolute-git-dir"], cwd=str(cfg.root),
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=child_env(), timeout=CLEANUP_TIMEOUT_S)
+    except (OSError, subprocess.TimeoutExpired):
         return
+    if found.returncode != 0 or not found.stdout.strip():
+        return
+    gitdir = Path(found.stdout.strip())
     for name in ("index.lock", f"next-index-{pid}.lock"):
         try:
             (gitdir / name).unlink(missing_ok=True)
@@ -122,19 +159,39 @@ class _StepFailed(Exception):
         self.why = why
 
 
-def _restore(path: Path, existed: bool, size: int) -> None:
-    """Put the log back to the bytes it had before the append."""
+def _restore(path: Path, prior: bytes | None) -> None:
+    """Put the log back to exactly ``prior`` (or remove it when ``prior`` is
+    None: it did not exist). Raises OSError when that cannot be done.
+
+    The bytes, not a length: a rejecting hook may rewrite, replace, append to
+    or delete the log before it fails, and truncating to the old length kept
+    whatever it wrote (review 2026-10-23 round 2, finding 1). The restore
+    writes a sibling temporary file, fsyncs it and ``os.replace``s it over the
+    log, so the log is never half-restored.
+    """
+    if prior is None:
+        path.unlink(missing_ok=True)
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.restore-{os.getpid()}")
     try:
-        if not existed:
-            path.unlink(missing_ok=True)
-        elif path.exists():
-            with open(path, "r+b") as fh:
-                fh.truncate(size)
-    except OSError:
-        pass
+        with open(tmp, "wb") as fh:
+            fh.write(prior)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
+    if os.name != "nt":
+        dir_fd = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
 
 
-def record(cfg, cycle: dict, action: str, reason: str) -> dict:
+def record(cfg, cycle: dict, action: str, reason: str, *,
+           deadline: float | None = None) -> dict:
     """Append one ruling and commit exactly that file. Returns the row,
     with the ledger commit that carries it under ``commit``.
 
@@ -143,64 +200,82 @@ def record(cfg, cycle: dict, action: str, reason: str) -> dict:
     changes (``StateStore.rule_escalation`` applies the change only after this
     returns), so ``cycle`` is the record as it was before the ruling.
 
-    Failure-atomic: if the append, ``git add`` or ``git commit`` fails, the
-    log is restored to its previous bytes (or removed if it did not exist),
-    the path is unstaged, and ``IntegrityDenial`` says the ruling was not
-    committed. Once the commit has landed the ruling is recorded; a
-    ``rev-parse`` that then fails leaves ``commit`` empty rather than undoing
-    a commit that exists.
+    ``deadline`` (``time.monotonic()``) bounds every git step of the
+    transaction together; by default it is :data:`COMMIT_TIMEOUT_S` from now.
+
+    Failure-atomic: the log's exact bytes are kept before the append; if the
+    append, ``git add`` or ``git commit`` fails (or runs out of time), the log
+    is restored to those bytes (or removed if it did not exist), the path is
+    unstaged, and ``IntegrityDenial`` says the ruling was not committed. If
+    the restore itself fails, a different ``IntegrityDenial`` says so and does
+    not claim nothing changed. Once the commit has landed the ruling is
+    recorded; a ``rev-parse`` that then fails leaves ``commit`` empty rather
+    than undoing a commit that exists.
     """
     from .controller.state import RESOLUTION_STATUS
 
-    now = time.time()
-    row = {
-        "cycle_id": cycle["cycle_id"],
-        "action": action,
-        "reason": reason,
-        "by": _who(cfg),
-        "t": int(now),
-        "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
-        "round": cycle.get("round"),
-        "active_sha": cycle.get("active_sha", ""),
-        "status_after": RESOLUTION_STATUS.get(action, ""),
-        "escalation_reason": str(cycle.get("escalation_reason", ""))[:400],
-    }
+    if deadline is None:
+        deadline = time.monotonic() + COMMIT_TIMEOUT_S
     path = log_path(cfg)
-    path.parent.mkdir(parents=True, exist_ok=True)
     rel = path.relative_to(cfg.root).as_posix()
+    cid = cycle["cycle_id"]
+    try:
+        prior = path.read_bytes() if path.is_file() else None
+    except OSError as exc:
+        # Nothing has been written yet, so nothing needs restoring.
+        raise IntegrityDenial(
+            f"the ruling on cycle {cid} could not be committed to the ledger "
+            f"(the log could not be read: {exc.strerror or exc}); the cycle stays "
+            f"ESCALATED and nothing was recorded", cycle_id=cid) from exc
     first = reason.strip().splitlines()[0] if reason.strip() else ""
-    subject = f"ruling {cycle['cycle_id']} {action}: {first}"
+    subject = f"ruling {cid} {action}: {first}"
     if len(subject) > 120:
         subject = subject[:117] + "..."
-    existed = path.is_file()
-    size = path.stat().st_size if existed else 0
     try:
+        now = time.time()
+        row = {
+            "cycle_id": cid,
+            "action": action,
+            "reason": reason,
+            "by": _who(cfg, deadline),
+            "t": int(now),
+            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
+            "round": cycle.get("round"),
+            "active_sha": cycle.get("active_sha", ""),
+            "status_after": RESOLUTION_STATUS.get(action, ""),
+            "escalation_reason": str(cycle.get("escalation_reason", ""))[:400],
+        }
         try:
+            path.parent.mkdir(parents=True, exist_ok=True)
             with open(path, "a", encoding="utf-8", newline="\n") as fh:
                 fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
         except OSError as exc:
             raise _StepFailed(f"the log could not be written: {exc.strerror or exc}") from exc
-        _git_step(cfg, "add", "--", rel)
+        _git_step(cfg, deadline, "add", "--", rel)
         # Only this file: anything else the person has staged stays staged.
-        _git_step(cfg, "commit", "-q", "-m", subject, "-m",
-                  f"Human ruling on escalated cycle {cycle['cycle_id']} "
+        _git_step(cfg, deadline, "commit", "-q", "-m", subject, "-m",
+                  f"Human ruling on escalated cycle {cid} "
                   f"(round {cycle.get('round')}, {str(cycle.get('active_sha', ''))[:12]}): "
                   f"{action}.\n\nReason:\n{reason}\n\nBy: {row['by']}\nAt: {row['at']}",
                   "--", rel)
     except _StepFailed as exc:
-        _restore(path, existed, size)
         try:
-            git("reset", "-q", "--", rel, cwd=cfg.root, check=False)
-        except (Denial, OSError):
-            pass
+            _restore(path, prior)
+        except OSError as lost:
+            _cleanup_git(cfg, "reset", "-q", "--", rel)
+            raise IntegrityDenial(
+                f"the ruling on cycle {cid} could not be committed to the ledger "
+                f"({exc.why}), and {rel} could not be restored "
+                f"({lost.strerror or lost}); the cycle stays ESCALATED, but check "
+                f"{rel} against git before ruling again", cycle_id=cid) from exc
+        _cleanup_git(cfg, "reset", "-q", "--", rel)
         raise IntegrityDenial(
-            f"the ruling on cycle {cycle['cycle_id']} could not be committed to the "
+            f"the ruling on cycle {cid} could not be committed to the "
             f"ledger ({exc.why}); the cycle stays ESCALATED and nothing was recorded",
-            cycle_id=cycle["cycle_id"]) from exc
-    try:
-        row["commit"] = git("rev-parse", "HEAD", cwd=cfg.root, check=False)
-    except (Denial, OSError):
-        row["commit"] = ""
+            cycle_id=cid) from exc
+    # The commit has landed; reading its hash is cleanup-bounded, not
+    # deadline-bounded, so a transaction that used its budget still reports it.
+    row["commit"] = _cleanup_git(cfg, "rev-parse", "HEAD")
     return row
 
 
@@ -219,12 +294,29 @@ def rule(cfg, store, cycle_id: str, action: str, reason: str) -> dict:
     and the cycle record after the ruling.
     """
     before: dict = {}
+    landed: dict = {}
 
     def commit(snapshot: dict) -> dict:
+        # The budget starts here, with the controller lock held.
         before.update(snapshot)
-        return record(cfg, snapshot, action, reason)
+        row = record(cfg, snapshot, action, reason,
+                     deadline=time.monotonic() + COMMIT_TIMEOUT_S)
+        landed.update(row)
+        return row
 
-    row, cycle = store.rule_escalation(cycle_id, action, reason, commit)
+    try:
+        row, cycle = store.rule_escalation(cycle_id, action, reason, commit)
+    except Denial as exc:
+        if exc.detail.get("issue") != "lock_taken_over" or not landed:
+            raise
+        # The commit landed, but the lock was broken and taken while it ran,
+        # so the state change was discarded (never written over newer state).
+        raise IntegrityDenial(
+            f"the ruling on cycle {cycle_id} was committed to the ledger "
+            f"({str(landed.get('commit', ''))[:12]}), but the controller lock was "
+            f"taken over before the cycle's state could change, so the cycle stays "
+            f"ESCALATED; rule on it again", cycle_id=cycle_id,
+            issue="lock_taken_over") from exc
     if action == "close":
         # The close ruling settles the parked run this escalation references:
         # a stopped task must not keep signalling "needs your decision".
