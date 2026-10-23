@@ -172,3 +172,51 @@ person at the app), C33b (a GitHub account), C34b (an SSH host, a scheduler,
 an HTTP MCP endpoint), C35 (the archived runs), C36 (live models and money —
 `benchmarks/ai4s/run_auditor.py --live` on a one-seed subset is the prepared
 path).
+
+## Round 3 — the terminal surface, 2026-10-23
+
+The owner's decision of 2026-10-23 (`docs/design/TUI_FIRST.md` on `feat/tui-first`,
+D175): the command line and `crossaudit tui` are the product, the console is an
+optional viewer, the native macOS app leaves the main line, and the usage ledger
+records which surface each call came from. Five rows were written from that
+document **before** the implementation existed (`ee9cf48`, section H of
+CLAIMS.md) and run against the pre-implementation tree to show they fail cleanly:
+
+| ref | PASS / 43 | the five new rows |
+|---|---|---|
+| `feat/tui-first` 483b4cb (spec only) | 38 | C37–C41 all FAIL (no `tui` verb, no `surface`, the tour still the DMG) |
+
+The product was then built on `feat/tui-first` (`tui` verb, `surface` field,
+README front door, D175) and the rows run again. Harness corrections, in the
+open, as in rounds 1–2: C38 had checked for any receipt word, but the first
+frame already shows the newest cycle's receipt, so it now checks the PASSED
+cycle's own `verify` line after `j` and Enter; C39 typed `q` before the product
+had finished dismissing the reason prompt (the prompt's wording contains
+"ruling"), so each key is now gated on what the screen shows; C40 read only the
+first fenced block of the tour and split backslash-continued lines; C41's fake
+generator re-emitted a byte-identical increment, which the product rightly
+refuses as a reproduced round, so its generator now varies per call. `pty_run`
+gained `gates` and `marks` for all of this (`e338d0e`).
+
+One product defect was found by the rows and fixed: the TUI re-read all project
+data before every redraw (~0.6 s per key), so a key's screen arrived after the
+next key had been typed; keys now redraw from loaded data, with the refresh and
+`verify` on background threads, and a pty test pins "j moves only, Enter opens,
+only q quits" (`feat/tui-app` 19ad038).
+
+In the same round the cross-vendor review AGENTS.md §0 requires, which none of
+the earlier rounds had had, was run with the OpenAI side (`gpt-5.6-terra`
+through the Codex CLI; `benchmarks/reviews/2026-10-23-*`): rounds 1–2 came back
+DO NOT MERGE (three P1: console rulings bypassing the ledger, `resolve` not
+failure-atomic, `child_env` leaking a nonconventional configured key; one P3),
+repaired and recorded as D176; the `science-ai4s` pack came back DO NOT MERGE
+(six fail-open declaration shapes), repaired on `bench/ai4s-pack-v2` (DESIGN.md
+Amendment 5) and MERGE in its round 2. Those repairs are in the ref below.
+
+| ref (same harness, `e338d0e` + the placeholder fill) | PASS / 43 |
+|---|---|
+| **`feat/tui-first` 2a7291f** (D175 + D176 repairs, incl. Stop's committed close ruling) | **43** |
+
+The record is `records/tui-first/claims.jsonl` and `RESULTS-tui-first.md`. Still
+untestable here, as before: C32 (now also "not on the main line"), C33b, C34b,
+C35, C36.
