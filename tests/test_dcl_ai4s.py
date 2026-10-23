@@ -202,6 +202,81 @@ def test_ranges_only_come_from_audit_rules_files():
     assert codes(files, "range_rules") == [(BLOCKER, "CA-PHYS-001")]
 
 
+@pytest.mark.parametrize("key", ["maximum", "minimum", "Max", "units", "where", "note"])
+def test_a_range_entry_key_outside_the_format_blocks_and_is_named(key):
+    """MUTATION: drop the key-set check in `_range_entries` (review round 1,
+    finding 4) — `maximum` is ignored, the entry has no upper bound, and a
+    p-value of 0.9 against an intended cap of 0.05 passes."""
+    rules = ("```crossaudit-ranges\n" + json.dumps([{"name": "p", "unit": "1", key: 0.05}])
+             + "\n```\n")
+    got = found(ranged(q("p", 0.9), rules=rules), "range_rules")
+    assert [(f.severity, f.rule, f.observation) for f in got] == [(
+        BLOCKER, "CA-PHYS-001",
+        f"crossaudit-ranges entry [0] has a key the range format does not take "
+        f"({key!r}); an entry takes exactly name, unit, min, max")], got
+
+
+def test_a_repeated_key_in_the_ranges_block_blocks():
+    """MUTATION: parse the block with plain `json.loads` (review round 1,
+    finding 3) — the reviewer's `{"max": 0.05, "max": 1}` keeps the last cap
+    and p = 0.9 passes."""
+    rules = '```crossaudit-ranges\n[{"name": "p", "unit": "1", "max": 0.05, "max": 1}]\n```\n'
+    got = found(ranged(q("p", 0.9), rules=rules), "range_rules")
+    assert [(f.severity, f.rule, f.observation) for f in got] == [(
+        BLOCKER, "CA-PHYS-001",
+        "the crossaudit-ranges block repeats a JSON key ('max' in [0]); a JSON "
+        "reader keeps only the last occurrence, so which value was declared is "
+        "ambiguous; the ranges cannot be read")], got
+
+
+REPEATED_VALUE = ('{"quantities": [{"name": "p", "value": 0.01, "value": 0.9, "unit": "1", '
+                  '"source": "s"}]%s}')
+
+
+@pytest.mark.parametrize("check,rule,tail,extra", [
+    ("numeric_validity", "CA-NUM-005", "its values cannot be verified", ""),
+    ("range_rules", "CA-PHYS-001", "the declared ranges cannot be verified against it", ""),
+    ("derivations", "CA-DERIV-001", "its derivations cannot be verified",
+     ', "derivations": [{"quantity": "p", "method": "mean", '
+     '"input": {"file": "data/d.csv", "x": "x"}}]'),
+    ("claims", "CA-STAT-004", "its claims cannot be decided",
+     ', "claims": [{"test": "p_below", "quantity": "p", "alpha": 0.05}]'),
+])
+def test_a_repeated_key_in_results_json_blocks_under_each_check_that_reads_it(
+        check, rule, tail, extra):
+    """MUTATION: parse results.json with plain `json.loads` in `_results_scan`
+    (review round 1, finding 3), or drop one check's report of the repeated
+    file — the last `value` (0.9) or the first (0.01) is read silently, and
+    e.g. a p_below 0.05 claim over the duplicated p passes on 0.01 under a
+    first-wins reader. The refusal names the key and where it sits."""
+    text = REPEATED_VALUE % extra
+    files = inc(text, {"data/d.csv": "x\n0.01\n"}, rules=RANGES.replace("p_value", "p"))
+    got = found(files, check)
+    assert [(f.severity, f.rule, f.observation) for f in got] == [(
+        BLOCKER, rule,
+        "results.json repeats a JSON key ('value' in quantities[0]); a JSON reader "
+        "keeps only the last occurrence, so which value was declared is ambiguous; "
+        f"{tail}")], got
+
+
+def test_a_repeated_key_is_located_and_unrelated_checks_stay_quiet():
+    """MUTATION: report only top-level repeats, or have a check that does not
+    read the repeated part (no derivations / no claims / no ranges declared)
+    report it too. A repeat nested in a where clause is named with its path."""
+    text = ('{"quantities": [{"name": "out", "value": 2.5, "unit": "1", "source": "s"}], '
+            '"derivations": [{"quantity": "out", "method": "mean", "input": {"file": '
+            '"data/d.csv", "x": "x", "where": {"column": "split", "equals": "test", '
+            '"equals": "train"}}}]}')
+    files = inc(text, {"data/d.csv": DATA})
+    got = found(files, "derivations")
+    assert len(got) == 1 and ("'equals' in derivations[0].input.where"
+                              in got[0].observation), got
+    assert codes(files, "claims") == []
+    assert codes(files, "range_rules") == []
+    assert codes(files, "precision") == [] and codes(files, "repro_declared") == []
+    assert codes(files, "numeric_validity") == [(BLOCKER, "CA-NUM-005")]
+
+
 # ============================================================ derivations
 DATA = csv(["id", "split", "x", "truth", "pred", "group", "response"], [
     ["c1", "train", 1, 1, 1.5, "control", 1],
@@ -407,13 +482,63 @@ def test_sig_tolerance_at_two_to_eight_figures(sig):
 
 def test_wrong_rows_and_n_mismatch_block():
     """MUTATION: ignore `where` — D10 `wrong_rows_used` (a train-row MAE reported
-    as test) and D11 (an inflated n) pass."""
+    as test) and D11 (an inflated n) pass.
+
+    Changed after the cross-vendor review of 2026-10-23 (finding 1): the last
+    assertion used to read `count` over a filter matching NO row as a verified
+    0 — the false pass the review reproduced. An integer `equals` is still
+    compared as its string, now over a filter that selects a row; the empty
+    selection is refused (`test_an_empty_selection_blocks_for_every_method`)."""
     inp = {"file": F, "x": "x", "where": {"column": "split", "equals": "test"}}
     assert codes(derived("mean", inp, 3.5), "derivations") == []
     assert codes(derived("mean", inp, 1.5), "derivations") == [(BLOCKER, "CA-DERIV-001")]
     assert codes(derived("count", inp, 3), "derivations") == [(BLOCKER, "CA-DERIV-001")]
+    assert codes(derived("count", {**inp, "where": {"column": "x", "equals": 3}}, 1),
+                 "derivations") == []          # int compared as its string
     assert codes(derived("count", {**inp, "where": {"column": "split", "equals": 7}}, 0),
-                 "derivations") == []          # int compared as its string; zero rows
+                 "derivations") == [(BLOCKER, "CA-DERIV-001")]     # zero rows: refused
+
+
+@pytest.mark.parametrize("method", ai4s.METHODS)
+def test_an_empty_selection_blocks_for_every_method(method):
+    """MUTATION: drop the empty-selection refusal in `_compute` (review round 1,
+    finding 1) — `count` and `sum` over a `where` that matches no row verify a
+    reported 0 and pass. Every file-reading method is swept, with a reported
+    value equal to what an empty selection would naively give (0), and the
+    refusal must say the filter selected no rows, so no method blocks for
+    some other reason. Scalar methods read no file and are skipped."""
+    kind = ai4s._METHODS[method][0]
+    if kind == "scalar":
+        return
+    inp = _valid_input(method)
+    nowhere = clause("g", "zzz")
+    inp = {**inp, "where": nowhere}
+    got = _obs(derived(method, inp, 0, data=SWEEP_DATA))
+    assert [(s, r) for s, r, _ in got] == [(BLOCKER, "CA-DERIV-001")], (method, got)
+    assert "selects no rows" in got[0][2], got
+
+
+def test_an_empty_selection_blocks_review_reproduction_and_per_argument():
+    """MUTATION: drop either empty-selection refusal — the reviewer's exact
+    case (`sum` of x over split == "missing", reported 0) passes, or a
+    two-sample argument whose own where matches nothing reaches the method.
+    A header-only file (no where at all) is refused the same way."""
+    data = "split,x\ntest,999\n"
+    inp = {"file": F, "x": "x", "where": clause("split", "missing")}
+    got = _obs(derived("sum", inp, 0, data=data))
+    assert got == [(BLOCKER, "CA-DERIV-001",
+                    "derivations[0] (out) cannot be verified: the where filter "
+                    '{"column": "split", "equals": "missing"} selects no rows of '
+                    f"'{EXP}/{F}'; a derivation over zero rows cannot be verified "
+                    "(check the column and the value as written in the file)")], got
+    assert codes(derived("count", {"file": F, "x": "x"}, 0, data="x\n"),
+                 "derivations") == [(BLOCKER, "CA-DERIV-001")]
+    assert codes(derived("sum", {"file": F, "x": "x"}, 0, data="x\n"),
+                 "derivations") == [(BLOCKER, "CA-DERIV-001")]
+    two = {"file": F, "a": {"column": "x", "where": clause("split", "test")},
+           "b": {"column": "x", "where": clause("split", "nope")}}
+    got = _obs(derived("difference", two, 0))
+    assert len(got) == 1 and "argument 'b'" in got[0][2] and "selects no rows" in got[0][2]
 
 
 @pytest.mark.parametrize("label,method,inp,data", [
@@ -499,6 +624,43 @@ def test_absent_declarations_produce_nothing_and_uncommitted_is_advisory():
     here = {"file": F, "uncommitted": True, "x": "x"}
     assert codes(derived("mean", here, 2.5), "derivations") == []
     assert codes(derived("mean", here, 99), "derivations") == [(BLOCKER, "CA-DERIV-001")]
+
+
+@pytest.mark.parametrize("label,inp,says", [
+    ("no file", {"x": "x", "uncommitted": True}, "its file is None"),
+    ("file is a number", {"x": "x", "uncommitted": True, "file": 7}, "its file is 7"),
+    ("file is empty", {"x": "x", "uncommitted": True, "file": ""}, "its file is ''"),
+    ("file is blank", {"x": "x", "uncommitted": True, "file": "  "}, "its file is '  '"),
+    ("file is null", {"x": "x", "uncommitted": True, "file": None}, "its file is None"),
+    ("uncommitted is a string", {"x": "x", "uncommitted": "yes", "file": "data/big.h5"},
+     "input 'uncommitted' is 'yes'; it must be true or false"),
+    ("uncommitted is 1", {"x": "x", "uncommitted": 1, "file": "data/big.h5"},
+     "input 'uncommitted' is 1; it must be true or false"),
+    ("uncommitted is null", {"x": "x", "uncommitted": None, "file": F},
+     "input 'uncommitted' is None; it must be true or false"),
+])
+def test_an_unusable_uncommitted_declaration_blocks_and_is_never_advisory(label, inp, says):
+    """MUTATION: drop the `uncommitted` shape check in `check_derivations`
+    (review round 1, finding 2) — `uncommitted: true` with no usable file came
+    back as the CA-DERIV-002 advisory "file declared uncommitted (None)" and the
+    increment passed; a non-boolean `uncommitted` was silently ignored, so the
+    row was read as committed (the `null` row verified against data/d.csv and
+    passed). Each must be one CA-DERIV-001 that says what is wrong."""
+    got = _obs(derived("mean", inp, 2.5))
+    assert [(s, r) for s, r, _ in got] == [(BLOCKER, "CA-DERIV-001")], (label, got)
+    assert says in got[0][2], got
+
+
+def test_uncommitted_true_beside_a_named_file_is_still_the_advisory():
+    """MUTATION: refuse every uncommitted row — the honest shape, a boolean
+    beside a non-empty string file, stays CA-DERIV-002, and `false` is a
+    committed row verified like any other."""
+    away = {"file": "data/big.h5", "uncommitted": True, "x": "x"}
+    assert codes(derived("mean", away, 99), "derivations") == [(ADVISORY, "CA-DERIV-002")]
+    assert codes(derived("mean", {"file": F, "uncommitted": False, "x": "x"}, 2.5),
+                 "derivations") == []
+    assert codes(derived("mean", {"file": F, "uncommitted": False, "x": "x"}, 9),
+                 "derivations") == [(BLOCKER, "CA-DERIV-001")]
 
 
 def test_trailing_blank_lines_are_layout():
@@ -933,6 +1095,45 @@ def test_a_path_outside_the_experiment_says_what_paths_are_relative_to(bad):
     assert f"relative to {EXP!r}" in got[0][2], got
 
 
+def test_a_sibling_experiments_committed_file_is_refused():
+    """MUTATION: drop the containment test in `_contained` (review round 1,
+    finding 6) — `../e2/data.csv`, a sibling experiment's file that IS in the
+    audited scope and holds the right numbers, verifies. The skill promises
+    paths never climb out; the code now keeps it, for a committed file, an
+    uncommitted one and an absolute one alike. A path that leaves and comes
+    back (`../<own dir>/data/d.csv`) normalises inside and is read."""
+    files = derived("mean", {"file": "../e2/data.csv", "x": "x"}, 2.5)
+    files["experiments/e2/data.csv"] = DATA.encode()
+    got = _obs(files)
+    assert got == [(BLOCKER, "CA-DERIV-001",
+                    "derivations[0] (out) cannot be verified: file '../e2/data.csv' "
+                    "resolves to 'experiments/e2/data.csv', which is outside "
+                    f"'{EXP}', the directory holding this results.json; input files "
+                    f"are named relative to '{EXP}' and must stay inside it (never "
+                    "../… or an absolute path)")], got
+    away = {"file": "../e2/big.h5", "uncommitted": True, "x": "x"}
+    got = _obs(derived("mean", away, 2.5))
+    assert [(s, r) for s, r, _ in got] == [(BLOCKER, "CA-DERIV-001")], got
+    assert "outside" in got[0][2]
+    files = derived("mean", {"file": f"/{EXP}/{F}", "x": "x"}, 2.5)
+    assert codes(files, "derivations") == [(BLOCKER, "CA-DERIV-001")]
+    back = "../" + EXP.rsplit("/", 1)[1] + "/" + F
+    assert codes(derived("mean", {"file": back, "x": "x"}, 2.5), "derivations") == []
+    assert codes(derived("mean", {"file": "data/../data/d.csv", "x": "x"}, 2.5),
+                 "derivations") == []
+
+
+def test_a_results_json_at_the_scope_root_cannot_climb_out_either():
+    """MUTATION: test containment only when the results.json sits in a
+    directory — at the scope root `../x.csv` would be accepted."""
+    files = {"results.json": json.dumps({"quantities": [q("out", 1)], "derivations": [
+        {"quantity": "out", "method": "mean", "input": {"file": "../d.csv", "x": "x"}}]}).encode(),
+        "d.csv": b"x\n1\n"}
+    got = found(files, "derivations")
+    assert [(f.severity, f.rule) for f in got] == [(BLOCKER, "CA-DERIV-001")]
+    assert "outside 'the scope root'" in got[0].observation, got
+
+
 # --------------------- strict keys in all three places, for every method (Arm C)
 SWEEP_DATA = csv(["g", "x", "y", "T_K", "k", "two_theta_deg", "h", "l"], [
     ["a", 1, 2, 300, 0.01, 28.4, 1, 1], ["a", 2, 4, 350, 0.05, 47.3, 2, 0],
@@ -1237,6 +1438,67 @@ def test_a_split_that_cannot_be_read_blocks(label, doc, data):
     files = inc({"quantities": []}, {"data/compounds.csv": data, "splits.json": text})
     got = codes(files, "split_integrity")
     assert got and set(got) == {(BLOCKER, "CA-ML-001")}, label
+
+
+def _split_files(text, data=COMPOUNDS, extra=None):
+    return inc({"quantities": []}, {"data/compounds.csv": data, "splits.json": text,
+                                    **(extra or {})})
+
+
+def test_an_unknown_splits_key_blocks_and_names_it():
+    """MUTATION: drop the key-set check in `_split_findings` (review round 1,
+    finding 5) — `group_colum` is ignored, the group test never runs, and a
+    split whose train and test share system A passes."""
+    doc = {"data": "data/compounds.csv", "id_column": "id", "group_colum": "system",
+           "train": ["c1"], "test": ["c2"]}
+    got = found(_split_files(json.dumps(doc)), "split_integrity")
+    assert [(f.severity, f.rule, f.observation) for f in got] == [(
+        BLOCKER, "CA-ML-001",
+        "splits.json has a key the split format does not take ('group_colum'); it "
+        "takes data, id_column, group_column, train, test, val or validation, so "
+        "split integrity cannot be verified")], got
+    doc = {**doc, "group_column": "system"}
+    del doc["group_colum"]
+    assert codes(_split_files(json.dumps(doc)), "split_integrity") == [(BLOCKER, "CA-ML-001")]
+
+
+def test_val_and_validation_together_block_as_ambiguous():
+    """MUTATION: drop the val/validation test — both lists are read as two
+    splits and, being disjoint, pass."""
+    doc = {"data": "data/compounds.csv", "id_column": "id", "train": ["c1"],
+           "test": ["c2"], "val": ["c3"], "validation": ["c4"]}
+    got = found(_split_files(json.dumps(doc)), "split_integrity")
+    assert [(f.severity, f.rule) for f in got] == [(BLOCKER, "CA-ML-001")]
+    assert "both 'val' and 'validation'" in got[0].observation, got
+    for one in ("val", "validation"):
+        alone = {k: v for k, v in doc.items() if k != one}
+        assert codes(_split_files(json.dumps(alone)), "split_integrity") == [], one
+
+
+def test_a_repeated_splits_key_blocks():
+    """MUTATION: parse splits.json with plain `json.loads` (review round 1,
+    finding 3) — the second `test` list wins silently and the overlapping
+    first one (c1, which train holds) is never compared."""
+    text = ('{"data": "data/compounds.csv", "id_column": "id", "train": ["c1"], '
+            '"test": ["c1"], "test": ["c2"]}')
+    got = found(_split_files(text), "split_integrity")
+    assert [(f.severity, f.rule, f.observation) for f in got] == [(
+        BLOCKER, "CA-ML-001",
+        "splits.json repeats a JSON key ('test' in the top-level object); a JSON "
+        "reader keeps only the last occurrence, so which value was declared is "
+        "ambiguous; split integrity cannot be verified")], got
+
+
+def test_a_split_data_path_outside_its_directory_blocks():
+    """MUTATION: drop the containment test for `data` (review round 1, finding
+    6) — a sibling experiment's compounds.csv, in scope, is read."""
+    doc = {"data": "../e2/compounds.csv", "id_column": "id", "train": ["c1"], "test": ["c2"]}
+    files = _split_files(json.dumps(doc))
+    files["experiments/e2/compounds.csv"] = COMPOUNDS.encode()
+    got = found(files, "split_integrity")
+    assert [(f.severity, f.rule) for f in got] == [(BLOCKER, "CA-ML-001")]
+    assert ("file '../e2/compounds.csv' resolves to 'experiments/e2/compounds.csv', "
+            "which is outside") in got[0].observation, got
 
 
 def test_no_splits_file_means_nothing():

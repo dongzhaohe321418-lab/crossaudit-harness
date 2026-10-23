@@ -25,6 +25,25 @@ A results.json that does not parse is skipped here, exactly as `check_units`
 skips it: `schema` already reports it as CA-META-001, and reporting it again
 under every pack check would multiply one defect into eight findings.
 
+**A JSON object that repeats a key is a declaration that cannot be read**
+(cross-vendor review round 1, DESIGN §9 Amendment 5). Python's JSON reader
+keeps the last of two `"max"` keys silently, so `{"max": 0.05, "max": 1}` would
+check the bound nobody meant. The pack reads results.json, the ranges block and
+splits.json with an `object_pairs_hook` that marks every repeated key, and a
+file that repeats one ANYWHERE is not read: the ranges block and splits.json
+block under their own check, and a results.json blocks under each blocking
+check that reads it — `numeric_validity` always, `range_rules` when ranges are
+declared, `derivations` when it carries `derivations`, `claims` when it carries
+`claims` — naming the key and where it sits. The two advisory checks skip it.
+The shipped profile's own readers (`schema`, `units`, `number_source`, …) are
+outside this pack and keep `json.loads`'s last-wins reading.
+
+**A declared path stays inside the directory of the file that declares it.** A
+derivation's `file` and splits.json's `data` are normalised and must resolve
+inside the directory holding that results.json / splits.json; `../…`, an
+absolute path, or a sibling experiment's committed file blocks, naming the
+path. The skill tells the generator paths never climb out; this keeps it.
+
 **The codes, and which failure wears which.**
 
 * CA-NUM-005 (BLOCKER, `numeric_validity`) — a quantity's `value` is not a
@@ -38,9 +57,11 @@ under every pack check would multiply one defect into eight findings.
   whitespace stripping, no synonym table: `kJ/mol`, `kJ mol⁻¹` and `kJ/mol `
   are three different units here, unlike in `number_source`), a value outside the
   inclusive bounds, or a value that cannot be compared at all; OR the
-  ```crossaudit-ranges block itself is malformed (not JSON, not a list of
-  entries with non-empty `name` and `unit`, a non-numeric bound, min > max, an
-  unclosed fence, two fences in one file).
+  ```crossaudit-ranges block itself is malformed (not JSON, a repeated JSON
+  key, not a list of entries with non-empty `name` and `unit`, an entry key
+  other than `name`, `unit`, `min`, `max` — `maximum` would drop a bound
+  silently —, a non-numeric bound, min > max, an unclosed fence, two fences in
+  one file).
 * CA-DERIV-001 (BLOCKER, `derivations`) — a declared derivation, recomputed
   from the committed file, disagrees with the reported value under the
   declared tolerance; or it cannot be recomputed (malformed row, unknown
@@ -50,14 +71,21 @@ under every pack check would multiply one defect into eight findings.
   wrong shape, a zero divisor in `ratio` or `percent_change`, an input key the
   method does not take — the message names the keys it does take, so a
   guessed argument name reads "`mae` takes truth, pred; got x, y" and an
-  ignored filter is a shape error rather than a "value disagrees"). When the row is
+  ignored filter is a shape error rather than a "value disagrees"; a selected
+  row set that is EMPTY after every declared filter, for every method, `count`
+  and `sum` included, since both would otherwise verify a reported 0 over rows
+  that do not exist; an `uncommitted` that is not a boolean, or
+  `uncommitted: true` without a non-empty string `file`; a `file` that
+  normalises outside the results.json directory). When the row is
   `t_pvalue_two_sided` and its `t` or `df` is not a quantity grounded by a
   derivation chain of its own (below), the message adds one sentence: `t` and
   `df` are read as REPORTED values, never as columns, so declare `welch_t` /
   `welch_df` rows for them to verify the chain end to end. A sentence, not a
   separate finding.
 * CA-DERIV-002 (ADVISORY, `derivations`) — a derivation whose file is declared
-  `uncommitted` and is indeed not in scope: the generator said where, the
+  uncommitted (`"uncommitted": true` beside a non-empty string `file` inside
+  the results.json directory, or `"file": "uncommitted"`) and is indeed not in
+  scope: the generator said where, the
   project does not keep it, so the check says it could not look rather than
   passing in silence. A file declared uncommitted that IS in scope is verified
   like any other.
@@ -83,8 +111,11 @@ under every pack check would multiply one defect into eight findings.
 * CA-ML-001 (BLOCKER, `split_integrity`) — a `splits.json` whose train/test
   (and optional val/validation) id lists overlap, repeat an id, name an id the
   data file does not hold, or share a group when `group_column` is set; or the
-  declaration cannot be read (unparseable, missing keys, data file or column
-  absent, an id the data file holds twice).
+  declaration cannot be read (unparseable, a repeated JSON key, missing keys,
+  a key outside `data`, `id_column`, `group_column`, `train`, `test`, `val`,
+  `validation` — `group_colum` would switch the group test off silently —,
+  both `val` and `validation`, a `data` path outside the splits.json
+  directory, data file or column absent, an id the data file holds twice).
 * CA-REPRO-001 (ADVISORY, `repro_declared`) — a results.json that says
   `"stochastic": true` sits beside a metadata.yml lacking a non-empty
   `command`, a non-empty `environment`, or an integer `seed`. One finding per
@@ -159,20 +190,107 @@ DEFAULT_WAVELENGTH = 1.5406
 
 
 # ----------------------------------------------------------------- reading
-def _results_docs(files: Mapping[str, bytes]) -> list[tuple[str, dict]]:
-    """Every parseable results.json mapping, sorted by path.
+class _Repeated(dict):
+    """A JSON object that spelled one key more than once. It holds the LAST
+    value of each key, as `json.loads` would; `repeated` names the keys, so a
+    reader can refuse the object instead of trusting whichever came last."""
 
-    Unparseable files are skipped: `schema` reports them as CA-META-001.
+    repeated: list[str]
+
+
+def _pairs(pairs: list[tuple[str, object]]) -> dict:
+    seen: dict = {}
+    repeated: list[str] = []
+    for key, value in pairs:
+        if key in seen and key not in repeated:
+            repeated.append(key)
+        seen[key] = value
+    if not repeated:
+        return seen
+    out = _Repeated(seen)
+    out.repeated = repeated
+    return out
+
+
+def _loads(text: str):
+    """`json.loads` that marks every object repeating a key (`_Repeated`)."""
+    return json.loads(text, object_pairs_hook=_pairs)
+
+
+def _repeats(node, where: str = "") -> list[str]:
+    """'key' in location, for every repeated key anywhere in a parsed tree."""
+    out: list[str] = []
+    if isinstance(node, dict):
+        if isinstance(node, _Repeated):
+            at = where or "the top-level object"
+            out += [f"{key!r} in {at}" for key in node.repeated]
+        for key, value in node.items():
+            out += _repeats(value, f"{where}.{key}" if where else str(key))
+    elif isinstance(node, list):
+        for i, value in enumerate(node):
+            out += _repeats(value, f"{where}[{i}]")
+    return out
+
+
+def _repeat_text(what: str, repeats: list[str]) -> str:
+    shown = "; ".join(repeats[:5]) + (" …" if len(repeats) > 5 else "")
+    return (f"{what} repeats a JSON key ({shown}); a JSON reader keeps only the "
+            "last occurrence, so which value was declared is ambiguous")
+
+
+def _results_scan(files: Mapping[str, bytes]) -> tuple[list[tuple[str, dict]],
+                                                        list[tuple[str, dict, str]]]:
+    """(readable docs, docs that repeat a key), each sorted by path.
+
+    Unparseable files are skipped: `schema` reports them as CA-META-001. A
+    mapping that repeats a key anywhere is NOT readable here — every pack check
+    would otherwise read whichever value came last — and comes back in the
+    second list as (path, doc, the refusal text) for the blocking checks that
+    read it to report under their own code.
     """
     out: list[tuple[str, dict]] = []
+    bad: list[tuple[str, dict, str]] = []
     for path in sorted(results_files(files)):
         try:
-            doc = json.loads(files[path].decode("utf-8"))
+            doc = _loads(files[path].decode("utf-8"))
         except (UnicodeDecodeError, ValueError, RecursionError):
             continue
-        if isinstance(doc, dict):
+        if not isinstance(doc, dict):
+            continue
+        repeats = _repeats(doc)
+        if repeats:
+            bad.append((path, doc, _repeat_text("results.json", repeats)))
+        else:
             out.append((path, doc))
-    return out
+    return out, bad
+
+
+def _results_docs(files: Mapping[str, bytes]) -> list[tuple[str, dict]]:
+    """Every readable results.json mapping, sorted by path (`_results_scan`)."""
+    return _results_scan(files)[0]
+
+
+def _contained(base: str, raw: str, owner: str) -> str:
+    """The scope path `raw` names, relative to `base`; it must stay inside it.
+
+    Normalised first, so `scripts/../data/d.csv` is `data/d.csv`. A path that
+    leaves `base` — `../…`, an absolute path, a sibling experiment's file that
+    IS in scope — cannot be read: the skill tells the generator paths never
+    climb out, and a check that followed them anyway would verify against
+    another experiment's data.
+    """
+    target = posixpath.normpath(posixpath.join(base, raw))
+    if base:
+        inside = target.startswith(base + "/")
+    else:
+        inside = not (target == ".." or target.startswith("../"))
+    if raw.startswith("/") or target.startswith("/") or not inside:
+        raise _Undecidable(
+            f"file {raw!r} resolves to {target!r}, which is outside "
+            f"{base or 'the scope root'!r}, the directory holding this {owner}; input "
+            f"files are named relative to {base or 'the scope root'!r} and must stay "
+            "inside it (never ../… or an absolute path)")
+    return target
 
 
 def _quantities(doc: dict) -> list:
@@ -233,8 +351,11 @@ def _lookup(doc: dict, name: str) -> tuple[dict | None, str]:
 # ------------------------------------------------------- numeric_validity
 def check_numeric_validity(files: Mapping[str, bytes]) -> list[Finding]:
     """CA-NUM-005: every quantity value is a finite number."""
-    out: list[Finding] = []
-    for path, doc in _results_docs(files):
+    docs, repeated = _results_scan(files)
+    out: list[Finding] = [Finding(BLOCKER, "CA-NUM-005", path,
+                                  f"{text}; its values cannot be verified")
+                          for path, _doc, text in repeated]
+    for path, doc in docs:
         for i, q in enumerate(_quantities(doc)):
             if not isinstance(q, dict):
                 continue                                   # reported by check_units
@@ -253,6 +374,9 @@ def check_numeric_validity(files: Mapping[str, bytes]) -> list[Finding]:
 # ------------------------------------------------------------ range_rules
 _RANGES_OPEN = re.compile(r"```crossaudit-ranges[^\n]*(?:\n|\Z)")
 _RANGES = re.compile(r"```crossaudit-ranges[^\n]*\n(.*?)\n```", re.S)
+#: Every key a range entry may carry. Any other — `maximum` for `max` — would
+#: silently drop a bound, so it blocks.
+_RANGE_KEYS = frozenset({"name", "unit", "min", "max"})
 
 
 def _bound(entry: dict, key: str) -> tuple[bool, Decimal | None]:
@@ -298,10 +422,16 @@ def _range_entries(files: Mapping[str, bytes]) -> tuple[list[dict], list[Finding
                                "is ambiguous"))
             continue
         try:
-            rows = json.loads(blocks[0])
+            rows = _loads(blocks[0])
         except (ValueError, RecursionError) as exc:
             out.append(Finding(BLOCKER, "CA-PHYS-001", path,
                                f"the crossaudit-ranges block does not parse as JSON: {exc}"))
+            continue
+        repeats = _repeats(rows)
+        if repeats:
+            out.append(Finding(BLOCKER, "CA-PHYS-001", path,
+                               _repeat_text("the crossaudit-ranges block", repeats)
+                               + "; the ranges cannot be read"))
             continue
         if not isinstance(rows, list):
             out.append(Finding(BLOCKER, "CA-PHYS-001", path,
@@ -314,6 +444,10 @@ def _range_entries(files: Mapping[str, bytes]) -> tuple[list[dict], list[Finding
             problem = ""
             if not isinstance(row, dict):
                 problem = "is not a mapping"
+            elif set(row) - _RANGE_KEYS:
+                problem = ("has a key the range format does not take ("
+                           + ", ".join(repr(k) for k in sorted(set(row) - _RANGE_KEYS))
+                           + "); an entry takes exactly name, unit, min, max")
             elif not isinstance(row.get("name"), str) or not row["name"]:
                 problem = "has no non-empty string name"
             elif not isinstance(row.get("unit"), str) or not row["unit"]:
@@ -342,7 +476,11 @@ def check_range_rules(files: Mapping[str, bytes]) -> list[Finding]:
     entries, out = _range_entries(files)
     if not entries:
         return out
-    for path, doc in _results_docs(files):
+    docs, repeated = _results_scan(files)
+    out += [Finding(BLOCKER, "CA-PHYS-001", path,
+                    f"{text}; the declared ranges cannot be verified against it")
+            for path, _doc, text in repeated]
+    for path, doc in docs:
         for i, q in enumerate(_quantities(doc)):
             if not isinstance(q, dict) or not isinstance(q.get("name"), str):
                 continue
@@ -877,6 +1015,16 @@ def _clauses(where) -> list[dict]:
     return where
 
 
+def _no_rows(table: _Table, where, narrowed: bool = False) -> str:
+    if where is None:
+        return (f"{table.path!r} has no data rows; a derivation over zero rows "
+                "cannot be verified")
+    scope = "the rows the top-level where kept" if narrowed else f"{table.path!r}"
+    return (f"the where filter {json.dumps(where, ensure_ascii=False)} selects no rows of "
+            f"{scope}; a derivation over zero rows cannot be verified (check the "
+            "column and the value as written in the file)")
+
+
 def _filter(table: _Table, rows: list[dict], where) -> list[dict]:
     if where is None:
         return rows
@@ -944,7 +1092,7 @@ def _compute(files: Mapping[str, bytes], base: str, doc: dict, method: str,
         return fn(*(_scalar_operand(doc, spec[k], k) for k in keys))
     if not isinstance(spec.get("file"), str) or not spec["file"]:
         raise _Undecidable("input names no file")
-    target = posixpath.normpath(posixpath.join(base, spec["file"]))
+    target = _contained(base, spec["file"], "results.json")
     if target not in files:
         raise _Undecidable(
             f"file {spec['file']!r} resolves to {target!r}, which is not in the audited "
@@ -952,6 +1100,11 @@ def _compute(files: Mapping[str, bytes], base: str, doc: dict, method: str,
             "directory holding this results.json")
     table = _read_table(files, target)
     rows = _filter(table, table.rows, spec.get("where"))
+    if not rows:
+        # Before dispatch, for EVERY method: `count` of nothing is 0 and `sum`
+        # of nothing is 0, so a filter that matches no row (a misspelt label)
+        # would otherwise verify a reported 0 over rows that do not exist.
+        raise _Undecidable(_no_rows(table, spec.get("where")))
     if kind == "count":
         _column(table, spec["x"])
         return float(len(rows))
@@ -965,6 +1118,9 @@ def _compute(files: Mapping[str, bytes], base: str, doc: dict, method: str,
                     raise _Undecidable(f"argument {k!r} must be a column name or "
                                        "{\"column\", \"where\"}")
                 sub = _filter(table, rows, arg.get("where"))
+                if not sub:
+                    raise _Undecidable(f"argument {k!r}: " + _no_rows(table, arg.get("where"),
+                                                                        rows is not table.rows))
                 arg = arg["column"]
             samples.append(_vector(table, sub, _column(table, arg)))
         if kind == "mixed":
@@ -1019,8 +1175,11 @@ def _grounded(files: Mapping[str, bytes], base: str, rows: list) -> set[str]:
                          for o in ops)
             elif _is_uncommitted(spec):
                 target = spec.get("file")
-                ok = (isinstance(target, str) and target != "uncommitted"
-                      and posixpath.normpath(posixpath.join(base, target)) in files)
+                try:
+                    ok = (isinstance(target, str) and target != "uncommitted"
+                          and _contained(base, target, "results.json") in files)
+                except _Undecidable:
+                    ok = False
             else:
                 ok = True
             if ok:
@@ -1112,8 +1271,11 @@ def _is_uncommitted(spec: dict) -> bool:
 
 def check_derivations(files: Mapping[str, bytes]) -> list[Finding]:
     """CA-DERIV-001/002/003: declared derivations recompute from committed files."""
-    out: list[Finding] = []
-    for path, doc in _results_docs(files):
+    docs, repeated = _results_scan(files)
+    out: list[Finding] = [Finding(BLOCKER, "CA-DERIV-001", path,
+                                  f"{text}; its derivations cannot be verified")
+                          for path, doc, text in repeated if "derivations" in doc]
+    for path, doc in docs:
         if "derivations" not in doc:
             continue
         rows = doc["derivations"]
@@ -1146,8 +1308,21 @@ def check_derivations(files: Mapping[str, bytes]) -> list[Finding]:
                     raise _Undecidable("input must be a mapping")
                 _tolerance(row.get("tolerance"))         # malformed blocks first
                 spec, alias = _normalise_input(method, spec)
+                if "uncommitted" in spec:
+                    flag, target = spec["uncommitted"], spec.get("file")
+                    if not isinstance(flag, bool):
+                        raise _Undecidable(f"input 'uncommitted' is {flag!r}; it must be "
+                                           "true or false")
+                    if flag and (not isinstance(target, str) or not target.strip()):
+                        raise _Undecidable(
+                            f"input declares uncommitted: true but its file is {target!r}; "
+                            "an uncommitted file must still be named, as a non-empty "
+                            "string 'file' beside it, so the advisory says which file "
+                            "could not be checked")
                 if _is_uncommitted(spec):
                     target = spec.get("file")
+                    if isinstance(target, str) and target != "uncommitted":
+                        _contained(base, target, "results.json")
                     present = (isinstance(target, str) and target != "uncommitted"
                                and posixpath.normpath(posixpath.join(base, target)) in files)
                     if not present:
@@ -1201,6 +1376,9 @@ def check_derivations(files: Mapping[str, bytes]) -> list[Finding]:
 
 # -------------------------------------------------------- split_integrity
 _SPLIT_KEYS = ("train", "test", "val", "validation")
+#: Every key a splits.json may carry. Any other — `group_colum` — would
+#: silently switch a test off, so it blocks.
+_SPLIT_DOC_KEYS = frozenset({"data", "id_column", "group_column", *_SPLIT_KEYS})
 
 
 def _split_findings(files: Mapping[str, bytes], path: str) -> list[Finding]:
@@ -1208,12 +1386,26 @@ def _split_findings(files: Mapping[str, bytes], path: str) -> list[Finding]:
         return [Finding(BLOCKER, "CA-ML-001", path, msg)]
 
     try:
-        doc = json.loads(files[path].decode("utf-8"))
+        doc = _loads(files[path].decode("utf-8"))
     except (UnicodeDecodeError, ValueError, RecursionError) as exc:
         return block(f"splits.json does not parse, so split integrity cannot be "
                      f"verified: {exc}")
+    repeats = _repeats(doc)
+    if repeats:
+        return block(_repeat_text("splits.json", repeats)
+                     + "; split integrity cannot be verified")
     if not isinstance(doc, dict):
         return block("splits.json must be a mapping")
+    unknown = sorted(set(doc) - _SPLIT_DOC_KEYS)
+    if unknown:
+        return block(f"splits.json has a key the split format does not take "
+                     f"({', '.join(repr(k) for k in unknown)}); it takes data, "
+                     "id_column, group_column, train, test, val or validation, so split "
+                     "integrity cannot be verified")
+    if "val" in doc and "validation" in doc:
+        return block("splits.json gives both 'val' and 'validation'; one validation "
+                     "split has one name, so which list is the validation split is "
+                     "ambiguous")
     for key in ("data", "id_column"):
         if not isinstance(doc.get(key), str) or not doc[key]:
             return block(f"splits.json has no non-empty string {key!r}")
@@ -1231,8 +1423,8 @@ def _split_findings(files: Mapping[str, bytes], path: str) -> list[Finding]:
                 isinstance(i, bool) or not isinstance(i, (str, int)) for i in ids):
             return block(f"splits.json {key!r} must be a list of string or integer ids")
         splits[key] = [str(i) for i in ids]
-    data_path = posixpath.normpath(posixpath.join(posixpath.dirname(path), doc["data"]))
     try:
+        data_path = _contained(posixpath.dirname(path), doc["data"], "splits.json")
         table = _read_table(files, data_path)
         id_col = _column(table, doc["id_column"])
         group_col = _column(table, group) if group else None
@@ -1356,8 +1548,11 @@ def _claim_operand(doc: dict, raw, key: str) -> Decimal:
 
 def check_claims(files: Mapping[str, bytes]) -> list[Finding]:
     """CA-STAT-004: declared statistical claims hold over the reported numbers."""
-    out: list[Finding] = []
-    for path, doc in _results_docs(files):
+    docs, repeated = _results_scan(files)
+    out: list[Finding] = [Finding(BLOCKER, "CA-STAT-004", path,
+                                  f"{text}; its claims cannot be decided")
+                          for path, doc, text in repeated if "claims" in doc]
+    for path, doc in docs:
         if "claims" not in doc:
             continue
         claims = doc["claims"]
@@ -1440,6 +1635,8 @@ register("numeric_validity", check_numeric_validity,
          "Every results.json quantity has a value that is a finite number: an int, a "
          "finite float, or a string holding a plain decimal literal. A missing value, "
          "null, a bool, NaN or Infinity, and a non-numeric string each block. A "
+         "results.json that repeats a JSON key anywhere blocks (which value was "
+         "meant is ambiguous; the key and its place are named). A "
          "results.json that does not parse is left to schema. It says nothing about "
          "whether a number is correct.")
 register("range_rules", check_range_rules,
@@ -1452,14 +1649,17 @@ register("range_rules", check_range_rules,
          "'kJ mol⁻¹' and 'kJ/mol ' with a trailing space are three different "
          "units, and a quantity carrying the wrong one blocks) and the value must lie within the "
          "inclusive bounds, compared as exact decimals. A malformed block (bad JSON, "
-         "an entry without a non-empty name or unit, a non-numeric bound, min above "
-         "max, an unclosed fence, two fences in one file) blocks. A quantity no entry "
+         "a repeated JSON key, an entry without a non-empty name or unit, an entry "
+         "key other than name, unit, min and max, a non-numeric bound, min above "
+         "max, an unclosed fence, two fences in one file) blocks, and so does a "
+         "results.json that repeats a JSON key while ranges are declared. A quantity no entry "
          "matches is not checked, and a project with no block gets nothing: the "
          "ranges are the project's rules, read and never invented. " + _BOUNDARY)
 register("derivations", check_derivations,
          "For each row a results.json declares under derivations ({quantity, method, "
          "input, tolerance?}), recomputes the method with the standard library over "
-         "the named CSV (path relative to the results.json directory, optional "
+         "the named CSV (path relative to the results.json directory and "
+         "normalised; a path that leaves that directory blocks, optional "
          "where filter comparing cells as strings: one {column, equals} clause or "
          "a non-empty list of them, all of which must hold) or over named "
          "quantities, and "
@@ -1476,12 +1676,16 @@ register("derivations", check_derivations,
          "tolerance below about 1e-14 is not meaningful; sig compares exact "
          "decimal roundings. An unknown method, a missing argument, a file not in "
          "scope, a missing or duplicated column, an empty or non-numeric cell, too "
-         "few rows, a malformed where clause, a zero divisor, an input key the "
+         "few rows, a filter or file that selects no rows (for every method, "
+         "count and sum included), a malformed where clause, a zero divisor, "
+         "an uncommitted that is not a boolean, a repeated JSON key in "
+         "results.json, an input key the "
          "method does not take (the message names the keys it does take), or a "
          "quantity name "
          "matching no row or several blocks: what cannot be verified is not "
-         "verified. A file declared uncommitted and absent is advisory "
-         "(CA-DERIV-002). In a one-sample or paired form, filter: {column_name: "
+         "verified. A file declared uncommitted (\"uncommitted\": true beside a "
+         "non-empty string file, or file \"uncommitted\") and absent is advisory "
+         "(CA-DERIV-002); uncommitted true without such a file blocks. In a one-sample or paired form, filter: {column_name: "
          "value} (one column, one value) is read as the where clause it spells "
          "and reported as advisory CA-DERIV-003 with the canonical form; any "
          "other filter, and any key the method does not take, blocks. A row "
@@ -1492,11 +1696,12 @@ register("derivations", check_derivations,
          "to end. A quantity with no derivation row is not checked. " + _BOUNDARY)
 register("split_integrity", check_split_integrity,
          "For every splits.json in the audited scope ({data, id_column, "
-         "group_column?, train, test, val?/validation?}, data relative to the "
-         "splits.json directory): the id lists must be pairwise disjoint, no list "
+         "group_column?, train, test, val? or validation?} and no other key, data "
+         "relative to the splits.json directory and inside it): the id lists must be pairwise disjoint, no list "
          "may repeat an id, every id must name exactly one row of the data CSV, and "
          "when group_column is set no group may appear in two lists. Any violation, "
-         "or a declaration that cannot be read, blocks. It checks the declared ids "
+         "or a declaration that cannot be read (including an unknown key, both "
+         "val and validation, or a repeated JSON key), blocks. It checks the declared ids "
          "only: it cannot tell whether predictions were actually made on the test "
          "rows, or whether the grouping is the scientifically right one. With no "
          "splits.json it does nothing.")
@@ -1514,8 +1719,9 @@ register("claims", check_claims,
          "high), less_than (quantity < than), greater_than (quantity > than), "
          "within (low <= quantity <= high). An operand that is a string always names "
          "a quantity; a number is a literal. A false claim, an unknown test, a "
-         "missing operand, an operand naming no quantity or several, or an interval "
-         "with low above high blocks. It decides only the declared comparison; "
+         "missing operand, an operand naming no quantity or several, an interval "
+         "with low above high, or a repeated JSON key in a results.json that "
+         "declares claims blocks. It decides only the declared comparison; "
          "whether that comparison supports the prose, and whether the statistic was "
          "computed by an appropriate test, is the auditor's question. " + _BOUNDARY)
 register("precision", check_precision,
