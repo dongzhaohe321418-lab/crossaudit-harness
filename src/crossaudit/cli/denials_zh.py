@@ -581,6 +581,10 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "裁定必须说明理由；它会被记入账本"),
     ("cycle is {}, not ESCALATED; only an escalated cycle needs a human ruling",
      "周期状态是 {}，不是 ESCALATED；只有已升级的周期才需要人工裁决"),
+    # ------------------------------------------------------------ rulings.py
+    ("the ruling on cycle {} could not be committed to the ledger ({}); the cycle "
+     "stays ESCALATED and nothing was recorded",
+     "周期 {} 的裁决未能提交到账本（{}）；该周期仍为 ESCALATED，未记录任何内容"),
     # --------------------------------------------------------------- dcl/
     ("unknown checks {}; available: {}", "未知的检查 {}；可用的有：{}"),
     ("check pack {} is named in plugins: but is not installed; available: {}",

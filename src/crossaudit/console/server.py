@@ -60,7 +60,7 @@ from pathlib import Path
 from socketserver import TCPServer
 from urllib.parse import parse_qs, quote, urlparse
 
-from .. import app_doctor, app_keys, connections, hpc, mcp, usage, workspace
+from .. import app_doctor, app_keys, connections, hpc, mcp, rulings, usage, workspace
 from ..autonomy import prepare_task
 from ..cli import i18n
 from ..config import Config, load
@@ -2106,10 +2106,9 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                             raise ConfigDenial(
                                 "the stopped task predates direct retry; copy it into the "
                                 "composer and choose Revise and continue")
-                        reason = (reason.strip() or
-                                  "Retry after reviewing the provider connection.")
-                        result = state_store.resolve_escalation(
-                            cycle_id, "reopen", reason)
+                        reason = reason.strip() or "Retry after reviewing the provider connection."
+                        result = rulings.rule(current, state_store, cycle_id, "reopen", reason)
+                        result = result["cycle"]
                         try:
                             started = start_build(
                                 current, task, chat_id=str(prior.get("chat_id", "")),
@@ -2122,14 +2121,15 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                                 task=task, kind="provider")
                             raise
                     else:
-                        result = state_store.resolve_escalation(
-                            cycle_id, action, reason)
+                        # The one ruling transaction every surface uses, as
+                        # does the retry's reopen above: committed to the
+                        # ledger first, the state changed only after, and a
+                        # close settles the waiting run (D172 ruling 5;
+                        # review 2026-10-23 finding 1).
+                        result = rulings.rule(
+                            current, state_store, cycle_id, action,
+                            reason)["cycle"]
                         started = None
-                        if action == "close":
-                            # The close ruling settles the parked run this
-                            # escalation references: a stopped task must not
-                            # keep signalling "needs your decision".
-                            daemon.settle_closed_escalation(current, result)
                     STREAM_CHANGES.notify()
                     response = {
                         "cycle_id": cycle_id,

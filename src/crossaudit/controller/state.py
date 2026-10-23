@@ -22,7 +22,7 @@ import json
 import os
 import tempfile
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -64,6 +64,11 @@ def _has_verdict_for(cycle: dict, sha: str) -> bool:
 
 OPEN, BLOCKED, PASSED, ESCALATED, CONSUMED = "OPEN", "BLOCKED", "PASSED", "ESCALATED", "CONSUMED"
 TERMINAL = frozenset({CONSUMED})
+
+#: The status each human ruling sets (``StateStore.rule_escalation``). The
+#: ledger row is written BEFORE the state changes, so it reads its
+#: ``status_after`` from here rather than from the mutated record.
+RESOLUTION_STATUS = {"reopen": OPEN, "close": BLOCKED}
 
 
 def cycle_id_for(repo: str, root_sha: str) -> str:
@@ -530,35 +535,75 @@ class StateStore:
 
         Escalation hands an increment to a human; this is the verb the human
         answers with. `reopen` returns the increment to the loop for another
-        audit round; `close` ends the cycle without admission. Either way the
-        decision and its stated reason enter the ledger, because a ruling that
-        leaves no record is exactly what this protocol exists to prevent.
+        audit round; `close` ends the cycle without admission.
+
+        This changes the controller state ONLY. A human ruling must also be
+        committed to the audit ledger (D172 ruling 5), and every shipped
+        surface does that through :meth:`rule_escalation` (via
+        ``rulings.rule``), which commits first and changes the state only once
+        the commit has landed. This method stays for a caller that must not
+        commit.
         """
-        if action not in ("reopen", "close"):
+        self._check_resolution(action, reason)
+        with self._locked() as state:
+            c = self._escalated_cycle(state, cycle_id)
+            self._apply_resolution(state, c, cycle_id, action, reason)
+            return dict(c, cycle_id=cycle_id)
+
+    def rule_escalation(self, cycle_id: str, action: str, reason: str,
+                        commit: Callable[[dict], dict]) -> tuple[dict, dict]:
+        """One human ruling, committed and applied as a single transaction.
+
+        Under this store's lock: the same validation as
+        :meth:`resolve_escalation` (a known cycle, status ESCALATED, a stated
+        reason, ``reopen`` or ``close``) without changing anything; then
+        ``commit(cycle)`` with the record as it stands BEFORE the ruling -- the
+        caller's callable appends the ruling row to the ledger and commits it,
+        returning the row; and only if that returns without raising, the state
+        change and the ``human_resolution`` entry, exactly as
+        :meth:`resolve_escalation` makes them. A ``commit`` that raises leaves
+        the state untouched (the lock's write-back is skipped) and the
+        exception propagates. Returns ``(row, cycle)``: the committed row and
+        the cycle record after the ruling.
+        """
+        self._check_resolution(action, reason)
+        with self._locked() as state:
+            c = self._escalated_cycle(state, cycle_id)
+            row = commit(dict(c, cycle_id=cycle_id))
+            self._apply_resolution(state, c, cycle_id, action, reason)
+            return row, dict(c, cycle_id=cycle_id)
+
+    @staticmethod
+    def _check_resolution(action: str, reason: str) -> None:
+        if action not in RESOLUTION_STATUS:
             raise IntegrityDenial(f"unknown resolution {action!r}; use reopen or close")
         if not reason.strip():
             raise IntegrityDenial("a resolution must state its reason; it becomes ledger")
-        with self._locked() as state:
-            c = state["cycles"].get(cycle_id)
-            if c is None:
-                raise IntegrityDenial("unknown cycle", cycle_id=cycle_id)
-            if c["status"] != ESCALATED:
-                raise IntegrityDenial(f"cycle is {c['status']}, not ESCALATED; only an "
-                                      f"escalated cycle needs a human ruling")
-            if action == "reopen":
-                c["status"] = OPEN
-                c["awaiting_verdict"] = True
-                c["human_reopened"] = True
-                # The ruled-on stop is settled; a future escalation will
-                # reference the run of the retry, not this one.
-                c.pop("escalation_run_id", None)
-            else:
-                c["status"] = BLOCKED
-                c["closed_by_human"] = True
-                c.pop("human_reopened", None)
-            self._log(state, "human_resolution", cycle=cycle_id, action=action,
-                      reason=reason[:400])
-            return dict(c, cycle_id=cycle_id)
+
+    @staticmethod
+    def _escalated_cycle(state: dict, cycle_id: str) -> dict:
+        c = state["cycles"].get(cycle_id)
+        if c is None:
+            raise IntegrityDenial("unknown cycle", cycle_id=cycle_id)
+        if c["status"] != ESCALATED:
+            raise IntegrityDenial(f"cycle is {c['status']}, not ESCALATED; only an "
+                                  f"escalated cycle needs a human ruling")
+        return c
+
+    def _apply_resolution(self, state: dict, c: dict, cycle_id: str,
+                          action: str, reason: str) -> None:
+        c["status"] = RESOLUTION_STATUS[action]
+        if action == "reopen":
+            c["awaiting_verdict"] = True
+            c["human_reopened"] = True
+            # The ruled-on stop is settled; a future escalation will
+            # reference the run of the retry, not this one.
+            c.pop("escalation_run_id", None)
+        else:
+            c["closed_by_human"] = True
+            c.pop("human_reopened", None)
+        self._log(state, "human_resolution", cycle=cycle_id, action=action,
+                  reason=reason[:400])
 
     # ------------------------------------------------------- self-attestation
     def capabilities(self) -> dict:

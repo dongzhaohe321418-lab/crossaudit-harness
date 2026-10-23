@@ -358,9 +358,9 @@ def lane_resolve(cfg: Config, routing, *, assume_yes: bool) -> str:
         return "declined by user"
     from .. import rulings as rulings_mod
 
-    resolved = store.resolve_escalation(cid, "reopen", routing.utterance)
-    # D172 ruling 5: "in the ledger" means committed, as `resolve` does.
-    rulings_mod.record(cfg, resolved, "reopen", routing.utterance)
+    # D172 ruling 5: "in the ledger" means committed, as `resolve` does --
+    # through the same transaction, so a failed commit leaves it ESCALATED.
+    rulings_mod.rule(cfg, store, cid, "reopen", routing.utterance)
     print(f"  Ruling recorded; {cid[:8]} is open again. Your reason is in the ledger.")
     return f"reopened {cid[:8]}"
 

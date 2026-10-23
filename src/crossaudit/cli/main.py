@@ -1603,66 +1603,20 @@ def cmd_resolve(args: argparse.Namespace) -> int:
 def resolve_cycle(cfg: Config, cycle_id: str, action: str, because: str) -> dict:
     """Record a human ruling on an escalated cycle: the body of `resolve`.
 
-    ``action`` is "reopen" or "close". The ruling goes through the controller
-    (which refuses a cycle that is not ESCALATED and a reason that is empty),
-    is appended to ``<ledger>/rulings.jsonl`` and committed, and a close settles
-    the run that was waiting for this decision. Returns ``{"ruling": row,
-    "cycle": cycle}``: the committed row (with ``commit``) and the cycle record
-    after the ruling. The terminal check stays in `cmd_resolve`; a caller of
-    this function is responsible for having a person at the keyboard.
+    ``action`` is "reopen" or "close". The ruling goes through the one ruling
+    transaction every surface uses (``rulings.rule``): the controller refuses a
+    cycle that is not ESCALATED and a reason that is empty, the ruling is
+    appended to ``<ledger>/rulings.jsonl`` and committed, and only then does
+    the cycle's state change; a commit that fails leaves the cycle ESCALATED
+    with nothing recorded. A close settles the run that was waiting for this
+    decision. Returns ``{"ruling": row, "cycle": cycle}``: the committed row
+    (with ``commit``) and the cycle record after the ruling. The terminal check
+    stays in `cmd_resolve`; a caller of this function is responsible for
+    having a person at the keyboard.
     """
     from .. import rulings as rulings_mod
 
-    store = _state(cfg)
-    before = store.cycle(cycle_id) or {}
-    c = store.resolve_escalation(cycle_id, action, because)
-    row = rulings_mod.record(cfg, c, action, because)
-    if action == "close":
-        # The close ruling settles the parked run this escalation references:
-        # a stopped task must not keep signalling "needs your decision".
-        from ..console import daemon
-
-        daemon.settle_closed_escalation(cfg, c)
-        _settle_human_wait(cfg, before, because)
-    return {"ruling": row, "cycle": c}
-
-
-def _settle_human_wait(cfg: Config, cycle: dict, reason: str) -> bool:
-    """End the run that was WAITING_FOR_HUMAN on the cycle a person closed.
-
-    ``daemon.settle_closed_escalation`` settles a PARKED (provider) run; a
-    content escalation leaves its run in WAITING_FOR_HUMAN, which then kept
-    reading as waiting after the person had ruled. WAITING_FOR_HUMAN ->
-    CANCELLED is the declared edge for exactly this. ``cycle`` is the record
-    as it was BEFORE the ruling.
-
-    Which run: the one the escalation references (``escalation_run_id``).
-    An escalation the audit ladder recorded (the round budget spent inside
-    ``cmd_run``) carries no reference, so the association must be
-    corroborated the way the daemon's reconciler does for legacy records:
-    the NEWEST run, still waiting, whose start the cycle's last recorded
-    activity does not precede, and the same chat when the cycle names one.
-    Anything less could cancel an unrelated run.
-    """
-    from ..runtime import RunJournal, journal_path
-
-    runtime = journal_path(cfg)
-    if not runtime.is_file():
-        return False
-    journal = RunJournal(runtime)
-    run_id = str(cycle.get("escalation_run_id") or "")
-    if not run_id:
-        latest = journal.latest()
-        if latest is None:
-            return False
-        touched = float(cycle.get("updated_at") or 0)
-        same_chat = (not cycle.get("chat_id")
-                     or str(cycle.get("chat_id")) == str(latest.get("chat_id", "")))
-        if touched < float(latest.get("started") or 0) - 1 or not same_chat:
-            return False
-        run_id = str(latest["run_id"])
-    return journal.settle_human_wait(
-        run_id, f"closed by a human ruling: {reason.strip()[:300]}")
+    return rulings_mod.rule(cfg, _state(cfg), cycle_id, action, because)
 
 
 def cmd_skills(args: argparse.Namespace) -> int:
