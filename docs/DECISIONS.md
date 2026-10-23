@@ -8411,8 +8411,14 @@ RULINGS:
    stays ESCALATED for an explicit ruling. The row's `status_after` is derived from the
    action, since the row is written before the state changes. `resolve_escalation`
    remains for state-only callers (tests) and is no longer used for a human ruling by
-   shipped code. The ruling commit has its own 90 s timeout, inside the store lock's
-   120 s abandonment window.
+   shipped code. The ruling commit has its own 90 s bound (`rulings.COMMIT_TIMEOUT_S`,
+   each git step; `CROSSAUDIT_GIT_TIMEOUT` does not apply to it), inside the store
+   lock's 120 s abandonment window; a step that overruns is killed with its process
+   group (git and the hook it runs) and the `index.lock` the killed git held is removed,
+   with the narrow race that another git process could take that lock between the kill
+   and the removal. A Stop that cannot commit its close reports the refusal in the stop
+   result (`note`, `note_zh`) and on the TUI's stop line; a state-file read error during
+   Stop is now reported there too instead of being ignored.
 2. **Every configured key name leaves non-provider children.** `config.load` registers,
    as soon as the roles parse, the `key_env` of the auditor, the generator and every
    fallback row, and each named vendor's backup slot (`app_keys.register_key_names`);
