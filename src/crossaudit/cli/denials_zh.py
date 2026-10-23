@@ -581,7 +581,21 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "裁定必须说明理由；它会被记入账本"),
     ("cycle is {}, not ESCALATED; only an escalated cycle needs a human ruling",
      "周期状态是 {}，不是 ESCALATED；只有已升级的周期才需要人工裁决"),
+    ("the controller lock was taken over by another process while this one held it "
+     "(longer than the {}s stale limit); this process's state change was discarded",
+     "控制器锁在本进程持有期间被另一个进程接管（持有时间超过 {} 秒的失效上限）；"
+     "本进程的状态更改已被丢弃"),
     # ------------------------------------------------------------ rulings.py
+    ("the ruling on cycle {} could not be committed to the ledger ({}), and {} could "
+     "not be restored ({}); the cycle stays ESCALATED, but check {} against git "
+     "before ruling again",
+     "周期 {} 的裁决未能提交到账本（{}），且 {} 未能恢复（{}）；该周期仍为 ESCALATED，"
+     "但再次裁决前请对照 git 检查 {}"),
+    ("the ruling on cycle {} was committed to the ledger ({}), but the controller lock "
+     "was taken over before the cycle's state could change, so the cycle stays "
+     "ESCALATED; rule on it again",
+     "周期 {} 的裁决已提交到账本（{}），但在周期状态更改之前控制器锁被接管，"
+     "因此该周期仍为 ESCALATED；请重新裁决"),
     ("the ruling on cycle {} could not be committed to the ledger ({}); the cycle "
      "stays ESCALATED and nothing was recorded",
      "周期 {} 的裁决未能提交到账本（{}）；该周期仍为 ESCALATED，未记录任何内容"),
