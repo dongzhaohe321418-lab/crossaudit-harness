@@ -2463,12 +2463,11 @@ def main(argv: list[str] | None = None) -> int:
     # TUI_FIRST.md §5: the usage ledger records which front door a completion
     # came through. Declared here, for every verb, rather than guessed later;
     # `serve` (console/app) and the `tui` verb override it in their own
-    # process, and a parent running this as a child on behalf of another
-    # surface says so through CROSSAUDIT_USAGE_SURFACE.
+    # process. Deliberately not read from the environment: a caller's
+    # variable must not relabel a CLI invocation (review r2, P3).
     from .. import usage as _usage
 
-    inherited = os.environ.get(_usage.SURFACE_ENV, "").strip()
-    _usage.set_surface(inherited if inherited in _usage.SURFACES else "cli")
+    _usage.set_surface("cli")
     # Load the credentials file we wrote, if the variables are not already set.
     # Done here rather than at import time: importing this package must stay
     # free of side effects, and only a command actually needs a key.

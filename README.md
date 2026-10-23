@@ -601,9 +601,12 @@ recent calls. It records setup drafting, task generation, conversation control,
 and formal audits, so the total reflects the whole supervised workflow rather
 than only the final answer. Each row also records the surface that made the
 call: `cli` for `build`, `talk`, `audit` and `run`, `tui`, `console` for the
-browser console's own calls, or `app` for the desktop app. Rows written before
-this field existed count as `unknown`, and `crossaudit --json status` lists
-calls and API value per surface under `usage.by_surface` (D175).
+browser console's own calls, or `app` for the desktop app. The process's entry
+point declares the surface; the caller's environment cannot set it. Rows written
+before this field existed count as `unknown`, and `crossaudit --json status`
+lists calls and API value per surface under `usage.by_surface` (D175). The usage
+ledger is a local analytics file, not evidence: a person can edit
+`.crossaudit/usage.jsonl`, and `by_surface` is a reading of that file.
 
 The provider response is the primary source. OpenAI API and Anthropic API usage,
 and token-usage notifications emitted by the official Codex subscription
@@ -1215,7 +1218,6 @@ and [consumer terms](https://www.anthropic.com/legal/consumer-terms).
 | `CROSSAUDIT_WORKSPACE_ROOT` | Advanced override for the app project directory; primarily useful in controlled tests. |
 | `CROSSAUDIT_APP_SUPPORT` | Advanced override for the app support directory; primarily useful in controlled tests. |
 | `CROSSAUDIT_APP_MODE` | Internal flag marking a native-app controller process. Do not set it for CLI use. |
-| `CROSSAUDIT_USAGE_SURFACE` | Internal: a parent process sets it (`cli`, `tui`, `console` or `app`) so a `crossaudit` command it starts records the parent's surface in the usage ledger. Other values are ignored. You do not need to set it. |
 | `CROSSAUDIT_APP_URL` | Internal startup-message prefix used by the native shell. |
 | `CROSSAUDIT_BUNDLED_GH` | Internal path to the GitHub CLI bundled inside the app. |
 | `CROSSAUDIT_BUNDLED_CODEX` | Internal path to the pinned official OpenAI Codex runtime bundled inside the app. |

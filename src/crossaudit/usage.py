@@ -10,12 +10,12 @@ through, one of ``SURFACES`` (``cli``, ``tui``, ``console``, ``app``). It is
 declared once per process at the entry point with ``set_surface`` and never
 guessed from the call stack: ``crossaudit``'s ``main()`` declares ``cli`` for
 every verb, ``console.server.serve`` overrides it with ``console`` (or ``app``
-when ``CROSSAUDIT_APP_MODE=1``), and the ``tui`` verb declares ``tui``. A
-parent that runs ``crossaudit <verb>`` as a child process on behalf of another
-surface passes its surface down in the environment variable
-``CROSSAUDIT_USAGE_SURFACE``, which ``main()`` honours when it names a member
-of ``SURFACES`` (anything else is ignored and the child records ``cli``). A
-row written where no surface was declared has no ``surface`` key at all, and
+when ``CROSSAUDIT_APP_MODE=1``), and the ``tui`` verb declares ``tui``. No
+environment variable can set it: the caller's environment does not choose
+the label (the console and the TUI make their completions in their own
+process, so no child needs to inherit one). The ledger is local analytics,
+not evidence; anyone with the file can edit it, and ``by_surface`` is only a
+reading of what it holds. A row written where no surface was declared has no ``surface`` key at all, and
 ``summary()`` files it, like every row from an older ledger, under
 ``unknown``.
 """
@@ -226,9 +226,6 @@ ROLES = ("generator", "auditor", "router")
 #: The front doors a completion can come through (TUI_FIRST.md §5), in the
 #: order ``summary()['by_surface']`` lists them; ``unknown`` follows them.
 SURFACES = ("cli", "tui", "console", "app")
-#: Environment variable a parent sets so a child ``crossaudit`` process
-#: records the parent's surface instead of ``cli`` (read by ``cli.main``).
-SURFACE_ENV = "CROSSAUDIT_USAGE_SURFACE"
 _SURFACE: str | None = None
 
 

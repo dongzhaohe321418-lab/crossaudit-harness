@@ -15,7 +15,8 @@ D10 mutations (each turns the named tests red):
     test (its old rows are two months back);
   * delete `usage.set_surface(...)` in `serve` -> both console/app tests (the
     row says `cli`, which `main()` declared first);
-  * ignore `CROSSAUDIT_USAGE_SURFACE` in `main()` -> the environment test;
+  * read the surface from the environment in `main()` (the variable this
+    module once honoured, removed after review r2 P3) -> the environment test;
   * drop the `usage` key from `cmd_status`'s JSON -> the status test;
   * drop `surface` from `EXPORT_COLUMNS` -> the export test.
 """
@@ -164,22 +165,17 @@ def test_crossaudit_build_writes_rows_with_surface_cli(project, monkeypatch):
     assert all(row.get("surface") == "cli" for row in rows), rows
 
 
-def test_main_honours_crossaudit_usage_surface_from_a_parent(project, monkeypatch):
+def test_the_callers_environment_cannot_relabel_a_cli_build(project, monkeypatch):
+    """Review r2 P3: `CROSSAUDIT_USAGE_SURFACE=app crossaudit build` recorded
+    `app`. The entry point declares the surface; the environment does not."""
     from crossaudit.cli import main
 
-    monkeypatch.setenv(usage.SURFACE_ENV, "tui")
+    monkeypatch.setenv("CROSSAUDIT_USAGE_SURFACE", "app")
     FakeVendors().install(monkeypatch)
     assert main.main(["build", *TASK]) == EXIT_OK
     rows = _lines(project)
-    assert rows and all(row.get("surface") == "tui" for row in rows), rows
-
-
-def test_main_ignores_an_invalid_crossaudit_usage_surface(project, monkeypatch):
-    from crossaudit.cli import main
-
-    monkeypatch.setenv(usage.SURFACE_ENV, "watch")
-    assert main.main(["--json", "status"]) == EXIT_OK
-    assert usage.surface() == "cli"
+    assert rows and all(row.get("surface") == "cli" for row in rows), rows
+    assert not hasattr(usage, "SURFACE_ENV")
 
 
 def test_status_json_carries_usage_by_surface_and_the_human_view_does_not(
