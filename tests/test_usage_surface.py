@@ -16,7 +16,8 @@ D10 mutations (each turns the named tests red):
   * delete `usage.set_surface(...)` in `serve` -> both console/app tests (the
     row says `cli`, which `main()` declared first);
   * ignore `CROSSAUDIT_USAGE_SURFACE` in `main()` -> the environment test;
-  * drop the `usage` key from `cmd_status`'s JSON -> the status test.
+  * drop the `usage` key from `cmd_status`'s JSON -> the status test;
+  * drop `surface` from `EXPORT_COLUMNS` -> the export test.
 """
 from __future__ import annotations
 
@@ -274,3 +275,14 @@ def test_a_build_thread_of_the_console_process_records_console(cfg, served,
     worker.start()
     worker.join(5)
     assert out and out[0]["surface"] == "console"
+
+
+def test_the_export_carries_the_surface_column_so_the_measurement_leaves_with_the_rows(cfg):
+    """Dropping ``surface`` from ``EXPORT_COLUMNS`` would make every CSV/JSON
+    export of the ledger silent about which surface made a call."""
+    usage.set_surface("tui")
+    _write(cfg)
+    assert usage.EXPORT_COLUMNS[-1] == "surface"
+    rows = usage.export_rows(cfg)
+    assert rows and rows[0]["surface"] == "tui"
+    assert "surface" in usage.export_csv(rows).splitlines()[0].split(",")

@@ -678,7 +678,8 @@ TURN_WINDOW = 200
 EXPORT_COLUMNS = ("t", "iso", "role", "phase", "vendor", "provider", "model",
                   "input", "output", "cache_write", "cache_read", "total",
                   "method", "api_value_usd", "billing_kind", "price_snapshot",
-                  "run_id", "cycle_id", "round", "chat_id", "duration_ms")
+                  "run_id", "cycle_id", "round", "chat_id", "duration_ms",
+                  "surface")
 
 
 def read_events(path: Path) -> tuple[list[dict], int]:
