@@ -1208,7 +1208,7 @@ and [consumer terms](https://www.anthropic.com/legal/consumer-terms).
 | `CROSSAUDIT_SIGNING_KEYFILE` | Directory holding the project's Ed25519 receipt-signing keypair; defaults to `<state-dir>/signing`. Point it at a shared secure location to sign several projects with one key. |
 | `CROSSAUDIT_SHOW_KEYS` | Show key input during setup when explicitly set to `1`; hidden is the secure default. |
 | `CROSSAUDIT_CA_BUNDLE` | Trust a specific CA bundle without disabling TLS verification. |
-| `CROSSAUDIT_GIT_TIMEOUT` | Seconds a single git operation may run before it is abandoned (default `240`). Raise it only for unusually large repositories. |
+| `CROSSAUDIT_GIT_TIMEOUT` | Seconds a single git operation may run before it is abandoned (default `240`). Raise it only for unusually large repositories. A human ruling's ledger commit has its own 90 s bound instead (D176). |
 | `CROSSAUDIT_MAX_DOC_BYTES` | Byte ceiling for a single PDF/DOCX blob before it is refused as too large to audit rather than read into memory (default `67108864`, i.e. 64 MiB). Must match between the audit host and the verify host, exactly as the blob read caps must. |
 | `CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT` | Explicitly allow sending a configured key to a non-built-in endpoint. |
 | `CROSSAUDIT_MAX_ACTIVE_PROJECTS` | Maximum simultaneous project builds in one workspace (default `4`, range `1`–`32`). |
