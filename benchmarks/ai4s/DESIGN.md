@@ -614,3 +614,83 @@ refused); terra arm C from 9/1 to 10/1 with verified rows 97 → 96, one
 malformed input v2 refuses more strictly; every other cell unchanged. These
 figures are quoted here as the reason v2's skill carries the generated
 table, not as a result of this corpus.
+
+**Amendment 5 (2026-10-23) — six contract changes from the round-1
+cross-vendor review of the v2 pack.** OpenAI gpt-5.6-terra (Codex CLI,
+`codex exec`) reviewed `bench/ai4s-pack-v2` at d909a43 and returned DO NOT
+MERGE with five P1 findings and one P2; the review is recorded verbatim in
+`benchmarks/reviews/2026-10-23-ai4s-pack-v2-terra-r1.md`. Each finding was a
+declaration shape the pack read silently instead of refusing. All six are
+fixed in `src/crossaudit/dcl/ai4s.py`. Each fix makes the pack strictly more
+fail-closed: the shape is now a BLOCKER whose observation names the shape and
+the key. Each has a test in `tests/test_dcl_ai4s.py` that names its mutation
+and was checked red with the fix reverted. The shipped `science` profile is
+unchanged. The preregistered sections above are unchanged too; this amendment
+records how the contract now reads.
+
+1. *Empty selection (P1).* If the selected row set is empty after every
+   declared filter (the top-level `where`, and each two-sample argument's own
+   `where`), the row is CA-DERIV-001 before the method runs. This holds for
+   every method, `count` and `sum` included. A data file with a header and no
+   rows is refused the same way. Before this fix, `count` or `sum` over a
+   filter that matched nothing (a misspelt label) verified a reported 0. The
+   v2 test that encoded that pass for `count` now asserts the refusal.
+2. *`uncommitted` (P1).* `uncommitted` must be a boolean, and
+   `uncommitted: true` needs a non-empty string `file`. Anything else is
+   CA-DERIV-001. It used to be the CA-DERIV-002 advisory ("a file declared
+   uncommitted (None)"), and a non-boolean value was ignored. The other
+   spelling, `"file": "uncommitted"`, is still the advisory, as before.
+3. *Repeated JSON keys (P1).* The pack now reads results.json, the
+   ```crossaudit-ranges block and splits.json through an `object_pairs_hook`
+   that marks repeated keys. A file that repeats a key anywhere is not read.
+   The ranges block blocks under CA-PHYS-001 and splits.json under CA-ML-001.
+   A results.json blocks under each blocking check that reads it:
+   `numeric_validity` (CA-NUM-005) always, `range_rules` (CA-PHYS-001) when
+   ranges are declared, `derivations` (CA-DERIV-001) when it carries
+   `derivations`, and `claims` (CA-STAT-004) when it carries `claims`. Each
+   observation names the key and where it sits, e.g. `'value' in
+   quantities[0]`. The two advisory checks skip such a file. The shipped
+   profile's own readers of results.json are outside the pack and were not
+   changed: `schema`, `units`, `convergence` and `provenance` go through
+   `builtin._load_json`, `number_source` through its own `json.loads`, and
+   `parseable` through a third. All of them still keep the last of a
+   repeated key silently.
+4. *Range entry keys (P1).* An entry may carry only `name`, `unit`, `min` and
+   `max`. Any other key is CA-PHYS-001 naming it. Before, `maximum` was
+   ignored and the entry had no upper bound.
+5. *splits.json keys (P1).* A splits.json may carry only `data`, `id_column`,
+   `group_column`, `train`, `test`, `val` and `validation`. An unknown key is
+   CA-ML-001 naming it (`group_colum` used to switch the group test off), and
+   so is `val` beside `validation`, since it is ambiguous which list is the
+   validation split.
+6. *Paths stay inside (P2).* A derivation's `file`, committed or uncommitted,
+   and splits.json's `data` are normalised, and the result must lie inside
+   the directory holding the results.json or splits.json that declares them.
+   `../…`, an absolute path, or a sibling experiment's committed file (e.g.
+   `../e2/data.csv`, which v2 read when it was in scope) blocks, and the
+   observation names the path and what it resolves to. The skill template
+   already said paths are "never `../…`", so its text is unchanged; the code
+   now enforces it. §8.2a said only that these paths are "relative to the
+   experiment directory holding the results.json". They are now relative to
+   *and inside* that directory, and for splits.json the directory is the one
+   holding splits.json; in this corpus both are the same directory.
+
+*Re-run.* The corpus was regenerated with the README commands (seed
+20261021; the manifest sha256 `726da406…` is identical to the v2 run's) and
+re-run with `run_checks.py --profiles science,science-ai4s --repeat 2` at
+a6c64d5, then put through `score.py` and `report.py`. The run had 4,120 rows,
+zero errors, and its two passes were byte-identical. No number changed. Clean
+false blocks are 0/60 under both profiles (Wilson upper 6.0%), and the clean
+controls still carry zero findings. Class-averaged recall over 18 classes is
+0.259 shipped and 0.907 extended before and after (delta 0.648). On all
+4,120 instance×profile rows, the verdict, caught, any-block, attribution
+and findings are identical to `records/run-2026-10-22-v2/`; only `wall_ms`
+differs. The rendered report differs from the committed `RESULTS.md` only
+in wall time and the provenance lines (git sha, contracts sha256, rows
+sha256, timestamps). So `RESULTS.md` is not re-rendered, and this run's
+directory is not committed: the README's commands regenerate it in about 20
+seconds. The corpus contains none of the six shapes. Its 2,460 JSON files
+carry no repeated key, no path climbs out, and no splits.json has `val` or
+`validation` or an unknown key. The numbers therefore say only that no
+clean control and no planted instance changed outcome. They do not measure
+how well the pack catches the six shapes; the unit tests cover that.
