@@ -61,11 +61,17 @@ def test_capabilities_reads_an_existing_store_without_rewriting_it(tmp_path):
     store.open_or_advance("t/p", "a" * 40, None)
     before = path.read_bytes()
     stat = path.stat()
+    # Since the kernel-held lock (review 2026-10-23 round 4) the lock file is
+    # never deleted, so the mutation above leaves `state.json.lock` behind as
+    # an inert file. What this test guards is that capabilities() itself
+    # writes and creates nothing, so the listing is compared before and after.
+    listing = sorted(p.name for p in path.parent.iterdir())
+    assert listing == ["state.json", "state.json.lock"]
     caps = store.capabilities()
     assert caps["atomic"], caps["why_not"]
     assert path.read_bytes() == before
     assert path.stat().st_mtime_ns == stat.st_mtime_ns
-    assert sorted(p.name for p in path.parent.iterdir()) == ["state.json"]
+    assert sorted(p.name for p in path.parent.iterdir()) == listing
 
 
 def test_a_corrupt_store_still_reports_itself_unlockable(tmp_path):

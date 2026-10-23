@@ -12,9 +12,11 @@ Review 2026-10-23 round 2:
   another process could then break the lock, and the old holder wrote its
   stale snapshot over the newer state and unlinked the newer lock. There is
   now one deadline for the transaction, and the lock is ownership-aware.
-  (Since round 3 a stale lock is never broken automatically; the takeover
-  tests below remove the lock by hand -- as a person, or `doctor --fix` on a
-  pid it judged dead, would -- instead of relying on auto-breaking.)
+  (The takeover tests that lived here were replaced in round 4, when the
+  controller lock became kernel-held: a live holder's lock can no longer be
+  removed or taken, so "a holder that overran" cannot arise. Their
+  successors are in ``test_kernel_held_locks.py``; the budget-versus-stale
+  pin went with ``LOCK_STALE_S``.)
 
 Time is scaled: the budget and the stale threshold are monkeypatched to a few
 seconds, and hooks and filters sleep. Each test names the mutation it catches.
@@ -22,7 +24,6 @@ seconds, and hooks and filters sleep. Each test names the mutation it catches.
 from __future__ import annotations
 
 import json
-import threading
 import time
 from pathlib import Path
 
@@ -32,7 +33,6 @@ from crossaudit import rulings
 from crossaudit.cli import main
 from crossaudit.config import load
 from crossaudit.controller import StateStore
-from crossaudit.controller import state as state_mod
 from crossaudit.errors import IntegrityDenial
 from crossaudit.gitio import git
 
@@ -142,14 +142,6 @@ def test_a_restore_that_fails_says_so_and_claims_nothing(escalated, monkeypatch)
 
 
 # ---------------------------------------------------------------- finding 2
-def test_the_commit_budget_and_its_cleanup_stay_inside_the_lock(escalated):
-    """Mutation caught: raising COMMIT_TIMEOUT_S or CLEANUP_TIMEOUT_S (or
-    lowering LOCK_STALE_S) until a ruling could outlive the controller lock.
-    The 10 s margin covers the state reads and writes around the commit."""
-    worst = rulings.COMMIT_TIMEOUT_S + 2 * rulings.CLEANUP_TIMEOUT_S
-    assert worst + 10 < state_mod.LOCK_STALE_S
-
-
 def test_a_slow_filter_plus_a_slow_hook_share_one_deadline(escalated, monkeypatch):
     """`git add` delayed 1.5 s by a clean filter, `git commit` delayed 1.5 s
     by a hook, budget 2 s: each step fits on its own, the two together do
@@ -166,85 +158,17 @@ def test_a_slow_filter_plus_a_slow_hook_share_one_deadline(escalated, monkeypatc
     began = time.monotonic()
     reason = _refused(cid)
     assert time.monotonic() - began < 2.0 + 1.5
+    # The killed `git commit` held .git/index.lock; since round 4 it is never
+    # deleted (it names no owner), so the refusal says so and the recovery
+    # it describes is done here by hand.
     assert reason == (
         f"the ruling on cycle {cid} could not be committed to the ledger "
         f"(git commit timed out after 2s); the cycle stays ESCALATED and "
-        f"nothing was recorded")
+        f"nothing was recorded; .git/index.lock may have been left by the killed "
+        f"git — if no git process is running, remove it by hand and run "
+        f"`git reset -q -- {LOG}`")
+    assert (gitdir / "index.lock").exists()
+    (gitdir / "index.lock").unlink()
     git("config", "--unset", "filter.slow.clean", cwd=root)
+    git("reset", "-q", "--", LOG, cwd=root)
     assert_nothing_was_ruled(root, cid, None, head)
-
-
-def test_a_holder_that_overran_never_writes_over_the_lock_s_new_owner(
-        escalated, monkeypatch):
-    """While a ruling's hook sleeps, its lock is removed by hand and a second
-    holder records a new escalation and takes the lock. (This used to happen
-    by the second holder breaking the "stale" lock; round 3 removed
-    auto-breaking, so the removal is explicit here -- the only way left for
-    a lock to vanish under its holder.) The first holder's commit then lands,
-    and it must neither write its old snapshot (which would erase the new
-    escalation) nor unlink the second holder's lock.
-
-    Mutation caught: `_locked` writing back and unlinking without checking
-    its owner token -- the concurrent escalation is lost and the second
-    holder's lock vanishes under it."""
-    root, cid = escalated
-    monkeypatch.setattr(rulings, "COMMIT_TIMEOUT_S", 6.0)
-    store = _store(root)
-    other = store.open_or_advance("t/p", "a" * 40, None)["cycle_id"]
-    marker = root.parent / "hook-started"
-    install_hook(root, f"#!/bin/sh\ntouch '{marker}'\nsleep 2\nexit 0\n")
-    first_done = threading.Event()
-    seen: dict = {}
-
-    def second_holder():
-        rival = _store(root)
-        deadline = time.monotonic() + 20
-        while not marker.exists() and time.monotonic() < deadline:
-            time.sleep(0.02)
-        rival.lock_path.unlink()              # removed by hand mid-ruling
-        rival.escalate(other, "a concurrent escalation", kind="audit")
-        held = rival._locked()
-        held.__enter__()
-        seen["token"] = rival.lock_path.read_text()
-        first_done.wait(20)
-        seen["lock_while_held"] = (rival.lock_path.read_text()
-                                   if rival.lock_path.exists() else None)
-        held.__exit__(None, None, None)
-
-    thread = threading.Thread(target=second_holder)
-    thread.start()
-    try:
-        reason = _refused(cid)
-    finally:
-        first_done.set()
-        thread.join(30)
-    assert reason.startswith(f"the ruling on cycle {cid} was committed to the ledger (")
-    assert reason.endswith("taken over before the cycle's state could change, so "
-                           "the cycle stays ESCALATED; rule on it again")
-    assert seen["lock_while_held"] == seen["token"]     # not unlinked by the first
-    assert not store.lock_path.exists()                 # released by its owner
-    state = json.loads((root / ".crossaudit" / "state.json").read_text())
-    assert state["cycles"][other]["status"] == "ESCALATED"
-    assert state["cycles"][cid]["status"] == "ESCALATED"
-    assert not any(h.get("event") == "human_resolution" and h.get("cycle") == cid
-                   for h in state["history"])
-    # Honest about what did happen: the commit is in the ledger.
-    assert [r["cycle_id"] for r in rulings.history(load())] == [cid]
-
-
-def test_a_holder_whose_lock_was_taken_says_so_in_its_own_words(tmp_path):
-    """The store-level sentence, without git: a `_locked` body whose lock is
-    removed by hand and taken by another store meanwhile. Mutation caught:
-    the same as above, at the store, with no ruling in between."""
-    store = StateStore(tmp_path / "state.json")
-    cycle = store.open_or_advance("t/p", "b" * 40, None)
-    rival = StateStore(tmp_path / "state.json")
-    with pytest.raises(IntegrityDenial) as denied:
-        with store._locked() as state:
-            state["cycles"][cycle["cycle_id"]]["status"] = "BLOCKED"
-            store.lock_path.unlink()
-            rival.escalate(cycle["cycle_id"], "taken meanwhile")
-    assert denied.value.reason == (
-        "the controller lock was removed or replaced while this process held it; "
-        "this process's state change was discarded")
-    assert store.cycle(cycle["cycle_id"])["status"] == "ESCALATED"
