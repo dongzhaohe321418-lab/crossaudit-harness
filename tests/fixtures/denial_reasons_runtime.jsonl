@@ -417,3 +417,4 @@
 {"kind": "ConfigDenial", "reason": "refusing plaintext http:// to 'api.example.com'; only HTTPS is allowed, except to a loopback address set as `base_url:` with CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1"}
 {"kind": "ConfigDenial", "reason": "refusing plaintext http:// to '127.0.0.1'; this request accepts HTTPS only, even on loopback"}
 {"kind": "ConfigDenial", "reason": "pair needs your GitHub account name to choose the work repository's name; pass --science owner/name (and --audit owner/name) to see the plan without signing in, or run `gh auth login`"}
+{"kind": "ConfigDenial", "reason": "auditor.key_env must name a variable that holds only a key; 'PATH' is not one"}

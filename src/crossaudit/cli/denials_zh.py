@@ -302,6 +302,8 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("repair: unknown keys {}", "repair：未知的键 {}"),
     ("{}: unknown keys {}", "{}：未知的键 {}"),
     ("{}.{} is required", "必须设置 {}.{}"),
+    ("{}.key_env must name a variable that holds only a key; {} is not one",
+     "{}.key_env 必须指向一个只存放密钥的变量；{} 不是"),
     ("generator.reasoning_effort must be one of {}",
      "generator.reasoning_effort 必须是 {} 之一"),
     ("{}.reasoning_effort must be one of {}", "{}.reasoning_effort 必须是 {} 之一"),

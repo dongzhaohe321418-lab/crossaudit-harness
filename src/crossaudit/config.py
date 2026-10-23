@@ -7,6 +7,7 @@ never written into a receipt.
 from __future__ import annotations
 
 import posixpath
+import re
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
@@ -154,6 +155,17 @@ class Config:
         return self.path.parent
 
 
+#: Names a ``key_env`` may never be: variables every child process needs, or
+#: that never hold a key. ``child_env`` strips every configured key name, so
+#: accepting one of these would break Git, the shell or Python for that config.
+_KEY_ENV_RESERVED = frozenset({
+    "PATH", "HOME", "USER", "LOGNAME", "SHELL", "PWD", "TMPDIR", "TEMP", "TMP",
+    "LANG", "LC_ALL", "LC_CTYPE", "TERM", "PYTHONPATH", "PYTHONHOME",
+    "SSH_AUTH_SOCK", "GIT_DIR", "GIT_WORK_TREE", "SYSTEMROOT", "COMSPEC",
+    "WINDIR", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "PROGRAMDATA"})
+_KEY_ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
 def _role(raw: dict, name: str, where: Path, *, allow_fallbacks: bool = True) -> Role:
     unknown = set(raw) - _ALLOWED_ROLE
     if unknown:
@@ -161,6 +173,15 @@ def _role(raw: dict, name: str, where: Path, *, allow_fallbacks: bool = True) ->
     for req in ("provider", "model", "vendor", "key_env"):
         if not raw.get(req):
             raise ConfigDenial(f"{name}.{req} is required", file=str(where))
+    key_env = raw.get("key_env")
+    # Every name declared here is stripped from non-provider children
+    # (app_keys.child_env, D176), so a name that is not a key variable at all
+    # would take PATH or HOME away from Git. Refuse it here, legibly.
+    if (not isinstance(key_env, str) or not _KEY_ENV_NAME.match(key_env)
+            or key_env.upper() in _KEY_ENV_RESERVED):
+        raise ConfigDenial(
+            f"{name}.key_env must name a variable that holds only a key; "
+            f"{key_env!r} is not one", file=str(where))
     effort = raw.get("reasoning_effort")
     if effort is not None and effort not in _EFFORT_VALUES:
         raise ConfigDenial(
