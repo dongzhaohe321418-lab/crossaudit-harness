@@ -487,6 +487,29 @@ def test_rule_on_with_an_empty_reason_records_nothing(project):
     assert not (root / "cycles" / "rulings.jsonl").exists()
 
 
+def test_rule_on_with_a_rejected_commit_shows_the_refusal_and_rules_nothing(project):
+    """Review 2026-10-23, finding 2, through the TUI's own call. Mutation
+    caught: the state changed before the commit -- the cycle reads BLOCKED and
+    the history holds a `human_resolution` the ledger never got."""
+    from crossaudit.config import load
+    from .test_resolve_commits_the_ruling import REFUSING_HOOK, install_hook
+
+    root, _passed, escalated = project
+    install_hook(root, REFUSING_HOOK)
+    head = git("rev-parse", "HEAD", cwd=root)
+    lines = tuiapp.rule_on(load(), escalated, "close", REASON)
+    assert lines == [
+        f"Refused: the ruling on cycle {escalated} could not be committed to the "
+        f"ledger (pre-commit: refused by policy); the cycle stays ESCALATED and "
+        f"nothing was recorded"]
+    state = json.loads((root / ".crossaudit" / "state.json").read_text())
+    assert state["cycles"][escalated]["status"] == "ESCALATED"
+    assert not any(h.get("event") == "human_resolution" for h in state["history"])
+    assert not (root / "cycles" / "rulings.jsonl").exists()
+    assert git("status", "--porcelain", "--", "cycles", cwd=root) == ""
+    assert git("rev-parse", "HEAD", cwd=root) == head
+
+
 def test_rule_on_a_cycle_that_is_not_escalated_shows_the_refusal(project):
     from crossaudit.config import load
 

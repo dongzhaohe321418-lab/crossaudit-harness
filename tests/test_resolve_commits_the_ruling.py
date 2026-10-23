@@ -7,9 +7,14 @@ closed cycle listed as BLOCKED and the run still WAITING_FOR_HUMAN. The
 escalation here is produced by the real loop -- a real `build` whose
 (transport-faked) auditor blocks every round until the budget is spent.
 
-D10 mutations (checked by hand): drop the `rulings_mod.record(...)` call in
-`cmd_resolve` and four go red (ledger, status, append, real pty); drop the
-`_settle_human_wait(...)` call and the run case goes red.
+D10 mutations (checked by hand): drop the `record(...)` call in
+`rulings.rule` and four go red (ledger, status, append, real pty); drop the
+`settle_human_wait(...)` call there and the run case goes red. (Both lived in
+`cli/main.py` until the one ruling transaction, review 2026-10-23.)
+
+Failure atomicity (review 2026-10-23, finding 2): a ruling whose commit fails
+leaves the cycle ESCALATED, the log as it was, nothing staged and no
+`human_resolution` entry. Each test below names the mutation it catches.
 """
 from __future__ import annotations
 
@@ -27,7 +32,8 @@ from readme_project import (FakeVendors, audit_reply, increment_reply,  # noqa: 
                             init_project, with_keys)
 
 from crossaudit.cli import main  # noqa: E402
-from crossaudit.errors import EXIT_CONFIG, EXIT_ESCALATED, EXIT_OK  # noqa: E402
+from crossaudit.errors import (EXIT_CONFIG, EXIT_ESCALATED, EXIT_INTEGRITY,  # noqa: E402
+                               EXIT_OK)
 from crossaudit.gitio import git  # noqa: E402
 
 REASON = "The benchmark is out of scope for this study; closing after review."
@@ -180,3 +186,151 @@ def test_the_talk_lane_ruling_is_committed_too(escalated, capsys):
     assert talk.lane_resolve(load(), routing, assume_yes=True).startswith("reopened")
     assert git("log", "-1", "--format=%s", cwd=root).startswith(f"ruling {cid} reopen")
     assert words in git("log", "-1", "--format=%B", cwd=root)
+
+
+# ------------------------------------------------- failure atomicity (finding 2)
+REFUSING_HOOK = "#!/bin/sh\necho 'pre-commit: refused by policy' >&2\nexit 1\n"
+#: Refuses only its second invocation: the hook "breaks" once and is repaired.
+SECOND_ONLY_HOOK = (
+    "#!/bin/sh\n"
+    'n=$(cat "$0.count" 2>/dev/null || echo 0); n=$((n+1)); echo "$n" > "$0.count"\n'
+    'if [ "$n" -eq 2 ]; then echo "pre-commit: refused once" >&2; exit 1; fi\n'
+    "exit 0\n")
+
+
+def install_hook(root: Path, script: str) -> Path:
+    """A `pre-commit` hook for the project repository, kept outside the tree
+    (so it never shows in `git status`) and named through the repository's
+    own `core.hooksPath`, so a global hooks path cannot shadow it."""
+    hooks = root.parent / f"{root.name}-hooks"
+    hooks.mkdir(exist_ok=True)
+    hook = hooks / "pre-commit"
+    hook.write_text(script)
+    hook.chmod(0o755)
+    git("config", "core.hooksPath", str(hooks), cwd=root)
+    return hook
+
+
+def assert_nothing_was_ruled(root: Path, cid: str, log_before: bytes | None,
+                             head: str) -> None:
+    """The four things a failed ruling must leave as they were."""
+    state = json.loads((root / ".crossaudit" / "state.json").read_text())
+    assert state["cycles"][cid]["status"] == "ESCALATED"
+    assert not any(h.get("event") == "human_resolution" and h.get("cycle") == cid
+                   for h in state["history"])
+    log = root / "cycles" / "rulings.jsonl"
+    assert (log.read_bytes() if log.exists() else None) == log_before
+    assert git("status", "--porcelain", "--", "cycles/rulings.jsonl", cwd=root) == ""
+    assert git("diff", "--cached", "--name-only", cwd=root) == ""
+    assert git("rev-parse", "HEAD", cwd=root) == head
+
+
+def test_a_rejected_commit_leaves_the_cycle_escalated_and_nothing_recorded(
+        escalated, monkeypatch, capsys):
+    """Mutation caught: mutating the controller state before the commit (the
+    old order in `resolve_cycle`) -- the cycle reads BLOCKED here; and
+    dropping the restore/unstage in `rulings.record` -- the log keeps the
+    line and `git status` shows it staged."""
+    root, cid = escalated
+    _on_a_terminal(monkeypatch)
+    install_hook(root, REFUSING_HOOK)
+    head = git("rev-parse", "HEAD", cwd=root)
+    capsys.readouterr()
+    code = main.main(["resolve", cid, "--close", "--because", REASON])
+    err = capsys.readouterr().err
+    assert code == EXIT_INTEGRITY
+    assert (f"the ruling on cycle {cid} could not be committed to the ledger "
+            f"(pre-commit: refused by policy); the cycle stays ESCALATED and "
+            f"nothing was recorded") in err
+    assert_nothing_was_ruled(root, cid, None, head)
+
+
+def test_a_rejected_commit_restores_an_existing_log_byte_for_byte(
+        escalated, monkeypatch, capsys):
+    """Mutation caught: removing the log instead of truncating it back (or
+    not restoring it at all) when it already held a committed ruling."""
+    root, cid = escalated
+    _on_a_terminal(monkeypatch)
+    assert main.main(["resolve", cid, "--reopen", "--because", "try once more"]) == EXIT_OK
+    from crossaudit.config import load
+    from crossaudit.controller import StateStore
+    cfg = load()
+    StateStore(cfg.root / cfg.state_dir / "state.json").escalate(
+        cid, "build round budget spent (3)", kind="audit")
+    before = (root / "cycles" / "rulings.jsonl").read_bytes()
+    state = json.loads((root / ".crossaudit" / "state.json").read_text())
+    resolutions = sum(1 for h in state["history"] if h.get("event") == "human_resolution")
+    install_hook(root, REFUSING_HOOK)
+    head = git("rev-parse", "HEAD", cwd=root)
+    assert main.main(["resolve", cid, "--close", "--because", REASON]) == EXIT_INTEGRITY
+    state = json.loads((root / ".crossaudit" / "state.json").read_text())
+    assert state["cycles"][cid]["status"] == "ESCALATED"
+    assert sum(1 for h in state["history"]
+               if h.get("event") == "human_resolution") == resolutions
+    assert (root / "cycles" / "rulings.jsonl").read_bytes() == before
+    assert git("status", "--porcelain", "--", "cycles", cwd=root) == ""
+    assert git("rev-parse", "HEAD", cwd=root) == head
+
+
+def test_after_a_failed_commit_a_repaired_hook_records_exactly_one_row(
+        escalated, monkeypatch, capsys):
+    """reopen (commit 1, accepted), the cycle stops again, close (commit 2,
+    refused), close again (commit 3, accepted): two rows, one per landed
+    commit. Mutation caught: a failed append left in the file -- the log
+    would hold three rows, two of them closes."""
+    root, cid = escalated
+    _on_a_terminal(monkeypatch)
+    install_hook(root, SECOND_ONLY_HOOK)
+    assert main.main(["resolve", cid, "--reopen", "--because", "try once more"]) == EXIT_OK
+    from crossaudit.config import load
+    from crossaudit.controller import StateStore
+    cfg = load()
+    StateStore(cfg.root / cfg.state_dir / "state.json").escalate(
+        cid, "build round budget spent (3)", kind="audit")
+    log = root / "cycles" / "rulings.jsonl"
+    after_first = log.read_bytes()
+    head = git("rev-parse", "HEAD", cwd=root)
+    assert main.main(["resolve", cid, "--close", "--because", REASON]) == EXIT_INTEGRITY
+    assert log.read_bytes() == after_first
+    assert git("rev-parse", "HEAD", cwd=root) == head
+    assert main.main(["resolve", cid, "--close", "--because", REASON]) == EXIT_OK
+    rows = [json.loads(line) for line in log.read_text().split("\n") if line]
+    assert [(r["action"], r["status_after"]) for r in rows] == [
+        ("reopen", "OPEN"), ("close", "BLOCKED")]
+    assert git("rev-list", "--count", f"{head}..HEAD", cwd=root) == "1"
+    assert git("status", "--porcelain", "--", "cycles", cwd=root) == ""
+    state = json.loads((root / ".crossaudit" / "state.json").read_text())
+    assert state["cycles"][cid]["status"] == "BLOCKED"
+    assert [h["action"] for h in state["history"]
+            if h.get("event") == "human_resolution"] == ["reopen", "close"]
+
+
+def test_a_rejected_commit_through_resolve_cycle_raises_and_changes_nothing(
+        escalated):
+    """The TUI's path (`resolve_cycle`, which `tuiapp.rule_on` calls).
+    Mutation caught: `resolve_cycle` calling `StateStore.resolve_escalation`
+    and `rulings.record` in sequence instead of the one transaction."""
+    from crossaudit.config import load
+    from crossaudit.errors import IntegrityDenial
+
+    root, cid = escalated
+    install_hook(root, REFUSING_HOOK)
+    head = git("rev-parse", "HEAD", cwd=root)
+    with pytest.raises(IntegrityDenial) as denied:
+        main.resolve_cycle(load(), cid, "reopen", "try once more")
+    assert "could not be committed to the ledger" in denied.value.reason
+    assert "the cycle stays ESCALATED and nothing was recorded" in denied.value.reason
+    assert_nothing_was_ruled(root, cid, None, head)
+
+
+def test_a_silent_hook_still_yields_a_legible_reason(escalated):
+    """A hook that exits 1 and says nothing: git's stderr is empty, and the
+    sentence must still say why. Mutation caught: an empty `why` slot (`()`)."""
+    from crossaudit.config import load
+    from crossaudit.errors import IntegrityDenial
+
+    root, cid = escalated
+    install_hook(root, "#!/bin/sh\nexit 1\n")
+    with pytest.raises(IntegrityDenial) as denied:
+        main.resolve_cycle(load(), cid, "close", REASON)
+    assert "(git commit failed and said nothing)" in denied.value.reason
