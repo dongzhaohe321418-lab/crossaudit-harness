@@ -216,6 +216,20 @@ def _reset_progress_tracker():
 
     TRACKER.clear()
 
+
+@pytest.fixture(autouse=True)
+def _reset_usage_surface(monkeypatch):
+    """The usage surface (TUI_FIRST.md §5) is a process-global declaration made
+    at an entry point: any test that calls `main()` or `serve()` sets it. Start
+    every test undeclared, with no inherited CROSSAUDIT_USAGE_SURFACE, so one
+    module's entry point cannot label another module's ledger rows."""
+    from crossaudit import usage
+
+    monkeypatch.delenv(usage.SURFACE_ENV, raising=False)
+    monkeypatch.setattr(usage, "_SURFACE", None)
+    yield
+
+
 GOOD_RESULTS = {
     "quantities": [
         {"name": "binding_energy", "value": -3.65, "unit": "kcal/mol",

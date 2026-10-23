@@ -1542,7 +1542,14 @@ def cmd_status(args: argparse.Namespace) -> int:
         human.append(f"run: {run['state']}"
                      + (f" ({run['note']})" if run["note"] else "")
                      + f" — {run['task']!r}")
-    _emit({"cycles": rows, "run": run}, args.json, "\n".join(human))
+    payload = {"cycles": rows, "run": run}
+    if args.json:
+        # Machine surface only (TUI_FIRST.md §5): calls and API value per
+        # surface over the whole ledger. The human table stays as it was.
+        from .. import usage as usage_mod
+
+        payload["usage"] = {"by_surface": usage_mod.summary(cfg)["by_surface"]}
+    _emit(payload, args.json, "\n".join(human))
     return EXIT_OK
 
 
@@ -2441,6 +2448,15 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    # TUI_FIRST.md §5: the usage ledger records which front door a completion
+    # came through. Declared here, for every verb, rather than guessed later;
+    # `serve` (console/app) and the `tui` verb override it in their own
+    # process, and a parent running this as a child on behalf of another
+    # surface says so through CROSSAUDIT_USAGE_SURFACE.
+    from .. import usage as _usage
+
+    inherited = os.environ.get(_usage.SURFACE_ENV, "").strip()
+    _usage.set_surface(inherited if inherited in _usage.SURFACES else "cli")
     # Load the credentials file we wrote, if the variables are not already set.
     # Done here rather than at import time: importing this package must stay
     # free of side effects, and only a command actually needs a key.

@@ -4,6 +4,20 @@ The ledger contains counts and routing metadata only.  Prompts, completions,
 provider request ids, and credentials deliberately never enter it.  Token
 counts are provider-reported when available and explicitly marked as estimates
 when an OpenAI-compatible endpoint omits usage.
+
+Surface. Each row may carry ``surface``: which front door the completion came
+through, one of ``SURFACES`` (``cli``, ``tui``, ``console``, ``app``). It is
+declared once per process at the entry point with ``set_surface`` and never
+guessed from the call stack: ``crossaudit``'s ``main()`` declares ``cli`` for
+every verb, ``console.server.serve`` overrides it with ``console`` (or ``app``
+when ``CROSSAUDIT_APP_MODE=1``), and the ``tui`` verb declares ``tui``. A
+parent that runs ``crossaudit <verb>`` as a child process on behalf of another
+surface passes its surface down in the environment variable
+``CROSSAUDIT_USAGE_SURFACE``, which ``main()`` honours when it names a member
+of ``SURFACES`` (anything else is ignored and the child records ``cli``). A
+row written where no surface was declared has no ``surface`` key at all, and
+``summary()`` files it, like every row from an older ledger, under
+``unknown``.
 """
 from __future__ import annotations
 
@@ -209,18 +223,55 @@ def _is_official(provider: str, base_url: str | None) -> bool:
 CONTEXT_ID_FIELDS = ("run_id", "cycle_id", "chat_id")
 ROLES = ("generator", "auditor", "router")
 
+#: The front doors a completion can come through (TUI_FIRST.md §5), in the
+#: order ``summary()['by_surface']`` lists them; ``unknown`` follows them.
+SURFACES = ("cli", "tui", "console", "app")
+#: Environment variable a parent sets so a child ``crossaudit`` process
+#: records the parent's surface instead of ``cli`` (read by ``cli.main``).
+SURFACE_ENV = "CROSSAUDIT_USAGE_SURFACE"
+_SURFACE: str | None = None
+
+
+def _valid_surface(name: Any) -> str:
+    if not isinstance(name, str) or name not in SURFACES:
+        raise ValueError(
+            f"unknown usage surface {name!r}; expected one of {', '.join(SURFACES)}")
+    return name
+
+
+def set_surface(name: str) -> str:
+    """Declare, for this process, which surface its completions come through.
+
+    Called at an entry point, never inferred. Raises ``ValueError`` for a name
+    outside ``SURFACES``; returns the name that is now in force.
+    """
+    global _SURFACE
+    _SURFACE = _valid_surface(name)
+    return _SURFACE
+
+
+def surface() -> str | None:
+    """The surface declared for this process, or None when none was."""
+    return _SURFACE
+
 
 def record_reply(*, root: Path, state_dir: str, role: str, phase: str,
                  vendor: str, provider: str, model: str, reply: Reply,
                  system: str, prompt: str, base_url: str | None = None,
-                 context: dict | None = None) -> dict:
+                 context: dict | None = None,
+                 surface: str | None = None) -> dict:
     """Append a completion's metadata, returning the exact persisted event.
 
     ``context`` is optional attribution: ``run_id``, ``cycle_id``, ``round``,
     ``chat_id``, ``duration_ms`` and the project's ``prices`` overrides. Fields
     that are absent or empty are not written, so a line recorded without them
     is byte-for-byte what the ledger always held (``v`` stays 1).
+
+    ``surface`` overrides the process's declared surface (``set_surface``) for
+    this one row; a name outside ``SURFACES`` raises ``ValueError``. With
+    neither, the row carries no ``surface`` key rather than a guess.
     """
+    row_surface = _valid_surface(surface) if surface is not None else _SURFACE
     counts = normalise_usage(reply.raw, system=system, prompt=prompt,
                              response=reply.text)
     ctx = dict(context) if isinstance(context, dict) else {}
@@ -259,6 +310,8 @@ def record_reply(*, root: Path, state_dir: str, role: str, phase: str,
         event["round"] = round_no
     if ctx.get("duration_ms") is not None:
         event["duration_ms"] = _nonnegative(ctx.get("duration_ms"))
+    if row_surface:
+        event["surface"] = row_surface
     path = root / state_dir / LEDGER_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(event, sort_keys=True, separators=(",", ":")) + "\n"
@@ -528,9 +581,16 @@ def summary(cfg, *, now: datetime | None = None) -> dict:
     days = {today - timedelta(days=i): _blank() for i in range(6, -1, -1)}
     roles: dict[str, dict] = defaultdict(_blank)
     models: dict[tuple[str, str, str], dict] = defaultdict(_blank)
+    # Over the whole ledger, not the month: the measurement TUI_FIRST.md §5
+    # describes spans 90 days. Rows without the field (older ledgers, or a path
+    # that declared no surface) are counted, honestly, as "unknown".
+    surfaces: dict[str, dict] = defaultdict(_blank)
     recent: list[dict] = []
     for event in events:
         _add(all_total, event)
+        named = event.get("surface")
+        named = named.strip()[:40] if isinstance(named, str) else ""
+        _add(surfaces[named or "unknown"], event)
         try:
             when = datetime.fromtimestamp(int(event.get("t", 0)) / 1000,
                                          tz=now.tzinfo)
@@ -576,6 +636,12 @@ def summary(cfg, *, now: datetime | None = None) -> dict:
         "roles": [{"role": role, **_finish(value)}
                   for role, value in sorted(roles.items())],
         "models": model_rows,
+        # Every known surface and "unknown" always present (zero when unused,
+        # so "console 0" is a reading, not a missing key), in SURFACES order;
+        # a name this version does not know (a newer writer) follows, sorted.
+        "by_surface": {name: _finish(surfaces[name]) for name in (
+            *SURFACES, "unknown",
+            *sorted(set(surfaces) - {*SURFACES, "unknown"}))},
         "recent": sorted(recent, key=lambda row: row["t"], reverse=True)[:30],
         "price_snapshot": PRICE_SNAPSHOT,
         "malformed_lines": malformed,
