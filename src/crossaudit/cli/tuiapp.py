@@ -483,7 +483,12 @@ def stop_run(cfg: Config, run_id: str = "") -> str:
         if getattr(exc, "detail", {}).get("issue") == "run_not_active":
             return t("tui.stop.none")
         return t("tui.refused", reason=i18n.denial_text(exc.reason))
-    return t("tui.stop.requested", run=str(selected.get("run_id", ""))[:12])
+    said = t("tui.stop.requested", run=str(selected.get("run_id", ""))[:12])
+    # Stop always stops; an escalation whose close could not be committed
+    # stays ESCALATED, and the person is told it still needs a ruling.
+    for reason in selected.get("ruling_refused", ()):
+        said += " " + t("tui.stop.ruling_refused", reason=i18n.denial_text(reason))
+    return said
 
 
 def rule_on(cfg: Config, cycle_id: str, action: str, reason: str) -> list[str]:
