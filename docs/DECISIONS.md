@@ -8305,3 +8305,68 @@ RULINGS:
 (ruling 1). The evidence view the Auditor sees still projects only its existing fields, so
 the Auditor sees MCP calls as `mcp_call` rows with hashes and status, without server or
 tool names.
+
+## D175 — The terminal is the product: `crossaudit tui` is the interactive surface, the console is an optional viewer, the native macOS app leaves the main line, and the usage ledger records which surface each call came from
+
+**Date:** 2026-10-23. **Branch:** `feat/tui-first` (documentation on `feat/tui-docs`).
+
+**Why.** The owner decided on 2026-10-23 to make the terminal the product; the
+specification is `docs/design/TUI_FIRST.md`. Its §1 sets out the evidence. What
+CrossAudit proves lives in the audit core (deterministic checks, the git ledger,
+receipts, `verify`), and every README sentence the claims harness can test
+(`benchmarks/claims/`) is kept by the command line, not by the app. The native app
+is the one surface no harness reaches. It also has the largest security boundary (a
+bearer token that authorises local code execution, a WebKit shell, Keychain, an
+ad-hoc-signed DMG) and the most maintenance (a 10,000-line page string, Swift,
+PyInstaller, notarisation that never happened), and it has no measured users. The
+users the evidence points at, scientists whose pipelines run on Linux machines and
+clusters and people who already work in Claude Code or Codex, are in a terminal,
+and a terminal surface can be driven by the same harness under a pseudo-terminal.
+
+RULINGS:
+
+1. **The CLI and `crossaudit tui` are the product.** `tui` is the loop, live, in
+   the terminal, and the place where a person acts on it: cycles and findings with
+   their tier, the decision card, verify and admit, and a new task. It acts only
+   through the engine verbs that already exist: `build`'s `run_loop`, the D172
+   ruling path (`cycles/rulings.jsonl`, committed), and `verify`. It is never a
+   second implementation of any of them, never reads a provider key itself, and
+   never writes `state.json` directly. `crossaudit watch` stays read-only.
+2. **The browser console stays, as the optional local viewer.** It is started by
+   `crossaudit console` and keeps the token boundary D170 described. No native
+   shell is placed around it on the main line.
+3. **The native macOS app and its DMG leave the main line.** The code is kept
+   under `packaging/` and nothing in it is deleted. It is not built, not released,
+   and not in the README's front door; the README describes it in one section
+   near the end, "The native macOS app (not on the main line)", and the last DMG
+   remains on the v4.17.0 GitHub release. `docs/RELEASE_CHECKLIST.md` moves the
+   DMG steps to an optional appendix, and `scripts/release_gate.sh` runs the Swift
+   type-check only when `swiftc` is on `PATH`; without it, the gate prints one line
+   saying so and continues. SECURITY.md's "Desktop trust boundary" says the app is
+   not on the main line; the console paragraph D170 wrote is unchanged. Bare
+   `crossaudit` inside a project now suggests `crossaudit tui` first.
+4. **The usage ledger records the surface, and that is the measurement the
+   decision is revisited on.** Each `.crossaudit/usage.jsonl` row gains the
+   additive field `surface` (`cli`, `tui`, `console` or `app`), set at the entry
+   point, not guessed from the call stack; older rows read as `unknown`.
+   `usage.summary` gains `by_surface`, shown by `crossaudit --json status`. The
+   decision about the app is revisited on 90 days of that number.
+5. **The claims harness rows C37–C41 are the definition of done.** They are named
+   in `TUI_FIRST.md` §6 and the harness lives on branch `bench/claims-loop`: one
+   frame from `tui --once` naming a PASSED and an ESCALATED cycle without a
+   provider request or a browser; the pseudo-terminal walk with the terminal
+   restored; a ruling recorded from the decision card; the README's 60-second tour
+   run literally from a fresh venv ending in `BINDINGS VERIFIED`; and `surface`
+   rows from `build` and from the TUI with `by_surface` in `--json status`. Until
+   those rows pass, the README's `tui` and `surface` sentences are documented
+   behaviour, not checked behaviour, and the README says so.
+6. **Nothing in the audit core, the receipt or the ledger format changes.** The
+   `surface` field is additive to the usage ledger, which is not the evidence
+   ledger and is not bound by any receipt. Old receipts and ledgers verify as
+   before.
+
+**Open.** The number of measured users that brings the app back is not set.
+Keychain storage remains the app's path only; the CLI and the console read keys
+from the environment or the mode-600 keys file. (Remote MCP bearer tokens are still
+stored as macOS Keychain items by `mcp.py` on every surface; that is unchanged
+here.) The TUI has not yet had a cross-vendor review (AGENTS §0).

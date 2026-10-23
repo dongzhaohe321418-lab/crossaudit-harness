@@ -5,6 +5,35 @@ All notable changes to CrossAudit are recorded here. Versions follow the
 
 ## Unreleased
 
+### Added
+- **`crossaudit tui`: the loop, live, in the terminal, and the place to act on it.**
+  It shows the project's cycles with their status, findings and the tier of each
+  finding, a decision card when a cycle waits for you (**Revise and continue** or
+  **Stop this task**, each with a written reason recorded as the same committed
+  ruling `crossaudit resolve` records), and keys to start a task, verify or admit a
+  receipt, stop a run, or open the console. It acts only through the existing engine
+  verbs (`build`'s loop, the ruling path, `verify`). Without a terminal,
+  `crossaudit tui --once` prints one frame and exits 0. `crossaudit watch` stays the
+  read-only view (D175).
+- **The usage ledger records which surface each call came from.** Each
+  `.crossaudit/usage.jsonl` row carries `surface` (`cli`, `tui`, `console` or `app`;
+  older rows read as `unknown`), and `crossaudit --json status` shows a `by_surface`
+  breakdown of calls and API value (D175).
+
+### Changed
+- **The README's front door is the terminal.** The 60-second tour is `pip install`,
+  `crossaudit init`, `crossaudit build`, `crossaudit tui`, `crossaudit verify`, and
+  the install section installs the Python package from this repository. Bare
+  `crossaudit` inside a project suggests `crossaudit tui` first, and no longer says
+  that nothing is configured (D175).
+- **The native macOS app and its DMG are off the main line.** The code is kept in
+  `packaging/macos/`; it is not built or released from `main`. The README describes
+  it in one section near the end, the last DMG stays on the v4.17.0 release, and the
+  DMG steps are an optional appendix of `docs/RELEASE_CHECKLIST.md` (D175).
+- **The release gate skips the Swift type-check when `swiftc` is absent.**
+  `scripts/release_gate.sh` prints one line saying so and continues; it still checks
+  the packaging scripts with `bash -n` (D175).
+
 ### Fixed
 - **MCP tool calls made during a build are now in the evidence ledger.** Each call
   the Generator makes to a registered MCP tool, from `crossaudit build` or a console
