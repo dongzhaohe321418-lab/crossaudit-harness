@@ -418,6 +418,8 @@
 {"kind": "ConfigDenial", "reason": "refusing plaintext http:// to '127.0.0.1'; this request accepts HTTPS only, even on loopback"}
 {"kind": "ConfigDenial", "reason": "pair needs your GitHub account name to choose the work repository's name; pass --science owner/name (and --audit owner/name) to see the plan without signing in, or run `gh auth login`"}
 {"kind": "ConfigDenial", "reason": "auditor.key_env must name a variable that holds only a key; 'PATH' is not one"}
+{"kind": "ConfigDenial", "reason": "generator.key_env must name a variable that holds only a key; 'PATH' is not one"}
+{"kind": "ConfigDenial", "reason": "generator.key_env must name a variable that holds only a key; 7 is not one"}
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 15183f6f385b9273 could not be committed to the ledger (pre-commit: refused by policy); the cycle stays ESCALATED and nothing was recorded"}
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 73766c874ca63d81 could not be committed to the ledger (git commit failed and said nothing); the cycle stays ESCALATED and nothing was recorded"}
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 2c9e0b7d41f6a853 could not be committed to the ledger (git commit timed out after 2s); the cycle stays ESCALATED and nothing was recorded"}
