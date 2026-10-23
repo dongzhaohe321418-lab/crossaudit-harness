@@ -51,7 +51,6 @@ LEDGER_SCHEMA = 1
 KINDS = ("tool_call", "decision", "tool_result", "approval", "note")
 
 _LOCK_TIMEOUT_S = 10.0
-_LOCK_STALE_S = 30.0
 
 #: Line separators ``str.splitlines`` honours that ``json.dumps(...,
 #: ensure_ascii=False)`` leaves raw (every other one is below U+0020 and is
@@ -356,67 +355,35 @@ def _utc_now() -> str:
 
 
 class _FileLock:
-    """Exclusive O_EXCL advisory lock, the same policy as the controller's.
+    """The ledger's exclusive lock: the same kernel-held lock as the
+    controller's (``crossaudit.locks``; review 2026-10-23 round 4, finding 1).
 
-    The lock file carries an owner token (pid, time, nonce; ``locks``), and
-    release removes it only while it is still this holder's. A lock older
-    than ``_LOCK_STALE_S`` is never broken automatically (review 2026-10-23
-    round 3, finding 2, applied to this lock too): "observe stale, then
-    unlink" could delete a fresh writer's lock. It is refused with a
-    ``LedgerError`` naming the pid, and ``crossaudit doctor --fix`` removes it
-    only when that pid is not alive.
+    Holding it is holding a ``flock`` on the open ``<ledger>.lock`` file;
+    release is unlock + close, and a writer that dies releases it with its
+    process. The file is never deleted. A live holder is waited on for
+    ``_LOCK_TIMEOUT_S``, then refused naming its pid.
     """
 
     def __init__(self, lock_path: Path) -> None:
         self.lock_path = lock_path
-        self.token = ""
+        self.held: locks.HeldLock | None = None
 
     def __enter__(self) -> "_FileLock":
-        self.lock_path.parent.mkdir(parents=True, exist_ok=True)
-        deadline = time.monotonic() + _LOCK_TIMEOUT_S
-        token = locks.new_token()
-        while True:
-            try:
-                fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                try:
-                    os.write(fd, token.encode())
-                finally:
-                    os.close(fd)
-                self.token = token
-                return self
-            except FileExistsError:
-                holder = locks.holder(self.lock_path)
-                if holder is None:
-                    continue                    # released meanwhile; retry
-                if holder["age"] > _LOCK_STALE_S:
-                    pid = holder["pid"] if holder["pid"] is not None else "?"
-                    raise LedgerError(
-                        f"the evidence ledger lock {self.lock_path} has been held by "
-                        f"pid {pid} for {holder['age']:.0f}s, longer than the "
-                        f"{_LOCK_STALE_S:g}s stale limit, and is not broken "
-                        f"automatically; if no crossaudit process is running for "
-                        f"this project, `crossaudit doctor --fix` removes it",
-                        issue="stale_lock", lock=str(self.lock_path))
-                if time.monotonic() > deadline:
-                    raise ConfigDenial(
-                        "the evidence ledger is locked by another writer")
-                time.sleep(0.02)
+        def busy(pid: int | None) -> ConfigDenial:
+            return ConfigDenial(
+                f"the evidence ledger is locked by another writer (pid "
+                f"{pid if pid is not None else '?'})")
+        self.held = locks.acquire(self.lock_path, _LOCK_TIMEOUT_S, busy)
+        return self
 
     def __exit__(self, *exc: Any) -> None:
-        if locks.owns(self.lock_path, self.token):
-            self.lock_path.unlink(missing_ok=True)
+        if self.held is not None:
+            self.held.release()
+            self.held = None
 
 
 def lock_status(ledger_path: Path) -> dict | None:
-    """The ledger's lock as `doctor` reports it (``locks.status``)."""
+    """Who holds the ledger's lock right now, for `doctor` (``locks.status``):
+    None when free."""
     ledger_path = Path(ledger_path)
-    return locks.status(ledger_path.with_suffix(ledger_path.suffix + ".lock"),
-                        _LOCK_STALE_S)
-
-
-def remove_stale_lock(ledger_path: Path) -> str:
-    """``doctor --fix`` for the ledger's lock: removed only when stale and its
-    pid is not alive (``locks.remove_stale``)."""
-    ledger_path = Path(ledger_path)
-    return locks.remove_stale(ledger_path.with_suffix(ledger_path.suffix + ".lock"),
-                              _LOCK_STALE_S)
+    return locks.status(ledger_path.with_suffix(ledger_path.suffix + ".lock"))

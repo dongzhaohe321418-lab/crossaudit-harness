@@ -27,10 +27,9 @@ ESCALATED with nothing recorded, and a close settles the waiting run the same
 way whichever surface it came from.
 
 The commit runs while the controller lock is held, so it is bounded by
-:data:`COMMIT_TIMEOUT_S`, well inside the lock's stale threshold
-(``controller.state.LOCK_STALE_S``): a hook slower than that is a broken hook,
-and the ruling fails rather than outliving the lock (a lock past the threshold
-is refused to everyone else, never broken; see ``controller.state``).
+:data:`COMMIT_TIMEOUT_S`: a hook slower than that is a broken hook, and the
+ruling fails rather than keeping every other process waiting on the lock
+(whose acquirers give up after ``controller.state.LOCK_TIMEOUT_S``).
 
 The log must be a regular file inside the repository (review round 3,
 finding 1): ``open()`` follows a symlink while ``git add`` commits the link
@@ -60,13 +59,14 @@ RULINGS_LOG = "rulings.jsonl"
 #: for the author, ``git add``, ``git commit``, ``rev-parse``); each step gets
 #: what remains, and a step with nothing left fails at once as timed out. The
 #: cleanup after a failure (unstaging, dropping a killed git's index locks)
-#: gets :data:`CLEANUP_TIMEOUT_S` per step on top. Together they must stay
-#: below ``controller.state.LOCK_STALE_S`` (120 s), so a live ruling never
-#: holds a lock that other processes see as stale (since round 3 they refuse
-#: such a lock rather than break it; review 2026-10-23 round 2, finding 2: the bound
-#: used to apply to each step separately, so a slow clean filter plus a slow
-#: hook held the lock past it). Not ``CROSSAUDIT_GIT_TIMEOUT``, which may
-#: legitimately be raised for large trees.
+#: gets :data:`CLEANUP_TIMEOUT_S` per step on top, so a ruling holds the
+#: controller lock for a bounded time (review 2026-10-23 round 2, finding 2:
+#: the bound used to apply to each step separately, so a slow clean filter
+#: plus a slow hook held the lock far longer). Since round 4 the lock is
+#: kernel-held and cannot be taken from a live holder at all; the bound is
+#: what keeps other processes from waiting on a broken hook indefinitely
+#: (they give up after ``controller.state.LOCK_TIMEOUT_S``). Not
+#: ``CROSSAUDIT_GIT_TIMEOUT``, which may legitimately be raised for large trees.
 COMMIT_TIMEOUT_S = 90.0
 
 #: Per-step bound on the cleanup after a failed commit (two steps at most).
@@ -136,8 +136,9 @@ def _bounded_bytes(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, by
                 proc.wait(timeout=CLEANUP_TIMEOUT_S)
             except subprocess.TimeoutExpired:
                 pass
-            _drop_index_locks(cfg, proc.pid)
-            raise _StepFailed(f"git {args[0]} timed out after {COMMIT_TIMEOUT_S:g}s") from exc
+            left = _drop_index_locks(cfg, proc.pid)
+            raise _StepFailed(f"git {args[0]} timed out after {COMMIT_TIMEOUT_S:g}s",
+                              index_lock_left=left) from exc
         out_f.seek(0)
         err_f.seek(0)
         return (proc.returncode, out_f.read(),
@@ -162,12 +163,16 @@ def _cleanup_git(cfg, *args: str) -> str:
         return ""
 
 
-def _drop_index_locks(cfg, pid: int) -> None:
-    """Remove the locks a git process we just killed was holding.
+def _drop_index_locks(cfg, pid: int) -> bool:
+    """After killing our git: remove only the lock named by its pid.
 
-    ``index.lock`` is held by ``git add``/``git commit`` for their whole run
-    (hooks included), so right after killing ours it is ours; a ``git commit
-    -- <path>`` also holds ``next-index-<pid>.lock``, named by its pid.
+    ``next-index-<pid>.lock`` (held by ``git commit -- <path>``) carries the
+    killed process's pid in its name, so it is demonstrably ours. ``index.lock``
+    carries no owner identity: another git writer may have taken it between
+    the kill and this cleanup, and deleting it would defeat git's own
+    serialization (review 2026-10-23 round 4, finding 2). It is never
+    removed; returns True when it exists afterwards, so the refusal can say
+    it may have been left by the killed git.
     """
     try:
         found = subprocess.run(
@@ -175,21 +180,23 @@ def _drop_index_locks(cfg, pid: int) -> None:
             capture_output=True, text=True, encoding="utf-8", errors="replace",
             env=child_env(), timeout=CLEANUP_TIMEOUT_S)
     except (OSError, subprocess.TimeoutExpired):
-        return
+        return False
     if found.returncode != 0 or not found.stdout.strip():
-        return
+        return False
     gitdir = Path(found.stdout.strip())
-    for name in ("index.lock", f"next-index-{pid}.lock"):
-        try:
-            (gitdir / name).unlink(missing_ok=True)
-        except OSError:
-            pass
+    try:
+        (gitdir / f"next-index-{pid}.lock").unlink(missing_ok=True)
+    except OSError:
+        pass
+    return (gitdir / "index.lock").exists()
 
 
 class _StepFailed(Exception):
-    def __init__(self, why: str) -> None:
+    def __init__(self, why: str, *, index_lock_left: bool = False) -> None:
         super().__init__(why)
         self.why = why
+        #: A timed-out git was killed and ``.git/index.lock`` exists after it.
+        self.index_lock_left = index_lock_left
 
 
 def _restore(path: Path, prior: bytes | None) -> None:
@@ -414,6 +421,14 @@ def record(cfg, cycle: dict, action: str, reason: str, *,
                 f"({lost.strerror or lost}); the cycle stays ESCALATED, but check "
                 f"{rel} against git before ruling again", cycle_id=cid) from exc
         _cleanup_git(cfg, "reset", "-q", "--", rel)
+        if exc.index_lock_left:
+            raise IntegrityDenial(
+                f"the ruling on cycle {cid} could not be committed to the "
+                f"ledger ({exc.why}); the cycle stays ESCALATED and nothing was "
+                f"recorded; .git/index.lock may have been left by the killed git — if "
+                f"no git process is running, remove it by hand and run "
+                f"`git reset -q -- {rel}`",
+                cycle_id=cid) from exc
         raise IntegrityDenial(
             f"the ruling on cycle {cid} could not be committed to the "
             f"ledger ({exc.why}); the cycle stays ESCALATED and nothing was recorded",
@@ -440,29 +455,14 @@ def rule(cfg, store, cycle_id: str, action: str, reason: str) -> dict:
     and the cycle record after the ruling.
     """
     before: dict = {}
-    landed: dict = {}
 
     def commit(snapshot: dict) -> dict:
         # The budget starts here, with the controller lock held.
         before.update(snapshot)
-        row = record(cfg, snapshot, action, reason,
-                     deadline=time.monotonic() + COMMIT_TIMEOUT_S)
-        landed.update(row)
-        return row
+        return record(cfg, snapshot, action, reason,
+                      deadline=time.monotonic() + COMMIT_TIMEOUT_S)
 
-    try:
-        row, cycle = store.rule_escalation(cycle_id, action, reason, commit)
-    except Denial as exc:
-        if exc.detail.get("issue") != "lock_taken_over" or not landed:
-            raise
-        # The commit landed, but the lock was broken and taken while it ran,
-        # so the state change was discarded (never written over newer state).
-        raise IntegrityDenial(
-            f"the ruling on cycle {cycle_id} was committed to the ledger "
-            f"({str(landed.get('commit', ''))[:12]}), but the controller lock was "
-            f"taken over before the cycle's state could change, so the cycle stays "
-            f"ESCALATED; rule on it again", cycle_id=cycle_id,
-            issue="lock_taken_over") from exc
+    row, cycle = store.rule_escalation(cycle_id, action, reason, commit)
     if action == "close":
         # The close ruling settles the parked run this escalation references:
         # a stopped task must not keep signalling "needs your decision".

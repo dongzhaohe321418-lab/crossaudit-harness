@@ -552,8 +552,8 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     # ------------------------------------------------- controller/state.py
     ("state file is corrupt: {}", "状态文件已损坏：{}"),
     ("state file has no cycles map", "状态文件没有 cycles 映射"),
-    ("could not acquire the controller lock; another verifier is mid-transaction",
-     "无法获取控制器锁；另一个验证器正处于事务之中"),
+    ("could not acquire the controller lock; another process (pid {}) is mid-transaction",
+     "无法获取控制器锁；另一个进程（pid {}）正在执行事务"),
     ("unknown continuation cycle", "未知的继续周期"),
     ("continuation cycle belongs to another repository", "要继续的周期属于另一个仓库"),
     ("cycle is {}, not BLOCKED or human-reopened; it cannot accept a build revision",
@@ -581,20 +581,14 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "裁定必须说明理由；它会被记入账本"),
     ("cycle is {}, not ESCALATED; only an escalated cycle needs a human ruling",
      "周期状态是 {}，不是 ESCALATED；只有已升级的周期才需要人工裁决"),
-    ("the controller lock was removed or replaced while this process held it; this "
-     "process's state change was discarded",
-     "控制器锁在本进程持有期间被移除或替换；本进程的状态更改已被丢弃"),
-    ("the evidence ledger lock {} has been held by pid {} for {}s, longer than the {}s "
-     "stale limit, and is not broken automatically; if no crossaudit process is running "
-     "for this project, `crossaudit doctor --fix` removes it",
-     "证据账本锁 {} 已被 pid {} 持有 {} 秒，超过 {} 秒的失效上限，不会被自动解除；"
-     "如果此项目没有正在运行的 crossaudit 进程，`crossaudit doctor --fix` 会将其移除"),
-    ("the controller lock {} has been held by pid {} for {}s, longer than the {}s stale "
-     "limit, and is not broken automatically; if no crossaudit process is running for "
-     "this project, `crossaudit doctor --fix` removes it",
-     "控制器锁 {} 已被 pid {} 持有 {} 秒，超过 {} 秒的失效上限，不会被自动解除；"
-     "如果此项目没有正在运行的 crossaudit 进程，`crossaudit doctor --fix` 会将其移除"),
     # ------------------------------------------------------------ rulings.py
+    ("the ruling on cycle {} could not be committed to the ledger ({}); the cycle stays "
+     "ESCALATED and nothing was recorded; .git/index.lock may have been left by the "
+     "killed git — if no git process is running, remove it by hand and run "
+     "`git reset -q -- {}`",
+     "周期 {} 的裁决未能提交到账本（{}）；该周期仍为 ESCALATED，未记录任何内容；"
+     ".git/index.lock 可能是被终止的 git 留下的 —— 如果没有正在运行的 git 进程，"
+     "请手动删除它并运行 `git reset -q -- {}`"),
     ("{} (or its directory) is a symbolic link; the rulings log must be a regular "
      "file inside the repository, so the ruling was not recorded",
      "{}（或其所在目录）是符号链接；裁决日志必须是仓库内的普通文件，因此该裁决未被记录"),
@@ -613,11 +607,6 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "before ruling again",
      "周期 {} 的裁决未能提交到账本（{}），且 {} 未能恢复（{}）；该周期仍为 ESCALATED，"
      "但再次裁决前请对照 git 检查 {}"),
-    ("the ruling on cycle {} was committed to the ledger ({}), but the controller lock "
-     "was taken over before the cycle's state could change, so the cycle stays "
-     "ESCALATED; rule on it again",
-     "周期 {} 的裁决已提交到账本（{}），但在周期状态更改之前控制器锁被接管，"
-     "因此该周期仍为 ESCALATED；请重新裁决"),
     ("the ruling on cycle {} could not be committed to the ledger ({}); the cycle "
      "stays ESCALATED and nothing was recorded",
      "周期 {} 的裁决未能提交到账本（{}）；该周期仍为 ESCALATED，未记录任何内容"),
@@ -788,7 +777,8 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     # ------------------------------------------------------ ledger/chain.py
     ("evidence payload must be a mapping", "证据载荷必须是映射"),
     ("evidence kind must be a non-empty string", "证据类型必须是非空字符串"),
-    ("the evidence ledger is locked by another writer", "证据账本已被另一个写入者锁定"),
+    ("the evidence ledger is locked by another writer (pid {})",
+     "证据账本已被另一个写入者（pid {}）锁定"),
     # -------------------------------------------------------------- mcp.py
     ("{} must be valid JSON", "{} 必须是有效的 JSON"),
     ("{} exceeds the {}-byte safety limit", "{} 超出了 {} 字节的安全上限"),
