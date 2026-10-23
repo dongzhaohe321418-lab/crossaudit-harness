@@ -2852,7 +2852,11 @@ def c40(h: Harness, rec: Record) -> Record:
         if "<" in ln and "verify" in ln:
             newest = p.receipts()[-1] if p.receipts() else None
             if newest is not None:
-                ln2 = re.sub(r"<[^>]+>", str(newest.relative_to(cwd)) if newest.is_relative_to(cwd) else str(newest), ln)
+                # `cycles/<cycle>/receipt.json`: the placeholder is the cycle
+                # directory's name; a bare `<receipt>` is the whole path.
+                fill = (newest.parent.name if "receipt.json" in ln
+                        else str(newest.relative_to(cwd)) if newest.is_relative_to(cwd) else str(newest))
+                ln2 = re.sub(r"<[^>]+>", fill, ln)
                 substituted.append(f"{ln} -> {ln2}")
                 ln = ln2
         label = "tour-" + re.sub(r"[^a-z0-9]+", "-", ln.lower())[:28]
