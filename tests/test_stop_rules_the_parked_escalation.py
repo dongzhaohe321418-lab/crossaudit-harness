@@ -129,7 +129,9 @@ def test_the_console_stop_returns_the_refusal_in_both_languages(console):  # noq
     # A park records its decision object against HEAD, so the project needs one.
     (root / ".gitignore").write_text(".crossaudit/\n")
     git("add", "-A", cwd=root)
-    git("commit", "-q", "-m", "bootstrap", cwd=root)
+    # An explicit identity: CI's quality job configures none.
+    git("-c", "user.name=harness", "-c", "user.email=harness@example.invalid",
+        "commit", "-q", "-m", "bootstrap", cwd=root)
     _journal, run_id, store, cid = _parked(cfg)
     install_hook(root, REFUSING_HOOK)
     code, result, _h = post_json_to(console, "/api/run",
