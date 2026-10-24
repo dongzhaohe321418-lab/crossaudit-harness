@@ -8786,10 +8786,20 @@ verification is the next round, cited only once its text exists):
 38. **A committed row for the current escalation that does not match completely is a
     refusal, not "no row".** A clean filter that rewrote the nonce produced a row that
     was no match; recovery then assumed no commit, cleared the intent and wrote a second
-    ruling. With an intent pending, any committed row for this cycle's current escalation
-    that the state does not reflect and that is not a complete bound match now refuses
-    and keeps the intent, naming the mismatch; repairing the repository is the way out,
-    as for ruling 34.
+    ruling. "The current escalation" is defined by committed-log order, never by
+    timestamps: the intent records `rows_before`, the committed log's length when it was
+    written (which needs a strict read of the log before every ruling; a log that cannot
+    be read refuses before anything is written), and recovery looks only at this cycle's
+    rows after that point. Among them, a complete bound match (nonce, action, reason
+    hash) is applied; any other row refuses with the mismatch sentence, naming `intent`
+    among the fields, and keeps the intent (repairing the repository is the way out, as
+    for ruling 34); no rows at all clears the intent and the ruling proceeds as a fresh
+    one. An intent written before `rows_before` existed falls back to "rows after the last
+    row whose nonce this controller applied". A foreign row on an earlier, already-ruled
+    escalation is therefore only listed by `status` and never blocks. The HEAD reads of
+    ruling 36 go through one function, `rulings.read_head`, which the strict reader
+    shares; a positively unborn `HEAD` reads as "no commit" so a hook refusing the very
+    first ruling in a fresh repository still counts as "did not land".
 39. **The three documents are qualified.** README, CHANGELOG and ruling 1 said a failed
     commit means "nothing is recorded"; they now say that holds when Git is positively
     known not to have committed, and that uncertainty keeps the intent.
