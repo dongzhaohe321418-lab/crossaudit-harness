@@ -103,11 +103,18 @@ DEFAULT_IDENTITY = ("CrossAudit", "crossaudit@local.invalid")
 
 
 def _identity(cfg, deadline: float) -> tuple[str, str]:
-    """The (name, email) every ledger-row commit passes explicitly: the
-    repository's configured ``user.name`` and ``user.email`` when both are
-    set, else :data:`DEFAULT_IDENTITY`. A row's ``by`` records exactly this,
-    so the row and its commit name the same author, and a commit never fails
-    for want of an identity."""
+    """The (name, email) every ledger-row commit carries, resolved once
+    (D176 ruling 55): ``GIT_AUTHOR_NAME`` and ``GIT_AUTHOR_EMAIL`` when both
+    are set in the environment, else the repository's ``user.name`` and
+    ``user.email`` when both are set, else :data:`DEFAULT_IDENTITY`. The
+    commit runs with author AND committer set to it (:func:`_as` and the
+    child environment), so a row's ``by``, its commit's author and its
+    committer are the same string, and a commit never fails for want of an
+    identity."""
+    name = os.environ.get("GIT_AUTHOR_NAME", "").strip()
+    email = os.environ.get("GIT_AUTHOR_EMAIL", "").strip()
+    if name and email:
+        return name, email
     name = _bounded(cfg, ("config", "user.name"), deadline)[1].strip()
     email = _bounded(cfg, ("config", "user.email"), deadline)[1].strip()
     return (name, email) if name and email else DEFAULT_IDENTITY
@@ -121,6 +128,23 @@ def _who(cfg, deadline: float) -> str:
 def _as(identity: tuple[str, str]) -> tuple[str, ...]:
     """The ``-c`` pair that makes a git step use ``identity``."""
     return ("-c", f"user.name={identity[0]}", "-c", f"user.email={identity[1]}")
+
+
+def _identity_env(args: tuple[str, ...]) -> dict[str, str]:
+    """For a git step that leads with :func:`_as`'s pair, the four author and
+    committer variables set to that identity: ``-c user.*`` alone does not
+    override ``GIT_AUTHOR_*``/``GIT_COMMITTER_*`` in the environment."""
+    found: dict[str, str] = {}
+    rest = list(args)
+    while len(rest) >= 2 and rest[0] == "-c":
+        key, _eq, value = rest[1].partition("=")
+        found[key] = value
+        rest = rest[2:]
+    if "user.name" not in found or "user.email" not in found:
+        return {}
+    return {"GIT_AUTHOR_NAME": found["user.name"], "GIT_AUTHOR_EMAIL": found["user.email"],
+            "GIT_COMMITTER_NAME": found["user.name"],
+            "GIT_COMMITTER_EMAIL": found["user.email"]}
 
 
 def _verb(args: tuple[str, ...]) -> str:
@@ -167,7 +191,8 @@ def _bounded_bytes(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, by
         try:
             proc = subprocess.Popen(
                 ["git", *args], cwd=str(cfg.root), stdin=subprocess.DEVNULL,
-                stdout=out_f, stderr=err_f, env=child_env(), start_new_session=posix)
+                stdout=out_f, stderr=err_f, env={**child_env(), **_identity_env(args)},
+                start_new_session=posix)
         except OSError as exc:
             raise _StepFailed(f"git {_verb(args)} could not run: {exc.strerror or exc}") from exc
         try:
