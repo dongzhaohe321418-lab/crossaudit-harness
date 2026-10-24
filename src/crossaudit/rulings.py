@@ -96,10 +96,39 @@ def log_path(cfg) -> Path:
     return Path(cfg.root) / cfg.ledger_dir / RULINGS_LOG
 
 
-def _who(cfg, deadline: float) -> str:
+#: The identity a ledger-row commit carries when the repository configures
+#: none (a fresh machine, CI): the product's own, like the broker's work
+#: commits (``broker/tools_git.py``).
+DEFAULT_IDENTITY = ("CrossAudit", "crossaudit@local.invalid")
+
+
+def _identity(cfg, deadline: float) -> tuple[str, str]:
+    """The (name, email) every ledger-row commit passes explicitly: the
+    repository's configured ``user.name`` and ``user.email`` when both are
+    set, else :data:`DEFAULT_IDENTITY`. A row's ``by`` records exactly this,
+    so the row and its commit name the same author, and a commit never fails
+    for want of an identity."""
     name = _bounded(cfg, ("config", "user.name"), deadline)[1].strip()
     email = _bounded(cfg, ("config", "user.email"), deadline)[1].strip()
-    return f"{name} <{email}>" if email else name
+    return (name, email) if name and email else DEFAULT_IDENTITY
+
+
+def _who(cfg, deadline: float) -> str:
+    name, email = _identity(cfg, deadline)
+    return f"{name} <{email}>"
+
+
+def _as(identity: tuple[str, str]) -> tuple[str, ...]:
+    """The ``-c`` pair that makes a git step use ``identity``."""
+    return ("-c", f"user.name={identity[0]}", "-c", f"user.email={identity[1]}")
+
+
+def _verb(args: tuple[str, ...]) -> str:
+    """The git subcommand in ``args``, past any leading ``-c key=value``."""
+    rest = list(args)
+    while len(rest) >= 2 and rest[0] == "-c":
+        rest = rest[2:]
+    return rest[0] if rest else "git"
 
 
 def _remaining(deadline: float) -> float:
@@ -132,7 +161,7 @@ def _bounded_bytes(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, by
 
     timeout = _remaining(deadline)
     if timeout <= 0:
-        raise _StepFailed(f"git {args[0]} timed out after {row_budget():g}s")
+        raise _StepFailed(f"git {_verb(args)} timed out after {row_budget():g}s")
     posix = os.name != "nt"
     with tempfile.TemporaryFile() as out_f, tempfile.TemporaryFile() as err_f:
         try:
@@ -140,7 +169,7 @@ def _bounded_bytes(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, by
                 ["git", *args], cwd=str(cfg.root), stdin=subprocess.DEVNULL,
                 stdout=out_f, stderr=err_f, env=child_env(), start_new_session=posix)
         except OSError as exc:
-            raise _StepFailed(f"git {args[0]} could not run: {exc.strerror or exc}") from exc
+            raise _StepFailed(f"git {_verb(args)} could not run: {exc.strerror or exc}") from exc
         try:
             proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired as exc:
@@ -156,7 +185,7 @@ def _bounded_bytes(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, by
             except subprocess.TimeoutExpired:
                 pass
             left = _drop_index_locks(cfg, proc.pid)
-            raise _StepFailed(f"git {args[0]} timed out after {row_budget():g}s",
+            raise _StepFailed(f"git {_verb(args)} timed out after {row_budget():g}s",
                               index_lock_left=left) from exc
         out_f.seek(0)
         err_f.seek(0)
@@ -171,7 +200,7 @@ def _git_step(cfg, deadline: float, *args: str) -> None:
     code, _out, err = _bounded(cfg, args, deadline)
     if code != 0:
         first = err.strip().split("\n")[0].strip()[:160]
-        raise _StepFailed(first or f"git {args[0]} failed and said nothing")
+        raise _StepFailed(first or f"git {_verb(args)} failed and said nothing")
 
 
 def _cleanup_git(cfg, *args: str) -> str:
@@ -448,7 +477,7 @@ def _record(cfg, cycle: dict, action: str, reason: str, *,
             "cycle_id": cid,
             "action": action,
             "reason": reason,
-            "by": _who(cfg, deadline),
+            "by": "",
             "t": int(now),
             "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
             "round": cycle.get("round"),
@@ -458,6 +487,8 @@ def _record(cfg, cycle: dict, action: str, reason: str, *,
             # Bound to the local intent at recovery (D176 ruling 34).
             "reason_sha256": hashlib.sha256(reason.encode("utf-8")).hexdigest(),
         }
+        identity = _identity(cfg, deadline)
+        row["by"] = f"{identity[0]} <{identity[1]}>"
         # The local intent's nonce (D176 ruling 30): recovery applies a
         # committed row only when it carries the nonce of an intent this
         # controller wrote; any other row is never acted on (ruling 31).
@@ -488,7 +519,7 @@ def _record(cfg, cycle: dict, action: str, reason: str, *,
         pre_ok, pre_head, _why = read_head(cfg)
         try:
             # Only this file: anything else the person has staged stays staged.
-            _git_step(cfg, deadline, "commit", "-q", "-m", subject, "-m",
+            _git_step(cfg, deadline, *_as(identity), "commit", "-q", "-m", subject, "-m",
                       f"Human ruling on escalated cycle {cid} "
                       f"(round {cycle.get('round')}, "
                       f"{str(cycle.get('active_sha', ''))[:12]}): "
@@ -782,7 +813,9 @@ def record_escalation(cfg, cycle: dict) -> str:
                "active_sha": cycle.get("active_sha", ""),
                "nonce": secrets.token_hex(16), "t": int(now),
                "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
-               "by": _who(cfg, deadline)}
+               "by": ""}
+        identity = _identity(cfg, deadline)
+        row["by"] = f"{identity[0]} <{identity[1]}>"
         sign_row(cfg, row)
         line = (json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
         try:
@@ -797,7 +830,7 @@ def record_escalation(cfg, cycle: dict) -> str:
         _git_step(cfg, deadline, "add", "--", rel)
         pre_ok, pre_head, _w = read_head(cfg)
         try:
-            _git_step(cfg, deadline, "commit", "-q", "-m",
+            _git_step(cfg, deadline, *_as(identity), "commit", "-q", "-m",
                       f"escalation {cid} {kind}"[:120], "-m",
                       f"Cycle {cid} escalated (round {cycle.get('round')}, {kind}); "
                       f"the reason is in the row.",
