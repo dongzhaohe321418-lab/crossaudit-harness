@@ -136,3 +136,68 @@ def test_the_tui_shows_the_later_cycle_first_on_a_tie(tmp_path):
     (root / ".crossaudit" / "state.json").write_text(json.dumps(_state_with_a_tie()))
     frame = tuiapp.frame(load(root / "crossaudit.yml"))
     assert [c["id"] for c in frame["cycles"]] == ["aaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbb"]
+
+
+# ------------------------------------------------ ambient identity (ruling 55)
+def _escalate_and_rule(root: Path, sha: str) -> list[dict]:
+    cfg = load(root / "crossaudit.yml")
+    store = StateStore(root / ".crossaudit" / "state.json")
+    cid = store.open_or_advance("t/p", sha * 40, None)["cycle_id"]
+    store.escalate(cid, "round budget spent")
+    assert store.cycle(cid)["escalation_commit"], store.cycle(cid).get("escalation_error")
+    rulings.rule(cfg, store, cid, "close", "ruled with ambient identity variables")
+    return [json.loads(ln) for ln in (root / "cycles" / "rulings.jsonl")
+            .read_text().split("\n") if ln]
+
+
+def _assert_one_person(root: Path, rows: list[dict], expected: str) -> None:
+    """The row's `by`, the commit's author and its committer are one string,
+    for the escalation row and the ruling row alike."""
+    assert [r["by"] for r in rows] == [expected, expected]
+    name, email = expected[:-1].split(" <")
+    for line in _git(root, "log", "--format=%an|%ae|%cn|%ce").splitlines():
+        assert line == f"{name}|{email}|{name}|{email}", line
+
+
+def test_ambient_author_variables_are_the_identity_of_row_author_and_committer(
+        tmp_path, no_identity, monkeypatch):
+    """GIT_AUTHOR_* set (and a different GIT_COMMITTER_*), the repository
+    configured differently: the ambient author wins, and author, committer
+    and `by` all carry it. Mutation caught: setting only the author variables
+    in the child environment -- the committer would stay the ambient
+    committer."""
+    root = _project(tmp_path)
+    _git(root, "config", "user.name", "Repo Config")
+    _git(root, "config", "user.email", "repo@config.invalid")
+    monkeypatch.setenv("GIT_AUTHOR_NAME", "Ambient Author")
+    monkeypatch.setenv("GIT_AUTHOR_EMAIL", "author@ambient.invalid")
+    monkeypatch.setenv("GIT_COMMITTER_NAME", "Ambient Committer")
+    monkeypatch.setenv("GIT_COMMITTER_EMAIL", "committer@ambient.invalid")
+    rows = _escalate_and_rule(root, "d")
+    _assert_one_person(root, rows, "Ambient Author <author@ambient.invalid>")
+
+
+def test_a_configured_identity_overrides_ambient_committer_variables(
+        tmp_path, no_identity, monkeypatch):
+    """The repository configured, only GIT_COMMITTER_* in the environment:
+    the configured identity on row, author and committer. Mutation caught:
+    dropping the committer variables from the child environment (git would
+    record the ambient committer)."""
+    root = _project(tmp_path)
+    _git(root, "config", "user.name", "Ada Lab")
+    _git(root, "config", "user.email", "ada@lab.invalid")
+    monkeypatch.setenv("GIT_COMMITTER_NAME", "Ambient Committer")
+    monkeypatch.setenv("GIT_COMMITTER_EMAIL", "committer@ambient.invalid")
+    rows = _escalate_and_rule(root, "e")
+    _assert_one_person(root, rows, "Ada Lab <ada@lab.invalid>")
+
+
+def test_with_nothing_configured_ambient_committer_variables_do_not_leak(
+        tmp_path, no_identity, monkeypatch):
+    """Nothing configured, only GIT_COMMITTER_* set: the default identity on
+    row, author and committer. Mutation caught: the same."""
+    root = _project(tmp_path)
+    monkeypatch.setenv("GIT_COMMITTER_NAME", "Ambient Committer")
+    monkeypatch.setenv("GIT_COMMITTER_EMAIL", "committer@ambient.invalid")
+    rows = _escalate_and_rule(root, "f")
+    _assert_one_person(root, rows, "CrossAudit <crossaudit@local.invalid>")
