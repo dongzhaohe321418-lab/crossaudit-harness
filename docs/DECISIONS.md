@@ -8736,21 +8736,32 @@ only once its text exists):
 33. **Every post-commit uncertainty keeps the intent; only a commit that definitely did
     not land clears it.** A commit that landed but whose confirmation read then failed
     cleared the intent as if nothing had been committed, so the next ruling wrote a
-    second row. Now the intent is cleared before the commit only when `git commit`
-    itself failed and `HEAD` is unchanged; after the commit has been attempted, any
-    failure to confirm leaves the intent in place and the refusal names the uncertainty;
-    the next ruling recovers strictly. In strict mode, "no commit yet" is accepted only
-    for a positively identified unborn `HEAD` (a symbolic `HEAD` whose branch does not
-    exist); every other failure of `rev-parse`, `ls-tree` or `cat-file` is the
-    "committed rulings log could not be read" refusal, never an empty list.
+    second row. Now every refusal `record()` raises says whether the commit landed:
+    "no" (nothing reached git, or `git commit` failed and `HEAD` equals the value read
+    just before; the log is restored and unstaged), "uncertain" (`git commit` failed but
+    `HEAD` moved or could not be read; nothing is restored, and the refusal says the
+    ruling may have been committed) or "yes" (the commit landed but the read-back failed
+    or showed a different row). The intent is cleared only for "no"; every other
+    outcome, including an unmarked exception, keeps it for the next ruling's strict
+    recovery. "No commit yet" is accepted only for a positively identified unborn `HEAD`
+    (`git symbolic-ref` names a branch that `git show-ref` does not find); every other
+    failure of `rev-parse`, `ls-tree` or `cat-file` is the "committed rulings log could
+    not be read" refusal, never an empty list. The "may have been committed" sentence
+    has no test: nothing yet makes `git commit` fail while `HEAD` moves.
 34. **The nonce, the action and the reason hash are bound to the committed row.**
     `_confirm_committed` compared four fields and not the `intent`, so a filter or hook
     could change the nonce while the state change still applied; recovery matched only
     the cycle and the nonce, so a writer of `.crossaudit/state.json` could pair a forged
     intent with a committed row and have that row's action applied. Confirmation now
-    compares the complete canonical row including `intent`; recovery requires the row's
-    cycle, nonce, action and `reason_sha256` to equal the stored intent's and the action
-    to be a valid resolution, else nothing is applied and the mismatch is named. The
+    compares the complete canonical row including `intent` (everything `record()`
+    wrote except `commit`); rows now carry `reason_sha256`; recovery requires the row's
+    cycle, nonce, action and reason hash (the field, and `sha256` of the row's reason) to
+    equal the stored intent's and the action to be a valid resolution, else nothing is
+    applied, the mismatch names the fields and the intent stays. A consequence,
+    accepted: a filter or hook that changes a committed row's action or reason but keeps
+    its nonce leaves that cycle refusing every later ruling until the repository (or the
+    local state, by hand) is repaired; no command offers a way out, because the way out
+    would be to act on a row this controller did not intend. The
     state file is not an authority boundary (`locks.py` says so); binding every field the
     intent carries to the committed row is what keeps a forged intent from doing
     anything a committed row does not already say.
