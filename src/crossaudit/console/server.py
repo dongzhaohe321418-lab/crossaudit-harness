@@ -2144,7 +2144,10 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                     }
                     if started is not None:
                         response.update(started, retrying=True)
-                    elif ruled.get("reconciled"):
+                    if ruled.get("intent_cleared"):
+                        response["note"] = i18n.CATALOGUE["en"]["ruling.intent_cleared"]
+                        response["note_zh"] = i18n.CATALOGUE["zh"]["ruling.intent_cleared"]
+                    if started is None and ruled.get("reconciled"):
                         # A ruling already committed whose state change had
                         # failed; the state now follows it (D176 ruling 27).
                         row = ruled["ruling"]

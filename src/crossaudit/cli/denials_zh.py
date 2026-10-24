@@ -607,14 +607,17 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "周期状态是 {}，不是 ESCALATED；只有已升级的周期才需要人工裁决"),
     # ------------------------------------------------------------ rulings.py
     ("the ruling on cycle {} was committed to the ledger as {}, but the cycle's state "
-     "could not be written ({}: {}); the state is unchanged, and ruling on this cycle "
-     "again applies the committed ruling instead of writing a new one",
+     "could not be written ({}: {}); the state is unchanged, and the next ruling on this "
+     "cycle applies the committed ruling",
      "周期 {} 的裁决已作为 {} 提交到账本，但周期状态无法写入（{}：{}）；状态未改变，"
-     "再次对该周期裁决将应用已提交的裁决，而不会写入新的裁决"),
+     "对该周期的下一次裁决将应用已提交的裁决"),
+    ("the committed rulings log could not be read ({}); no ruling is made until it can be",
+     "无法读取已提交的裁决日志（{}）；在能够读取之前不会作出任何裁决"),
+    ("the ruling on cycle {} does not match the intent this controller recorded for it; "
+     "nothing was recorded",
+     "周期 {} 的裁决与本控制器为其记录的意图不符；未记录任何内容"),
     ("a committed ruling ({}, {}) already stands for cycle {}; the state now reflects it",
      "已提交的裁决（{}，{}）对周期 {} 仍然有效；状态现已与之一致"),
-    ("the committed ruling does not answer this cycle's current escalation",
-     "已提交的裁决并非针对该周期当前的升级"),
     ("the ruling on cycle {} could not be committed to the ledger ({}); the cycle stays "
      "ESCALATED and nothing was recorded; .git/index.lock may have been left by the "
      "killed git — if no git process is running, remove it by hand and run "
