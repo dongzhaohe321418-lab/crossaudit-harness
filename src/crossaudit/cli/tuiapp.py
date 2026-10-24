@@ -476,7 +476,7 @@ def view(frame: dict, width: int, height: int, *, selected: int = 0,
 def render(frame: dict, width: int, height: int, *, selected: int = 0,
            expanded: bool = False, mode: str = "cycles",
            scroll: int | None = None) -> str:
-    """The text of one screen. Pure: the same arguments and the same stdout encoding give the same bytes (glyphs the stream cannot encode fall back to ASCII).
+    """The text of one screen. Pure: the same arguments give the same text for the same stdout encoding and colour setting (glyphs the stream cannot encode fall back to ASCII; colour follows ``tui.coloured()``, i.e. a TTY without NO_COLOR).
 
     ``mode`` is "cycles" (the list), "decision" (the decision card above the
     list, while a cycle waits for a person), or "help" (the key overlay).

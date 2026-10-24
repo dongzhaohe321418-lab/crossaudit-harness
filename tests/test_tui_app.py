@@ -561,10 +561,20 @@ def test_watch_help_points_at_tui():
 def _spawn_tui(root: Path, rows: int = 60, cols: int = 120, *,
                in_a_shell: bool = False):
     """``crossaudit tui`` on a pty. ``in_a_shell`` runs it the way a person
-    (and the claims harness) does: under ``sh`` in a session whose controlling
-    terminal is the pty, so Ctrl-C there is a real SIGINT, with ``stty -g``
-    printed before and after (the session leader is the shell, which outlives
-    the TUI, so the terminal is still there to be read)."""
+    (and the claims harness) does: under ``sh -m`` in a session whose
+    controlling terminal is the pty, so Ctrl-C there is a real SIGINT, with
+    ``stty -g`` printed before and after (the session leader is the shell,
+    which outlives the TUI, so the terminal is still there to be read).
+
+    ``-m`` matters on Linux, where ``sh`` is dash: a non-interactive dash
+    that receives SIGINT while waiting for a child kills itself once the
+    child returns, whatever the child did with the signal, so the
+    ``TUI-EXIT=`` line was never printed (seen on ubuntu CI; reproduced on
+    macOS with ``/bin/dash`` as ``sh``). With job control dash runs the TUI
+    in its own foreground process group, as an interactive shell does, and
+    the signal reaches the TUI alone. bash 3.2 (macOS's ``sh``) ignores
+    ``-m`` under ``-c`` but, after a SIGINT, carries on when the child caught
+    it and exited normally, which is the case here."""
     import fcntl
     import pty
     import struct
@@ -583,7 +593,7 @@ def _spawn_tui(root: Path, rows: int = 60, cols: int = 120, *,
     if in_a_shell:
         import shlex
 
-        argv = ["sh", "-c", "echo STTY=$(stty -g); " + shlex.join(argv)
+        argv = ["sh", "-m", "-c", "echo STTY=$(stty -g); " + shlex.join(argv)
                 + "; echo TUI-EXIT=$?; echo STTY=$(stty -g)"]
         extra["preexec_fn"] = _own_the_terminal     # setsid + ioctl only
     proc = subprocess.Popen(
