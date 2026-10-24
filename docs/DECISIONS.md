@@ -8864,19 +8864,36 @@ this branch (the verification is the next round, cited only once its text exists
     alike, consulting no local state. A new stop after a reopen appends a new escalation
     row, hence a new identity, so a recovered `reopen` can never reopen a later stop.
     If the escalation row cannot be committed, the cycle still escalates (escalation is
-    the fail-closed outcome and never fails to happen) and its identity is "unknown";
-    every ruling on it refuses, legibly, until the repository is repaired. The
-    receipt-based identity and `ruling_intents` as authority are gone; `status` shows
-    each escalation's row and commit.
+    the fail-closed outcome and never fails to happen) with an empty
+    `escalation_commit` and the cause in `escalation_error`; every ruling on it first
+    retries committing the row and, if that still fails, refuses by name ("the escalation
+    of cycle … is not committed to the ledger (…); rule on it after the repository is
+    repaired"), so the cycle proceeds once the repository is repaired. The state's
+    `escalation_commit` is a gate, never authority: a ruling requires it to equal git's
+    latest verified escalation row (which also catches a history rewrite that removed
+    that row), and editing the state can block a ruling but cannot make any row apply.
+    A cycle escalated by an older version has no row; its next ruling commits the row
+    then and proceeds. The row is committed under the controller lock, bounded like a
+    ruling's commit. The receipt-based identity and `ruling_intents` are gone; `status`
+    shows each escalated cycle's escalation commit or "escalation not committed (why)".
+    Because escalation rows are commits, `HEAD` moves; `run` and `audit` now take as
+    their parent the nearest commit that is not ledger-only (`gitio.past_ledger_commits`
+    walks back past commits touching only the ledger directory: escalation rows, audit
+    reports, receipts), and provider stops anchor the same way, so a child of such a
+    commit continues its cycle instead of opening a new one and cannot route around the
+    escalation lock. That is a behaviour change: before, a `run` on a child of a report or
+    receipt commit opened a new cycle.
 44. **A project's signing key is not recreated once anything is signed.**
     `load_or_create` created a fresh key whenever the seed was missing, so a lost or
     replaced seed left every earlier signed row (and receipt) unverifiable as "no valid
     signature", with no keyring to fall back on. Now the key is created implicitly only
-    when the project holds no signed artefact (no `sig` in any committed ruling or
-    escalation row, no signed receipt); otherwise a missing seed is refused: "the project
-    signing key at … is missing but signed rulings or receipts exist; restore it from
-    your backup, since a new key would not verify them" (Chinese parity). Rotation is
-    unsupported and said so; a public-key history is not built here.
+    when the project holds no signed artefact (no `receipt.dsse.json` under the ledger
+    directory and no `sig` in the rulings log); otherwise a missing seed is refused: "the
+    project signing key at … is missing but signed rulings or receipts exist; restore it
+    from your backup, since a new key would not verify them" (Chinese parity). Receipt
+    signing stays fail-open as before: with the seed missing and artefacts present, the
+    receipt is left unsigned and no second key is created. Rotation is unsupported and
+    said so; a public-key history is not built here.
 45. **The two documents are qualified.** README and CHANGELOG say that every ruling line
     written from this version on is signed, that older lines are listed as unverified,
     and that the recovery "instead of writing a second one" rests on the committed
