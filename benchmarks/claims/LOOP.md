@@ -237,11 +237,15 @@ local state), answered by escalations committed as signed rows; round 14 found t
 paths in that new code (an unwrapped confirmation timeout; a capped lineage
 walk), repaired, and the release gate forced the row commits to honour the
 configured git timeout; round 15 found no route left and two test items,
-fixed, on the ref below.
+fixed; round 16 found nothing (MERGE). The pull request's CI then found that
+ledger-row commits carried no git identity and that same-second cycles ordered
+by hash, and a walk of the TUI as a person found silent clipping on short
+terminals, a crash on an ASCII console and Ctrl-C quitting at a prompt; all
+fixed on the ref below.
 
 | ref (same harness, `e338d0e` + the placeholder fill) | PASS / 43 |
 |---|---|
-| **`feat/tui-first` c68b6c3** (D175; D176 repairs from fifteen review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
+| **`feat/tui-first` ca8a421** (D175; D176 repairs from sixteen review rounds, the two CI findings and the usability walk: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
 
 The record is `records/tui-first/claims.jsonl` and `RESULTS-tui-first.md`. Still
 untestable here, as before: C32 (now also "not on the main line"), C33b, C34b,
