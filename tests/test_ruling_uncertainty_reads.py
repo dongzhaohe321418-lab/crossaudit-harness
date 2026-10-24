@@ -40,7 +40,9 @@ def _state(root: Path) -> dict:
 
 
 def _committed_lines(root: Path) -> list[str]:
-    return [ln for ln in git("show", f"HEAD:{LOG}", cwd=root).split("\n") if ln.strip()]
+    """The committed ruling lines (escalation rows excluded: D176 ruling 43)."""
+    return [ln for ln in git("show", f"HEAD:{LOG}", cwd=root).split("\n")
+            if ln.strip() and json.loads(ln).get("kind") != "escalation"]
 
 
 # ------------------------------------------------ ruling 36
@@ -79,7 +81,8 @@ def test_a_landed_commit_with_unreadable_head_checks_is_uncertain(
         f"ruling on this cycle recovers it")
     assert int(git("rev-list", "--count", f"{head}..HEAD", cwd=root)) == 1
     assert len(_committed_lines(root)) == 1
-    assert len([ln for ln in (root / LOG).read_text().split("\n") if ln]) == 1
+    assert len([ln for ln in (root / LOG).read_text().split("\n")
+                if ln and json.loads(ln).get("kind") != "escalation"]) == 1
     assert cid in _state(root)["pending_rulings"]
     sha = git("rev-parse", "HEAD", cwd=root)
     assert rulings.rule(cfg, _store(root), cid, "close", "again")["reconciled"] is True

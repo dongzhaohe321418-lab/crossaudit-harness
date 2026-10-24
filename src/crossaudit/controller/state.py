@@ -378,6 +378,7 @@ class StateStore:
                 c["escalation_run_id"] = run_id[:64]
             if task.strip():
                 c["task"] = task.strip()[:12000]
+            self._commit_escalation(cycle_id, c)
             self._log(state, "escalate", cycle=cycle_id, reason=reason,
                       round=c["round"], run_id=run_id[:64])
             return dict(c, cycle_id=cycle_id)
@@ -439,6 +440,7 @@ class StateStore:
             if task.strip():
                 c["task"] = task.strip()[:12000]
             cycles[cid] = c
+            self._commit_escalation(cid, c)
             self._log(state, "build_escalated_before_revision", cycle=cid,
                       sha=sha, reason=reason, round=round_, chat_id=chat_id,
                       run_id=run_id[:64])
@@ -544,6 +546,8 @@ class StateStore:
                 # cycle's stored value: copying is what let the two drift.
                 "constitution_commit": (constitution_commit
                                         or c.get("constitution_commit", ""))})
+            if c["status"] == ESCALATED:
+                self._commit_escalation(cycle_id, c)
             self._log(state, "verdict", cycle=cycle_id, sha=sha, verdict=verdict,
                       round=c["round"], status=c["status"], receipt=receipt_hash[:16])
             return c["status"]
@@ -605,9 +609,11 @@ class StateStore:
         (``rulings.assess``) reads the committed rulings log and git, and
         returns the current escalation's committed identity and, if any, the
         verified ruling for it that the state does not reflect. Such a
-        ruling is applied (history ``reconciled``, its nonce remembered in
-        ``ruling_intents``) and returned with ``reconciled: True``, whatever
-        the local intent says; no new row is written. A committed row that
+        ruling is applied (history ``reconciled``) and returned with
+        ``reconciled: True``, whatever the local state says; no new row is
+        written. An ESCALATED cycle whose escalation row is not committed is
+        first given another attempt to commit it (ruling 43), and ``assess``
+        refuses while it is still missing. A committed row that
         claims this escalation but does not verify is refused by
         ``assess``.
 
@@ -618,7 +624,7 @@ class StateStore:
         ``commit(cycle_before, nonce, identity)``, which signs, appends and
         commits the row (a refusal marked ``commit_landed="no"`` clears the
         intent; any other keeps it: ruling 33); phase 3 applies the state
-        change, remembers the nonce and removes the intent in one write. If
+        change and removes the intent in one write. If
         phase 3 fails its ``ConfigDenial`` (``state_unwritable``) propagates.
         The intent is a hint for the "earlier attempt" note and for
         ``rulings.record``'s nonce check, never authority over which
@@ -635,6 +641,17 @@ class StateStore:
             c = state["cycles"].get(cycle_id)
             if c is None:
                 raise IntegrityDenial("unknown cycle", cycle_id=cycle_id)
+            if c.get("status") == ESCALATED and not c.get("escalation_commit"):
+                # The escalation's row never committed (or the cycle was
+                # escalated by an older version, which wrote none): try again
+                # now; assess refuses while it is still missing (ruling 43).
+                older = "escalation_commit" not in c
+                self._commit_escalation(cycle_id, c)
+                if older and not c["escalation_commit"]:
+                    c["escalation_error"] = ("escalated by an older version of "
+                                             "CrossAudit, and committing its escalation "
+                                             "now failed: " + c["escalation_error"])[:300]
+                self._commit_state(held, state)
             verdict = assess(dict(c, cycle_id=cycle_id))
             pending = verdict.get("pending")
             if pending is not None:
@@ -643,8 +660,6 @@ class StateStore:
                 self._apply_resolution(state, c, cycle_id, str(pending["action"]),
                                        str(pending.get("reason", "")))
                 state["history"][-1]["reconciled"] = True
-                if pending.get("intent"):
-                    c.setdefault("ruling_intents", []).append(pending["intent"])
                 self._commit_state(held, state)
                 return {"row": pending, "cycle": dict(c, cycle_id=cycle_id),
                         "before": before, "reconciled": True, "intent_cleared": False}
@@ -681,13 +696,33 @@ class StateStore:
                         pass
                 raise
             self._apply_resolution(state, c, cycle_id, action, reason)  # phase 3
-            c.setdefault("ruling_intents", []).append(nonce)
             del intents[cycle_id]
             self._commit_state(held, state)
             return {"row": row, "cycle": dict(c, cycle_id=cycle_id),
                     "before": before, "reconciled": False, "intent_cleared": cleared}
         finally:
             held.release()
+
+    def _commit_escalation(self, cycle_id: str, c: dict) -> None:
+        """Commit the signed ``escalation`` row for a cycle that has just
+        escalated (D176 ruling 43), under this store's lock. Never stops the
+        escalation: on failure the cycle is ESCALATED in the state with an
+        empty ``escalation_commit`` and the reason in ``escalation_error``,
+        and every ruling on it refuses until the row is committed (the next
+        ruling attempt tries again)."""
+        from .. import rulings
+
+        recorder = rulings.escalation_recorder_for(self.path)
+        if recorder is None:
+            c["escalation_commit"] = ""
+            c["escalation_error"] = "no project configuration was found for this state"
+            return
+        try:
+            c["escalation_commit"] = recorder(dict(c, cycle_id=cycle_id))
+            c.pop("escalation_error", None)
+        except rulings.EscalationNotCommitted as exc:
+            c["escalation_commit"] = ""
+            c["escalation_error"] = exc.why[:300]
 
     def _commit_state(self, held: locks.HeldLock, state: dict) -> None:
         """One fsync'd state write inside a held lock, refused if the lock

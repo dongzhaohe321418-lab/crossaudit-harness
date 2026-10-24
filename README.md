@@ -1018,10 +1018,14 @@ is uncertain, or the state change fails after the commit, the refusal says so
 and names the commit when there is one, `status` shows the cycle as "ruling
 committed, state pending", and the next ruling on that cycle recovers the
 committed ruling instead of writing a second one; nothing is cleared while the
-repository cannot be read. Every ruling line is signed with the project's key
-and names the escalation it answers; a line without this project's valid
-signature (someone else committed it, or an older line) is listed by `status`
-as unverified and never acted on.
+repository cannot be read. From this version on, every escalation and every
+ruling is a line signed with the project's key, and a ruling names the
+committed escalation line it answers; that is what lets the next ruling recover
+a committed one rather than write a second. A line without this project's valid
+signature (someone else committed it, or a line written by an older version) is
+listed by `status` as unverified and never acted on. The signing key lives in
+`.crossaudit/signing/` and is not recreated once anything is signed: keep a
+backup, because a new key would not verify the old lines.
 
 ## Configuration
 

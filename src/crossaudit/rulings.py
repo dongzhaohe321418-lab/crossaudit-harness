@@ -47,10 +47,12 @@ import errno
 import hashlib
 import json
 import os
+import secrets
 import signal
 import stat
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from .app_keys import child_env
@@ -670,6 +672,22 @@ def row_verifies(row: dict, pubkey: bytes | None) -> bool:
         return False
 
 
+def _verifying_key(cfg) -> bytes:
+    """The project public key for a ruling's checks: loaded, or created
+    while nothing is signed yet; refused (D176 ruling 44) when it is missing
+    but signed artefacts exist, rather than verifying against nothing."""
+    from .crypto import keys
+
+    try:
+        return keys.load_or_create(cfg)[1]
+    except (OSError, ValueError) as exc:
+        why = getattr(exc, "strerror", None) or str(exc) or type(exc).__name__
+        raise ConfigDenial(
+            f"the project signing key at {_key_path(cfg)} is not available ({why}); "
+            f"a ruling must be signed, so none was made",
+            issue="ruling_key_unavailable") from exc
+
+
 def _project_pubkey(cfg) -> bytes | None:
     from .crypto import keys
 
@@ -680,89 +698,169 @@ def _project_pubkey(cfg) -> bytes | None:
     return found[0] if found else None
 
 
-def escalation_identity(cfg, cycle_id: str) -> str:
-    """The committed identity a ruling on this cycle's escalation starts
-    from: the commit that introduced the cycle's highest-round receipt at
-    HEAD (``<ledger>/<sha>-r<n>/receipt.json`` whose ``cycle.cycle_id`` is
-    this cycle), or ``""`` when the cycle has no committed receipt (a build
-    or provider stop) or HEAD is positively unborn. Read strictly: a failure
-    is refused, never guessed (D176 ruling 40)."""
-    def refuse(why: str) -> IntegrityDenial:
-        return IntegrityDenial(
-            f"the escalation of cycle {cycle_id} could not be established from git "
-            f"({why}); no ruling is made until it can be",
-            cycle_id=cycle_id, issue="escalation_unknown")
+ESCALATION = "escalation"
 
-    ok, head, why = read_head(cfg)
-    if not ok:
-        raise refuse(why)
-    if not head:
-        return ""
-    ledger = Path(cfg.ledger_dir).as_posix()
+
+def is_escalation(row: dict) -> bool:
+    return row.get("kind") == ESCALATION
+
+
+class EscalationNotCommitted(Exception):
+    """An escalation row could not be committed; ``why`` says why. Not a
+    Denial: an escalation always happens in the state, and this reason is
+    kept beside it for the refusal a later ruling gives (D176 ruling 43)."""
+
+    def __init__(self, why: str) -> None:
+        super().__init__(why)
+        self.why = why
+
+
+def record_escalation(cfg, cycle: dict) -> str:
+    """Append and commit the signed ``escalation`` row for ``cycle`` (D176
+    ruling 43); return the commit's sha. Same bounded git steps as a
+    ruling's: the log's prior bytes are put back and the path unstaged only
+    when ``git commit`` failed with HEAD positively unchanged. Any failure,
+    including no signing key, raises :class:`EscalationNotCommitted`."""
+    deadline = time.monotonic() + COMMIT_TIMEOUT_S
+    path = log_path(cfg)
+    rel = path.relative_to(cfg.root).as_posix()
+    cid = str(cycle["cycle_id"])
     try:
-        code, listed, err = _bounded(cfg, ("ls-tree", "-r", "--name-only", "HEAD", "--",
-                                           ledger), time.monotonic() + CLEANUP_TIMEOUT_S)
-        if code != 0:
-            raise refuse(err.strip().split("\n")[0][:120] or "git ls-tree failed")
-        best: tuple[int, str] | None = None
-        for path in listed.splitlines():
-            if not path.endswith("/receipt.json"):
-                continue
-            code, blob, err = _bounded_bytes(cfg, ("cat-file", "blob", f"HEAD:{path}"),
-                                             time.monotonic() + CLEANUP_TIMEOUT_S)
-            if code != 0:
-                raise refuse(err.strip().split("\n")[0][:120] or "git cat-file failed")
+        _refuse_symlinks(cfg, rel, cid)
+        prior = _read_nofollow(path)
+    except (Denial, OSError) as exc:
+        raise EscalationNotCommitted(getattr(exc, "reason", None) or str(exc)) from exc
+    kind = str(cycle.get("escalation_kind") or "escalation")
+    text = str(cycle.get("escalation_reason", ""))
+    try:
+        now = time.time()
+        row = {"kind": ESCALATION, "cycle_id": cid,
+               "reason": f"{kind}: {text}"[:400], "round": cycle.get("round"),
+               "active_sha": cycle.get("active_sha", ""),
+               "nonce": secrets.token_hex(16), "t": int(now),
+               "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
+               "by": _who(cfg, deadline)}
+        sign_row(cfg, row)
+        line = (json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | _NOFOLLOW, 0o644)
             try:
-                receipt = json.loads(blob.decode("utf-8"))
-            except (ValueError, UnicodeDecodeError):
-                continue        # not a receipt this reader understands
-            cyc = receipt.get("cycle") if isinstance(receipt, dict) else None
-            if not isinstance(cyc, dict) or str(cyc.get("cycle_id")) != cycle_id:
-                continue
-            rnd = int(cyc.get("round") or 0)
-            if best is None or rnd > best[0]:
-                best = (rnd, path)
-        if best is None:
-            return ""
-        code, intro, err = _bounded(cfg, ("log", "-n", "1", "--diff-filter=A",
-                                          "--format=%H", "HEAD", "--", best[1]),
-                                    time.monotonic() + CLEANUP_TIMEOUT_S)
+                os.write(fd, line)
+            finally:
+                os.close(fd)
+        except OSError as exc:
+            raise _StepFailed(f"the log could not be written: {exc.strerror or exc}") from exc
+        _git_step(cfg, deadline, "add", "--", rel)
+        pre_ok, pre_head, _w = read_head(cfg)
+        try:
+            _git_step(cfg, deadline, "commit", "-q", "-m",
+                      f"escalation {cid} {kind}"[:120], "-m",
+                      f"Cycle {cid} escalated (round {cycle.get('round')}, {kind}); "
+                      f"the reason is in the row.",
+                      "--", rel)
+        except _StepFailed as exc:
+            post_ok, post_head, _w = read_head(cfg)
+            if pre_ok and post_ok and post_head == pre_head:
+                try:
+                    _restore(path, prior)
+                except OSError:
+                    pass
+                _cleanup_git(cfg, "reset", "-q", "--", rel)
+            raise
+    except Denial as exc:
+        raise EscalationNotCommitted(exc.reason) from exc
     except _StepFailed as exc:
-        raise refuse(exc.why) from exc
-    if code != 0 or not intro.strip():
-        raise refuse(err.strip().split("\n")[0][:120]
-                     or f"no commit introduces {best[1]}")
-    return intro.strip()
+        raise EscalationNotCommitted(exc.why) from exc
+    sha = _cleanup_git(cfg, "rev-parse", "HEAD")
+    code, blob, _err = _bounded_bytes(cfg, ("cat-file", "blob", f"HEAD:{rel}"),
+                                      time.monotonic() + CLEANUP_TIMEOUT_S)
+    lines = [ln for ln in blob.decode("utf-8", "replace").split("\n") if ln.strip()]
+    try:
+        landed = json.loads(lines[-1]) if code == 0 and lines else None
+    except ValueError:
+        landed = None
+    if not sha or not isinstance(landed, dict) or _canonical(landed) != _canonical(row):
+        raise EscalationNotCommitted("the committed escalation row could not be confirmed")
+    return sha
+
+
+def escalation_recorder_for(state_path) -> "Callable[[dict], str] | None":
+    """The recorder for the project whose state file is ``state_path``: the
+    nearest ``crossaudit.yml`` at or above the state directory. None when
+    there is none (a bare state store used without a project)."""
+    from .config import CONFIG_NAME, load
+
+    here = Path(state_path).resolve().parent
+    for folder in (here, *here.parents):
+        candidate = folder / CONFIG_NAME
+        if candidate.is_file():
+            try:
+                cfg = load(candidate)
+            except Exception:  # noqa: BLE001 -- no recorder, the cycle still escalates
+                return None
+            if Path(state_path).resolve() != (Path(cfg.root) / cfg.state_dir
+                                              / "state.json").resolve():
+                return None
+            return lambda cycle: record_escalation(cfg, cycle)
+    return None
+
+
+def escalation_identity(cfg, cycle_id: str) -> str:
+    """The commit of the cycle's latest committed ``escalation`` row that
+    verifies with the project key, or ``""`` when there is none (D176
+    ruling 43). Read strictly from the committed log."""
+    rows = committed_rows(cfg, strict=True)
+    pubkey = _project_pubkey(cfg)
+    mine = [r for r in rows if is_escalation(r) and str(r.get("cycle_id")) == cycle_id
+            and row_verifies(r, pubkey)]
+    if not mine:
+        return ""
+    return commit_of(cfg, mine[-1])
 
 
 def assess(cfg, cycle_id: str, cycle: dict) -> dict:
     """What the committed, verified record says about this cycle's current
-    escalation (D176 rulings 40-41), from git and the project key only.
+    escalation, from git and the project key only (D176 rulings 40, 41, 43).
 
-    Starting from :func:`escalation_identity`, the committed rows for this
-    cycle are walked in log order; a row whose ``escalation_commit`` is the
-    current identity must verify with the project's public key and carry a
-    valid action (else it is refused by name, never skipped), and it moves
-    the identity on to the commit that carries it. Rows that name another
-    identity, or none (legacy), are history. Returns ``{"identity": E,
-    "pending": row or None}``: ``E`` is what a new ruling answers; ``pending``
-    is the last verified ruling when the cycle is ESCALATED and the state
-    does not reflect it -- a ``close`` always (a closed cycle cannot
-    escalate again), a ``reopen`` unless its nonce is among the cycle's
-    ``ruling_intents``. That last test is the one place the local state is
-    consulted: git cannot tell a reopen whose state change failed from a
-    reopen followed by a new stop that left no receipt.
-    """
+    The current identity is the commit of the cycle's latest verified
+    ``escalation`` row. An ESCALATED cycle whose escalation is not that one
+    -- its row never committed (``escalation_commit`` empty or absent in the
+    state) or the ledger's latest escalation is another -- is refused: no
+    ruling is made on an escalation the ledger does not hold. Ruling rows
+    naming the identity must verify (else refused by name); the last one is
+    applied when the cycle is ESCALATED, close and reopen alike: a new stop
+    always has a new escalation row, so a verified ruling answering the
+    current identity is one the state has not applied. No local state
+    decides that. Returns ``{"identity", "pending"}``."""
     from .controller.state import RESOLUTION_STATUS
 
     rows = committed_rows(cfg, strict=True)
-    identity = escalation_identity(cfg, cycle_id)
-    pubkey = _project_pubkey(cfg)
+    pubkey = _verifying_key(cfg)
+    escalations = [r for r in rows if is_escalation(r)
+                   and str(r.get("cycle_id")) == cycle_id and row_verifies(r, pubkey)]
+    identity = commit_of(cfg, escalations[-1]) if escalations else ""
+    if cycle.get("status") == "ESCALATED":
+        recorded = cycle.get("escalation_commit")
+        if not identity or recorded != identity:
+            if recorded is None:
+                why = "escalated by an older version of CrossAudit"
+            elif not recorded:
+                why = str(cycle.get("escalation_error") or "its escalation row was not committed")
+            elif not identity:
+                why = "the ledger holds no verified escalation row for it"
+            else:
+                why = (f"the ledger's latest escalation of this cycle is {identity[:12]}, "
+                       f"not {recorded[:12]}")
+            raise IntegrityDenial(
+                f"the escalation of cycle {cycle_id} is not committed to the ledger "
+                f"({why}); rule on it after the repository is repaired",
+                cycle_id=cycle_id, issue="escalation_not_committed")
     last = None
     for row in rows:
-        if str(row.get("cycle_id")) != cycle_id or "escalation_commit" not in row:
-            continue
-        if row.get("escalation_commit") != identity:
+        if (is_escalation(row) or str(row.get("cycle_id")) != cycle_id
+                or "escalation_commit" not in row or not identity
+                or row.get("escalation_commit") != identity):
             continue
         sha = commit_of(cfg, row)
         if not row_verifies(row, pubkey) or row.get("action") not in RESOLUTION_STATUS:
@@ -771,27 +869,17 @@ def assess(cfg, cycle_id: str, cycle: dict) -> dict:
                 f"valid signature from this project; nothing was applied, and no new "
                 f"ruling is made until the repository is repaired",
                 cycle_id=cycle_id, issue="ruling_unverified")
-        if not sha:
-            raise IntegrityDenial(
-                f"the escalation of cycle {cycle_id} could not be established from git "
-                f"(no commit carries its ruling); no ruling is made until it can be",
-                cycle_id=cycle_id, issue="escalation_unknown")
         last = dict(row, commit=sha)
-        identity = sha
-    pending = None
-    if last is not None and cycle.get("status") == "ESCALATED":
-        if last["action"] == "close" or \
-                last.get("intent") not in set(cycle.get("ruling_intents") or []):
-            pending = last
+    pending = last if last is not None and cycle.get("status") == "ESCALATED" else None
     return {"identity": identity, "pending": pending}
 
 
 def unverified_rows(cfg, cycle_id: str, cycle: dict, rows: list[dict]) -> list[dict]:
-    """For ``status`` only (read-only, D176 ruling 41): rows on an ESCALATED
-    cycle that cannot be authority -- no signature or no
+    """For ``status`` only (read-only, D176 ruling 41): ruling rows on an
+    ESCALATED cycle that cannot be authority -- no signature or no
     ``escalation_commit`` (written before ruling 40), or a signature that
-    does not verify with the project's key. A row with a valid shape that
-    names an earlier escalation stays in ordinary history."""
+    does not verify while claiming the current escalation. Escalation rows
+    are shown on their own line."""
     if cycle.get("status") != "ESCALATED":
         return []
     pubkey = _project_pubkey(cfg)
@@ -801,7 +889,7 @@ def unverified_rows(cfg, cycle_id: str, cycle: dict, rows: list[dict]) -> list[d
         current = None
     out = []
     for row in rows:
-        if str(row.get("cycle_id")) != cycle_id:
+        if is_escalation(row) or str(row.get("cycle_id")) != cycle_id:
             continue
         if "sig" not in row or "escalation_commit" not in row:
             out.append(row)
@@ -950,7 +1038,7 @@ def history(cfg) -> list[dict]:
             row = json.loads(line)
         except ValueError:
             continue
-        if isinstance(row, dict) and row.get("cycle_id"):
+        if isinstance(row, dict) and row.get("cycle_id") and not is_escalation(row):
             rows.append(row)
     return rows
 

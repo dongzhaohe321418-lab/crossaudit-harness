@@ -64,12 +64,16 @@ def test_a_symlinked_log_file_is_refused_and_nothing_leaves_the_repository(
     row goes to the outside target, the commit holds only the link's target
     pathname, and the cycle closes."""
     root, cid = escalated
+    # Since D176 ruling 43 the log already holds the escalation's row, so its
+    # bytes move outside and the log becomes a link to them.
     outside = tmp_path / "outside-rulings.jsonl"
-    outside.write_bytes(b"")
+    before = (root / LOG).read_bytes()
+    outside.write_bytes(before)
+    (root / LOG).unlink()
     (root / LOG).symlink_to(outside)
     head = git("rev-parse", "HEAD", cwd=root)
     assert _refused(cid) == SYMLINK_SENTENCE
-    assert outside.read_bytes() == b""
+    assert outside.read_bytes() == before
     assert (root / LOG).is_symlink()
     assert git("rev-parse", "HEAD", cwd=root) == head
     assert git("diff", "--cached", "--name-only", cwd=root) == ""
@@ -85,21 +89,24 @@ def test_a_symlinked_ledger_directory_is_refused(escalated, tmp_path):
     (root / "cycles").rename(real)
     (root / "cycles").symlink_to(real, target_is_directory=True)
     head = git("rev-parse", "HEAD", cwd=root)
+    before = (real / "rulings.jsonl").read_bytes()      # the escalation's row
     assert _refused(cid) == SYMLINK_SENTENCE
-    assert not (real / "rulings.jsonl").exists()
+    assert (real / "rulings.jsonl").read_bytes() == before
     assert git("rev-parse", "HEAD", cwd=root) == head
     _assert_unruled(root, cid)
 
 
 def test_a_clean_filter_that_strips_the_row_leaves_the_cycle_escalated(escalated):
-    """The commit lands but carries an empty log: the filter removed the row.
-    Mutation caught: dropping `_confirm_committed` -- the cycle closes on a
-    commit that holds no ruling."""
+    """The commit lands but carries something else: the filter replaced the
+    row. (Since D176 ruling 43 the log already holds the escalation's row, so
+    a filter that only deleted the last line would leave nothing to commit;
+    this one rewrites it.) Mutation caught: dropping `_confirm_committed` --
+    the cycle closes on a commit that holds no ruling."""
     root, cid = escalated
     gitdir = Path(git("rev-parse", "--absolute-git-dir", cwd=root))
     (gitdir / "info").mkdir(exist_ok=True)
     (gitdir / "info" / "attributes").write_text(f"{LOG} filter=strip\n")
-    git("config", "filter.strip.clean", "sed '$d'", cwd=root)
+    git("config", "filter.strip.clean", "sed '$s/.*/{\"replaced\": true}/'", cwd=root)
     head = git("rev-parse", "HEAD", cwd=root)
     reason = _refused(cid)
     landed = git("rev-parse", "HEAD", cwd=root)

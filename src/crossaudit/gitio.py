@@ -176,6 +176,25 @@ def parent(repo: Path, sha: str) -> str | None:
     return out[1] if len(out) > 1 else None
 
 
+def past_ledger_commits(repo: Path, ledger_dir: str, sha: str | None) -> str | None:
+    """``sha``, or its nearest ancestor that is not a ledger-only commit.
+
+    A commit that touches only the ledger directory -- the controller's own
+    escalation and ruling rows (D176 ruling 43), audit reports and receipts
+    -- is not an increment: cycle lineage, the escalation lock and the
+    anchor of a stop look through it to the work it records."""
+    ledger = Path(ledger_dir).as_posix().rstrip("/") + "/"
+    current = sha
+    for _ in range(64):
+        if not current:
+            return current
+        paths = changed_paths(repo, current)
+        if not paths or not all(p.startswith(ledger) for p in paths):
+            return current
+        current = parent(repo, current)
+    return current
+
+
 def changed_paths(repo: Path, sha: str) -> list[str]:
     """The paths this commit touched: the increment, as git already knows it.
 

@@ -514,7 +514,11 @@ def reconcile_human_wait(cfg: Config, journal: RunJournal | None = None) -> dict
     if not is_repo(cfg.root):
         return result
     try:
-        anchor = git("rev-parse", "HEAD", cwd=cfg.root)
+        from ..gitio import past_ledger_commits
+
+        # Past the controller's own ledger-only commits (D176 ruling 43).
+        anchor = past_ledger_commits(cfg.root, cfg.ledger_dir,
+                                     git("rev-parse", "HEAD", cwd=cfg.root))
     except Denial:
         return result
     candidate = next((dict(c, cycle_id=cid) for cid, c in cycles.items()

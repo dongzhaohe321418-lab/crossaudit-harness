@@ -8844,19 +8844,68 @@ verification is the next round, cited only once its text exists):
     ruling would, and the test asserts it stays in ordinary history while the new
     escalation proceeds.
 
+**Round 13** (`…-r13.md`): the round-12 repair verified for every covered case; the one
+residual this record had kept open is named as a blocker (a writer of the state file
+could obtain two signed `reopen` rows for one escalation), with two P2; repaired on
+this branch (the verification is the next round, cited only once its text exists):
+
+43. **An escalation is a committed, signed row, and a ruling answers that row.** The
+    identity of ruling 40 came from the commit that introduced the cycle's latest
+    receipt, advanced by each verified ruling; git could not tell a verified `reopen`
+    whose state write failed from a `reopen` followed by a new stop that left no
+    receipt, so the mutable `ruling_intents` decided. Now, when the controller
+    escalates a cycle (round budget spent, auditor escalation, generator produced
+    nothing, provider failure), it appends an `escalation` row to `cycles/rulings.jsonl`
+    — cycle, kind, reason, round, active sha, a nonce — signed with the project key, and
+    commits exactly that file, as a ruling is. The cycle's current escalation identity
+    is the commit of its latest committed `escalation` row; a ruling row carries that
+    commit as `escalation_commit`, and recovery applies a verified ruling answering the
+    current identity whenever the state does not reflect it, for `close` and `reopen`
+    alike, consulting no local state. A new stop after a reopen appends a new escalation
+    row, hence a new identity, so a recovered `reopen` can never reopen a later stop.
+    If the escalation row cannot be committed, the cycle still escalates (escalation is
+    the fail-closed outcome and never fails to happen) with an empty
+    `escalation_commit` and the cause in `escalation_error`; every ruling on it first
+    retries committing the row and, if that still fails, refuses by name ("the escalation
+    of cycle … is not committed to the ledger (…); rule on it after the repository is
+    repaired"), so the cycle proceeds once the repository is repaired. The state's
+    `escalation_commit` is a gate, never authority: a ruling requires it to equal git's
+    latest verified escalation row (which also catches a history rewrite that removed
+    that row), and editing the state can block a ruling but cannot make any row apply.
+    A cycle escalated by an older version has no row; its next ruling commits the row
+    then and proceeds. The row is committed under the controller lock, bounded like a
+    ruling's commit. The receipt-based identity and `ruling_intents` are gone; `status`
+    shows each escalated cycle's escalation commit or "escalation not committed (why)".
+    Because escalation rows are commits, `HEAD` moves; `run` and `audit` now take as
+    their parent the nearest commit that is not ledger-only (`gitio.past_ledger_commits`
+    walks back past commits touching only the ledger directory: escalation rows, audit
+    reports, receipts), and provider stops anchor the same way, so a child of such a
+    commit continues its cycle instead of opening a new one and cannot route around the
+    escalation lock. That is a behaviour change: before, a `run` on a child of a report or
+    receipt commit opened a new cycle.
+44. **A project's signing key is not recreated once anything is signed.**
+    `load_or_create` created a fresh key whenever the seed was missing, so a lost or
+    replaced seed left every earlier signed row (and receipt) unverifiable as "no valid
+    signature", with no keyring to fall back on. Now the key is created implicitly only
+    when the project holds no signed artefact (no `receipt.dsse.json` under the ledger
+    directory and no `sig` in the rulings log); otherwise a missing seed is refused: "the
+    project signing key at … is missing but signed rulings or receipts exist; restore it
+    from your backup, since a new key would not verify them" (Chinese parity). Receipt
+    signing stays fail-open as before: with the seed missing and artefacts present, the
+    receipt is left unsigned and no second key is created. Rotation is unsupported and
+    said so; a public-key history is not built here.
+45. **The two documents are qualified.** README and CHANGELOG say that every ruling line
+    written from this version on is signed, that older lines are listed as unverified,
+    and that the recovery "instead of writing a second one" rests on the committed
+    escalation row of ruling 43.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
 paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, which no
-ruling path can prevent; what rulings 40–41 close is that such a writer, or a
-repository writer, could make the ledger hold conflicting rulings through CrossAudit's
-own recovery. One residual case consults the state: git cannot tell a verified `reopen`
-whose state write failed from a `reopen` followed by a new stop that left no receipt, so
-for a `reopen` answering the current identity the state's `ruling_intents` decides
-between "apply it" and "a new escalation"; a writer of `state.json` could add that
-nonce, and the person would rule `reopen` again, giving two `reopen` rows for one
-escalation (the same action, not conflicting ones). `close` has no such case. Closing
-it needs escalations themselves committed to git, which today only receipts are. The TUI (D175) was reviewed cold in round 2; rounds 3 to 12 are recorded
+ruling path can prevent; a holder of the project's private seed (`.crossaudit/signing/`,
+mode 0600) who can also write the repository can forge rulings and escalations, the
+same trust boundary as receipt signing. The TUI (D175) was reviewed cold in round 2; rounds 3 to 13 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,

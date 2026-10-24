@@ -43,8 +43,9 @@ def _state(root: Path) -> dict:
 
 def _rows(root: Path) -> list[dict]:
     path = root / LOG
-    return ([json.loads(ln) for ln in path.read_text().split("\n") if ln]
+    rows = ([json.loads(ln) for ln in path.read_text().split("\n") if ln]
             if path.exists() else [])
+    return [r for r in rows if r.get("kind") != "escalation"]   # D176 ruling 43
 
 
 def _count(root: Path, since: str) -> int:
@@ -65,11 +66,13 @@ def test_a_landed_commit_whose_confirmation_read_fails_keeps_the_intent(
     calls = {"n": 0}
 
     def confirmation_fails_once(cfg, args, deadline):
-        # The rulings log's own read-back (the escalation identity reads
-        # receipts first since D176 ruling 40, so the call is matched by path).
-        if args == ("cat-file", "blob", f"HEAD:{LOG}") and calls["n"] == 0:
+        # The rulings log's read-back after the commit: the second read of the
+        # committed log in the ruling (the first is the recovery check, which
+        # since D176 ruling 43 always finds the escalation's row).
+        if args == ("cat-file", "blob", f"HEAD:{LOG}"):
             calls["n"] += 1
-            return 128, b"", "fatal: unable to read blob\n"
+            if calls["n"] == 2:
+                return 128, b"", "fatal: unable to read blob\n"
         return real(cfg, args, deadline)
     monkeypatch.setattr(rulings, "_bounded_bytes", confirmation_fails_once)
     with pytest.raises(IntegrityDenial) as denied:
@@ -139,25 +142,29 @@ def test_a_failed_rev_parse_during_recovery_is_refused_not_no_commit(
 
 
 def test_a_genuinely_unborn_repository_reads_as_no_rows(console):  # noqa: F811
-    """A fresh `git init` (no commit) with an intent present: no rows, the
-    intent is cleared and the ruling proceeds as the repository's first
-    commit. Mutation caught: refusing an unborn HEAD (the first ruling in a
-    new project could never be recovered from a crash)."""
+    """A fresh `git init` (no commit) reads as no rows, not as a refusal.
+    Since D176 ruling 43 escalating the cycle commits its escalation row, so
+    that becomes the repository's first commit; an intent then present is
+    cleared and the ruling proceeds as the second. Mutation caught: refusing
+    an unborn HEAD (a new project's first escalation or ruling could never
+    be read)."""
     _s, body, _h = fetch(console.replace("/?t=", "/api/state?t="))
     root = Path(json.loads(body)["root"])
     assert git("rev-parse", "-q", "--verify", "HEAD", cwd=root, check=False) == ""
     store = _store(root)
+    cfg = load(root / "crossaudit.yml")
+    assert rulings.committed_rows(cfg, strict=True) == []       # unborn: no rows
     cid = store.open_or_advance("t/p", "a" * 40, None)["cycle_id"]
     store.escalate(cid, "round budget spent")
-    cfg = load(root / "crossaudit.yml")
-    assert rulings.committed_rows(cfg, strict=True) == []
+    assert [r.get("kind") for r in rulings.committed_rows(cfg, strict=True)] == [
+        "escalation"]
     with store._locked() as state:
         state.setdefault("pending_rulings", {})[cid] = {
             "action": "close", "nonce": "b" * 32, "reason_sha256": "", "by": "",
             "started_at": 0}
     result = rulings.rule(cfg, store, cid, "close", REASON)
     assert result.get("intent_cleared") is True
-    assert int(git("rev-list", "--count", "HEAD", cwd=root)) == 1
+    assert int(git("rev-list", "--count", "HEAD", cwd=root)) == 2
     assert store.cycle(cid)["status"] == "BLOCKED"
 
 
@@ -198,7 +205,8 @@ def test_a_filter_that_rewrites_the_nonce_stops_phase_3(escalated):
         "new ruling is made until the repository is repaired")
     assert git("rev-parse", "HEAD", cwd=root) == head
     committed = git("show", f"HEAD:{LOG}", cwd=root)
-    assert len([ln for ln in committed.split("\n") if ln.strip()]) == 1
+    assert len([ln for ln in committed.split("\n")             # rulings only
+                if ln.strip() and json.loads(ln).get("kind") != "escalation"]) == 1
     assert cid in _state(root)["pending_rulings"]
     assert _state(root)["cycles"][cid]["status"] == "ESCALATED"
 

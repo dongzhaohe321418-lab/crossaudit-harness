@@ -81,8 +81,7 @@ def test_a_close_ruling_is_committed_to_the_ledger_with_its_reason(
         "cycles/rulings.jsonl"]
     message = git("log", "-1", "--format=%B", cwd=root)
     assert cid in message and REASON in message
-    rows = [json.loads(line) for line in
-            (root / "cycles" / "rulings.jsonl").read_text().split("\n") if line]
+    rows = ruling_rows(root)
     assert rows == [dict(rows[0], cycle_id=cid, action="close", reason=REASON)]
     assert rows[0]["by"] and rows[0]["at"]
     assert not git("status", "--porcelain", "--", "cycles", cwd=root)
@@ -147,7 +146,7 @@ def test_without_a_terminal_resolve_still_refuses(escalated, capsys):
     assert code == EXIT_CONFIG
     assert "refuses to run without a terminal" in capsys.readouterr().err
     assert git("rev-parse", "HEAD", cwd=root) == head
-    assert not (root / "cycles" / "rulings.jsonl").exists()
+    assert ruling_rows(root) == []
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="pty does not exist on Windows")
@@ -211,15 +210,34 @@ def install_hook(root: Path, script: str) -> Path:
     return hook
 
 
+def ruling_rows(root: Path) -> list[dict]:
+    """The ruling rows in the working log. Since D176 ruling 43 the log also
+    holds the controller's signed `escalation` rows; they are not rulings."""
+    log = root / "cycles" / "rulings.jsonl"
+    if not log.exists():
+        return []
+    rows = [json.loads(line) for line in log.read_text().split("\n") if line]
+    return [r for r in rows if r.get("kind") != "escalation"]
+
+
 def assert_nothing_was_ruled(root: Path, cid: str, log_before: bytes | None,
                              head: str) -> None:
-    """The four things a failed ruling must leave as they were."""
+    """The four things a failed ruling must leave as they were. A
+    ``log_before`` of None means "no ruling rows": since D176 ruling 43 the
+    log holds the escalation's committed row, so it must equal its copy at
+    HEAD rather than be absent."""
     state = json.loads((root / ".crossaudit" / "state.json").read_text())
     assert state["cycles"][cid]["status"] == "ESCALATED"
     assert not any(h.get("event") == "human_resolution" and h.get("cycle") == cid
                    for h in state["history"])
     log = root / "cycles" / "rulings.jsonl"
-    assert (log.read_bytes() if log.exists() else None) == log_before
+    if log_before is None:
+        assert ruling_rows(root) == []
+        committed = subprocess.run(["git", "show", "HEAD:cycles/rulings.jsonl"], cwd=root,
+                                   capture_output=True).stdout
+        assert (log.read_bytes() if log.exists() else b"") == committed
+    else:
+        assert log.read_bytes() == log_before
     assert git("status", "--porcelain", "--", "cycles/rulings.jsonl", cwd=root) == ""
     assert git("diff", "--cached", "--name-only", cwd=root) == ""
     assert git("rev-parse", "HEAD", cwd=root) == head
@@ -280,7 +298,9 @@ def test_after_a_failed_commit_a_repaired_hook_records_exactly_one_row(
     would hold three rows, two of them closes."""
     root, cid = escalated
     _on_a_terminal(monkeypatch)
-    install_hook(root, SECOND_ONLY_HOOK)
+    # Since D176 ruling 43 escalating commits too: invocation 1 is the
+    # reopen, 2 the new escalation, 3 the close (refused), 4 the retried close.
+    install_hook(root, SECOND_ONLY_HOOK.replace('-eq 2', '-eq 3'))
     assert main.main(["resolve", cid, "--reopen", "--because", "try once more"]) == EXIT_OK
     from crossaudit.config import load
     from crossaudit.controller import StateStore
@@ -294,7 +314,7 @@ def test_after_a_failed_commit_a_repaired_hook_records_exactly_one_row(
     assert log.read_bytes() == after_first
     assert git("rev-parse", "HEAD", cwd=root) == head
     assert main.main(["resolve", cid, "--close", "--because", REASON]) == EXIT_OK
-    rows = [json.loads(line) for line in log.read_text().split("\n") if line]
+    rows = ruling_rows(root)
     assert [(r["action"], r["status_after"]) for r in rows] == [
         ("reopen", "OPEN"), ("close", "BLOCKED")]
     assert git("rev-list", "--count", f"{head}..HEAD", cwd=root) == "1"

@@ -33,7 +33,9 @@ def _mint(science: Path, monkeypatch) -> Path:
     write_increment(science, GOOD_RESULTS, "Fine.", "clean increment")
     monkeypatch.chdir(science)
     cli.main(["audit", "--offline", "--write-ledger", "--scope", "experiments"])
-    (cycle,) = sorted((science / "cycles").iterdir())
+    # Directories only: since D176 ruling 43 an escalating audit (DCL_ONLY)
+    # also writes cycles/rulings.jsonl, the escalation's committed row.
+    (cycle,) = sorted(p for p in (science / "cycles").iterdir() if p.is_dir())
     assert (cycle / SIDECAR).is_file(), "the audit did not sign its receipt"
     return cycle / "receipt.json"
 

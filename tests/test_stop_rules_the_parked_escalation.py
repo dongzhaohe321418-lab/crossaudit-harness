@@ -37,7 +37,9 @@ def _rows(root):
     log = root / "cycles" / "rulings.jsonl"
     if not log.exists():
         return None
-    return [json.loads(line) for line in log.read_text().split("\n") if line]
+    rows = [json.loads(line) for line in log.read_text().split("\n") if line]
+    rows = [r for r in rows if r.get("kind") != "escalation"]   # escalation rows are not rulings (D176 ruling 43)
+    return rows or None
 
 
 def _assert_still_escalated(cfg, store, cid, head):
@@ -136,4 +138,4 @@ def test_the_console_stop_returns_the_refusal_in_both_languages(console):  # noq
     assert result["note"].startswith(f"the ruling on cycle {cid} could not be committed")
     assert result["note_zh"].startswith(f"周期 {cid} 的裁决未能提交到账本")
     assert store.cycle(cid)["status"] == "ESCALATED"
-    assert not (root / "cycles" / "rulings.jsonl").exists()
+    assert _rows(root) is None

@@ -32,6 +32,8 @@ from crossaudit.gitio import git
 from crossaudit.runtime.events import RunEvent
 from crossaudit.runtime.runs import RunState
 
+from .test_resolve_commits_the_ruling import ruling_rows
+
 SRC = Path(__file__).resolve().parents[1] / "src"
 REASON = "The benchmark is out of scope for this study; stopping after review."
 
@@ -456,8 +458,7 @@ def test_resolve_cycle_records_the_ruling_and_commits_it(project):
     result = main.resolve_cycle(load(), escalated, "close", REASON)
     assert result["cycle"]["status"] == "BLOCKED" and result["cycle"]["closed_by_human"]
     assert result["ruling"]["commit"] == git("rev-parse", "HEAD", cwd=root) != head
-    rows = [json.loads(line) for line in
-            (root / "cycles" / "rulings.jsonl").read_text().split("\n") if line]
+    rows = ruling_rows(root)          # escalation rows are not rulings (D176 r. 43)
     assert [(r["cycle_id"], r["action"], r["reason"]) for r in rows] == [
         (escalated, "close", REASON)]
     assert REASON in git("log", "-1", "--format=%B", cwd=root)
@@ -484,7 +485,7 @@ def test_rule_on_with_an_empty_reason_records_nothing(project):
     assert tuiapp.rule_on(load(), escalated, "close", "   ") == [
         i18n.CATALOGUE["en"]["tui.reason.empty"]]
     assert git("rev-parse", "HEAD", cwd=root) == head
-    assert not (root / "cycles" / "rulings.jsonl").exists()
+    assert ruling_rows(root) == []
 
 
 def test_rule_on_with_a_rejected_commit_shows_the_refusal_and_rules_nothing(project):
@@ -505,7 +506,7 @@ def test_rule_on_with_a_rejected_commit_shows_the_refusal_and_rules_nothing(proj
     state = json.loads((root / ".crossaudit" / "state.json").read_text())
     assert state["cycles"][escalated]["status"] == "ESCALATED"
     assert not any(h.get("event") == "human_resolution" for h in state["history"])
-    assert not (root / "cycles" / "rulings.jsonl").exists()
+    assert ruling_rows(root) == []
     assert git("status", "--porcelain", "--", "cycles", cwd=root) == ""
     assert git("rev-parse", "HEAD", cwd=root) == head
 
@@ -678,8 +679,7 @@ def test_under_a_pty_c_with_a_typed_reason_commits_the_ruling(project, capsys):
         os.close(leader)
         os.close(follower)
     assert code == 0, screen.seen[-2000:]
-    rows = [json.loads(line) for line in
-            (root / "cycles" / "rulings.jsonl").read_text().split("\n") if line]
+    rows = ruling_rows(root)          # escalation rows are not rulings (D176 r. 43)
     assert [(r["cycle_id"], r["action"], r["reason"]) for r in rows] == [
         (escalated, "close", REASON)]
     assert REASON in git("log", "-1", "--format=%B", cwd=root)

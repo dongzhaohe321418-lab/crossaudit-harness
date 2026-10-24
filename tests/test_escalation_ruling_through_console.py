@@ -62,7 +62,10 @@ def _root(store: StateStore) -> Path:
 
 def _rows(root: Path) -> list[dict]:
     log = root / "cycles" / "rulings.jsonl"
-    return [json.loads(line) for line in log.read_text().split("\n") if line]
+    if not log.exists():
+        return []
+    rows = [json.loads(line) for line in log.read_text().split("\n") if line]
+    return [r for r in rows if r.get("kind") != "escalation"]   # escalation rows are not rulings (D176 ruling 43)
 
 
 def _status_rulings(root: Path, cid: str, monkeypatch, capsys) -> list[dict]:
@@ -142,7 +145,7 @@ def test_a_ruling_without_a_reason_or_with_an_unknown_action_is_refused(
         assert 400 <= code < 500
     assert answered_by == [StateStore, StateStore]
     assert store.cycle(cycle["cycle_id"])["status"] == "ESCALATED"
-    assert not (_root(store) / "cycles" / "rulings.jsonl").exists()
+    assert _rows(_root(store)) == []
 
 
 def _provider_stop(store: StateStore, sha: str) -> dict:
@@ -199,7 +202,7 @@ def _assert_refused_and_unchanged(console, store, cid, payload, head_before):
     assert store.cycle(cid)["status"] == "ESCALATED"
     assert not any(h.get("event") == "human_resolution"
                    for h in store.snapshot()["history"])
-    assert not (root / "cycles" / "rulings.jsonl").exists()
+    assert _rows(root) == []
     assert git("status", "--porcelain", cwd=root) == head_before
 
 
