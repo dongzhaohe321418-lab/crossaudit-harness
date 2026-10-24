@@ -720,9 +720,16 @@ class StateStore:
         try:
             c["escalation_commit"] = recorder(dict(c, cycle_id=cycle_id))
             c.pop("escalation_error", None)
+            c.pop("escalation_nonce", None)
         except rulings.EscalationNotCommitted as exc:
             c["escalation_commit"] = ""
             c["escalation_error"] = exc.why[:300]
+            if exc.nonce:
+                c["escalation_nonce"] = exc.nonce
+        except Exception as exc:  # noqa: BLE001 -- escalation must never fail to happen
+            c["escalation_commit"] = ""
+            c["escalation_error"] = (getattr(exc, "reason", None) or str(exc)
+                                     or type(exc).__name__)[:300]
 
     def _commit_state(self, held: locks.HeldLock, state: dict) -> None:
         """One fsync'd state write inside a held lock, refused if the lock
