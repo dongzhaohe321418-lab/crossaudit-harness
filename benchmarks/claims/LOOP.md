@@ -253,7 +253,8 @@ as "no commit" and an escalation row was written twice, fixed as a refusal
 reached with no time left said "timed out after 90s"), fixed; round 21 verified
 that and found the ruling's own post-commit read-back still bounded by the row's
 remaining deadline where the records said 5 s, fixed; round 22 verified it on
-the ref below.
+the ref below (MERGE); the CI then found one test still calling the old signature,
+adapted, and round 23 verified that and the record (MERGE).
 
 | ref (same harness, `e338d0e` + the placeholder fill) | PASS / 43 |
 |---|---|
