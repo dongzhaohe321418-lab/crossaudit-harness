@@ -214,12 +214,14 @@ repaired and recorded as D176; the `science-ai4s` pack came back DO NOT MERGE
 Amendment 5) and MERGE in its round 2; the stack's round 2 found two more P1 (the
 ruling restore, the lock), a P2 and a P3, repaired; round 3 verified them and found two more P1 (a symlinked
 ruling log; stale-lock breaking); round 4 verified those and found the last
-one (any check-then-unlink on a lock file), answered by kernel-held locks and
-verified in round 5. Those repairs are in the ref below.
+one (any check-then-unlink on a lock file), answered by kernel-held locks; round 5 verified those and
+asked for a still-current check before each protected write and a legible
+refusal on filesystems without locks, verified in round 6. Those repairs are
+in the ref below.
 
 | ref (same harness, `e338d0e` + the placeholder fill) | PASS / 43 |
 |---|---|
-| **`feat/tui-first` 9f06ae1** (D175; D176 repairs from four review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks, the symlink refusal and committed-blob check) | **43** |
+| **`feat/tui-first` fd5495e** (D175; D176 repairs from five review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check) | **43** |
 
 The record is `records/tui-first/claims.jsonl` and `RESULTS-tui-first.md`. Still
 untestable here, as before: C32 (now also "not on the main line"), C33b, C34b,
