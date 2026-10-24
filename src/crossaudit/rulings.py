@@ -44,6 +44,7 @@ ruling's row before the state changes.
 from __future__ import annotations
 
 import errno
+import hashlib
 import json
 import os
 import signal
@@ -285,19 +286,27 @@ def _read_nofollow(path: Path) -> bytes | None:
         os.close(fd)
 
 
+def _canonical(row: dict) -> str:
+    return json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
 def _confirm_committed(cfg, path: Path, rel: str, row: dict, deadline: float) -> None:
-    """The committed blob must end with this ruling's row.
+    """The committed blob must end with exactly this ruling's row.
 
     A clean filter, or a hook that rewrote and re-staged the file, can make
     the commit carry something other than the line that was appended. The
     blob is read raw (``git cat-file blob HEAD:<rel>``: no filters, no
     textconv), bounded by what remains of the deadline but never less than
-    :data:`CLEANUP_TIMEOUT_S`. If its last line is not this row (same
-    ``cycle_id``, ``action``, ``reason``, ``t``), ``IntegrityDenial`` is raised
-    and the controller state is not changed. The commit is NOT undone (the
-    ledger is append-only); the working file is set to the committed bytes so
-    it carries no line git does not have.
+    :data:`CLEANUP_TIMEOUT_S`, and its last line is compared with the row as
+    written, COMPLETE and canonical (every field, the intent's nonce
+    included; D176 ruling 34). A mismatch or a failed read raises
+    ``IntegrityDenial`` marked ``commit_landed="yes"``: the controller state
+    is not changed and the local intent stays, so the next ruling recovers
+    strictly (ruling 33). The commit is NOT undone (the ledger is
+    append-only); on a mismatch the working file is set to the committed
+    bytes so it carries no line git does not have.
     """
+    expected = _canonical({k: v for k, v in row.items() if k != "commit"})
     floor = time.monotonic() + CLEANUP_TIMEOUT_S
     changed = "a filter or hook changed the file"
     why = changed
@@ -311,8 +320,7 @@ def _confirm_committed(cfg, path: Path, rel: str, row: dict, deadline: float) ->
         else:
             lines = [ln for ln in blob.decode("utf-8").split("\n") if ln.strip()]
             got = json.loads(lines[-1]) if lines else None
-            if isinstance(got, dict) and all(
-                    got.get(k) == row[k] for k in ("cycle_id", "action", "reason", "t")):
+            if isinstance(got, dict) and _canonical(got) == expected:
                 return
     except _StepFailed as exc:
         why = f"it could not be read back: {exc.why}"
@@ -328,17 +336,42 @@ def _confirm_committed(cfg, path: Path, rel: str, row: dict, deadline: float) ->
             f"the ruling on cycle {cid} was committed as {sha}, but the committed "
             f"{rel} could not be confirmed to contain it (a filter or hook changed "
             f"the file); the cycle stays ESCALATED — check the repository's filters "
-            f"and hooks before ruling again", cycle_id=cid, issue="ruling_not_in_commit")
+            f"and hooks before ruling again", cycle_id=cid, issue="ruling_not_in_commit",
+            commit_landed="yes")
     raise IntegrityDenial(
-        f"the ruling on cycle {cid} was committed as {sha}, but the committed "
-        f"{rel} could not be confirmed to contain it (it could not be read back: "
-        f"{why.removeprefix('it could not be read back: ')}); the cycle stays "
-        f"ESCALATED — check the repository's filters and hooks before ruling again",
-        cycle_id=cid, issue="ruling_not_in_commit")
+        f"the ruling on cycle {cid} was committed as {sha}, but the committed {rel} "
+        f"could not be read back to confirm it "
+        f"({why.removeprefix('it could not be read back: ')}); the cycle stays "
+        f"ESCALATED, and the next ruling on this cycle recovers it",
+        cycle_id=cid, issue="ruling_not_confirmed", commit_landed="yes")
+
+
+class _Uncertain(Exception):
+    """``git commit`` failed but HEAD moved (or could not be read): the
+    commit may have landed."""
+
+    def __init__(self, why: str) -> None:
+        super().__init__(why)
+        self.why = why
 
 
 def record(cfg, cycle: dict, action: str, reason: str, *,
            intent: str, store, deadline: float | None = None) -> dict:
+    """:func:`_record`, with every refusal marked by whether the commit
+    could have landed (``detail["commit_landed"]``: ``"no"`` -- nothing
+    reached git, the caller may clear its intent; ``"uncertain"`` or
+    ``"yes"`` -- it did or may have, the intent must stay for recovery;
+    D176 ruling 33)."""
+    try:
+        return _record(cfg, cycle, action, reason, intent=intent, store=store,
+                       deadline=deadline)
+    except Denial as exc:
+        exc.detail.setdefault("commit_landed", "no")
+        raise
+
+
+def _record(cfg, cycle: dict, action: str, reason: str, *,
+            intent: str, store, deadline: float | None = None) -> dict:
     """Append one ruling and commit exactly that file. Returns the row,
     with the ledger commit that carries it under ``commit``.
 
@@ -406,6 +439,8 @@ def record(cfg, cycle: dict, action: str, reason: str, *,
             "active_sha": cycle.get("active_sha", ""),
             "status_after": RESOLUTION_STATUS.get(action, ""),
             "escalation_reason": str(cycle.get("escalation_reason", ""))[:400],
+            # Bound to the local intent at recovery (D176 ruling 34).
+            "reason_sha256": hashlib.sha256(reason.encode("utf-8")).hexdigest(),
         }
         # The local intent's nonce (D176 ruling 30): recovery applies a
         # committed row only when it carries the nonce of an intent this
@@ -426,12 +461,27 @@ def record(cfg, cycle: dict, action: str, reason: str, *,
                 raise _symlink_denial(rel, cid) from exc
             raise _StepFailed(f"the log could not be written: {exc.strerror or exc}") from exc
         _git_step(cfg, deadline, "add", "--", rel)
-        # Only this file: anything else the person has staged stays staged.
-        _git_step(cfg, deadline, "commit", "-q", "-m", subject, "-m",
-                  f"Human ruling on escalated cycle {cid} "
-                  f"(round {cycle.get('round')}, {str(cycle.get('active_sha', ''))[:12]}): "
-                  f"{action}.\n\nReason:\n{reason}\n\nBy: {row['by']}\nAt: {row['at']}",
-                  "--", rel)
+        # HEAD before the attempt: a failed commit with HEAD unchanged did not
+        # land; any other outcome may have (D176 ruling 33).
+        pre_head = _cleanup_git(cfg, "rev-parse", "-q", "--verify", "HEAD")
+        try:
+            # Only this file: anything else the person has staged stays staged.
+            _git_step(cfg, deadline, "commit", "-q", "-m", subject, "-m",
+                      f"Human ruling on escalated cycle {cid} "
+                      f"(round {cycle.get('round')}, "
+                      f"{str(cycle.get('active_sha', ''))[:12]}): "
+                      f"{action}.\n\nReason:\n{reason}\n\nBy: {row['by']}\nAt: {row['at']}",
+                      "--", rel)
+        except _StepFailed as exc:
+            if _cleanup_git(cfg, "rev-parse", "-q", "--verify", "HEAD") != pre_head:
+                raise _Uncertain(exc.why) from exc
+            raise
+    except _Uncertain as exc:
+        # Neither restored nor unstaged: the line may be in a commit.
+        raise IntegrityDenial(
+            f"the ruling on cycle {cid} may have been committed to the ledger "
+            f"({exc.why}); the cycle stays ESCALATED, and the next ruling on this "
+            f"cycle recovers it", cycle_id=cid, commit_landed="uncertain") from exc
     except _StepFailed as exc:
         try:
             _restore(path, prior)
@@ -468,9 +518,10 @@ def committed_rows(cfg, *, strict: bool = False) -> list[dict]:
 
     ``strict`` (recovery, D176 ruling 30): a log that is in HEAD but cannot
     be read or parsed raises ``IntegrityDenial``; it is never "no rows". A
-    repository with no commit yet, or whose HEAD has no rulings log, has no
-    committed rows. Not strict (``status``, read-only): any failure reads as
-    no rows.
+    positively unborn HEAD (a symbolic HEAD whose branch does not exist), or a
+    HEAD with no rulings log, has no committed rows; any other failure of
+    ``rev-parse``, ``ls-tree`` or ``cat-file`` is refused (D176 ruling 33).
+    Not strict (``status``, read-only): any failure reads as no rows.
     """
     rel = log_path(cfg).relative_to(cfg.root).as_posix()
 
@@ -480,10 +531,23 @@ def committed_rows(cfg, *, strict: bool = False) -> list[dict]:
             f"until it can be", issue="rulings_unreadable")
 
     try:
-        code, _out, _err = _bounded(cfg, ("rev-parse", "--verify", "-q", "HEAD"),
-                                    time.monotonic() + CLEANUP_TIMEOUT_S)
+        code, _out, err = _bounded(cfg, ("rev-parse", "--verify", "-q", "HEAD"),
+                                   time.monotonic() + CLEANUP_TIMEOUT_S)
         if code != 0:
-            return []                                   # no commit yet
+            # "No commit yet" only for a positively identified unborn HEAD: a
+            # symbolic HEAD whose branch does not exist (D176 ruling 33). Any
+            # other failure (a corrupt HEAD, a broken repository) is refused.
+            sym_code, ref, _e = _bounded(cfg, ("symbolic-ref", "-q", "HEAD"),
+                                         time.monotonic() + CLEANUP_TIMEOUT_S)
+            if sym_code == 0 and ref.strip():
+                exists, _o, _e2 = _bounded(cfg, ("show-ref", "--verify", "-q", ref.strip()),
+                                           time.monotonic() + CLEANUP_TIMEOUT_S)
+                if exists != 0:
+                    return []                           # unborn: no commit yet
+            if strict:
+                raise refuse(err.strip().split("\n")[0][:120]
+                             or "git rev-parse HEAD failed")
+            return []
         code, listed, err = _bounded(cfg, ("ls-tree", "HEAD", "--", rel),
                                      time.monotonic() + CLEANUP_TIMEOUT_S)
         if code != 0:

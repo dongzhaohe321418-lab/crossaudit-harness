@@ -605,7 +605,9 @@ class StateStore:
         (``state["pending_rulings"][cycle_id]``), ``read_committed()`` reads
         the committed rulings log (it raises on any read or parse failure,
         never returning "nothing"). A committed row carrying the intent's
-        nonce is applied (history ``reconciled``), the intent cleared, and
+        nonce, whose action and reason hash also equal the intent's (D176
+        ruling 34; otherwise nothing is applied and the mismatch is named), is
+        applied (history ``reconciled``), the intent cleared, and
         ``{"reconciled": True, "row": row, ...}`` returned with no new row. No
         such row (the earlier process stopped before committing): the intent
         is cleared and this ruling proceeds as a fresh one
@@ -616,7 +618,9 @@ class StateStore:
         started_at, escalated_at, updated_at}`` with the normal fsync'd state
         write (a failure here commits nothing); phase 2 calls
         ``commit(cycle_before, nonce)``, which appends and commits the row
-        carrying ``intent: nonce`` (a failure clears the intent, best effort);
+        carrying ``intent: nonce`` (a refusal marked ``commit_landed="no"``
+        clears the intent; any other failure keeps it, since the commit may
+        have landed: D176 ruling 33);
         phase 3 applies the state change, records the nonce among the cycle's
         ``ruling_intents`` and removes the intent in one write. If phase 3
         fails, its ``ConfigDenial`` (issue ``state_unwritable``) propagates
@@ -640,6 +644,22 @@ class StateStore:
                          and r.get("intent") == intent.get("nonce")]
                 if match:
                     row = match[-1]
+                    # Every field the intent carries is bound to the row
+                    # (D176 ruling 34): a mismatch applies nothing.
+                    wrong = [name for name, ok in (
+                        ("action", row.get("action") == intent.get("action")
+                         and row.get("action") in RESOLUTION_STATUS),
+                        ("reason_sha256",
+                         hashlib.sha256(str(row.get("reason", "")).encode("utf-8"))
+                         .hexdigest() == intent.get("reason_sha256")
+                         and row.get("reason_sha256", intent.get("reason_sha256"))
+                         == intent.get("reason_sha256")),
+                    ) if not ok]
+                    if wrong:
+                        raise IntegrityDenial(
+                            f"the committed ruling for cycle {cycle_id} does not match "
+                            f"this controller's intent ({', '.join(wrong)}); nothing "
+                            f"was applied", cycle_id=cycle_id, issue="intent_mismatch")
                     c = state["cycles"].get(cycle_id)
                     before = dict(c or {}, cycle_id=cycle_id)
                     del intents[cycle_id]
@@ -674,12 +694,16 @@ class StateStore:
             self._commit_state(held, state)                    # phase 1
             try:
                 row = commit(before, nonce)                    # phase 2
-            except BaseException:
-                intents.pop(cycle_id, None)
-                try:
-                    self._commit_state(held, state)
-                except Denial:
-                    pass       # the intent stays; recovery finds no row for it
+            except Denial as exc:
+                # Clear the intent only when the commit definitely did not
+                # land (D176 ruling 33); any uncertainty keeps it for the
+                # next ruling's strict recovery.
+                if exc.detail.get("commit_landed") == "no":
+                    intents.pop(cycle_id, None)
+                    try:
+                        self._commit_state(held, state)
+                    except Denial:
+                        pass   # the intent stays; recovery finds no row for it
                 raise
             self._apply_resolution(state, c, cycle_id, action, reason)  # phase 3
             c.setdefault("ruling_intents", []).append(nonce)
