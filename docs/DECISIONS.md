@@ -9030,10 +9030,16 @@ cited only once its text exists):
     `assess`) call it strictly: the ruling is refused by name, nothing is written or
     committed, the nonce stays in the state, and the next ruling recognises the row
     at HEAD once git answers. The display paths (`status`, the informational commit
-    on a reconciled row) stay lenient. The timeout sentence now names the bound the
-    step had (`math.ceil` of the time it was given: 5 s for a lookup or confirmation,
-    what is left of the row budget for a row's own step), not the 90 s row budget it
-    did not have. The lookup for an escalation row no longer runs the ruling-subject
+    on a reconciled row) stay lenient. The timeout sentence now names the bound in force
+    for the step, carried on its deadline (`_until(budget)`): the row budget for a
+    row's own steps -- the number the person configured, whatever earlier steps of the
+    same row consumed, as `test_a_slow_filter_plus_a_slow_hook_share_one_deadline`
+    holds -- and 5 s for a lookup or confirmation, which used to be reported as the
+    row budget too (a deadline built elsewhere names the time that was left, rounded
+    up); a step reached with its deadline already passed is refused without
+    starting git and says so ("git commit was not started: its time budget was
+    already spent"), naming no number, where it used to say "timed out after 90s"
+    (round 20's finding). The lookup for an escalation row no longer runs the ruling-subject
     fallback, which could never match it. `tests/test_commit_lookup_fails_closed.py`
     drives a real hanging `git log` through a PATH shim and names four mutations
     (the lenient lookup on recognition; the lenient identity in `assess`; the budget
@@ -9055,6 +9061,13 @@ the Ctrl-C test accepted any non-zero exit where its D10 says 20. **VERDICT: DO 
 MERGE.** Both corrected (ruling 56; the test asserts 20). The same push's CI failed
 once on a path no round had seen, repaired as ruling 57.
 
+**Round 20** (`…-r20.md`): ruling 57's repair judged sound and more fail-closed -- a
+successful `git log` with no match is still "", not a refusal; the first two mutations
+reproduced; the causal account fits the CI evidence and no other mechanism for the
+third row was found in the old or the new code; the round-19 repairs correct; Chinese
+parity present. One P2: a step reached with its deadline already passed still said
+"timed out after 90s". **VERDICT: DO NOT MERGE.** Corrected above (ruling 57).
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
@@ -9062,7 +9075,7 @@ paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, whi
 ruling path can prevent; a holder of the project's private seed (`.crossaudit/signing/`,
 mode 0600) who can also write the repository can forge rulings and escalations, the
 same trust boundary as receipt signing. `by` on a row is attribution, not an
-authenticated human identity. The TUI (D175) was reviewed cold in round 2; rounds 3 to 19 are recorded
+authenticated human identity. The TUI (D175) was reviewed cold in round 2; rounds 3 to 20 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,

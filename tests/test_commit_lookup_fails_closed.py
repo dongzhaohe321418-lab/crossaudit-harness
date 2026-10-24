@@ -160,18 +160,39 @@ def test_a_ruling_refuses_by_name_while_the_escalation_commit_cannot_be_located(
 
 def test_a_timed_out_step_names_the_bound_it_had_and_display_reads_stay_lenient(
         escalated, hanging_log):
-    """`_bounded_bytes` names the time the step was given: a lookup under the
-    1 s bound says "after 1s", not the 90 s row budget; and the non-strict
-    `commit_of` (status, display) answers "" without raising. Mutations
-    caught: reporting `row_budget()` for every step; strict by default."""
+    """`_bounded_bytes` names the bound in force for the step, carried on its
+    deadline: a lookup under the 1 s bound says "after 1s", not the 90 s row
+    budget (a row's own step names the row budget, whatever earlier steps
+    consumed: `test_a_slow_filter_plus_a_slow_hook_share_one_deadline`); and
+    the non-strict `commit_of` (status, display) answers "" without raising.
+    Mutations caught: reporting `row_budget()` for every step; strict by
+    default."""
     root, _cid = escalated
     cfg = load()
     hanging_log.hang()
     started = time.monotonic()
     with pytest.raises(rulings._StepFailed) as failed:
         rulings._bounded_bytes(cfg, ("log", "-n", "1", "--format=%H"),
-                               time.monotonic() + rulings.CLEANUP_TIMEOUT_S)
+                               rulings._until(rulings.CLEANUP_TIMEOUT_S))
     assert failed.value.why == "git log timed out after 1s"
     assert rulings.commit_of(cfg, {"kind": "escalation", "cycle_id": "x"}) == ""
     hanging_log.answer()
     assert time.monotonic() - started < 10                          # killed, not waited
+
+
+def test_a_step_reached_with_no_time_left_says_so_and_never_starts_git(
+        escalated, hanging_log):
+    """A step whose deadline has already passed when it is reached (the row
+    budget spent by the steps before it) is refused without starting git, and
+    the sentence says that -- not "timed out after 90s", a bound it never had
+    (review round 20). Mutation caught: reporting `row_budget()` on the
+    expired branch."""
+    root, _cid = escalated
+    cfg = load()
+    hanging_log.hang()                        # a started `git log` would take 1 s
+    started = time.monotonic()
+    with pytest.raises(rulings._StepFailed) as failed:
+        rulings._bounded_bytes(cfg, ("log", "-n", "1"), rulings._until(-0.01))
+    hanging_log.answer()
+    assert failed.value.why == "git log was not started: its time budget was already spent"
+    assert time.monotonic() - started < 0.5                         # never started

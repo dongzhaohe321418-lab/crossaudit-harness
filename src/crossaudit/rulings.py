@@ -160,6 +160,20 @@ def _remaining(deadline: float) -> float:
     return deadline - time.monotonic()
 
 
+class _Deadline(float):
+    """A monotonic deadline that remembers the budget it was built from, so
+    a step that runs out of time can say the bound in force for it (D176
+    ruling 57): the row budget for a row's own steps, CLEANUP_TIMEOUT_S for
+    a lookup or confirmation."""
+    budget: float
+
+
+def _until(budget: float) -> _Deadline:
+    deadline = _Deadline(time.monotonic() + budget)
+    deadline.budget = budget
+    return deadline
+
+
 def _bounded(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, str, str]:
     """:func:`_bounded_bytes` with stdout and stderr decoded as UTF-8."""
     code, out, err = _bounded_bytes(cfg, args, deadline)
@@ -186,11 +200,19 @@ def _bounded_bytes(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, by
 
     timeout = _remaining(deadline)
     if timeout <= 0:
-        raise _StepFailed(f"git {_verb(args)} timed out after {row_budget():g}s")
-    # The refusal names the time this step was given (a cleanup or lookup
-    # step has CLEANUP_TIMEOUT_S, a row's step what is left of the row
-    # budget), never a budget it did not have (D176 ruling 57).
-    bound = math.ceil(timeout)
+        # Reached with its budget already spent by the steps before it: git
+        # is not started, and the sentence says that rather than naming a
+        # bound this step never had (review round 20; D176 ruling 57).
+        raise _StepFailed(f"git {_verb(args)} was not started: its time budget was "
+                          f"already spent")
+    # The refusal names the bound in force for this step (the row budget for
+    # a row's own steps, whatever earlier steps of the row consumed, and
+    # CLEANUP_TIMEOUT_S for a lookup or confirmation), never a budget it did
+    # not have (D176 ruling 57); a deadline built elsewhere names the time
+    # that was left, rounded up.
+    bound = getattr(deadline, "budget", None)
+    if bound is None:
+        bound = math.ceil(timeout)
     posix = os.name != "nt"
     with tempfile.TemporaryFile() as out_f, tempfile.TemporaryFile() as err_f:
         try:
@@ -236,7 +258,7 @@ def _git_step(cfg, deadline: float, *args: str) -> None:
 def _cleanup_git(cfg, *args: str) -> str:
     """A cleanup step after a failure, bounded on its own (CLEANUP_TIMEOUT_S)."""
     try:
-        return _bounded(cfg, args, time.monotonic() + CLEANUP_TIMEOUT_S)[1].strip()
+        return _bounded(cfg, args, _until(CLEANUP_TIMEOUT_S))[1].strip()
     except _StepFailed:
         return ""
 
@@ -380,7 +402,7 @@ def _confirm_committed(cfg, path: Path, rel: str, row: dict, deadline: float) ->
     bytes so it carries no line git does not have.
     """
     expected = _canonical({k: v for k, v in row.items() if k != "commit"})
-    floor = time.monotonic() + CLEANUP_TIMEOUT_S
+    floor = _until(CLEANUP_TIMEOUT_S)
     changed = "a filter or hook changed the file"
     why = changed
     blob = b""
@@ -476,7 +498,7 @@ def _record(cfg, cycle: dict, action: str, reason: str, *,
     from .controller.state import RESOLUTION_STATUS
 
     if deadline is None:
-        deadline = time.monotonic() + row_budget()
+        deadline = _until(row_budget())
     path = log_path(cfg)
     rel = path.relative_to(cfg.root).as_posix()
     cid = cycle["cycle_id"]
@@ -606,16 +628,16 @@ def read_head(cfg) -> tuple[bool, str, str]:
     otherwise ``(False, "", why)``. An unreadable HEAD proves nothing."""
     try:
         code, out, err = _bounded(cfg, ("rev-parse", "--verify", "-q", "HEAD"),
-                                  time.monotonic() + CLEANUP_TIMEOUT_S)
+                                  _until(CLEANUP_TIMEOUT_S))
         if code == 0 and out.strip():
             return True, out.strip(), ""
         why = err.strip().split("\n")[0][:120]
         sym_code, ref, _e = _bounded(cfg, ("symbolic-ref", "-q", "HEAD"),
-                                     time.monotonic() + CLEANUP_TIMEOUT_S)
+                                     _until(CLEANUP_TIMEOUT_S))
         if sym_code == 0 and ref.strip():
             exists, _o, show_err = _bounded(
                 cfg, ("show-ref", "--verify", "-q", ref.strip()),
-                time.monotonic() + CLEANUP_TIMEOUT_S)
+                _until(CLEANUP_TIMEOUT_S))
             if exists == 1 and not show_err.strip():
                 return True, "", ""                     # unborn: Git says missing
             if exists not in (0, 1) or show_err.strip():
@@ -656,7 +678,7 @@ def committed_rows(cfg, *, strict: bool = False) -> list[dict]:
         if not head:
             return []                                   # unborn: no commit yet
         code, listed, err = _bounded(cfg, ("ls-tree", "HEAD", "--", rel),
-                                     time.monotonic() + CLEANUP_TIMEOUT_S)
+                                     _until(CLEANUP_TIMEOUT_S))
         if code != 0:
             if strict:
                 raise refuse(err.strip().split("\n")[0][:120] or "git ls-tree failed")
@@ -664,7 +686,7 @@ def committed_rows(cfg, *, strict: bool = False) -> list[dict]:
         if not listed.strip():
             return []                                   # no rulings log at HEAD
         code, blob, err = _bounded_bytes(cfg, ("cat-file", "blob", f"HEAD:{rel}"),
-                                         time.monotonic() + CLEANUP_TIMEOUT_S)
+                                         _until(CLEANUP_TIMEOUT_S))
     except _StepFailed as exc:
         if strict:
             raise refuse(exc.why) from exc
@@ -827,7 +849,7 @@ def record_escalation(cfg, cycle: dict) -> str:
     ruling's: the log's prior bytes are put back and the path unstaged only
     when ``git commit`` failed with HEAD positively unchanged. Any failure,
     including no signing key, raises :class:`EscalationNotCommitted`."""
-    deadline = time.monotonic() + row_budget()
+    deadline = _until(row_budget())
     path = log_path(cfg)
     rel = path.relative_to(cfg.root).as_posix()
     cid = str(cycle["cycle_id"])
@@ -891,7 +913,7 @@ def record_escalation(cfg, cycle: dict) -> str:
     try:
         sha = _cleanup_git(cfg, "rev-parse", "HEAD")
         code, blob, _err = _bounded_bytes(cfg, ("cat-file", "blob", f"HEAD:{rel}"),
-                                          time.monotonic() + CLEANUP_TIMEOUT_S)
+                                          _until(CLEANUP_TIMEOUT_S))
         lines = [ln for ln in blob.decode("utf-8", "replace").split("\n") if ln.strip()]
         landed = json.loads(lines[-1]) if code == 0 and lines else None
     except _StepFailed as exc:
@@ -1043,7 +1065,7 @@ def commit_of(cfg, row: dict, *, strict: bool = False) -> str:
                         "--", rel))
     for args in lookups:
         try:
-            code, out, err = _bounded(cfg, args, time.monotonic() + CLEANUP_TIMEOUT_S)
+            code, out, err = _bounded(cfg, args, _until(CLEANUP_TIMEOUT_S))
         except _StepFailed as exc:
             if strict:
                 raise _unreadable(exc.why) from exc
@@ -1079,7 +1101,7 @@ def rule(cfg, store, cycle_id: str, action: str, reason: str) -> dict:
     def commit(snapshot: dict, nonce: str, identity: str) -> dict:
         # The budget starts here, with the controller lock held.
         row = record(cfg, snapshot, action, reason, intent=nonce, store=store,
-                     deadline=time.monotonic() + row_budget(),
+                     deadline=_until(row_budget()),
                      escalation_commit=identity)
         landed.update(row)
         return row
@@ -1088,7 +1110,7 @@ def rule(cfg, store, cycle_id: str, action: str, reason: str) -> dict:
         outcome = store.rule_escalation(
             cycle_id, action, reason, commit,
             assess=lambda cycle: assess(cfg, cycle_id, cycle),
-            by=_who(cfg, time.monotonic() + CLEANUP_TIMEOUT_S))
+            by=_who(cfg, _until(CLEANUP_TIMEOUT_S)))
     except Denial as exc:
         if not landed or exc.detail.get("issue") != "state_unwritable":
             raise
