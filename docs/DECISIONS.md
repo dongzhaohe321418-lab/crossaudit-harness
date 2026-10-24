@@ -9005,16 +9005,55 @@ cited only once its text exists):
     variables for both the default and the configured case. The identity is visible to
     hooks, which is intended.
 56. **`render()`'s docstring states what it depends on.** Equal text holds for the same
-    arguments, the same stdout encoding and the same colour setting (a TTY without
-    `NO_COLOR` colours; anything else does not); glyphs the stream cannot encode fall
-    back. Round 18 named the colour half, which the first wording had left out.
+    arguments and the same three settings it reads and never changes: the current
+    language (`i18n.language()`), the stdout encoding (glyphs the stream cannot encode
+    fall back to ASCII) and the colour setting (`tui.coloured()`: a TTY without
+    `NO_COLOR`). It reads no clock, no file and no key, and writes nothing. Round 18
+    named the colour half, which the first wording had left out; round 19 named the
+    language and the "no terminal" overstatement in the module docstring, both now
+    corrected (the round-18 record's header had called the earlier amendment complete;
+    it was not).
+
+57. **A `git log` that cannot answer during a ruling is a refusal, never "no commit".**
+    `commit_of()` locates the commit that carries a row with a bounded `git log`
+    (CLEANUP_TIMEOUT_S, 5 s). It returned "" on a timeout, a failure to start or a
+    non-zero exit, and the recovery paths read that "" as "no commit": after an
+    escalation whose row had committed but whose confirmation had failed, the next
+    ruling's lookup failed once on the pull request's CI (ubuntu, Python 3.12; the
+    three sibling runs and the previous head passed), `_escalation_already_committed`
+    found nothing, and `record_escalation` wrote the escalation row a second time --
+    two verified escalation rows for one escalation, the duplication ruling 43 exists
+    to prevent. Now `commit_of(strict=True)` raises the same refusal `committed_rows`
+    gives ("the committed rulings log could not be read (git log timed out after 5s);
+    no ruling is made until it can be"; one sentence, one Chinese entry) and the
+    recovery and ruling paths (`_escalation_already_committed`, `escalation_identity`,
+    `assess`) call it strictly: the ruling is refused by name, nothing is written or
+    committed, the nonce stays in the state, and the next ruling recognises the row
+    at HEAD once git answers. The display paths (`status`, the informational commit
+    on a reconciled row) stay lenient. The timeout sentence now names the bound the
+    step had (`math.ceil` of the time it was given: 5 s for a lookup or confirmation,
+    what is left of the row budget for a row's own step), not the 90 s row budget it
+    did not have. The lookup for an escalation row no longer runs the ruling-subject
+    fallback, which could never match it. `tests/test_commit_lookup_fails_closed.py`
+    drives a real hanging `git log` through a PATH shim and names four mutations
+    (the lenient lookup on recognition; the lenient identity in `assess`; the budget
+    in the sentence; strict by default on the display path). What stays open: why
+    that one `git log` failed on that runner is not known; the repair makes the
+    failure a refusal rather than a duplicate, whatever its cause.
 
 **Round 18** (`…-r18.md`): the round-17 repair verified in both scenarios; the
 `GIT_AUTHOR_*` precedence lets the launching environment choose the `by` attribution
 but not forge or authorise a ruling, since the signature and the committed escalation
 lineage decide; nothing since round 16 is unjudged. **VERDICT: MERGE.** One P3 on
-wording, corrected above. The branch merges under the one law with eighteen review
-texts on record.
+wording, amended (incompletely, as round 19 found).
+
+**Round 19** (`…-r19.md`): the round-18 record and the Ctrl-C test repair (the wrapper
+shell under Linux's dash) verified: the repair is sound for bash 3.2 and dash, the
+mutation still fails, `-m` hides no product defect. Two P2s: the amended `render()`
+claim still omitted the language and the module docstring still said "no terminal";
+the Ctrl-C test accepted any non-zero exit where its D10 says 20. **VERDICT: DO NOT
+MERGE.** Both corrected (ruling 56; the test asserts 20). The same push's CI failed
+once on a path no round had seen, repaired as ruling 57.
 
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
@@ -9023,7 +9062,7 @@ paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, whi
 ruling path can prevent; a holder of the project's private seed (`.crossaudit/signing/`,
 mode 0600) who can also write the repository can forge rulings and escalations, the
 same trust boundary as receipt signing. `by` on a row is attribution, not an
-authenticated human identity. The TUI (D175) was reviewed cold in round 2; rounds 3 to 18 are recorded
+authenticated human identity. The TUI (D175) was reviewed cold in round 2; rounds 3 to 19 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,

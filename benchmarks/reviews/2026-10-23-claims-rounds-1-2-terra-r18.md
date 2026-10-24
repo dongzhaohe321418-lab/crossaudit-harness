@@ -2,7 +2,7 @@
 
 **Reviewer:** OpenAI `gpt-5.6-terra` through Codex CLI 0.151.0 (`codex exec`, sandbox `workspace-write`, the subscription route; no API spend).
 **Tree reviewed:** `feat/tui-first` at 392b023 (the round-17 repair: the row identity resolved once and forced onto author and committer; the docstring), in a detached worktree (the reviewer reports the tree stayed clean).
-**Brief:** reproduce the round-17 scenario; judge the chosen precedence; say whether anything since round 16 is unjudged. **Run by:** the Claude lead, 2026-10-24. **Verdict:** MERGE — no P1/P2; the precedence lets the launching environment choose the `by` attribution but not forge or authorise a ruling (the signature and the committed escalation lineage still decide); one P3 (`render()` also depends on colour and TTY state, corrected in the commit that records this review).
+**Brief:** reproduce the round-17 scenario; judge the chosen precedence; say whether anything since round 16 is unjudged. **Run by:** the Claude lead, 2026-10-24. **Verdict:** MERGE — no P1/P2; the precedence lets the launching environment choose the `by` attribution but not forge or authorise a ruling (the signature and the committed escalation lineage still decide); one P3 (`render()` also depends on colour and TTY state; amended in the commit that records this review, and found still short of the language dependence in round 19, which completed it under ruling 56).
 
 The reviewer's text follows verbatim (links rewritten to tree-relative paths).
 
