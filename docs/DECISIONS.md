@@ -8596,8 +8596,8 @@ one P1, one P2 and one P3, each repaired:
     directory is still a plain `OSError`.
 
 **Round 6** (`…-r6.md`): the round-5 repairs verified and the lock property judged
-honestly scoped; no blocking finding; two P2 and one P3, repaired on this branch and
-verified in round 7 (`…-r7.md`):
+honestly scoped; no blocking finding; two P2 and one P3, repaired on this branch (the
+verification is the next round, cited here only once its text exists):
 
 21. **Creating a missing parent directory is a refusal, not a traceback.** A regular file
     at the path where `.crossaudit/` (or the ledger's or lock file's directory) should
