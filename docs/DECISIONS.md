@@ -8699,18 +8699,29 @@ cited only once its text exists):
     appends and commits the row, which carries the intent's nonce; (3) the state change
     is applied and the intent cleared in one write. If (3) fails, the refusal names the
     committed sha and the intent stays. Recovery, also under the lock, at the next ruling
-    on that cycle: the committed log at `HEAD` is read (a read or parse failure is an
-    `IntegrityDenial`, never "nothing pending"); a committed row with the intent's nonce
+    on that cycle: the committed log at `HEAD` is read (a log that exists but cannot be
+    read or parsed is an `IntegrityDenial`, never "nothing pending"; a repository with
+    no commit yet, or no log at `HEAD`, reads as no rows, else an intent left before the
+    very first commit could never be recovered); a committed row with the intent's nonce
     is applied and reported as reconciled, with no new row; an intent with no committed
     row (the process died between phases) is cleared and the new ruling proceeds as a
-    fresh one; a request for the other action while a committed row stands is refused.
-    The timestamp heuristics of ruling 27 (`escalated_at`, `updated_at`) are gone; the
-    nonce identifies the escalation exactly, for legacy cycles too.
+    fresh one, saying so; a refused commit clears its intent; a matched row on a cycle
+    that is no longer ESCALATED only clears the intent; a request for the other action
+    while a committed row stands is refused. `record()` refuses a nonce that is not the
+    cycle's current intent. The timestamp heuristics of ruling 27 (`escalated_at`,
+    `updated_at`) are gone from the authority path; the nonce identifies the escalation
+    exactly, for legacy cycles too. Round 7's writability probe is gone as well: the
+    intent's own state write is that probe.
 31. **A committed row this controller did not intend is never applied.** Such a row is
     listed by `status` as "ruling row in the ledger not made by this controller (sha)",
     in English and Chinese; an explicit human ruling still proceeds and supersedes it,
     and the ledger shows both rows. A repository writer can add lines to the log; they
-    cannot make this controller act on them.
+    cannot make this controller act on them. What `status` lists is a display rule, not
+    authority: only rows on a cycle that is ESCALATED now; a row whose `escalated_at`
+    names an earlier escalation is shown as history; a row written before the `intent`
+    field existed, on a cycle that has since re-escalated, is labelled foreign although it
+    was genuine, and a hand-made row whose line and commit subject do not match what
+    `record()` writes shows "?" for its sha.
 32. **The words match the mechanism.** "Failure-atomic" and "never ruled twice" are
     replaced, here and in the README and CHANGELOG, by what holds: a ruling's commit and
     its state change are two phases joined by a local intent; a failure between them is
