@@ -13,6 +13,17 @@ Appends are serialised by an ``O_EXCL`` lock and made durable with ``fsync``
 (mirroring ``controller/state``), so a crash cannot interleave two chains; a
 torn final line is reported as an incomplete tail rather than silently trusted.
 
+Line framing: an entry ends at ``"\\n"`` and nowhere else. The writer only ever
+emits ``"\\n"``, and ``json.dumps`` escapes every control character, so a raw
+``"\\n"`` or ``"\\r"`` can never occur inside an entry. ``str.splitlines`` was
+used here once and also splits on U+2028, U+2029 and U+0085, which
+``ensure_ascii=False`` leaves raw: one such character in a payload made the
+ledger unverifiable and let the next appends fork the chain. Readers now split
+on ``"\\n"`` only (a line that still carries a ``"\\r"`` was not written by this
+writer and is unparseable, never silently CRLF-tolerated), and the writer
+escapes those three characters so a ledger it writes is also readable by an
+older reader. An append refuses a ledger whose complete lines do not verify.
+
 Design note — determinism: the caller supplies ``ts`` (and any other evidence),
 because the ledger records facts, it does not mint them. Re-deriving a stored
 entry therefore reproduces its digest byte-for-byte on any host, which is what
@@ -40,6 +51,14 @@ KINDS = ("tool_call", "decision", "tool_result", "approval", "note")
 
 _LOCK_TIMEOUT_S = 10.0
 _LOCK_STALE_S = 30.0
+
+#: Line separators ``str.splitlines`` honours that ``json.dumps(...,
+#: ensure_ascii=False)`` leaves raw (every other one is below U+0020 and is
+#: escaped already). The writer escapes these; JSON decodes the escape to the
+#: same character, so the body -- and therefore ``digest(body)``, which is
+#: taken over ``canonical(body)`` and not over the line -- is unchanged, and a
+#: line without them is byte-identical to what the writer always produced.
+_LINE_SEPARATOR_ESCAPES = {0x2028: "\\u2028", 0x2029: "\\u2029", 0x85: "\\u0085"}
 
 
 class LedgerError(IntegrityDenial):
@@ -95,7 +114,7 @@ class EvidenceLedger:
         stamp = ts if ts is not None else _utc_now()
         with self._locked():
             self._refuse_torn_tail()
-            prev_seq, prev_digest = self._head_locked()
+            prev_seq, prev_digest = self._verified_head_locked()
             body = {
                 "ledger_schema": LEDGER_SCHEMA,
                 "seq": prev_seq + 1 if prev_digest else 0,
@@ -108,7 +127,8 @@ class EvidenceLedger:
             entry_digest = digest(body)
             line = json.dumps({**body, "digest": entry_digest},
                               sort_keys=True, separators=(",", ":"),
-                              ensure_ascii=False) + "\n"
+                              ensure_ascii=False
+                              ).translate(_LINE_SEPARATOR_ESCAPES) + "\n"
             self.path.parent.mkdir(parents=True, exist_ok=True)
             fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
             try:
@@ -215,6 +235,38 @@ class EvidenceLedger:
                     "left a torn tail); refusing to append onto a damaged chain "
                     "until it is recovered")
 
+    def _verified_head_locked(self) -> tuple[int, str]:
+        """(seq, digest) to chain onto, refusing a ledger that does not verify.
+
+        Computing a head from "the last line that parses" let a complete but
+        unparseable line be skipped: the next two appends both chained onto
+        the entry before it, with the same ``seq`` and ``prev`` -- a forked
+        chain no verifier can repair. So on any cache miss the whole chain is
+        re-derived first and an append onto a damaged chain is refused. The
+        size-guarded cache is trusted exactly as ``_head_locked`` trusts it:
+        the file is the size this instance left it after its own verified
+        write, under the lock. (The torn-tail refusal runs before this and is
+        unchanged.)
+        """
+        try:
+            size = self.path.stat().st_size if self.path.exists() else 0
+        except OSError:
+            size = 0
+        if size == 0:
+            self._cached_head, self._cached_size = (-1, ""), 0
+            return (-1, "")
+        if self._cached_head is not None and size == self._cached_size:
+            return self._cached_head
+        report = self.verify()
+        if not report.ok:
+            raise LedgerError(
+                f"the evidence ledger does not verify ({report.error}); refusing "
+                f"to append onto a damaged chain until it is recovered",
+                at_seq=report.at_seq)
+        head = (report.count - 1, report.head) if report.count else (-1, "")
+        self._cached_head, self._cached_size = head, size
+        return head
+
     def _head_locked(self) -> tuple[int, str]:
         """(seq, digest) of the last complete entry; (-1, "") when empty.
 
@@ -250,6 +302,10 @@ class EvidenceLedger:
 
         ``complete`` is False only for a final line with no terminating newline
         (a crash mid-append). A parse failure yields obj=None, complete=True.
+
+        Lines are split on ``"\\n"`` only -- see the module docstring. A line
+        carrying a ``"\\r"`` is reported unparseable: the writer never emits
+        one raw, so it is not an entry this ledger wrote.
         """
         if not self.path.exists():
             return
@@ -259,13 +315,15 @@ class EvidenceLedger:
             return
         text = raw.decode("utf-8", errors="replace")
         trailing_newline = text.endswith("\n")
-        lines = text.splitlines()
+        lines = text.split("\n")
+        if trailing_newline:
+            lines.pop()           # the empty remainder after the final "\n"
         for i, ln in enumerate(lines):
             if not ln.strip():
                 continue
             complete = trailing_newline or i < len(lines) - 1
             try:
-                obj = json.loads(ln)
+                obj = None if "\r" in ln else json.loads(ln)
                 if not isinstance(obj, dict):
                     obj = None
             except (ValueError, TypeError):

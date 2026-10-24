@@ -16,13 +16,19 @@ from urllib.parse import urlparse
 
 from ..errors import ProviderDenial
 from .base import (Reply, egress_check, read_key, request_json, request_stream,
-                   sha256_text, vendor_message)
+                   sha256_text, truncated_completion, vendor_message)
 from .specs import capability_card
 from .streaming import (STREAM_CHUNK_BYTES, STREAM_FLUSH_SECONDS, ChunkEmitter,
                         take_prefix)
 
 BUILTIN_ORIGIN = "https://api.openai.com"
 BUILTIN_BASE = "https://api.openai.com/v1"
+
+#: ``finish_reason`` that means the completion was cut off by the token limit
+#: (``max_tokens`` / ``max_completion_tokens``) rather than finishing. Only the
+#: value the chat-completions contract documents is matched; an origin that
+#: reports no finish reason at all is not second-guessed here.
+TRUNCATED_FINISH_REASONS = frozenset({"length"})
 
 
 def _origin(url: str) -> str:
@@ -132,6 +138,7 @@ class _ChatStream:
         self.parts: list[str] = []
         self.usage: dict = {}
         self.request_id: str | None = None
+        self.finish_reason: str | None = None
         self.done = False
 
     def feed(self, raw: bytes) -> None:
@@ -189,6 +196,10 @@ class _ChatStream:
         if not isinstance(choices, list) or not choices:
             return
         first = choices[0]
+        if isinstance(first, dict) and isinstance(first.get("finish_reason"), str):
+            # Read before the content early-return: the terminal chunk usually
+            # carries the finish reason with an empty delta.
+            self.finish_reason = first["finish_reason"]
         delta = first.get("delta") if isinstance(first, dict) else None
         # Reasoning-model extensions (``reasoning_content`` on DeepSeek and
         # compatible origins) are summarised thinking: display-only, kept
@@ -282,6 +293,9 @@ def complete(*, model: str, system: str, prompt: str, key_env: str,
                 url, payload, headers, timeout, parser,
                 repair=card.compat_retry)
             text = parser.finish()
+            if parser.finish_reason in TRUNCATED_FINISH_REASONS:
+                raise truncated_completion(_vendor, parser.finish_reason,
+                                           max_tokens)
             if not text.strip():
                 raise ProviderDenial("provider returned an empty completion")
             # Residual decoded text is flushed before the explicit terminal
@@ -308,8 +322,11 @@ def complete(*, model: str, system: str, prompt: str, key_env: str,
     data, rid = _request(url, payload, headers, timeout, repair=card.compat_retry)
     try:
         text = data["choices"][0]["message"]["content"] or ""
-    except (KeyError, IndexError, TypeError) as exc:
+        finish_reason = data["choices"][0].get("finish_reason")
+    except (KeyError, IndexError, TypeError, AttributeError) as exc:
         raise ProviderDenial(f"unexpected chat-completions response shape: {exc}") from exc
+    if isinstance(finish_reason, str) and finish_reason in TRUNCATED_FINISH_REASONS:
+        raise truncated_completion(_vendor, finish_reason, max_tokens)
     if not text.strip():
         raise ProviderDenial("provider returned an empty completion")
     return Reply(text=text, request_id=rid or data.get("id"),

@@ -7673,3 +7673,76 @@ time, and the run cannot say whose failure that is": the measurement found the r
 unmet on this document shape at a rate it bounded with intervals — an association on one
 domain, not a cause — and left the cause to a slice designed to test it, which is what a
 second domain was for.
+
+## D167 — A completion the provider reports as cut off by a token limit is refused at the adapter, not repaired in the parser
+
+**Date:** 2026-10-21. **Branch:** `fix/truncated-output-and-ledger-splitlines`.
+
+**What was wrong.** Both HTTP adapters send `max_tokens=4096` and never read the
+provider's stop signal, and `generator._extract_file_blocks` deliberately accepts a file
+block with no END marker (the "model forgot the closing marker" recovery). A reply stopped
+by the output limit therefore parsed as complete work, and the half-written file was
+applied and committed as the round's deliverable. D165 had already recorded two generator
+replies hitting the 4,096-token ceiling.
+
+RULINGS:
+
+1. **The adapter refuses; the text is never returned.** Anthropic `stop_reason`
+   `max_tokens` (and `model_context_window_exceeded`, on models that report it) and
+   OpenAI-compatible `finish_reason` `length` raise a `ProviderDenial` with category
+   `truncated`, `retryable=False`, in the streaming and non-streaming paths of both
+   adapters (`providers/base.truncated_completion`). Not retryable because the identical
+   request with the identical budget truncates again; the resilience layer still tries the
+   next configured route, then rolls up into `routes_exhausted`, which the build loop
+   records as a parked run with a cycle-side escalation carrying the sentence. The
+   remedies omit `retry`.
+2. **The tolerant parser stays.** With the adapters refusing a reply the provider says was
+   cut off, a missing END marker on a reply that reached the parser is the case the
+   recovery was written for: a reply the provider reports as finished. What this does not
+   cover, stated rather than implied: an OpenAI-compatible origin that reports no
+   `finish_reason` at all is not second-guessed; the `replay` fixture carries no stop
+   signal; the Codex App Server bridge reads only the turn status, and any status other
+   than `completed` already fails closed (no output-limit signal is exposed to it).
+3. **The 4,096 default is not changed here**, and no knob is added. Raising it, or making
+   it per role, is a separate decision with a cost side (open).
+4. **Open:** a truncation parks as a provider wait (`provider_unavailable`), whose
+   remedies are connection-shaped; routing an all-routes-truncated stop to the content
+   remedies (revise the task) is a follow-up, not taken here.
+
+Recorded because a later reader could otherwise remove the parser's END-marker tolerance
+"to be safe" (losing a recovery the suite pins) or add a retry for truncation (which
+cannot succeed with the same budget).
+
+## D168 — The evidence ledger frames an entry at "\n" only, escapes the three separators `splitlines` honours, and refuses to append onto a chain that does not verify
+
+**Date:** 2026-10-21. **Branch:** `fix/truncated-output-and-ledger-splitlines`.
+
+**What was wrong.** `ledger/chain.py` wrote `json.dumps(..., ensure_ascii=False) + "\n"`
+and read with `str.splitlines()`, which also splits on U+2028, U+2029 and U+0085 — left
+raw by `ensure_ascii=False` (every other separator `splitlines` honours is below U+0020
+and already escaped). One such character in a payload made `verify()` fail for good, and
+because `append` took its head from the last line that parsed, the next two appends shared
+a `seq` and a `prev`: a forked chain, after which every receipt's tool evidence was refused.
+
+RULINGS:
+
+1. **Readers split on `"\n"` only.** A line still carrying a `"\r"` is unparseable: the
+   writer never emits one raw, so CRLF is not silently accepted. Ledgers the old writer
+   left with a raw separator now verify (a recovery, tested).
+2. **The writer escapes exactly U+2028, U+2029 and U+0085** (` `, ` `, `\u0085`)
+   rather than switching to `ensure_ascii=True`. Considered and rejected: `ensure_ascii=True`
+   would also make new ledgers readable by old readers, but it rewrites the on-disk bytes
+   of every non-ASCII payload (all Chinese text), where the targeted escape leaves every
+   line without those three characters byte-identical. Digests are unaffected either way:
+   `digest(body)` is taken over `canonical(body)`, not over the line.
+3. **`append` refuses a ledger whose complete lines do not verify** (unparseable,
+   tampered, unchained or out of order), on every head-cache miss, with a `LedgerError`
+   naming the verifier's report. The torn-tail refusal is unchanged and runs first. A warm
+   instance whose file is still exactly the size its own last write left keeps trusting
+   its cache, as before (P10): a same-size external rewrite between two appends of one
+   instance is caught by `verify()`, not by `append` — left open, deliberately, because
+   closing it costs a full re-derivation per append.
+
+Recorded because the escaping choice is a boundary a later reader could reopen (switching
+to `ensure_ascii=True` "for safety" changes bytes on disk for every Chinese payload), and
+because "append refuses a damaged chain" is now a contract the receipt path relies on.

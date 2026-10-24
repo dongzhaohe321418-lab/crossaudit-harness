@@ -3,6 +3,20 @@
 All notable changes to CrossAudit are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH` scheme; the source on `main` is authoritative.
 
+## Unreleased
+
+### Fixed
+- **A reply cut off by the output-token limit is refused, not committed.** When
+  Anthropic reports `stop_reason: max_tokens` or an OpenAI-compatible provider
+  reports `finish_reason: length`, the reply is discarded and the run stops with
+  a legible reason instead of committing a half-written file as the round's work
+  (D167).
+- **One character no longer breaks the evidence ledger.** A payload holding
+  U+2028, U+2029 or U+0085 (common in text extracted from PDFs) made the ledger
+  unverifiable and let the next appends fork the chain. Ledgers already written
+  that way verify again, and an append onto a ledger that does not verify is now
+  refused instead of forking it (D168).
+
 ## 4.17.0 — The activity stream
 
 The conversation is now one chronological stream, in one visual language,
