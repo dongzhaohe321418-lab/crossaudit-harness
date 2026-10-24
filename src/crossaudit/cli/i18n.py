@@ -934,6 +934,18 @@ def _denial_clause(part: str) -> str:
     return part
 
 
+def clause_text(text: str) -> str:
+    """A fixed phrase of ours carried in a catalogue slot (``status``'s
+    "escalation not committed ({why})"), in the current language: the same
+    clause table the composite refusals use; a phrase it does not know is
+    carried through as it is."""
+    if _language == DEFAULT_LANGUAGE:
+        return text
+    if not _denial_exact and not _denial_patterns:
+        _compile_denials()
+    return _denial_clause(text)
+
+
 def denial_zh(reason: str) -> str | None:
     """The Chinese for a `Denial.reason`, or None when the table has none.
 

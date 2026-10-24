@@ -448,3 +448,25 @@
 {"kind": "ConfigDenial", "reason": "the project signing key at /tmp/T/not-a-directory/ed25519.seed is not available (File exists); a ruling must be signed, so none was made"}
 {"kind": "IntegrityDenial", "reason": "the escalation of cycle 60aa693f05b053a7 is not committed to the ledger (pre-commit: refused by policy); rule on it after the repository is repaired"}
 {"kind": "ConfigDenial", "reason": "the project signing key at /tmp/T/proj/.crossaudit/signing/ed25519.seed is missing but signed rulings or receipts exist; restore it from your backup, since a new key would not verify them"}
+{"kind": "IntegrityDenial", "reason": "the escalation of cycle 60aa693f05b053a7 is not committed to the ledger (the ledger holds no verified escalation row for it); rule on it after the repository is repaired"}
+{"kind": "IntegrityDenial", "reason": "the escalation of cycle 60aa693f05b053a7 is not committed to the ledger (escalated by an older version of CrossAudit); rule on it after the repository is repaired"}
+{"kind": "IntegrityDenial", "reason": "the escalation of cycle 60aa693f05b053a7 is not committed to the ledger (escalated by an older version of CrossAudit, and committing its escalation now failed: git commit failed and said nothing); rule on it after the repository is repaired"}
+{"kind": "IntegrityDenial", "reason": "the escalation of cycle 60aa693f05b053a7 is not committed to the ledger (the ledger's latest escalation of this cycle is 0123456789ab, not ba9876543210); rule on it after the repository is repaired"}
+{"kind": "IntegrityDenial", "reason": "the escalation of cycle 60aa693f05b053a7 is not committed to the ledger (its escalation row was not committed); rule on it after the repository is repaired"}
+{"kind": "IntegrityDenial", "reason": "the escalation of cycle 60aa693f05b053a7 is not committed to the ledger (no project configuration was found for this state); rule on it after the repository is repaired"}
+{"kind": "IntegrityDenial", "reason": "the escalation of cycle 60aa693f05b053a7 is not committed to the ledger (the committed escalation row could not be confirmed); rule on it after the repository is repaired"}
+{"kind": "IntegrityDenial", "reason": "the escalation of cycle 60aa693f05b053a7 is not committed to the ledger (git commit timed out after 90s); rule on it after the repository is repaired"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle 60aa693f05b053a7 could not be committed to the ledger (git commit failed and said nothing); the cycle stays ESCALATED and nothing was recorded"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle 60aa693f05b053a7 could not be committed to the ledger (the log could not be written: No space left on device); the cycle stays ESCALATED and nothing was recorded"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle 60aa693f05b053a7 could not be committed to the ledger (git add could not run: No such file or directory); the cycle stays ESCALATED and nothing was recorded"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle 60aa693f05b053a7 could not be committed to the ledger (the log could not be read: Permission denied); the cycle stays ESCALATED and nothing was recorded"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle 60aa693f05b053a7 may have been committed to the ledger (git commit timed out after 90s); the cycle stays ESCALATED, and the next ruling on this cycle recovers it"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle 60aa693f05b053a7 was committed as 0123456789ab, but the committed cycles/rulings.jsonl could not be read back to confirm it (git said nothing); the cycle stays ESCALATED, and the next ruling on this cycle recovers it"}
+{"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (git rev-parse HEAD failed); no ruling is made until it can be"}
+{"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (git ls-tree failed); no ruling is made until it can be"}
+{"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (git cat-file failed); no ruling is made until it can be"}
+{"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (it is not UTF-8); no ruling is made until it can be"}
+{"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (a line is not JSON); no ruling is made until it can be"}
+{"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (a line is not a ruling); no ruling is made until it can be"}
+{"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (git cat-file timed out after 5s); no ruling is made until it can be"}
+{"kind": "ConfigDenial", "reason": "the evidence ledger at /tmp/T/evidence.jsonl could not be written (ENOSPC: short write to the evidence ledger); check the file and its directory are writable"}

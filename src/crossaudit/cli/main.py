@@ -1610,7 +1610,8 @@ def cmd_status(args: argparse.Namespace) -> int:
         if esc:
             human.append("  " + (i18n.t("status.escalation_committed", sha=esc["commit"])
                                  if esc["committed"] else
-                                 i18n.t("status.escalation_not_committed", why=esc["why"])))
+                                 i18n.t("status.escalation_not_committed",
+                                        why=i18n.clause_text(esc["why"]))))
         for f in r.get("unverified_rulings", []):
             human.append("  " + i18n.t("status.unverified_ruling", sha=f["commit"] or "?")
                          + f" — {f.get('action')} {f.get('at')}")
