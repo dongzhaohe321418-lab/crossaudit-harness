@@ -558,6 +558,9 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the controller state at {} could not be written ({}: {}); check the directory "
      "and file are writable",
      "无法写入位于 {} 的控制器状态（{}：{}）；请确认该目录和文件可写"),
+    ("the evidence ledger at {} could not be closed cleanly after writing ({}: {}); "
+     "the entry may have been recorded, and the next append verifies the chain",
+     "写入后无法正常关闭位于 {} 的证据账本（{}：{}）；该条目可能已被记录，下一次追加会校验链条"),
     ("the evidence ledger at {} could not be written ({}: {}); check the file and its "
      "directory are writable",
      "无法写入位于 {} 的证据账本（{}：{}）；请确认该文件及其目录可写"),
@@ -603,6 +606,15 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("cycle is {}, not ESCALATED; only an escalated cycle needs a human ruling",
      "周期状态是 {}，不是 ESCALATED；只有已升级的周期才需要人工裁决"),
     # ------------------------------------------------------------ rulings.py
+    ("the ruling on cycle {} was committed to the ledger as {}, but the cycle's state "
+     "could not be written ({}: {}); the state is unchanged, and ruling on this cycle "
+     "again applies the committed ruling instead of writing a new one",
+     "周期 {} 的裁决已作为 {} 提交到账本，但周期状态无法写入（{}：{}）；状态未改变，"
+     "再次对该周期裁决将应用已提交的裁决，而不会写入新的裁决"),
+    ("a committed ruling ({}, {}) already stands for cycle {}; the state now reflects it",
+     "已提交的裁决（{}，{}）对周期 {} 仍然有效；状态现已与之一致"),
+    ("the committed ruling does not answer this cycle's current escalation",
+     "已提交的裁决并非针对该周期当前的升级"),
     ("the ruling on cycle {} could not be committed to the ledger ({}); the cycle stays "
      "ESCALATED and nothing was recorded; .git/index.lock may have been left by the "
      "killed git — if no git process is running, remove it by hand and run "
