@@ -229,12 +229,14 @@ row carries; round 10 found that a landed commit whose read-back failed
 cleared the intent and that the row's fields were not bound to it, answered
 by the commit-landed marks and full-row binding; round 11 found that an
 unreadable repository could still read as certainty, answered by status-carrying
-HEAD reads, Git's own "ref missing" only, and committed-log order, on the ref
-below.
+HEAD reads, Git's own "ref missing" only, and committed-log order; round 12
+found that mutable local state still decided recovery, answered by ruling
+rows signed with the project key and bound to the escalation's committed
+identity, on the ref below.
 
 | ref (same harness, `e338d0e` + the placeholder fill) | PASS / 43 |
 |---|---|
-| **`feat/tui-first` 0910eba** (D175; D176 repairs from eleven review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
+| **`feat/tui-first` f38e4db** (D175; D176 repairs from twelve review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
 
 The record is `records/tui-first/claims.jsonl` and `RESULTS-tui-first.md`. Still
 untestable here, as before: C32 (now also "not on the main line"), C33b, C34b,
