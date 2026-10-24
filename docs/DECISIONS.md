@@ -8603,9 +8603,13 @@ verification is the next round, cited here only once its text exists):
     at the path where `.crossaudit/` (or the ledger's or lock file's directory) should
     be made `mkdir` raise `FileExistsError` through `main()`, which catches only
     `Denial`. Every such creation site (`controller/state.py`, `locks.py`,
-    `ledger/chain.py`) now goes through one helper that turns the error into a
-    `ConfigDenial` naming the directory and the reason (Chinese parity), with a
-    regression through `main()`.
+    `ledger/chain.py`) now goes through one helper, `locks.ensure_directory`, that turns
+    the error into a `ConfigDenial`, one literal sentence per kind of file so each is
+    translated whole: "the directory … for the controller state (/ the evidence ledger
+    / the lock file) could not be created (EEXIST: …); check the path is a directory you
+    can write" (Chinese parity), with a regression through `main()` in English and
+    Chinese. `rulings.py`'s own directory creations were already answered by the
+    ruling's refusals.
 22. **This record no longer cites a review round before it exists.** The previous text
     said "rounds 3 to 6 verified the repairs" while round 6 was still running and then
     found these items; the reviewer named that as an overclaim. A round is cited here
