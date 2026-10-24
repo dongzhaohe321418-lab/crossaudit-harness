@@ -131,6 +131,34 @@ def test_a_ledger_rows_budget_is_the_smaller_of_90s_and_the_git_timeout(
     else:
         monkeypatch.setenv("CROSSAUDIT_GIT_TIMEOUT", configured)
     assert rulings.row_budget() == expected
-    import inspect
-    for fn in (rulings.record_escalation, rulings._record, rulings.rule):
-        assert "row_budget()" in inspect.getsource(fn), fn.__name__
+
+
+def test_a_ruling_commit_is_bounded_by_the_configured_git_timeout(escalated, monkeypatch):
+    """Executable, not a source search (review round 15, D176 ruling 50): a
+    pre-commit hook that sleeps 30 s and CROSSAUDIT_GIT_TIMEOUT=2. The
+    ruling is refused within a few seconds, saying git commit timed out
+    after 2s; the log is put back and the cycle stays ESCALATED. Mutation
+    caught: `rule()`'s record path taking its deadline from COMMIT_TIMEOUT_S
+    (90 s) instead of `row_budget()` -- the ruling waits out the hook (about
+    30 s) and lands, failing the elapsed bound and the refusal."""
+    import time
+
+    from .test_resolve_commits_the_ruling import install_hook
+
+    root, cid = escalated
+    cfg = load()
+    log_before = (root / LOG).read_bytes()
+    head = git("rev-parse", "HEAD", cwd=root)
+    install_hook(root, "#!/bin/sh\nexec sleep 30\n")
+    monkeypatch.setenv("CROSSAUDIT_GIT_TIMEOUT", "2")
+    began = time.monotonic()
+    with pytest.raises(IntegrityDenial) as denied:
+        rulings.rule(cfg, _store(root), cid, "close", REASON)
+    elapsed = time.monotonic() - began
+    assert elapsed < 10, elapsed
+    assert "(git commit timed out after 2s)" in denied.value.reason
+    assert (root / LOG).read_bytes() == log_before
+    assert git("rev-parse", "HEAD", cwd=root) == head
+    assert _state(root)["cycles"][cid]["status"] == "ESCALATED"
+    gitdir = Path(git("rev-parse", "--absolute-git-dir", cwd=root))
+    (gitdir / "index.lock").unlink(missing_ok=True)   # left by the killed git
