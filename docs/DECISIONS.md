@@ -8563,10 +8563,43 @@ lock primitive, both repaired:
     running, then `git reset -q -- cycles/rulings.jsonl`, since our own unstaging could
     not run while it existed).
 
+**Round 5** (`…-r5.md`): the kernel-held locks verified in their covered intervals, then
+one P1, one P2 and one P3, each repaired:
+
+18. **A "still current" check runs immediately before every protected write.** The inode
+    comparison of ruling 16 ran once, at acquisition, so a lock file replaced afterwards
+    (from outside CrossAudit, which no longer unlinks lock files) let a second writer
+    lock the new inode while the first held the old one, and the first could write a
+    stale snapshot over the second's state. `HeldLock.still_current()` compares the fd's
+    device and inode with the path's; `require_current()` is called by the controller
+    just before it writes state back and by the ledger just before its append writes,
+    and on a mismatch nothing is written: "the lock file … was replaced while this
+    process held the lock; this process's change was discarded" (Chinese parity). The
+    reviewer's sequence is the regression test for both locks; the second writer's
+    cycle, and the ledger's chain, survive.
+19. **The property is stated, not overstated.** `locks.py`'s docstring, the ledger's
+    module docstring (which still said `O_EXCL`) and the ruling test module now say the
+    same narrower thing: CrossAudit itself never unlinks a lock file (test-enforced); the
+    lock serialises CrossAudit's own processes; it does not defend against a writer with
+    access to `.crossaudit/`, who could as easily edit `state.json` or the evidence
+    ledger directly; a lock file replaced from outside is detected at acquisition and
+    again before each protected write, except within the microseconds between that
+    check and the write.
+20. **A filesystem without a usable lock service is a refusal, not a traceback.** `ENOLCK`,
+    `ENOTSUP`, a lock file that cannot be opened, or a missing locking backend surfaced
+    as a bare `OSError` through `main()`, which catches only `Denial` (network
+    filesystems are where this happens). `locks.acquire` now turns every
+    non-contention error into `ConfigDenial`: "this filesystem cannot provide the
+    exclusive lock CrossAudit needs at … (ENOLCK: …); use a project directory on a local
+    filesystem" (Chinese parity); only `EWOULDBLOCK`/`EAGAIN`/`EACCES`/`EDEADLK` from the
+    lock call itself still mean contention. A failure to create the lock file's
+    directory is still a plain `OSError`.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
-paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 5 verified the
-repairs (`…-r3.md` to `…-r5.md`). The Windows lock branch (`msvcrt.locking`) has not
-run on Windows; a plain `os.fork()` without exec would share a held lock with the
-child, and nothing in CrossAudit forks while holding one.
+paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 6 verified the
+repairs (`…-r3.md` to `…-r6.md`). The Windows lock branch (`msvcrt.locking`) has not
+run on Windows and no network filesystem was tried (the ENOLCK test simulates the
+error); a plain `os.fork()` without exec would share a held lock with the child, and
+nothing in CrossAudit forks while holding one.
