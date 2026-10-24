@@ -9081,6 +9081,15 @@ greater of the row's remaining deadline and the 5 s floor. **VERDICT: DO NOT MER
 Corrected above (ruling 57): the confirmation has its own 5 s deadline, with a real
 hang test.
 
+**Round 22** (`…-r22.md`): the round-21 repair judged more fail-closed (a slow but
+healthy read-back can now refuse after 5 s where it used to proceed; the commit
+stands, the intent stays, the next ruling reconciles it), the real hang test and its
+mutation reproduced, every Git step's budget enumerated and found as ruling 57 says,
+parity present, nothing unjudged. **VERDICT: MERGE**, no finding. The branch merges
+under the one law with twenty-two review texts on record: rounds 1–15 each DO NOT
+MERGE, 16 MERGE, 17 DO NOT MERGE after the CI findings, 18 MERGE, 19–21 DO NOT MERGE
+on one or two items each in the previous repair, 22 MERGE.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
@@ -9088,7 +9097,7 @@ paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, whi
 ruling path can prevent; a holder of the project's private seed (`.crossaudit/signing/`,
 mode 0600) who can also write the repository can forge rulings and escalations, the
 same trust boundary as receipt signing. `by` on a row is attribution, not an
-authenticated human identity. The TUI (D175) was reviewed cold in round 2; rounds 3 to 21 are recorded
+authenticated human identity. The TUI (D175) was reviewed cold in round 2; rounds 3 to 22 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,
