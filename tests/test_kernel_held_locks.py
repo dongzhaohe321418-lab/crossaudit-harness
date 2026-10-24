@@ -12,6 +12,7 @@ behaviour that no longer exists. Each test names the mutation it catches.
 from __future__ import annotations
 
 import ast
+import errno
 import json
 import os
 import signal
@@ -295,3 +296,104 @@ def test_a_foreign_index_lock_is_never_removed(escalated, monkeypatch):
     assert seen["next_index_before"] is True
     assert not (gitdir / f"next-index-{seen['pid']}.lock").exists()
     (gitdir / "index.lock").unlink()
+
+
+# ------------------------------------------- round 5: replaced after acquisition
+def test_a_lock_file_replaced_after_acquisition_never_overwrites_the_new_holder(
+        tmp_path, monkeypatch):
+    """The reviewer's sequence: the lock file is replaced after the inode
+    comparison (here, from `_write_token`), a second writer takes the
+    replacement and records a cycle, then the first writer reaches its write.
+    It must refuse and the second writer's cycle must survive. Mutation
+    caught: dropping `require_current()` before `_write(state)` -- the first
+    writer's stale snapshot erases the second's cycle."""
+    path = tmp_path / "state.json"
+    first = StateStore(path)
+    first.open_or_advance("t/p", "1" * 40, None)          # an existing store
+    real_write_token = locks._write_token
+    seen: dict = {}
+
+    def replace_then_second_writer(fd):
+        real_write_token(fd)
+        if "child" not in seen:
+            seen["child"] = None
+            first.lock_path.unlink()
+            first.lock_path.write_text("")
+            seen["child"] = StateStore(path).open_or_advance(
+                "t/p", "2" * 40, None)["cycle_id"]
+    monkeypatch.setattr(locks, "_write_token", replace_then_second_writer)
+    with pytest.raises(IntegrityDenial) as denied:
+        first.open_or_advance("t/p", "3" * 40, None)
+    assert denied.value.reason == (
+        f"the lock file {first.lock_path} was replaced while this process held "
+        f"the lock; this process's change was discarded")
+    cycles = json.loads(path.read_text())["cycles"]
+    assert seen["child"] in cycles                         # child_cycle_survives
+    assert len(cycles) == 2                                # the first's never landed
+
+
+def test_a_ledger_lock_replaced_after_acquisition_never_forks_the_chain(
+        tmp_path, monkeypatch):
+    """The same sequence on the evidence ledger: the second writer appends on
+    the replacement lock, then the first writer reaches its append. Mutation
+    caught: dropping `require_current()` before the ledger's write -- both
+    entries claim the same seq and prev, and `verify()` fails."""
+    path = tmp_path / "evidence.jsonl"
+    ledger = EvidenceLedger(path)
+    ledger.append("note", run_id="r", payload={"n": 0})
+    lock = Path(str(path) + ".lock")
+    real_write_token = locks._write_token
+    seen: dict = {}
+
+    def replace_then_second_writer(fd):
+        real_write_token(fd)
+        if "child" not in seen:
+            seen["child"] = None
+            lock.unlink()
+            lock.write_text("")
+            seen["child"] = EvidenceLedger(path).append("note", run_id="r",
+                                                       payload={"n": "second"})
+    monkeypatch.setattr(locks, "_write_token", replace_then_second_writer)
+    with pytest.raises(IntegrityDenial) as denied:
+        ledger.append("note", run_id="r", payload={"n": "first"})
+    assert "was replaced while this process held the lock" in denied.value.reason
+    monkeypatch.undo()
+    entries = EvidenceLedger(path).entries()
+    assert [e["payload"]["n"] for e in entries] == [0, "second"]
+    assert entries[-1]["digest"] == seen["child"]
+    assert EvidenceLedger(path).verify().ok
+
+
+# ------------------------------------------- round 5: no lock service
+@pytest.mark.parametrize("code", [errno.ENOLCK, errno.ENOTSUP])
+@pytest.mark.parametrize("lang", ["en", "zh"])
+def test_a_filesystem_without_locks_is_a_legible_refusal_not_a_traceback(
+        escalated, monkeypatch, capsys, code, lang):
+    """`flock` failing with ENOLCK / ENOTSUP (NFS and the like) through
+    `main()`. Mutation caught: letting the OSError escape `locks.acquire`
+    (main() catches only Denial: a traceback, no exit code)."""
+    from crossaudit.errors import EXIT_CONFIG
+
+    root, cid = escalated
+
+    def no_locks(_fd):
+        raise OSError(code, os.strerror(code))
+    monkeypatch.setattr(locks, "_try_lock", no_locks)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    capsys.readouterr()
+    argv = (["--lang", "zh"] if lang == "zh" else []) + [
+        "resolve", cid, "--close", "--because", REASON]
+    assert main.main(argv) == EXIT_CONFIG
+    out, err = capsys.readouterr()
+    name = errno.errorcode[code]
+    lock = root / ".crossaudit" / "state.json.lock"
+    if lang == "en":
+        assert err.strip() == (
+            f"DENIED (config): this filesystem cannot provide the exclusive "
+            f"lock CrossAudit needs at {lock} ({name}: {os.strerror(code)}); use a "
+            f"project directory on a local filesystem")
+    else:
+        assert err.strip().startswith(
+            f"DENIED (config): 此文件系统无法在 {lock} 提供 CrossAudit 所需的独占锁"
+            f"（{name}：")
+    assert "Traceback" not in out + err
