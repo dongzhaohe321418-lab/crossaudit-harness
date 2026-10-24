@@ -463,7 +463,7 @@ def _record(cfg, cycle: dict, action: str, reason: str, *,
         _git_step(cfg, deadline, "add", "--", rel)
         # HEAD before the attempt: a failed commit with HEAD unchanged did not
         # land; any other outcome may have (D176 ruling 33).
-        pre_head = _cleanup_git(cfg, "rev-parse", "-q", "--verify", "HEAD")
+        pre_ok, pre_head, _why = read_head(cfg)
         try:
             # Only this file: anything else the person has staged stays staged.
             _git_step(cfg, deadline, "commit", "-q", "-m", subject, "-m",
@@ -473,7 +473,10 @@ def _record(cfg, cycle: dict, action: str, reason: str, *,
                       f"{action}.\n\nReason:\n{reason}\n\nBy: {row['by']}\nAt: {row['at']}",
                       "--", rel)
         except _StepFailed as exc:
-            if _cleanup_git(cfg, "rev-parse", "-q", "--verify", "HEAD") != pre_head:
+            post_ok, post_head, _why = read_head(cfg)
+            # "Did not land" needs both reads to have positively succeeded and
+            # to agree; an unreadable HEAD proves nothing (D176 ruling 36).
+            if not (pre_ok and post_ok and post_head == pre_head):
                 raise _Uncertain(exc.why) from exc
             raise
     except _Uncertain as exc:
@@ -512,6 +515,33 @@ def _record(cfg, cycle: dict, action: str, reason: str, *,
     return row
 
 
+def read_head(cfg) -> tuple[bool, str, str]:
+    """``HEAD`` read with its status (D176 rulings 33, 36 and 37):
+    ``(True, sha, "")`` when it names a commit; ``(True, "", "")`` for a
+    positively unborn HEAD -- a symbolic HEAD whose branch Git itself
+    reports missing (``show-ref --verify -q`` exit 1 with no error text);
+    otherwise ``(False, "", why)``. An unreadable HEAD proves nothing."""
+    try:
+        code, out, err = _bounded(cfg, ("rev-parse", "--verify", "-q", "HEAD"),
+                                  time.monotonic() + CLEANUP_TIMEOUT_S)
+        if code == 0 and out.strip():
+            return True, out.strip(), ""
+        why = err.strip().split("\n")[0][:120]
+        sym_code, ref, _e = _bounded(cfg, ("symbolic-ref", "-q", "HEAD"),
+                                     time.monotonic() + CLEANUP_TIMEOUT_S)
+        if sym_code == 0 and ref.strip():
+            exists, _o, show_err = _bounded(
+                cfg, ("show-ref", "--verify", "-q", ref.strip()),
+                time.monotonic() + CLEANUP_TIMEOUT_S)
+            if exists == 1 and not show_err.strip():
+                return True, "", ""                     # unborn: Git says missing
+            if exists not in (0, 1) or show_err.strip():
+                why = why or show_err.strip().split("\n")[0][:120]
+        return False, "", why or "git rev-parse HEAD failed"
+    except _StepFailed as exc:
+        return False, "", exc.why
+
+
 def committed_rows(cfg, *, strict: bool = False) -> list[dict]:
     """The ruling rows in the COMMITTED log (the blob at HEAD), not the
     working file, so a provisional line during another ruling is not read.
@@ -531,23 +561,13 @@ def committed_rows(cfg, *, strict: bool = False) -> list[dict]:
             f"until it can be", issue="rulings_unreadable")
 
     try:
-        code, _out, err = _bounded(cfg, ("rev-parse", "--verify", "-q", "HEAD"),
-                                   time.monotonic() + CLEANUP_TIMEOUT_S)
-        if code != 0:
-            # "No commit yet" only for a positively identified unborn HEAD: a
-            # symbolic HEAD whose branch does not exist (D176 ruling 33). Any
-            # other failure (a corrupt HEAD, a broken repository) is refused.
-            sym_code, ref, _e = _bounded(cfg, ("symbolic-ref", "-q", "HEAD"),
-                                         time.monotonic() + CLEANUP_TIMEOUT_S)
-            if sym_code == 0 and ref.strip():
-                exists, _o, _e2 = _bounded(cfg, ("show-ref", "--verify", "-q", ref.strip()),
-                                           time.monotonic() + CLEANUP_TIMEOUT_S)
-                if exists != 0:
-                    return []                           # unborn: no commit yet
+        ok, head, err = read_head(cfg)
+        if not ok:
             if strict:
-                raise refuse(err.strip().split("\n")[0][:120]
-                             or "git rev-parse HEAD failed")
+                raise refuse(err or "git rev-parse HEAD failed")
             return []
+        if not head:
+            return []                                   # unborn: no commit yet
         code, listed, err = _bounded(cfg, ("ls-tree", "HEAD", "--", rel),
                                      time.monotonic() + CLEANUP_TIMEOUT_S)
         if code != 0:

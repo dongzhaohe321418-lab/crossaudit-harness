@@ -1011,11 +1011,14 @@ Resolution is a human act that neither model can produce: at the command line
 `resolve` refuses to run without a terminal; in the console it is the decision
 screen, which rules through the same path (D176). That path has two phases
 joined by a local note of intent kept in `.crossaudit/`: the ruling is
-committed to the ledger first, then the cycle's state changes. If the commit
-fails, the cycle stays ESCALATED and nothing is recorded. If the state change
-fails after the commit, the refusal names the commit, `status` shows the cycle
-as "ruling committed, state pending", and the next ruling on that cycle applies
-the committed ruling instead of writing a second one. A ruling line that this
+committed to the ledger first, then the cycle's state changes. If Git is
+positively known not to have committed (the commit failed and `HEAD` is
+unchanged), the cycle stays ESCALATED and nothing is recorded. If the outcome
+is uncertain, or the state change fails after the commit, the refusal says so
+and names the commit when there is one, `status` shows the cycle as "ruling
+committed, state pending", and the next ruling on that cycle recovers the
+committed ruling instead of writing a second one; nothing is cleared while the
+repository cannot be read. A ruling line that this
 project's controller did not make (someone else committed it to the
 repository) is listed by `status` and never acted on.
 

@@ -444,3 +444,6 @@
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 0b8d262c745cac98 was committed as 05a91e8e2dc5, but the committed cycles/rulings.jsonl could not be read back to confirm it (fatal: unable to read blob); the cycle stays ESCALATED, and the next ruling on this cycle recovers it"}
 {"kind": "IntegrityDenial", "reason": "the committed ruling for cycle e74e37022a0aaf64 does not match this controller's intent (action); nothing was applied"}
 {"kind": "IntegrityDenial", "reason": "the committed ruling for cycle e74e37022a0aaf64 does not match this controller's intent (reason_sha256); nothing was applied"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle 5f03960d052b471c may have been committed to the ledger (git commit failed: injected after landing); the cycle stays ESCALATED, and the next ruling on this cycle recovers it"}
+{"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (fatal: cannot read packed-refs); no ruling is made until it can be"}
+{"kind": "IntegrityDenial", "reason": "the committed ruling for cycle d0d485b249d296cc does not match this controller's intent (intent); nothing was applied"}
