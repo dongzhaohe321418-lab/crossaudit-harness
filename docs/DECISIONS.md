@@ -8948,13 +8948,19 @@ text exists):
 51. **The ruling-timeout docstring states the minimum-of-two bound.** It said the ruling
     has its own 90 s bound "instead of git's 240 s", which ruling 49 superseded.
 
+**Round 16** (`…-r16.md`): the round-15 repairs verified (the executable row-budget test
+goes red under the mutant), and the reviewer, having reviewed rounds 1 to 15, found
+nothing that blocks the merge under AGENTS.md §0–§1 and no overstatement in D175, D176,
+the README or the CHANGELOG. **VERDICT: MERGE.** The branch merges under the one law
+with that review on record; the sixteen texts are the evidence.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
 paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, which no
 ruling path can prevent; a holder of the project's private seed (`.crossaudit/signing/`,
 mode 0600) who can also write the repository can forge rulings and escalations, the
-same trust boundary as receipt signing. The TUI (D175) was reviewed cold in round 2; rounds 3 to 15 are recorded
+same trust boundary as receipt signing. The TUI (D175) was reviewed cold in round 2; rounds 3 to 16 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,
