@@ -40,7 +40,7 @@ Grounded only in the six per-subsystem inventories. No code is asserted that isn
 - `receipt/schema.py:37 canonical()` / `:43 digest()` / `:53 validate()` — canonical JSON + SHA-256 content-addressing.
 - `receipt/build.py:104 build()` — provenance-complete, derived-not-narrated record; `:60 isolation_evidence`.
 - `receipt/verify.py:39 verify()` — read-only re-derivation, refuse-on-first-mismatch; `:104-111` `report_commit` ancestor check (the only append-order tamper check); `:136 admit()`.
-- `controller/state.py:87 _write` (atomic O_EXCL + fsync + rename) / `:102 _locked` / `:375 admit` consume-once — durable-append + single-use-claim substrate.
+- `controller/state.py:118 _write` (temp file + fsync + atomic rename) / `:149 _locked` (kernel-held file lock, `crossaudit/locks.py`) / `:521 admit` consume-once — durable-append + single-use-claim substrate.
 - `gitio.py` tree-materialization + `is_ancestor`/`commit_exists` — git-as-append-only read layer (symlink/submodule refusal `:259`).
 - `_selfid.py:30 code_digest` / `:90 identity` — verifier provenance block per entry.
 - `auditor/run.py:45 dcl_source_digest` — pins the exact code that produced evidence.
@@ -145,7 +145,7 @@ Every subprocess / network / fs-write / exec that Phase 1's Tool Broker must eve
 - `src/crossaudit/broker/tools_readonly.py` — the four brokered tools, each wrapping an existing primitive: `file_read` (via `gitio.read_blob` + `scope_dirs` gate), `search` (scoped grep over the committed tree), `git_status` (via `gitio` read ops), `doctor` (wrap `app.self_test`/`app_doctor.collect`, no `repair`).
 - `src/crossaudit/policy/tokens.py` — `CapabilityToken` frozen dataclass (tools, paths, hosts, time-window, cost ceiling, expiry) reusing `config.Role`'s strict-allowlist schema shape.
 - `src/crossaudit/policy/engine.py` — deterministic `decide(proposal, token) -> Decision` (reuse the `admission.Assessment` "absent evidence never counts in favour" posture). Separable from execution so it can be replayed.
-- `src/crossaudit/ledger/chain.py` — append-only, hash-chained evidence ledger: `append(entry) -> digest` where each entry carries `prev_digest` + a head pointer. Reuse `schema.canonical()/digest()` for hashing and `controller/state._locked/_write` for the atomic O_EXCL durable append. Generic evidence-entry type (tool-call / decision / result), distinct from the audit-cycle receipt schema.
+- `src/crossaudit/ledger/chain.py` — append-only, hash-chained evidence ledger: `append(entry) -> digest` where each entry carries `prev_digest` + a head pointer. Reuse `schema.canonical()/digest()` for hashing and `controller/state._locked/_write` for the kernel-held file lock and the fsync'd durable append. Generic evidence-entry type (tool-call / decision / result), distinct from the audit-cycle receipt schema.
 - `src/crossaudit/appservice/__init__.py` — neutral Application Service both `cli.*` and `console.*` import (fixes the inverted layering), exposing `run_loop` + broker wiring.
 
 ### Existing files to modify

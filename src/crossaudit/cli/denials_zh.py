@@ -555,6 +555,15 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the lock file {} was replaced while this process held the lock; this process's "
      "change was discarded",
      "锁文件 {} 在本进程持有锁期间被替换；本进程的更改已被丢弃"),
+    ("the directory {} for the controller state could not be created ({}: {}); check "
+     "the path is a directory you can write",
+     "无法创建用于控制器状态的目录 {}（{}：{}）；请确认该路径是你可写入的目录"),
+    ("the directory {} for the evidence ledger could not be created ({}: {}); check "
+     "the path is a directory you can write",
+     "无法创建用于证据账本的目录 {}（{}：{}）；请确认该路径是你可写入的目录"),
+    ("the directory {} for the lock file could not be created ({}: {}); check the "
+     "path is a directory you can write",
+     "无法创建用于锁文件的目录 {}（{}：{}）；请确认该路径是你可写入的目录"),
     ("this filesystem cannot provide the exclusive lock CrossAudit needs at {} ({}: {}); "
      "use a project directory on a local filesystem",
      "此文件系统无法在 {} 提供 CrossAudit 所需的独占锁（{}：{}）；请使用位于本地文件系统上的项目目录"),

@@ -116,7 +116,7 @@ class StateStore:
         return data
 
     def _write(self, state: dict) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        locks.ensure_directory(self.path.parent, "the controller state")
         tmp = self.path.with_suffix(self.path.suffix + f".tmp{os.getpid()}")
         with open(tmp, "w") as fh:
             json.dump(state, fh, indent=2, sort_keys=True)
@@ -156,7 +156,7 @@ class StateStore:
         (``HeldLock.require_current``), except within the microseconds
         between that check and the write.
         """
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        locks.ensure_directory(self.path.parent, "the controller state")
         held = self._acquire(self.lock_path)
         try:
             state = self._read()

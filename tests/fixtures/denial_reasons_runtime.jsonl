@@ -431,3 +431,6 @@
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle e1dabb7a19f96c4b could not be committed to the ledger (git commit timed out after 1s); the cycle stays ESCALATED and nothing was recorded; .git/index.lock may have been left by the killed git — if no git process is running, remove it by hand and run `git reset -q -- cycles/rulings.jsonl`"}
 {"kind": "ConfigDenial", "reason": "this filesystem cannot provide the exclusive lock CrossAudit needs at /tmp/T/state.json.lock (ENOLCK: No locks available); use a project directory on a local filesystem"}
 {"kind": "IntegrityDenial", "reason": "the lock file /tmp/T/evidence.jsonl.lock was replaced while this process held the lock; this process's change was discarded"}
+{"kind": "ConfigDenial", "reason": "the directory /tmp/T/blocked for the controller state could not be created (EEXIST: File exists); check the path is a directory you can write"}
+{"kind": "ConfigDenial", "reason": "the directory /tmp/T/blocked for the evidence ledger could not be created (EEXIST: File exists); check the path is a directory you can write"}
+{"kind": "ConfigDenial", "reason": "the directory /tmp/T/blocked for the lock file could not be created (EEXIST: File exists); check the path is a directory you can write"}

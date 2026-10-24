@@ -8595,11 +8595,34 @@ one P1, one P2 and one P3, each repaired:
     lock call itself still mean contention. A failure to create the lock file's
     directory is still a plain `OSError`.
 
+**Round 6** (`…-r6.md`): the round-5 repairs verified and the lock property judged
+honestly scoped; no blocking finding; two P2 and one P3, repaired on this branch (the
+verification is the next round, cited here only once its text exists):
+
+21. **Creating a missing parent directory is a refusal, not a traceback.** A regular file
+    at the path where `.crossaudit/` (or the ledger's or lock file's directory) should
+    be made `mkdir` raise `FileExistsError` through `main()`, which catches only
+    `Denial`. Every such creation site (`controller/state.py`, `locks.py`,
+    `ledger/chain.py`) now goes through one helper, `locks.ensure_directory`, that turns
+    the error into a `ConfigDenial`, one literal sentence per kind of file so each is
+    translated whole: "the directory … for the controller state (/ the evidence ledger
+    / the lock file) could not be created (EEXIST: …); check the path is a directory you
+    can write" (Chinese parity), with a regression through `main()` in English and
+    Chinese. `rulings.py`'s own directory creations were already answered by the
+    ruling's refusals.
+22. **This record no longer cites a review round before it exists.** The previous text
+    said "rounds 3 to 6 verified the repairs" while round 6 was still running and then
+    found these items; the reviewer named that as an overclaim. A round is cited here
+    only once its text is in `benchmarks/reviews/`.
+23. **Two more retained descriptions stop saying `O_EXCL`.** `tests/test_enterprise_race.py`
+    and `docs/AGENTIC_RUNTIME_PHASE0.md` describe the locks as kernel-held file locks
+    and their line references are brought up to date.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
-paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 6 verified the
-repairs (`…-r3.md` to `…-r6.md`). The Windows lock branch (`msvcrt.locking`) has not
-run on Windows and no network filesystem was tried (the ENOLCK test simulates the
-error); a plain `os.fork()` without exec would share a held lock with the child, and
-nothing in CrossAudit forks while holding one.
+paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 6 are recorded
+above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
+has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
+the error); a plain `os.fork()` without exec would share a held lock with the child,
+and nothing in CrossAudit forks while holding one.
