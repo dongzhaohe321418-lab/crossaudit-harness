@@ -8963,9 +8963,9 @@ job, which configures no git identity, and `test (ubuntu-latest, 3.13)`):
     with "Author identity unknown", escalations read "not committed", and the console
     refused rulings. The rows now commit with the repository's configured identity when
     both name and email are set, else `CrossAudit <crossaudit@local.invalid>`, the same
-    default the broker's work commits use; the row's `by` records exactly the identity
-    the commit carries. The suite is run, and green, both with and without any git
-    identity on the machine.
+    default the broker's work commits use; the row's `by` records the identity the
+    commit carries — made true by ruling 55, since `-c` alone does not. The suite is
+    run, and green, both with and without any git identity on the machine.
 53. **Cycle order breaks a same-second tie by recorded order.** `_ordered_cycles` sorted
     by the latest history event's time, which is whole seconds, with the hash id as the
     tie-break, so two builds inside one second ordered arbitrarily and the TUI's "newest
@@ -8989,6 +8989,23 @@ job, which configures no git identity, and `test (ubuntu-latest, 3.13)`):
     The walk's evidence: every key answered in 1–209 ms, help/expand/verify/later/quit
     exited 0 with `stty -g` unchanged, a frame in 0.75 s, a legible sentence and exit 20
     outside a project.
+
+**Round 17** (`…-r17.md`): the CI repairs and the TUI changes verified in their tested
+cases; one P2 and one P3, repaired on this branch (the verification is the next round,
+cited only once its text exists):
+
+55. **A row's identity is resolved once and forced onto the commit.** `-c user.name`
+    does not override `GIT_AUTHOR_*`/`GIT_COMMITTER_*`, so with those variables in the
+    environment the commit named one person and the signed row another. The identity
+    is now resolved in one place — `GIT_AUTHOR_NAME`+`GIT_AUTHOR_EMAIL` when both are
+    set, else the repository's `user.name`+`user.email` when both are set, else the
+    default — and the row commit runs with all four `GIT_AUTHOR_*`/`GIT_COMMITTER_*`
+    variables set to that tuple (and `-c` as well), so the row's `by`, the commit's
+    author and its committer are the same string; tests set conflicting ambient
+    variables for both the default and the configured case. The identity is visible to
+    hooks, which is intended.
+56. **`render()`'s docstring states what it depends on.** Byte-equality holds for the same
+    arguments and the same stdout encoding; glyphs the stream cannot encode fall back.
 
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
