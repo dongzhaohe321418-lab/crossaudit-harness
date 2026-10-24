@@ -442,8 +442,7 @@
 {"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (fatal: bad object HEAD:cycles/rulings.jsonl); no ruling is made until it can be"}
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 81b75308cace6a78 does not match the intent this controller recorded for it; nothing was recorded"}
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 0b8d262c745cac98 was committed as 05a91e8e2dc5, but the committed cycles/rulings.jsonl could not be read back to confirm it (fatal: unable to read blob); the cycle stays ESCALATED, and the next ruling on this cycle recovers it"}
-{"kind": "IntegrityDenial", "reason": "the committed ruling for cycle e74e37022a0aaf64 does not match this controller's intent (action); nothing was applied"}
-{"kind": "IntegrityDenial", "reason": "the committed ruling for cycle e74e37022a0aaf64 does not match this controller's intent (reason_sha256); nothing was applied"}
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 5f03960d052b471c may have been committed to the ledger (git commit failed: injected after landing); the cycle stays ESCALATED, and the next ruling on this cycle recovers it"}
 {"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (fatal: cannot read packed-refs); no ruling is made until it can be"}
-{"kind": "IntegrityDenial", "reason": "the committed ruling for cycle d0d485b249d296cc does not match this controller's intent (intent); nothing was applied"}
+{"kind": "IntegrityDenial", "reason": "a committed ruling for cycle d2997cd18ed2dd0c (f2eda0f15a57) carries no valid signature from this project; nothing was applied, and no new ruling is made until the repository is repaired"}
+{"kind": "ConfigDenial", "reason": "the project signing key at /tmp/T/not-a-directory/ed25519.seed is not available (File exists); a ruling must be signed, so none was made"}

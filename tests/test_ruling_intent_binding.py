@@ -65,7 +65,9 @@ def test_a_landed_commit_whose_confirmation_read_fails_keeps_the_intent(
     calls = {"n": 0}
 
     def confirmation_fails_once(cfg, args, deadline):
-        if args[:2] == ("cat-file", "blob") and calls["n"] == 0:
+        # The rulings log's own read-back (the escalation identity reads
+        # receipts first since D176 ruling 40, so the call is matched by path).
+        if args == ("cat-file", "blob", f"HEAD:{LOG}") and calls["n"] == 0:
             calls["n"] += 1
             return 128, b"", "fatal: unable to read blob\n"
         return real(cfg, args, deadline)
@@ -166,8 +168,8 @@ def test_a_filter_that_rewrites_the_nonce_stops_phase_3(escalated):
     Mutations caught: confirming on four fields without the nonce (round 9)
     -- phase 3 applies the state change although the commit carries another
     nonce; and, on the retry, treating that committed row as "no row" (round
-    10) -- the intent is cleared and a second ruling committed (D176 ruling
-    38)."""
+    10) -- a second ruling would be committed (D176 rulings 38 and 40: the
+    altered row no longer verifies and is refused by name)."""
     root, cid = escalated
     cfg = load()
     gitdir = Path(git("rev-parse", "--absolute-git-dir", cwd=root))
@@ -186,9 +188,14 @@ def test_a_filter_that_rewrites_the_nonce_stops_phase_3(escalated):
     (gitdir / "info" / "attributes").write_text("")
     with pytest.raises(IntegrityDenial) as retried:
         rulings.rule(cfg, _store(root), cid, "close", REASON)
-    assert retried.value.reason == (f"the committed ruling for cycle {cid} does not "
-                                    f"match this controller's intent (intent); "
-                                    f"nothing was applied")
+    # Since D176 ruling 40 the committed row is judged by its signature: the
+    # filter changed a signed field, so the row no longer verifies and is
+    # refused by name (it is never "no row").
+    assert retried.value.reason.startswith(
+        f"a committed ruling for cycle {cid} (")
+    assert retried.value.reason.endswith(
+        "carries no valid signature from this project; nothing was applied, and no "
+        "new ruling is made until the repository is repaired")
     assert git("rev-parse", "HEAD", cwd=root) == head
     committed = git("show", f"HEAD:{LOG}", cwd=root)
     assert len([ln for ln in committed.split("\n") if ln.strip()]) == 1
@@ -197,10 +204,13 @@ def test_a_filter_that_rewrites_the_nonce_stops_phase_3(escalated):
 
 
 def test_a_forged_local_intent_cannot_apply_a_committed_row(escalated, monkeypatch):
-    """A genuine committed `close` row (its state write failed) and a local
-    intent edited to say `reopen` with the right nonce. Mutation caught:
-    recovery matching on cycle and nonce only (round 9) -- the forged intent
-    would pass and the committed action be applied under it."""
+    """A genuine signed committed `close` row (its state write failed) and a
+    local intent edited to say `reopen`. Since D176 ruling 40 the intent is
+    not authority at all: the verified committed `close` is applied whatever
+    the intent says, and the request for `reopen` is refused. (Round 10's
+    version expected the intent mismatch to be named; ruling 40 removed the
+    intent from recovery.) Mutation caught: letting the local intent's
+    action decide what recovery applies."""
     root, cid = escalated
     cfg = load()
     _fail_phase3_write(monkeypatch)
@@ -211,18 +221,13 @@ def test_a_forged_local_intent_cannot_apply_a_committed_row(escalated, monkeypat
     store = _store(root)
     with store._locked() as state:
         state["pending_rulings"][cid]["action"] = "reopen"
+        state["pending_rulings"][cid]["reason_sha256"] = "0" * 64
     with pytest.raises(IntegrityDenial) as denied:
         rulings.rule(cfg, store, cid, "reopen", REASON)
-    assert denied.value.reason == (f"the committed ruling for cycle {cid} does not "
-                                   f"match this controller's intent (action); nothing "
-                                   f"was applied")
-    assert _state(root)["cycles"][cid]["status"] == "ESCALATED"
+    assert denied.value.reason == (f"a committed ruling (close, {sha[:12]}) already "
+                                   f"stands for cycle {cid}; the state now reflects it")
+    assert _state(root)["cycles"][cid]["status"] == "BLOCKED"
     assert git("rev-parse", "HEAD", cwd=root) == sha
-    with store._locked() as state:
-        state["pending_rulings"][cid]["action"] = "close"
-        state["pending_rulings"][cid]["reason_sha256"] = "0" * 64
-    with pytest.raises(IntegrityDenial, match=r"\(reason_sha256\); nothing was applied"):
-        rulings.rule(cfg, store, cid, "close", REASON)
 
 
 def test_confirm_committed_refuses_a_row_whose_nonce_differs(escalated):

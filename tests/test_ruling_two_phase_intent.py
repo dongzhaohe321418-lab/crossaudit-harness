@@ -177,11 +177,12 @@ def test_a_committed_row_this_controller_did_not_make_is_never_applied(
     assert main.main(["--json", "status"]) == EXIT_OK
     row = next(r for r in json.loads(capsys.readouterr().out)["cycles"]
                if r["cycle_id"] == cid)
-    assert row["foreign_rulings"] == [{"action": "close", "at": "1970-01-01T00:00:00Z",
-                                       "commit": sha[:12]}]
+    # Since D176 ruling 41 an unsigned row is listed as unverified.
+    assert row["unverified_rulings"] == [{"action": "close",
+                                          "at": "1970-01-01T00:00:00Z",
+                                          "commit": sha[:12]}]
     assert main.main(["status"]) == EXIT_OK
-    assert (f"ruling row in the ledger not made by this controller ({sha[:12]})"
-            in capsys.readouterr().out)
+    assert f"unverified ruling row ({sha[:12]})" in capsys.readouterr().out
     assert _state(root)["cycles"][cid]["status"] == "ESCALATED"
     # The explicit human ruling proceeds; the ledger then holds both rows.
     result = rulings.rule(load(), _store(root), cid, "reopen", "the genuine ruling")
