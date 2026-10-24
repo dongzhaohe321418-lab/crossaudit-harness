@@ -28,6 +28,7 @@ import errno
 import hashlib
 import json
 import os
+import secrets
 import tempfile
 import time
 from collections.abc import Callable, Iterator
@@ -35,7 +36,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from .. import locks
-from ..errors import ConfigDenial, IntegrityDenial, classify_escalation_kind
+from ..errors import ConfigDenial, Denial, IntegrityDenial, classify_escalation_kind
 
 STATE_FILENAME = "state.json"
 LOCK_TIMEOUT_S = 30.0
@@ -115,18 +116,6 @@ class StateStore:
         if not isinstance(data, dict) or "cycles" not in data:
             raise IntegrityDenial("state file has no cycles map", path=str(self.path))
         return data
-
-    def _require_writable(self) -> None:
-        """Probe that the state file can be replaced: create and remove the
-        temporary file ``_write`` would use. Refuses with ``_write``'s own
-        sentence when it cannot."""
-        tmp = self.path.with_suffix(self.path.suffix + f".tmp{os.getpid()}")
-        try:
-            fd = os.open(tmp, os.O_CREAT | os.O_WRONLY, 0o600)
-            os.close(fd)
-            tmp.unlink()
-        except OSError as exc:
-            raise self._unwritable(exc) from exc
 
     def _unwritable(self, exc: OSError) -> ConfigDenial:
         name = errno.errorcode.get(exc.errno or 0, str(exc.errno))
@@ -606,55 +595,111 @@ class StateStore:
             return dict(c, cycle_id=cycle_id)
 
     def rule_escalation(self, cycle_id: str, action: str, reason: str,
-                        commit: Callable[[dict], dict]) -> tuple[dict, dict]:
-        """One human ruling, committed and applied as a single transaction.
+                        commit: Callable[[dict, str], dict], *,
+                        read_committed: Callable[[], list[dict]],
+                        by: str = "") -> dict:
+        """One human ruling, in two phases joined by a local intent, all
+        under this store's lock (D176 ruling 30).
 
-        Under this store's lock: the same validation as
-        :meth:`resolve_escalation` (a known cycle, status ESCALATED, a stated
-        reason, ``reopen`` or ``close``) without changing anything; then
-        ``commit(cycle)`` with the record as it stands BEFORE the ruling -- the
-        caller's callable appends the ruling row to the ledger and commits it,
-        returning the row; and only if that returns without raising, the state
-        change and the ``human_resolution`` entry, exactly as
-        :meth:`resolve_escalation` makes them. A ``commit`` that raises leaves
-        the state untouched (the lock's write-back is skipped) and the
-        exception propagates. Returns ``(row, cycle)``: the committed row and
-        the cycle record after the ruling.
+        Recovery first: if a previous ruling on this cycle left an intent
+        (``state["pending_rulings"][cycle_id]``), ``read_committed()`` reads
+        the committed rulings log (it raises on any read or parse failure,
+        never returning "nothing"). A committed row carrying the intent's
+        nonce is applied (history ``reconciled``), the intent cleared, and
+        ``{"reconciled": True, "row": row, ...}`` returned with no new row. No
+        such row (the earlier process stopped before committing): the intent
+        is cleared and this ruling proceeds as a fresh one
+        (``"intent_cleared": True``).
+
+        Then: validate (a known cycle, ESCALATED, a reason, reopen/close);
+        phase 1 writes the intent ``{action, reason_sha256, by, nonce,
+        started_at, escalated_at, updated_at}`` with the normal fsync'd state
+        write (a failure here commits nothing); phase 2 calls
+        ``commit(cycle_before, nonce)``, which appends and commits the row
+        carrying ``intent: nonce`` (a failure clears the intent, best effort);
+        phase 3 applies the state change, records the nonce among the cycle's
+        ``ruling_intents`` and removes the intent in one write. If phase 3
+        fails, its ``ConfigDenial`` (issue ``state_unwritable``) propagates
+        and the intent stays on disk for the next ruling to recover.
+
+        A committed row with no matching local intent is never applied
+        (ruling 31). Returns ``{"row", "cycle", "before", "reconciled",
+        "intent_cleared"}``.
         """
         self._check_resolution(action, reason)
-        with self._locked() as state:
-            c = self._escalated_cycle(state, cycle_id)
-            # The ruling is committed before the state is written; refuse here,
-            # before the commit, if the state could not be written afterwards
-            # (an unwritable state directory), so the ledger never holds a
-            # ruling whose state change was then refused. A failure that only
-            # appears later (a disk that fills between the two) is not covered.
-            self._require_writable()
-            row = commit(dict(c, cycle_id=cycle_id))
-            self._apply_resolution(state, c, cycle_id, action, reason)
-            return row, dict(c, cycle_id=cycle_id)
+        locks.ensure_directory(self.path.parent, "the controller state")
+        held = self._acquire(self.lock_path)
+        try:
+            state = self._read()
+            intents = state.setdefault("pending_rulings", {})
+            intent = intents.get(cycle_id)
+            cleared = False
+            if intent:
+                rows = read_committed()
+                match = [r for r in rows if str(r.get("cycle_id")) == cycle_id
+                         and r.get("intent") == intent.get("nonce")]
+                if match:
+                    row = match[-1]
+                    c = state["cycles"].get(cycle_id)
+                    before = dict(c or {}, cycle_id=cycle_id)
+                    del intents[cycle_id]
+                    if c is None or c["status"] != ESCALATED:
+                        self._commit_state(held, state)
+                        self._escalated_cycle(state, cycle_id)   # raises
+                    self._apply_resolution(state, c, cycle_id, str(row["action"]),
+                                           str(row.get("reason", "")))
+                    state["history"][-1]["reconciled"] = True
+                    c.setdefault("ruling_intents", []).append(intent["nonce"])
+                    self._commit_state(held, state)
+                    return {"row": row, "cycle": dict(c, cycle_id=cycle_id),
+                            "before": before, "reconciled": True,
+                            "intent_cleared": False}
+                del intents[cycle_id]
+                cleared = True
+            try:
+                c = self._escalated_cycle(state, cycle_id)
+            except IntegrityDenial:
+                if cleared:
+                    self._commit_state(held, state)
+                raise
+            before = dict(c, cycle_id=cycle_id)
+            nonce = secrets.token_hex(16)
+            intents[cycle_id] = {
+                "action": action,
+                "reason_sha256": hashlib.sha256(reason.encode("utf-8")).hexdigest(),
+                "by": by, "nonce": nonce, "started_at": time.time(),
+                # informational only; the nonce is the identity
+                "escalated_at": c.get("escalated_at"), "updated_at": c.get("updated_at"),
+            }
+            self._commit_state(held, state)                    # phase 1
+            try:
+                row = commit(before, nonce)                    # phase 2
+            except BaseException:
+                intents.pop(cycle_id, None)
+                try:
+                    self._commit_state(held, state)
+                except Denial:
+                    pass       # the intent stays; recovery finds no row for it
+                raise
+            self._apply_resolution(state, c, cycle_id, action, reason)  # phase 3
+            c.setdefault("ruling_intents", []).append(nonce)
+            del intents[cycle_id]
+            self._commit_state(held, state)
+            return {"row": row, "cycle": dict(c, cycle_id=cycle_id),
+                    "before": before, "reconciled": False, "intent_cleared": cleared}
+        finally:
+            held.release()
 
-    def apply_committed_ruling(self, cycle_id: str, row: dict) -> dict:
-        """Make the state follow a ruling that is already committed to the
-        ledger but whose state change was never written (a write that failed
-        after the commit; D176 ruling 27). Under the lock: the cycle must
-        still be ESCALATED and still be the escalation ``row`` answers
-        (``rulings.answers``); then the same state change and
-        ``human_resolution`` entry as a fresh ruling, marked ``reconciled``.
-        Returns the cycle after it."""
-        from .. import rulings
+    def _commit_state(self, held: locks.HeldLock, state: dict) -> None:
+        """One fsync'd state write inside a held lock, refused if the lock
+        file was replaced (``HeldLock.require_current``)."""
+        held.require_current()
+        self._write(state)
 
-        action, reason = str(row.get("action", "")), str(row.get("reason", ""))
-        self._check_resolution(action, reason)
-        with self._locked() as state:
-            c = self._escalated_cycle(state, cycle_id)
-            if not rulings.answers(row, c):
-                raise IntegrityDenial(
-                    "the committed ruling does not answer this cycle's current "
-                    "escalation", cycle_id=cycle_id)
-            self._apply_resolution(state, c, cycle_id, action, reason)
-            state["history"][-1]["reconciled"] = True
-            return dict(c, cycle_id=cycle_id)
+    def current_intent(self, cycle_id: str) -> dict | None:
+        """The ruling intent the state file records for this cycle, or None
+        (read without the lock: the caller of ``rulings.record`` holds it)."""
+        return self._read().get("pending_rulings", {}).get(cycle_id)
 
     @staticmethod
     def _check_resolution(action: str, reason: str) -> None:

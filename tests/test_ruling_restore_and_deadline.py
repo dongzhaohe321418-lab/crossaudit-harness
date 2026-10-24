@@ -25,6 +25,7 @@ seconds, and hooks and filters sleep. Each test names the mutation it catches.
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 
@@ -122,8 +123,16 @@ def test_a_restore_that_fails_says_so_and_claims_nothing(escalated, monkeypatch)
     install_hook(root, "#!/bin/sh\necho 'pre-commit: refused' >&2\nexit 1\n")
     head = git("rev-parse", "HEAD", cwd=root)
 
-    def refuse(_src, _dst):
-        raise OSError(28, "No space left on device")
+    real_replace = os.replace
+
+    def refuse(src, dst):
+        # Only the log's restore fails. Since the two-phase ruling (D176
+        # ruling 30) the controller writes its state (os.replace too) before
+        # the commit, so failing every os.replace would stop the ruling at
+        # its intent instead of at the restore this test is about.
+        if Path(dst).name == "rulings.jsonl":
+            raise OSError(28, "No space left on device")
+        return real_replace(src, dst)
     monkeypatch.setattr(rulings.os, "replace", refuse)
     reason = _refused(cid)
     monkeypatch.undo()

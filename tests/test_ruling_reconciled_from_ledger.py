@@ -1,6 +1,7 @@
 """A ruling committed to the ledger whose state change could not be written is
-reconciled from the ledger, never ruled twice (review 2026-10-23 round 8;
-D176 ruling 27). Also round 8's two P2: the credentials bootstrap inside
+recovered at the next ruling on that cycle (review 2026-10-23 round 8; D176
+ruling 27, superseded in mechanism by ruling 30: the recovery now follows the
+local intent's nonce, see test_ruling_two_phase_intent.py). Also round 8's two P2: the credentials bootstrap inside
 `main()`'s OS-error boundary (ruling 28) and the ledger's close (ruling 29).
 
 Each test names the mutation it catches.
@@ -38,14 +39,17 @@ def _english():
 
 
 def _fail_the_next_state_write(monkeypatch):
-    """The state file's write fails once with ENOSPC, after
-    `_require_writable` has passed: the reviewer's reproduction."""
+    """The state write AFTER the commit fails once with ENOSPC: the
+    reviewer's round-8 reproduction. Since the two-phase ruling (D176 ruling
+    30) a ruling writes the state twice -- the intent before the commit
+    (write 1) and the state change after it (write 2) -- so it is write 2
+    that fails here."""
     real = StateStore._write
     calls = {"n": 0}
 
     def failing(self, state):
         calls["n"] += 1
-        if calls["n"] == 1:
+        if calls["n"] == 2:
             try:
                 raise OSError(errno.ENOSPC, "No space left on device")
             except OSError as exc:
@@ -94,8 +98,8 @@ def test_a_failed_state_write_after_the_commit_names_the_committed_ruling(
     assert err.strip() == (
         f"DENIED (integrity): the ruling on cycle {cid} was committed to the ledger "
         f"as {sha[:12]}, but the cycle's state could not be written (ENOSPC: No "
-        f"space left on device); the state is unchanged, and ruling on this cycle "
-        f"again applies the committed ruling instead of writing a new one")
+        f"space left on device); the state is unchanged, and the next ruling on "
+        f"this cycle applies the committed ruling")
     assert _state(root)["cycles"][cid]["status"] == "ESCALATED"
     # status, read-only, marks it.
     row = _status_row(capsys, cid)

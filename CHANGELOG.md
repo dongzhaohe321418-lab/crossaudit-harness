@@ -49,12 +49,19 @@ All notable changes to CrossAudit are recorded here. Versions follow the
 - **A ruling made from the console is committed to the ledger, like one made
   with `crossaudit resolve`.** The console's decision screen (close, revise and
   continue, and the provider-failure retry) used to change only the local
-  controller state; every surface now rules through one transaction that
-  appends to `cycles/rulings.jsonl` and commits it first, then changes the
-  state. If the commit fails (a rejecting hook, a full disk), the cycle stays
-  ESCALATED, the log is restored byte for byte, nothing stays staged, and the
-  refusal says so, in English and Chinese. Found by the first independent
-  cross-vendor review of this release's changes (D176).
+  controller state; every surface now rules through one path with two phases
+  joined by a local note of intent: the row is appended to `cycles/rulings.jsonl`
+  and committed first, then the state changes. If the commit fails (a rejecting
+  hook, a full disk), the cycle stays ESCALATED, the log is restored byte for
+  byte, nothing stays staged, and the refusal says so, in English and Chinese.
+  If the state change fails after the commit, the refusal names the commit,
+  `status` shows "ruling committed, state pending", and the next ruling on that
+  cycle applies the committed ruling instead of writing a second one; a ruling
+  line the controller did not make is listed by `status` and never acted on.
+  The controller and evidence-ledger locks are held by the kernel, so a crashed
+  process releases them and no lock file is ever deleted. Found and refined by
+  nine rounds of independent cross-vendor review of this release's changes
+  (D176).
 - **A provider key held under a nonconventional configured name no longer
   reaches Git, `gh`, SSH or the Codex runtime.** `child_env()` stripped only
   `CROSSAUDIT_*_KEY` and `*_API_KEY` names; it now also strips every `key_env`
