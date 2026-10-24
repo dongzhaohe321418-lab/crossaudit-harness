@@ -283,6 +283,16 @@ def _write_sources(cfg: Config, receipt: dict, cycle_dir: Path) -> bool:
         return False
 
 
+def _lineage_parent(cfg: Config, sha: str) -> str | None:
+    """The increment's parent for cycle lineage, looking through commits that
+    touch only the ledger directory (``gitio.past_ledger_commits``), so a
+    child of the controller's own escalation row still meets the escalation
+    lock of the cycle it continues."""
+    from ..gitio import past_ledger_commits
+
+    return past_ledger_commits(cfg.root, cfg.ledger_dir, parent(cfg.root, sha))
+
+
 def _state(cfg: Config) -> StateStore:
     """The state store lives beside the configuration, never in site-packages."""
     return StateStore(cfg.root / cfg.state_dir / "state.json")
@@ -1135,7 +1145,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
                 f"descend from its active commit {prior['active_sha'][:12]}")
         cycle = store.continue_cycle(continuation, cfg.science_repo, sha)
     else:
-        cycle = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha),
+        cycle = store.open_or_advance(cfg.science_repo, sha, _lineage_parent(cfg, sha),
                                       constitution_commit=head_const_commit)
     if cycle.get("already_admitted"):
         raise ConfigDenial(
@@ -1560,6 +1570,15 @@ def cmd_status(args: argparse.Namespace) -> int:
             # The controller keeps BLOCKED + closed_by_human (other readers
             # key on both); `closed` says what that means.
             row["closed"] = True
+        if cid in escalated:
+            # The escalation's committed row (D176 ruling 43), read-only.
+            if c.get("escalation_commit"):
+                row["escalation"] = {"committed": True, "commit": c["escalation_commit"][:12]}
+            else:
+                row["escalation"] = {
+                    "committed": False,
+                    "why": str(c.get("escalation_error")
+                               or "escalated by an older version of CrossAudit")}
         if cid in escalated and committed:
             try:
                 if rulings_mod.assess(cfg, cid, dict(c, cycle_id=cid))["pending"]:
@@ -1587,6 +1606,11 @@ def cmd_status(args: argparse.Namespace) -> int:
                         else "")
                      + (f"   {i18n.t('status.ruling_pending')}" if r.get("ruling_pending")
                         else ""))
+        esc = r.get("escalation")
+        if esc:
+            human.append("  " + (i18n.t("status.escalation_committed", sha=esc["commit"])
+                                 if esc["committed"] else
+                                 i18n.t("status.escalation_not_committed", why=esc["why"])))
         for f in r.get("unverified_rulings", []):
             human.append("  " + i18n.t("status.unverified_ruling", sha=f["commit"] or "?")
                          + f" — {f.get('action')} {f.get('at')}")
@@ -2155,7 +2179,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 f"descend from its active commit {prior['active_sha'][:12]}")
         cycle = store.continue_cycle(continuation, cfg.science_repo, sha)
     else:
-        cycle = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha),
+        cycle = store.open_or_advance(cfg.science_repo, sha, _lineage_parent(cfg, sha),
                                       constitution_commit=const_commit)
     if cycle.get("already_admitted"):
         print("  This commit was already audited, passed, and admitted. Nothing to do.")

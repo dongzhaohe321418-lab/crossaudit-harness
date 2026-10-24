@@ -60,6 +60,16 @@ def load_or_create(cfg: Config) -> tuple[bytes, bytes, str]:
         seed = _unb64(seed_path.read_text(encoding="ascii").strip())
         pub = ed25519.public_key(seed)
         return seed, pub, key_id(pub)
+    # A key is created implicitly only while nothing in the project is signed
+    # yet (D176 ruling 44): a new key would not verify signed rulings or
+    # receipts, so a missing one is refused rather than replaced.
+    if signed_artefacts_exist(cfg):
+        from ..errors import ConfigDenial
+
+        raise ConfigDenial(
+            f"the project signing key at {seed_path} is missing but signed rulings or "
+            f"receipts exist; restore it from your backup, since a new key would not "
+            f"verify them", issue="signing_key_missing", path=str(seed_path))
     directory.mkdir(parents=True, exist_ok=True)
     try:
         os.chmod(directory, 0o700)
@@ -80,6 +90,38 @@ def load_or_create(cfg: Config) -> tuple[bytes, bytes, str]:
         os.close(fd)
     (directory / _PUB_FILE).write_text(_b64(pub) + "\n", encoding="ascii")
     return seed, pub, key_id(pub)
+
+
+def signed_artefacts_exist(cfg: Config) -> bool:
+    """Whether the project already holds anything signed with its key: a
+    receipt signature sidecar (``receipt.dsse.json``) under the ledger
+    directory, or a line carrying ``"sig"`` in the rulings log -- the working
+    file, or the copy committed at HEAD when the working file is absent."""
+    ledger_dir = getattr(cfg, "ledger_dir", "cycles")
+    ledger = Path(cfg.root) / ledger_dir
+    try:
+        if any(ledger.rglob("receipt.dsse.json")):
+            return True
+    except OSError:
+        return True                       # cannot tell: do not mint a new key
+    log = ledger / "rulings.jsonl"
+    try:
+        text = log.read_text(encoding="utf-8", errors="replace") if log.is_file() else ""
+    except OSError:
+        return True
+    if not text:
+        import subprocess
+
+        rel = (Path(ledger_dir) / "rulings.jsonl").as_posix()
+        try:
+            from ..app_keys import child_env
+
+            shown = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=str(cfg.root),
+                                   capture_output=True, timeout=10, env=child_env())
+            text = shown.stdout.decode("utf-8", "replace") if shown.returncode == 0 else ""
+        except (OSError, subprocess.TimeoutExpired):
+            text = ""
+    return '"sig":' in text
 
 
 def public_key(cfg: Config) -> tuple[bytes, str] | None:

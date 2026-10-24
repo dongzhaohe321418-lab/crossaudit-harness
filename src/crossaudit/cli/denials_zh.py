@@ -647,12 +647,12 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("a committed ruling for cycle {} ({}) carries no valid signature from this project; "
      "nothing was applied, and no new ruling is made until the repository is repaired",
      "周期 {} 的一条已提交裁决（{}）没有本项目的有效签名；未应用任何内容，在仓库修复之前不会作出新的裁决"),
-    ("the escalation of cycle {} could not be established from git ({}); no ruling is "
-     "made until it can be",
-     "无法从 git 确定周期 {} 的升级（{}）；在能够确定之前不会作出任何裁决"),
-    ("the escalation of cycle {} could not be established from git (no commit carries "
-     "its ruling); no ruling is made until it can be",
-     "无法从 git 确定周期 {} 的升级（没有提交包含它的裁决）；在能够确定之前不会作出任何裁决"),
+    ("the escalation of cycle {} is not committed to the ledger ({}); rule on it after "
+     "the repository is repaired",
+     "周期 {} 的升级未提交到账本（{}）；请在仓库修复后再对其裁决"),
+    ("the project signing key at {} is missing but signed rulings or receipts exist; "
+     "restore it from your backup, since a new key would not verify them",
+     "位于 {} 的项目签名密钥缺失，但已存在签名的裁决或收据；请从备份中恢复它，因为新密钥无法验证它们"),
     ("the ruling on cycle {} could not be committed to the ledger ({}), and {} could "
      "not be restored ({}); the cycle stays ESCALATED, but check {} against git "
      "before ruling again",

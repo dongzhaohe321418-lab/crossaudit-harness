@@ -1289,7 +1289,11 @@ def run_loop(cfg, task: str, *, on_event=None, attachments: str = "",
             # current durable task/routing commit so the UI exposes an
             # actual human decision instead of an ephemeral "needs input"
             # banner with nothing to resolve.
-            anchor = git("rev-parse", "HEAD", cwd=cfg.root)
+            from ..gitio import past_ledger_commits
+
+            # Past the controller's own ledger-only commits (D176 ruling 43).
+            anchor = past_ledger_commits(cfg.root, cfg.ledger_dir,
+                                         git("rev-parse", "HEAD", cwd=cfg.root))
             cycle = store.record_build_escalation(
                 cfg.science_repo, anchor, reason, last_round, chat_id, task,
                 run_id=run_id, kind=kind, cause=cause)

@@ -181,7 +181,11 @@ class RunCommandService:
         if not is_repo(root):
             return
         try:
-            anchor = git("rev-parse", "HEAD", cwd=root)
+            # Past the controller's own ledger-only commits (D176 ruling 43).
+            from ..gitio import past_ledger_commits
+
+            anchor = past_ledger_commits(root, self.cfg.ledger_dir,
+                                         git("rev-parse", "HEAD", cwd=root))
         except Denial:
             return
         row = self.journal.latest()
