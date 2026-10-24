@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import select
 import subprocess
 import sys
@@ -135,8 +136,9 @@ EXPECTED_60 = "\n".join([
     '      ADMISSION READY  latest recorded PASS',
     '  0c11aa2b3c4d  CLOSED     2/3  BLOCKED  9f9f9f9f9f9f  ruli…',
     '─' * 60,
-    '↑/↓ j/k select · Enter expand · n new task · v verify',
-    'a admit · x stop · o console · ? help · q quit',
+    '↑/↓ j/k select · Enter expand · PgUp/PgDn u/d scroll',
+    'n new task · v verify · a admit · x stop · o console',
+    '? help · q quit',
 ])
 
 EXPECTED_80 = "\n".join([
@@ -170,8 +172,8 @@ EXPECTED_80 = "\n".join([
     '      ADMISSION READY  latest recorded PASS',
     '  0c11aa2b3c4d  CLOSED     2/3  BLOCKED  9f9f9f9f9f9f  ruling: close 2026-10-22…',
     '─' * 80,
-    '↑/↓ j/k select · Enter expand · n new task · v verify · a admit · x stop',
-    'o console · ? help · q quit',
+    '↑/↓ j/k select · Enter expand · PgUp/PgDn u/d scroll · n new task · v verify',
+    'a admit · x stop · o console · ? help · q quit',
 ])
 
 EXPECTED_120 = "\n".join([
@@ -204,7 +206,8 @@ EXPECTED_120 = "\n".join([
     '      ADMISSION READY  latest recorded PASS',
     '  0c11aa2b3c4d  CLOSED     2/3  BLOCKED  9f9f9f9f9f9f  ruling: close 2026-10-22T09:15:00Z',
     '─' * 120,
-    '↑/↓ j/k select · Enter expand · n new task · v verify · a admit · x stop · o console · ? help · q quit',
+    '↑/↓ j/k select · Enter expand · PgUp/PgDn u/d scroll · n new task · v verify · a admit · x stop · o console · ? help',
+    'q quit',
 ])
 
 
@@ -214,7 +217,11 @@ EXPECTED_120 = "\n".join([
 def test_render_is_byte_exact_for_a_fixed_frame(width, expected):
     """The decision card, the list newest first, the selected row open to its
     finding, tier word and `verify` lines, the help bar wrapped between keys.
-    Any change to what the screen says, or where, turns this red."""
+    Any change to what the screen says, or where, turns this red.
+
+    The expected frames changed once, deliberately, when the help bar gained
+    "PgUp/PgDn u/d scroll" (the body scrolls on a short terminal); at height
+    40 these frames fit, so no scroll indicator appears in them."""
     got = tuiapp.render(FIXED_FRAME, width, 40, selected=1, expanded=True,
                         mode="decision")
     assert got == expected
@@ -493,6 +500,7 @@ def test_rule_on_with_a_rejected_commit_shows_the_refusal_and_rules_nothing(proj
     caught: the state changed before the commit -- the cycle reads BLOCKED and
     the history holds a `human_resolution` the ledger never got."""
     from crossaudit.config import load
+
     from .test_resolve_commits_the_ruling import REFUSING_HOOK, install_hook
 
     root, _passed, escalated = project
@@ -500,9 +508,9 @@ def test_rule_on_with_a_rejected_commit_shows_the_refusal_and_rules_nothing(proj
     head = git("rev-parse", "HEAD", cwd=root)
     lines = tuiapp.rule_on(load(), escalated, "close", REASON)
     assert lines == [
-        f"Refused: the ruling on cycle {escalated} could not be committed to the "
+        (f"Refused: the ruling on cycle {escalated} could not be committed to the "
         f"ledger (pre-commit: refused by policy); the cycle stays ESCALATED and "
-        f"nothing was recorded"]
+        f"nothing was recorded")]
     state = json.loads((root / ".crossaudit" / "state.json").read_text())
     assert state["cycles"][escalated]["status"] == "ESCALATED"
     assert not any(h.get("event") == "human_resolution" for h in state["history"])
@@ -550,25 +558,49 @@ def test_watch_help_points_at_tui():
 
 
 # ===================================================== pseudo-terminal
-def _spawn_tui(root: Path):
+def _spawn_tui(root: Path, rows: int = 60, cols: int = 120, *,
+               in_a_shell: bool = False):
+    """``crossaudit tui`` on a pty. ``in_a_shell`` runs it the way a person
+    (and the claims harness) does: under ``sh`` in a session whose controlling
+    terminal is the pty, so Ctrl-C there is a real SIGINT, with ``stty -g``
+    printed before and after (the session leader is the shell, which outlives
+    the TUI, so the terminal is still there to be read)."""
     import fcntl
     import pty
     import struct
     import termios
 
     leader, follower = pty.openpty()
-    fcntl.ioctl(follower, termios.TIOCSWINSZ, struct.pack("HHHH", 60, 120, 0, 0))
+    fcntl.ioctl(follower, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
     before = termios.tcgetattr(follower)
     env = {k: v for k, v in os.environ.items() if not k.lower().endswith("_proxy")}
     env.update(PYTHONPATH=str(SRC), NO_COLOR="1", TERM="xterm-256color")
     env.pop("COLUMNS", None)
     env.pop("LINES", None)
+    argv = [sys.executable, "-c",
+            "import sys; from crossaudit.cli.main import main; sys.exit(main(['tui']))"]
+    extra = {}
+    if in_a_shell:
+        import shlex
+
+        argv = ["sh", "-c", "echo STTY=$(stty -g); " + shlex.join(argv)
+                + "; echo TUI-EXIT=$?; echo STTY=$(stty -g)"]
+        extra["preexec_fn"] = _own_the_terminal     # setsid + ioctl only
     proc = subprocess.Popen(
-        [sys.executable, "-c",
-         "import sys; from crossaudit.cli.main import main; sys.exit(main(['tui']))"],
-        cwd=root, env=env, stdin=follower, stdout=follower, stderr=follower,
-        close_fds=True)
+        argv, cwd=root, env=env, stdin=follower, stdout=follower,
+        stderr=follower, close_fds=True, **extra)
     return proc, leader, follower, before
+
+
+def _own_the_terminal():
+    """In the child: a new session whose controlling terminal is the pty, as
+    a shell in a terminal window has. Without it the pty has no foreground
+    process group, so Ctrl-C there signals nobody."""
+    import fcntl
+    import termios
+
+    os.setsid()
+    fcntl.ioctl(0, termios.TIOCSCTTY, 0)
 
 
 class _Screen:
@@ -752,3 +784,221 @@ def test_under_a_pty_j_only_moves_and_enter_opens_the_row_without_quitting(proje
         os.close(leader)
         os.close(follower)
     assert code == 0, screen.seen[-2000:]
+
+
+# ============================================ a terminal shorter than the frame
+def _tall_frame() -> dict:
+    """FIXED_FRAME with two more findings on the newest cycle: 38 lines at
+    width 60 with that cycle selected and open, against a 24-line terminal."""
+    fr = json.loads(json.dumps(FIXED_FRAME))
+    fr["cycles"][0]["findings"] += [
+        {"severity": "ADVISORY", "rule": "CA-META-002",
+         "artifact": "experiments/bench/metadata.yml",
+         "observation": "The seed is not recorded.", "tier": ""},
+        {"severity": "BLOCKER", "rule": "CA-DATA-004",
+         "artifact": "experiments/bench/results.json",
+         "observation": "A quantity has no unit.", "tier": "check"}]
+    return fr
+
+
+def _render_tall(height, scroll=None):
+    return tuiapp.render(_tall_frame(), 60, height, selected=0, expanded=True,
+                         mode="decision", scroll=scroll)
+
+
+def test_a_short_terminal_gets_exactly_its_height_and_says_what_is_hidden():
+    """24 lines for a 38-line frame: header first, help bar last, the body cut
+    with a line saying how many lines are below and which key shows them.
+    D10: drop the indicator (silent clipping, the walk's finding) or let the
+    frame run past the terminal and this goes red."""
+    whole = _render_tall(tuiapp.ONCE_HEIGHT).split("\n")
+    assert len(whole) == 38                      # --once still prints it all
+    lines = _render_tall(24).split("\n")
+    assert len(lines) == 24
+    assert lines[0] == whole[0] == "CrossAudit · bench-study"
+    assert lines[-3:] == whole[-3:]               # the help bar, whole, last
+    assert lines[-1] == "? help · q quit"
+    below = [ln for ln in lines if "more lines (PageDown)" in ln]
+    assert len(below) == 1
+    head, body, _focus, foot = tuiapp._sections(
+        _tall_frame(), 60, selected=0, expanded=True, mode="decision")
+    above = [ln for ln in lines if "above (PageUp)" in ln]
+    hidden_above = int(re.search(r"(\d+)", above[0]).group(1)) if above else 0
+    shown = 24 - len(head) - len(foot) - len(above) - 1
+    assert below[0] == (f"… {len(body) - hidden_above - shown} "
+                        f"more lines (PageDown)")
+
+
+def test_scrolling_moves_the_window_and_both_indicators_account_for_every_line():
+    """Swept over every scroll position, not sampled: each frame is exactly 24
+    lines, shows a contiguous run of the body, and above + shown + below is
+    the whole body. D10: an off-by-one in the window (a line lost between the
+    indicator and the run) fails at the position where it happens."""
+    fr = _tall_frame()
+    head, body, _focus, foot = tuiapp._sections(fr, 60, selected=0, expanded=True,
+                                                mode="decision")
+    seen_first = []
+    for scroll in range(len(body) + 3):
+        lines = _render_tall(24, scroll).split("\n")
+        assert len(lines) == 24, scroll
+        middle = lines[len(head):24 - len(foot)]
+        above = (int(re.search(r"(\d+) more lines? above", middle[0]).group(1))
+                 if "above (PageUp)" in middle[0] else 0)
+        below = (int(re.search(r"(\d+) more lines? \(PageDown\)", middle[-1]).group(1))
+                 if "(PageDown)" in middle[-1] else 0)
+        shown = middle[(1 if above else 0):len(middle) - (1 if below else 0)]
+        assert shown == body[above:above + len(shown)], scroll
+        assert above + len(shown) + below == len(body), scroll
+        seen_first.append(above)
+    assert seen_first[0] == 0 and max(seen_first) == len(body) - (24 - len(head)
+                                                                   - len(foot) - 1)
+    assert seen_first == sorted(seen_first)
+
+
+def test_the_indicator_speaks_chinese():
+    i18n.set_language("zh")
+    text = _render_tall(24)
+    assert re.search(r"… \d+ 行未显示（PageDown）", text)
+    text = _render_tall(24, scroll=5)
+    assert "… 上方还有 5 行（PageUp）" in text
+
+
+def test_one_hidden_line_is_said_in_the_singular():
+    fr = _tall_frame()
+    whole = len(tuiapp.render(fr, 60, tuiapp.ONCE_HEIGHT, selected=0,
+                              expanded=True, mode="decision").split("\n"))
+    text = tuiapp.render(fr, 60, whole - 1, selected=0, expanded=True,
+                         mode="decision", scroll=0)
+    assert "… 2 more lines (PageDown)" in text  # the indicator takes a line too
+    text = tuiapp.render(fr, 60, whole - 1, selected=0, expanded=True,
+                         mode="decision", scroll=99)
+    assert "… 2 more lines above (PageUp)" in text
+    text = tuiapp.render(fr, 60, whole - 1, selected=0, expanded=True,
+                         mode="decision", scroll=1)
+    assert "… 1 more line above (PageUp)" in text
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="pty does not exist on Windows")
+@pytest.mark.timeout(120)
+def test_under_a_24_line_pty_page_down_brings_the_receipt_lines_into_view(project):
+    """The walk's finding, at a real 24-line terminal: the open cycle's receipt
+    lines are below the fold and say so; PageDown (ESC [ 6 ~) shows them, `u`
+    pages back. D10: read only three bytes of an escape sequence (the old
+    `_read_key`) and PageDown arrives as ESC [ 6 plus a stray `~`: nothing
+    scrolls and this goes red."""
+    root, _passed, _escalated = project
+    proc, leader, follower, _before = _spawn_tui(root, rows=24, cols=100)
+    screen = _Screen(leader)
+    try:
+        first = screen.read_until("q quit")
+        first += screen.drain(1.0)
+        assert "more lines (PageDown)" in first
+        assert "BINDINGS VERIFIED" not in first
+        os.write(leader, b"\x1b[6~")
+        paged = screen.read_until("BINDINGS VERIFIED")
+        assert "above (PageUp)" in paged
+        os.write(leader, b"u")
+        screen.read_until("Waiting for you")
+        assert proc.poll() is None
+        os.write(leader, b"q")
+        code = _finish(proc, screen, leader, follower)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        os.close(leader)
+        os.close(follower)
+    assert code == 0, screen.seen[-2000:]
+
+
+# ================================================ a stream that is not UTF-8
+def _once_under(root, encoding, *args):
+    env = {k: v for k, v in os.environ.items()
+           if not k.lower().endswith("_proxy") and k != "PYTHONUTF8"}
+    env.update(PYTHONPATH=str(SRC), NO_COLOR="1", PYTHONIOENCODING=encoding,
+               COLUMNS="100")
+    return subprocess.run(
+        [sys.executable, "-c",
+         "import sys; from crossaudit.cli.main import main; sys.exit(main())",
+         *args, "tui", "--once"],
+        cwd=root, env=env, capture_output=True, timeout=120, check=False)
+
+
+@pytest.mark.timeout(120)
+def test_an_ascii_stream_gets_ascii_glyphs_and_never_a_traceback(project):
+    """`PYTHONIOENCODING=ascii crossaudit tui --once` tracebacked on the `·`
+    in the header. D10: remove `_degrade` and `_write` and this exits 1 with
+    UnicodeEncodeError."""
+    root, passed, escalated = project
+    for lang in ([], ["--lang", "zh"]):
+        proc = _once_under(root, "ascii", *lang)
+        assert proc.returncode == 0, proc.stderr.decode("ascii", "replace")
+        assert b"Traceback" not in proc.stderr
+        out = proc.stdout.decode("ascii")            # nothing but ASCII
+        assert passed[:12] in out and escalated[:12] in out
+        assert "~$" in out                           # ≈ -> ~
+        assert "> " + escalated[:12] in out           # ❯ -> >
+        assert "^/v j/k" in out                       # ↑/↓ -> ^/v
+        assert "-" * 100 in out                       # ─ -> -
+    english = _once_under(root, "ascii").stdout.decode("ascii")
+    assert "CrossAudit - proj" in english            # · -> -
+
+
+@pytest.mark.timeout(120)
+def test_a_gbk_stream_keeps_the_chinese_and_the_glyphs_gbk_has(project):
+    root, passed, escalated = project
+    for lang in ([], ["--lang", "zh"]):
+        proc = _once_under(root, "gbk", *lang)
+        assert proc.returncode == 0, proc.stderr.decode("gbk", "replace")
+        assert b"Traceback" not in proc.stderr
+        out = proc.stdout.decode("gbk")
+        assert passed[:12] in out and escalated[:12] in out
+        assert "> " + escalated[:12] in out           # GBK has no ❯
+    out = _once_under(root, "gbk", "--lang", "zh").stdout.decode("gbk")
+    assert "周期，最新在前" in out and "由审计者提出，尚未复现" in out
+    assert "≈" in out and "·" in out                   # GBK has these
+
+
+# ====================================================== Ctrl-C at a prompt
+@pytest.mark.skipif(sys.platform == "win32", reason="pty does not exist on Windows")
+@pytest.mark.timeout(120)
+def test_ctrl_c_at_a_prompt_cancels_the_prompt_not_the_window(project):
+    """Ctrl-C at the `n` prompt and at the reason prompt returns to the frame
+    with "cancelled"; nothing is started or ruled; then Ctrl-C in the loop
+    still quits with the terminal restored. D10: drop the KeyboardInterrupt
+    arm in `prompt` and the first Ctrl-C ends the TUI (exit 20)."""
+    root, _passed, escalated = project
+    head = git("rev-parse", "HEAD", cwd=root)
+    proc, leader, follower, _before = _spawn_tui(root, in_a_shell=True)
+    screen = _Screen(leader)
+    try:
+        screen.read_until("q quit")
+        os.write(leader, b"n")
+        screen.read_until("What should be built?")
+        screen.drain(0.3)
+        os.write(leader, b"\x03")
+        back = screen.read_until("cancelled")
+        assert "q quit" in back + screen.drain(0.5)
+        assert proc.poll() is None, "Ctrl-C at the task prompt ended the TUI"
+        os.write(leader, b"c")
+        screen.read_until("Why stop this task?")
+        screen.drain(0.3)
+        os.write(leader, b"half a reason\x03")
+        screen.read_until("cancelled")
+        screen.drain(0.5)
+        assert proc.poll() is None, "Ctrl-C at the reason prompt ended the TUI"
+        os.write(leader, b"\x03")                 # in the loop: quits
+        screen.read_until("TUI-EXIT=")
+        screen.read_until("STTY=")
+        screen.drain(0.5)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        os.close(leader)
+        os.close(follower)
+    stty = re.findall(r"STTY=(\S+)", screen.seen)
+    assert len(stty) == 2 and stty[0] == stty[1], stty  # terminal restored
+    exit_code = int(re.search(r"TUI-EXIT=(\d+)", screen.seen).group(1))
+    assert exit_code != 0                     # interrupted, as before
+    assert git("rev-parse", "HEAD", cwd=root) == head    # no task, no ruling
+    state = json.loads((root / ".crossaudit" / "state.json").read_text())
+    assert state["cycles"][escalated]["status"] == "ESCALATED"
