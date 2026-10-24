@@ -18,7 +18,14 @@ the defences are structural rather than promised:
   cross-site request arrives without the token and is refused — not by
   pretending cookies do not exist.
 * **Host pinned to localhost**, which is what turns away DNS rebinding.
-* **a strict inline-only CSP**, so nothing on the page can fetch or exfiltrate.
+* **a CSP with `default-src 'none'`**: no remote script, style, font, image
+  or frame is loaded, and the only scripts that run are the page's own two
+  `<script>` blocks, pinned by SHA-256 (no `'unsafe-inline'` for scripts, so
+  an injected `<script>` or `on*=` attribute does not execute). What it does
+  NOT do: `connect-src 'self'` lets the page's script call every same-origin
+  API, so script that did run could use them with the page's token; and a CSP
+  does not stop a top-level navigation from carrying data away. The
+  `innerHTML` sinks are kept safe by escaping (`esc`), not by the CSP.
 * **the write surface is an explicit POST allowlist**, not one narrow path.
   What began as `/api/say` alone has grown to two dozen actions, and several
   are consequential: they commit to git, delete projects and their
@@ -53,14 +60,14 @@ from pathlib import Path
 from socketserver import TCPServer
 from urllib.parse import parse_qs, quote, urlparse
 
-from .. import app_doctor, app_keys, connections, hpc, mcp, usage, workspace
+from .. import app_doctor, app_keys, connections, hpc, mcp, rulings, usage, workspace
 from ..autonomy import prepare_task
 from ..cli import i18n
 from ..config import Config, load
 from ..controller import StateStore
 from ..dispute import DISPUTES_LOG
 from ..errors import ConfigDenial, Denial, classify_escalation_kind
-from ..gitio import is_ancestor
+from ..gitio import git as _git_run, is_ancestor
 from ..providers import codex_subscription
 from ..providers import resilience as provider_resilience
 from ..receipt.verify import admit as admit_receipt
@@ -77,7 +84,7 @@ from ..runtime import (
     journal_path,
 )
 from . import chats, daemon, overview, projects
-from .page import PAGE
+from .page import PAGE, PAGE_CSP
 from .intake import INTAKE
 from .progress import TRACKER
 from .streams import bundle, legacy_seen
@@ -525,11 +532,16 @@ def _ordered_cycles(state: dict, commit_chats: dict[str, str] | None = None) -> 
     """
     states = state.get("cycles", {})
     updated: dict[str, int] = {}
-    for event in state.get("history", []):
+    # The position of each cycle's last event in the (chronological) history:
+    # the tie-break when two cycles share a whole-second ``t`` -- the hash id
+    # used to decide, and a fast build put the older cycle "newest".
+    last_index: dict[str, int] = {}
+    for index, event in enumerate(state.get("history", [])):
         cycle_id = str(event.get("cycle", ""))
         if cycle_id in states:
             updated[cycle_id] = max(updated.get(cycle_id, 0),
                                     int(event.get("t", 0) or 0))
+            last_index[cycle_id] = index
 
     def when(cid: str, cycle: dict) -> int:
         # History (capped on write) is authoritative when it still carries the
@@ -539,15 +551,18 @@ def _ordered_cycles(state: dict, commit_chats: dict[str, str] | None = None) -> 
         return updated.get(cid) or int(cycle.get("updated_at") or 0)
 
     ordered = sorted(states.items(), key=lambda item: (
-        when(item[0], item[1]), item[0]))
+        when(item[0], item[1]), last_index.get(item[0], -1), item[0]))
     chat_map = commit_chats or {}
     # D2: only the most-recent cycles ride in each frame (mirrors the stream
     # windows). The list is oldest-first, so the tail keeps the newest cycles —
     # exactly the ones the live view renders.
+    # ``closed`` is additive and present only when true: a BLOCKED cycle a
+    # person closed by ruling, which `crossaudit status` prints as CLOSED.
     return [{"id": cid, "status": cycle["status"], "round": cycle["round"],
              "sha": cycle["active_sha"], "updated": when(cid, cycle),
              "chat_id": chats.canonical_id(
-                 cycle.get("chat_id") or chat_map.get(cycle["active_sha"]))}
+                 cycle.get("chat_id") or chat_map.get(cycle["active_sha"])),
+             **({"closed": True} if cycle.get("closed_by_human") else {})}
             for cid, cycle in ordered][-CYCLES_WINDOW:]
 
 
@@ -694,6 +709,15 @@ def _memoized_snapshot(cfg: Config, cache: dict) -> dict:
     return state
 
 
+def _rules_commit(cfg: Config) -> str:
+    """The commit that last changed the rules file, or "" when none can say."""
+    try:
+        return _git_run("log", "-1", "--format=%H", "--", cfg.constitution,
+                        cwd=cfg.root, check=False).strip()
+    except Denial:
+        return ""
+
+
 def snapshot(cfg: Config) -> dict:
     from .. import __version__
     from .. import admission as adm
@@ -826,6 +850,17 @@ def snapshot(cfg: Config) -> dict:
                   (f" · {cfg.generator_reasoning_effort}" if
                    cfg.generator_reasoning_effort else ""))
         ),
+        # Additive: the two roles as vendor:model, and the commit that last
+        # changed the rules, for surfaces with one line to say it in (the
+        # terminal UI's header). "" when the rules are not committed.
+        "roles": {
+            "auditor": f"{cfg.auditor.vendor}:{cfg.auditor.model}",
+            "generator": (
+                "human" if (cfg.generator_vendor or "").lower() == "human"
+                else f"{cfg.generator_vendor or 'unset'}:"
+                     f"{cfg.generator_model or 'unset'}"),
+        },
+        "rules_commit": _rules_commit(cfg),
         "runtime_config": projects.runtime_options(cfg),
         "check_contracts": check_contracts(cfg.checks),
         "max_rounds": cfg.max_rounds,
@@ -1277,10 +1312,7 @@ def make_handler(cfg: Config, token: str, touch) -> type:
             self.send_response(200)
             self.send_header("content-type", ctype)
             self.send_header("content-length", str(len(body)))
-            self.send_header("content-security-policy",
-                             "default-src 'none'; style-src 'unsafe-inline'; "
-                             "script-src 'unsafe-inline'; connect-src 'self'; "
-                             "img-src 'self' data:; frame-src 'self'")
+            self.send_header("content-security-policy", PAGE_CSP)
             self.send_header("referrer-policy", "no-referrer")
             self.send_header("x-content-type-options", "nosniff")
             self.end_headers()
@@ -2041,17 +2073,26 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                         current, alive=daemon._pid_alive,
                         on_change=TRACKER.notify).request_cancel(
                             str(payload.get("run_id", "")) or None)
+                    if result.get("ruling_refused"):
+                        # The run stopped; the escalation it names did not
+                        # close (its ruling could not be committed).
+                        result["note_zh"] = " ".join(
+                            i18n.denial_zh(r) or r for r in result["ruling_refused"])
                     STREAM_CHANGES.notify()
                     self._send(json.dumps(result).encode(), "application/json")
                     return
                 if parsed.path == "/api/escalation":
                     current = self._config()
-                    store = StateStore(
+                    # Its own name: `store` is an AuthorizationStore in the
+                    # /api/authorization branch of this same method, and the
+                    # shared name read to mypy as a call on that type (D169).
+                    state_store = StateStore(
                         current.root / current.state_dir / "state.json")
                     cycle_id = str(payload.get("cycle_id", ""))
                     action = str(payload.get("action", ""))
                     reason = str(payload.get("reason", ""))
                     retrying_provider = action == "retry_provider"
+                    ruled: dict = {}
                     if retrying_provider:
                         # A retry that cannot start for want of a credential
                         # is a setup step, not a provider failure: the card,
@@ -2062,7 +2103,7 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                             self._send(json.dumps(blocked).encode(),
                                        "application/json")
                             return
-                        prior = store.cycle(cycle_id)
+                        prior = state_store.cycle(cycle_id)
                         prior_kind = (str(prior.get("escalation_kind") or "")
                                       or classify_escalation_kind(
                                           str(prior.get("escalation_reason", "")))
@@ -2076,30 +2117,30 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                             raise ConfigDenial(
                                 "the stopped task predates direct retry; copy it into the "
                                 "composer and choose Revise and continue")
-                        reason = (reason.strip() or
-                                  "Retry after reviewing the provider connection.")
-                        result = store.resolve_escalation(
-                            cycle_id, "reopen", reason)
+                        reason = reason.strip() or "Retry after reviewing the provider connection."
+                        result = rulings.rule(current, state_store, cycle_id, "reopen", reason)
+                        result = result["cycle"]
                         try:
                             started = start_build(
                                 current, task, chat_id=str(prior.get("chat_id", "")),
                                 continuation_cycle=cycle_id)
                         except Denial as exc:
-                            store.escalate(
+                            state_store.escalate(
                                 cycle_id,
                                 f"generator provider failure retry could not start: "
                                 f"{exc.reason}",
                                 task=task, kind="provider")
                             raise
                     else:
-                        result = store.resolve_escalation(
-                            cycle_id, action, reason)
+                        # The one ruling transaction every surface uses, as
+                        # does the retry's reopen above: committed to the
+                        # ledger first, the state changed only after, and a
+                        # close settles the waiting run (D172 ruling 5;
+                        # review 2026-10-23 finding 1).
+                        ruled = rulings.rule(current, state_store, cycle_id,
+                                             action, reason)
+                        result = ruled["cycle"]
                         started = None
-                        if action == "close":
-                            # The close ruling settles the parked run this
-                            # escalation references: a stopped task must not
-                            # keep signalling "needs your decision".
-                            daemon.settle_closed_escalation(current, result)
                     STREAM_CHANGES.notify()
                     response = {
                         "cycle_id": cycle_id,
@@ -2108,6 +2149,20 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                     }
                     if started is not None:
                         response.update(started, retrying=True)
+                    if ruled.get("intent_cleared"):
+                        response["note"] = i18n.CATALOGUE["en"]["ruling.intent_cleared"]
+                        response["note_zh"] = i18n.CATALOGUE["zh"]["ruling.intent_cleared"]
+                    if started is None and ruled.get("reconciled"):
+                        # A ruling already committed whose state change had
+                        # failed; the state now follows it (D176 ruling 27).
+                        row = ruled["ruling"]
+                        slots = {"at": row.get("at", ""), "action": row.get("action", ""),
+                                 "sha": str(row.get("commit", ""))[:12]}
+                        response["reconciled"] = True
+                        response["message"] = i18n.CATALOGUE["en"][
+                            "ruling.reconciled"].format(**slots)
+                        response["message_zh"] = i18n.CATALOGUE["zh"][
+                            "ruling.reconciled"].format(**slots)
                     self._send(json.dumps(response).encode(), "application/json")
                     return
                 if parsed.path == "/api/interrupted":
@@ -2217,6 +2272,13 @@ def serve(cfg: Config, port: int = 0, *,
           idle_timeout: float = IDLE_TIMEOUT_S,
           register: bool = False) -> tuple[str, ThreadingHTTPServer]:
     """Start the console. Returns (url carrying the session token, server)."""
+    # TUI_FIRST.md §5: every completion this process makes from here on (say,
+    # chat, routing, and the builds `start_build` runs on threads of this same
+    # process) is the console's, or the native app's in app mode. `crossaudit
+    # console --foreground` reached here through `main()`, which declared
+    # `cli`; this entry point is the more specific one, so it overrides.
+    usage.set_surface(
+        "app" if os.environ.get("CROSSAUDIT_APP_MODE") == "1" else "console")
     # Recovery is a command-side responsibility. The tracker below remains a
     # pure projection and cannot mutate state merely because a view opened.
     RunCommandService(cfg, alive=daemon._pid_alive, on_change=TRACKER.notify)

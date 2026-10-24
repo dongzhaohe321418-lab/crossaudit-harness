@@ -24,6 +24,7 @@ import urllib.request
 from pathlib import Path
 
 from . import __version__
+from .app_keys import child_env
 from .config import CONFIG_NAME, Config
 from .errors import ConfigDenial
 from .providers.base import tls_context
@@ -84,7 +85,7 @@ def _display(value: tuple[int, int, int]) -> str:
 def _run(path: str, *args: str, timeout: float = 5.0) -> tuple[bool, str]:
     try:
         result = subprocess.run([path, *args], capture_output=True, text=True,
-                                timeout=timeout)
+                                timeout=timeout, env=child_env())
     except (OSError, subprocess.TimeoutExpired) as exc:
         return False, str(exc)
     output = (result.stdout or result.stderr).strip()
@@ -491,7 +492,7 @@ def repair(cfg: Config, action: str, payload: dict) -> dict:
                 "if Git is still unavailable, update macOS or reinstall the tools.")
         try:
             subprocess.Popen(["/usr/bin/xcode-select", "--install"],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=child_env())
         except OSError as exc:
             raise ConfigDenial(f"Could not open Apple's installer: {exc}") from exc
         return {"pending": True,

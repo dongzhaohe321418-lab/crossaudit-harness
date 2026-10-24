@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..config import Config
+from ..app_keys import child_env
 from ..errors import ConfigDenial
 
 STATE_FILE = "ui-state.json"
@@ -124,7 +125,7 @@ def _has_evidence(cfg: Config, chat_id: str) -> bool:
             pass
     result = subprocess.run(
         ["git", "log", "--format=%(trailers:key=CrossAudit-Chat,valueonly)"],
-        cwd=str(cfg.root), capture_output=True, text=True, check=False)
+        cwd=str(cfg.root), capture_output=True, text=True, check=False, env=child_env())
     return result.returncode == 0 and chat_id in result.stdout.split()
 
 

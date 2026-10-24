@@ -145,6 +145,10 @@ PROVIDER_REMEDIATIONS: dict[str, tuple[RemediationAction, ...]] = {
     "transport":      (_A.RETRY, _A.USE_FALLBACK, _A.CONTINUE_LATER, _A.STOP),
     "tls":            (_A.VALIDATE_CREDENTIAL, _A.STOP),
     "response":       (_A.RETRY, _A.USE_FALLBACK, _A.STOP),
+    # The provider reported that it cut the completion off at a token limit.
+    # The same request truncates again, so RETRY is deliberately absent: the
+    # remedies are a different model or route, or stopping to narrow the task.
+    "truncated":      (_A.SELECT_MODEL, _A.USE_FALLBACK, _A.STOP),
     "budget":         (_A.OPEN_BILLING, _A.CONTINUE_LATER, _A.STOP),
     "circuit_open":   (_A.RETRY, _A.USE_FALLBACK, _A.CONTINUE_LATER, _A.STOP),
     "routes_exhausted": (_A.RETRY, _A.VALIDATE_CREDENTIAL, _A.SELECT_MODEL, _A.STOP),
@@ -252,6 +256,12 @@ def escalation_cause(*, integrity: str, verdict: str, model_verdict: str = "",
         return "invalid_reply"
     if integrity == "BOUNDS_EXCEEDED":
         return "bounds_exceeded"
+    if integrity == "INPUT_NOT_SHOWN":
+        # D169. No structured cause yet: "bounds_exceeded" would tell the
+        # person the task is too large, and "auditor_escalated" that the
+        # auditor asked -- both false. The report names the unread files; a
+        # dedicated Decision Center card is a console slice of its own.
+        return ""
     if contested:
         return "auditor_concern"
     if model_verdict == "ESCALATE":

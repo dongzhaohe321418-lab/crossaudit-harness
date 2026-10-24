@@ -9,6 +9,13 @@ A2 adds both, as a small derived view:
   * ``detect_locks`` picks the dependency-lock files out of the already-verified
     manifest (so their hashes are the same ones the receipt digest — and, under
     A1, the signature — already cover; nothing new is trusted);
+  * ``detect_tree_locks`` (D171) finds the locks the manifest does NOT carry:
+    a manifest can be only the increment's changed paths (``crossaudit build``)
+    or only the scope directories, so a ``requirements.txt`` committed earlier,
+    or at the repository root, was never named. It reads the AUDITED COMMIT
+    through ``gitio`` — never the working tree — over the scope directories and
+    the files at the repository root, and the receipt binds each blob digest in
+    ``reproduction.tree_locks``; ``verify`` re-reads each one at the commit;
   * ``build_bundle`` assembles a self-contained ``reproduction.json`` sidecar
     (the pinned locks, the audit identity, and a concrete re-run recipe);
   * ``build.py`` binds only the bundle's digest into the receipt, in an optional
@@ -80,12 +87,78 @@ def detect_locks(manifest: dict) -> dict[str, str]:
     return out
 
 
+#: The read bound for a dependency lock found outside the manifest. Locks are
+#: hashed whole (a truncated hash would pin nothing); a lock larger than this is
+#: left unrecorded rather than hashed in part — the same rule on both sides,
+#: because ``verify`` re-reads under this one constant.
+LOCK_READ_LIMIT = 16 * 1024 * 1024
+
+#: Git modes of a regular file. A symlink or submodule entry named like a lock
+#: is not a lock: its "content" is a path or a commit id, not a resolved pin.
+_REGULAR_MODES = ("100644", "100755")
+
+
+def _in_lock_scope(path: str, prefixes: list[str]) -> bool:
+    """At the repository root, or under one of the audited scope prefixes
+    (``""`` — no configured scope — is the whole tree)."""
+    if "/" not in path:
+        return True
+    for prefix in prefixes:
+        prefix = str(prefix or "").strip("/")
+        if not prefix or path == prefix or path.startswith(prefix + "/"):
+            return True
+    return False
+
+
+def detect_tree_locks(repo, sha: str, prefixes: list[str] | None,
+                      manifest: dict) -> dict[str, str]:
+    """Dependency locks in the audited tree that the manifest does not carry:
+    ``{path: sha256 of the blob}``, sorted by path.
+
+    Read from commit ``sha`` through ``gitio`` (never the working tree), over
+    the files at the repository root plus everything under ``prefixes`` (the
+    configured scope directories; ``None`` or ``[""]`` is the whole tree).
+    Paths the manifest already lists are skipped — their digest is bound there.
+    A scaffold ``TEMPLATE`` path, a non-regular entry, and a lock larger than
+    :data:`LOCK_READ_LIMIT` are not recorded.
+    """
+    from ..gitio import entries, read_blob
+    scope = [str(p) for p in (prefixes or [""])]
+    listed = {p for p, d in (manifest or {}).items() if d != "ABSENT"}
+    out: dict[str, str] = {}
+    for mode, path, blob in entries(repo, sha):
+        if (mode not in _REGULAR_MODES or _basename(path) not in LOCK_KINDS
+                or path in listed or "TEMPLATE" in path.split("/")
+                or not _in_lock_scope(path, scope)):
+            continue
+        data, truncated = read_blob(repo, blob, limit=LOCK_READ_LIMIT)
+        if truncated:
+            continue
+        out[path] = _sha256(data)
+    return dict(sorted(out.items()))
+
+
+def tree_locks(receipt: dict) -> dict[str, str]:
+    """The ``reproduction.tree_locks`` a receipt binds (``{}`` when absent)."""
+    block = receipt.get("reproduction") if isinstance(receipt, dict) else None
+    value = block.get("tree_locks") if isinstance(block, dict) else None
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def all_locks(receipt: dict, extra: dict | None = None) -> dict[str, str]:
+    """Every lock a receipt pins: the manifest's, plus its tree locks (or
+    ``extra``, while the block is still being built), sorted by path."""
+    locks = detect_locks(receipt.get("inputs", {}).get("manifest", {}))
+    locks.update(tree_locks(receipt) if extra is None else extra)
+    return dict(sorted(locks.items()))
+
+
 def lock_kinds(locks: dict) -> list[str]:
     """The sorted, de-duplicated ecosystems named by a set of lock paths."""
     return sorted({LOCK_KINDS[_basename(p)] for p in locks})
 
 
-def build_bundle(receipt: dict) -> dict:
+def build_bundle(receipt: dict, tree: dict | None = None) -> dict:
     """A deterministic reproduction bundle derived purely from the receipt.
 
     Purely a function of the receipt (whose manifest ``verify`` re-derives from
@@ -97,7 +170,7 @@ def build_bundle(receipt: dict) -> dict:
     audit = receipt.get("audit", {})
     verifier = receipt.get("verifier", {})
     ledger = receipt.get("ledger", {})
-    locks = detect_locks(receipt.get("inputs", {}).get("manifest", {}))
+    locks = all_locks(receipt, tree)
     cycle_path = ledger.get("cycle_path", "")
     return {
         "schema": BUNDLE_SCHEMA,
@@ -144,16 +217,25 @@ def bundle_digest(bundle: dict) -> str:
     return _sha256(canonical(bundle))
 
 
-def receipt_block(receipt: dict) -> dict | None:
+def receipt_block(receipt: dict, tree: dict | None = None) -> dict | None:
     """The optional ``reproduction`` block for a receipt, or ``None`` when the
     audited tree carries no dependency lock (so the receipt stays byte-identical
-    to a pre-A2 receipt — additive, exactly like ``tool_evidence``)."""
-    locks = detect_locks(receipt.get("inputs", {}).get("manifest", {}))
+    to a pre-A2 receipt — additive, exactly like ``tool_evidence``).
+
+    ``tree`` is :func:`detect_tree_locks`' result. It appears in the block as
+    ``tree_locks`` only when non-empty, so a receipt whose every lock is in its
+    manifest is byte-identical to one minted before D171.
+    """
+    tree = dict(tree or {})
+    locks = all_locks(receipt, tree)
     if not locks:
         return None
-    bundle = build_bundle(receipt)
-    return {
+    bundle = build_bundle(receipt, tree)
+    block = {
         "bundle_sha256": bundle_digest(bundle),
         "locks": len(locks),
         "lock_kinds": lock_kinds(locks),
     }
+    if tree:
+        block["tree_locks"] = tree
+    return block

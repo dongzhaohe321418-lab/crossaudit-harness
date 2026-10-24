@@ -9,9 +9,24 @@ independent checks make tampering detectable on re-read:
 * chain     — each ``prev`` must equal the prior entry's digest;
 * order     — ``seq`` must increment by exactly one from 0.
 
-Appends are serialised by an ``O_EXCL`` lock and made durable with ``fsync``
-(mirroring ``controller/state``), so a crash cannot interleave two chains; a
-torn final line is reported as an incomplete tail rather than silently trusted.
+Appends are serialised by a kernel-held ``flock`` on ``<ledger>.lock``
+(``crossaudit.locks``, shared with ``controller/state``) and made durable with
+``fsync``, so CrossAudit's own writers cannot interleave two chains;
+CrossAudit never unlinks the lock file, and one replaced from outside is
+refused at acquisition and again just before the append's write (see
+``crossaudit.locks`` for what that does not cover). A torn final line is
+reported as an incomplete tail rather than silently trusted.
+
+Line framing: an entry ends at ``"\\n"`` and nowhere else. The writer only ever
+emits ``"\\n"``, and ``json.dumps`` escapes every control character, so a raw
+``"\\n"`` or ``"\\r"`` can never occur inside an entry. ``str.splitlines`` was
+used here once and also splits on U+2028, U+2029 and U+0085, which
+``ensure_ascii=False`` leaves raw: one such character in a payload made the
+ledger unverifiable and let the next appends fork the chain. Readers now split
+on ``"\\n"`` only (a line that still carries a ``"\\r"`` was not written by this
+writer and is unparseable, never silently CRLF-tolerated), and the writer
+escapes those three characters so a ledger it writes is also readable by an
+older reader. An append refuses a ledger whose complete lines do not verify.
 
 Design note — determinism: the caller supplies ``ts`` (and any other evidence),
 because the ledger records facts, it does not mint them. Re-deriving a stored
@@ -20,6 +35,7 @@ lets an independent verifier confirm the chain offline.
 """
 from __future__ import annotations
 
+import errno
 import json
 import os
 import time
@@ -27,6 +43,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .. import locks
 from ..errors import ConfigDenial, IntegrityDenial
 from ..receipt.schema import canonical, digest
 
@@ -39,7 +56,19 @@ LEDGER_SCHEMA = 1
 KINDS = ("tool_call", "decision", "tool_result", "approval", "note")
 
 _LOCK_TIMEOUT_S = 10.0
-_LOCK_STALE_S = 30.0
+
+#: Line separators ``str.splitlines`` honours that ``json.dumps(...,
+#: ensure_ascii=False)`` leaves raw (every other one is below U+0020 and is
+#: escaped already). The writer escapes these; JSON decodes the escape to the
+#: same character, so the body -- and therefore ``digest(body)``, which is
+#: taken over ``canonical(body)`` and not over the line -- is unchanged, and a
+#: line without them is byte-identical to what the writer always produced.
+_LINE_SEPARATOR_ESCAPES = {0x2028: "\\u2028", 0x2029: "\\u2029", 0x85: "\\u0085"}
+
+
+def _stamp_of(st: os.stat_result) -> tuple[int, int, int]:
+    """What the head cache is keyed on: size, mtime in ns, inode."""
+    return (st.st_size, st.st_mtime_ns, st.st_ino)
 
 
 class LedgerError(IntegrityDenial):
@@ -65,18 +94,21 @@ class EvidenceLedger:
 
     path: Path
     _lock_path: Path = field(init=False)
-    #: A size-guarded head cache so a build's many appends stay O(1) instead of
-    #: re-scanning the whole file each time. It is trusted ONLY when the file
-    #: size still matches what we last saw; any change on disk (another writer,
-    #: truncation) misses the cache and forces a full, authoritative re-derive.
+    #: A head cache so a build's many appends stay O(1) instead of re-scanning
+    #: the whole file each time. It is trusted ONLY when the file's identity
+    #: stamp -- ``(st_size, st_mtime_ns, st_ino)`` -- still matches what this
+    #: instance recorded after its own write or scan; a change in any one of
+    #: the three (another writer, truncation, an in-place rewrite, a file
+    #: replaced by rename) misses the cache and forces a full, authoritative
+    #: re-derive. What it cannot see is spelled out in ``_head_locked``.
     _cached_head: tuple[int, str] | None = field(default=None, init=False)
-    _cached_size: int = field(default=-1, init=False)
+    _cached_stamp: tuple[int, int, int] | None = field(default=None, init=False)
 
     def __post_init__(self) -> None:
         self.path = Path(self.path)
         self._lock_path = self.path.with_suffix(self.path.suffix + ".lock")
         self._cached_head = None
-        self._cached_size = -1
+        self._cached_stamp = None
 
     # -- append ---------------------------------------------------------------
     def append(self, kind: str, *, run_id: str, payload: dict,
@@ -93,9 +125,11 @@ class EvidenceLedger:
         if not kind or not isinstance(kind, str):
             raise ConfigDenial("evidence kind must be a non-empty string")
         stamp = ts if ts is not None else _utc_now()
-        with self._locked():
+        # Named for the ledger, before the lock names it for the lock file.
+        locks.ensure_directory(self.path.parent, "the evidence ledger")
+        with self._locked() as lock:
             self._refuse_torn_tail()
-            prev_seq, prev_digest = self._head_locked()
+            prev_seq, prev_digest = self._verified_head_locked()
             body = {
                 "ledger_schema": LEDGER_SCHEMA,
                 "seq": prev_seq + 1 if prev_digest else 0,
@@ -108,20 +142,73 @@ class EvidenceLedger:
             entry_digest = digest(body)
             line = json.dumps({**body, "digest": entry_digest},
                               sort_keys=True, separators=(",", ":"),
-                              ensure_ascii=False) + "\n"
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-            try:
-                os.write(fd, line.encode("utf-8"))
-                os.fsync(fd)
-                new_size = os.fstat(fd).st_size
-            finally:
-                os.close(fd)
+                              ensure_ascii=False
+                              ).translate(_LINE_SEPARATOR_ESCAPES) + "\n"
+            locks.ensure_directory(self.path.parent, "the evidence ledger")
+            # Fail closed if the lock file was replaced after acquisition: a
+            # second writer may hold the replacement and have appended, and
+            # appending on the head read above would fork the chain (review
+            # 2026-10-23 round 5, finding 1).
+            lock.held.require_current()
+            new_stamp = self._write_line(line.encode("utf-8"))
             # We just wrote the new head; remember it (guarded by the resulting
-            # file size) so the next append does not have to re-scan the file.
+            # file's size, mtime and inode) so the next append does not have to
+            # re-scan the file.
             self._cached_head = (body["seq"], entry_digest)
-            self._cached_size = new_size
+            self._cached_stamp = new_stamp
             return entry_digest
+
+    def _write_line(self, data: bytes) -> tuple[int, int, int]:
+        """Append one complete line and fsync it; return the file's stamp.
+
+        Called under the append lock. Any ``OSError`` (an unwritable file or
+        directory, a directory replaced after the lock check, a full disk) is
+        a ``ConfigDenial``, never a traceback (review 2026-10-23 round 7). A
+        write that fails part-way, or a short write, is taken back: the file is
+        truncated to its length before the append, so no partial line is left.
+        If even that truncation fails, the torn tail stays and the next append
+        refuses it (``_refuse_torn_tail``) rather than writing onto it.
+        """
+        fd = -1
+        try:
+            fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            before = os.fstat(fd).st_size
+            try:
+                written = os.write(fd, data)
+                if written != len(data):
+                    raise OSError(errno.ENOSPC, "short write to the evidence ledger")
+                os.fsync(fd)
+                stamp = _stamp_of(os.fstat(fd))
+            except OSError:
+                try:
+                    os.ftruncate(fd, before)
+                except OSError:
+                    pass
+                raise
+        except OSError as exc:
+            if fd >= 0:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+            name = errno.errorcode.get(exc.errno or 0, str(exc.errno))
+            raise ConfigDenial(
+                f"the evidence ledger at {self.path} could not be written ({name}: "
+                f"{exc.strerror or exc}); check the file and its directory are "
+                f"writable", issue="ledger_unwritable", path=str(self.path)) from exc
+        # The entry is written and fsynced. A close that fails now must not be
+        # reported as "not written" (D176 ruling 29): the entry may well be on
+        # disk, and the next append verifies the chain before extending it.
+        try:
+            os.close(fd)
+        except OSError as exc:
+            name = errno.errorcode.get(exc.errno or 0, str(exc.errno))
+            raise ConfigDenial(
+                f"the evidence ledger at {self.path} could not be closed cleanly after "
+                f"writing ({name}: {exc.strerror or exc}); the entry may have been "
+                f"recorded, and the next append verifies the chain",
+                issue="ledger_close_failed", path=str(self.path)) from exc
+        return stamp
 
     # -- read -----------------------------------------------------------------
     def head(self) -> str:
@@ -215,22 +302,53 @@ class EvidenceLedger:
                     "left a torn tail); refusing to append onto a damaged chain "
                     "until it is recovered")
 
+    def _verified_head_locked(self) -> tuple[int, str]:
+        """(seq, digest) to chain onto, refusing a ledger that does not verify.
+
+        Computing a head from "the last line that parses" let a complete but
+        unparseable line be skipped: the next two appends both chained onto
+        the entry before it, with the same ``seq`` and ``prev`` -- a forked
+        chain no verifier can repair. So on any cache miss the whole chain is
+        re-derived first and an append onto a damaged chain is refused. The
+        cache is trusted exactly as ``_head_locked`` trusts it, with the same
+        stated blind spot: the file still has the size, mtime and inode this
+        instance recorded after its own verified write or scan, under the
+        lock. (The torn-tail refusal runs before this and is unchanged.)
+        """
+        stamp = self._stamp()
+        if stamp is None:
+            self._cached_head, self._cached_stamp = (-1, ""), None
+            return (-1, "")
+        if self._cached_head is not None and stamp == self._cached_stamp:
+            return self._cached_head
+        report = self.verify()
+        if not report.ok:
+            raise LedgerError(
+                f"the evidence ledger does not verify ({report.error}); refusing "
+                f"to append onto a damaged chain until it is recovered",
+                at_seq=report.at_seq)
+        head = (report.count - 1, report.head) if report.count else (-1, "")
+        self._cached_head, self._cached_stamp = head, stamp
+        return head
+
     def _head_locked(self) -> tuple[int, str]:
         """(seq, digest) of the last complete entry; (-1, "") when empty.
 
-        Fast path: if the file is exactly the size we last recorded, the cached
-        head is authoritative (we hold the append lock, and no size change means
-        no writer appended). Otherwise fall back to an authoritative full scan
-        and refresh the cache — so correctness never depends on the cache.
+        Fast path: if the file has exactly the ``(st_size, st_mtime_ns,
+        st_ino)`` this instance last recorded, the cached head is used without
+        re-reading the file. A change in any one of the three falls back to an
+        authoritative full scan and refreshes the cache. What the fast path
+        does NOT detect: a rewrite by another process that keeps the size,
+        restores ``st_mtime_ns`` exactly (``os.utime`` can) and stays on the
+        same inode. An append then chains onto the cached head without
+        re-verifying the file; the next ``verify()``, which never consults the
+        cache, reports the rewrite.
         """
-        try:
-            size = self.path.stat().st_size if self.path.exists() else 0
-        except OSError:
-            size = 0
-        if size == 0:
-            self._cached_head, self._cached_size = (-1, ""), 0
+        stamp = self._stamp()
+        if stamp is None:
+            self._cached_head, self._cached_stamp = (-1, ""), None
             return (-1, "")
-        if self._cached_head is not None and size == self._cached_size:
+        if self._cached_head is not None and stamp == self._cached_stamp:
             return self._cached_head
         last_obj = None
         for _lineno, obj, complete in self._iter_lines():
@@ -242,14 +360,26 @@ class EvidenceLedger:
             seq = last_obj.get("seq")
             head = (seq if isinstance(seq, int) else -1,
                     str(last_obj.get("digest", "")))
-        self._cached_head, self._cached_size = head, size
+        self._cached_head, self._cached_stamp = head, stamp
         return head
+
+    def _stamp(self) -> tuple[int, int, int] | None:
+        """The file's identity stamp, or None when it is missing or empty."""
+        try:
+            st = self.path.stat()
+        except OSError:
+            return None
+        return _stamp_of(st) if st.st_size else None
 
     def _iter_lines(self):
         """Yield (lineno, parsed_obj_or_None, complete_bool) for each line.
 
         ``complete`` is False only for a final line with no terminating newline
         (a crash mid-append). A parse failure yields obj=None, complete=True.
+
+        Lines are split on ``"\\n"`` only -- see the module docstring. A line
+        carrying a ``"\\r"`` is reported unparseable: the writer never emits
+        one raw, so it is not an entry this ledger wrote.
         """
         if not self.path.exists():
             return
@@ -259,13 +389,15 @@ class EvidenceLedger:
             return
         text = raw.decode("utf-8", errors="replace")
         trailing_newline = text.endswith("\n")
-        lines = text.splitlines()
+        lines = text.split("\n")
+        if trailing_newline:
+            lines.pop()           # the empty remainder after the final "\n"
         for i, ln in enumerate(lines):
             if not ln.strip():
                 continue
             complete = trailing_newline or i < len(lines) - 1
             try:
-                obj = json.loads(ln)
+                obj = None if "\r" in ln else json.loads(ln)
                 if not isinstance(obj, dict):
                     obj = None
             except (ValueError, TypeError):
@@ -281,32 +413,35 @@ def _utc_now() -> str:
 
 
 class _FileLock:
-    """Exclusive O_EXCL advisory lock with stale-break, mirroring state.py."""
+    """The ledger's exclusive lock: the same kernel-held lock as the
+    controller's (``crossaudit.locks``; review 2026-10-23 round 4, finding 1).
+
+    Holding it is holding a ``flock`` on the open ``<ledger>.lock`` file;
+    release is unlock + close, and a writer that dies releases it with its
+    process. The file is never deleted. A live holder is waited on for
+    ``_LOCK_TIMEOUT_S``, then refused naming its pid.
+    """
 
     def __init__(self, lock_path: Path) -> None:
         self.lock_path = lock_path
+        self.held: locks.HeldLock | None = None
 
     def __enter__(self) -> "_FileLock":
-        self.lock_path.parent.mkdir(parents=True, exist_ok=True)
-        deadline = time.monotonic() + _LOCK_TIMEOUT_S
-        while True:
-            try:
-                fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(fd, f"{os.getpid()} {time.time():.0f}".encode())
-                os.close(fd)
-                return self
-            except FileExistsError:
-                try:
-                    age = time.time() - self.lock_path.stat().st_mtime
-                except OSError:
-                    age = 0
-                if age > _LOCK_STALE_S:
-                    self.lock_path.unlink(missing_ok=True)
-                    continue
-                if time.monotonic() > deadline:
-                    raise ConfigDenial(
-                        "the evidence ledger is locked by another writer")
-                time.sleep(0.02)
+        def busy(pid: int | None) -> ConfigDenial:
+            return ConfigDenial(
+                f"the evidence ledger is locked by another writer (pid "
+                f"{pid if pid is not None else '?'})")
+        self.held = locks.acquire(self.lock_path, _LOCK_TIMEOUT_S, busy)
+        return self
 
     def __exit__(self, *exc: Any) -> None:
-        self.lock_path.unlink(missing_ok=True)
+        if self.held is not None:
+            self.held.release()
+            self.held = None
+
+
+def lock_status(ledger_path: Path) -> dict | None:
+    """Who holds the ledger's lock right now, for `doctor` (``locks.status``):
+    None when free."""
+    ledger_path = Path(ledger_path)
+    return locks.status(ledger_path.with_suffix(ledger_path.suffix + ".lock"))

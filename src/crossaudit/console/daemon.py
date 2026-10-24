@@ -32,11 +32,11 @@ import subprocess
 import sys
 import time
 import urllib.error
-import urllib.request
 from pathlib import Path
 
 from .. import _selfid
 from ..config import Config
+from ..netutil import open_loopback
 from ..controller import CONSUMED, ESCALATED, PASSED, StateStore
 from ..errors import Denial, park_escalation_kind
 from ..gitio import git, is_repo
@@ -148,7 +148,7 @@ def responding(port: int, token: str, timeout: float = 1.5) -> bool:
     url = f"http://127.0.0.1:{port}/api/health?t={token}"
     try:
         # URL is constructed here from a validated integer and loopback literal.
-        with urllib.request.urlopen(url, timeout=timeout) as r:  # nosec B310
+        with open_loopback(url, timeout=timeout) as r:  # nosec B310
             return r.status == 200
     except (urllib.error.URLError, OSError):
         return False
@@ -160,7 +160,7 @@ def fetch_state(info: dict, timeout: float = 0.5) -> dict | None:
         port, token = int(info["port"]), str(info["token"])
         url = f"http://127.0.0.1:{port}/api/state?t={token}"
         # URL is constructed here from a validated integer and loopback literal.
-        with urllib.request.urlopen(url, timeout=timeout) as response:  # nosec B310
+        with open_loopback(url, timeout=timeout) as response:  # nosec B310
             value = json.loads(response.read())
             return value if response.status == 200 and isinstance(value, dict) else None
     except (KeyError, TypeError, ValueError, json.JSONDecodeError,
@@ -514,7 +514,11 @@ def reconcile_human_wait(cfg: Config, journal: RunJournal | None = None) -> dict
     if not is_repo(cfg.root):
         return result
     try:
-        anchor = git("rev-parse", "HEAD", cwd=cfg.root)
+        from ..gitio import past_ledger_commits
+
+        # Past the controller's own ledger-only commits (D176 ruling 43).
+        anchor = past_ledger_commits(cfg.root, cfg.ledger_dir,
+                                     git("rev-parse", "HEAD", cwd=cfg.root))
     except Denial:
         return result
     candidate = next((dict(c, cycle_id=cid) for cid, c in cycles.items()

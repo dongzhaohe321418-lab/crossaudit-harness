@@ -106,14 +106,27 @@ def test_commit_timeout_surfaces_to_the_loop_as_commit_refused(
     monkeypatch.chdir(science)
 
     events: list[RunEvent] = []
+    import time as _time
+    began = _time.monotonic()
     code = build_mod.run_loop(cfg, "produce the experiment",
                               on_event=events.append)
+    elapsed = _time.monotonic() - began
 
     assert code == EXIT_ESCALATED
     kinds = [e.kind for e in events]
     assert "commit_refused" in kinds
     # It stopped at the commit, before any audit round could begin.
     assert "audit_started" not in kinds
+    # The escalation's own ledger row runs the same hung hook; its budget is
+    # min(90 s, CROSSAUDIT_GIT_TIMEOUT), so it gives up after 2 s too and the
+    # cycle is ESCALATED with the row uncommitted (D176 rulings 43 and 46),
+    # instead of holding the lock for the hook's 30 s.
+    assert elapsed < 15, elapsed
+    import json as _json
+    state = _json.loads((science / ".crossaudit" / "state.json").read_text())
+    escalated = [c for c in state["cycles"].values() if c["status"] == "ESCALATED"]
+    assert [c["escalation_commit"] for c in escalated] == [""]
+    assert escalated[0]["escalation_error"] == "git commit timed out after 2s"
 
 
 # =========================================================================== A2

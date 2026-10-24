@@ -11,26 +11,35 @@ would put it inside a throwaway checkout — where "consumed" survives nothing.
 
 **Every mutation is a read-modify-write inside an exclusive lock.** Admission
 is a single-use claim; two concurrent verifiers must not both see an unconsumed
-receipt. The lock is an `O_EXCL` file with the holder's pid and a stale-break
-timeout, and the state file is replaced by atomic rename after fsync, so a
-crash mid-write leaves the previous state intact rather than a truncated file.
+receipt. The lock is a kernel-held ``flock`` on ``state.json.lock``
+(``crossaudit.locks``), and the state file is replaced by atomic rename after
+fsync, so a crash mid-write leaves the previous state intact rather than a
+truncated file.
+
+The lock file is never deleted, and holding the lock is holding the open file
+(review 2026-10-23 round 4, finding 1): every earlier scheme that judged
+ownership from the file and then unlinked it by pathname could delete a fresh
+owner's lock. A holder that dies releases the lock with its process, so a
+"stale" lock no longer exists and nothing ever breaks or removes one.
 """
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
+import secrets
 import tempfile
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from ..errors import ConfigDenial, IntegrityDenial, classify_escalation_kind
+from .. import locks
+from ..errors import ConfigDenial, Denial, IntegrityDenial, classify_escalation_kind
 
 STATE_FILENAME = "state.json"
 LOCK_TIMEOUT_S = 30.0
-LOCK_STALE_S = 120.0
 
 #: The operational ``history`` list is read whole every render frame and only
 #: ever used to derive a per-cycle "updated" timestamp (server._ordered_cycles)
@@ -64,6 +73,11 @@ def _has_verdict_for(cycle: dict, sha: str) -> bool:
 
 OPEN, BLOCKED, PASSED, ESCALATED, CONSUMED = "OPEN", "BLOCKED", "PASSED", "ESCALATED", "CONSUMED"
 TERMINAL = frozenset({CONSUMED})
+
+#: The status each human ruling sets (``StateStore.rule_escalation``). The
+#: ledger row is written BEFORE the state changes, so it reads its
+#: ``status_after`` from here rather than from the mutated record.
+RESOLUTION_STATUS = {"reopen": OPEN, "close": BLOCKED}
 
 
 def cycle_id_for(repo: str, root_sha: str) -> str:
@@ -103,48 +117,82 @@ class StateStore:
             raise IntegrityDenial("state file has no cycles map", path=str(self.path))
         return data
 
+    def _unwritable(self, exc: OSError) -> ConfigDenial:
+        name = errno.errorcode.get(exc.errno or 0, str(exc.errno))
+        return ConfigDenial(
+            f"the controller state at {self.path} could not be written ({name}: "
+            f"{exc.strerror or exc}); check the directory and file are writable",
+            issue="state_unwritable", path=str(self.path))
+
     def _write(self, state: dict) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        """Replace the state file atomically (temp file, fsync, rename, then
+        fsync the directory). Any ``OSError`` on that path -- an unwritable
+        directory, a full disk -- is a ``ConfigDenial``, never a traceback
+        (review 2026-10-23 round 7); the temporary file is removed and the
+        previous state file is left as it was, unless the rename itself had
+        already happened (only the directory fsync can fail after it)."""
+        locks.ensure_directory(self.path.parent, "the controller state")
         tmp = self.path.with_suffix(self.path.suffix + f".tmp{os.getpid()}")
-        with open(tmp, "w") as fh:
-            json.dump(state, fh, indent=2, sort_keys=True)
-            fh.flush()
-            os.fsync(fh.fileno())
-        os.replace(tmp, self.path)          # atomic within a filesystem
-        if os.name != "nt":
-            dir_fd = os.open(self.path.parent, os.O_RDONLY)
+        try:
             try:
-                os.fsync(dir_fd)             # the rename itself must survive a crash
-            finally:
-                os.close(dir_fd)
+                with open(tmp, "w") as fh:
+                    json.dump(state, fh, indent=2, sort_keys=True)
+                    fh.flush()
+                    os.fsync(fh.fileno())
+                os.replace(tmp, self.path)          # atomic within a filesystem
+            except OSError:
+                try:
+                    tmp.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise
+            if os.name != "nt":
+                dir_fd = os.open(self.path.parent, os.O_RDONLY)
+                try:
+                    os.fsync(dir_fd)             # the rename itself must survive a crash
+                finally:
+                    os.close(dir_fd)
+        except OSError as exc:
+            raise self._unwritable(exc) from exc
+
+    def _acquire(self, lock_path: Path) -> locks.HeldLock:
+        """Take the controller lock (``locks.acquire``), waiting up to
+        ``LOCK_TIMEOUT_S`` for a live holder; then refuse naming its pid."""
+        def busy(pid: int | None) -> ConfigDenial:
+            return ConfigDenial(
+                f"could not acquire the controller lock; another process (pid "
+                f"{pid if pid is not None else '?'}) is mid-transaction",
+                lock=str(lock_path))
+        return locks.acquire(lock_path, LOCK_TIMEOUT_S, busy)
+
+    def lock_status(self) -> dict | None:
+        """Who holds the controller lock right now, for `doctor`
+        (``locks.status``): None when free."""
+        return locks.status(self.lock_path)
 
     @contextmanager
     def _locked(self) -> Iterator[dict]:
-        """Exclusive read-modify-write. Yields state; writes it back on clean exit."""
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        deadline = time.monotonic() + LOCK_TIMEOUT_S
-        while True:
-            try:
-                fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(fd, f"{os.getpid()} {time.time():.0f}".encode())
-                os.close(fd)
-                break
-            except FileExistsError:
-                age = time.time() - self.lock_path.stat().st_mtime if self.lock_path.exists() else 0
-                if age > LOCK_STALE_S:
-                    self.lock_path.unlink(missing_ok=True)   # holder died; break it
-                    continue
-                if time.monotonic() > deadline:
-                    raise ConfigDenial(
-                        "could not acquire the controller lock; another verifier is "
-                        "mid-transaction", lock=str(self.lock_path))
-                time.sleep(0.05)
+        """Exclusive read-modify-write. Yields state; writes it back on clean exit.
+
+        The kernel holds the lock for as long as this process keeps the lock
+        file open, and CrossAudit never removes the file, so no other
+        CrossAudit process can take it while this one holds it. If the file
+        is replaced from outside after acquisition, the write-back is refused
+        (``HeldLock.require_current``), except within the microseconds
+        between that check and the write.
+        """
+        locks.ensure_directory(self.path.parent, "the controller state")
+        held = self._acquire(self.lock_path)
         try:
             state = self._read()
             yield state
+            # Fail closed if the lock file was replaced after acquisition:
+            # another process may hold a lock on the replacement and have
+            # written meanwhile (review 2026-10-23 round 5, finding 1).
+            held.require_current()
             self._write(state)
         finally:
-            self.lock_path.unlink(missing_ok=True)
+            held.release()
 
     @staticmethod
     def _log(state: dict, event: str, **kw: object) -> None:
@@ -232,9 +280,28 @@ class StateStore:
                         self._log(state, "advance", cycle=cid, sha=sha, round=c["round"])
                         return dict(c, cycle_id=cid)
             cid = cycle_id_for(repo, sha)
+            # Never overwrite a cycle (D172 ruling 2). The id is derived from
+            # the root sha, so re-auditing a commit that ROOTED a cycle which
+            # has since PASSED, or advanced to a later round, collided with it
+            # and replaced the recorded decision with a fresh OPEN cycle --
+            # `build` then `audit --offline` turned a PASSED cycle into an
+            # ESCALATED one. The new cycle gets its own id; the old record is
+            # left exactly as it was. The id stays 16 hex (the console's
+            # continuation check and the progress redaction match that shape)
+            # and is deterministic -- the same repo, sha and attempt number
+            # always give the same id -- and the record says which cycle it
+            # follows and which attempt it is, so it reads as a re-audit.
+            first, attempt = cid, 1
+            while cid in cycles:
+                attempt += 1
+                cid = cycle_id_for(repo, f"{sha}\n{attempt}")
             c = {"repo": repo, "root_sha": sha, "active_sha": sha, "parent_receipt": "",
                  "round": 1, "status": OPEN, "consumed": [], "awaiting_verdict": True,
-                 "constitution_commit": constitution_commit, "verdicts": []}
+                 "constitution_commit": constitution_commit, "verdicts": [],
+                 "opened_at": int(time.time())}
+            if attempt > 1:
+                c["reaudit_of"] = first
+                c["attempt"] = attempt
             cycles[cid] = c
             self._log(state, "open", cycle=cid, sha=sha)
             return dict(c, cycle_id=cid)
@@ -299,6 +366,7 @@ class StateStore:
                     f"cycle is {c['status']}; it cannot be escalated",
                     cycle_id=cycle_id, status=c["status"])
             c["status"] = ESCALATED
+            c["escalated_at"] = time.time()
             c["awaiting_verdict"] = False
             c["escalation_reason"] = reason
             c["escalation_kind"] = kind or classify_escalation_kind(reason)
@@ -310,6 +378,7 @@ class StateStore:
                 c["escalation_run_id"] = run_id[:64]
             if task.strip():
                 c["task"] = task.strip()[:12000]
+            self._commit_escalation(cycle_id, c)
             self._log(state, "escalate", cycle=cycle_id, reason=reason,
                       round=c["round"], run_id=run_id[:64])
             return dict(c, cycle_id=cycle_id)
@@ -352,7 +421,7 @@ class StateStore:
                 "parent_receipt": "", "consumed": [],
             }
             c.update(round=round_, status=ESCALATED, awaiting_verdict=False,
-                     escalation_reason=reason,
+                     escalated_at=time.time(), escalation_reason=reason,
                      escalation_kind=kind or classify_escalation_kind(reason))
             if cause:
                 c["escalation_cause"] = cause[:64]
@@ -371,6 +440,7 @@ class StateStore:
             if task.strip():
                 c["task"] = task.strip()[:12000]
             cycles[cid] = c
+            self._commit_escalation(cid, c)
             self._log(state, "build_escalated_before_revision", cycle=cid,
                       sha=sha, reason=reason, round=round_, chat_id=chat_id,
                       run_id=run_id[:64])
@@ -448,6 +518,10 @@ class StateStore:
             else:
                 c["status"] = ESCALATED if c["round"] >= max_rounds else BLOCKED
             if c["status"] == ESCALATED:
+                # Which escalation a ruling answers (additive): the ruling row
+                # records it, so a committed ruling is matched to this stop
+                # exactly, never by comparing clocks (D176 ruling 27).
+                c["escalated_at"] = time.time()
                 if escalation_reason.strip():
                     c["escalation_reason"] = escalation_reason.strip()[:400]
                 # A round-limit stop with no provider reason is a content
@@ -472,6 +546,8 @@ class StateStore:
                 # cycle's stored value: copying is what let the two drift.
                 "constitution_commit": (constitution_commit
                                         or c.get("constitution_commit", ""))})
+            if c["status"] == ESCALATED:
+                self._commit_escalation(cycle_id, c)
             self._log(state, "verdict", cycle=cycle_id, sha=sha, verdict=verdict,
                       round=c["round"], status=c["status"], receipt=receipt_hash[:16])
             return c["status"]
@@ -507,35 +583,196 @@ class StateStore:
 
         Escalation hands an increment to a human; this is the verb the human
         answers with. `reopen` returns the increment to the loop for another
-        audit round; `close` ends the cycle without admission. Either way the
-        decision and its stated reason enter the ledger, because a ruling that
-        leaves no record is exactly what this protocol exists to prevent.
+        audit round; `close` ends the cycle without admission.
+
+        This changes the controller state ONLY. A human ruling must also be
+        committed to the audit ledger (D172 ruling 5), and every shipped
+        surface does that through :meth:`rule_escalation` (via
+        ``rulings.rule``), which commits first and changes the state only once
+        the commit has landed. This method stays for a caller that must not
+        commit.
         """
-        if action not in ("reopen", "close"):
-            raise IntegrityDenial(f"unknown resolution {action!r}; use reopen or close")
-        if not reason.strip():
-            raise IntegrityDenial("a resolution must state its reason; it becomes ledger")
+        self._check_resolution(action, reason)
         with self._locked() as state:
+            c = self._escalated_cycle(state, cycle_id)
+            self._apply_resolution(state, c, cycle_id, action, reason)
+            return dict(c, cycle_id=cycle_id)
+
+    def rule_escalation(self, cycle_id: str, action: str, reason: str,
+                        commit: Callable[[dict, str, str], dict], *,
+                        assess: Callable[[dict], dict],
+                        by: str = "") -> dict:
+        """One human ruling, in two phases joined by a local intent, all
+        under this store's lock (D176 rulings 30 and 40).
+
+        Authority comes from committed, verified data: ``assess(cycle)``
+        (``rulings.assess``) reads the committed rulings log and git, and
+        returns the current escalation's committed identity and, if any, the
+        verified ruling for it that the state does not reflect. Such a
+        ruling is applied (history ``reconciled``) and returned with
+        ``reconciled: True``, whatever the local state says; no new row is
+        written. An ESCALATED cycle whose escalation row is not committed is
+        first given another attempt to commit it (ruling 43), and ``assess``
+        refuses while it is still missing. A committed row that
+        claims this escalation but does not verify is refused by
+        ``assess``.
+
+        Otherwise the new ruling proceeds. A leftover local intent (an
+        earlier attempt that left no verified commit) is cleared
+        (``intent_cleared``). Phase 1 writes the intent ``{action,
+        reason_sha256, by, nonce, started_at}``; phase 2 calls
+        ``commit(cycle_before, nonce, identity)``, which signs, appends and
+        commits the row (a refusal marked ``commit_landed="no"`` clears the
+        intent; any other keeps it: ruling 33); phase 3 applies the state
+        change and removes the intent in one write. If
+        phase 3 fails its ``ConfigDenial`` (``state_unwritable``) propagates.
+        The intent is a hint for the "earlier attempt" note and for
+        ``rulings.record``'s nonce check, never authority over which
+        committed row applies. Returns ``{"row", "cycle", "before",
+        "reconciled", "intent_cleared"}``.
+        """
+        self._check_resolution(action, reason)
+        locks.ensure_directory(self.path.parent, "the controller state")
+        held = self._acquire(self.lock_path)
+        try:
+            state = self._read()
+            intents = state.setdefault("pending_rulings", {})
+            intent = intents.get(cycle_id)
             c = state["cycles"].get(cycle_id)
             if c is None:
                 raise IntegrityDenial("unknown cycle", cycle_id=cycle_id)
-            if c["status"] != ESCALATED:
-                raise IntegrityDenial(f"cycle is {c['status']}, not ESCALATED; only an "
-                                      f"escalated cycle needs a human ruling")
-            if action == "reopen":
-                c["status"] = OPEN
-                c["awaiting_verdict"] = True
-                c["human_reopened"] = True
-                # The ruled-on stop is settled; a future escalation will
-                # reference the run of the retry, not this one.
-                c.pop("escalation_run_id", None)
-            else:
-                c["status"] = BLOCKED
-                c["closed_by_human"] = True
-                c.pop("human_reopened", None)
-            self._log(state, "human_resolution", cycle=cycle_id, action=action,
-                      reason=reason[:400])
-            return dict(c, cycle_id=cycle_id)
+            if c.get("status") == ESCALATED and not c.get("escalation_commit"):
+                # The escalation's row never committed (or the cycle was
+                # escalated by an older version, which wrote none): try again
+                # now; assess refuses while it is still missing (ruling 43).
+                older = "escalation_commit" not in c
+                self._commit_escalation(cycle_id, c)
+                if older and not c["escalation_commit"]:
+                    c["escalation_error"] = ("escalated by an older version of "
+                                             "CrossAudit, and committing its escalation "
+                                             "now failed: " + c["escalation_error"])[:300]
+                self._commit_state(held, state)
+            verdict = assess(dict(c, cycle_id=cycle_id))
+            pending = verdict.get("pending")
+            if pending is not None:
+                before = dict(c, cycle_id=cycle_id)
+                intents.pop(cycle_id, None)
+                self._apply_resolution(state, c, cycle_id, str(pending["action"]),
+                                       str(pending.get("reason", "")))
+                state["history"][-1]["reconciled"] = True
+                self._commit_state(held, state)
+                return {"row": pending, "cycle": dict(c, cycle_id=cycle_id),
+                        "before": before, "reconciled": True, "intent_cleared": False}
+            cleared = False
+            if intent:
+                del intents[cycle_id]
+                cleared = True
+            try:
+                c = self._escalated_cycle(state, cycle_id)
+            except IntegrityDenial:
+                if cleared:
+                    self._commit_state(held, state)
+                raise
+            before = dict(c, cycle_id=cycle_id)
+            identity = str(verdict.get("identity") or "")
+            nonce = secrets.token_hex(16)
+            intents[cycle_id] = {
+                "action": action,
+                "reason_sha256": hashlib.sha256(reason.encode("utf-8")).hexdigest(),
+                "by": by, "nonce": nonce, "started_at": time.time(),
+                "escalation_commit": identity,          # informational
+            }
+            self._commit_state(held, state)                    # phase 1
+            try:
+                row = commit(before, nonce, identity)          # phase 2
+            except Denial as exc:
+                # Clear the intent only when the commit definitely did not
+                # land (D176 ruling 33); any uncertainty keeps it.
+                if exc.detail.get("commit_landed") == "no":
+                    intents.pop(cycle_id, None)
+                    try:
+                        self._commit_state(held, state)
+                    except Denial:
+                        pass
+                raise
+            self._apply_resolution(state, c, cycle_id, action, reason)  # phase 3
+            del intents[cycle_id]
+            self._commit_state(held, state)
+            return {"row": row, "cycle": dict(c, cycle_id=cycle_id),
+                    "before": before, "reconciled": False, "intent_cleared": cleared}
+        finally:
+            held.release()
+
+    def _commit_escalation(self, cycle_id: str, c: dict) -> None:
+        """Commit the signed ``escalation`` row for a cycle that has just
+        escalated (D176 ruling 43), under this store's lock. Never stops the
+        escalation: on failure the cycle is ESCALATED in the state with an
+        empty ``escalation_commit`` and the reason in ``escalation_error``,
+        and every ruling on it refuses until the row is committed (the next
+        ruling attempt tries again)."""
+        from .. import rulings
+
+        recorder = rulings.escalation_recorder_for(self.path)
+        if recorder is None:
+            c["escalation_commit"] = ""
+            c["escalation_error"] = "no project configuration was found for this state"
+            return
+        try:
+            c["escalation_commit"] = recorder(dict(c, cycle_id=cycle_id))
+            c.pop("escalation_error", None)
+            c.pop("escalation_nonce", None)
+        except rulings.EscalationNotCommitted as exc:
+            c["escalation_commit"] = ""
+            c["escalation_error"] = exc.why[:300]
+            if exc.nonce:
+                c["escalation_nonce"] = exc.nonce
+        except Exception as exc:  # noqa: BLE001 -- escalation must never fail to happen
+            c["escalation_commit"] = ""
+            c["escalation_error"] = (getattr(exc, "reason", None) or str(exc)
+                                     or type(exc).__name__)[:300]
+
+    def _commit_state(self, held: locks.HeldLock, state: dict) -> None:
+        """One fsync'd state write inside a held lock, refused if the lock
+        file was replaced (``HeldLock.require_current``)."""
+        held.require_current()
+        self._write(state)
+
+    def current_intent(self, cycle_id: str) -> dict | None:
+        """The ruling intent the state file records for this cycle, or None
+        (read without the lock: the caller of ``rulings.record`` holds it)."""
+        return self._read().get("pending_rulings", {}).get(cycle_id)
+
+    @staticmethod
+    def _check_resolution(action: str, reason: str) -> None:
+        if action not in RESOLUTION_STATUS:
+            raise IntegrityDenial(f"unknown resolution {action!r}; use reopen or close")
+        if not reason.strip():
+            raise IntegrityDenial("a resolution must state its reason; it becomes ledger")
+
+    @staticmethod
+    def _escalated_cycle(state: dict, cycle_id: str) -> dict:
+        c = state["cycles"].get(cycle_id)
+        if c is None:
+            raise IntegrityDenial("unknown cycle", cycle_id=cycle_id)
+        if c["status"] != ESCALATED:
+            raise IntegrityDenial(f"cycle is {c['status']}, not ESCALATED; only an "
+                                  f"escalated cycle needs a human ruling")
+        return c
+
+    def _apply_resolution(self, state: dict, c: dict, cycle_id: str,
+                          action: str, reason: str) -> None:
+        c["status"] = RESOLUTION_STATUS[action]
+        if action == "reopen":
+            c["awaiting_verdict"] = True
+            c["human_reopened"] = True
+            # The ruled-on stop is settled; a future escalation will
+            # reference the run of the retry, not this one.
+            c.pop("escalation_run_id", None)
+        else:
+            c["closed_by_human"] = True
+            c.pop("human_reopened", None)
+        self._log(state, "human_resolution", cycle=cycle_id, action=action,
+                  reason=reason[:400])
 
     # ------------------------------------------------------- self-attestation
     def capabilities(self) -> dict:
@@ -557,19 +794,56 @@ class StateStore:
         persistent = not in_system_temp and not any(
             marker in path.replace("\\", "/") for marker in ephemeral_markers)
 
+        # Read-only (D172): this probe runs under `doctor`, which promises to
+        # write nothing, and on every console snapshot. It used to take the
+        # read-modify-write lock, which wrote state.json back (creating it,
+        # and the state directory, on a fresh project). Now it exercises the
+        # SAME flock acquisition (crossaudit.locks) on the real lock path when the state
+        # directory exists, and reads the state without writing it, so a
+        # corrupt state file still reports as unlockable. Before the directory
+        # exists it probes flock on the same filesystem, in the nearest
+        # existing ancestor, with a transient file it removes again; nothing
+        # is created that outlives the call.
         atomic = False
         detail = ""
+        held = None
+        probe = None
         try:
-            with self._locked() as state:
-                state.setdefault("cycles", {})
-                # If the lock is real, a second acquisition from this process
-                # must fail while we hold it.
-                try:
-                    fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                    os.close(fd)
-                    detail = "the lock did not exclude a second holder"
-                except FileExistsError:
+            try:
+                # The real lock file only when it already exists: the lock
+                # file persists once created, and this probe creates nothing
+                # that outlives it.
+                if self.path.parent.is_dir() and self.lock_path.exists():
+                    lock_path = self.lock_path
+                    # One attempt, never a wait: doctor and the console call
+                    # this, and a live holder already shows the lock excludes.
+                    try:
+                        held = locks.acquire(lock_path, 0.0, lambda _pid: RuntimeError(
+                            "held by another process"))
+                    except RuntimeError:
+                        held = None
+                    self._read()
+                else:
+                    anchor = self.path.parent
+                    while not anchor.is_dir() and anchor != anchor.parent:
+                        anchor = anchor.parent
+                    probe = anchor / f".crossaudit-lock-probe-{os.getpid()}"
+                    lock_path = probe
+                    held = locks.acquire(probe, 1.0, lambda _pid: RuntimeError(
+                        "the lock probe is busy"))
+                    if self.path.exists():
+                        self._read()            # a corrupt store is unlockable
+                # If the lock is real, a second open file must not obtain it
+                # while we hold it.
+                if locks.status(lock_path) is not None:
                     atomic = True
+                else:
+                    detail = "the lock did not exclude a second holder"
+            finally:
+                if held is not None:
+                    held.release()
+                if probe is not None:
+                    probe.unlink(missing_ok=True)   # our own transient probe
         except Exception as exc:                       # noqa: BLE001
             detail = f"the store could not be locked: {exc}"
 

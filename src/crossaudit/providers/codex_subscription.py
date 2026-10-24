@@ -6,9 +6,11 @@ documented JSON-RPC protocol over stdio and keeps only non-secret account state.
 
 Each completion runs in an ephemeral, read-only, network-disabled thread.  A
 CrossAudit model role returns text only.  Tool requests are denied at the
-protocol boundary, but the turn may continue so the model can recover and
-provide a valid text answer.  A turn still fails closed when no valid text is
-returned.
+protocol boundary, and any command, file-change, MCP, web, image, delegation
+or other tool event the runtime reports for the turn -- a completed tool item
+or a server-initiated tool/approval request -- makes the completion fail
+closed: the turn's text is discarded and a ``ProviderDenial`` is raised (D170).
+A turn also fails closed when no text is returned.
 """
 from __future__ import annotations
 
@@ -148,10 +150,14 @@ class CodexAppServer:
                 if self._proc:
                     self._stop_process(self._proc)
                 path = self.path or executable()
+                # Imported here, not at module top: app_keys imports the
+                # provider registry, which imports this module.
+                from ..app_keys import child_env
                 try:
                     proc = subprocess.Popen(
                         [path, "app-server"], stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE, stderr=None, text=True, bufsize=1)
+                        stdout=subprocess.PIPE, stderr=None, text=True, bufsize=1,
+                        env=child_env())
                 except OSError as exc:
                     raise ConfigDenial(
                         f"could not start the official Codex runtime: {exc}") from exc
@@ -182,8 +188,8 @@ class CodexAppServer:
                 # Server-initiated tool/approval requests are outside this
                 # adapter's text-only contract. Refuse the request immediately
                 # instead of leaving the runtime (and UI) waiting for a timeout.
-                # Do not end the turn here: Codex can recover from the denial
-                # and return ordinary text, which remains safe to consume.
+                # The request is recorded on the turn's collector, and the
+                # completion is refused when the turn ends (D170).
                 if message.get("method"):
                     self._deny_server_request(message)
                     continue
@@ -214,7 +220,8 @@ class CodexAppServer:
             collector.done.set()
 
     def _deny_server_request(self, message: dict) -> None:
-        """Reject one server-side action without prematurely ending its turn."""
+        """Reject one server-side action and record it; the turn's completion
+        is refused when it ends (see ``_complete_in_workspace``)."""
         params = message.get("params") or {}
         thread_id = str(params.get("threadId", ""))
         method = str(message.get("method", "tool request"))
@@ -418,13 +425,20 @@ class CodexAppServer:
                 "ChatGPT subscription completion failed" +
                 (f": {collector.error}" if collector.error else ""),
                 category="provider")
+        if collector.forbidden:
+            # D170: SECURITY.md promises that any tool event makes the round
+            # fail closed. The text is discarded unread: a reply produced after
+            # (or alongside) a tool attempt is not a text-only completion.
+            kinds = ", ".join(sorted(set(collector.forbidden)))
+            raise ProviderDenial(
+                f"ChatGPT subscription completion was refused: the model requested "
+                f"{kinds} in a text-only role, so its reply was discarded",
+                category="response",
+                blocked_tool_requests=sorted(set(collector.forbidden)))
         text = "".join(collector.text).strip()
         if not text:
-            detail = (
-                "; its tool request was safely blocked, but it did not recover "
-                "with a text answer" if collector.forbidden else "")
             raise ProviderDenial(
-                "ChatGPT subscription returned an empty completion" + detail,
+                "ChatGPT subscription returned an empty completion",
                 category="response")
         request_bytes = json.dumps(request, sort_keys=True, separators=(",", ":")).encode()
         return Reply(
@@ -433,7 +447,7 @@ class CodexAppServer:
             response_sha256=hashlib.sha256(text.encode()).hexdigest(),
             raw={"transport": "codex-app-server", "thread": thread_id,
                  "usage": collector.usage,
-                 "blocked_tool_requests": sorted(set(collector.forbidden))})
+                 "blocked_tool_requests": []})
 
     @staticmethod
     def _stop_process(proc: subprocess.Popen) -> None:

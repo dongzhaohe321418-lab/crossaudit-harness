@@ -7673,3 +7673,1439 @@ time, and the run cannot say whose failure that is": the measurement found the r
 unmet on this document shape at a rate it bounded with intervals — an association on one
 domain, not a cause — and left the cause to a slice designed to test it, which is what a
 second domain was for.
+
+## D167 — A completion the provider reports as cut off by a token limit is refused at the adapter, not repaired in the parser
+
+**Date:** 2026-10-21. **Branch:** `fix/truncated-output-and-ledger-splitlines`.
+
+**What was wrong.** Both HTTP adapters send `max_tokens=4096` and never read the
+provider's stop signal, and `generator._extract_file_blocks` deliberately accepts a file
+block with no END marker (the "model forgot the closing marker" recovery). A reply stopped
+by the output limit therefore parsed as complete work, and the half-written file was
+applied and committed as the round's deliverable. D165 had already recorded two generator
+replies hitting the 4,096-token ceiling.
+
+RULINGS:
+
+1. **The adapter refuses; the text is never returned.** Anthropic `stop_reason`
+   `max_tokens` (and `model_context_window_exceeded`, on models that report it) and
+   OpenAI-compatible `finish_reason` `length` raise a `ProviderDenial` with category
+   `truncated`, `retryable=False`, in the streaming and non-streaming paths of both
+   adapters (`providers/base.truncated_completion`). Not retryable because the identical
+   request with the identical budget truncates again; the resilience layer still tries the
+   next configured route, then rolls up into `routes_exhausted`, which the build loop
+   records as a parked run with a cycle-side escalation carrying the sentence. The
+   remedies omit `retry`.
+2. **The tolerant parser stays.** With the adapters refusing a reply the provider says was
+   cut off, a missing END marker on a reply that reached the parser is the case the
+   recovery was written for: a reply the provider reports as finished. What this does not
+   cover, stated rather than implied: an OpenAI-compatible origin that reports no
+   `finish_reason` at all is not second-guessed; the `replay` fixture carries no stop
+   signal; the Codex App Server bridge reads only the turn status, and any status other
+   than `completed` already fails closed (no output-limit signal is exposed to it).
+3. **The 4,096 default is not changed here**, and no knob is added. Raising it, or making
+   it per role, is a separate decision with a cost side (open).
+4. **Open:** a truncation parks as a provider wait (`provider_unavailable`), whose
+   remedies are connection-shaped; routing an all-routes-truncated stop to the content
+   remedies (revise the task) is a follow-up, not taken here.
+
+Recorded because a later reader could otherwise remove the parser's END-marker tolerance
+"to be safe" (losing a recovery the suite pins) or add a retry for truncation (which
+cannot succeed with the same budget).
+
+## D168 — The evidence ledger frames an entry at "\n" only, escapes the three separators `splitlines` honours, and refuses to append onto a chain that does not verify
+
+**Date:** 2026-10-21. **Branch:** `fix/truncated-output-and-ledger-splitlines`.
+
+**What was wrong.** `ledger/chain.py` wrote `json.dumps(..., ensure_ascii=False) + "\n"`
+and read with `str.splitlines()`, which also splits on U+2028, U+2029 and U+0085 — left
+raw by `ensure_ascii=False` (every other separator `splitlines` honours is below U+0020
+and already escaped). One such character in a payload made `verify()` fail for good, and
+because `append` took its head from the last line that parsed, the next two appends shared
+a `seq` and a `prev`: a forked chain, after which every receipt's tool evidence was refused.
+
+RULINGS:
+
+1. **Readers split on `"\n"` only.** A line still carrying a `"\r"` is unparseable: the
+   writer never emits one raw, so CRLF is not silently accepted. Ledgers the old writer
+   left with a raw separator now verify (a recovery, tested).
+2. **The writer escapes exactly U+2028, U+2029 and U+0085** (` `, ` `, `\u0085`)
+   rather than switching to `ensure_ascii=True`. Considered and rejected: `ensure_ascii=True`
+   would also make new ledgers readable by old readers, but it rewrites the on-disk bytes
+   of every non-ASCII payload (all Chinese text), where the targeted escape leaves every
+   line without those three characters byte-identical. Digests are unaffected either way:
+   `digest(body)` is taken over `canonical(body)`, not over the line.
+3. **`append` refuses a ledger whose complete lines do not verify** (unparseable,
+   tampered, unchained or out of order), on every head-cache miss, with a `LedgerError`
+   naming the verifier's report. The torn-tail refusal is unchanged and runs first. A warm
+   instance whose file is still exactly the size its own last write left keeps trusting
+   its cache, as before (P10): a same-size external rewrite between two appends of one
+   instance is caught by `verify()`, not by `append` — left open, deliberately, because
+   closing it costs a full re-derivation per append.
+
+Recorded because the escaping choice is a boundary a later reader could reopen (switching
+to `ensure_ascii=True` "for safety" changes bytes on disk for every Chinese payload), and
+because "append refuses a damaged chain" is now a contract the receipt path relies on.
+
+## D169 — Five confirmed defects closed in one round: loopback HTTP ignores proxies, unseen input escalates, the authorization store serialises its writes, a decimal comma is not a number, and the escalation-ruling path is pinned
+
+**Date:** 2026-10-21. **Branch:** `fix/claims-round-1a`. One commit per defect; each ruling
+below names its defect (F1–F5) so a later reader can find the commit.
+
+RULINGS:
+
+1. **F1 — Every request CrossAudit makes to its own loopback servers bypasses the proxy
+   variables.** `urllib.request.urlopen` installs a `ProxyHandler` from `HTTP_PROXY` /
+   `http_proxy` / `ALL_PROXY`; with a local proxy exported (common: `HTTP_PROXY=
+   http://127.0.0.1:7897`) the daemon health/state probes, the project-relay stream and
+   the app self-test were sent to the proxy, which saw the console session token in the
+   query string and could misreport liveness. One module, `crossaudit/netutil.py`, owns
+   the policy: `open_loopback` (refuses a non-loopback URL), `loopback_opener` (an opener
+   with `ProxyHandler({})`), and `opener_for(url, *handlers)`, which drops the proxy only
+   when the URL names a loopback host literally (`localhost`, `127.0.0.1`, `::1`; a name
+   that merely resolves to loopback is not looked up). **Remote MCP servers keep honouring
+   the user's proxy; a loopback MCP server (the HTTP-on-loopback case `mcp._safe_url`
+   already allows) is reached directly**, through `opener_for` with the existing
+   no-redirect handler — a proxy there would receive the server's bearer token and could
+   not reach the user's local server anyway. Considered and rejected: dropping proxies for
+   MCP altogether (breaks remote MCP behind a corporate proxy) and setting `NO_PROXY` in
+   the process (global, and leaks into every child process). The suite's own client is
+   scrubbed by an autouse conftest fixture (`_no_proxy_variables`) so the result no longer
+   depends on the developer's proxy; the product tests set a dead proxy back inside the
+   test. Left open, deliberately: the provider adapters' openers (`providers/base.py`)
+   still honour proxies for a loopback provider endpoint (`--allow-insecure-localhost`),
+   which would send that provider's key to the proxy; that is a provider-path change for
+   its own slice. A macOS system-level proxy (`scutil`) can still affect the suite's own
+   client (urllib consults it when no variable is set); the product helpers are immune.
+2. **F2 — A file the auditor is not shown in full ESCALATEs the round, and a text suffix
+   that is not UTF-8 is a CA-FILE-001 BLOCKER.** `auditor/prompt.py` rendered a non-UTF-8
+   file that is not a `.pdf`/`.docx` as `<binary, N bytes, not shown>` without setting
+   `bounded`, and `dcl/neutral.check_parseable` skipped non-UTF-8 data silently: a UTF-16
+   `results.csv` beside an `.xlsx` passed the `general` profile on a model PASS,
+   contradicting I8 (`dcl/framework.py`: an input we could not fully read can never end in
+   PASS). The more fail-closed reading was chosen (AGENTS §1.1): **every** placeholder file
+   counts — an image or a spreadsheet as much as a mis-encoded CSV — because the auditor
+   cannot vouch for content it never read. `prompt.unseen_files` names them;
+   `render_increment` reports them as `bounded`; the new `build_audit_prompt` keeps the size
+   overflow and the unseen paths apart (`build` keeps its signature and bytes), and the
+   verdict ladder gains one branch after the size bound: `unseen -> ESCALATE`, integrity
+   **`INPUT_NOT_SHOWN`** (a new receipt integrity code, with its clause in
+   `INTEGRITY_IN_WORDS` and Chinese in `SENTENCES_ZH`; the old `BOUNDS_EXCEEDED` sentence
+   says the prompt overflowed, which is false here). The report gains a section,
+   *Files the auditor was not shown*, listing each path; it is not in the finding shape,
+   because nothing was judged. Prompt bytes are unchanged for every input, and a report
+   with no unseen file is byte-identical. `check_parseable` now reports a file whose
+   suffix is in `TEXT_SUFFIXES` (case-insensitive; a superset of the list in the defect
+   report — `.js`, `.ts`, `.toml`, `.html`, `.css`, `.sh` also promise text) but is not
+   UTF-8 as a BLOCKER under the existing **CA-FILE-001** (the suffix promises a format the
+   bytes do not keep; a new code would mean a new constitution row for the same rule).
+   Consequence, stated: the exact reproduction is **BLOCKED** under `general` (the
+   deterministic BLOCKER dominates the ladder), and ESCALATE where no check reads the CSV;
+   either way never PASS. Consequence, stated: an increment that commits a PNG figure or an
+   `.npz` now escalates to a person every round. That is the price of I8 read strictly; a
+   project that wants such files audited commits them in a readable form or a person rules.
+   Left open: the Decision Center has no card of its own for this cause (`escalation_cause`
+   returns no structured cause rather than "bounds_exceeded", whose card says the task is
+   too large); the report names the files. A dedicated card is a console slice
+   (`console/page.py` is owned elsewhere this round).
+3. **F3 — `AuthorizationStore` serialises every load–modify–persist under one module
+   lock, and each write uses a random temp name.** `broker/approval.py` read, changed and
+   wrote `authorizations.json` with no lock, through `authorizations.json.tmp<pid>`, a name
+   every thread of the process shared: 40 threads calling `add_tool` raised 24
+   `FileNotFoundError` and kept 5 of 40 tools. The real trigger is a build thread approving
+   a tool "for this project" (`humanapproval`) while the settings UI toggles
+   `workspace_writes` (`/api/authorization`); a lost revoke there is fail-open. Now one
+   module-level `threading.Lock` covers `set`, `set_list` and `add_tool` (through one
+   `_update`), and the temp name carries `secrets.token_hex(8)` and is removed on any
+   failure, as `mcp._write` already did. One lock for every project rather than one per
+   path: writes are rare and tiny. Left open: the lock is per process. Two processes
+   writing the same project's authorizations (a CLI run beside the console) can still
+   lose an update; closing that needs a file lock like the controller's, and no
+   cross-process writer was found in this round's trigger.
+4. **F4 — A comma in a transcribed number is thousands grouping or the token is not a
+   number.** `dcl/quantities.normalise_number` stripped every comma before matching, so a
+   transcribed `1,5` keyed as `15` and `1,0,0` as `100`, and `check_number_source`
+   accepted `{"v": "1,5", "u": "mg"}` against "Add 15 mg of salt." — the wrong-number-
+   accepted direction the module exists to prevent. Commas are now stripped only when the
+   whole token matches `[+-]?[0-9]{1,3}(,[0-9]{3})+(\.[0-9]+)?([eE][+-]?[0-9]+)?` (ASCII
+   digits, after the U+2212 fold); any other comma returns `None`, which every caller
+   already turns into CA-NUM-001. Considered and rejected: reading a lone comma as a
+   decimal point (`1,5` = 1.5). The layer compares transcriptions literally, and guessing
+   a locale is exactly the looseness it refuses; the generator can write `1.5`. The same
+   function reads numbers out of source spans, so a source token with invalid grouping
+   (`1234,567`) no longer matches anything; that can only turn a pass into a block.
+5. **F5 — The escalation ruling's `store.resolve_escalation` was a mypy false positive;
+   the variable is renamed and the path is pinned end to end.** In `console/server.py`
+   `do_POST`, `store` is an `AuthorizationStore` in the `/api/authorization` branch and is
+   rebound to a `StateStore` at the top of the `/api/escalation` branch; every branch
+   returns, so no request reaches `resolve_escalation` on the wrong object. mypy types a
+   name by its first binding in the function, hence the report. The escalation branch now
+   calls its variable `state_store` (no behaviour change), and a test drives `close` and
+   `reopen` through the tokened HTTP boundary after an `/api/authorization` request on the
+   same server, recording that `StateStore.resolve_escalation` is what answered. mypy is
+   not installed in this environment, so the absence of the warning was not re-measured;
+   the rename removes the name it was keyed on.
+
+Recorded because three of these settle boundaries a later reader could reopen by
+accident: what counts as an input the auditor saw (ruling 2), which loopback calls may
+ignore the user's proxy (ruling 1), and what a comma in a transcribed number means
+(ruling 4).
+## D170 — Where SECURITY.md promised more than the code: keys stay out of non-provider children, a Codex tool event fails the round, the page CSP pins its scripts, and the token is named for what it authorises
+
+**Date:** 2026-10-21. **Branch:** `fix/claims-round-1b`.
+
+**What was wrong.** Four sentences in SECURITY.md and the console server's docstring were
+stronger than the code. (S1) Keys were said to be "injected only into the local core
+process", but every child the core launched — Git, the GitHub CLI, OpenSSH, the Codex
+app-server — inherited the whole environment. (S2) "Any command, file-change, web, or tool
+event makes the provider round fail closed", but the Codex bridge only recorded the event
+and returned the turn's text. (S3) "A strict inline-only CSP, so nothing on the page can
+fetch or exfiltrate", over a header carrying `script-src 'unsafe-inline'` and
+`connect-src 'self'`. (S4) SECURITY.md said the web view "cannot accept a command,
+executable" of Environment Doctor only, and was silent that the same token registers a
+local stdio MCP executable (started immediately) and replaces the allowed check commands.
+
+RULINGS:
+
+1. **One helper strips provider keys from non-provider children:**
+   `app_keys.child_env()`. It removes each vendor's primary and backup name, the legacy
+   role names, any `CROSSAUDIT_*_KEY` and any `*_API_KEY`, and leaves everything else
+   byte-identical (`GH_TOKEN`, `SSH_AUTH_SOCK`, `GIT_ASKPASS`, `CODEX_HOME` are tested as
+   kept). Every `subprocess` launch site in `src/` uses it except four that build their own
+   environment on purpose: stdio MCP servers (an eight-name allowlist [COUNT CORRECTED BY D174: thirteen names, six of them Windows runtime names]), `run_check` (every
+   `*KEY*`/`*TOKEN*`/`*SECRET*` name stripped), project workers (they call the providers
+   and must have the keys), and `app.py` (below). A structural test fails on a new launch
+   site without it. Considered and rejected: a broad `*TOKEN*`/`*SECRET*` scrub for every
+   child — the GitHub CLI and Git credential helpers need `GH_TOKEN`/`GITHUB_TOKEN`.
+   The Codex runtime needs none of the stripped names (its ChatGPT login lives under
+   `HOME`/`CODEX_HOME`); an `OPENAI_API_KEY` or `CODEX_API_KEY` in its environment is the
+   one thing that could move it to API-key billing. Not verified against a live runtime.
+2. **A Codex turn with any tool event is refused**, category `response`, not retryable
+   (the empty-completion shape), with `blocked_tool_requests` in the detail; the text is
+   discarded unread. Both sources count: a completed item of a forbidden type and a
+   server-initiated tool/approval request (still answered `-32601` at once). The code was
+   moved to the stronger sentence, not the sentence to the code, because that is the
+   direction AGENTS.md §1 allows. Considered and rejected: interrupting the turn at the
+   first tool event — it saves tokens but adds a protocol path for no change in outcome.
+3. **The page CSP lists the SHA-256 of its two script blocks**, computed at import from
+   `PAGE` itself, and no `'unsafe-inline'` for scripts; the three inline handlers (Stop,
+   approval decisions, draft fold) became delegated listeners. Everything else in the
+   header is unchanged. The docstring now also says what the CSP does not do:
+   `connect-src 'self'` leaves every same-origin API reachable to script that runs, a CSP
+   does not stop top-level navigation, and the `innerHTML` sinks rely on escaping.
+4. **SECURITY.md names the token as a bearer credential for local code execution**: what
+   its holder can do (register and start a local MCP executable, replace allowed check
+   commands), that the MCP local-code approval is a field of the same request, where the
+   token lives (the URL and browser history; `.crossaudit/console.json`, mode 600), and
+   what the user should treat it as. Documentation only; no code gate was added, and no new
+   promise was made.
+
+OPEN (deliberately not taken here):
+
+- `app.py`'s bootstrap `git` calls and `mcp.py`'s Keychain `security` calls still inherit
+  the full environment: both files are owned by a sibling branch this round. Adding them to
+  `child_env` is mechanical; the structural test's exemption list names them.
+- A configured `key_env` that is neither `CROSSAUDIT_*_KEY` nor `*_API_KEY` is not
+  recognised by `child_env`.
+- A code gate on MCP registration and on allowed commands (a confirmation the native shell
+  holds, not the token) is the owner's decision; SECURITY.md now states the exposure
+  instead.
+- SECURITY.md's "CrossAudit does not execute generated commands automatically" reads
+  against `run_check`, which runs a generator-chosen argv whose `argv[0]` is on the
+  allowed list; worth an owner's wording pass.
+
+Recorded because each ruling closes a gap a later reader could reopen by accident: by
+launching a new child with the inherited environment, by relaxing the Codex refusal back
+to "recover with text", by putting `'unsafe-inline'` back for a quick inline handler, or by
+reading SECURITY.md as if the token authorised only reads.
+## D171 — `verify` refuses what the README says it refuses: invalid or (when pinned) missing signatures, and a cycle file on disk that is not the audited one; the receipt names the dependency locks of the audited tree
+
+**Date:** 2026-10-21. **Branch:** `fix/claims-round-1c`. **Source:** the black-box
+acceptance run of the README's claims (C18 FAIL; C15, C19 PARTIAL).
+
+**What was wrong (C18).** `crossaudit export-pubkey > project.pem` wrote a `KEY <id>`
+line above the PEM block, and `verify --pubkey project.pem` base64-decoded every
+non-dash line, so the README's own next command died with a `binascii.Error`
+traceback (exit 1). A corrupted signature printed `SIGNATURE INVALID` and exited 0
+in a dry run; only `--admit` refused it. A deleted sidecar printed `UNSIGNED`,
+exit 0, even with a key pinned. The signed predicate read `receipt["verdict"]` and
+`subject["report_sha256"]`, which no minted receipt has, so both fields were
+always empty (and `tests/test_receipt_signing.py` used a fixture with the same
+misreading).
+
+RULINGS:
+
+1. **Signatures (C18).**
+   a. `export-pubkey` writes the PEM block and nothing else to stdout; the key id
+      goes to stderr (`--json` carries both). Considered: a `--with-id` flag;
+      rejected because the default must be the one the README redirects.
+   b. `crypto/keys.parse_public_key_pem` reads the one `BEGIN/END PUBLIC KEY`
+      block, ignores text outside it (as OpenSSL does, so files the old export
+      wrote still work), and holds the inside to strict base64 and the exact
+      Ed25519 SPKI form. A file that cannot be read or parsed is a `ConfigDenial`
+      (exit 20) naming the file — the person handed over the wrong file.
+   c. A present signature that does not verify is an `IntegrityDenial` (exit 21)
+      in a dry run as well as under `--admit`, and it refuses before admission is
+      attempted. The human output still shows the bindings line and the
+      `SIGNATURE INVALID` line before the refusal; `--json` emits the refusal alone
+      (one document) with the signature facts as detail.
+   d. **What pinning means:** `--pubkey` asks "does this receipt carry a valid
+      signature by this key?", so a missing `receipt.dsse.json` under a pin is
+      refused (exit 21). Without a pin, `UNSIGNED` stays informational, because
+      every receipt minted before A1 is unsigned and must keep verifying.
+   e. The predicate is read from `audit.verdict` and `ledger.report_sha256`.
+      Additive: verification binds the statement's subject digest (the whole
+      receipt), never the predicate, so envelopes minted with the empty fields
+      still verify — tested by signing with the old `_predicate` verbatim.
+
+2. **The file on disk (C15).** `verify` re-reads `report.md` at the bound
+   `report_commit`, which is right for the record and silent about the file a person
+   opens: a byte flipped in `cycles/<id>/report.md`, uncommitted or committed on top,
+   still printed `BINDINGS VERIFIED`, exit 0. Now, after the record verifies,
+   `receipt/verify.working_tree_drift` compares the on-disk copy of every cycle file
+   whose digest the receipt carries — `report.md` (`ledger.report_sha256`) and
+   `reproduction.json` (`reproduction.bundle_sha256`, over canonical JSON, so
+   whitespace is not drift) — and `crossaudit verify` refuses a drifted one with exit
+   21 naming it. A file that is not on disk is reported (`WORKING TREE NOT ON DISK`),
+   not refused: nobody reads a wrong text from a file that is not there.
+   a. `BINDINGS VERIFIED` keeps its meaning (the committed record); the new fact is
+      its own line, `WORKING TREE MATCHES` / `WORKING TREE DRIFTED`, the fourth
+      after the bindings, signature and record lines.
+   b. **`--record-only`** verifies the record alone: the drift line is still
+      printed, with "(--record-only: …)", and does not refuse. Chosen over
+      `--ignore-working-tree` because it names what IS checked.
+   c. Not checked, by decision: `checks.json` and `findings.json` (no receipt digest
+      covers them — the comment at their write site says so), `sources.json` (bound
+      only through its source-id set), and the project's files and `AUDIT_RULES.md`,
+      which the receipt binds at their commits; the working tree legitimately moves
+      on after an audit, and `test_working_tree_constitution_drift_does_not_change_pinned_receipt`
+      pins that a later rulebook does not invalidate an earlier receipt.
+   d. Left open: the check lives in the CLI verb; `verify()` (used by admission in
+      the console) is unchanged, so the console's admit path does not yet compare
+      the on-disk report.
+
+3. **Dependency locks of the audited tree (C19).** `detect_locks` read only the
+   manifest, which is the increment's changed paths under `crossaudit build` and the
+   scope under `audit`, so a `requirements.txt` committed before the round (or at the
+   repository root) was never named, and `reproduce` said `NO DEPENDENCY LOCK
+   RECORDED`; it also never printed a lock's hash.
+   a. **Detection scope:** `reproduction.detect_tree_locks` lists the AUDITED COMMIT
+      through `gitio` (never the working tree) and takes regular-file entries whose
+      basename is a known lock, at the repository root or under `cfg.scope_dirs`
+      (the whole tree when no scope is configured). Paths the manifest already
+      lists are skipped — bound there, unchanged. Not recorded: `TEMPLATE` paths,
+      symlinks and submodules, and a lock over 16 MiB (`LOCK_READ_LIMIT`; hashed
+      whole or not at all, the same constant on both sides). It follows the
+      configured `scope.dirs`, not a one-off `audit --scope` flag (that flag does
+      not reach `receipt/build.py`; a lock elsewhere at the audited commit is still
+      a true statement about that commit).
+   b. **Binding:** the blob digests go in an optional `reproduction.tree_locks`
+      (`{path: sha256}`), present only when non-empty; `locks`, `lock_kinds` and the
+      bundle count both sources. `verify` re-reads each tree lock at the audited
+      commit (absent, non-lock or different bytes are refused) before recomputing
+      the bundle digest. Additive: a lock-free receipt has no block (byte-identical,
+      the existing guard), and a receipt whose locks are all in its manifest has no
+      `tree_locks` key, so it is byte-identical to one minted before D171. Forward
+      compatibility is not claimed: a verifier from before D171 refuses a receipt
+      that carries `tree_locks` (its bundle recomputation does not know them).
+   c. Detection is fail-open at mint time like the sidecar: a commit `receipt/build.py`
+      cannot read yields no tree locks, which is what every earlier receipt said.
+      `verify` does not re-run detection to find a lock the receipt omits, because
+      the scope at mint time is not recorded; it binds what is recorded.
+   d. `reproduce` prints each lock as `<path>  sha256 <digest>  MATCHES|DRIFTED|MISSING`
+      against the working tree (JSON gains `sha256` per lock), and `NO DEPENDENCY
+      LOCK RECORDED` now speaks of the receipt ("names no lock file"), not the tree,
+      since a receipt minted before D171 never looked outside its manifest.
+
+Recorded because three boundaries here are easy to reopen by accident: that a pinned
+`--pubkey` refuses an unsigned receipt while an unpinned verify does not; that the
+working-tree check covers exactly the cycle files a receipt digest covers (and why
+`AUDIT_RULES.md` and the project's files are not among them); and that lock
+detection reads the commit, over root plus `scope.dirs`, and is additive.
+## D172 — Where a README command-line flow and the product disagreed, the product now does what the README documents
+
+**Date:** 2026-10-21. **Branch:** `fix/claims-round-1d`.
+
+**What was wrong.** A black-box acceptance run (`benchmarks/claims`, one project per
+README sentence, created by the documented `init` and driven by the documented commands
+against scripted fake providers) found README flows that could not be followed literally.
+Each ruling below names the claim it closes.
+
+RULINGS:
+
+1. **`doctor` writes nothing (C04).** `StateStore.capabilities()` — the admission probe
+   `doctor` and every console snapshot call — took the read-modify-write lock and wrote
+   `state.json` back, creating `.crossaudit/` on a fresh project. It now probes the same
+   `O_EXCL` acquisition on the real lock path when the state directory exists (reading the
+   state, never writing it, so a corrupt state file still reports as unlockable), and
+   before it exists probes `O_EXCL` in the nearest existing ancestor with a transient file
+   it removes. Considered and rejected: probing in the system temp directory (a different
+   filesystem proves nothing about the store's), and reporting `atomic: false` until the
+   directory exists (it would lower a fresh project's tier for no reason). `doctor --fix`
+   keeps its documented writes, and still only on a terminal.
+2. **Without `--sha`, `audit` and `run` judge the latest increment, and a recorded cycle is
+   never overwritten (C10).** After `build`, `HEAD` is the loop's own `audit receipt …`
+   commit, so the README's `build` then `audit --offline` refused with exit 20. The default
+   is now the newest commit (within 200) that changed work by the definition `run` already
+   used (`_increment_paths`: the scope directories, minus rules, configuration, ledger,
+   state, CI and house skills). `audit` prints `auditing <sha> (<subject>) …` before it
+   runs, and `--json` carries `sha` and `sha_source` (`latest_increment`, `explicit`,
+   `head`). An explicit `--sha` is used as given, and a ledger-only one is still refused.
+   Making this the default exposed a data-loss defect that **already existed on `main`
+   with an explicit `--sha`**. A cycle's id is derived from its root sha, and
+   `open_or_advance` had no branch for a PASSED cycle at the same sha. So re-auditing a
+   commit that rooted a cycle (one that later PASSED, or that advanced to a later round)
+   wrote a fresh OPEN cycle over the recorded one: `audit --offline --sha <increment>`
+   after `build` turned a PASSED cycle into an ESCALATED one, and its receipt could no
+   longer be admitted. Now `open_or_advance` never overwrites. On an id collision it
+   derives `cycle_id_for(repo, sha + "\n<attempt>")`, which stays 16 hex because the
+   console's continuation check and progress redaction match that shape. The id is
+   deterministic, so the same command on the same tree always produces the same ids. The
+   new record carries `reaudit_of`, `attempt` and `opened_at`, and `status` lists cycles
+   in opening order with the re-audit after the cycle it follows. The earlier PASS stays
+   admissible: admission is keyed by the receipt's cycle id, and the new DCL_ONLY cycle
+   cannot shadow it (tested by admitting once after the re-audit). Considered and
+   rejected: refusing a re-audit of a PASSED commit as "already has a recorded decision",
+   as D36 clause 2 does for OPEN/BLOCKED cycles and `record_build_escalation` does for
+   PASSED ones. It is equally fail-closed, but the README's flow would exit 20 again, and a
+   deterministic re-check of passed work is a legitimate thing to ask for.
+3. **`build` exits by the loop's final state, from one table (C20).** `run_loop` returns
+   0 or 11 for every stop (the console reads it that way, and that is unchanged). The
+   CLI's exit status now comes from `cli/build.BUILD_EXIT`, keyed by the loop's code and
+   the park kind of the run's final event. That kind is the same value the cycle side
+   records as `escalation_kind`. The rows: PASS is 0. A park because every provider route
+   failed, generator or auditor side, is 22. A usage-guardrail (`budget`) park is 11,
+   because a person raises the limit and nothing failed. Every other escalation is 11,
+   including a BLOCKED round that spent the round budget. There is no 10 row, because a
+   build never ends BLOCKED without escalating, while `audit` and `run` do return 10. Only
+   the final event counts: a park that was followed by more work is not reported as a
+   provider failure. Unlisted codes, such as a refusal raised before the loop, pass
+   through unchanged.
+4. **`--json routing` is always a JSON list (C21).** It is `[]` before anything is
+   routed, the same shape as the populated case, never the human sentence. Considered and
+   rejected: `{"decisions": [...]}`. It would change the populated shape scripts already
+   parse. The other commands the claim names (`status`, `doctor`, `check`, `verify`,
+   including `verify`'s denial path) already printed only JSON on an empty project, and a
+   sweep test now pins that.
+5. **A ruling is committed to the ledger, `status` shows it, and a close reads as closed
+   (C25).** `resolve` kept the reason only in the gitignored `state.json`. Now each ruling
+   (from `resolve`, and from `talk`'s resolve lane, which also said "Your reason is in the
+   ledger") appends one JSON line to `<ledger>/rulings.jsonl` with these fields:
+   `cycle_id`, `action`, `reason`, `by` (the repository's git identity), `t`, `at`,
+   `round`, `active_sha`, `status_after` and `escalation_reason`. That file alone is
+   committed, as `ruling <cycle> <action>: <first line of the reason>`, with the full
+   reason, who and when in the commit body (`src/crossaudit/rulings.py`). The shape
+   copies `routing.jsonl` and `disputes.jsonl`: a flat append-only JSONL beside the
+   receipts, keyed by cycle id. A line is never rewritten, so a second ruling appends,
+   and no existing cycle file is touched. Considered and rejected: a `decision.json` in
+   the round directory. Escalations recorded before any audit (a provider stop in round
+   one) have no round directory, and a per-round file would split one cycle's rulings
+   across directories. `status` (human and `--json`) lists the rulings under their cycle.
+   A closed cycle keeps controller status `BLOCKED` plus `closed_by_human`, because the
+   daemon reconciler and the run command key on both, and is reported as `closed: true`
+   and shown as `CLOSED`. A close also ends the run that was `WAITING_FOR_HUMAN` on that
+   decision, through a new `RunJournal.settle_human_wait`
+   (WAITING_FOR_HUMAN -> CANCELLED, the declared edge, recorded as `run_cancelled`). It
+   picks the run the escalation references, or, for a ladder escalation that carries no
+   reference, the newest run, only when the cycle's last activity does not predate the
+   run's start and the chat matches: the daemon's legacy association rule. The TTY
+   requirement is unchanged. **Open:** the console's decision screen (`console/server.py`,
+   outside this slice) still calls `resolve_escalation` without writing the ledger, so the
+   README's sentence about the app's two actions is not yet true there.
+6. **`crossaudit console` opens the dashboard for a person at a terminal (C28).** It
+   calls `webbrowser.open` on the printed tokenized URL, both when it starts the
+   background server and when it reattaches to one, only when stdout is a terminal. It
+   never opens with `--no-open` (new flag), under `--json`, or from the foreground server
+   process (`--foreground` or the daemon child). The test is stdout's `isatty()`, not
+   whether `BROWSER` or a display is present, so CI, pipes, the suite and other
+   non-interactive callers stay silent without having to know the flag, and a person
+   always gets the page. A failed or refused open prints "Open that URL when you are
+   ready." (the existing catalogue line), and setup is never failed for it.
+7. **Small README/product disagreements, settled toward the product's words unless the
+   product was wrong (C03 and others).** (a) "Deterministic checks" now describes the
+   `general` pack (parseable, declared, internal, complete), which is what `init`
+   writes, as the default, and the `science` pack (schema, units, convergence,
+   provenance, number_source) as `checks: science`. The strictness table's `science`
+   row gains `number_source`, and the configuration example ends `checks: general`.
+   (b) A non-interactive `init` (stdin not a terminal) writes no keys file. Its closing
+   summary now says "No keys file was written: keys are read from
+   CROSSAUDIT_AUDITOR_KEY and CROSSAUDIT_GENERATOR_KEY in the environment", and the
+   README's step 1 says the same. (c) `amend --yes` is documented for scripts, because
+   without a terminal `amend` exits 20. (d) The expected `--version` line shows the real
+   format, `crossaudit 4.17.0 (receipt schema 2) · <mode> · <path>`. (e) **The README
+   changed, not the product.** `status` says `PASSED` because it lists *cycle* states,
+   while `PASS` is a round's *verdict* and is the receipt's `verdict` value. Both words
+   are consistent in their own domain, so the README now has a verdict table (PASS,
+   BLOCKED, ESCALATE, DCL_ONLY) and a separate sentence naming the cycle states (OPEN,
+   PASSED, BLOCKED, ESCALATED, CONSUMED, CLOSED). (f) The plaintext refusal in
+   `providers/base.egress_check` named `--allow-insecure-localhost`, a flag that never
+   existed. It now names what does: a loopback `base_url:` with
+   `CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1` (the generation adapters accept plain HTTP to
+   loopback by themselves). The model-catalogue fetch, which accepts HTTPS only even on
+   loopback, gets its own sentence. Behaviour is unchanged. The README's provider
+   section shows `base_url:` with the variable. **Open:** the custom-origin refusal
+   still says "pass --allow-custom-endpoint", a flag that exists on `audit` and `run`
+   but not on `build`, where only the variable works.
+
+## D173 — `pair`'s plan is the list `--apply` runs, it needs no GitHub account, and `init --github` says the same thing
+
+**Date:** 2026-10-22. **Branch:** `fix/claims-round-2a`.
+
+**What was wrong.** README, "Two-repository deployment": "Without `--apply`, `pair`
+prints the intended GitHub operations and changes nothing remotely. Review the plan
+before creating repositories or secrets." The claims harness (row C33a: a fake `gh`
+that logs argv, every `https://github.com/` URL rewritten to a local bare repository)
+found the plan was a hand-written list kept beside the code that applied it, and the
+two had drifted.
+
+RULINGS:
+
+1. **One step table; the plan prints it and `--apply` runs it (C33a, observations 1
+   and 2).** `--apply` also pushed the local history to the work repository, made a
+   local commit recording the pair and added an `origin` remote, none of which the
+   five plan steps named; and plan step 5, branch protection, was never applied but
+   printed as a manual step afterwards. Now `pair.steps()` returns a list of `Step`s
+   (stage, sentence, reason, the argv of every command the step may run that changes
+   something, the case in which it runs them when it does not always, and the function
+   that runs it). `cmd_pair` prints that list with its commands under "`--apply` does
+   exactly this, in this order"; `apply_pair` runs that list, in order, after its
+   unchanged local preflights and the `gh auth status` check, and does nothing else
+   that changes anything. The order is the one `--apply` already had: create or adopt
+   the work repository, then the audit repository; commit `science_repo`/`audit_repo`
+   to `crossaudit.yml`; add `origin`; merge an adopted work repository's `main`; push
+   `HEAD` to `main`; seed the audit repository (clone into the state directory, commit
+   the Constitution and `cycles/README.md`, push, delete the clone); upload the auditor
+   key. Steps that would do nothing are left out of the table rather than printed and
+   skipped: the pair commit when the config already names the pair, `origin` when one
+   is set, the key upload when the key is not loaded. What `--apply` does not do is a
+   second list, `pair.afterwards()`, printed in both modes under "You do afterwards":
+   the key upload when it was left out, branch protection (admin rights, a paid plan
+   on some private tiers), and `crossaudit doctor --online`. The console's project
+   wizard calls the same `apply_pair`, so it runs the same table; its progress stages
+   are unchanged. Two small changes came with it. The audit seed commit passes the
+   CrossAudit identity as `-c` options when the clone names nobody, instead of writing
+   it into the clone's config. The `origin` check reads `remote.origin.url` instead of
+   `git remote get-url`, which applies `url.insteadOf` and so called a user's own
+   rewrite of the configured URL a conflict. Considered and rejected: generating the
+   plan text by running `--apply` against a dry-run shim (it would need GitHub's
+   answers to know which branch each step takes, and the plan must not need GitHub,
+   ruling 2); and listing only the GitHub calls, as the README sentence literally says
+   (the local commit and the push are the operations the harness found unannounced,
+   and a person reviewing the plan needs them most). The test
+   (`tests/test_pair_plan_is_apply.py`) puts a recording `gh` and a recording `git`
+   wrapper on `PATH`, runs `main(["pair", …, "--apply"])`, and asserts that the logged
+   commands that change something are, one for one and in order, the `$ ` lines the
+   same run printed, excluding the one step whose printed case ("already existed")
+   does not hold for fresh repositories. A re-run, which adopts both repositories,
+   must execute only printed commands in printed order.
+2. **The plan needs no GitHub account when both names are given (C33a, observation
+   3).** `cmd_pair` called `gh api user` before printing anything, so the plan the
+   README says to review was refused to anyone without a signed-in `gh`. The step
+   table reads only local state (the config file, `origin`, the environment), so the
+   account is now asked for only when `--science` is missing and the default name
+   needs the owner. A missing name with `gh` signed out or absent is refused (exit 20)
+   with a sentence saying to pass both names or run `gh auth login`. In plan mode
+   `pair` still runs `gh auth status` (read-only) and, when it is not signed in, adds
+   one line: "Before --apply: GitHub CLI is installed but not signed in — run `gh auth
+   login`." or "Before --apply: GitHub CLI is not installed — install it from
+   https://cli.github.com, then run `gh auth login`." `--apply` without a signed-in
+   `gh` is refused, as before, after the local preflights and before any change. This
+   departs from C33a's written expectation that plan mode with `gh` absent or signed
+   out exit 20; the README sentence ("prints the intended GitHub operations and
+   changes nothing remotely") is what the product now honours, and printing the plan
+   with the one missing prerequisite named serves the reader that sentence addresses.
+3. **`init --github` prints `pair`'s steps and one warning (C33a, observation 4).**
+   The setup panel ended "crossaudit pair --apply   does all of it, after showing
+   you", false given ruling 1's branch protection, and with `gh` installed but signed
+   out the warning composed two states into one line: "gh installed but not
+   authenticated (run: gh auth login) — install from https://cli.github.com first".
+   The panel is now drawn from `pair.steps()` and `pair.afterwards()`: each step's
+   commands, a note on steps that run only in some cases, the `pair --apply` command
+   with "performs steps 1–N above, in this order, and nothing else", and the "You do
+   afterwards" commands. The names are `OWNER/<project>` unless `gh` is signed in, in
+   which case the account is used; `init` asks no more of GitHub than that. The warning
+   comes from `pair.gh_state()` and is one of three catalogue sentences (not installed
+   → the install URL then `gh auth login`; installed but signed out → `gh auth login`;
+   could not be checked → GitHub's words), in English and Chinese. `init` still exits
+   0: it set up the local project, and the device code is the app's **Connect
+   GitHub**, as the README says. `doctor --online` keeps `wizard.gh_available()`,
+   whose detail is a single state.
+
+## D174 — A build's MCP calls go through the broker's MCP path, which writes each one to the evidence ledger before and after it runs; the receipt binds them
+
+**Date:** 2026-10-22. **Branch:** `fix/claims-round-2b`.
+
+**What was wrong.** The README says governed actions go to the append-only hash-chained
+ledger, and `broker/tools_mcp.py` said the ledger records an MCP call's result hash. The
+claims harness (C34a–C34g) found that a registered stdio MCP tool the Generator called
+during `crossaudit build` was allowlisted, budgeted, bounded and written to
+`.crossaudit/mcp/calls.json`, but never reached the ledger: `cli/build.py` called
+`mcp.MANAGER.call_agent` directly, so `evidence.jsonl` was not even created and the
+receipt carried no `tool_evidence` block. The same module docstring also said "the build
+never calls one", which was false.
+
+RULINGS:
+
+1. **The build reaches MCP only through `broker/tools_mcp.governed_mcp_call`, and that
+   function is the one place an MCP call is ledgered.** Before the call it appends a
+   `tool_call` entry; after it, a `tool_result` entry. Console chats run the same build
+   loop (`run_loop`), so they take the same path, and no other caller of `call_agent`
+   exists outside `tools_mcp.py`. Chosen over having `mcp.Manager` append to the ledger
+   because the broker owns the ledger and its vocabulary (`tool_call` / `tool_result`,
+   `tool`, `args_sha256`, `result_sha256`, `status`, the fields the Auditor's evidence view
+   and the audit panel already read), and because it makes the `tools_mcp.py` comment true
+   as rewritten: one module records both MCP entry points. The manager stays a protocol
+   client with no ledger dependency. Considered and rejected: sending the build's MCP
+   requests through `ToolBroker.execute` with the Level-4 `mcp_call` spec. Policy flags
+   Level 4 for approval and the standing Approval Service never grants it, so every MCP
+   call in a non-interactive build would be refused. That would remove a flow the README
+   documents, and it would ask a person to approve, call by call, tools they already
+   approved by name at registration. Per-call approval of build MCP calls remains possible
+   later; it is not part of this change.
+2. **Entry shapes (additive; `LEDGER_SCHEMA` is unchanged).** `tool_call` payload:
+   `tool: "mcp_call"`, `server_id`, `mcp_tool`, `args_sha256` (the same value as
+   `calls.json`'s `arguments_sha256`: sha256 of the bounded JSON arguments), `approval:
+   "owner_allowlist"`, `allowlisted`, `allowlist_sha256` (sha256 of the server's sorted
+   allowlist as it stood), `call_ordinal` and `call_budget` (the per-task budget position).
+   `tool_result` payload: `tool`, `server_id`, `mcp_tool`, `call_id` (the `calls.json`
+   row's id), `status`, `result_sha256` (equal to `calls.json`'s), `bytes`, `truncated`,
+   `duration_ms`. No argument value and no tool output enter the ledger. `calls.json` is
+   unchanged byte for byte; its result hash now comes from `mcp.result_evidence`, which
+   hashes the same serialisation of the same three fields.
+3. **A refusal is recorded too.** When the owner's policy refuses (server not registered
+   or not enabled, tool not allowlisted, budget spent, arguments not an object or too
+   large), `mcp.Manager.authorize` raises before anything runs. The ledger gets
+   `tool_call` with `allowlisted: false` and an empty argument hash, and `tool_result` with
+   `status: "refused"` and the policy's own sentence. A model-supplied server id or tool
+   name that does not have the registered shape is recorded as `""`, not copied. A
+   transport or protocol failure is recorded as `status: "failed"` without its reason,
+   because that reason can quote the server's stderr. `call_agent` runs the same
+   `authorize` first, so its refusals are unchanged.
+4. **The ledger refusing an append fails the call closed.** The first append happens before
+   the server is started, so a ledger that does not verify (D168) means the tool never
+   runs. If the second append is refused, the result is never handed back. The build loop
+   re-raises `IntegrityDenial` ahead of its `except Denial` branch, which turns a refused
+   tool call into a tool result the Generator works around. So the run stops; it does not
+   carry on without evidence.
+5. **The receipt and `verify` needed no change.** `receipt/build._tool_evidence` already
+   binds the ledger's head and count once the ledger exists, and `verify` re-derives the
+   chain and checks the bound prefix. An end-to-end test (`tests/test_mcp_evidence_ledger.py`)
+   registers a real stdio server, runs `run_loop` with a scripted Generator and the replay
+   auditor, and checks that the receipt's `tool_evidence.entries` is 2 and `cmd_verify`
+   passes. It then edits one ledger line and checks that `verify` refuses.
+6. **The request text in the run journal is documented, not removed.** The Generator's
+   streamed reply, which contains the MCP request, is kept in the run's event log in
+   `.crossaudit/runtime.sqlite3` (mode 600), which the console replays. Changing what that
+   journal keeps is a different decision. SECURITY.md now says where the text lives and
+   that the ledger holds hashes. It also gives the stdio environment allowlist's real size,
+   thirteen names (seven POSIX, six Windows runtime). D170's "eight-name allowlist" is
+   marked corrected.
+
+**Open.** Build MCP calls are approved by the owner's registration, not call by call
+(ruling 1). The evidence view the Auditor sees still projects only its existing fields, so
+the Auditor sees MCP calls as `mcp_call` rows with hashes and status, without server or
+tool names.
+
+## D175 — The terminal is the product: `crossaudit tui` is the interactive surface, the console is an optional viewer, the native macOS app leaves the main line, and the usage ledger records which surface each call came from
+
+**Date:** 2026-10-23. **Branch:** `feat/tui-first` (documentation on `feat/tui-docs`).
+
+**Why.** The owner decided on 2026-10-23 to make the terminal the product; the
+specification is `docs/design/TUI_FIRST.md`. Its §1 sets out the evidence. What
+CrossAudit proves lives in the audit core (deterministic checks, the git ledger,
+receipts, `verify`), and every README sentence the claims harness can test
+(`benchmarks/claims/`) is kept by the command line, not by the app. The native app
+is the one surface no harness reaches. It also has the largest security boundary (a
+bearer token that authorises local code execution, a WebKit shell, Keychain, an
+ad-hoc-signed DMG) and the most maintenance (a 10,000-line page string, Swift,
+PyInstaller, notarisation that never happened), and it has no measured users. The
+users the evidence points at, scientists whose pipelines run on Linux machines and
+clusters and people who already work in Claude Code or Codex, are in a terminal,
+and a terminal surface can be driven by the same harness under a pseudo-terminal.
+
+RULINGS:
+
+1. **The CLI and `crossaudit tui` are the product.** `tui` is the loop, live, in
+   the terminal, and the place where a person acts on it: cycles and findings with
+   their tier, the decision card, verify and admit, and a new task. It acts only
+   through the engine verbs that already exist: `build`'s `run_loop`, the D172
+   ruling path (`cycles/rulings.jsonl`, committed), and `verify`. It is never a
+   second implementation of any of them, never reads a provider key itself, and
+   never writes `state.json` directly. `crossaudit watch` stays read-only.
+2. **The browser console stays, as the optional local viewer.** It is started by
+   `crossaudit console` and keeps the token boundary D170 described. No native
+   shell is placed around it on the main line.
+3. **The native macOS app and its DMG leave the main line.** The code is kept
+   under `packaging/` and nothing in it is deleted. It is not built, not released,
+   and not in the README's front door; the README describes it in one section
+   near the end, "The native macOS app (not on the main line)", and the last DMG
+   remains on the v4.17.0 GitHub release. `docs/RELEASE_CHECKLIST.md` moves the
+   DMG steps to an optional appendix, and `scripts/release_gate.sh` runs the Swift
+   type-check only when `swiftc` is on `PATH`; without it, the gate prints one line
+   saying so and continues. SECURITY.md's "Desktop trust boundary" says the app is
+   not on the main line; the console paragraph D170 wrote is unchanged. Bare
+   `crossaudit` inside a project now suggests `crossaudit tui` first.
+4. **The usage ledger records the surface, and that is the measurement the
+   decision is revisited on.** Each `.crossaudit/usage.jsonl` row gains the
+   additive field `surface` (`cli`, `tui`, `console` or `app`), set at the entry
+   point, not guessed from the call stack; older rows read as `unknown`.
+   `usage.summary` gains `by_surface`, shown by `crossaudit --json status`. The
+   decision about the app is revisited on 90 days of that number.
+5. **The claims harness rows C37–C41 are the definition of done.** They are named
+   in `TUI_FIRST.md` §6 and the harness lives on branch `bench/claims-loop`: one
+   frame from `tui --once` naming a PASSED and an ESCALATED cycle without a
+   provider request or a browser; the pseudo-terminal walk with the terminal
+   restored; a ruling recorded from the decision card; the README's 60-second tour
+   run literally from a fresh venv ending in `BINDINGS VERIFIED`; and `surface`
+   rows from `build` and from the TUI with `by_surface` in `--json status`. Until
+   those rows pass, the README's `tui` and `surface` sentences are documented
+   behaviour, not checked behaviour, and the README says so.
+6. **Nothing in the audit core, the receipt or the ledger format changes.** The
+   `surface` field is additive to the usage ledger, which is not the evidence
+   ledger and is not bound by any receipt. Old receipts and ledgers verify as
+   before.
+
+**Open.** The number of measured users that brings the app back is not set.
+Keychain storage remains the app's path only; the CLI and the console read keys
+from the environment or the mode-600 keys file. (Remote MCP bearer tokens are still
+stored as macOS Keychain items by `mcp.py` on every surface; that is unchanged
+here.) The TUI was reviewed cold by the cross-vendor reviewer in round 2 of the
+review recorded in D176 (`benchmarks/reviews/2026-10-23-claims-rounds-1-2-terra-r2.md`)
+and its ruling path re-verified in the rounds after it.
+
+## D176 — The cross-vendor review of this release's changes, in rounds: every human ruling goes through one path on every surface (two phases joined by a local intent, as rulings 30–33 make precise), every configured key name leaves non-provider children, the ledger head cache is bound to the file's identity, a `key_env` that is not a key is refused, and the locks are held by the kernel
+
+**Date:** 2026-10-23. **Branch:** `feat/tui-first` (repairs on `fix/review-r1-keys-cache`
+and `fix/review-r1-rulings`, merged). **Evidence:**
+`benchmarks/reviews/2026-10-23-claims-rounds-1-2-terra-r1.md` (the review: DO NOT MERGE,
+three P1 and one P3) and `…-r2.md` (the second round, over the repairs and the TUI).
+
+**Why.** AGENTS.md §0 is the one law: no agent merges a change it wrote without an
+independent review by the other agent. The claims-loop rounds 1–2 (D167–D174) had
+reached 38 of 38 harness rows without that review. It was run on 2026-10-23 with the
+OpenAI side (`gpt-5.6-terra` through the Codex CLI, the subscription route, no API spend)
+over the diff `main..05e78f7` for `src/` and `tests/` and the decision records. It found
+what the harness, which checks README sentences from the outside, cannot see: three ways
+the audit record could disagree with the controller state or a child process could see a
+key, and one docstring that claimed more than the code did. The same day the same
+reviewer found six fail-open declaration shapes in the `science-ai4s` pack
+(`bench/ai4s-pack-v2`, recorded there in DESIGN.md Amendment 5 and
+`2026-10-23-ai4s-pack-v2-terra-r{1,2}.md`; round 2: MERGE).
+
+RULINGS:
+
+1. **A human ruling goes through one path, the same on every surface, and the ledger comes
+   first** *(the mechanism as first built; rulings 30–33 replace "one transaction" with
+   the two-phase protocol and a local intent)*. `StateStore.rule_escalation` validates under the store's lock without writing
+   (known cycle, ESCALATED, non-empty reason, reopen or close), calls the commit step,
+   and only then applies the state change and the `human_resolution` entry.
+   `rulings.record` appends the row to `cycles/rulings.jsonl` and commits exactly that
+   file; if the append, `git add` or `git commit` fails *and Git is positively known not
+   to have committed (`HEAD` read before and after, equal)* it restores the log byte for
+   byte (or removes it), runs `git reset -- <path>` so nothing stays staged, and raises
+   `IntegrityDenial`: "the ruling on cycle … could not be committed to the ledger (…);
+   the cycle stays ESCALATED and nothing was recorded" (Chinese parity in
+   `denials_zh`); any uncertainty keeps the intent and says so (rulings 33 and 36). `rulings.rule` wraps the two and performs the after-close settling
+   (`daemon.settle_closed_escalation`, `settle_human_wait`, moved out of the CLI) so a
+   close from any surface ends the run that was waiting. Callers: `cmd_resolve`,
+   `resolve_cycle` (the TUI), `talk`'s resolve lane, and both console branches of
+   `/api/escalation` (the provider-failure retry reopens through it before it starts a
+   build). Stop on a parked run closes the escalations that name it through the same
+   transaction; when that commit is refused the run is still cancelled and the cycle
+   stays ESCALATED for an explicit ruling. The row's `status_after` is derived from the
+   action, since the row is written before the state changes. `resolve_escalation`
+   remains for state-only callers (tests) and is no longer used for a human ruling by
+   shipped code. The ruling commit has its own 90 s bound (`rulings.COMMIT_TIMEOUT_S`,
+   each git step; `CROSSAUDIT_GIT_TIMEOUT` does not apply to it), inside the store
+   lock's 120 s abandonment window; a step that overruns is killed with its process
+   group (git and the hook it runs) and the `index.lock` the killed git held is removed,
+   with the narrow race that another git process could take that lock between the kill
+   and the removal. A Stop that cannot commit its close reports the refusal in the stop
+   result (`note`, `note_zh`) and on the TUI's stop line; a state-file read error during
+   Stop is now reported there too instead of being ignored.
+2. **Every configured key name leaves non-provider children.** `config.load` registers,
+   as soon as the roles parse, the `key_env` of the auditor, the generator and every
+   fallback row, and each named vendor's backup slot (`app_keys.register_key_names`);
+   `provider_key_names` unions that registry, so `child_env()` strips a key held under
+   `key_env: PROJECT_PROVIDER_SECRET` from Git, `gh`, OpenSSH and the Codex runtime
+   whether or not the caller holds a `Config`. A real Git child proves it in the test.
+   D170's open item on this point is closed for every name a loaded configuration
+   declares; a key under a name no loaded configuration declared is still not
+   recognised, and the docstring says so.
+3. **A `key_env` that is not a key variable is refused at load.** Because every
+   configured name is now stripped from children, `key_env: PATH` would take `PATH` away
+   from Git. The loader refuses a name that is not an identifier or that is one of the
+   variables every child needs (`PATH`, `HOME`, `TMPDIR`, `LANG`, `TERM`, `PYTHONPATH`,
+   the Windows equivalents, …) with "<role>.key_env must name a variable that holds only
+   a key; '<name>' is not one" (Chinese parity). Ordinary nonconventional names load.
+4. **The evidence ledger's head cache is keyed on the file's identity, and its docstring
+   is true.** The cache was trusted whenever the file had the size of the instance's
+   last write, so a same-size rewrite by another process was appended onto without
+   re-verification, while the docstring said correctness "never depends on the cache".
+   The key is now `(st_size, st_mtime_ns, st_ino)`; a rewrite in place, a truncation or
+   a file replaced by rename misses the cache and forces the authoritative scan. The
+   docstring states what remains: a rewrite that keeps the size, restores `st_mtime_ns`
+   exactly and stays on the same inode is appended onto, and the next `verify()`, which
+   never consults the cache, reports it. D168's "exactly the size its own last write
+   left" sentence is superseded by this record.
+5. **The review is the evidence, not the summary of it.** Each round's text is kept
+   verbatim under `benchmarks/reviews/` with the reviewer, the tree, the brief and the
+   verdict in a header; a decision record cites it rather than paraphrasing it.
+
+**Round 2** (`…-r2.md`, over the repairs above and the D175 work): DO NOT MERGE again,
+two P1, one P2, one P3, each reproduced by the reviewer and each repaired:
+
+6. **The restore after a failed commit puts back the exact prior bytes.** It had kept
+   only the prior length and truncated, so a rejecting hook that rewrote the log with
+   same-length bytes (or deleted or appended to it) left it changed while the refusal
+   said nothing was recorded. `rulings.record` now keeps the log's bytes before the
+   append and, on failure, writes them to a sibling temporary file, fsyncs it and
+   `os.replace`s it over the log (or removes the log if it did not exist), then unstages.
+   If that restore itself fails, the refusal says so and claims no atomicity: "… could
+   not be committed to the ledger (…), and cycles/rulings.jsonl could not be restored
+   (…); the cycle stays ESCALATED, but check it against git before ruling again".
+7. **One deadline for the whole ruling transaction, inside the lock's window.** The
+   90 s bound applied to each git step separately, so a slow clean filter on `git add`
+   plus a slow hook on `git commit` could hold the controller lock past its 120 s stale
+   threshold. `COMMIT_TIMEOUT_S` is now one budget started when the transaction starts
+   and shared by every git step (`config`, `add`, `commit`, `rev-parse`); a step with
+   nothing left fails at once; the cleanup after a failure gets `CLEANUP_TIMEOUT_S` (5 s)
+   per step on top; a test asserts budget plus cleanup stay below `LOCK_STALE_S`.
+8. **The controller lock is owned** *(superseded by ruling 16: the locks are now kernel-held)*. The lock file carries a token (pid, time, random
+   nonce); the holder re-reads it before writing state back and before releasing. A
+   holder whose lock was broken as stale and taken by another process does not write
+   its stale snapshot, does not unlink its successor's lock, and raises "the controller
+   lock was taken over by another process while this one held it (longer than the 120s
+   stale limit); this process's state change was discarded". When that happens after
+   the ruling's commit has landed, the ruling is in the ledger but the cycle's state did
+   not change, and the sentence says to rule on it again. The check and the write are
+   not one atomic step; the window is the microseconds between them, and it opens only
+   after the holder has already overrun the stale threshold.
+9. **The direct generator row is validated like every other role row.** `generator.key_env`
+   at the top level bypassed `_role()`, so `PATH` was accepted and registered (and then
+   stripped from every Git child) and a non-string value crashed later; one validator
+   (`_key_env_name`) now serves both paths. An absent `generator.key_env` still loads
+   with the default; an empty string is refused.
+10. **`surface` is declared by the entry point only.** `CROSSAUDIT_USAGE_SURFACE` let a
+    caller relabel a CLI invocation as `app`; no child `crossaudit` process writes usage
+    rows for another surface (the console and the TUI complete in their own process), so
+    the variable is removed. The README says the field is declared by the process's
+    entry point and that the usage ledger is local analytics, not evidence.
+
+**Round 3** (`…-r3.md`): the round-2 repairs verified, then two P1, one P2 and one P3,
+each reproduced and each repaired:
+
+11. **The rulings log must be a regular file inside the repository, and the committed
+    blob is checked.** `open(path, "a")` followed a symlinked `cycles/rulings.jsonl`
+    while `git add` committed the symlink itself, so a cycle closed with the ruling
+    written outside the repository and no row in the committed ledger. `record` now
+    checks every path component below the root down to the log without following links
+    and refuses a symlink anywhere there ("… is a symbolic link; the rulings log must be
+    a regular file inside the repository, so the ruling was not recorded"), opens the
+    log with `O_NOFOLLOW`, and after the commit reads the committed blob back
+    (`git cat-file blob HEAD:<rel>`, inside the deadline) and requires its last line to
+    parse to this ruling. If it cannot be confirmed (a clean filter or hook rewrote the
+    file), the state is not changed, the working file is set to the committed bytes, and
+    the refusal says the commit exists but could not be confirmed to contain the ruling;
+    the commit is not undone, since the ledger is append-only.
+12. **A stale controller lock is never broken automatically** *(superseded by ruling 16: stale locks no longer exist)*. Breaking a lock by age with
+    an unconditional unlink could delete a lock a live process had just taken (the
+    reviewer forced the interleaving: A sees B's lock as stale, B releases, C acquires, A
+    unlinks C's), and no ownership token repairs that. A lock older than `LOCK_STALE_S`
+    now refuses every state change with one sentence naming the lock, its holder's pid,
+    its age and the limit, and that `crossaudit doctor --fix` removes it when no
+    crossaudit process is running. `doctor` reports a stale lock and whether its pid is
+    alive; `doctor --fix`, interactive, removes it only when `os.kill(pid, 0)` says the
+    holder does not exist, re-reading the lock file just before. The trade-off, accepted:
+    a process killed while holding the lock no longer heals after 120 s; the next command
+    refuses until a person runs `doctor --fix` at a terminal (the console shows the
+    refusal; the README's troubleshooting says what to do). The ownership checks of
+    ruling 8 stay, reworded: a lock removed or replaced under its holder discards that
+    holder's state change.
+13. **A detached hook child cannot hold the ruling past its deadline.** A hook that
+    started a `setsid` child keeping Git's stdout and stderr made the post-kill
+    `communicate()` wait for that child. Git's output now goes to temporary files, its
+    stdin is `/dev/null`, and only Git's own exit is awaited, bounded; a child that
+    outlives Git neither delays the ruling nor misreports a Git that succeeded.
+14. **The module docstring says when its claim holds.** "A line that is in the file is a
+    line that is in git" is true once `record()` has returned; during a ruling,
+    `history()` may read the provisional line. The sentence now says so.
+15. **The evidence ledger's own lock follows the same policy** *(superseded by ruling 16)*. `ledger/chain.py` broke
+    its lock after 30 s by the same unlink, the same race, inside the audit core. Its
+    lock file now carries the owner token, release is ownership-aware, a stale lock is
+    refused with the same sentence shape (`LedgerError`), and `doctor`/`doctor --fix`
+    cover both locks through one module, `locks.py` (token, holder, liveness, stale
+    removal). A writer that crashes leaves the ledger refusing appends until `doctor
+    --fix` is run; the append still verifies the chain first (D168).
+
+**Round 4** (`…-r4.md`): the round-3 repairs verified, then one P1 and one P2, both in the
+lock primitive, both repaired:
+
+16. **The controller lock and the evidence-ledger lock are held by the kernel.** Every
+    scheme that checks a token and then unlinks a lock file by pathname (release,
+    `doctor --fix`'s removal) has a window in which another process has released and a
+    third has created a fresh lock that is then deleted; the reviewer forced all three
+    interleavings. So the primitive changed: one module, `locks.py`, opens the lock file
+    (`O_CREAT|O_RDWR`, never deleted; it persists inert between holders), takes
+    `fcntl.flock(LOCK_EX|LOCK_NB)` (POSIX; `msvcrt.locking` on Windows, unverified here)
+    with retries up to the existing timeouts, then requires `fstat` of the fd and `stat`
+    of the path to name the same file (a lock file replaced between open and flock is
+    released and retried), and writes the pid token for `doctor`'s report only; the
+    kernel decides ownership. Release is unlock-and-close; a holder that dies releases
+    with its process, so stale locks do not exist: `LOCK_STALE_S`, the stale refusals,
+    `remove_stale`, `doctor --fix`'s lock removal, the pre-write ownership check and the
+    "taken over" refusals are all gone (rulings 8, 12 and 15 are superseded). A live
+    holder makes an acquirer wait up to the timeout and then refuse, naming the holder's
+    pid ("could not acquire the controller lock; another process (pid N) is
+    mid-transaction"; "the evidence ledger is locked by another writer (pid N)").
+    `doctor` only reports who holds each lock. A test scans `src/` so that no delete of a
+    lock path can return.
+17. **CrossAudit never removes Git's `index.lock`.** After a killed Git, another writer may
+    already hold a new `index.lock`; only `next-index-<pid>.lock`, named by the killed
+    process, is removed. If `index.lock` remains, the timed-out refusal says it may have
+    been left by the killed git and how to recover by hand (remove it when no git is
+    running, then `git reset -q -- cycles/rulings.jsonl`, since our own unstaging could
+    not run while it existed).
+
+**Round 5** (`…-r5.md`): the kernel-held locks verified in their covered intervals, then
+one P1, one P2 and one P3, each repaired:
+
+18. **A "still current" check runs immediately before every protected write.** The inode
+    comparison of ruling 16 ran once, at acquisition, so a lock file replaced afterwards
+    (from outside CrossAudit, which no longer unlinks lock files) let a second writer
+    lock the new inode while the first held the old one, and the first could write a
+    stale snapshot over the second's state. `HeldLock.still_current()` compares the fd's
+    device and inode with the path's; `require_current()` is called by the controller
+    just before it writes state back and by the ledger just before its append writes,
+    and on a mismatch nothing is written: "the lock file … was replaced while this
+    process held the lock; this process's change was discarded" (Chinese parity). The
+    reviewer's sequence is the regression test for both locks; the second writer's
+    cycle, and the ledger's chain, survive.
+19. **The property is stated, not overstated.** `locks.py`'s docstring, the ledger's
+    module docstring (which still said `O_EXCL`) and the ruling test module now say the
+    same narrower thing: CrossAudit itself never unlinks a lock file (test-enforced); the
+    lock serialises CrossAudit's own processes; it does not defend against a writer with
+    access to `.crossaudit/`, who could as easily edit `state.json` or the evidence
+    ledger directly; a lock file replaced from outside is detected at acquisition and
+    again before each protected write, except within the microseconds between that
+    check and the write.
+20. **A filesystem without a usable lock service is a refusal, not a traceback.** `ENOLCK`,
+    `ENOTSUP`, a lock file that cannot be opened, or a missing locking backend surfaced
+    as a bare `OSError` through `main()`, which catches only `Denial` (network
+    filesystems are where this happens). `locks.acquire` now turns every
+    non-contention error into `ConfigDenial`: "this filesystem cannot provide the
+    exclusive lock CrossAudit needs at … (ENOLCK: …); use a project directory on a local
+    filesystem" (Chinese parity); only `EWOULDBLOCK`/`EAGAIN`/`EACCES`/`EDEADLK` from the
+    lock call itself still mean contention. A failure to create the lock file's
+    directory is still a plain `OSError`.
+
+**Round 6** (`…-r6.md`): the round-5 repairs verified and the lock property judged
+honestly scoped; no blocking finding; two P2 and one P3, repaired on this branch (the
+verification is the next round, cited here only once its text exists):
+
+21. **Creating a missing parent directory is a refusal, not a traceback.** A regular file
+    at the path where `.crossaudit/` (or the ledger's or lock file's directory) should
+    be made `mkdir` raise `FileExistsError` through `main()`, which catches only
+    `Denial`. Every such creation site (`controller/state.py`, `locks.py`,
+    `ledger/chain.py`) now goes through one helper, `locks.ensure_directory`, that turns
+    the error into a `ConfigDenial`, one literal sentence per kind of file so each is
+    translated whole: "the directory … for the controller state (/ the evidence ledger
+    / the lock file) could not be created (EEXIST: …); check the path is a directory you
+    can write" (Chinese parity), with a regression through `main()` in English and
+    Chinese. `rulings.py`'s own directory creations were already answered by the
+    ruling's refusals.
+22. **This record no longer cites a review round before it exists.** The previous text
+    said "rounds 3 to 6 verified the repairs" while round 6 was still running and then
+    found these items; the reviewer named that as an overclaim. A round is cited here
+    only once its text is in `benchmarks/reviews/`.
+23. **Two more retained descriptions stop saying `O_EXCL`.** `tests/test_enterprise_race.py`
+    and `docs/AGENTIC_RUNTIME_PHASE0.md` describe the locks as kernel-held file locks
+    and their line references are brought up to date.
+
+**Round 7** (`…-r7.md`): the round-6 repairs verified; "no P1 fail-open path found"; two
+P2 and one P3, repaired on this branch (the verification is the next round, cited only
+once its text exists):
+
+24. **The state write and the ledger write refuse legibly on any operating-system
+    error.** An existing but unwritable `.crossaudit/` made `StateStore._write` raise a
+    raw `PermissionError`; a read-only `evidence.jsonl`, or a directory replaced right
+    after the lock's still-current check, did the same in `EvidenceLedger.append`. Each
+    path (temp open, write, fsync, rename, directory fsync) now raises `ConfigDenial`:
+    "the controller state at … could not be written (EACCES: …); check the directory and
+    file are writable" / "the evidence ledger at … could not be written (…)" (Chinese
+    parity). A failed ledger write truncates the file back to its prior length, so no
+    partial line remains for the next append to build on; if that truncation itself
+    fails, the existing torn-tail refusal stops the next append. Before a ruling's
+    commit, `rule_escalation` probes that the state can be written (it creates and
+    removes the same temp file), so a ruling is not committed to git and then left
+    without its state change; a failure that appears only between the commit and the
+    write was still possible and, as round 8 found, was reported only as the write
+    refusal (the sentence this text had promised for that case no longer existed): see
+    ruling 27.
+25. **`main()` has a last resort for operating-system errors.** Any `OSError` that no
+    specific refusal caught becomes one sentence in the resolved language, "an
+    operating-system error stopped this command: … (EIO) at …", with the configuration
+    denial exit code and no traceback (with `--json`, a `denied` object of kind
+    `os_error`). There is no debug switch; none was added.
+26. **D175's open item is current.** It said the TUI had not had a cross-vendor review;
+    it now cites round 2 and the rounds after it.
+
+**Round 8** (`…-r8.md`): the round-7 repairs verified; one P1 and two P2, repaired on this
+branch (the verification is the next round, cited only once its text exists):
+
+27. **A ruling committed to the ledger whose state change could not be written is
+    reconciled from the ledger, never ruled twice.** A write that fails after
+    `rulings.record()` has committed (the reviewer failed the state file's `fsync` with
+    `ENOSPC`) left the ruling in git and the cycle ESCALATED, reported only as "the
+    controller state … could not be written", so a person could rule again and commit a
+    second, conflicting ruling. Now: the failure sentence names the committed sha and
+    says the state is unchanged and that ruling again applies the committed ruling;
+    `rulings.rule`, before recording anything, reads the committed `cycles/rulings.jsonl`
+    (the blob at `HEAD`, not the working file) for a ruling that answers this cycle's
+    current escalation and that the state does not yet reflect, and if there is one it
+    applies that ruling's state change (`StateStore.apply_committed_ruling`, the same
+    locked path, history marked `reconciled`, the same settle on close) and reports it
+    instead of writing a new row; a request for the other action is refused, the
+    committed ruling stands, and the cycle is no longer ESCALATED. "Answers" is exact,
+    not a clock comparison: every escalation records `escalated_at` and every ruling row
+    copies it, so a ruling is applied only to the escalation it was made for, even when
+    a cycle is ruled on and re-escalated within one second; a cycle escalated before this
+    field existed is matched only by a row strictly later than its `updated_at`, and a
+    same-second ruling on such a cycle is not recognised (a second ruling is then
+    allowed, as before) rather than applied to the wrong escalation. `status` shows a
+    cycle in that condition as "ruling committed, state pending" and changes nothing.
+    `resolve`, the TUI, the console, Stop and `talk`'s resolve lane all rule through
+    `rule()`, so all reconcile the same way. The ledger is the record; the state follows.
+28. **The credentials-file bootstrap is inside `main()`'s OS-error boundary.** An
+    unreadable `CROSSAUDIT_KEYS_FILE` (mode 000) raised `PermissionError` before the
+    boundary and tracebacked; the post-parse bootstrap (the keys file and the bare
+    invocation's setup prompt) now runs inside it (English, Chinese and `--json`
+    tested), so a refusal raised there is caught as well.
+29. **The ledger's `os.close` is inside its conversion, with wording that does not claim
+    the entry was not written.** A close that fails after a successful write raised a raw
+    `OSError` although one valid entry was on disk; the sentence for that case says the
+    entry may have been recorded and that the next append verifies the chain.
+
+**Round 9** (`…-r9.md`): the round-8 repairs verified in the serial case, then one P1 in
+three parts and two P2, repaired on this branch (the verification is the next round,
+cited only once its text exists):
+
+30. **A ruling is two-phase, with a local intent, and reconciliation applies only what
+    this controller intended.** Ruling 27's reconciliation read the committed log before
+    the controller lock (two resolvers could commit opposite rulings), treated an
+    unreadable log as "no pending ruling" (fail-open), and applied any syntactically
+    valid committed row, which anyone able to commit to the audit repository could forge
+    without access to the local state. Now, all under the controller lock: (1) the
+    intent — cycle, action, reason hash, who, a random nonce — is written into the local
+    state store first; if that write fails, nothing is committed; (2) `rulings.record`
+    appends and commits the row, which carries the intent's nonce; (3) the state change
+    is applied and the intent cleared in one write. If (3) fails, the refusal names the
+    committed sha and the intent stays. Recovery, also under the lock, at the next ruling
+    on that cycle: the committed log at `HEAD` is read (a log that exists but cannot be
+    read or parsed is an `IntegrityDenial`, never "nothing pending"; a repository with
+    no commit yet, or no log at `HEAD`, reads as no rows, else an intent left before the
+    very first commit could never be recovered); a committed row with the intent's nonce
+    is applied and reported as reconciled, with no new row; an intent with no committed
+    row (the process died between phases) is cleared and the new ruling proceeds as a
+    fresh one, saying so; a refused commit clears its intent; a matched row on a cycle
+    that is no longer ESCALATED only clears the intent; a request for the other action
+    while a committed row stands is refused. `record()` refuses a nonce that is not the
+    cycle's current intent. The timestamp heuristics of ruling 27 (`escalated_at`,
+    `updated_at`) are gone from the authority path; the nonce identifies the escalation
+    exactly, for legacy cycles too. Round 7's writability probe is gone as well: the
+    intent's own state write is that probe.
+31. **A committed row this controller did not intend is never applied.** Such a row is
+    listed by `status` as "ruling row in the ledger not made by this controller (sha)",
+    in English and Chinese; an explicit human ruling still proceeds and supersedes it,
+    and the ledger shows both rows. A repository writer can add lines to the log; they
+    cannot make this controller act on them. What `status` lists is a display rule, not
+    authority: only rows on a cycle that is ESCALATED now; a row whose `escalated_at`
+    names an earlier escalation is shown as history; a row written before the `intent`
+    field existed, on a cycle that has since re-escalated, is labelled foreign although it
+    was genuine, and a hand-made row whose line and commit subject do not match what
+    `record()` writes shows "?" for its sha.
+32. **The words match the mechanism.** "Failure-atomic" and "never ruled twice" are
+    replaced, here and in the README and CHANGELOG, by what holds: a ruling's commit and
+    its state change are two phases joined by a local intent; a failure between them is
+    recovered from the intent at the next ruling, and the person is told at each step
+    what was and was not recorded.
+
+**Round 10** (`…-r10.md`): the round-9 sequences verified, then three P1 inside the intent
+mechanism and one P2, repaired on this branch (the verification is the next round, cited
+only once its text exists):
+
+33. **Every post-commit uncertainty keeps the intent; only a commit that definitely did
+    not land clears it.** A commit that landed but whose confirmation read then failed
+    cleared the intent as if nothing had been committed, so the next ruling wrote a
+    second row. Now every refusal `record()` raises says whether the commit landed:
+    "no" (nothing reached git, or `git commit` failed and `HEAD` equals the value read
+    just before; the log is restored and unstaged), "uncertain" (`git commit` failed but
+    `HEAD` moved or could not be read; nothing is restored, and the refusal says the
+    ruling may have been committed) or "yes" (the commit landed but the read-back failed
+    or showed a different row). The intent is cleared only for "no"; every other
+    outcome, including an unmarked exception, keeps it for the next ruling's strict
+    recovery. "No commit yet" is accepted only for a positively identified unborn `HEAD`
+    (`git symbolic-ref` names a branch that `git show-ref` does not find); every other
+    failure of `rev-parse`, `ls-tree` or `cat-file` is the "committed rulings log could
+    not be read" refusal, never an empty list. The "may have been committed" sentence
+    has no test: nothing yet makes `git commit` fail while `HEAD` moves.
+34. **The nonce, the action and the reason hash are bound to the committed row.**
+    `_confirm_committed` compared four fields and not the `intent`, so a filter or hook
+    could change the nonce while the state change still applied; recovery matched only
+    the cycle and the nonce, so a writer of `.crossaudit/state.json` could pair a forged
+    intent with a committed row and have that row's action applied. Confirmation now
+    compares the complete canonical row including `intent` (everything `record()`
+    wrote except `commit`); rows now carry `reason_sha256`; recovery requires the row's
+    cycle, nonce, action and reason hash (the field, and `sha256` of the row's reason) to
+    equal the stored intent's and the action to be a valid resolution, else nothing is
+    applied, the mismatch names the fields and the intent stays. A consequence,
+    accepted: a filter or hook that changes a committed row's action or reason but keeps
+    its nonce leaves that cycle refusing every later ruling until the repository (or the
+    local state, by hand) is repaired; no command offers a way out, because the way out
+    would be to act on a row this controller did not intend. The
+    state file is not an authority boundary (`locks.py` says so); binding every field the
+    intent carries to the committed row is what keeps a forged intent from doing
+    anything a committed row does not already say.
+35. **This record's older wording is corrected.** The title and ruling 1 said "one
+    failure-atomic transaction"; they now say what rulings 30–33 built.
+
+**Round 11** (`…-r11.md`): the round-10 repairs verified in their tested paths, then
+three P1, all in how uncertainty is read, and one P2, repaired on this branch (the
+verification is the next round, cited only once its text exists):
+
+36. **An unreadable `HEAD` never proves anything.** The pre- and post-commit reads of
+    `HEAD` returned "" on failure, so two failed reads compared equal and a landed commit
+    was marked "did not land", its intent cleared, the log "restored" over a committed
+    row. Each read now carries its status; the intent is cleared, and the log restored,
+    only when both reads positively succeeded and are equal; any unreadable check is
+    "uncertain": nothing restored, nothing reset, the intent kept.
+37. **"Branch absent" means Git said so.** Strict recovery accepted any non-zero
+    `show-ref` as the unborn-branch case. Only Git's own "ref missing" result (exit 1
+    with no error text) does now; every other failure is the "could not be read"
+    refusal.
+38. **A committed row for the current escalation that does not match completely is a
+    refusal, not "no row".** A clean filter that rewrote the nonce produced a row that
+    was no match; recovery then assumed no commit, cleared the intent and wrote a second
+    ruling. "The current escalation" is defined by committed-log order, never by
+    timestamps: the intent records `rows_before`, the committed log's length when it was
+    written (which needs a strict read of the log before every ruling; a log that cannot
+    be read refuses before anything is written), and recovery looks only at this cycle's
+    rows after that point. Among them, a complete bound match (nonce, action, reason
+    hash) is applied; any other row refuses with the mismatch sentence, naming `intent`
+    among the fields, and keeps the intent (repairing the repository is the way out, as
+    for ruling 34); no rows at all clears the intent and the ruling proceeds as a fresh
+    one. An intent written before `rows_before` existed falls back to "rows after the last
+    row whose nonce this controller applied". A foreign row on an earlier, already-ruled
+    escalation is therefore only listed by `status` and never blocks. The HEAD reads of
+    ruling 36 go through one function, `rulings.read_head`, which the strict reader
+    shares; a positively unborn `HEAD` reads as "no commit" so a hook refusing the very
+    first ruling in a fresh repository still counts as "did not land".
+39. **The three documents are qualified.** README, CHANGELOG and ruling 1 said a failed
+    commit means "nothing is recorded"; they now say that holds when Git is positively
+    known not to have committed, and that uncertainty keeps the intent.
+
+**Round 12** (`…-r12.md`): the round-11 repairs verified and no path left that clears an
+intent after an unreadable read; one P1 and one P2, repaired on this branch (the
+verification is the next round, cited only once its text exists):
+
+40. **Authority over recovery comes from committed, verified data; the local state is a
+    hint.** Rulings 30–38 let the intent's fields and the `rows_before` cursor, both in
+    the mutable local state, decide which committed row applies and whether a prior
+    commit existed; a writer of `.crossaudit/state.json` could move the cursor to hide a
+    committed ruling and cause a second one, or shape an intent to make a foreign row
+    apply — exactly what `locks.py` says the state file cannot be trusted to prevent.
+    Now a ruling row is signed with the project's Ed25519 key — the receipt key,
+    `crypto.keys.load_or_create`, created on first use as receipts create it; for
+    rulings the signing is fail-closed: a key that cannot be loaded or created refuses
+    the ruling and writes nothing — over its canonical bytes (`keyid` inside, `sig` and
+    `commit` outside), and carries `escalation_commit`, the identity of the escalation it
+    answers, established from git, not from the state: the commit that introduced this
+    cycle's highest-round receipt at `HEAD`, advanced to the commit of each verified
+    ruling that follows, so every escalation after a ruling has a distinct identity even
+    without a new receipt (a cycle with no committed receipt, a build or provider stop,
+    starts at the empty identity and advances the same way; the escalating round's
+    receipt says BLOCKED, so the verdict itself is not the fact checked). Recovery reads
+    the committed log strictly and walks it in order: a row naming the current identity
+    must verify with the project public key and carry a valid action, else it is refused
+    by name and never skipped; the last verified row is applied if the cycle is
+    ESCALATED and the state does not reflect it, whatever the local intent says; no
+    candidate means the new ruling proceeds. The local intent remains only for the "an
+    earlier attempt left no commit" message and for `record()`'s nonce check;
+    `rows_before` is gone. Cost: a ruling, and `status` for an escalated cycle, reads
+    every receipt at `HEAD`.
+41. **Unsigned and legacy rows are history, not authority.** A row with no signature or
+    no `escalation_commit` (written before this ruling) is never a recovery candidate;
+    `status` lists it as unverified. A repository writer can add rows to the log, with
+    or without a forged signature; without the project's private key none of them
+    verifies, and none is acted on.
+42. **The earlier-escalation test uses the real shape.** The foreign row in
+    `test_a_foreign_row_on_an_earlier_escalation_is_listed_and_does_not_block` now
+    carries the first escalation's `escalated_at` and `escalation_commit`, as a prior real
+    ruling would, and the test asserts it stays in ordinary history while the new
+    escalation proceeds.
+
+**Round 13** (`…-r13.md`): the round-12 repair verified for every covered case; the one
+residual this record had kept open is named as a blocker (a writer of the state file
+could obtain two signed `reopen` rows for one escalation), with two P2; repaired on
+this branch (the verification is the next round, cited only once its text exists):
+
+43. **An escalation is a committed, signed row, and a ruling answers that row.** The
+    identity of ruling 40 came from the commit that introduced the cycle's latest
+    receipt, advanced by each verified ruling; git could not tell a verified `reopen`
+    whose state write failed from a `reopen` followed by a new stop that left no
+    receipt, so the mutable `ruling_intents` decided. Now, when the controller
+    escalates a cycle (round budget spent, auditor escalation, generator produced
+    nothing, provider failure), it appends an `escalation` row to `cycles/rulings.jsonl`
+    — cycle, kind, reason, round, active sha, a nonce — signed with the project key, and
+    commits exactly that file, as a ruling is. The cycle's current escalation identity
+    is the commit of its latest committed `escalation` row; a ruling row carries that
+    commit as `escalation_commit`, and recovery applies a verified ruling answering the
+    current identity whenever the state does not reflect it, for `close` and `reopen`
+    alike, consulting no local state. A new stop after a reopen appends a new escalation
+    row, hence a new identity, so a recovered `reopen` can never reopen a later stop.
+    If the escalation row cannot be committed, the cycle still escalates (escalation is
+    the fail-closed outcome and never fails to happen) with an empty
+    `escalation_commit` and the cause in `escalation_error`; every ruling on it first
+    retries committing the row and, if that still fails, refuses by name ("the escalation
+    of cycle … is not committed to the ledger (…); rule on it after the repository is
+    repaired"), so the cycle proceeds once the repository is repaired. The state's
+    `escalation_commit` is a gate, never authority: a ruling requires it to equal git's
+    latest verified escalation row (which also catches a history rewrite that removed
+    that row), and editing the state can block a ruling but cannot make any row apply.
+    A cycle escalated by an older version has no row; its next ruling commits the row
+    then and proceeds. The row is committed under the controller lock, bounded like a
+    ruling's commit. The receipt-based identity and `ruling_intents` are gone; `status`
+    shows each escalated cycle's escalation commit or "escalation not committed (why)".
+    Because escalation rows are commits, `HEAD` moves; `run` and `audit` now take as
+    their parent the nearest commit that is not ledger-only (`gitio.past_ledger_commits`
+    walks back past commits touching only the ledger directory: escalation rows, audit
+    reports, receipts), and provider stops anchor the same way, so a child of such a
+    commit continues its cycle instead of opening a new one and cannot route around the
+    escalation lock. That is a behaviour change: before, a `run` on a child of a report or
+    receipt commit opened a new cycle.
+44. **A project's signing key is not recreated once anything is signed.**
+    `load_or_create` created a fresh key whenever the seed was missing, so a lost or
+    replaced seed left every earlier signed row (and receipt) unverifiable as "no valid
+    signature", with no keyring to fall back on. Now the key is created implicitly only
+    when the project holds no signed artefact (no `receipt.dsse.json` under the ledger
+    directory and no `sig` in the rulings log); otherwise a missing seed is refused: "the
+    project signing key at … is missing but signed rulings or receipts exist; restore it
+    from your backup, since a new key would not verify them" (Chinese parity). Receipt
+    signing stays fail-open as before: with the seed missing and artefacts present, the
+    receipt is left unsigned and no second key is created. Rotation is unsupported and
+    said so; a public-key history is not built here.
+45. **The two documents are qualified.** README and CHANGELOG say that every ruling line
+    written from this version on is signed, that older lines are listed as unverified,
+    and that the recovery "instead of writing a second one" rests on the committed
+    escalation row of ruling 43.
+
+**Round 14** (`…-r14.md`): the round-13 identity repair held in every targeted case and
+no tested path remains for two committed rulings on one committed escalation; two P1 in
+the new code and one P2, repaired on this branch (the verification is the next round,
+cited only once its text exists):
+
+46. **An escalation whose ledger confirmation fails is still an escalation.** After a
+    successful `git commit` of the escalation row, a `git cat-file` confirmation that
+    timed out or could not start raised the internal step error unwrapped; no caller
+    catches it, the state write was abandoned and the cycle stayed OPEN. The whole
+    post-commit path (`rev-parse`, the confirming `cat-file`, the parse, the comparison)
+    is now inside the conversion: any failure there records ESCALATED with an empty
+    `escalation_commit`, the cause in `escalation_error` and the row's nonce in
+    `escalation_nonce`, exactly as a failed commit does; the next ruling's retry first
+    looks at `HEAD` for a verified escalation row with that nonce and adopts its commit,
+    so a row that did land is never written twice; while the log cannot be read, the
+    ruling refuses by name. A last-resort catch means escalation never fails to happen.
+47. **The lineage walk has no silent cap.** `gitio.past_ledger_commits` stopped after 64
+    ledger-only commits and returned the last ledger commit, so a work commit following
+    a long run of reports, receipts and escalation rows found no cycle and opened a new
+    one, past the pending-decision lock. The walk now has no cap: it continues to the
+    first commit that is not ledger-only, or to the repository's first commit.
+48. **README and CHANGELOG state the exception.** "Every committed escalation or ruling
+    row written by this version is signed; an escalation whose row cannot be committed
+    stays ESCALATED and cannot be ruled on until the repository is repaired."
+49. **A ledger-row commit is bounded by the smaller of 90 s and the configured git
+    timeout.** The release gate (a 30 s per-test cap) caught it: a work commit that had
+    just timed out through a hung pre-commit hook (`CROSSAUDIT_GIT_TIMEOUT=2`) was
+    followed by the escalation row's commit running the same hook for its full 30 s
+    under the controller lock, because the row budget was the 90 s of ruling 7 alone.
+    `rulings.row_budget()` is now `min(COMMIT_TIMEOUT_S, CROSSAUDIT_GIT_TIMEOUT)` for
+    escalation and ruling rows alike, the timed-out refusal names the actual budget, and
+    ruling 7's sentence that `CROSSAUDIT_GIT_TIMEOUT` does not apply is superseded: the
+    owner's bound on git applies to rows too, capped at 90 s for the lock's window. The
+    README's row for the variable says so.
+
+**Round 15** (`…-r15.md`): the round-14 repairs verified, and no inspected
+CrossAudit-controlled route left for a lost escalation, two committed rulings on one
+committed escalation, or a run around a pending decision; one P2 and one P3, both in
+tests, repaired on this branch (the verification is the next round, cited only once its
+text exists):
+
+50. **The row-budget regression exercises a ruling.** The test proved `row_budget()` and
+    then searched function source for the call, which a mutant with a comment would pass
+    while holding the lock 90 s. It now installs a hung pre-commit hook with
+    `CROSSAUDIT_GIT_TIMEOUT=2`, rules, and asserts the elapsed bound and "git commit
+    timed out after 2s"; the escalation-hook test stays.
+51. **The ruling-timeout docstring states the minimum-of-two bound.** It said the ruling
+    has its own 90 s bound "instead of git's 240 s", which ruling 49 superseded.
+
+**Round 16** (`…-r16.md`): the round-15 repairs verified (the executable row-budget test
+goes red under the mutant), and the reviewer, having reviewed rounds 1 to 15, found
+nothing that blocks the merge under AGENTS.md §0–§1 and no overstatement in D175, D176,
+the README or the CHANGELOG. **VERDICT: MERGE.** The branch merges under the one law
+with that review on record; the sixteen texts are the evidence.
+
+**After the verdict: what the pull request's CI found** (PR #7 at 47cba44; the `quality`
+job, which configures no git identity, and `test (ubuntu-latest, 3.13)`):
+
+52. **Every ledger-row commit carries an explicit identity.** The escalation and ruling
+    rows ran `git commit` with no `-c user.name`/`user.email`, unlike the product's work
+    commits, so on a machine with no git identity every escalation and ruling failed
+    with "Author identity unknown", escalations read "not committed", and the console
+    refused rulings. The rows now commit with the repository's configured identity when
+    both name and email are set, else `CrossAudit <crossaudit@local.invalid>`, the same
+    default the broker's work commits use; the row's `by` records the identity the
+    commit carries — made true by ruling 55, since `-c` alone does not. The suite is
+    run, and green, both with and without any git identity on the machine.
+53. **Cycle order breaks a same-second tie by recorded order.** `_ordered_cycles` sorted
+    by the latest history event's time, which is whole seconds, with the hash id as the
+    tie-break, so two builds inside one second ordered arbitrarily and the TUI's "newest
+    first" was wrong on a fast runner. The key is now (time, position of the cycle's last
+    event in the history, id); the history's resolution is unchanged, being the state
+    format.
+
+54. **The TUI was walked as a person before it was called usable, and three things were
+    fixed** (`cli/tuiapp.py` only; no audit-core file). On a 24-line terminal the 38-line
+    frame was clipped silently in the middle; the body (decision card and cycles) now
+    scrolls — the view follows the selection, `PageUp`/`PageDown` and `u`/`d` page, and
+    the first or last body line says "… N more lines (PageDown)" / "… N more lines above
+    (PageUp)" (Chinese parity) — and a frame is exactly the terminal's height
+    (`--once` still prints everything). A stdout that cannot encode `·` (an ASCII or
+    cp1252 console) raised `UnicodeEncodeError`; each glyph now falls back separately
+    to ASCII (`·`→`-`, `≈`→`~`, `❯`→`>`, `…`→`...`, `─`→`-`, `↑`→`^`, `↓`→`v`), under
+    GBK only `❯` falls back, and every write replaces what the codec cannot encode
+    instead of raising. Ctrl-C at the task, reason or admit prompt cancelled the whole
+    TUI; it now cancels the prompt and says so. Found on the way: `PageDown` is a
+    four-byte escape sequence and the key reader stopped at three, so it never worked.
+    The walk's evidence: every key answered in 1–209 ms, help/expand/verify/later/quit
+    exited 0 with `stty -g` unchanged, a frame in 0.75 s, a legible sentence and exit 20
+    outside a project.
+
+**Round 17** (`…-r17.md`): the CI repairs and the TUI changes verified in their tested
+cases; one P2 and one P3, repaired on this branch (the verification is the next round,
+cited only once its text exists):
+
+55. **A row's identity is resolved once and forced onto the commit.** `-c user.name`
+    does not override `GIT_AUTHOR_*`/`GIT_COMMITTER_*`, so with those variables in the
+    environment the commit named one person and the signed row another. The identity
+    is now resolved in one place — `GIT_AUTHOR_NAME`+`GIT_AUTHOR_EMAIL` when both are
+    set, else the repository's `user.name`+`user.email` when both are set, else the
+    default — and the row commit runs with all four `GIT_AUTHOR_*`/`GIT_COMMITTER_*`
+    variables set to that tuple (and `-c` as well), so the row's `by`, the commit's
+    author and its committer are the same string; tests set conflicting ambient
+    variables for both the default and the configured case. The identity is visible to
+    hooks, which is intended.
+56. **`render()`'s docstring states what it depends on.** Equal text holds for the same
+    arguments and the same three settings it reads and never changes: the current
+    language (`i18n.language()`), the stdout encoding (glyphs the stream cannot encode
+    fall back to ASCII) and the colour setting (`tui.coloured()`: a TTY without
+    `NO_COLOR`). It reads no clock, no file and no key, and writes nothing. Round 18
+    named the colour half, which the first wording had left out; round 19 named the
+    language and the "no terminal" overstatement in the module docstring, both now
+    corrected (the round-18 record's header had called the earlier amendment complete;
+    it was not).
+
+57. **A `git log` that cannot answer during a ruling is a refusal, never "no commit".**
+    `commit_of()` locates the commit that carries a row with a bounded `git log`
+    (CLEANUP_TIMEOUT_S, 5 s). It returned "" on a timeout, a failure to start or a
+    non-zero exit, and the recovery paths read that "" as "no commit": after an
+    escalation whose row had committed but whose confirmation had failed, the next
+    ruling's lookup failed once on the pull request's CI (ubuntu, Python 3.12; the
+    three sibling runs and the previous head passed), `_escalation_already_committed`
+    found nothing, and `record_escalation` wrote the escalation row a second time --
+    two verified escalation rows for one escalation, the duplication ruling 43 exists
+    to prevent. Now `commit_of(strict=True)` raises the same refusal `committed_rows`
+    gives ("the committed rulings log could not be read (git log timed out after 5s);
+    no ruling is made until it can be"; one sentence, one Chinese entry) and the
+    recovery and ruling paths (`_escalation_already_committed`, `escalation_identity`,
+    `assess`) call it strictly: the ruling is refused by name, nothing is written or
+    committed, the nonce stays in the state, and the next ruling recognises the row
+    at HEAD once git answers. The display paths (`status`, the informational commit
+    on a reconciled row) stay lenient. The timeout sentence now names the bound in force
+    for the step, carried on its deadline (`_until(budget)`): the row budget for a
+    row's own steps -- the number the person configured, whatever earlier steps of the
+    same row consumed, as `test_a_slow_filter_plus_a_slow_hook_share_one_deadline`
+    holds -- and 5 s for a lookup or confirmation, which used to be reported as the
+    row budget too (a deadline built elsewhere names the time that was left, rounded
+    up); a step reached with its deadline already passed is refused without
+    starting git and says so ("git commit was not started: its time budget was
+    already spent"), naming no number, where it used to say "timed out after 90s"
+    (round 20's finding). The ruling's own post-commit confirmation used to run under
+    the greater of the row's remaining deadline and a 5 s floor, so a hung read could
+    be waited on for the row budget and its sentence named that budget (round 21's
+    finding); it now has its own 5 s deadline, as the escalation row's confirmation
+    always had, and a real hang after the commit (a post-commit hook starts it) is
+    refused within seconds, `commit_landed=yes`, and recovered by the next ruling. The lookup for an escalation row no longer runs the ruling-subject
+    fallback, which could never match it. `tests/test_commit_lookup_fails_closed.py`
+    drives a real hanging `git log` through a PATH shim and names four mutations
+    (the lenient lookup on recognition; the lenient identity in `assess`; the budget
+    in the sentence; strict by default on the display path). What stays open: why
+    that one `git log` failed on that runner is not known; the repair makes the
+    failure a refusal rather than a duplicate, whatever its cause.
+
+**Round 18** (`…-r18.md`): the round-17 repair verified in both scenarios; the
+`GIT_AUTHOR_*` precedence lets the launching environment choose the `by` attribution
+but not forge or authorise a ruling, since the signature and the committed escalation
+lineage decide; nothing since round 16 is unjudged. **VERDICT: MERGE.** One P3 on
+wording, amended (incompletely, as round 19 found).
+
+**Round 19** (`…-r19.md`): the round-18 record and the Ctrl-C test repair (the wrapper
+shell under Linux's dash) verified: the repair is sound for bash 3.2 and dash, the
+mutation still fails, `-m` hides no product defect. Two P2s: the amended `render()`
+claim still omitted the language and the module docstring still said "no terminal";
+the Ctrl-C test accepted any non-zero exit where its D10 says 20. **VERDICT: DO NOT
+MERGE.** Both corrected (ruling 56; the test asserts 20). The same push's CI failed
+once on a path no round had seen, repaired as ruling 57.
+
+**Round 20** (`…-r20.md`): ruling 57's repair judged sound and more fail-closed -- a
+successful `git log` with no match is still "", not a refusal; the first two mutations
+reproduced; the causal account fits the CI evidence and no other mechanism for the
+third row was found in the old or the new code; the round-19 repairs correct; Chinese
+parity present. One P2: a step reached with its deadline already passed still said
+"timed out after 90s". **VERDICT: DO NOT MERGE.** Corrected above (ruling 57).
+
+**Round 21** (`…-r21.md`): the expired-before-start path and the slow-filter case
+verified; the deadline subclass judged numerically harmless and preserved through
+`max()` and the test wrappers; parity rendered in Chinese. One P2: the records said
+"5 s for a lookup or confirmation" while the ruling's own confirmation ran under the
+greater of the row's remaining deadline and the 5 s floor. **VERDICT: DO NOT MERGE.**
+Corrected above (ruling 57): the confirmation has its own 5 s deadline, with a real
+hang test.
+
+**Round 22** (`…-r22.md`): the round-21 repair judged more fail-closed (a slow but
+healthy read-back can now refuse after 5 s where it used to proceed; the commit
+stands, the intent stays, the next ruling reconciles it), the real hang test and its
+mutation reproduced, every Git step's budget enumerated and found as ruling 57 says,
+parity present, nothing unjudged. **VERDICT: MERGE**, no finding.
+
+**Round 23** (`…-r23.md`): the pull request's CI then failed one test on the round-22
+head -- `test_ruling_intent_binding` still passed the deadline argument ruling 57's
+repair had removed from `_confirm_committed`, a file neither the author nor round 22
+had run -- adapted in a test-only commit; round 23 confirmed the adaptation proves what
+it did, that no stale caller of the changed signatures remains anywhere, and that the
+round-22 record is faithful byte for byte. **VERDICT: MERGE**, no finding. The branch
+merges under the one law with twenty-three review texts on record: rounds 1–15 each
+DO NOT MERGE, 16 MERGE, 17 DO NOT MERGE after the CI findings, 18 MERGE, 19–21 DO NOT
+MERGE on one or two items each in the previous repair, 22 and 23 MERGE.
+
+**Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
+is now committed, but the README's sentence that neither model can produce a
+resolution rests on the token staying with the person (SECURITY.md's console
+paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, which no
+ruling path can prevent; a holder of the project's private seed (`.crossaudit/signing/`,
+mode 0600) who can also write the repository can forge rulings and escalations, the
+same trust boundary as receipt signing. `by` on a row is attribution, not an
+authenticated human identity. The TUI (D175) was reviewed cold in round 2; rounds 3 to 23 are recorded
+above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
+has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
+the error); a plain `os.fork()` without exec would share a held lock with the child,
+and nothing in CrossAudit forks while holding one.

@@ -29,11 +29,12 @@ from collections.abc import Callable
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, Request
 
 from . import __version__
 from .config import Config
 from .errors import ConfigDenial
+from .netutil import opener_for
 
 PROTOCOL_VERSION = "2025-11-25"
 SUPPORTED_VERSIONS = {PROTOCOL_VERSION, "2025-06-18", "2025-03-26"}
@@ -201,6 +202,8 @@ def _stdio_environment() -> dict[str, str]:
     cryptographic random source.  Dropping that variable caused otherwise safe
     MCP fixture processes to fail before user code ran on clean Windows hosts.
     These values describe the operating system/runtime; they are not secrets.
+    Thirteen names: seven POSIX ones and six Windows runtime ones; only those
+    set in this process's environment are passed on.
     """
     names = (
         "PATH", "HOME", "USER", "LOGNAME", "TMPDIR", "LANG", "LC_ALL",
@@ -375,7 +378,10 @@ class _HTTPSession:
         self.sequence = 0
         self.session_id = ""
         self.protocol = PROTOCOL_VERSION
-        self.opener = build_opener(_NoRedirect())
+        # A loopback MCP server is reached directly, never through a proxy
+        # (the bearer token would otherwise go to the proxy); a remote one
+        # keeps honouring the user's proxy variables (D169).
+        self.opener = opener_for(row["url"], _NoRedirect())
 
     def _post(self, message: dict, *, initialization: bool = False) -> dict:
         body = _bounded_json(message, MAX_MESSAGE_BYTES, "MCP message")
@@ -688,9 +694,16 @@ class Manager:
             rows.append(row)
             _write(self._paths(cfg)[1], rows[-200:])
 
-    def call_agent(self, cfg: Config, request: dict, *, chat_id: str = "",
-                   ordinal: int = 1,
-                   notify: Callable[[str, str], None] | None = None) -> dict:
+    def authorize(self, cfg: Config, request: dict, *, ordinal: int = 1) -> dict:
+        """The owner's standing policy for one Generator call, without calling.
+
+        Returns the content-free facts a governed call records before it runs
+        (D174): the server, the tool, the hash of the bounded arguments (the
+        same value ``calls.json`` keeps), a hash of the server's allowlist as
+        it stands, and the call's place in the per-task budget. Raises
+        ``ConfigDenial`` on exactly the refusals ``call_agent`` makes, because
+        ``call_agent`` runs this same check first.
+        """
         if not isinstance(request, dict):
             raise ConfigDenial("Generator MCP request must be an object")
         server = self._server(cfg, str(request.get("server_id", "")))
@@ -699,12 +712,25 @@ class Manager:
         tool = str(request.get("tool", ""))
         if tool not in server.get("allowed_tools", []):
             raise ConfigDenial("this MCP tool is not approved for automatic use")
-        if not 1 <= ordinal <= int(server.get("max_calls_per_task", 1)):
+        budget = int(server.get("max_calls_per_task", 1))
+        if not 1 <= ordinal <= budget:
             raise ConfigDenial("the Generator reached this MCP server's calls-per-task limit")
         arguments = request.get("arguments", {})
         if not isinstance(arguments, dict):
             raise ConfigDenial("MCP tool arguments must be an object")
         args_raw = _bounded_json(arguments, MAX_ARGUMENT_BYTES, "MCP tool arguments")
+        allowlist = json.dumps(sorted(str(t) for t in server.get("allowed_tools", [])),
+                               separators=(",", ":")).encode()
+        return {"server": server, "tool": tool, "arguments": arguments,
+                "arguments_sha256": hashlib.sha256(args_raw).hexdigest(),
+                "allowlist_sha256": hashlib.sha256(allowlist).hexdigest(),
+                "call_ordinal": int(ordinal), "call_budget": budget}
+
+    def call_agent(self, cfg: Config, request: dict, *, chat_id: str = "",
+                   ordinal: int = 1,
+                   notify: Callable[[str, str], None] | None = None) -> dict:
+        grant = self.authorize(cfg, request, ordinal=ordinal)
+        server, tool, arguments = grant["server"], grant["tool"], grant["arguments"]
         started = time.time()
         if notify:
             notify("calling", f"{server['name']} · {tool}")
@@ -722,14 +748,13 @@ class Manager:
         finally:
             session.close()
         bounded = self._agent_result(result)
-        result_raw = json.dumps(bounded, ensure_ascii=False, sort_keys=True).encode()
         call_id = secrets.token_hex(8)
         self._record_call(cfg, {
             "id": call_id, "server_id": server["id"], "server": server["name"],
             "tool": tool, "status": status, "chat_id": chat_id, "started": started,
             "duration_ms": int((time.time() - started) * 1000),
-            "arguments_sha256": hashlib.sha256(args_raw).hexdigest(),
-            "result_sha256": hashlib.sha256(result_raw).hexdigest(),
+            "arguments_sha256": grant["arguments_sha256"],
+            "result_sha256": result_evidence(bounded)["result_sha256"],
         })
         if notify:
             notify(status, f"{server['name']} · {tool}")
@@ -775,6 +800,26 @@ class Manager:
         return {"servers": [self._public_server(row) for row in self._servers(cfg)],
                 "calls": list(reversed(self._calls(cfg)[-40:])),
                 "protocol_version": PROTOCOL_VERSION}
+
+
+def result_evidence(result: dict) -> dict:
+    """Content-free facts about a bounded call result (D174).
+
+    ``result_sha256`` is taken over exactly the bounded fields ``call_agent``
+    returns (``is_error``, ``content``, ``structured_content``), serialised as
+    ``calls.json`` has always hashed them, so the ledger's hash and the call
+    log's hash agree. ``bytes`` is that serialisation's length; ``truncated``
+    says whether any text block or the structured result was clipped.
+    """
+    bounded = {key: result.get(key) for key in (
+        "is_error", "content", "structured_content")}
+    raw = json.dumps(bounded, ensure_ascii=False, sort_keys=True).encode()
+    content = bounded["content"] if isinstance(bounded["content"], list) else []
+    structured = bounded["structured_content"]
+    truncated = (any(isinstance(b, dict) and b.get("truncated") is True for b in content)
+                 or (isinstance(structured, dict) and structured == {"truncated": True}))
+    return {"result_sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw),
+            "truncated": bool(truncated)}
 
 
 MANAGER = Manager()

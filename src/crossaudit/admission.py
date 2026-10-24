@@ -38,6 +38,8 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .app_keys import child_env
+
 LOCAL, REMOTE, PAIRED, ENFORCED = "local", "remote", "paired", "enforced"
 NOTIFICATION = "verified-notification"
 
@@ -85,13 +87,13 @@ def _gh(*args: str) -> tuple[int, str]:
     exe = shutil.which("gh")
     if not exe:
         return 127, "gh not installed"
-    p = subprocess.run([exe, *args], capture_output=True, text=True)
+    p = subprocess.run([exe, *args], capture_output=True, text=True, env=child_env())
     return p.returncode, (p.stdout if p.returncode == 0 else p.stderr).strip()
 
 
 def _remote_repo(root: Path) -> str | None:
     p = subprocess.run(["git", "remote", "get-url", "origin"], cwd=str(root),
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, env=child_env())
     if p.returncode != 0:
         return None
     url = p.stdout.strip()

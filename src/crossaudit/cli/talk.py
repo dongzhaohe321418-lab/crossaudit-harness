@@ -356,7 +356,11 @@ def lane_resolve(cfg: Config, routing, *, assume_yes: bool) -> str:
     if not _confirm(f"Return {cid[:8]} to the loop for another audit?",
                     assume_yes=assume_yes):
         return "declined by user"
-    store.resolve_escalation(cid, "reopen", routing.utterance)
+    from .. import rulings as rulings_mod
+
+    # D172 ruling 5: "in the ledger" means committed, as `resolve` does --
+    # through the same transaction, so a failed commit leaves it ESCALATED.
+    rulings_mod.rule(cfg, store, cid, "reopen", routing.utterance)
     print(f"  Ruling recorded; {cid[:8]} is open again. Your reason is in the ledger.")
     return f"reopened {cid[:8]}"
 
@@ -414,11 +418,14 @@ def cmd_routing(args) -> int:
     """Open the box: every decision the router ever made."""
     cfg = load()
     rows = router_mod.history(_routing_path(cfg), limit=args.limit)
+    # `--json` is a contract with a parser: the same shape (a list of
+    # decisions) whether or not anything was routed yet. The empty case used
+    # to print the human sentence, which no parser can read (D172 ruling 4).
+    if getattr(args, "json", False):
+        print(json.dumps(rows, indent=2, ensure_ascii=False))
+        return 0
     if not rows:
         print("no routing decisions recorded yet")
-        return 0
-    if args.json:
-        print(json.dumps(rows, indent=2, ensure_ascii=False))
         return 0
     print(f"{'lane':<11}{'conf':>6}  utterance / what was done")
     print("-" * 76)

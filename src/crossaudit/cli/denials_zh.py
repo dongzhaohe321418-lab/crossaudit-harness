@@ -203,6 +203,11 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "CrossAudit 有意不实现自己的 OAuth 流程，也不经手你的 token"),
     ("GitHub is not connected. Connect the account in CrossAudit and retry.",
      "尚未连接 GitHub。请在 CrossAudit 中连接账户后重试。"),
+    ("pair needs your GitHub account name to choose the work repository's name; "
+     "pass --science owner/name (and --audit owner/name) to see the plan without "
+     "signing in, or run `gh auth login`",
+     "pair 需要你的 GitHub 账户名来确定工作仓库的名称；传入 --science owner/name"
+     "（以及 --audit owner/name）即可在不登录的情况下查看计划，或者运行 `gh auth login`"),
     ("GitHub could not verify authorization scopes: {}", "GitHub 无法核实授权范围：{}"),
     ("GitHub could not check {}: {}", "GitHub 无法检查 {}：{}"),
     ("git {} failed: {}", "git {} 失败：{}"),
@@ -297,6 +302,8 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("repair: unknown keys {}", "repair：未知的键 {}"),
     ("{}: unknown keys {}", "{}：未知的键 {}"),
     ("{}.{} is required", "必须设置 {}.{}"),
+    ("{}.key_env must name a variable that holds only a key; {} is not one",
+     "{}.key_env 必须指向一个只存放密钥的变量；{} 不是"),
     ("generator.reasoning_effort must be one of {}",
      "generator.reasoning_effort 必须是 {} 之一"),
     ("{}.reasoning_effort must be one of {}", "{}.reasoning_effort 必须是 {} 之一"),
@@ -545,8 +552,32 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     # ------------------------------------------------- controller/state.py
     ("state file is corrupt: {}", "状态文件已损坏：{}"),
     ("state file has no cycles map", "状态文件没有 cycles 映射"),
-    ("could not acquire the controller lock; another verifier is mid-transaction",
-     "无法获取控制器锁；另一个验证器正处于事务之中"),
+    ("the lock file {} was replaced while this process held the lock; this process's "
+     "change was discarded",
+     "锁文件 {} 在本进程持有锁期间被替换；本进程的更改已被丢弃"),
+    ("the controller state at {} could not be written ({}: {}); check the directory "
+     "and file are writable",
+     "无法写入位于 {} 的控制器状态（{}：{}）；请确认该目录和文件可写"),
+    ("the evidence ledger at {} could not be closed cleanly after writing ({}: {}); "
+     "the entry may have been recorded, and the next append verifies the chain",
+     "写入后无法正常关闭位于 {} 的证据账本（{}：{}）；该条目可能已被记录，下一次追加会校验链条"),
+    ("the evidence ledger at {} could not be written ({}: {}); check the file and its "
+     "directory are writable",
+     "无法写入位于 {} 的证据账本（{}：{}）；请确认该文件及其目录可写"),
+    ("the directory {} for the controller state could not be created ({}: {}); check "
+     "the path is a directory you can write",
+     "无法创建用于控制器状态的目录 {}（{}：{}）；请确认该路径是你可写入的目录"),
+    ("the directory {} for the evidence ledger could not be created ({}: {}); check "
+     "the path is a directory you can write",
+     "无法创建用于证据账本的目录 {}（{}：{}）；请确认该路径是你可写入的目录"),
+    ("the directory {} for the lock file could not be created ({}: {}); check the "
+     "path is a directory you can write",
+     "无法创建用于锁文件的目录 {}（{}：{}）；请确认该路径是你可写入的目录"),
+    ("this filesystem cannot provide the exclusive lock CrossAudit needs at {} ({}: {}); "
+     "use a project directory on a local filesystem",
+     "此文件系统无法在 {} 提供 CrossAudit 所需的独占锁（{}：{}）；请使用位于本地文件系统上的项目目录"),
+    ("could not acquire the controller lock; another process (pid {}) is mid-transaction",
+     "无法获取控制器锁；另一个进程（pid {}）正在执行事务"),
     ("unknown continuation cycle", "未知的继续周期"),
     ("continuation cycle belongs to another repository", "要继续的周期属于另一个仓库"),
     ("cycle is {}, not BLOCKED or human-reopened; it cannot accept a build revision",
@@ -574,6 +605,66 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "裁定必须说明理由；它会被记入账本"),
     ("cycle is {}, not ESCALATED; only an escalated cycle needs a human ruling",
      "周期状态是 {}，不是 ESCALATED；只有已升级的周期才需要人工裁决"),
+    # ------------------------------------------------------------ rulings.py
+    ("the ruling on cycle {} was committed to the ledger as {}, but the cycle's state "
+     "could not be written ({}: {}); the state is unchanged, and the next ruling on this "
+     "cycle applies the committed ruling",
+     "周期 {} 的裁决已作为 {} 提交到账本，但周期状态无法写入（{}：{}）；状态未改变，"
+     "对该周期的下一次裁决将应用已提交的裁决"),
+    ("the committed rulings log could not be read ({}); no ruling is made until it can be",
+     "无法读取已提交的裁决日志（{}）；在能够读取之前不会作出任何裁决"),
+    ("the ruling on cycle {} does not match the intent this controller recorded for it; "
+     "nothing was recorded",
+     "周期 {} 的裁决与本控制器为其记录的意图不符；未记录任何内容"),
+    ("a committed ruling ({}, {}) already stands for cycle {}; the state now reflects it",
+     "已提交的裁决（{}，{}）对周期 {} 仍然有效；状态现已与之一致"),
+    ("the ruling on cycle {} could not be committed to the ledger ({}); the cycle stays "
+     "ESCALATED and nothing was recorded; .git/index.lock may have been left by the "
+     "killed git — if no git process is running, remove it by hand and run "
+     "`git reset -q -- {}`",
+     "周期 {} 的裁决未能提交到账本（{}）；该周期仍为 ESCALATED，未记录任何内容；"
+     ".git/index.lock 可能是被终止的 git 留下的 —— 如果没有正在运行的 git 进程，"
+     "请手动删除它并运行 `git reset -q -- {}`"),
+    ("{} (or its directory) is a symbolic link; the rulings log must be a regular "
+     "file inside the repository, so the ruling was not recorded",
+     "{}（或其所在目录）是符号链接；裁决日志必须是仓库内的普通文件，因此该裁决未被记录"),
+    ("the ruling on cycle {} was committed as {}, but the committed {} could not be "
+     "confirmed to contain it (a filter or hook changed the file); the cycle stays "
+     "ESCALATED — check the repository's filters and hooks before ruling again",
+     "周期 {} 的裁决已作为 {} 提交，但无法确认已提交的 {} 包含它（过滤器或钩子更改了该文件）；"
+     "该周期仍为 ESCALATED —— 再次裁决前请检查仓库的过滤器和钩子"),
+    ("the ruling on cycle {} was committed as {}, but the committed {} could not be "
+     "read back to confirm it ({}); the cycle stays ESCALATED, and the next ruling on "
+     "this cycle recovers it",
+     "周期 {} 的裁决已作为 {} 提交，但无法读回已提交的 {} 加以确认（{}）；该周期仍为 "
+     "ESCALATED，对该周期的下一次裁决将恢复它"),
+    ("the ruling on cycle {} may have been committed to the ledger ({}); the cycle "
+     "stays ESCALATED, and the next ruling on this cycle recovers it",
+     "周期 {} 的裁决可能已提交到账本（{}）；该周期仍为 ESCALATED，对该周期的下一次裁决将恢复它"),
+    ("the project signing key at {} is not available ({}); a ruling must be signed, so "
+     "none was made",
+     "位于 {} 的项目签名密钥不可用（{}）；裁决必须签名，因此未作出任何裁决"),
+    ("a committed ruling for cycle {} ({}) carries no valid signature from this project; "
+     "nothing was applied, and no new ruling is made until the repository is repaired",
+     "周期 {} 的一条已提交裁决（{}）没有本项目的有效签名；未应用任何内容，在仓库修复之前不会作出新的裁决"),
+    ("the committed escalation row could not be confirmed: {}", "无法确认已提交的升级行：{}"),
+    ("escalated by an older version of CrossAudit, and committing its escalation now "
+     "failed: {}",
+     "由旧版 CrossAudit 升级，且现在提交其升级失败：{}"),
+    ("the escalation of cycle {} is not committed to the ledger ({}); rule on it after "
+     "the repository is repaired",
+     "周期 {} 的升级未提交到账本（{}）；请在仓库修复后再对其裁决"),
+    ("the project signing key at {} is missing but signed rulings or receipts exist; "
+     "restore it from your backup, since a new key would not verify them",
+     "位于 {} 的项目签名密钥缺失，但已存在签名的裁决或收据；请从备份中恢复它，因为新密钥无法验证它们"),
+    ("the ruling on cycle {} could not be committed to the ledger ({}), and {} could "
+     "not be restored ({}); the cycle stays ESCALATED, but check {} against git "
+     "before ruling again",
+     "周期 {} 的裁决未能提交到账本（{}），且 {} 未能恢复（{}）；该周期仍为 ESCALATED，"
+     "但再次裁决前请对照 git 检查 {}"),
+    ("the ruling on cycle {} could not be committed to the ledger ({}); the cycle "
+     "stays ESCALATED and nothing was recorded",
+     "周期 {} 的裁决未能提交到账本（{}）；该周期仍为 ESCALATED，未记录任何内容"),
     # --------------------------------------------------------------- dcl/
     ("unknown checks {}; available: {}", "未知的检查 {}；可用的有：{}"),
     ("check pack {} is named in plugins: but is not installed; available: {}",
@@ -741,7 +832,8 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     # ------------------------------------------------------ ledger/chain.py
     ("evidence payload must be a mapping", "证据载荷必须是映射"),
     ("evidence kind must be a non-empty string", "证据类型必须是非空字符串"),
-    ("the evidence ledger is locked by another writer", "证据账本已被另一个写入者锁定"),
+    ("the evidence ledger is locked by another writer (pid {})",
+     "证据账本已被另一个写入者（pid {}）锁定"),
     # -------------------------------------------------------------- mcp.py
     ("{} must be valid JSON", "{} 必须是有效的 JSON"),
     ("{} exceeds the {}-byte safety limit", "{} 超出了 {} 字节的安全上限"),
@@ -826,9 +918,13 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "another host)",
      "供应商试图重定向到 {}；已拒绝（重定向可能把密钥送到另一台主机）"),
     ("provider endpoint {} is not an absolute URL", "供应商端点 {} 不是绝对 URL"),
-    ("refusing plaintext {}:// to {}; only HTTPS is allowed (loopback needs "
-     "--allow-insecure-localhost)",
-     "拒绝以明文 {}:// 访问 {}；只允许 HTTPS（回环地址需要 --allow-insecure-localhost）"),
+    ("refusing plaintext {}:// to {}; only HTTPS is allowed, except to a loopback "
+     "address set as `base_url:` with CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1",
+     "拒绝以明文 {}:// 访问 {}；只允许 HTTPS，回环地址除外：需将其设为 `base_url:` "
+     "并设置 CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT=1"),
+    ("refusing plaintext {}:// to {}; this request accepts HTTPS only, even on "
+     "loopback",
+     "拒绝以明文 {}:// 访问 {}；此请求只接受 HTTPS，回环地址也不例外"),
     ("endpoint {} is not this provider's built-in origin ({}); pass "
      "--allow-custom-endpoint to send a key there",
      "端点 {} 不是此供应商的内置源（{}）；要把密钥发到那里，请传入 --allow-custom-endpoint"),
@@ -877,6 +973,16 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("provider completion stream ended without a terminal marker",
      "供应商的回复流在没有结束标记的情况下结束了"),
     ("provider returned an empty completion", "供应商返回了空回复"),
+    # providers/base.py truncated_completion — the slot is the vendor id.
+    # The sentence opens with literal words, never the slot: a leading slot would
+    # swallow a composite prefix ("generator provider failure in round …") whole.
+    ("the reply from {} was cut off at a token limit before it finished (stop "
+     "reason {}, output limit {} tokens); the partial reply was discarded and "
+     "nothing from it was used. Ask for a smaller change per round so the whole "
+     "reply fits",
+     "来自 {} 的回复在完成之前被 token 上限截断（停止原因 {}，输出上限 {} 个 token）；"
+     "被截断的回复已丢弃，其中任何内容都没有被使用。请缩小每一轮要求的改动，"
+     "使完整的回复能够容纳在上限之内"),
     ("unexpected chat-completions response shape: {}",
      "chat-completions 返回了意料之外的响应结构：{}"),
     ("unknown provider {}; available: {}", "未知的供应商 {}；可用的有：{}"),
@@ -977,6 +1083,8 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "reproduction.bundle_sha256 必须是非空字符串"),
     ("reproduction.locks must be a positive integer", "reproduction.locks 必须是正整数"),
     ("reproduction.lock_kinds must be a list", "reproduction.lock_kinds 必须是列表"),
+    ("reproduction.tree_locks must map lock paths to sha256 digests",
+     "reproduction.tree_locks 必须把锁文件路径映射到 sha256 摘要"),
     ("sources must be a mapping", "sources 必须是映射"),
     ("sources.set_sha256 must be a non-empty string", "sources.set_sha256 必须是非空字符串"),
     ("sources.count must be a positive integer", "sources.count 必须是正整数"),
@@ -1032,6 +1140,11 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("reproduction bundle digest does not match the receipt", "复现包摘要与收据不匹配"),
     ("reproduction lock count does not match the audited manifest",
      "复现锁数量与受审清单不匹配"),
+    ("reproduction names {} as a dependency lock, which it is not",
+     "复现信息把 {} 列为依赖锁文件，但它不是"),
+    ("reproduction names the lock {}, absent from the tree",
+     "复现信息列出了锁文件 {}，但它不在受审的树中"),
+    ("reproduction lock mismatch for {}", "复现锁文件 {} 不匹配"),
     ("receipt claims governed sources but none re-derive from the evidence ledger",
      "收据声称有受管来源，但没有任何一个能从证据账本重新推导出来"),
     ("governed-source set does not match the evidence ledger", "受管来源集合与证据账本不匹配"),
@@ -1047,6 +1160,23 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the verifier that minted this receipt is not the one admitting it; re-verify "
      "with the recorded version before admitting",
      "签发此收据的验证器与准入它的不是同一个；请先用记录的版本重新验证，再准入"),
+    # ------------------------------- cli/main.py (verify, export-pubkey, D171)
+    ("the public key file {} could not be read: {}", "无法读取公钥文件 {}：{}"),
+    ("the public key file {} is not an Ed25519 public key in PEM form: {}",
+     "公钥文件 {} 不是 PEM 格式的 Ed25519 公钥：{}"),
+    ("the receipt's signature does not verify: {}; the receipt or its signature "
+     "was altered after it was minted",
+     "收据的签名无法通过验证：{}；收据或其签名在签发之后被改动过"),
+    ("a public key was pinned but the receipt carries no signature sidecar "
+     "(receipt.dsse.json); a pinned verification requires a signature by that key",
+     "已指定公钥，但收据旁没有签名文件（receipt.dsse.json）；指定公钥的验证要求有该密钥的签名"),
+    ("the report on disk is not the audited report: {} does not match the digest "
+     "the receipt binds (verify --record-only checks the committed record alone)",
+     "磁盘上的报告不是受审的报告：{} 与收据绑定的摘要不符（verify --record-only 只检查已提交的记录）"),
+    ("the reproduction bundle on disk is not the audited bundle: {} does not match "
+     "the digest the receipt binds (verify --record-only checks the committed "
+     "record alone)",
+     "磁盘上的复现包不是受审的复现包：{} 与收据绑定的摘要不符（verify --record-only 只检查已提交的记录）"),
     # ------------------------------------------------------------ router.py
     ("router returned an unknown lane {}", "路由器返回了未知的通道 {}"),
     ("name a recipient and include the instruction after it",
@@ -1191,6 +1321,10 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the evidence ledger has an incomplete final entry (a crash left a torn tail); "
      "refusing to append onto a damaged chain until it is recovered",
      "证据账本的最后一条记录不完整（崩溃留下了残缺的尾部）；在恢复之前拒绝向受损的链上追加记录"),
+    # The slot is the verifier's own report (line number / seq), carried through.
+    ("the evidence ledger does not verify ({}); refusing to append onto a damaged "
+     "chain until it is recovered",
+     "证据账本未通过校验（{}）；在恢复之前拒绝向受损的链上追加记录"),
     # ------------------------------------------ hpc.py (SSHFailure and labels)
     ("This host is not trusted yet. Verify the hostname, then choose Trust first "
      "key & connect. CrossAudit will use OpenSSH trust-on-first-use.",
@@ -1384,9 +1518,9 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("ChatGPT subscription completion failed: {}", "ChatGPT 订阅请求失败：{}"),
     ("ChatGPT subscription returned an empty completion{}", "ChatGPT 订阅返回了空回复{}"),
     ("ChatGPT subscription returned an empty completion", "ChatGPT 订阅返回了空回复"),
-    ("ChatGPT subscription returned an empty completion; its tool request was "
-     "safely blocked, but it did not recover with a text answer",
-     "ChatGPT 订阅返回了空回复；它的工具请求已被安全拦截，但之后没有恢复为文本回答"),
+    ("ChatGPT subscription completion was refused: the model requested {} in a "
+     "text-only role, so its reply was discarded",
+     "ChatGPT 订阅回复被拒绝：模型在仅限文本的角色中请求了 {}，因此其回复已被丢弃"),
     # ------------------------------------------ console/daemon.py, runtime/commands.py
     # The escalation sentence the Decision Center leads with; its slot is the
     # provider refusal itself, translated in turn (COMPOSITE).
@@ -1465,6 +1599,31 @@ ENTRIES: tuple[tuple[str, str], ...] = (
 #: would rightly reject them there). They are looked up only from the slots
 #: of the templates in COMPOSITES.
 CLAUSES: tuple[tuple[str, str], ...] = (
+    # rulings.py / controller/state.py -- the fixed phrases that land in the
+    # slots of the ruling and escalation refusals (and the status line), so a
+    # Chinese reader never meets them in English.
+    ("git {} failed and said nothing", "git {} 失败且没有给出任何信息"),
+    ("git {} timed out after {}s", "git {} 在 {} 秒后超时"),
+    ("git {} was not started: its time budget was already spent",
+     "git {} 未启动：其时间预算已经用尽"),
+    ("git {} could not run: {}", "git {} 无法运行：{}"),
+    ("git said nothing", "git 没有给出任何信息"),
+    ("the log could not be written: {}", "无法写入日志：{}"),
+    ("the log could not be read: {}", "无法读取日志：{}"),
+    ("git rev-parse HEAD failed", "git rev-parse HEAD 失败"),
+    ("git ls-tree failed", "git ls-tree 失败"),
+    ("git cat-file failed", "git cat-file 失败"),
+    ("it is not UTF-8", "它不是 UTF-8"),
+    ("a line is not JSON", "有一行不是 JSON"),
+    ("a line is not a ruling", "有一行不是裁决"),
+    ("escalated by an older version of CrossAudit", "由旧版 CrossAudit 升级"),
+    ("its escalation row was not committed", "其升级行未被提交"),
+    ("the ledger holds no verified escalation row for it", "账本中没有它的经过验证的升级行"),
+    ("the ledger's latest escalation of this cycle is {}, not {}",
+     "账本中该周期最新的升级是 {}，而不是 {}"),
+    ("no project configuration was found for this state", "未找到此状态对应的项目配置"),
+    ("the committed escalation row could not be confirmed", "无法确认已提交的升级行"),
+    ("short write to the evidence ledger", "写入证据账本时写入不完整"),
     # broker/secretscan.py — the KIND of secret a refused commit carried.
     ("a private key block", "私钥块"),
     ("an AWS access key id", "AWS 访问密钥 ID"),
@@ -1553,6 +1712,30 @@ CLAUSES: tuple[tuple[str, str], ...] = (
 #: other slot is carried through untouched (D130: never match text a person
 #: could have authored).
 COMPOSITES: frozenset[str] = frozenset({
+    # The ruling, escalation and ledger refusals whose slots carry our own
+    # phrases (git failures, read failures, why an escalation is not committed).
+    "the committed rulings log could not be read ({}); no ruling is made until it can be",
+    "the ruling on cycle {} could not be committed to the ledger ({}); the cycle stays "
+    "ESCALATED and nothing was recorded; .git/index.lock may have been left by the "
+    "killed git — if no git process is running, remove it by hand and run "
+    "`git reset -q -- {}`",
+    "the ruling on cycle {} was committed as {}, but the committed {} could not be "
+    "read back to confirm it ({}); the cycle stays ESCALATED, and the next ruling on "
+    "this cycle recovers it",
+    "the ruling on cycle {} may have been committed to the ledger ({}); the cycle "
+    "stays ESCALATED, and the next ruling on this cycle recovers it",
+    "the escalation of cycle {} is not committed to the ledger ({}); rule on it after "
+    "the repository is repaired",
+    "the ruling on cycle {} could not be committed to the ledger ({}), and {} could "
+    "not be restored ({}); the cycle stays ESCALATED, but check {} against git "
+    "before ruling again",
+    "the ruling on cycle {} could not be committed to the ledger ({}); the cycle "
+    "stays ESCALATED and nothing was recorded",
+    "escalated by an older version of CrossAudit, and committing its escalation now "
+    "failed: {}",
+    "the committed escalation row could not be confirmed: {}",
+    "the evidence ledger at {} could not be written ({}: {}); check the file and its "
+    "directory are writable",
     "commit refused: the staged changes appear to contain {}; remove the secret "
     "(or add the file to .gitignore) and try again",
     "gh {} failed: {}.{}",

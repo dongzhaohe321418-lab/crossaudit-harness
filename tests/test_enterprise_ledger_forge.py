@@ -226,7 +226,7 @@ def test_verify_ignores_warm_cache_and_catches_same_size_tail_tamper(tmp_path):
     led.append("note", run_id="r", payload={"i": 0}, ts="t0")
     led.append("note", run_id="r", payload={"i": 1}, ts="t1")
     led.append("note", run_id="r", payload={"path": "work/TAILZZZZ.md"}, ts="t2")
-    # Cache is warm here: _cached_size == current file size, head == seq2 digest.
+    # Cache is warm here: the cached stamp matches the file, head == seq2 digest.
     warm_head = led.head()
 
     # In-place edit of the TAIL entry's payload, byte-for-byte same length, so
@@ -234,7 +234,7 @@ def test_verify_ignores_warm_cache_and_catches_same_size_tail_tamper(tmp_path):
     text = led.path.read_text()
     before = len(text)
     tampered = text.replace("work/TAILZZZZ.md", "work/TAILWWWW.md")
-    assert len(tampered) == before  # size identical -> cache guard not tripped
+    assert len(tampered) == before  # size identical (mtime/inode may still trip it)
     led.path.write_text(tampered)
 
     # verify() never consults the cache; it re-reads disk and catches the tail.

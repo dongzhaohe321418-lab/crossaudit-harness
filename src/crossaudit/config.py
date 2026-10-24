@@ -7,6 +7,7 @@ never written into a receipt.
 from __future__ import annotations
 
 import posixpath
+import re
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
@@ -154,6 +155,34 @@ class Config:
         return self.path.parent
 
 
+#: Names a ``key_env`` may never be: variables every child process needs, or
+#: that never hold a key. ``child_env`` strips every configured key name, so
+#: accepting one of these would break Git, the shell or Python for that config.
+_KEY_ENV_RESERVED = frozenset({
+    "PATH", "HOME", "USER", "LOGNAME", "SHELL", "PWD", "TMPDIR", "TEMP", "TMP",
+    "LANG", "LC_ALL", "LC_CTYPE", "TERM", "PYTHONPATH", "PYTHONHOME",
+    "SSH_AUTH_SOCK", "GIT_DIR", "GIT_WORK_TREE", "SYSTEMROOT", "COMSPEC",
+    "WINDIR", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "PROGRAMDATA"})
+_KEY_ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _key_env_name(value: object, name: str, where: Path) -> str:
+    """``value`` if it can name a key variable; otherwise a legible refusal.
+
+    Every name declared as a ``key_env`` is stripped from non-provider
+    children (app_keys.child_env, D176), so a name that is not a key variable
+    at all would take PATH or HOME away from Git, and a non-string would fail
+    later as a TypeError instead of a refusal. The one check for every row
+    that declares a ``key_env``: each ``_role`` and the direct generator row.
+    """
+    if (not isinstance(value, str) or not _KEY_ENV_NAME.match(value)
+            or value.upper() in _KEY_ENV_RESERVED):
+        raise ConfigDenial(
+            f"{name}.key_env must name a variable that holds only a key; "
+            f"{value!r} is not one", file=str(where))
+    return value
+
+
 def _role(raw: dict, name: str, where: Path, *, allow_fallbacks: bool = True) -> Role:
     unknown = set(raw) - _ALLOWED_ROLE
     if unknown:
@@ -161,6 +190,7 @@ def _role(raw: dict, name: str, where: Path, *, allow_fallbacks: bool = True) ->
     for req in ("provider", "model", "vendor", "key_env"):
         if not raw.get(req):
             raise ConfigDenial(f"{name}.{req} is required", file=str(where))
+    _key_env_name(raw.get("key_env"), name, where)
     effort = raw.get("reasoning_effort")
     if effort is not None and effort not in _EFFORT_VALUES:
         raise ConfigDenial(
@@ -180,6 +210,31 @@ def _role(raw: dict, name: str, where: Path, *, allow_fallbacks: bool = True) ->
     return Role(provider=raw["provider"], model=raw["model"], vendor=raw["vendor"],
                 key_env=raw["key_env"], base_url=raw.get("base_url"),
                 reasoning_effort=effort, fallbacks=fallbacks)
+
+
+def _register_key_names(auditor: Role, generator_vendor: object,
+                        generator_key_env: object,
+                        generator_fallbacks: tuple[Role, ...]) -> None:
+    """Tell ``app_keys`` every variable name this file says holds a key.
+
+    ``key_env`` accepts any non-empty name, so ``app_keys.child_env()`` cannot
+    recognise a configured key by its shape alone. Registering the names here,
+    as soon as the roles are parsed (before the rest of the file is validated,
+    so a load that is refused later still registers them), means every
+    non-provider child launched afterwards in this process is started without
+    them, whether or not its caller holds this ``Config``. Covered: the
+    ``key_env`` of the auditor, the generator and every fallback row, and the
+    backup slot of every vendor named by any of them.
+    """
+    from . import app_keys
+    roles = (auditor, *auditor.fallbacks, *generator_fallbacks)
+    vendors = {role.vendor for role in roles}
+    if isinstance(generator_vendor, str):
+        vendors.add(generator_vendor)
+    app_keys.register_key_names(
+        *(role.key_env for role in roles), generator_key_env,
+        *(app_keys.backup_env_for_vendor(vendor.strip().lower())
+          for vendor in vendors if isinstance(vendor, str) and vendor.strip()))
 
 
 def _number(raw: dict, key: str, default: float, low: float, high: float,
@@ -346,6 +401,13 @@ def load(path: Path | None = None) -> Config:
     if gen_unknown:
         raise ConfigDenial(f"generator: unknown keys {sorted(gen_unknown)}", file=str(p))
     generator_vendor = gen.get("vendor")
+    # The direct generator row does not go through `_role` (its fields are all
+    # optional), so its `key_env` gets the same check here, before
+    # `_register_key_names` below. Absent (or `key_env:` with no value) keeps
+    # the default, CROSSAUDIT_GENERATOR_KEY; anything else must be a key name.
+    generator_key_env = gen.get("key_env")
+    if generator_key_env is not None:
+        _key_env_name(generator_key_env, "generator", p)
     # D150 (owner directive): streaming is on unless a project turns it off.
     # Perceived latency is the only latency there is to win, and a silent
     # generation is the whole complaint.
@@ -365,6 +427,8 @@ def load(path: Path | None = None) -> Config:
         for i, item in enumerate(generator_fallbacks_raw) if isinstance(item, dict))
     if len(generator_fallbacks) != len(generator_fallbacks_raw):
         raise ConfigDenial("generator.fallbacks entries must be mappings", file=str(p))
+    _register_key_names(auditor, generator_vendor, generator_key_env,
+                        generator_fallbacks)
 
     iso_raw = raw.get("isolation") or {}
     minimum = iso_raw.get("minimum") or {}
@@ -511,7 +575,7 @@ def load(path: Path | None = None) -> Config:
         generator_vendor=generator_vendor,
         generator_provider=gen.get("provider"),
         generator_model=gen.get("model"),
-        generator_key_env=gen.get("key_env"),
+        generator_key_env=generator_key_env,
         generator_base_url=gen.get("base_url"),
         generator_reasoning_effort=generator_effort,
         isolation_minimum={d: bool(minimum.get(d, False)) for d in ISOLATION_DIMS},

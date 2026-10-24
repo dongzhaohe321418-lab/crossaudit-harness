@@ -29,7 +29,7 @@ import yaml
 from .. import connections
 from .. import skills as skills_mod
 from .. import workspace as workspace_mod
-from ..app_keys import backup_env_for_vendor, env_for_vendor
+from ..app_keys import backup_env_for_vendor, child_env, env_for_vendor
 from ..cli import pair as pair_mod
 from ..cli import wizard
 from ..config import CONFIG_NAME, Config, heterogeneity, load
@@ -37,6 +37,7 @@ from ..controller import StateStore
 from ..dcl import describe as describe_checks
 from ..errors import ConfigDenial, Denial, ProviderDenial
 from ..gitio import git, is_repo
+from ..netutil import open_loopback
 from ..providers import codex_subscription
 from ..providers.catalog import list_models
 from ..providers.specs import EFFORT_HINTS, SPECS, capability_json, reasoning_efforts
@@ -601,7 +602,7 @@ class RuntimeRelays:
                f"?t={info['token']}")
         try:
             # Child console URLs are always generated from a local run record.
-            with urllib.request.urlopen(url, timeout=20) as response:  # nosec B310
+            with open_loopback(url, timeout=20) as response:  # nosec B310
                 for raw in response:
                     if raw.startswith(b"data:"):
                         _invalidate_runtime(cfg.root)
@@ -687,8 +688,8 @@ class GithubAuthJobs:
                     command,
                     stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT, text=True, bufsize=1,
-                    env=dict(os.environ, GH_PROMPT_DISABLED="1",
-                             BROWSER="/usr/bin/false"))
+                    env=child_env(GH_PROMPT_DISABLED="1",
+                                  BROWSER="/usr/bin/false"))
                 with self._lock:
                     self._proc = proc
 
@@ -1085,7 +1086,7 @@ def update_skill(current: Config, payload: dict) -> dict:
         temp.unlink(missing_ok=True)
         subprocess.run(["git", "restore", "--staged", "--",
                         target.relative_to(current.root).as_posix()],
-                       cwd=current.root, capture_output=True, check=False)
+                       cwd=current.root, capture_output=True, check=False, env=child_env())
         raise
     return {"skills": skill_options(current), "changed": True, "commit": commit}
 
@@ -2253,7 +2254,7 @@ def project_deletion_preview(current: Config, root: str) -> dict:
     ahead = 0
     upstream = subprocess.run(
         ["git", "rev-list", "--count", "@{upstream}..HEAD"], cwd=str(path),
-        capture_output=True, text=True, check=False)
+        capture_output=True, text=True, check=False, env=child_env())
     if upstream.returncode == 0 and upstream.stdout.strip().isdigit():
         ahead = int(upstream.stdout.strip())
     trash = path.parent / ".crossaudit-trash"

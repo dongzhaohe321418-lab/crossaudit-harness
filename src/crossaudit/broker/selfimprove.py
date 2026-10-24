@@ -13,6 +13,7 @@ import subprocess
 from pathlib import Path
 
 from ..config import Config
+from ..app_keys import child_env
 from ..policy.tokens import CapabilityToken
 from .registry import ToolError, ToolRegistry, ToolSpec
 
@@ -36,9 +37,9 @@ def candidate_worktree(cfg: Config, ref: str = "HEAD") -> Path:
     target = cfg.root / cfg.state_dir / CANDIDATE_DIRNAME
     if target.exists():
         subprocess.run(["git", "worktree", "remove", "--force", str(target)],
-                       cwd=str(cfg.root), capture_output=True, check=False)
+                       cwd=str(cfg.root), capture_output=True, check=False, env=child_env())
     subprocess.run(["git", "worktree", "add", "--detach", str(target), ref],
-                   cwd=str(cfg.root), capture_output=True, text=True, check=True)
+                   cwd=str(cfg.root), capture_output=True, text=True, check=True, env=child_env())
     return target
 
 

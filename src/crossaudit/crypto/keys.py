@@ -60,6 +60,16 @@ def load_or_create(cfg: Config) -> tuple[bytes, bytes, str]:
         seed = _unb64(seed_path.read_text(encoding="ascii").strip())
         pub = ed25519.public_key(seed)
         return seed, pub, key_id(pub)
+    # A key is created implicitly only while nothing in the project is signed
+    # yet (D176 ruling 44): a new key would not verify signed rulings or
+    # receipts, so a missing one is refused rather than replaced.
+    if signed_artefacts_exist(cfg):
+        from ..errors import ConfigDenial
+
+        raise ConfigDenial(
+            f"the project signing key at {seed_path} is missing but signed rulings or "
+            f"receipts exist; restore it from your backup, since a new key would not "
+            f"verify them", issue="signing_key_missing", path=str(seed_path))
     directory.mkdir(parents=True, exist_ok=True)
     try:
         os.chmod(directory, 0o700)
@@ -82,6 +92,38 @@ def load_or_create(cfg: Config) -> tuple[bytes, bytes, str]:
     return seed, pub, key_id(pub)
 
 
+def signed_artefacts_exist(cfg: Config) -> bool:
+    """Whether the project already holds anything signed with its key: a
+    receipt signature sidecar (``receipt.dsse.json``) under the ledger
+    directory, or a line carrying ``"sig"`` in the rulings log -- the working
+    file, or the copy committed at HEAD when the working file is absent."""
+    ledger_dir = getattr(cfg, "ledger_dir", "cycles")
+    ledger = Path(cfg.root) / ledger_dir
+    try:
+        if any(ledger.rglob("receipt.dsse.json")):
+            return True
+    except OSError:
+        return True                       # cannot tell: do not mint a new key
+    log = ledger / "rulings.jsonl"
+    try:
+        text = log.read_text(encoding="utf-8", errors="replace") if log.is_file() else ""
+    except OSError:
+        return True
+    if not text:
+        import subprocess
+
+        rel = (Path(ledger_dir) / "rulings.jsonl").as_posix()
+        try:
+            from ..app_keys import child_env
+
+            shown = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=str(cfg.root),
+                                   capture_output=True, timeout=10, env=child_env())
+            text = shown.stdout.decode("utf-8", "replace") if shown.returncode == 0 else ""
+        except (OSError, subprocess.TimeoutExpired):
+            text = ""
+    return '"sig":' in text
+
+
 def public_key(cfg: Config) -> tuple[bytes, str] | None:
     """The project's public key + key id if a signing key exists, else None.
 
@@ -96,9 +138,43 @@ def public_key(cfg: Config) -> tuple[bytes, str] | None:
     return pub, key_id(pub)
 
 
+_SPKI_PREFIX = bytes.fromhex("302a300506032b6570032100")
+_PEM_BEGIN = "-----BEGIN PUBLIC KEY-----"
+_PEM_END = "-----END PUBLIC KEY-----"
+
+
 def public_key_pem(pubkey: bytes) -> str:
     """The public key as PEM SubjectPublicKeyInfo, so openssl / ssh-keygen -Y /
     cryptography can all verify offline without any CrossAudit code."""
-    spki = bytes.fromhex("302a300506032b6570032100") + pubkey   # Ed25519 SPKI prefix
+    spki = _SPKI_PREFIX + pubkey   # Ed25519 SPKI prefix
     body = base64.encodebytes(spki).decode("ascii").strip()
-    return "-----BEGIN PUBLIC KEY-----\n" + body + "\n-----END PUBLIC KEY-----\n"
+    return _PEM_BEGIN + "\n" + body + "\n" + _PEM_END + "\n"
+
+
+def parse_public_key_pem(text: str) -> bytes:
+    """The raw 32-byte Ed25519 key from a PEM SubjectPublicKeyInfo block.
+
+    The inverse of :func:`public_key_pem`. Text outside the one ``BEGIN/END
+    PUBLIC KEY`` block is ignored, as OpenSSL ignores it, so a file that an
+    older ``export-pubkey`` wrote with a ``KEY <id>`` line above the block still
+    parses. Everything inside the block is held to the exact form: strict
+    base64, exactly the Ed25519 SPKI prefix and 32 key bytes. Raises
+    ``ValueError`` with a short reason otherwise — never a ``binascii.Error``
+    reaching a person as a traceback.
+    """
+    lines = [line.strip() for line in str(text).splitlines()]
+    try:
+        start = lines.index(_PEM_BEGIN)
+        end = lines.index(_PEM_END, start + 1)
+    except ValueError:
+        raise ValueError("it holds no BEGIN/END PUBLIC KEY block") from None
+    if _PEM_BEGIN in lines[end + 1:]:
+        raise ValueError("it holds more than one PUBLIC KEY block")
+    body = "".join(lines[start + 1:end])
+    try:
+        der = base64.b64decode(body.encode("ascii"), validate=True)
+    except (ValueError, UnicodeEncodeError):
+        raise ValueError("the PUBLIC KEY block is not valid base64") from None
+    if len(der) != len(_SPKI_PREFIX) + 32 or not der.startswith(_SPKI_PREFIX):
+        raise ValueError("the PUBLIC KEY block is not an Ed25519 key")
+    return der[len(_SPKI_PREFIX):]
