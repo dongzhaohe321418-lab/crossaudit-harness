@@ -9039,7 +9039,12 @@ cited only once its text exists):
     up); a step reached with its deadline already passed is refused without
     starting git and says so ("git commit was not started: its time budget was
     already spent"), naming no number, where it used to say "timed out after 90s"
-    (round 20's finding). The lookup for an escalation row no longer runs the ruling-subject
+    (round 20's finding). The ruling's own post-commit confirmation used to run under
+    the greater of the row's remaining deadline and a 5 s floor, so a hung read could
+    be waited on for the row budget and its sentence named that budget (round 21's
+    finding); it now has its own 5 s deadline, as the escalation row's confirmation
+    always had, and a real hang after the commit (a post-commit hook starts it) is
+    refused within seconds, `commit_landed=yes`, and recovered by the next ruling. The lookup for an escalation row no longer runs the ruling-subject
     fallback, which could never match it. `tests/test_commit_lookup_fails_closed.py`
     drives a real hanging `git log` through a PATH shim and names four mutations
     (the lenient lookup on recognition; the lenient identity in `assess`; the budget
@@ -9068,6 +9073,14 @@ third row was found in the old or the new code; the round-19 repairs correct; Ch
 parity present. One P2: a step reached with its deadline already passed still said
 "timed out after 90s". **VERDICT: DO NOT MERGE.** Corrected above (ruling 57).
 
+**Round 21** (`…-r21.md`): the expired-before-start path and the slow-filter case
+verified; the deadline subclass judged numerically harmless and preserved through
+`max()` and the test wrappers; parity rendered in Chinese. One P2: the records said
+"5 s for a lookup or confirmation" while the ruling's own confirmation ran under the
+greater of the row's remaining deadline and the 5 s floor. **VERDICT: DO NOT MERGE.**
+Corrected above (ruling 57): the confirmation has its own 5 s deadline, with a real
+hang test.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
@@ -9075,7 +9088,7 @@ paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, whi
 ruling path can prevent; a holder of the project's private seed (`.crossaudit/signing/`,
 mode 0600) who can also write the repository can forge rulings and escalations, the
 same trust boundary as receipt signing. `by` on a row is attribution, not an
-authenticated human identity. The TUI (D175) was reviewed cold in round 2; rounds 3 to 20 are recorded
+authenticated human identity. The TUI (D175) was reviewed cold in round 2; rounds 3 to 21 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,

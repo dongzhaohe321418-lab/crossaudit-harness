@@ -385,14 +385,17 @@ def _canonical(row: dict) -> str:
     return json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-def _confirm_committed(cfg, path: Path, rel: str, row: dict, deadline: float) -> None:
+def _confirm_committed(cfg, path: Path, rel: str, row: dict) -> None:
     """The committed blob must end with exactly this ruling's row.
 
     A clean filter, or a hook that rewrote and re-staged the file, can make
     the commit carry something other than the line that was appended. The
     blob is read raw (``git cat-file blob HEAD:<rel>``: no filters, no
-    textconv), bounded by what remains of the deadline but never less than
-    :data:`CLEANUP_TIMEOUT_S`, and its last line is compared with the row as
+    textconv) under its own :data:`CLEANUP_TIMEOUT_S` deadline, the same
+    bound as the escalation row's confirmation (it used to take what was
+    left of the row's deadline, at least 5 s, so a hung read could be waited
+    on for the row budget and the refusal named that budget; review round
+    21, D176 ruling 57), and its last line is compared with the row as
     written, COMPLETE and canonical (every field, the intent's nonce
     included; D176 ruling 34). A mismatch or a failed read raises
     ``IntegrityDenial`` marked ``commit_landed="yes"``: the controller state
@@ -402,13 +405,12 @@ def _confirm_committed(cfg, path: Path, rel: str, row: dict, deadline: float) ->
     bytes so it carries no line git does not have.
     """
     expected = _canonical({k: v for k, v in row.items() if k != "commit"})
-    floor = _until(CLEANUP_TIMEOUT_S)
     changed = "a filter or hook changed the file"
     why = changed
     blob = b""
     try:
         code, blob, err = _bounded_bytes(
-            cfg, ("cat-file", "blob", f"HEAD:{rel}"), max(deadline, floor))
+            cfg, ("cat-file", "blob", f"HEAD:{rel}"), _until(CLEANUP_TIMEOUT_S))
         if code != 0:
             said = err.strip().split("\n")[0][:120] if err.strip() else "git said nothing"
             why = f"it could not be read back: {said}"
@@ -616,7 +618,7 @@ def _record(cfg, cycle: dict, action: str, reason: str, *,
     # The commit has landed; reading its hash is cleanup-bounded, not
     # deadline-bounded, so a transaction that used its budget still reports it.
     row["commit"] = _cleanup_git(cfg, "rev-parse", "HEAD")
-    _confirm_committed(cfg, path, rel, row, deadline)
+    _confirm_committed(cfg, path, rel, row)
     return row
 
 
