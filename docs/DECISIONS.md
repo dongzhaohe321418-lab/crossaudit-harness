@@ -8369,7 +8369,9 @@ RULINGS:
 Keychain storage remains the app's path only; the CLI and the console read keys
 from the environment or the mode-600 keys file. (Remote MCP bearer tokens are still
 stored as macOS Keychain items by `mcp.py` on every surface; that is unchanged
-here.) The TUI has not yet had a cross-vendor review (AGENTS §0).
+here.) The TUI was reviewed cold by the cross-vendor reviewer in round 2 of the
+review recorded in D176 (`benchmarks/reviews/2026-10-23-claims-rounds-1-2-terra-r2.md`)
+and its ruling path re-verified in the rounds after it.
 
 ## D176 — The first cross-vendor review of this release's changes found four defects, and they are repaired: every human ruling is one failure-atomic transaction on every surface, every configured key name leaves non-provider children, the ledger head cache is bound to the file's identity, and a `key_env` that is not a key is refused
 
