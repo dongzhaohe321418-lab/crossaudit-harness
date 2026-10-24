@@ -24,6 +24,7 @@ owner's lock. A holder that dies releases the lock with its process, so a
 """
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -115,20 +116,55 @@ class StateStore:
             raise IntegrityDenial("state file has no cycles map", path=str(self.path))
         return data
 
+    def _require_writable(self) -> None:
+        """Probe that the state file can be replaced: create and remove the
+        temporary file ``_write`` would use. Refuses with ``_write``'s own
+        sentence when it cannot."""
+        tmp = self.path.with_suffix(self.path.suffix + f".tmp{os.getpid()}")
+        try:
+            fd = os.open(tmp, os.O_CREAT | os.O_WRONLY, 0o600)
+            os.close(fd)
+            tmp.unlink()
+        except OSError as exc:
+            raise self._unwritable(exc) from exc
+
+    def _unwritable(self, exc: OSError) -> ConfigDenial:
+        name = errno.errorcode.get(exc.errno or 0, str(exc.errno))
+        return ConfigDenial(
+            f"the controller state at {self.path} could not be written ({name}: "
+            f"{exc.strerror or exc}); check the directory and file are writable",
+            issue="state_unwritable", path=str(self.path))
+
     def _write(self, state: dict) -> None:
+        """Replace the state file atomically (temp file, fsync, rename, then
+        fsync the directory). Any ``OSError`` on that path -- an unwritable
+        directory, a full disk -- is a ``ConfigDenial``, never a traceback
+        (review 2026-10-23 round 7); the temporary file is removed and the
+        previous state file is left as it was, unless the rename itself had
+        already happened (only the directory fsync can fail after it)."""
         locks.ensure_directory(self.path.parent, "the controller state")
         tmp = self.path.with_suffix(self.path.suffix + f".tmp{os.getpid()}")
-        with open(tmp, "w") as fh:
-            json.dump(state, fh, indent=2, sort_keys=True)
-            fh.flush()
-            os.fsync(fh.fileno())
-        os.replace(tmp, self.path)          # atomic within a filesystem
-        if os.name != "nt":
-            dir_fd = os.open(self.path.parent, os.O_RDONLY)
+        try:
             try:
-                os.fsync(dir_fd)             # the rename itself must survive a crash
-            finally:
-                os.close(dir_fd)
+                with open(tmp, "w") as fh:
+                    json.dump(state, fh, indent=2, sort_keys=True)
+                    fh.flush()
+                    os.fsync(fh.fileno())
+                os.replace(tmp, self.path)          # atomic within a filesystem
+            except OSError:
+                try:
+                    tmp.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise
+            if os.name != "nt":
+                dir_fd = os.open(self.path.parent, os.O_RDONLY)
+                try:
+                    os.fsync(dir_fd)             # the rename itself must survive a crash
+                finally:
+                    os.close(dir_fd)
+        except OSError as exc:
+            raise self._unwritable(exc) from exc
 
     def _acquire(self, lock_path: Path) -> locks.HeldLock:
         """Take the controller lock (``locks.acquire``), waiting up to
@@ -583,6 +619,12 @@ class StateStore:
         self._check_resolution(action, reason)
         with self._locked() as state:
             c = self._escalated_cycle(state, cycle_id)
+            # The ruling is committed before the state is written; refuse here,
+            # before the commit, if the state could not be written afterwards
+            # (an unwritable state directory), so the ledger never holds a
+            # ruling whose state change was then refused. A failure that only
+            # appears later (a disk that fills between the two) is not covered.
+            self._require_writable()
             row = commit(dict(c, cycle_id=cycle_id))
             self._apply_resolution(state, c, cycle_id, action, reason)
             return row, dict(c, cycle_id=cycle_id)

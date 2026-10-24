@@ -555,6 +555,12 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the lock file {} was replaced while this process held the lock; this process's "
      "change was discarded",
      "锁文件 {} 在本进程持有锁期间被替换；本进程的更改已被丢弃"),
+    ("the controller state at {} could not be written ({}: {}); check the directory "
+     "and file are writable",
+     "无法写入位于 {} 的控制器状态（{}：{}）；请确认该目录和文件可写"),
+    ("the evidence ledger at {} could not be written ({}: {}); check the file and its "
+     "directory are writable",
+     "无法写入位于 {} 的证据账本（{}：{}）；请确认该文件及其目录可写"),
     ("the directory {} for the controller state could not be created ({}: {}); check "
      "the path is a directory you can write",
      "无法创建用于控制器状态的目录 {}（{}：{}）；请确认该路径是你可写入的目录"),

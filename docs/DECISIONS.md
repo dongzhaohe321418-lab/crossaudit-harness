@@ -8369,7 +8369,9 @@ RULINGS:
 Keychain storage remains the app's path only; the CLI and the console read keys
 from the environment or the mode-600 keys file. (Remote MCP bearer tokens are still
 stored as macOS Keychain items by `mcp.py` on every surface; that is unchanged
-here.) The TUI has not yet had a cross-vendor review (AGENTS §0).
+here.) The TUI was reviewed cold by the cross-vendor reviewer in round 2 of the
+review recorded in D176 (`benchmarks/reviews/2026-10-23-claims-rounds-1-2-terra-r2.md`)
+and its ruling path re-verified in the rounds after it.
 
 ## D176 — The first cross-vendor review of this release's changes found four defects, and they are repaired: every human ruling is one failure-atomic transaction on every surface, every configured key name leaves non-provider children, the ledger head cache is bound to the file's identity, and a `key_env` that is not a key is refused
 
@@ -8618,10 +8620,36 @@ verification is the next round, cited here only once its text exists):
     and `docs/AGENTIC_RUNTIME_PHASE0.md` describe the locks as kernel-held file locks
     and their line references are brought up to date.
 
+**Round 7** (`…-r7.md`): the round-6 repairs verified; "no P1 fail-open path found"; two
+P2 and one P3, repaired on this branch (the verification is the next round, cited only
+once its text exists):
+
+24. **The state write and the ledger write refuse legibly on any operating-system
+    error.** An existing but unwritable `.crossaudit/` made `StateStore._write` raise a
+    raw `PermissionError`; a read-only `evidence.jsonl`, or a directory replaced right
+    after the lock's still-current check, did the same in `EvidenceLedger.append`. Each
+    path (temp open, write, fsync, rename, directory fsync) now raises `ConfigDenial`:
+    "the controller state at … could not be written (EACCES: …); check the directory and
+    file are writable" / "the evidence ledger at … could not be written (…)" (Chinese
+    parity). A failed ledger write truncates the file back to its prior length, so no
+    partial line remains for the next append to build on; if that truncation itself
+    fails, the existing torn-tail refusal stops the next append. Before a ruling's
+    commit, `rule_escalation` probes that the state can be written (it creates and
+    removes the same temp file), so a ruling is not committed to git and then left
+    without its state change; a failure that appears only between the commit and the
+    write is still possible and is answered by the committed-but-unchanged sentence.
+25. **`main()` has a last resort for operating-system errors.** Any `OSError` that no
+    specific refusal caught becomes one sentence in the resolved language, "an
+    operating-system error stopped this command: … (EIO) at …", with the configuration
+    denial exit code and no traceback (with `--json`, a `denied` object of kind
+    `os_error`). There is no debug switch; none was added.
+26. **D175's open item is current.** It said the TUI had not had a cross-vendor review;
+    it now cites round 2 and the rounds after it.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
-paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 6 are recorded
+paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 7 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,

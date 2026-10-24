@@ -35,6 +35,7 @@ lets an independent verifier confirm the chain offline.
 """
 from __future__ import annotations
 
+import errno
 import json
 import os
 import time
@@ -149,19 +150,50 @@ class EvidenceLedger:
             # appending on the head read above would fork the chain (review
             # 2026-10-23 round 5, finding 1).
             lock.held.require_current()
-            fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-            try:
-                os.write(fd, line.encode("utf-8"))
-                os.fsync(fd)
-                new_stamp = _stamp_of(os.fstat(fd))
-            finally:
-                os.close(fd)
+            new_stamp = self._write_line(line.encode("utf-8"))
             # We just wrote the new head; remember it (guarded by the resulting
             # file's size, mtime and inode) so the next append does not have to
             # re-scan the file.
             self._cached_head = (body["seq"], entry_digest)
             self._cached_stamp = new_stamp
             return entry_digest
+
+    def _write_line(self, data: bytes) -> tuple[int, int, int]:
+        """Append one complete line and fsync it; return the file's stamp.
+
+        Called under the append lock. Any ``OSError`` (an unwritable file or
+        directory, a directory replaced after the lock check, a full disk) is
+        a ``ConfigDenial``, never a traceback (review 2026-10-23 round 7). A
+        write that fails part-way, or a short write, is taken back: the file is
+        truncated to its length before the append, so no partial line is left.
+        If even that truncation fails, the torn tail stays and the next append
+        refuses it (``_refuse_torn_tail``) rather than writing onto it.
+        """
+        fd = -1
+        try:
+            fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            before = os.fstat(fd).st_size
+            try:
+                written = os.write(fd, data)
+                if written != len(data):
+                    raise OSError(errno.ENOSPC, "short write to the evidence ledger")
+                os.fsync(fd)
+                return _stamp_of(os.fstat(fd))
+            except OSError:
+                try:
+                    os.ftruncate(fd, before)
+                except OSError:
+                    pass
+                raise
+        except OSError as exc:
+            name = errno.errorcode.get(exc.errno or 0, str(exc.errno))
+            raise ConfigDenial(
+                f"the evidence ledger at {self.path} could not be written ({name}: "
+                f"{exc.strerror or exc}); check the file and its directory are "
+                f"writable", issue="ledger_unwritable", path=str(self.path)) from exc
+        finally:
+            if fd >= 0:
+                os.close(fd)
 
     # -- read -----------------------------------------------------------------
     def head(self) -> str:

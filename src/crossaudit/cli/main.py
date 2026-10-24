@@ -7,6 +7,7 @@ invents a default when configuration is missing: absent config denies.
 from __future__ import annotations
 
 import argparse
+import errno
 import json
 import os
 import shutil
@@ -2545,6 +2546,24 @@ def main(argv: list[str] | None = None) -> int:
                   file=sys.stderr)
             _report_untranslated()
         return exc.exit_code
+    except OSError as exc:
+        # The last resort (review 2026-10-23 round 7): an operating-system
+        # error that no layer turned into a Denial is still one legible
+        # sentence in the person's language and the config exit code, never a
+        # traceback. There is no debug switch in this CLI, so none prints one.
+        i18n.set_language(_language_for(args))
+        where = (i18n.t("cli.oserror.at", filename=exc.filename)
+                 if getattr(exc, "filename", None) else "")
+        name = errno.errorcode.get(exc.errno or 0, str(exc.errno))
+        sentence = i18n.t("cli.oserror", strerror=exc.strerror or str(exc),
+                          name=name, where=where)
+        if getattr(args, "json", False):
+            print(json.dumps({"denied": True, "kind": "os_error",
+                              "reason": sentence, "exit_code": EXIT_CONFIG},
+                             indent=2, sort_keys=True))
+        else:
+            print(sentence, file=sys.stderr)
+        return EXIT_CONFIG
     except KeyboardInterrupt:
         print("\n" + i18n.t("build.interrupted"), file=sys.stderr)
         return EXIT_CONFIG
