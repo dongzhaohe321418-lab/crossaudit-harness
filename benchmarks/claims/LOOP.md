@@ -227,11 +227,14 @@ found that reconciliation raced the lock and would apply any committed row,
 answered by a two-phase ruling with a local intent whose nonce the committed
 row carries; round 10 found that a landed commit whose read-back failed
 cleared the intent and that the row's fields were not bound to it, answered
-by the commit-landed marks and full-row binding, on the ref below.
+by the commit-landed marks and full-row binding; round 11 found that an
+unreadable repository could still read as certainty, answered by status-carrying
+HEAD reads, Git's own "ref missing" only, and committed-log order, on the ref
+below.
 
 | ref (same harness, `e338d0e` + the placeholder fill) | PASS / 43 |
 |---|---|
-| **`feat/tui-first` c26e74e** (D175; D176 repairs from ten review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
+| **`feat/tui-first` 0910eba** (D175; D176 repairs from eleven review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
 
 The record is `records/tui-first/claims.jsonl` and `RESULTS-tui-first.md`. Still
 untestable here, as before: C32 (now also "not on the main line"), C33b, C34b,
