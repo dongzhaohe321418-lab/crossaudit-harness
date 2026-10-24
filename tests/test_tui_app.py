@@ -1014,7 +1014,7 @@ def test_ctrl_c_at_a_prompt_cancels_the_prompt_not_the_window(project):
     stty = re.findall(r"STTY=(\S+)", screen.seen)
     assert len(stty) == 2 and stty[0] == stty[1], stty  # terminal restored
     exit_code = int(re.search(r"TUI-EXIT=(\d+)", screen.seen).group(1))
-    assert exit_code != 0                     # interrupted, as before
+    assert exit_code == 20                    # interrupted: EXIT_CONFIG, as `build`
     assert git("rev-parse", "HEAD", cwd=root) == head    # no task, no ruling
     state = json.loads((root / ".crossaudit" / "state.json").read_text())
     assert state["cycles"][escalated]["status"] == "ESCALATED"

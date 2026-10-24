@@ -8,7 +8,11 @@ docs/design/TUI_FIRST.md §2. Three layers, each testable on its own:
   derived here that a projection could carry; where one lacked a field, the
   field was added to the projection.
 * ``render(frame, width, height, ...)`` turns that data into the text of one
-  screen. Pure: no terminal, no clock, no files. Every line is measured as the
+  screen. Pure relative to its arguments and three settings it reads and never
+  changes: the current language (``i18n``), the stdout encoding (a glyph the
+  stream cannot encode falls back to ASCII) and whether colour is on
+  (``tui.coloured()``: stdout is a TTY and ``NO_COLOR`` is unset). It reads no
+  clock, no file and no key, and writes nothing. Every line is measured as the
   terminal counts it (CJK is two columns) and cut to the width with an
   ellipsis, so a narrow terminal truncates instead of wrapping into garbage.
 * ``run_tui(cfg)`` draws frames with two ANSI escapes (home, clear to the end
@@ -476,7 +480,12 @@ def view(frame: dict, width: int, height: int, *, selected: int = 0,
 def render(frame: dict, width: int, height: int, *, selected: int = 0,
            expanded: bool = False, mode: str = "cycles",
            scroll: int | None = None) -> str:
-    """The text of one screen. Pure: the same arguments give the same text for the same stdout encoding and colour setting (glyphs the stream cannot encode fall back to ASCII; colour follows ``tui.coloured()``, i.e. a TTY without NO_COLOR).
+    """The text of one screen. Pure relative to its arguments and three settings it
+    reads and never changes: the same arguments give the same text for the same
+    language (``i18n.language()``), the same stdout encoding (glyphs the stream
+    cannot encode fall back to ASCII) and the same colour setting
+    (``tui.coloured()``: stdout is a TTY and ``NO_COLOR`` is unset). It reads
+    no clock, no file and no key, and writes nothing.
 
     ``mode`` is "cycles" (the list), "decision" (the decision card above the
     list, while a cycle waits for a person), or "help" (the key overlay).
