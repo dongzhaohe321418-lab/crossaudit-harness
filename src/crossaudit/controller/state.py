@@ -640,26 +640,49 @@ class StateStore:
             cleared = False
             if intent:
                 rows = read_committed()
-                match = [r for r in rows if str(r.get("cycle_id")) == cycle_id
-                         and r.get("intent") == intent.get("nonce")]
-                if match:
-                    row = match[-1]
+                c0 = state["cycles"].get(cycle_id) or {}
+                # The rows that could answer this intent: this cycle's rows
+                # later in the committed log than the intent's starting point
+                # (``rows_before``, the log's length when the intent was
+                # written), or, for an intent written before that field
+                # existed, later than every row this controller has already
+                # applied (``ruling_intents``). Log order, never timestamps
+                # (D176 ruling 38).
+                if isinstance(intent.get("rows_before"), int):
+                    start_at = intent["rows_before"]
+                else:
+                    applied = set(c0.get("ruling_intents") or [])
+                    start_at = max((i + 1 for i, r in enumerate(rows)
+                                    if r.get("intent") in applied), default=0)
+                candidates = [r for r in rows[start_at:]
+                              if str(r.get("cycle_id")) == cycle_id]
+
+                def mismatches(r: dict) -> list[str]:
                     # Every field the intent carries is bound to the row
-                    # (D176 ruling 34): a mismatch applies nothing.
-                    wrong = [name for name, ok in (
-                        ("action", row.get("action") == intent.get("action")
-                         and row.get("action") in RESOLUTION_STATUS),
+                    # (D176 ruling 34).
+                    return [name for name, ok in (
+                        ("intent", r.get("intent") == intent.get("nonce")),
+                        ("action", r.get("action") == intent.get("action")
+                         and r.get("action") in RESOLUTION_STATUS),
                         ("reason_sha256",
-                         hashlib.sha256(str(row.get("reason", "")).encode("utf-8"))
+                         hashlib.sha256(str(r.get("reason", "")).encode("utf-8"))
                          .hexdigest() == intent.get("reason_sha256")
-                         and row.get("reason_sha256", intent.get("reason_sha256"))
+                         and r.get("reason_sha256", intent.get("reason_sha256"))
                          == intent.get("reason_sha256")),
                     ) if not ok]
-                    if wrong:
-                        raise IntegrityDenial(
-                            f"the committed ruling for cycle {cycle_id} does not match "
-                            f"this controller's intent ({', '.join(wrong)}); nothing "
-                            f"was applied", cycle_id=cycle_id, issue="intent_mismatch")
+
+                match = [r for r in candidates if not mismatches(r)]
+                if candidates and not match:
+                    # A committed row for this escalation that is not a
+                    # complete bound match is a refusal, never "no row"
+                    # (ruling 38): the intent stays.
+                    wrong = min((mismatches(r) for r in candidates), key=len)
+                    raise IntegrityDenial(
+                        f"the committed ruling for cycle {cycle_id} does not match "
+                        f"this controller's intent ({', '.join(wrong)}); nothing "
+                        f"was applied", cycle_id=cycle_id, issue="intent_mismatch")
+                if match:
+                    row = match[-1]
                     c = state["cycles"].get(cycle_id)
                     before = dict(c or {}, cycle_id=cycle_id)
                     del intents[cycle_id]
@@ -683,8 +706,13 @@ class StateStore:
                     self._commit_state(held, state)
                 raise
             before = dict(c, cycle_id=cycle_id)
+            # Where in the committed log this intent starts: recovery looks
+            # only at rows after it (ruling 38). A log that cannot be read
+            # refuses here, before anything is written.
+            rows_before = len(read_committed())
             nonce = secrets.token_hex(16)
             intents[cycle_id] = {
+                "rows_before": rows_before,
                 "action": action,
                 "reason_sha256": hashlib.sha256(reason.encode("utf-8")).hexdigest(),
                 "by": by, "nonce": nonce, "started_at": time.time(),
