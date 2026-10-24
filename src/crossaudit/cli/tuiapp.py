@@ -502,8 +502,13 @@ def rule_on(cfg: Config, cycle_id: str, action: str, reason: str) -> list[str]:
     except Denial as exc:
         return [t("tui.refused", reason=i18n.denial_text(exc.reason))]
     cycle = result["cycle"]
-    lines = [t("tui.ruling.recorded", cycle=cycle_id[:12], action=action,
-               commit=result["ruling"]["commit"][:12])]
+    if result.get("reconciled"):
+        row = result["ruling"]
+        lines = [t("ruling.reconciled", at=row.get("at", ""),
+                   action=row.get("action", ""), sha=str(row.get("commit", ""))[:12])]
+    else:
+        lines = [t("tui.ruling.recorded", cycle=cycle_id[:12], action=action,
+                   commit=result["ruling"]["commit"][:12])]
     lines.append(t("tui.ruling.closed") if action == "close" else
                  t("tui.ruling.reopened", status=cycle["status"],
                    round=cycle["round"]))

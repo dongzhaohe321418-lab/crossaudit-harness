@@ -40,6 +40,7 @@ ruling's row before the state changes.
 """
 from __future__ import annotations
 
+import errno
 import json
 import os
 import signal
@@ -391,6 +392,11 @@ def record(cfg, cycle: dict, action: str, reason: str, *,
             "status_after": RESOLUTION_STATUS.get(action, ""),
             "escalation_reason": str(cycle.get("escalation_reason", ""))[:400],
         }
+        if cycle.get("escalated_at") is not None:
+            # Which escalation this answers (additive; D176 ruling 27): matched
+            # exactly by `answers`, so a committed ruling whose state change was
+            # never written is recognised without comparing clocks.
+            row["escalated_at"] = cycle["escalated_at"]
         line = (json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -440,6 +446,72 @@ def record(cfg, cycle: dict, action: str, reason: str, *,
     return row
 
 
+def answers(row: dict, cycle: dict) -> bool:
+    """Whether a committed ruling row answers the cycle's CURRENT escalation.
+
+    Exact when both carry ``escalated_at`` (every escalation since D176
+    ruling 27 records one, and every ruling row copies it). For a cycle
+    escalated before that, the row must be strictly later than the cycle's
+    last recorded change (``updated_at``): a ruling in the same second is
+    then not recognised, which errs toward the old behaviour (a second
+    ruling), never toward applying a ruling to a later escalation.
+    """
+    if cycle.get("escalated_at") is not None:
+        return row.get("escalated_at") == cycle["escalated_at"]
+    if row.get("escalated_at") is not None:
+        return False
+    return int(row.get("t") or 0) > int(cycle.get("updated_at") or 0)
+
+
+def committed_rows(cfg) -> list[dict]:
+    """The ruling rows in the COMMITTED log (the blob at HEAD), not the
+    working file: a provisional line during another ruling is not read."""
+    rel = log_path(cfg).relative_to(cfg.root).as_posix()
+    try:
+        code, blob, _err = _bounded_bytes(cfg, ("cat-file", "blob", f"HEAD:{rel}"),
+                                          time.monotonic() + CLEANUP_TIMEOUT_S)
+    except _StepFailed:
+        return []
+    if code != 0:
+        return []
+    rows = []
+    for line in blob.decode("utf-8", "replace").split("\n"):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(row, dict) and row.get("cycle_id"):
+            rows.append(row)
+    return rows
+
+
+def pending_ruling(cfg, cycle_id: str, cycle: dict | None,
+                   rows: list[dict] | None = None) -> dict | None:
+    """The committed ruling the state does not yet reflect, or None: the
+    latest committed row on this cycle that answers its current escalation,
+    while the cycle is still ESCALATED. Carries ``commit`` (its sha)."""
+    if not cycle or cycle.get("status") != "ESCALATED":
+        return None
+    rows = committed_rows(cfg) if rows is None else rows
+    mine = [r for r in rows if str(r.get("cycle_id")) == cycle_id and answers(r, cycle)]
+    if not mine:
+        return None
+    row = dict(mine[-1])
+    row["commit"] = _commit_of(cfg, row)
+    return row
+
+
+def _commit_of(cfg, row: dict) -> str:
+    """The sha of the commit that carries ``row`` (its subject names the
+    cycle and the action; the latest such commit touching the log)."""
+    rel = log_path(cfg).relative_to(cfg.root).as_posix()
+    return _cleanup_git(cfg, "log", "-n", "1", "--format=%H", "--fixed-strings",
+                        f"--grep=ruling {row.get('cycle_id')} {row.get('action')}:",
+                        "--", rel)
+
+
 def rule(cfg, store, cycle_id: str, action: str, reason: str) -> dict:
     """A human ruling on an escalated cycle, from any surface.
 
@@ -453,16 +525,63 @@ def rule(cfg, store, cycle_id: str, action: str, reason: str) -> dict:
     WAITING_FOR_HUMAN run (:func:`settle_human_wait`). Returns
     ``{"ruling": row, "cycle": cycle}``: the committed row (with ``commit``)
     and the cycle record after the ruling.
+
+    The ledger is the record and the state follows it (D176 ruling 27).
+    Before recording anything, a committed ruling on this escalation that
+    the state does not yet reflect (its state write failed after the commit)
+    is applied instead of writing a new row: the result then carries
+    ``reconciled: True`` and the committed row. A request for a different
+    action than the committed one is refused after the committed ruling is
+    applied. If the state write fails after a NEW ruling's commit, the
+    refusal names the committed sha and says the state will follow it.
     """
+    snapshot = store.cycle(cycle_id)
+    pending = pending_ruling(cfg, cycle_id, snapshot)
+    if pending is not None:
+        cycle = store.apply_committed_ruling(cycle_id, pending)
+        _settle(cfg, str(pending["action"]), snapshot or {}, cycle,
+                str(pending.get("reason", "")))
+        if pending["action"] != action:
+            raise IntegrityDenial(
+                f"a committed ruling ({pending['action']}, "
+                f"{str(pending.get('commit', ''))[:12]}) already stands for cycle "
+                f"{cycle_id}; the state now reflects it",
+                cycle_id=cycle_id, issue="committed_ruling_stands")
+        return {"ruling": pending, "cycle": cycle, "reconciled": True}
+
     before: dict = {}
+    landed: dict = {}
 
     def commit(snapshot: dict) -> dict:
         # The budget starts here, with the controller lock held.
         before.update(snapshot)
-        return record(cfg, snapshot, action, reason,
-                      deadline=time.monotonic() + COMMIT_TIMEOUT_S)
+        row = record(cfg, snapshot, action, reason,
+                     deadline=time.monotonic() + COMMIT_TIMEOUT_S)
+        landed.update(row)
+        return row
 
-    row, cycle = store.rule_escalation(cycle_id, action, reason, commit)
+    try:
+        row, cycle = store.rule_escalation(cycle_id, action, reason, commit)
+    except Denial as exc:
+        if not landed or exc.detail.get("issue") != "state_unwritable":
+            raise
+        cause = exc.__cause__
+        if isinstance(cause, OSError):
+            name = errno.errorcode.get(cause.errno or 0, str(cause.errno))
+            why = cause.strerror or str(cause)
+        else:
+            name, why = "?", exc.reason
+        raise IntegrityDenial(
+            f"the ruling on cycle {cycle_id} was committed to the ledger as "
+            f"{str(landed.get('commit', ''))[:12]}, but the cycle's state could not "
+            f"be written ({name}: {why}); the state is unchanged, and ruling on this "
+            f"cycle again applies the committed ruling instead of writing a new one",
+            cycle_id=cycle_id, issue="ruling_committed_state_pending") from exc
+    _settle(cfg, action, before, cycle, reason)
+    return {"ruling": row, "cycle": cycle}
+
+
+def _settle(cfg, action: str, before: dict, cycle: dict, reason: str) -> None:
     if action == "close":
         # The close ruling settles the parked run this escalation references:
         # a stopped task must not keep signalling "needs your decision".
@@ -470,7 +589,6 @@ def rule(cfg, store, cycle_id: str, action: str, reason: str) -> dict:
 
         daemon.settle_closed_escalation(cfg, cycle)
         settle_human_wait(cfg, before, reason)
-    return {"ruling": row, "cycle": cycle}
 
 
 def settle_human_wait(cfg, cycle: dict, reason: str) -> bool:

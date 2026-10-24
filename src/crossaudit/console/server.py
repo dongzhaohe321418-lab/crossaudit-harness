@@ -2087,6 +2087,7 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                     action = str(payload.get("action", ""))
                     reason = str(payload.get("reason", ""))
                     retrying_provider = action == "retry_provider"
+                    ruled: dict = {}
                     if retrying_provider:
                         # A retry that cannot start for want of a credential
                         # is a setup step, not a provider failure: the card,
@@ -2131,9 +2132,9 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                         # ledger first, the state changed only after, and a
                         # close settles the waiting run (D172 ruling 5;
                         # review 2026-10-23 finding 1).
-                        result = rulings.rule(
-                            current, state_store, cycle_id, action,
-                            reason)["cycle"]
+                        ruled = rulings.rule(current, state_store, cycle_id,
+                                             action, reason)
+                        result = ruled["cycle"]
                         started = None
                     STREAM_CHANGES.notify()
                     response = {
@@ -2143,6 +2144,17 @@ def make_handler(cfg: Config, token: str, touch) -> type:
                     }
                     if started is not None:
                         response.update(started, retrying=True)
+                    elif ruled.get("reconciled"):
+                        # A ruling already committed whose state change had
+                        # failed; the state now follows it (D176 ruling 27).
+                        row = ruled["ruling"]
+                        slots = {"at": row.get("at", ""), "action": row.get("action", ""),
+                                 "sha": str(row.get("commit", ""))[:12]}
+                        response["reconciled"] = True
+                        response["message"] = i18n.CATALOGUE["en"][
+                            "ruling.reconciled"].format(**slots)
+                        response["message_zh"] = i18n.CATALOGUE["zh"][
+                            "ruling.reconciled"].format(**slots)
                     self._send(json.dumps(response).encode(), "application/json")
                     return
                 if parsed.path == "/api/interrupted":

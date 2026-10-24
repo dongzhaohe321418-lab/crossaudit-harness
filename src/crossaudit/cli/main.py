@@ -1544,6 +1544,10 @@ def cmd_status(args: argparse.Namespace) -> int:
     from .. import rulings as rulings_mod
 
     ledger_rulings = rulings_mod.by_cycle(cfg)
+    # A ruling committed to the ledger whose state change was never written
+    # (D176 ruling 27): read-only here; the next ruling applies it.
+    escalated = [cid for cid, c in cycles.items() if c.get("status") == "ESCALATED"]
+    committed = rulings_mod.committed_rows(cfg) if escalated else []
     rows = []
     for cid, c in sorted(cycles.items(), key=opened):
         row = {"cycle_id": cid, "status": c["status"], "round": c["round"],
@@ -1555,6 +1559,9 @@ def cmd_status(args: argparse.Namespace) -> int:
             # The controller keeps BLOCKED + closed_by_human (other readers
             # key on both); `closed` says what that means.
             row["closed"] = True
+        if committed and any(str(r.get("cycle_id")) == cid and rulings_mod.answers(r, c)
+                             for r in committed) and c.get("status") == "ESCALATED":
+            row["ruling_pending"] = True
         if ledger_rulings.get(cid):
             row["rulings"] = [{k: r.get(k) for k in
                                ("action", "by", "at", "reason")
@@ -1568,6 +1575,8 @@ def cmd_status(args: argparse.Namespace) -> int:
         human.append(f"{r['cycle_id']:16s} {shown:10s} {r['round']:5d}  "
                      f"{r['active_sha']}  {r['consumed']}"
                      + (f"   re-audit of {r['reaudit_of']}" if r.get("reaudit_of")
+                        else "")
+                     + (f"   {i18n.t('status.ruling_pending')}" if r.get("ruling_pending")
                         else ""))
         for ruling in r.get("rulings", []):
             human.append(f"  ruling: {ruling.get('action')} by {ruling.get('by')} "
@@ -1608,9 +1617,17 @@ def cmd_resolve(args: argparse.Namespace) -> int:
     action = "reopen" if args.reopen else "close"
     result = resolve_cycle(cfg, args.cycle_id, action, args.because)
     row, c = result["ruling"], result["cycle"]
-    print(f"ruling recorded: {args.cycle_id} {action} — {args.because}")
-    print(f"  committed to the ledger: {row['commit'][:12]} "
-          f"({cfg.ledger_dir}/{rulings_mod.RULINGS_LOG})")
+    if result.get("reconciled"):
+        # A ruling already committed whose state change had failed: the state
+        # now follows it and nothing new was written (D176 ruling 27). One
+        # sentence, in the person's language, like a refusal.
+        i18n.set_language(_language_for(args))
+        print(i18n.t("ruling.reconciled", at=row.get("at", ""),
+                     action=row.get("action", ""), sha=str(row.get("commit", ""))[:12]))
+    else:
+        print(f"ruling recorded: {args.cycle_id} {action} — {args.because}")
+        print(f"  committed to the ledger: {row['commit'][:12]} "
+              f"({cfg.ledger_dir}/{rulings_mod.RULINGS_LOG})")
     if action == "close":
         print(f"cycle is now closed (round {c['round']}); "
               "the increment stays out of the record.")
@@ -2488,30 +2505,33 @@ def main(argv: list[str] | None = None) -> int:
     from .. import usage as _usage
 
     _usage.set_surface("cli")
-    # Load the credentials file we wrote, if the variables are not already set.
-    # Done here rather than at import time: importing this package must stay
-    # free of side effects, and only a command actually needs a key.
-    wizard.load_keys_into_env()
-    if not getattr(args, "verb", None):
-        # First-run funnel: pip cannot run a wizard at install time (and must
-        # not — constraint 7), so the first bare invocation is the doorway.
-        try:
-            load()
-        except Denial:
-            if sys.stdin.isatty():
-                print("CrossAudit is installed but this directory is not set up.")
-                if input("Set it up now? [Y/n] ").strip().lower() in ("", "y", "yes"):
-                    wizard.run(Path("."), mode="local", force=False)
-                    print("\nNow: `crossaudit doctor --fix` to finish, then "
-                          "`crossaudit run`.")
-                    return EXIT_OK
-            print(GETTING_STARTED.format(version=__version__))
+    try:
+        # The post-parse bootstrap runs inside the same boundary as the
+        # command (D176 ruling 28): an unreadable credentials file is a
+        # refusal or the last-resort sentence, never a traceback.
+        # Load the credentials file we wrote, if the variables are not already set.
+        # Done here rather than at import time: importing this package must stay
+        # free of side effects, and only a command actually needs a key.
+        wizard.load_keys_into_env()
+        if not getattr(args, "verb", None):
+            # First-run funnel: pip cannot run a wizard at install time (and must
+            # not — constraint 7), so the first bare invocation is the doorway.
+            try:
+                load()
+            except Denial:
+                if sys.stdin.isatty():
+                    print("CrossAudit is installed but this directory is not set up.")
+                    if input("Set it up now? [Y/n] ").strip().lower() in ("", "y", "yes"):
+                        wizard.run(Path("."), mode="local", force=False)
+                        print("\nNow: `crossaudit doctor --fix` to finish, then "
+                              "`crossaudit run`.")
+                        return EXIT_OK
+                print(GETTING_STARTED.format(version=__version__))
+                _print_origin()
+                return EXIT_OK
+            print(_project_front_door(args))
             _print_origin()
             return EXIT_OK
-        print(_project_front_door(args))
-        _print_origin()
-        return EXIT_OK
-    try:
         # F4. Reported once here rather than at each command's return, so a
         # command cannot be added that silently drops the notice — the same
         # reason the action set comes from argparse rather than a list. It goes

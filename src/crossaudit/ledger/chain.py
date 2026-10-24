@@ -178,7 +178,7 @@ class EvidenceLedger:
                 if written != len(data):
                     raise OSError(errno.ENOSPC, "short write to the evidence ledger")
                 os.fsync(fd)
-                return _stamp_of(os.fstat(fd))
+                stamp = _stamp_of(os.fstat(fd))
             except OSError:
                 try:
                     os.ftruncate(fd, before)
@@ -186,14 +186,29 @@ class EvidenceLedger:
                     pass
                 raise
         except OSError as exc:
+            if fd >= 0:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
             name = errno.errorcode.get(exc.errno or 0, str(exc.errno))
             raise ConfigDenial(
                 f"the evidence ledger at {self.path} could not be written ({name}: "
                 f"{exc.strerror or exc}); check the file and its directory are "
                 f"writable", issue="ledger_unwritable", path=str(self.path)) from exc
-        finally:
-            if fd >= 0:
-                os.close(fd)
+        # The entry is written and fsynced. A close that fails now must not be
+        # reported as "not written" (D176 ruling 29): the entry may well be on
+        # disk, and the next append verifies the chain before extending it.
+        try:
+            os.close(fd)
+        except OSError as exc:
+            name = errno.errorcode.get(exc.errno or 0, str(exc.errno))
+            raise ConfigDenial(
+                f"the evidence ledger at {self.path} could not be closed cleanly after "
+                f"writing ({name}: {exc.strerror or exc}); the entry may have been "
+                f"recorded, and the next append verifies the chain",
+                issue="ledger_close_failed", path=str(self.path)) from exc
+        return stamp
 
     # -- read -----------------------------------------------------------------
     def head(self) -> str:

@@ -377,6 +377,7 @@ class StateStore:
                     f"cycle is {c['status']}; it cannot be escalated",
                     cycle_id=cycle_id, status=c["status"])
             c["status"] = ESCALATED
+            c["escalated_at"] = time.time()
             c["awaiting_verdict"] = False
             c["escalation_reason"] = reason
             c["escalation_kind"] = kind or classify_escalation_kind(reason)
@@ -430,7 +431,7 @@ class StateStore:
                 "parent_receipt": "", "consumed": [],
             }
             c.update(round=round_, status=ESCALATED, awaiting_verdict=False,
-                     escalation_reason=reason,
+                     escalated_at=time.time(), escalation_reason=reason,
                      escalation_kind=kind or classify_escalation_kind(reason))
             if cause:
                 c["escalation_cause"] = cause[:64]
@@ -526,6 +527,10 @@ class StateStore:
             else:
                 c["status"] = ESCALATED if c["round"] >= max_rounds else BLOCKED
             if c["status"] == ESCALATED:
+                # Which escalation a ruling answers (additive): the ruling row
+                # records it, so a committed ruling is matched to this stop
+                # exactly, never by comparing clocks (D176 ruling 27).
+                c["escalated_at"] = time.time()
                 if escalation_reason.strip():
                     c["escalation_reason"] = escalation_reason.strip()[:400]
                 # A round-limit stop with no provider reason is a content
@@ -628,6 +633,28 @@ class StateStore:
             row = commit(dict(c, cycle_id=cycle_id))
             self._apply_resolution(state, c, cycle_id, action, reason)
             return row, dict(c, cycle_id=cycle_id)
+
+    def apply_committed_ruling(self, cycle_id: str, row: dict) -> dict:
+        """Make the state follow a ruling that is already committed to the
+        ledger but whose state change was never written (a write that failed
+        after the commit; D176 ruling 27). Under the lock: the cycle must
+        still be ESCALATED and still be the escalation ``row`` answers
+        (``rulings.answers``); then the same state change and
+        ``human_resolution`` entry as a fresh ruling, marked ``reconciled``.
+        Returns the cycle after it."""
+        from .. import rulings
+
+        action, reason = str(row.get("action", "")), str(row.get("reason", ""))
+        self._check_resolution(action, reason)
+        with self._locked() as state:
+            c = self._escalated_cycle(state, cycle_id)
+            if not rulings.answers(row, c):
+                raise IntegrityDenial(
+                    "the committed ruling does not answer this cycle's current "
+                    "escalation", cycle_id=cycle_id)
+            self._apply_resolution(state, c, cycle_id, action, reason)
+            state["history"][-1]["reconciled"] = True
+            return dict(c, cycle_id=cycle_id)
 
     @staticmethod
     def _check_resolution(action: str, reason: str) -> None:

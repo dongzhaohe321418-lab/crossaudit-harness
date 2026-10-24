@@ -8637,7 +8637,9 @@ once its text exists):
     commit, `rule_escalation` probes that the state can be written (it creates and
     removes the same temp file), so a ruling is not committed to git and then left
     without its state change; a failure that appears only between the commit and the
-    write is still possible and is answered by the committed-but-unchanged sentence.
+    write was still possible and, as round 8 found, was reported only as the write
+    refusal (the sentence this text had promised for that case no longer existed): see
+    ruling 27.
 25. **`main()` has a last resort for operating-system errors.** Any `OSError` that no
     specific refusal caught becomes one sentence in the resolved language, "an
     operating-system error stopped this command: … (EIO) at …", with the configuration
@@ -8646,10 +8648,46 @@ once its text exists):
 26. **D175's open item is current.** It said the TUI had not had a cross-vendor review;
     it now cites round 2 and the rounds after it.
 
+**Round 8** (`…-r8.md`): the round-7 repairs verified; one P1 and two P2, repaired on this
+branch (the verification is the next round, cited only once its text exists):
+
+27. **A ruling committed to the ledger whose state change could not be written is
+    reconciled from the ledger, never ruled twice.** A write that fails after
+    `rulings.record()` has committed (the reviewer failed the state file's `fsync` with
+    `ENOSPC`) left the ruling in git and the cycle ESCALATED, reported only as "the
+    controller state … could not be written", so a person could rule again and commit a
+    second, conflicting ruling. Now: the failure sentence names the committed sha and
+    says the state is unchanged and that ruling again applies the committed ruling;
+    `rulings.rule`, before recording anything, reads the committed `cycles/rulings.jsonl`
+    (the blob at `HEAD`, not the working file) for a ruling that answers this cycle's
+    current escalation and that the state does not yet reflect, and if there is one it
+    applies that ruling's state change (`StateStore.apply_committed_ruling`, the same
+    locked path, history marked `reconciled`, the same settle on close) and reports it
+    instead of writing a new row; a request for the other action is refused, the
+    committed ruling stands, and the cycle is no longer ESCALATED. "Answers" is exact,
+    not a clock comparison: every escalation records `escalated_at` and every ruling row
+    copies it, so a ruling is applied only to the escalation it was made for, even when
+    a cycle is ruled on and re-escalated within one second; a cycle escalated before this
+    field existed is matched only by a row strictly later than its `updated_at`, and a
+    same-second ruling on such a cycle is not recognised (a second ruling is then
+    allowed, as before) rather than applied to the wrong escalation. `status` shows a
+    cycle in that condition as "ruling committed, state pending" and changes nothing.
+    `resolve`, the TUI, the console, Stop and `talk`'s resolve lane all rule through
+    `rule()`, so all reconcile the same way. The ledger is the record; the state follows.
+28. **The credentials-file bootstrap is inside `main()`'s OS-error boundary.** An
+    unreadable `CROSSAUDIT_KEYS_FILE` (mode 000) raised `PermissionError` before the
+    boundary and tracebacked; the post-parse bootstrap (the keys file and the bare
+    invocation's setup prompt) now runs inside it (English, Chinese and `--json`
+    tested), so a refusal raised there is caught as well.
+29. **The ledger's `os.close` is inside its conversion, with wording that does not claim
+    the entry was not written.** A close that fails after a successful write raised a raw
+    `OSError` although one valid entry was on disk; the sentence for that case says the
+    entry may have been recorded and that the next append verifies the chain.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
-paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 7 are recorded
+paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 8 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,
