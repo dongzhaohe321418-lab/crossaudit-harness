@@ -647,6 +647,9 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("a committed ruling for cycle {} ({}) carries no valid signature from this project; "
      "nothing was applied, and no new ruling is made until the repository is repaired",
      "周期 {} 的一条已提交裁决（{}）没有本项目的有效签名；未应用任何内容，在仓库修复之前不会作出新的裁决"),
+    ("escalated by an older version of CrossAudit, and committing its escalation now "
+     "failed: {}",
+     "由旧版 CrossAudit 升级，且现在提交其升级失败：{}"),
     ("the escalation of cycle {} is not committed to the ledger ({}); rule on it after "
      "the repository is repaired",
      "周期 {} 的升级未提交到账本（{}）；请在仓库修复后再对其裁决"),
@@ -1595,6 +1598,29 @@ ENTRIES: tuple[tuple[str, str], ...] = (
 #: would rightly reject them there). They are looked up only from the slots
 #: of the templates in COMPOSITES.
 CLAUSES: tuple[tuple[str, str], ...] = (
+    # rulings.py / controller/state.py -- the fixed phrases that land in the
+    # slots of the ruling and escalation refusals (and the status line), so a
+    # Chinese reader never meets them in English.
+    ("git {} failed and said nothing", "git {} 失败且没有给出任何信息"),
+    ("git {} timed out after {}s", "git {} 在 {} 秒后超时"),
+    ("git {} could not run: {}", "git {} 无法运行：{}"),
+    ("git said nothing", "git 没有给出任何信息"),
+    ("the log could not be written: {}", "无法写入日志：{}"),
+    ("the log could not be read: {}", "无法读取日志：{}"),
+    ("git rev-parse HEAD failed", "git rev-parse HEAD 失败"),
+    ("git ls-tree failed", "git ls-tree 失败"),
+    ("git cat-file failed", "git cat-file 失败"),
+    ("it is not UTF-8", "它不是 UTF-8"),
+    ("a line is not JSON", "有一行不是 JSON"),
+    ("a line is not a ruling", "有一行不是裁决"),
+    ("escalated by an older version of CrossAudit", "由旧版 CrossAudit 升级"),
+    ("its escalation row was not committed", "其升级行未被提交"),
+    ("the ledger holds no verified escalation row for it", "账本中没有它的经过验证的升级行"),
+    ("the ledger's latest escalation of this cycle is {}, not {}",
+     "账本中该周期最新的升级是 {}，而不是 {}"),
+    ("no project configuration was found for this state", "未找到此状态对应的项目配置"),
+    ("the committed escalation row could not be confirmed", "无法确认已提交的升级行"),
+    ("short write to the evidence ledger", "写入证据账本时写入不完整"),
     # broker/secretscan.py — the KIND of secret a refused commit carried.
     ("a private key block", "私钥块"),
     ("an AWS access key id", "AWS 访问密钥 ID"),
@@ -1683,6 +1709,29 @@ CLAUSES: tuple[tuple[str, str], ...] = (
 #: other slot is carried through untouched (D130: never match text a person
 #: could have authored).
 COMPOSITES: frozenset[str] = frozenset({
+    # The ruling, escalation and ledger refusals whose slots carry our own
+    # phrases (git failures, read failures, why an escalation is not committed).
+    "the committed rulings log could not be read ({}); no ruling is made until it can be",
+    "the ruling on cycle {} could not be committed to the ledger ({}); the cycle stays "
+    "ESCALATED and nothing was recorded; .git/index.lock may have been left by the "
+    "killed git — if no git process is running, remove it by hand and run "
+    "`git reset -q -- {}`",
+    "the ruling on cycle {} was committed as {}, but the committed {} could not be "
+    "read back to confirm it ({}); the cycle stays ESCALATED, and the next ruling on "
+    "this cycle recovers it",
+    "the ruling on cycle {} may have been committed to the ledger ({}); the cycle "
+    "stays ESCALATED, and the next ruling on this cycle recovers it",
+    "the escalation of cycle {} is not committed to the ledger ({}); rule on it after "
+    "the repository is repaired",
+    "the ruling on cycle {} could not be committed to the ledger ({}), and {} could "
+    "not be restored ({}); the cycle stays ESCALATED, but check {} against git "
+    "before ruling again",
+    "the ruling on cycle {} could not be committed to the ledger ({}); the cycle "
+    "stays ESCALATED and nothing was recorded",
+    "escalated by an older version of CrossAudit, and committing its escalation now "
+    "failed: {}",
+    "the evidence ledger at {} could not be written ({}: {}); check the file and its "
+    "directory are writable",
     "commit refused: the staged changes appear to contain {}; remove the secret "
     "(or add the file to .gitignore) and try again",
     "gh {} failed: {}.{}",
