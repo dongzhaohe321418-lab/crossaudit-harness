@@ -242,11 +242,22 @@ ledger-row commits carried no git identity and that same-second cycles ordered
 by hash, and a walk of the TUI as a person found silent clipping on short
 terminals, a crash on an ASCII console and Ctrl-C quitting at a prompt; all
 fixed; round 17 verified those and found that ambient GIT_AUTHOR_/GIT_COMMITTER_
-variables could split a row's identity from its commit, fixed on the ref below.
+variables could split a row's identity from its commit, fixed; round 18 verified
+that (MERGE). The CI then found the Ctrl-C pty test's wrapper shell dying under
+Linux's dash (a non-interactive dash that receives SIGINT while waiting kills
+itself when the child returns), fixed by running it with job control; round 19
+verified that repair and found two wording and assertion items, fixed; the same
+push's CI failed once where a bounded `git log` that could not answer was read
+as "no commit" and an escalation row was written twice, fixed as a refusal
+(D176 ruling 57); round 20 judged that sound and found one wording item (a step
+reached with no time left said "timed out after 90s"), fixed; round 21 verified
+that and found the ruling's own post-commit read-back still bounded by the row's
+remaining deadline where the records said 5 s, fixed; round 22 verified it on
+the ref below.
 
 | ref (same harness, `e338d0e` + the placeholder fill) | PASS / 43 |
 |---|---|
-| **`feat/tui-first` 392b023** (D175; D176 repairs from seventeen review rounds, the two CI findings and the usability walk: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
+| **`feat/tui-first` dbeb258** (D175; D176 repairs from twenty-two review rounds, the two CI findings and the usability walk: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
 
 The record is `records/tui-first/claims.jsonl` and `RESULTS-tui-first.md`. Still
 untestable here, as before: C32 (now also "not on the main line"), C33b, C34b,
