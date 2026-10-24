@@ -42,6 +42,14 @@ DEFAULT_CHECKS = SCIENCE_CHECKS
 ANNOTATION_SKILLS: dict[str, tuple[str, str]] = {
     "number_source": ("skills/provenance-numbers.md", "PROVENANCE_NUMBERS_SKILL.md"),
     "source_provenance": ("skills/provenance-sources.md", "PROVENANCE_SOURCES_SKILL.md"),
+    # The AI4S declaration pack reads two blocks the generator writes into
+    # results.json. One file serves both checks — they share a vocabulary
+    # (quantity names, literals) — and its front matter names both, so
+    # `skills.select` keeps it while EITHER check is on and drops it when
+    # neither is. Neither check is in `SCIENCE_CHECKS`, so no scaffolded
+    # project receives it unless its own `checks:` names one of them.
+    "derivations": ("skills/ai4s-declarations.md", "AI4S_DECLARATIONS_SKILL.md"),
+    "claims": ("skills/ai4s-declarations.md", "AI4S_DECLARATIONS_SKILL.md"),
 }
 ANNOTATION_CHECKS = tuple(ANNOTATION_SKILLS)
 
@@ -125,9 +133,26 @@ def annotation_skill_tree(checks, root=None) -> dict[str, str]:
     Its removal is reported through `prune_legacy_annotation_skill`, which the
     caller must stage; this function only writes.
     """
-    return {path: read(template)
+    return {path: render_skill(template)
             for name, (path, template) in ANNOTATION_SKILLS.items()
             if name in (checks or ())}
+
+
+#: The line in AI4S_DECLARATIONS_SKILL.md that becomes the derivation method
+#: table. Generated from the registry the check itself reads
+#: (`crossaudit.dcl.ai4s.method_table`), so the argument names a generator is
+#: shown are, by construction, the ones the check accepts: the first
+#: live-generator experiment's commonest miss was a guessed argument name.
+AI4S_METHOD_TABLE = "{{AI4S_METHOD_TABLE}}"
+
+
+def render_skill(template: str) -> str:
+    """A packaged skill template as it is written into a project."""
+    text = read(template)
+    if AI4S_METHOD_TABLE in text:
+        from ..dcl.ai4s import method_table
+        text = text.replace(AI4S_METHOD_TABLE, method_table())
+    return text
 
 
 def read(name: str) -> str:

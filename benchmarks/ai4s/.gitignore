@@ -1,0 +1,6 @@
+records/corpus/
+records/corpus-x30/
+records/*/rows.jsonl
+records/*/rows.replicate.jsonl
+records/auditor-dryrun-*/auditor_dryrun_rows.jsonl
+records/manifest.jsonl

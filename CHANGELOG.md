@@ -3,6 +3,21 @@
 All notable changes to CrossAudit are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH` scheme; the source on `main` is authoritative.
 
+## Unreleased
+
+### Added
+- `science-ai4s` check profile (opt-in; `science` is unchanged): numeric validity,
+  constitution-declared value ranges, derivations recomputed from committed
+  data, split integrity and declared statistical claims as blockers, with
+  reproducibility and precision as advisories. Measured on the synthetic AI4S
+  test set in `benchmarks/ai4s/` (`RESULTS.md`). Its declaration contract was
+  tightened after an independent cross-vendor review found six shapes that
+  passed silently (an empty `where` match, `uncommitted: true` without a file,
+  duplicate JSON keys, unknown range or split keys, a path outside the
+  declaring file's directory); each is now a blocker naming the shape
+  (`benchmarks/reviews/2026-10-23-ai4s-pack-v2-terra-r{1,2}.md`, DESIGN.md
+  Amendment 5).
+
 ## 4.17.0 — The activity stream
 
 The conversation is now one chronological stream, in one visual language,
