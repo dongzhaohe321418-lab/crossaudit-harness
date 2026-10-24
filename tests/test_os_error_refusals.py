@@ -59,11 +59,12 @@ def test_the_store_refuses_an_unwritable_existing_directory(tmp_path):
 def test_resolve_with_an_unwritable_state_directory_refuses_before_committing(
         escalated, monkeypatch, capsys, lang):
     """Through `main()`. The ruling is refused BEFORE its commit, so the
-    ledger never holds a ruling whose state change then failed. Mutations
-    caught: dropping `_require_writable()` from `rule_escalation` (the commit
-    lands, then the write is refused: HEAD moves); and the probe's OSError
-    left unwrapped (a traceback, no exit code). `_write`'s own wrapping is
-    caught by the store-level test above."""
+    ledger never holds a ruling whose state change then failed. Since the
+    two-phase ruling (D176 ruling 30) the refusal comes from the intent's
+    state write, which precedes the commit (it replaced round 7's
+    `_require_writable` probe). Mutation caught: committing before the
+    intent is written (HEAD moves). `_write`'s own wrapping is caught by the
+    store-level test above."""
     root, cid = escalated
     state_dir = root / ".crossaudit"
     head = git("rev-parse", "HEAD", cwd=root)
