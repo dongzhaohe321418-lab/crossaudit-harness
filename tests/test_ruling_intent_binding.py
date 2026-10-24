@@ -161,10 +161,13 @@ def test_a_genuinely_unborn_repository_reads_as_no_rows(console):  # noqa: F811
 
 # ------------------------------------------------ ruling 34: the binding
 def test_a_filter_that_rewrites_the_nonce_stops_phase_3(escalated):
-    """A clean filter rewrites the `intent` value in the committed line.
-    Mutation caught: confirming on four fields without the nonce (round 9)
+    """A clean filter rewrites the `intent` value in the committed line; then
+    the filter is removed and the ruling retried (round 11's reproduction).
+    Mutations caught: confirming on four fields without the nonce (round 9)
     -- phase 3 applies the state change although the commit carries another
-    nonce."""
+    nonce; and, on the retry, treating that committed row as "no row" (round
+    10) -- the intent is cleared and a second ruling committed (D176 ruling
+    38)."""
     root, cid = escalated
     cfg = load()
     gitdir = Path(git("rev-parse", "--absolute-git-dir", cwd=root))
@@ -178,6 +181,19 @@ def test_a_filter_that_rewrites_the_nonce_stops_phase_3(escalated):
         in denied.value.reason
     assert _state(root)["cycles"][cid]["status"] == "ESCALATED"
     assert cid in _state(root)["pending_rulings"]
+    head = git("rev-parse", "HEAD", cwd=root)
+    git("config", "--unset", "filter.nonce.clean", cwd=root)
+    (gitdir / "info" / "attributes").write_text("")
+    with pytest.raises(IntegrityDenial) as retried:
+        rulings.rule(cfg, _store(root), cid, "close", REASON)
+    assert retried.value.reason == (f"the committed ruling for cycle {cid} does not "
+                                    f"match this controller's intent (intent); "
+                                    f"nothing was applied")
+    assert git("rev-parse", "HEAD", cwd=root) == head
+    committed = git("show", f"HEAD:{LOG}", cwd=root)
+    assert len([ln for ln in committed.split("\n") if ln.strip()]) == 1
+    assert cid in _state(root)["pending_rulings"]
+    assert _state(root)["cycles"][cid]["status"] == "ESCALATED"
 
 
 def test_a_forged_local_intent_cannot_apply_a_committed_row(escalated, monkeypatch):
