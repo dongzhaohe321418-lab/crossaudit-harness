@@ -441,3 +441,6 @@
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 1cdf28046d474bcd was committed to the ledger as a2520b9a11c0, but the cycle's state could not be written (ENOSPC: No space left on device); the state is unchanged, and the next ruling on this cycle applies the committed ruling"}
 {"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (fatal: bad object HEAD:cycles/rulings.jsonl); no ruling is made until it can be"}
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle 81b75308cace6a78 does not match the intent this controller recorded for it; nothing was recorded"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle 0b8d262c745cac98 was committed as 05a91e8e2dc5, but the committed cycles/rulings.jsonl could not be read back to confirm it (fatal: unable to read blob); the cycle stays ESCALATED, and the next ruling on this cycle recovers it"}
+{"kind": "IntegrityDenial", "reason": "the committed ruling for cycle e74e37022a0aaf64 does not match this controller's intent (action); nothing was applied"}
+{"kind": "IntegrityDenial", "reason": "the committed ruling for cycle e74e37022a0aaf64 does not match this controller's intent (reason_sha256); nothing was applied"}
