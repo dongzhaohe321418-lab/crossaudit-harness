@@ -220,11 +220,14 @@ refusal on filesystems without locks; round 6 verified those with no blocking
 finding and asked for a legible refusal where a parent directory cannot be
 created; round 7 verified that and asked for legible refusals where a
 state or ledger write fails and a last-resort handler for any other
-operating-system error, repaired on the ref below.
+operating-system error; round 8 verified that and found the last P1 (a
+ruling committed to the ledger whose state write then failed could be ruled
+twice), answered by reconciling the state from the committed ledger, on the
+ref below.
 
 | ref (same harness, `e338d0e` + the placeholder fill) | PASS / 43 |
 |---|---|
-| **`feat/tui-first` 5400597** (D175; D176 repairs from seven review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
+| **`feat/tui-first` d973abd** (D175; D176 repairs from eight review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
 
 The record is `records/tui-first/claims.jsonl` and `RESULTS-tui-first.md`. Still
 untestable here, as before: C32 (now also "not on the main line"), C33b, C34b,
