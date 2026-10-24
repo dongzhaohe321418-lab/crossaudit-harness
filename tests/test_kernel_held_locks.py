@@ -237,8 +237,9 @@ def test_no_source_file_unlinks_a_lock_path():
     `controller/state.py`, where a lock path may hide behind a neutral name
     such as `self.path`) -- the check-then-unlink pattern rounds 3 and 4
     removed. Exceptions: git's `next-index-<pid>.lock` of a git process we
-    killed, named by its pid (rulings.py), and the controller's capability
-    probe file, which is not a lock anyone else takes (state.py)."""
+    killed, named by its pid (rulings.py), and in state.py the capability
+    probe file and the state write's own temporary file (`state.json.tmp<pid>`),
+    neither of which is a lock anyone else takes."""
     lock_modules = {"locks.py", "chain.py", "state.py"}
     offenders = []
     for path in sorted((SRC / "crossaudit").rglob("*.py")):
@@ -257,7 +258,8 @@ def test_no_source_file_unlinks_a_lock_path():
                 continue
             if path.name == "rulings.py" and "next-index-" in segment:
                 continue
-            if path.name == "state.py" and segment.startswith("probe.unlink("):
+            if path.name == "state.py" and segment.startswith(("probe.unlink(",
+                                                                "tmp.unlink(")):
                 continue
             offenders.append(f"{path.relative_to(SRC)}:{node.lineno}: {segment}")
     assert offenders == []
