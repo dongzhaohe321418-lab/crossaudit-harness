@@ -438,4 +438,6 @@
 {"kind": "ConfigDenial", "reason": "the evidence ledger at /tmp/T/evidence.jsonl could not be written (EACCES: Permission denied); check the file and its directory are writable"}
 {"kind": "ConfigDenial", "reason": "the evidence ledger at /tmp/T/evidence.jsonl could not be closed cleanly after writing (EIO: Input/output error); the entry may have been recorded, and the next append verifies the chain"}
 {"kind": "IntegrityDenial", "reason": "a committed ruling (close, 73376075561f) already stands for cycle 2ab66e93ac84b7cb; the state now reflects it"}
-{"kind": "IntegrityDenial", "reason": "the ruling on cycle 2ab66e93ac84b7cb was committed to the ledger as 73376075561f, but the cycle's state could not be written (ENOSPC: No space left on device); the state is unchanged, and ruling on this cycle again applies the committed ruling instead of writing a new one"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle 1cdf28046d474bcd was committed to the ledger as a2520b9a11c0, but the cycle's state could not be written (ENOSPC: No space left on device); the state is unchanged, and the next ruling on this cycle applies the committed ruling"}
+{"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (fatal: bad object HEAD:cycles/rulings.jsonl); no ruling is made until it can be"}
+{"kind": "IntegrityDenial", "reason": "the ruling on cycle 81b75308cace6a78 does not match the intent this controller recorded for it; nothing was recorded"}
