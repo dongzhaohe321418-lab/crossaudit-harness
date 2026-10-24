@@ -358,17 +358,21 @@ def test_a_silent_hook_still_yields_a_legible_reason(escalated):
 
 def test_a_hook_slower_than_the_commit_timeout_fails_the_ruling_inside_the_lock(
         escalated, monkeypatch):
-    """The ruling's commit runs under the controller lock, so it has its own
-    bound (`rulings.COMMIT_TIMEOUT_S`, 90 s; 2 s here) instead of git's
-    240 s. A hook that sleeps past it: the ruling is refused saying it timed
-    out, the hook is killed rather than waited for, nothing is recorded, and
-    the cycle stays ESCALATED. Since round 4 the killed git's `index.lock`
-    is never deleted (it names no owner): the refusal says so, the recovery
-    it describes is done here by hand, and the next ruling commits.
+    """The ruling's commit runs under the controller lock, so it is bounded
+    by `rulings.row_budget()`: the smaller of `COMMIT_TIMEOUT_S` (90 s; 2 s
+    here) and the configured git timeout, `CROSSAUDIT_GIT_TIMEOUT` (default
+    240 s; D176 ruling 49). A hook that sleeps past it: the ruling is refused
+    saying it timed out, the hook is killed rather than waited for, nothing
+    is recorded, and the cycle stays ESCALATED. Since round 4 the killed
+    git's `index.lock` is never deleted (it names no owner): the refusal
+    says so, the recovery it describes is done here by hand, and the next
+    ruling commits.
 
-    Mutations caught: the commit bounded by git's general timeout (the hook
-    finishes after 5 s, exits 0 and the ruling lands -- no denial); killing
-    only git and not its process group (the ruling waits out the hook)."""
+    Mutations caught: the commit bounded by neither value but git's general
+    240 s timeout (the hook finishes after 5 s, exits 0 and the ruling lands
+    -- no denial); killing only git and not its process group (the ruling
+    waits out the hook). Ignoring CROSSAUDIT_GIT_TIMEOUT is caught by
+    test_escalation_paths_round14.py."""
     import time
 
     from crossaudit import rulings

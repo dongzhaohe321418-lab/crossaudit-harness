@@ -8934,13 +8934,27 @@ cited only once its text exists):
     owner's bound on git applies to rows too, capped at 90 s for the lock's window. The
     README's row for the variable says so.
 
+**Round 15** (`…-r15.md`): the round-14 repairs verified, and no inspected
+CrossAudit-controlled route left for a lost escalation, two committed rulings on one
+committed escalation, or a run around a pending decision; one P2 and one P3, both in
+tests, repaired on this branch (the verification is the next round, cited only once its
+text exists):
+
+50. **The row-budget regression exercises a ruling.** The test proved `row_budget()` and
+    then searched function source for the call, which a mutant with a comment would pass
+    while holding the lock 90 s. It now installs a hung pre-commit hook with
+    `CROSSAUDIT_GIT_TIMEOUT=2`, rules, and asserts the elapsed bound and "git commit
+    timed out after 2s"; the escalation-hook test stays.
+51. **The ruling-timeout docstring states the minimum-of-two bound.** It said the ruling
+    has its own 90 s bound "instead of git's 240 s", which ruling 49 superseded.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
 paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, which no
 ruling path can prevent; a holder of the project's private seed (`.crossaudit/signing/`,
 mode 0600) who can also write the repository can forge rulings and escalations, the
-same trust boundary as receipt signing. The TUI (D175) was reviewed cold in round 2; rounds 3 to 14 are recorded
+same trust boundary as receipt signing. The TUI (D175) was reviewed cold in round 2; rounds 3 to 15 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,
