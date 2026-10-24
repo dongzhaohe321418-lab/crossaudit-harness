@@ -8657,18 +8657,28 @@ branch (the verification is the next round, cited only once its text exists):
     `ENOSPC`) left the ruling in git and the cycle ESCALATED, reported only as "the
     controller state … could not be written", so a person could rule again and commit a
     second, conflicting ruling. Now: the failure sentence names the committed sha and
-    says the state is unchanged and will follow the ledger; `rulings.rule`, before
-    recording anything, reads the committed `cycles/rulings.jsonl` (the blob at `HEAD`,
-    not the working file) for a ruling on this cycle later than its escalation that the
-    state does not yet reflect, and if there is one it applies that ruling's state
-    change and reports it instead of writing a new row (a request for a different action
-    is refused: the committed ruling stands, and the cycle is no longer ESCALATED).
-    `status` shows a cycle in that condition as "ruling committed, state pending". The
-    ledger is the record; the state follows it.
+    says the state is unchanged and that ruling again applies the committed ruling;
+    `rulings.rule`, before recording anything, reads the committed `cycles/rulings.jsonl`
+    (the blob at `HEAD`, not the working file) for a ruling that answers this cycle's
+    current escalation and that the state does not yet reflect, and if there is one it
+    applies that ruling's state change (`StateStore.apply_committed_ruling`, the same
+    locked path, history marked `reconciled`, the same settle on close) and reports it
+    instead of writing a new row; a request for the other action is refused, the
+    committed ruling stands, and the cycle is no longer ESCALATED. "Answers" is exact,
+    not a clock comparison: every escalation records `escalated_at` and every ruling row
+    copies it, so a ruling is applied only to the escalation it was made for, even when
+    a cycle is ruled on and re-escalated within one second; a cycle escalated before this
+    field existed is matched only by a row strictly later than its `updated_at`, and a
+    same-second ruling on such a cycle is not recognised (a second ruling is then
+    allowed, as before) rather than applied to the wrong escalation. `status` shows a
+    cycle in that condition as "ruling committed, state pending" and changes nothing.
+    `resolve`, the TUI, the console, Stop and `talk`'s resolve lane all rule through
+    `rule()`, so all reconcile the same way. The ledger is the record; the state follows.
 28. **The credentials-file bootstrap is inside `main()`'s OS-error boundary.** An
     unreadable `CROSSAUDIT_KEYS_FILE` (mode 000) raised `PermissionError` before the
-    boundary and tracebacked; the post-parse bootstrap now runs inside it (English,
-    Chinese and `--json` tested).
+    boundary and tracebacked; the post-parse bootstrap (the keys file and the bare
+    invocation's setup prompt) now runs inside it (English, Chinese and `--json`
+    tested), so a refusal raised there is caught as well.
 29. **The ledger's `os.close` is inside its conversion, with wording that does not claim
     the entry was not written.** A close that fails after a successful write raised a raw
     `OSError` although one valid entry was on disk; the sentence for that case says the
