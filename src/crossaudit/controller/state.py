@@ -595,40 +595,35 @@ class StateStore:
             return dict(c, cycle_id=cycle_id)
 
     def rule_escalation(self, cycle_id: str, action: str, reason: str,
-                        commit: Callable[[dict, str], dict], *,
-                        read_committed: Callable[[], list[dict]],
+                        commit: Callable[[dict, str, str], dict], *,
+                        assess: Callable[[dict], dict],
                         by: str = "") -> dict:
         """One human ruling, in two phases joined by a local intent, all
-        under this store's lock (D176 ruling 30).
+        under this store's lock (D176 rulings 30 and 40).
 
-        Recovery first: if a previous ruling on this cycle left an intent
-        (``state["pending_rulings"][cycle_id]``), ``read_committed()`` reads
-        the committed rulings log (it raises on any read or parse failure,
-        never returning "nothing"). A committed row carrying the intent's
-        nonce, whose action and reason hash also equal the intent's (D176
-        ruling 34; otherwise nothing is applied and the mismatch is named), is
-        applied (history ``reconciled``), the intent cleared, and
-        ``{"reconciled": True, "row": row, ...}`` returned with no new row. No
-        such row (the earlier process stopped before committing): the intent
-        is cleared and this ruling proceeds as a fresh one
-        (``"intent_cleared": True``).
+        Authority comes from committed, verified data: ``assess(cycle)``
+        (``rulings.assess``) reads the committed rulings log and git, and
+        returns the current escalation's committed identity and, if any, the
+        verified ruling for it that the state does not reflect. Such a
+        ruling is applied (history ``reconciled``, its nonce remembered in
+        ``ruling_intents``) and returned with ``reconciled: True``, whatever
+        the local intent says; no new row is written. A committed row that
+        claims this escalation but does not verify is refused by
+        ``assess``.
 
-        Then: validate (a known cycle, ESCALATED, a reason, reopen/close);
-        phase 1 writes the intent ``{action, reason_sha256, by, nonce,
-        started_at, escalated_at, updated_at}`` with the normal fsync'd state
-        write (a failure here commits nothing); phase 2 calls
-        ``commit(cycle_before, nonce)``, which appends and commits the row
-        carrying ``intent: nonce`` (a refusal marked ``commit_landed="no"``
-        clears the intent; any other failure keeps it, since the commit may
-        have landed: D176 ruling 33);
-        phase 3 applies the state change, records the nonce among the cycle's
-        ``ruling_intents`` and removes the intent in one write. If phase 3
-        fails, its ``ConfigDenial`` (issue ``state_unwritable``) propagates
-        and the intent stays on disk for the next ruling to recover.
-
-        A committed row with no matching local intent is never applied
-        (ruling 31). Returns ``{"row", "cycle", "before", "reconciled",
-        "intent_cleared"}``.
+        Otherwise the new ruling proceeds. A leftover local intent (an
+        earlier attempt that left no verified commit) is cleared
+        (``intent_cleared``). Phase 1 writes the intent ``{action,
+        reason_sha256, by, nonce, started_at}``; phase 2 calls
+        ``commit(cycle_before, nonce, identity)``, which signs, appends and
+        commits the row (a refusal marked ``commit_landed="no"`` clears the
+        intent; any other keeps it: ruling 33); phase 3 applies the state
+        change, remembers the nonce and removes the intent in one write. If
+        phase 3 fails its ``ConfigDenial`` (``state_unwritable``) propagates.
+        The intent is a hint for the "earlier attempt" note and for
+        ``rulings.record``'s nonce check, never authority over which
+        committed row applies. Returns ``{"row", "cycle", "before",
+        "reconciled", "intent_cleared"}``.
         """
         self._check_resolution(action, reason)
         locks.ensure_directory(self.path.parent, "the controller state")
@@ -637,66 +632,24 @@ class StateStore:
             state = self._read()
             intents = state.setdefault("pending_rulings", {})
             intent = intents.get(cycle_id)
+            c = state["cycles"].get(cycle_id)
+            if c is None:
+                raise IntegrityDenial("unknown cycle", cycle_id=cycle_id)
+            verdict = assess(dict(c, cycle_id=cycle_id))
+            pending = verdict.get("pending")
+            if pending is not None:
+                before = dict(c, cycle_id=cycle_id)
+                intents.pop(cycle_id, None)
+                self._apply_resolution(state, c, cycle_id, str(pending["action"]),
+                                       str(pending.get("reason", "")))
+                state["history"][-1]["reconciled"] = True
+                if pending.get("intent"):
+                    c.setdefault("ruling_intents", []).append(pending["intent"])
+                self._commit_state(held, state)
+                return {"row": pending, "cycle": dict(c, cycle_id=cycle_id),
+                        "before": before, "reconciled": True, "intent_cleared": False}
             cleared = False
             if intent:
-                rows = read_committed()
-                c0 = state["cycles"].get(cycle_id) or {}
-                # The rows that could answer this intent: this cycle's rows
-                # later in the committed log than the intent's starting point
-                # (``rows_before``, the log's length when the intent was
-                # written), or, for an intent written before that field
-                # existed, later than every row this controller has already
-                # applied (``ruling_intents``). Log order, never timestamps
-                # (D176 ruling 38).
-                if isinstance(intent.get("rows_before"), int):
-                    start_at = intent["rows_before"]
-                else:
-                    applied = set(c0.get("ruling_intents") or [])
-                    start_at = max((i + 1 for i, r in enumerate(rows)
-                                    if r.get("intent") in applied), default=0)
-                candidates = [r for r in rows[start_at:]
-                              if str(r.get("cycle_id")) == cycle_id]
-
-                def mismatches(r: dict) -> list[str]:
-                    # Every field the intent carries is bound to the row
-                    # (D176 ruling 34).
-                    return [name for name, ok in (
-                        ("intent", r.get("intent") == intent.get("nonce")),
-                        ("action", r.get("action") == intent.get("action")
-                         and r.get("action") in RESOLUTION_STATUS),
-                        ("reason_sha256",
-                         hashlib.sha256(str(r.get("reason", "")).encode("utf-8"))
-                         .hexdigest() == intent.get("reason_sha256")
-                         and r.get("reason_sha256", intent.get("reason_sha256"))
-                         == intent.get("reason_sha256")),
-                    ) if not ok]
-
-                match = [r for r in candidates if not mismatches(r)]
-                if candidates and not match:
-                    # A committed row for this escalation that is not a
-                    # complete bound match is a refusal, never "no row"
-                    # (ruling 38): the intent stays.
-                    wrong = min((mismatches(r) for r in candidates), key=len)
-                    raise IntegrityDenial(
-                        f"the committed ruling for cycle {cycle_id} does not match "
-                        f"this controller's intent ({', '.join(wrong)}); nothing "
-                        f"was applied", cycle_id=cycle_id, issue="intent_mismatch")
-                if match:
-                    row = match[-1]
-                    c = state["cycles"].get(cycle_id)
-                    before = dict(c or {}, cycle_id=cycle_id)
-                    del intents[cycle_id]
-                    if c is None or c["status"] != ESCALATED:
-                        self._commit_state(held, state)
-                        self._escalated_cycle(state, cycle_id)   # raises
-                    self._apply_resolution(state, c, cycle_id, str(row["action"]),
-                                           str(row.get("reason", "")))
-                    state["history"][-1]["reconciled"] = True
-                    c.setdefault("ruling_intents", []).append(intent["nonce"])
-                    self._commit_state(held, state)
-                    return {"row": row, "cycle": dict(c, cycle_id=cycle_id),
-                            "before": before, "reconciled": True,
-                            "intent_cleared": False}
                 del intents[cycle_id]
                 cleared = True
             try:
@@ -706,32 +659,26 @@ class StateStore:
                     self._commit_state(held, state)
                 raise
             before = dict(c, cycle_id=cycle_id)
-            # Where in the committed log this intent starts: recovery looks
-            # only at rows after it (ruling 38). A log that cannot be read
-            # refuses here, before anything is written.
-            rows_before = len(read_committed())
+            identity = str(verdict.get("identity") or "")
             nonce = secrets.token_hex(16)
             intents[cycle_id] = {
-                "rows_before": rows_before,
                 "action": action,
                 "reason_sha256": hashlib.sha256(reason.encode("utf-8")).hexdigest(),
                 "by": by, "nonce": nonce, "started_at": time.time(),
-                # informational only; the nonce is the identity
-                "escalated_at": c.get("escalated_at"), "updated_at": c.get("updated_at"),
+                "escalation_commit": identity,          # informational
             }
             self._commit_state(held, state)                    # phase 1
             try:
-                row = commit(before, nonce)                    # phase 2
+                row = commit(before, nonce, identity)          # phase 2
             except Denial as exc:
                 # Clear the intent only when the commit definitely did not
-                # land (D176 ruling 33); any uncertainty keeps it for the
-                # next ruling's strict recovery.
+                # land (D176 ruling 33); any uncertainty keeps it.
                 if exc.detail.get("commit_landed") == "no":
                     intents.pop(cycle_id, None)
                     try:
                         self._commit_state(held, state)
                     except Denial:
-                        pass   # the intent stays; recovery finds no row for it
+                        pass
                 raise
             self._apply_resolution(state, c, cycle_id, action, reason)  # phase 3
             c.setdefault("ruling_intents", []).append(nonce)

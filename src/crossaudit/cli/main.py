@@ -1544,11 +1544,9 @@ def cmd_status(args: argparse.Namespace) -> int:
     from .. import rulings as rulings_mod
 
     ledger_rulings = rulings_mod.by_cycle(cfg)
-    # D176 rulings 30-31, read-only here: a ruling committed by this
-    # controller whose state change is pending (its local intent and a
-    # committed row carrying the intent's nonce), and committed rows this
-    # controller did not make, which are never applied.
-    pending_intents = snap.get("pending_rulings", {}) or {}
+    # D176 rulings 40-41, read-only here: a verified committed ruling the
+    # state does not yet reflect (applied by the next ruling), and ruling
+    # rows that cannot be authority (unsigned, legacy, or not verifying).
     escalated = [cid for cid, c in cycles.items() if c.get("status") == "ESCALATED"]
     committed = rulings_mod.committed_rows(cfg) if escalated else []
     rows = []
@@ -1562,17 +1560,17 @@ def cmd_status(args: argparse.Namespace) -> int:
             # The controller keeps BLOCKED + closed_by_human (other readers
             # key on both); `closed` says what that means.
             row["closed"] = True
-        intent = pending_intents.get(cid) or {}
-        if intent and any(str(r.get("cycle_id")) == cid
-                          and r.get("intent") == intent.get("nonce") for r in committed):
-            row["ruling_pending"] = True
-        known = dict(c, ruling_intents=list(c.get("ruling_intents") or [])
-                     + ([intent["nonce"]] if intent.get("nonce") else []))
-        foreign = rulings_mod.foreign_rows(cid, known, committed) if committed else []
-        if foreign:
-            row["foreign_rulings"] = [
-                {"action": f.get("action"), "at": f.get("at"),
-                 "commit": rulings_mod.commit_of(cfg, f)[:12]} for f in foreign]
+        if cid in escalated and committed:
+            try:
+                if rulings_mod.assess(cfg, cid, dict(c, cycle_id=cid))["pending"]:
+                    row["ruling_pending"] = True
+            except Denial:
+                pass        # status reads; the next ruling refuses by name
+            unverified = rulings_mod.unverified_rows(cfg, cid, c, committed)
+            if unverified:
+                row["unverified_rulings"] = [
+                    {"action": f.get("action"), "at": f.get("at"),
+                     "commit": rulings_mod.commit_of(cfg, f)[:12]} for f in unverified]
         if ledger_rulings.get(cid):
             row["rulings"] = [{k: r.get(k) for k in
                                ("action", "by", "at", "reason")
@@ -1589,8 +1587,8 @@ def cmd_status(args: argparse.Namespace) -> int:
                         else "")
                      + (f"   {i18n.t('status.ruling_pending')}" if r.get("ruling_pending")
                         else ""))
-        for f in r.get("foreign_rulings", []):
-            human.append("  " + i18n.t("status.foreign_ruling", sha=f["commit"] or "?")
+        for f in r.get("unverified_rulings", []):
+            human.append("  " + i18n.t("status.unverified_ruling", sha=f["commit"] or "?")
                          + f" — {f.get('action')} {f.get('at')}")
         for ruling in r.get("rulings", []):
             human.append(f"  ruling: {ruling.get('action')} by {ruling.get('by')} "
