@@ -429,3 +429,5 @@
 {"kind": "ConfigDenial", "reason": "could not acquire the controller lock; another process (pid 72235) is mid-transaction"}
 {"kind": "ConfigDenial", "reason": "the evidence ledger is locked by another writer (pid 72235)"}
 {"kind": "IntegrityDenial", "reason": "the ruling on cycle e1dabb7a19f96c4b could not be committed to the ledger (git commit timed out after 1s); the cycle stays ESCALATED and nothing was recorded; .git/index.lock may have been left by the killed git — if no git process is running, remove it by hand and run `git reset -q -- cycles/rulings.jsonl`"}
+{"kind": "ConfigDenial", "reason": "this filesystem cannot provide the exclusive lock CrossAudit needs at /tmp/T/state.json.lock (ENOLCK: No locks available); use a project directory on a local filesystem"}
+{"kind": "IntegrityDenial", "reason": "the lock file /tmp/T/evidence.jsonl.lock was replaced while this process held the lock; this process's change was discarded"}

@@ -150,14 +150,21 @@ class StateStore:
         """Exclusive read-modify-write. Yields state; writes it back on clean exit.
 
         The kernel holds the lock for as long as this process keeps the lock
-        file open, and no code path removes the file, so no other process can
-        take the lock while this one holds it (and none can write state).
+        file open, and CrossAudit never removes the file, so no other
+        CrossAudit process can take it while this one holds it. If the file
+        is replaced from outside after acquisition, the write-back is refused
+        (``HeldLock.require_current``), except within the microseconds
+        between that check and the write.
         """
         self.path.parent.mkdir(parents=True, exist_ok=True)
         held = self._acquire(self.lock_path)
         try:
             state = self._read()
             yield state
+            # Fail closed if the lock file was replaced after acquisition:
+            # another process may hold a lock on the replacement and have
+            # written meanwhile (review 2026-10-23 round 5, finding 1).
+            held.require_current()
             self._write(state)
         finally:
             held.release()

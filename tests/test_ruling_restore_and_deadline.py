@@ -13,10 +13,11 @@ Review 2026-10-23 round 2:
   stale snapshot over the newer state and unlinked the newer lock. There is
   now one deadline for the transaction, and the lock is ownership-aware.
   (The takeover tests that lived here were replaced in round 4, when the
-  controller lock became kernel-held: a live holder's lock can no longer be
-  removed or taken, so "a holder that overran" cannot arise. Their
-  successors are in ``test_kernel_held_locks.py``; the budget-versus-stale
-  pin went with ``LOCK_STALE_S``.)
+  controller lock became kernel-held: CrossAudit itself no longer unlinks a
+  lock path, so no CrossAudit process can take a live holder's lock. A lock
+  file replaced from outside is a different case, refused before each write
+  (round 5). The successors are in ``test_kernel_held_locks.py``; the
+  budget-versus-stale pin went with ``LOCK_STALE_S``.)
 
 Time is scaled: the budget and the stale threshold are monkeypatched to a few
 seconds, and hooks and filters sleep. Each test names the mutation it catches.

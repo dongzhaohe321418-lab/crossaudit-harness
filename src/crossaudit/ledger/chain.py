@@ -9,9 +9,13 @@ independent checks make tampering detectable on re-read:
 * chain     — each ``prev`` must equal the prior entry's digest;
 * order     — ``seq`` must increment by exactly one from 0.
 
-Appends are serialised by an ``O_EXCL`` lock and made durable with ``fsync``
-(mirroring ``controller/state``), so a crash cannot interleave two chains; a
-torn final line is reported as an incomplete tail rather than silently trusted.
+Appends are serialised by a kernel-held ``flock`` on ``<ledger>.lock``
+(``crossaudit.locks``, shared with ``controller/state``) and made durable with
+``fsync``, so CrossAudit's own writers cannot interleave two chains;
+CrossAudit never unlinks the lock file, and one replaced from outside is
+refused at acquisition and again just before the append's write (see
+``crossaudit.locks`` for what that does not cover). A torn final line is
+reported as an incomplete tail rather than silently trusted.
 
 Line framing: an entry ends at ``"\\n"`` and nowhere else. The writer only ever
 emits ``"\\n"``, and ``json.dumps`` escapes every control character, so a raw
@@ -120,7 +124,7 @@ class EvidenceLedger:
         if not kind or not isinstance(kind, str):
             raise ConfigDenial("evidence kind must be a non-empty string")
         stamp = ts if ts is not None else _utc_now()
-        with self._locked():
+        with self._locked() as lock:
             self._refuse_torn_tail()
             prev_seq, prev_digest = self._verified_head_locked()
             body = {
@@ -138,6 +142,11 @@ class EvidenceLedger:
                               ensure_ascii=False
                               ).translate(_LINE_SEPARATOR_ESCAPES) + "\n"
             self.path.parent.mkdir(parents=True, exist_ok=True)
+            # Fail closed if the lock file was replaced after acquisition: a
+            # second writer may hold the replacement and have appended, and
+            # appending on the head read above would fork the chain (review
+            # 2026-10-23 round 5, finding 1).
+            lock.held.require_current()
             fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
             try:
                 os.write(fd, line.encode("utf-8"))

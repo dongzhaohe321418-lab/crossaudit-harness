@@ -19,10 +19,26 @@ existence or contents:
 * The owner token (pid, time, nonce) written into the file after
   acquisition is for ``doctor``'s report only; the kernel decides ownership.
 
+What this does and does not guarantee (review 2026-10-23 round 5): CrossAudit
+itself never unlinks a lock file (test-enforced:
+``tests/test_kernel_held_locks.py``). The lock serialises CrossAudit's own
+processes. It does not defend against a writer with access to
+``.crossaudit/``, who could as easily edit ``state.json`` or the evidence
+ledger directly. A lock file replaced from outside is detected at
+acquisition, and again immediately before each protected write
+(:meth:`HeldLock.still_current`, called by the controller before writing
+state and by the ledger before appending), except within the microseconds
+between that check and the write itself.
+
 File descriptors are opened non-inheritable (Python's default), so a child
 process (git, a hook) never holds the lock after its parent is gone. A plain
 ``os.fork()`` without exec shares the lock with the child until the child
 exits; nothing in CrossAudit forks while holding one.
+
+A filesystem that cannot provide the lock at all (``ENOLCK`` and ``ENOTSUP``
+on some network filesystems, a lock file that cannot be opened, no locking
+backend) is refused with a ``ConfigDenial`` naming the path and the error,
+never a bare ``OSError``.
 """
 from __future__ import annotations
 
@@ -32,6 +48,8 @@ import secrets
 import time
 from collections.abc import Callable
 from pathlib import Path
+
+from .errors import ConfigDenial, IntegrityDenial
 
 try:  # POSIX
     import fcntl as _fcntl
@@ -105,6 +123,23 @@ class HeldLock:
         self.path = path
         self.fd: int | None = fd
 
+    def still_current(self) -> bool:
+        """Whether ``path`` still names the file this lock is held on
+        (``fstat(fd)`` against ``stat(path)``, device and inode)."""
+        return self.fd is not None and _same_file(self.fd, self.path)
+
+    def require_current(self) -> None:
+        """Refuse a protected write when the lock file was replaced after
+        acquisition: another process may now hold a lock on the replacement
+        and be writing. Called immediately before each write; the window
+        between this check and the write is the few microseconds between two
+        system calls."""
+        if not self.still_current():
+            raise IntegrityDenial(
+                f"the lock file {self.path} was replaced while this process held "
+                f"the lock; this process's change was discarded",
+                issue="lock_replaced", lock=str(self.path))
+
     def release(self) -> None:
         fd, self.fd = self.fd, None
         if fd is None:
@@ -132,9 +167,16 @@ def acquire(path: Path, timeout: float,
     path.parent.mkdir(parents=True, exist_ok=True)
     deadline = time.monotonic() + timeout
     while True:
-        fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o644)
         try:
-            if _try_lock(fd):
+            fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o644)
+        except OSError as exc:
+            raise _unsupported(path, exc) from exc
+        try:
+            try:
+                obtained = _try_lock(fd)
+            except OSError as exc:
+                raise _unsupported(path, exc) from exc
+            if obtained:
                 if _same_file(fd, path):
                     _write_token(fd)
                     return HeldLock(path, fd)
@@ -148,6 +190,15 @@ def acquire(path: Path, timeout: float,
         if time.monotonic() > deadline:
             raise busy(holder_pid(path))
         time.sleep(_POLL_S)
+
+
+def _unsupported(path: Path, exc: OSError) -> ConfigDenial:
+    """A lock service that is missing or refuses (not contention)."""
+    name = errno.errorcode.get(exc.errno or 0, str(exc.errno))
+    return ConfigDenial(
+        f"this filesystem cannot provide the exclusive lock CrossAudit needs at "
+        f"{path} ({name}: {exc.strerror or exc}); use a project directory on a "
+        f"local filesystem", issue="lock_unsupported", lock=str(path))
 
 
 def _write_token(fd: int) -> None:

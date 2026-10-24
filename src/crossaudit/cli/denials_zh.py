@@ -552,6 +552,12 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     # ------------------------------------------------- controller/state.py
     ("state file is corrupt: {}", "状态文件已损坏：{}"),
     ("state file has no cycles map", "状态文件没有 cycles 映射"),
+    ("the lock file {} was replaced while this process held the lock; this process's "
+     "change was discarded",
+     "锁文件 {} 在本进程持有锁期间被替换；本进程的更改已被丢弃"),
+    ("this filesystem cannot provide the exclusive lock CrossAudit needs at {} ({}: {}); "
+     "use a project directory on a local filesystem",
+     "此文件系统无法在 {} 提供 CrossAudit 所需的独占锁（{}：{}）；请使用位于本地文件系统上的项目目录"),
     ("could not acquire the controller lock; another process (pid {}) is mid-transaction",
      "无法获取控制器锁；另一个进程（pid {}）正在执行事务"),
     ("unknown continuation cycle", "未知的继续周期"),
