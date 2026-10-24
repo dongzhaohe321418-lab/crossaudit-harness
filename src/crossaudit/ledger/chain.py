@@ -124,6 +124,8 @@ class EvidenceLedger:
         if not kind or not isinstance(kind, str):
             raise ConfigDenial("evidence kind must be a non-empty string")
         stamp = ts if ts is not None else _utc_now()
+        # Named for the ledger, before the lock names it for the lock file.
+        locks.ensure_directory(self.path.parent, "the evidence ledger")
         with self._locked() as lock:
             self._refuse_torn_tail()
             prev_seq, prev_digest = self._verified_head_locked()
@@ -141,7 +143,7 @@ class EvidenceLedger:
                               sort_keys=True, separators=(",", ":"),
                               ensure_ascii=False
                               ).translate(_LINE_SEPARATOR_ESCAPES) + "\n"
-            self.path.parent.mkdir(parents=True, exist_ok=True)
+            locks.ensure_directory(self.path.parent, "the evidence ledger")
             # Fail closed if the lock file was replaced after acquisition: a
             # second writer may hold the replacement and have appended, and
             # appending on the head read above would fork the chain (review
