@@ -236,11 +236,12 @@ identity; round 13 named the last residual (a reopen's recovery still read
 local state), answered by escalations committed as signed rows; round 14 found two
 paths in that new code (an unwrapped confirmation timeout; a capped lineage
 walk), repaired, and the release gate forced the row commits to honour the
-configured git timeout, on the ref below.
+configured git timeout; round 15 found no route left and two test items,
+fixed, on the ref below.
 
 | ref (same harness, `e338d0e` + the placeholder fill) | PASS / 43 |
 |---|---|
-| **`feat/tui-first` 73e26b0** (D175; D176 repairs from fourteen review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
+| **`feat/tui-first` c68b6c3** (D175; D176 repairs from fifteen review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
 
 The record is `records/tui-first/claims.jsonl` and `RESULTS-tui-first.md`. Still
 untestable here, as before: C32 (now also "not on the main line"), C33b, C34b,
