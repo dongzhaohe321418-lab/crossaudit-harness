@@ -216,12 +216,13 @@ ruling restore, the lock), a P2 and a P3, repaired; round 3 verified them and fo
 ruling log; stale-lock breaking); round 4 verified those and found the last
 one (any check-then-unlink on a lock file), answered by kernel-held locks; round 5 verified those and
 asked for a still-current check before each protected write and a legible
-refusal on filesystems without locks, verified in round 6. Those repairs are
-in the ref below.
+refusal on filesystems without locks; round 6 verified those with no blocking
+finding and asked for a legible refusal where a parent directory cannot be
+created, repaired on the ref below.
 
 | ref (same harness, `e338d0e` + the placeholder fill) | PASS / 43 |
 |---|---|
-| **`feat/tui-first` fd5495e** (D175; D176 repairs from five review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check) | **43** |
+| **`feat/tui-first` 0d88003** (D175; D176 repairs from six review rounds: Stop's committed close ruling, the exact-bytes ruling restore, kernel-held controller and ledger locks with a still-current check before each write, the symlink refusal and committed-blob check, legible refusals where a traceback used to escape) | **43** |
 
 The record is `records/tui-first/claims.jsonl` and `RESULTS-tui-first.md`. Still
 untestable here, as before: C32 (now also "not on the main line"), C33b, C34b,
