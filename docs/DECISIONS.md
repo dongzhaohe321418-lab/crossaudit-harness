@@ -8954,6 +8954,25 @@ nothing that blocks the merge under AGENTS.md §0–§1 and no overstatement in 
 the README or the CHANGELOG. **VERDICT: MERGE.** The branch merges under the one law
 with that review on record; the sixteen texts are the evidence.
 
+**After the verdict: what the pull request's CI found** (PR #7 at 47cba44; the `quality`
+job, which configures no git identity, and `test (ubuntu-latest, 3.13)`):
+
+52. **Every ledger-row commit carries an explicit identity.** The escalation and ruling
+    rows ran `git commit` with no `-c user.name`/`user.email`, unlike the product's work
+    commits, so on a machine with no git identity every escalation and ruling failed
+    with "Author identity unknown", escalations read "not committed", and the console
+    refused rulings. The rows now commit with the repository's configured identity when
+    both name and email are set, else `CrossAudit <crossaudit@local.invalid>`, the same
+    default the broker's work commits use; the row's `by` records exactly the identity
+    the commit carries. The suite is run, and green, both with and without any git
+    identity on the machine.
+53. **Cycle order breaks a same-second tie by recorded order.** `_ordered_cycles` sorted
+    by the latest history event's time, which is whole seconds, with the hash id as the
+    tie-break, so two builds inside one second ordered arbitrarily and the TUI's "newest
+    first" was wrong on a fast runner. The key is now (time, position of the cycle's last
+    event in the history, id); the history's resolution is unchanged, being the state
+    format.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
