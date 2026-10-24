@@ -8804,10 +8804,47 @@ verification is the next round, cited only once its text exists):
     commit means "nothing is recorded"; they now say that holds when Git is positively
     known not to have committed, and that uncertainty keeps the intent.
 
+**Round 12** (`…-r12.md`): the round-11 repairs verified and no path left that clears an
+intent after an unreadable read; one P1 and one P2, repaired on this branch (the
+verification is the next round, cited only once its text exists):
+
+40. **Authority over recovery comes from committed, verified data; the local state is a
+    hint.** Rulings 30–38 let the intent's fields and the `rows_before` cursor, both in
+    the mutable local state, decide which committed row applies and whether a prior
+    commit existed; a writer of `.crossaudit/state.json` could move the cursor to hide a
+    committed ruling and cause a second one, or shape an intent to make a foreign row
+    apply — exactly what `locks.py` says the state file cannot be trusted to prevent.
+    Now a ruling row is signed with the project's Ed25519 key (the key receipts are
+    signed with, `receipt/sign.py`; for rulings the signing is fail-closed: no key, no
+    ruling) over its canonical bytes, and carries the committed identity of the
+    escalation it answers (`escalation_commit`: the commit of the audit round that
+    escalated the cycle, which recovery verifies in git holds this cycle's escalating
+    report). Recovery reads the committed log strictly and considers only rows for this
+    cycle whose `escalation_commit` is the current escalation's; a row whose signature
+    verifies with the project public key and whose action is valid is the authority: if
+    the state does not reflect it, it is applied, whatever the local intent says; a
+    candidate that does not verify, or carries no signature, is refused by name and
+    never applied or treated as "no row"; no candidate means the new ruling proceeds.
+    The local intent remains only for the "an earlier attempt left no commit" message
+    and for `record()`'s nonce check; `rows_before` is gone.
+41. **Unsigned and legacy rows are history, not authority.** A row with no signature or
+    no `escalation_commit` (written before this ruling) is never a recovery candidate;
+    `status` lists it as unverified. A repository writer can add rows to the log, with
+    or without a forged signature; without the project's private key none of them
+    verifies, and none is acted on.
+42. **The earlier-escalation test uses the real shape.** The foreign row in
+    `test_a_foreign_row_on_an_earlier_escalation_is_listed_and_does_not_block` now
+    carries the first escalation's `escalated_at` and `escalation_commit`, as a prior real
+    ruling would, and the test asserts it stays in ordinary history while the new
+    escalation proceeds.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
-paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 11 are recorded
+paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, which no
+ruling path can prevent; what rulings 40–41 close is that such a writer, or a
+repository writer, could make the ledger hold conflicting rulings through CrossAudit's
+own recovery. The TUI (D175) was reviewed cold in round 2; rounds 3 to 12 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,
