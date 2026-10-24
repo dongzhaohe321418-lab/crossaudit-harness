@@ -218,25 +218,35 @@ def test_an_intent_left_with_no_commit_is_cleared_and_the_ruling_proceeds(
 
 
 def test_a_commit_that_fails_clears_its_intent(escalated, monkeypatch):
-    """`record()` raises after the intent was written: nothing is committed,
-    the intent is removed, and the next ruling makes exactly one commit.
-    Mutations caught: leaving the intent behind after a refused commit (the
-    next ruling would report an earlier attempt that never happened); and
-    phase 3 not remembering the nonce in `ruling_intents`."""
+    """`record()` refuses with a commit that definitely did not land
+    (`commit_landed="no"`): nothing is committed, the intent is removed, and
+    the next ruling makes exactly one commit. Since D176 ruling 33 only such
+    a refusal clears the intent; one without that mark (the commit may have
+    landed) keeps it, which this test also checks. Mutations caught: leaving
+    the intent behind after a refused commit (the next ruling would report an
+    earlier attempt that never happened); clearing it on an uncertain
+    outcome; and phase 3 not remembering the nonce in `ruling_intents`."""
     root, cid = escalated
     head = git("rev-parse", "HEAD", cwd=root)
     real = rulings.record
 
     def refuses(*a, **k):
-        raise IntegrityDenial("a test refusal")
+        raise IntegrityDenial("a test refusal", commit_landed="no")
     monkeypatch.setattr(rulings, "record", refuses)
     with pytest.raises(IntegrityDenial):
         rulings.rule(load(), _store(root), cid, "close", REASON)
-    monkeypatch.setattr(rulings, "record", real)
     assert cid not in _state(root).get("pending_rulings", {})
+
+    def uncertain(*a, **k):
+        raise IntegrityDenial("a test refusal, outcome unknown")
+    monkeypatch.setattr(rulings, "record", uncertain)
+    with pytest.raises(IntegrityDenial):
+        rulings.rule(load(), _store(root), cid, "close", REASON)
+    assert cid in _state(root).get("pending_rulings", {})
+    monkeypatch.setattr(rulings, "record", real)
     assert git("rev-parse", "HEAD", cwd=root) == head
     result = rulings.rule(load(), _store(root), cid, "close", REASON)
-    assert "intent_cleared" not in result
+    assert result.get("intent_cleared") is True        # the uncertain one had no row
     assert _commit_count(root, head) == 1
     # Phase 3 remembers the nonce, so status never reads this row as foreign.
     assert _rows(root)[-1]["intent"] in _state(root)["cycles"][cid]["ruling_intents"]

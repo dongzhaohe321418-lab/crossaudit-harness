@@ -634,10 +634,16 @@ ENTRIES: tuple[tuple[str, str], ...] = (
      "周期 {} 的裁决已作为 {} 提交，但无法确认已提交的 {} 包含它（过滤器或钩子更改了该文件）；"
      "该周期仍为 ESCALATED —— 再次裁决前请检查仓库的过滤器和钩子"),
     ("the ruling on cycle {} was committed as {}, but the committed {} could not be "
-     "confirmed to contain it (it could not be read back: {}); the cycle stays "
-     "ESCALATED — check the repository's filters and hooks before ruling again",
-     "周期 {} 的裁决已作为 {} 提交，但无法确认已提交的 {} 包含它（无法读回：{}）；"
-     "该周期仍为 ESCALATED —— 再次裁决前请检查仓库的过滤器和钩子"),
+     "read back to confirm it ({}); the cycle stays ESCALATED, and the next ruling on "
+     "this cycle recovers it",
+     "周期 {} 的裁决已作为 {} 提交，但无法读回已提交的 {} 加以确认（{}）；该周期仍为 "
+     "ESCALATED，对该周期的下一次裁决将恢复它"),
+    ("the ruling on cycle {} may have been committed to the ledger ({}); the cycle "
+     "stays ESCALATED, and the next ruling on this cycle recovers it",
+     "周期 {} 的裁决可能已提交到账本（{}）；该周期仍为 ESCALATED，对该周期的下一次裁决将恢复它"),
+    ("the committed ruling for cycle {} does not match this controller's intent ({}); "
+     "nothing was applied",
+     "周期 {} 已提交的裁决与本控制器的意图不符（{}）；未应用任何内容"),
     ("the ruling on cycle {} could not be committed to the ledger ({}), and {} could "
      "not be restored ({}); the cycle stays ESCALATED, but check {} against git "
      "before ruling again",

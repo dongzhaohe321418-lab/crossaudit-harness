@@ -8373,7 +8373,7 @@ here.) The TUI was reviewed cold by the cross-vendor reviewer in round 2 of the
 review recorded in D176 (`benchmarks/reviews/2026-10-23-claims-rounds-1-2-terra-r2.md`)
 and its ruling path re-verified in the rounds after it.
 
-## D176 — The first cross-vendor review of this release's changes found four defects, and they are repaired: every human ruling is one failure-atomic transaction on every surface, every configured key name leaves non-provider children, the ledger head cache is bound to the file's identity, and a `key_env` that is not a key is refused
+## D176 — The cross-vendor review of this release's changes, in rounds: every human ruling goes through one path on every surface (two phases joined by a local intent, as rulings 30–33 make precise), every configured key name leaves non-provider children, the ledger head cache is bound to the file's identity, a `key_env` that is not a key is refused, and the locks are held by the kernel
 
 **Date:** 2026-10-23. **Branch:** `feat/tui-first` (repairs on `fix/review-r1-keys-cache`
 and `fix/review-r1-rulings`, merged). **Evidence:**
@@ -8394,8 +8394,9 @@ reviewer found six fail-open declaration shapes in the `science-ai4s` pack
 
 RULINGS:
 
-1. **A human ruling is one transaction, the same on every surface, and the ledger comes
-   first.** `StateStore.rule_escalation` validates under the store's lock without writing
+1. **A human ruling goes through one path, the same on every surface, and the ledger comes
+   first** *(the mechanism as first built; rulings 30–33 replace "one transaction" with
+   the two-phase protocol and a local intent)*. `StateStore.rule_escalation` validates under the store's lock without writing
    (known cycle, ESCALATED, non-empty reason, reopen or close), calls the commit step,
    and only then applies the state change and the `human_resolution` entry.
    `rulings.record` appends the row to `cycles/rulings.jsonl` and commits exactly that
@@ -8728,10 +8729,49 @@ cited only once its text exists):
     recovered from the intent at the next ruling, and the person is told at each step
     what was and was not recorded.
 
+**Round 10** (`…-r10.md`): the round-9 sequences verified, then three P1 inside the intent
+mechanism and one P2, repaired on this branch (the verification is the next round, cited
+only once its text exists):
+
+33. **Every post-commit uncertainty keeps the intent; only a commit that definitely did
+    not land clears it.** A commit that landed but whose confirmation read then failed
+    cleared the intent as if nothing had been committed, so the next ruling wrote a
+    second row. Now every refusal `record()` raises says whether the commit landed:
+    "no" (nothing reached git, or `git commit` failed and `HEAD` equals the value read
+    just before; the log is restored and unstaged), "uncertain" (`git commit` failed but
+    `HEAD` moved or could not be read; nothing is restored, and the refusal says the
+    ruling may have been committed) or "yes" (the commit landed but the read-back failed
+    or showed a different row). The intent is cleared only for "no"; every other
+    outcome, including an unmarked exception, keeps it for the next ruling's strict
+    recovery. "No commit yet" is accepted only for a positively identified unborn `HEAD`
+    (`git symbolic-ref` names a branch that `git show-ref` does not find); every other
+    failure of `rev-parse`, `ls-tree` or `cat-file` is the "committed rulings log could
+    not be read" refusal, never an empty list. The "may have been committed" sentence
+    has no test: nothing yet makes `git commit` fail while `HEAD` moves.
+34. **The nonce, the action and the reason hash are bound to the committed row.**
+    `_confirm_committed` compared four fields and not the `intent`, so a filter or hook
+    could change the nonce while the state change still applied; recovery matched only
+    the cycle and the nonce, so a writer of `.crossaudit/state.json` could pair a forged
+    intent with a committed row and have that row's action applied. Confirmation now
+    compares the complete canonical row including `intent` (everything `record()`
+    wrote except `commit`); rows now carry `reason_sha256`; recovery requires the row's
+    cycle, nonce, action and reason hash (the field, and `sha256` of the row's reason) to
+    equal the stored intent's and the action to be a valid resolution, else nothing is
+    applied, the mismatch names the fields and the intent stays. A consequence,
+    accepted: a filter or hook that changes a committed row's action or reason but keeps
+    its nonce leaves that cycle refusing every later ruling until the repository (or the
+    local state, by hand) is repaired; no command offers a way out, because the way out
+    would be to act on a row this controller did not intend. The
+    state file is not an authority boundary (`locks.py` says so); binding every field the
+    intent carries to the committed row is what keeps a forged intent from doing
+    anything a committed row does not already say.
+35. **This record's older wording is corrected.** The title and ruling 1 said "one
+    failure-atomic transaction"; they now say what rulings 30–33 built.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
-paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 9 are recorded
+paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 10 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,
