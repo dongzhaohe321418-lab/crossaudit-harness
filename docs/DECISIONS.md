@@ -8973,6 +8973,23 @@ job, which configures no git identity, and `test (ubuntu-latest, 3.13)`):
     event in the history, id); the history's resolution is unchanged, being the state
     format.
 
+54. **The TUI was walked as a person before it was called usable, and three things were
+    fixed** (`cli/tuiapp.py` only; no audit-core file). On a 24-line terminal the 38-line
+    frame was clipped silently in the middle; the body (decision card and cycles) now
+    scrolls — the view follows the selection, `PageUp`/`PageDown` and `u`/`d` page, and
+    the first or last body line says "… N more lines (PageDown)" / "… N more lines above
+    (PageUp)" (Chinese parity) — and a frame is exactly the terminal's height
+    (`--once` still prints everything). A stdout that cannot encode `·` (an ASCII or
+    cp1252 console) raised `UnicodeEncodeError`; each glyph now falls back separately
+    to ASCII (`·`→`-`, `≈`→`~`, `❯`→`>`, `…`→`...`, `─`→`-`, `↑`→`^`, `↓`→`v`), under
+    GBK only `❯` falls back, and every write replaces what the codec cannot encode
+    instead of raising. Ctrl-C at the task, reason or admit prompt cancelled the whole
+    TUI; it now cancels the prompt and says so. Found on the way: `PageDown` is a
+    four-byte escape sequence and the key reader stopped at three, so it never worked.
+    The walk's evidence: every key answered in 1–209 ms, help/expand/verify/later/quit
+    exited 0 with `stty -g` unchanged, a frame in 0.75 s, a legible sentence and exit 20
+    outside a project.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
