@@ -641,9 +641,18 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("the ruling on cycle {} may have been committed to the ledger ({}); the cycle "
      "stays ESCALATED, and the next ruling on this cycle recovers it",
      "周期 {} 的裁决可能已提交到账本（{}）；该周期仍为 ESCALATED，对该周期的下一次裁决将恢复它"),
-    ("the committed ruling for cycle {} does not match this controller's intent ({}); "
-     "nothing was applied",
-     "周期 {} 已提交的裁决与本控制器的意图不符（{}）；未应用任何内容"),
+    ("the project signing key at {} is not available ({}); a ruling must be signed, so "
+     "none was made",
+     "位于 {} 的项目签名密钥不可用（{}）；裁决必须签名，因此未作出任何裁决"),
+    ("a committed ruling for cycle {} ({}) carries no valid signature from this project; "
+     "nothing was applied, and no new ruling is made until the repository is repaired",
+     "周期 {} 的一条已提交裁决（{}）没有本项目的有效签名；未应用任何内容，在仓库修复之前不会作出新的裁决"),
+    ("the escalation of cycle {} could not be established from git ({}); no ruling is "
+     "made until it can be",
+     "无法从 git 确定周期 {} 的升级（{}）；在能够确定之前不会作出任何裁决"),
+    ("the escalation of cycle {} could not be established from git (no commit carries "
+     "its ruling); no ruling is made until it can be",
+     "无法从 git 确定周期 {} 的升级（没有提交包含它的裁决）；在能够确定之前不会作出任何裁决"),
     ("the ruling on cycle {} could not be committed to the ledger ({}), and {} could "
      "not be restored ({}); the cycle stays ESCALATED, but check {} against git "
      "before ruling again",

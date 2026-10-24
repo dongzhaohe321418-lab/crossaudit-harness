@@ -120,12 +120,15 @@ def test_a_failing_show_ref_is_not_an_unborn_branch(escalated, monkeypatch):
 
 
 # ------------------------------------------------ ruling 38: log order
-def _forge(root: Path, cid: str) -> str:
+def _forge(root: Path, cid: str, **claims) -> str:
+    """A hand-written, unsigned ruling row committed to the audit repository.
+    ``claims`` adds what a prior real ruling would carry (D176 ruling 42:
+    the first escalation's ``escalated_at`` and ``escalation_commit``)."""
     cycle = _state(root)["cycles"][cid]
     forged = {"cycle_id": cid, "action": "close", "reason": "forged", "by": "x",
               "t": 0, "at": "1970-01-01T00:00:00Z", "round": cycle["round"],
               "active_sha": cycle["active_sha"], "status_after": "BLOCKED",
-              "escalation_reason": "", "intent": "f" * 32}
+              "escalation_reason": "", "intent": "f" * 32, **claims}
     (root / "cycles").mkdir(exist_ok=True)
     with open(root / LOG, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(forged, ensure_ascii=False, sort_keys=True) + "\n")
@@ -136,27 +139,32 @@ def _forge(root: Path, cid: str) -> str:
 
 def test_a_foreign_row_on_an_earlier_escalation_is_listed_and_does_not_block(
         escalated, monkeypatch, capsys):
-    """A forged row, then a genuine ruling (applied), then the cycle stops
-    again and a ruling's intent is left with no commit. Only rows later in
-    the committed log than the intent's starting point can answer it, so the
-    forged row neither blocks the new ruling nor is applied; status still
-    lists it. Mutation caught: considering every committed row for the cycle
-    regardless of log order -- the forged row would block the cycle forever."""
+    """A genuine ruling answers the first escalation; then a forged row that
+    claims that same first escalation (its `escalated_at` and
+    `escalation_commit`, the shape a prior real ruling has: D176 ruling 42)
+    is committed; then the cycle stops again and a ruling's intent is left
+    with no commit. The forged row stays in history: it names an escalation
+    that is no longer current, so it is neither applied nor blocking, and
+    status lists it as unverified (it carries no signature). The new
+    ruling proceeds. Mutation caught: considering rows for an earlier
+    escalation as candidates -- the forged row would block the cycle."""
     root, cid = escalated
     cfg = load()
-    forged_sha = _forge(root, cid)
+    first = rulings.escalation_identity(cfg, cid)
+    first_at = _state(root)["cycles"][cid].get("escalated_at")
     rulings.rule(cfg, _store(root), cid, "reopen", "the genuine ruling")
+    forged_sha = _forge(root, cid, escalated_at=first_at, escalation_commit=first)
     _store(root).escalate(cid, "round budget spent again", kind="audit")
-    rows = len(_committed_lines(root))
     with _store(root)._locked() as state:
         state.setdefault("pending_rulings", {})[cid] = {
             "action": "close", "nonce": "a" * 32, "reason_sha256": "", "by": "",
-            "started_at": 0, "rows_before": rows}
+            "started_at": 0}
     capsys.readouterr()
     assert main.main(["--json", "status"]) == EXIT_OK
     row = next(r for r in json.loads(capsys.readouterr().out)["cycles"]
                if r["cycle_id"] == cid)
-    assert [f["commit"] for f in row.get("foreign_rulings", [])] == [forged_sha[:12]]
+    assert [f["commit"] for f in row.get("unverified_rulings", [])] == [forged_sha[:12]]
+    assert "ruling_pending" not in row
     head = git("rev-parse", "HEAD", cwd=root)
     result = rulings.rule(cfg, _store(root), cid, "close", REASON)
     assert result.get("intent_cleared") is True
