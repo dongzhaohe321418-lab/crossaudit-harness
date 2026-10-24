@@ -8899,13 +8899,36 @@ this branch (the verification is the next round, cited only once its text exists
     and that the recovery "instead of writing a second one" rests on the committed
     escalation row of ruling 43.
 
+**Round 14** (`…-r14.md`): the round-13 identity repair held in every targeted case and
+no tested path remains for two committed rulings on one committed escalation; two P1 in
+the new code and one P2, repaired on this branch (the verification is the next round,
+cited only once its text exists):
+
+46. **An escalation whose ledger confirmation fails is still an escalation.** After a
+    successful `git commit` of the escalation row, a `git cat-file` confirmation that
+    timed out or could not start raised the internal step error unwrapped; no caller
+    catches it, the state write was abandoned and the cycle stayed OPEN. The whole
+    post-commit path is now inside the conversion: any failure there records ESCALATED
+    with an empty `escalation_commit` and the cause in `escalation_error`, exactly as a
+    failed commit does, and rulings refuse until the repository is repaired. Escalation
+    never fails to happen.
+47. **The lineage walk has no silent cap.** `gitio.past_ledger_commits` stopped after 64
+    ledger-only commits and returned the last ledger commit, so a work commit following
+    a long run of reports, receipts and escalation rows found no cycle and opened a new
+    one, past the pending-decision lock. The walk now continues to the first commit that
+    is not ledger-only; if it reaches a bound it refuses, legibly, instead of returning a
+    ledger commit.
+48. **README and CHANGELOG state the exception.** "Every committed escalation or ruling
+    row written by this version is signed; an escalation whose row cannot be committed
+    stays ESCALATED and cannot be ruled on until the repository is repaired."
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
 paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, which no
 ruling path can prevent; a holder of the project's private seed (`.crossaudit/signing/`,
 mode 0600) who can also write the repository can forge rulings and escalations, the
-same trust boundary as receipt signing. The TUI (D175) was reviewed cold in round 2; rounds 3 to 13 are recorded
+same trust boundary as receipt signing. The TUI (D175) was reviewed cold in round 2; rounds 3 to 14 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,

@@ -47,10 +47,12 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   the state change fails after the commit, the refusal says so and names the commit when there is one,
   `status` shows "ruling committed, state pending", and the next ruling on that
   cycle applies the committed ruling instead of writing a second one. From this
-  version on, escalations and rulings are lines signed with the project key, and a
-  ruling names the committed escalation line it answers; a line without this
-  project's valid signature (including lines written by older versions) is
-  listed by `status` as unverified and never acted on. The signing key is not
+  version on, every committed escalation or ruling line is signed with the project
+  key, and a ruling names the committed escalation line it answers; an escalation
+  whose line cannot be committed still escalates the cycle, which cannot be ruled
+  on until the repository is repaired; a line without this project's valid
+  signature (including lines written by older versions) is listed by `status` as
+  unverified and never acted on. The signing key is not
   recreated once anything is signed; a missing key is a refusal that asks for the
   backup.
   The controller and evidence-ledger locks are held by the kernel, so a crashed
