@@ -60,10 +60,12 @@ def test_a_landed_commit_with_unreadable_head_checks_is_uncertain(
     stage = {"commit": False}
 
     def step(cfg_, deadline, *args):
-        if args[0] == "add":
+        # The subcommand past the explicit identity's `-c` pairs.
+        verb = rulings._verb(args)
+        if verb == "add":
             stage["commit"] = True
         real_step(cfg_, deadline, *args)
-        if args[0] == "commit":
+        if verb == "commit":
             raise rulings._StepFailed("git commit failed: injected after landing")
 
     def bounded(cfg_, args, deadline):

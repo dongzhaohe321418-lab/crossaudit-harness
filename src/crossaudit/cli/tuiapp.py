@@ -202,6 +202,7 @@ def _fit(text: str, width: int) -> str:
     """``text`` cut to ``width`` terminal columns, with an ellipsis if cut."""
     if width <= 0:
         return ""
+    text = _degrade(text)        # measured as it will be drawn
     if tui._visible(text) <= width:
         return text
     ellipsis = tui.glyph("…", "...")
@@ -360,7 +361,7 @@ def _cycle_detail(cycle: dict, width: int) -> list[str]:
 
 
 def _help(width: int) -> list[str]:
-    keys = ("select", "expand", "new", "verify", "admit", "stop", "console",
+    keys = ("select", "expand", "scroll", "new", "verify", "admit", "stop", "console",
             "decision", "help", "quit")
     out = [tui.bold(_fit(t("tui.help.title"), width))]
     for key in keys:
@@ -368,18 +369,26 @@ def _help(width: int) -> list[str]:
     return out
 
 
-def render(frame: dict, width: int, height: int, *, selected: int = 0,
-           expanded: bool = False, mode: str = "cycles") -> str:
-    """The text of one screen. Pure: the same arguments give the same bytes.
+#: Every non-ASCII glyph the screen draws on its own account, and the ASCII
+#: it falls back to on a stream that cannot encode it (a Windows console at
+#: cp1252 or cp936, ``PYTHONIOENCODING=ascii``), the way the wizard degrades.
+GLYPH_FALLBACKS = {"·": "-", "≈": "~", "❯": ">", "…": "...", "─": "-",
+                   "↑": "^", "↓": "v"}
 
-    ``mode`` is "cycles" (the list), "decision" (the decision card above the
-    list, while a cycle waits for a person), or "help" (the key overlay).
-    ``expanded`` opens the ``selected`` row to its findings and receipt.
-    No line is wider than ``width`` columns and there are at most ``height``
-    lines; when the list does not fit, it scrolls to keep the selection seen.
-    """
-    width = max(1, int(width))
-    height = max(1, int(height))
+
+def _degrade(text: str) -> str:
+    """``text`` with each glyph the stream cannot encode replaced by its ASCII
+    fallback, decided per glyph through `tui.glyph` (so a GBK console keeps
+    the ones GBK has)."""
+    table = {ch: tui.glyph(ch, fallback) for ch, fallback in GLYPH_FALLBACKS.items()}
+    if all(ch == got for ch, got in table.items()):
+        return text
+    return "".join(table.get(ch, ch) for ch in text)
+
+
+def _sections(frame: dict, width: int, *, selected: int, expanded: bool,
+              mode: str) -> tuple[list[str], list[str], int, list[str]]:
+    """(header, body, the body line of the selected row, footer)."""
     head = _header(frame, width) + [_rule(width)] + _activity(frame, width)
 
     body: list[str] = []
@@ -412,16 +421,91 @@ def render(frame: dict, width: int, height: int, *, selected: int = 0,
         foot += _wrapped(frame["message"], width)
     foot.append(_rule(width))
     foot += [tui.dim(line) for line in _segments(t("tui.help.bar"), width)]
+    return head, body, focus, foot
 
+
+def _more(key: str, n: int, width: int) -> str:
+    said = t(key + (".plural" if n != 1 else ""), n=n)
+    return tui.dim(_fit(tui.glyph("…", "...") + " " + said, width))
+
+
+def _window(body_len: int, focus: int, room: int,
+            scroll: int | None) -> tuple[int, int, bool, bool]:
+    """Which body lines fit in ``room`` lines: (start, count, hidden above,
+    hidden below). An indicator line takes the place of a body line at each
+    end that hides something. ``scroll`` None follows the selection."""
+    if body_len <= room:
+        return 0, body_len, False, False
+    if room < 3:
+        # No space for indicators and content both: show what fits.
+        start = max(0, min(focus, body_len - room)) if scroll is None else \
+            max(0, min(scroll, body_len - room))
+        return start, room, False, False
+    if scroll is None:
+        # Follow the selection with as little movement as possible: from the
+        # top while the selected row is on the first screen (so the decision
+        # card stays whole above it), else with the row a third of the way
+        # down so what it opens to is in view.
+        start = (0 if focus < room - 1 else
+                 max(0, min(focus - (room - 2) // 3, body_len - (room - 1))))
+    else:
+        start = max(0, min(scroll, body_len - (room - 1)))
+    above = start > 0
+    count = room - (1 if above else 0)
+    below = start + count < body_len
+    if below:
+        count -= 1
+    return start, count, above, below
+
+
+def view(frame: dict, width: int, height: int, *, selected: int = 0,
+         expanded: bool = False, mode: str = "cycles",
+         scroll: int | None = None) -> dict:
+    """Where the body window falls for these arguments: ``start`` (first body
+    line shown), ``count`` (body lines shown), ``total`` body lines and
+    ``room`` (lines the body may use). The loop pages with it."""
+    width = max(1, int(width))
+    height = max(1, int(height))
+    head, body, focus, foot = _sections(frame, width, selected=selected,
+                                        expanded=expanded, mode=mode)
+    room = max(0, height - len(head) - len(foot))
+    start, count, _above, _below = _window(len(body), focus, room, scroll)
+    return {"start": start, "count": count, "total": len(body), "room": room}
+
+
+def render(frame: dict, width: int, height: int, *, selected: int = 0,
+           expanded: bool = False, mode: str = "cycles",
+           scroll: int | None = None) -> str:
+    """The text of one screen. Pure: the same arguments give the same bytes.
+
+    ``mode`` is "cycles" (the list), "decision" (the decision card above the
+    list, while a cycle waits for a person), or "help" (the key overlay).
+    ``expanded`` opens the ``selected`` row to its findings and receipt.
+    No line is wider than ``width`` columns. When the body (decision card and
+    cycles) is taller than the space between header and help bar, the frame
+    is exactly ``height`` lines: the body scrolls (``scroll`` is the first body
+    line shown; None follows the selection) and a line at each end that hides
+    something says how many lines are hidden there and which key shows them.
+    Glyphs the output stream cannot encode are drawn in ASCII.
+    """
+    width = max(1, int(width))
+    height = max(1, int(height))
+    head, body, focus, foot = _sections(frame, width, selected=selected,
+                                        expanded=expanded, mode=mode)
     room = height - len(head) - len(foot)
-    if room < len(body):
-        if room <= 0:
-            body = []
-        else:
-            start = max(0, min(focus - room // 3, len(body) - room))
-            body = body[start:start + room]
-    lines = head + body + foot
-    return "\n".join(lines[:height])
+    if room <= 0:
+        # Not even the header and help bar fit: keep the help bar whole at
+        # the bottom and as much header as there is room for above it.
+        foot = foot[-height:]
+        lines = head[:height - len(foot)] + foot
+        return _degrade("\n".join(lines))
+    start, count, above, below = _window(len(body), focus, room, scroll)
+    shown = body[start:start + count]
+    if above:
+        shown = [_more("tui.more.above", start, width)] + shown
+    if below:
+        shown = shown + [_more("tui.more.below", len(body) - start - count, width)]
+    return _degrade("\n".join(head + shown + foot))
 
 
 # ================================================================== actions
@@ -670,6 +754,27 @@ def _size() -> tuple[int, int]:
     return (size.columns or 80, size.lines or 24)
 
 
+def _printable(text: str, stream=None) -> str:
+    """``text`` as ``stream`` can encode it: unencodable characters become
+    the codec's replacement, never an exception (the last resort behind the
+    ASCII glyph fallbacks)."""
+    stream = stream if stream is not None else sys.stdout
+    encoding = getattr(stream, "encoding", None) or "utf-8"
+    try:
+        text.encode(encoding)
+        return text
+    except (UnicodeEncodeError, LookupError):
+        try:
+            return text.encode(encoding, "replace").decode(encoding)
+        except LookupError:
+            return text.encode("ascii", "replace").decode("ascii")
+
+
+def _write(stream, text: str) -> None:
+    stream.write(_printable(text, stream))
+    stream.flush()
+
+
 def run_tui(cfg: Config, *, once: bool = False) -> int:
     """The interactive loop at a terminal; one printed frame anywhere else."""
     session = Session()
@@ -681,18 +786,31 @@ def run_tui(cfg: Config, *, once: bool = False) -> int:
         fr["panel"], fr["message"] = None, ""
         _attach_verification(cfg, fr, newest, session)
         width, _rows = _size()
-        print(render(fr, width, ONCE_HEIGHT, selected=0,
-                     expanded=newest is not None, mode=_mode(fr, session, False)))
+        _write(sys.stdout, render(fr, width, ONCE_HEIGHT, selected=0,
+                                  expanded=newest is not None,
+                                  mode=_mode(fr, session, False)) + "\n")
         if not once:
-            print(t("tui.once.no_terminal"), file=sys.stderr)
+            _write(sys.stderr, t("tui.once.no_terminal") + "\n")
         return 0
     return _loop(cfg, session)
 
 
+#: The escape sequences the loop reads as paging keys.
+PAGE_UP, PAGE_DOWN = b"\x1b[5~", b"\x1b[6~"
+
+
 def _read_key(fd: int) -> bytes:
+    """One keypress: a byte, or a whole escape sequence (arrows are three
+    bytes, PageUp/PageDown four), read while its bytes keep arriving."""
     raw = os.read(fd, 1)
-    if raw == b"\x1b" and select.select([fd], [], [], 0.02)[0]:
-        raw += os.read(fd, 2)
+    if raw == b"\x1b":
+        while len(raw) < 8 and select.select([fd], [], [], 0.02)[0]:
+            got = os.read(fd, 1)
+            if not got:
+                break
+            raw += got
+            if raw[-1:].isalpha() or raw[-1:] == b"~":
+                break
     return raw
 
 
@@ -707,6 +825,9 @@ def _loop(cfg: Config, session: Session) -> int:
     expanded_id: str | None = None
     first = True
     helping = False
+    #: The first body line shown, once the person has paged; None follows
+    #: the selection. Moving the selection or opening a row follows it again.
+    scroll: int | None = None
     fr: dict = {}
 
     data: dict = {}
@@ -758,12 +879,22 @@ def _loop(cfg: Config, session: Session) -> int:
             settle()
             owed = _attach_verification(cfg, fr, expanded_id, session)
         width, rows = _size()
-        text = render(fr, width, rows, selected=selected,
-                      expanded=_expanded_index(fr, selected, expanded_id),
-                      mode=_mode(fr, session, helping))
-        out.write("\x1b[H" + text.replace("\n", "\x1b[K\n") + "\x1b[K\x1b[J")
-        out.flush()
+        text = render(fr, width, rows, **layout())
+        _write(out, "\x1b[H" + text.replace("\n", "\x1b[K\n") + "\x1b[K\x1b[J")
         return owed
+
+    def layout() -> dict:
+        return {"selected": selected,
+                "expanded": _expanded_index(fr, selected, expanded_id),
+                "mode": _mode(fr, session, helping), "scroll": scroll}
+
+    def page(direction: int) -> None:
+        nonlocal scroll
+        width, rows = _size()
+        where = view(fr, width, rows, **layout())
+        step = max(1, where["room"] - 2)
+        scroll = max(0, min(where["start"] + direction * step,
+                            max(0, where["total"] - 1)))
 
     warmer: dict = {"thread": None}
 
@@ -795,17 +926,21 @@ def _loop(cfg: Config, session: Session) -> int:
             warmer["thread"].join()
 
     def prompt(ask):
-        """Leave cbreak for one line of input with `tui.text`/`tui.confirm`."""
+        """Leave cbreak for one line of input with `tui.text`/`tui.confirm`.
+
+        Ctrl-C at the prompt cancels the prompt, not the window: it returns
+        None and the caller says "cancelled" on the frame it goes back to."""
         settle()
         termios.tcsetattr(fd, termios.TCSADRAIN, saved)
-        out.write("\x1b[?25h\x1b[H\x1b[J")
-        out.flush()
+        _write(out, "\x1b[?25h\x1b[H\x1b[J")
         try:
             return ask()
+        except (KeyboardInterrupt, EOFError):
+            _write(out, "\n")
+            return None
         finally:
             tty.setcbreak(fd)
-            out.write("\x1b[?25l\x1b[2J")
-            out.flush()
+            _write(out, "\x1b[?25l\x1b[2J")
 
     def current_cycle() -> dict | None:
         cycles = fr.get("cycles") or []
@@ -813,8 +948,7 @@ def _loop(cfg: Config, session: Session) -> int:
 
     try:
         tty.setcbreak(fd)
-        out.write("\x1b[?25l\x1b[2J")
-        out.flush()
+        _write(out, "\x1b[?25l\x1b[2J")
         draw()
         warm()
         last = time.monotonic()
@@ -850,11 +984,17 @@ def _loop(cfg: Config, session: Session) -> int:
                     handled = False
             elif key == tui.ENTER and session.panel:
                 session.panel = None
+            elif raw == PAGE_UP or ch == "u":
+                page(-1)
+            elif raw == PAGE_DOWN or ch == "d":
+                page(+1)
             elif key == tui.UP:
-                selected = max(0, selected - 1)
+                selected, scroll = max(0, selected - 1), None
             elif key == tui.DOWN:
                 selected = min(max(0, len(fr.get("cycles") or []) - 1), selected + 1)
+                scroll = None
             elif key == tui.ENTER:
+                scroll = None
                 cycle = current_cycle()
                 if cycle is not None:
                     expanded_id = None if expanded_id == cycle["id"] else cycle["id"]
@@ -866,8 +1006,10 @@ def _loop(cfg: Config, session: Session) -> int:
                 if session.busy:
                     session.message = t("tui.busy")
                 else:
-                    task = prompt(lambda: tui.text(t("tui.new.prompt")))
-                    if not task.strip():
+                    task = prompt(lambda: tui.text(_printable(t("tui.new.prompt"))))
+                    if task is None:
+                        session.message = t("tui.cancelled")
+                    elif not task.strip():
                         session.message = t("tui.new.empty")
                     else:
                         try:
@@ -890,8 +1032,11 @@ def _loop(cfg: Config, session: Session) -> int:
                                      "lines": verify_lines(cfg, rel)}
                 else:
                     rel = cycle["receipt"]["path"]
-                    if prompt(lambda: tui.confirm(t("tui.admit.confirm"),
-                                                  default=False)):
+                    answer = prompt(lambda: tui.confirm(
+                        _printable(t("tui.admit.confirm")), default=False))
+                    if answer is None:
+                        session.message = t("tui.cancelled")
+                    elif answer:
                         session.panel = {"title": t("tui.admit.title", path=rel),
                                          "lines": verify_lines(cfg, rel, admit=True)}
                     else:
@@ -923,9 +1068,10 @@ def _loop(cfg: Config, session: Session) -> int:
                     action = "reopen" if ch == "r" else "close"
                     question = t("tui.reason.reopen" if ch == "r"
                                  else "tui.reason.close")
-                    reason = prompt(lambda q=question: tui.text(q))
-                    session.message = " ".join(rule_on(cfg, esc["cycle_id"],
-                                                       action, reason))
+                    reason = prompt(lambda q=question: tui.text(_printable(q)))
+                    session.message = (t("tui.cancelled") if reason is None else
+                                       " ".join(rule_on(cfg, esc["cycle_id"],
+                                                        action, reason)))
             else:
                 handled = False          # a key the help bar does not list
             if handled:
@@ -946,6 +1092,5 @@ def _loop(cfg: Config, session: Session) -> int:
         # reprocesses pending input and clears the flag; nothing is consumed)
         # leaves the attributes exactly as they were found.
         select.select([fd], [], [], 0)
-        out.write("\x1b[?25h\n")
-        out.flush()
+        _write(out, "\x1b[?25h\n")
     return 0

@@ -532,11 +532,16 @@ def _ordered_cycles(state: dict, commit_chats: dict[str, str] | None = None) -> 
     """
     states = state.get("cycles", {})
     updated: dict[str, int] = {}
-    for event in state.get("history", []):
+    # The position of each cycle's last event in the (chronological) history:
+    # the tie-break when two cycles share a whole-second ``t`` -- the hash id
+    # used to decide, and a fast build put the older cycle "newest".
+    last_index: dict[str, int] = {}
+    for index, event in enumerate(state.get("history", [])):
         cycle_id = str(event.get("cycle", ""))
         if cycle_id in states:
             updated[cycle_id] = max(updated.get(cycle_id, 0),
                                     int(event.get("t", 0) or 0))
+            last_index[cycle_id] = index
 
     def when(cid: str, cycle: dict) -> int:
         # History (capped on write) is authoritative when it still carries the
@@ -546,7 +551,7 @@ def _ordered_cycles(state: dict, commit_chats: dict[str, str] | None = None) -> 
         return updated.get(cid) or int(cycle.get("updated_at") or 0)
 
     ordered = sorted(states.items(), key=lambda item: (
-        when(item[0], item[1]), item[0]))
+        when(item[0], item[1]), last_index.get(item[0], -1), item[0]))
     chat_map = commit_chats or {}
     # D2: only the most-recent cycles ride in each frame (mirrors the stream
     # windows). The list is oldest-first, so the tail keeps the newest cycles —
