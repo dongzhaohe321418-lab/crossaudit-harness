@@ -633,12 +633,18 @@ def test_finding_without_evidence_is_invalid():
 
 
 def test_escalated_cycle_cannot_be_routed_around(science, cfg, transcripts):
+    """Since D176 ruling 43 the escalation itself is a commit (its signed row
+    in the ledger), so the child's git parent is that commit; lineage looks
+    through ledger-only commits the way `run` and `audit` do
+    (`_lineage_parent`)."""
+    from crossaudit.cli.main import _lineage_parent
+
     sha = write_increment(science, BAD_RESULTS, "Bad.", "defective")
     store = StateStore(cfg.root / cfg.state_dir / "state.json")
     cycle = store.open_or_advance(cfg.science_repo, sha, parent(cfg.root, sha))
     store.record_verdict(cycle["cycle_id"], sha, "ESCALATE", "r1", cfg.max_rounds)
     child = write_increment(science, GOOD_RESULTS, "Fixed.", "revision")
-    advanced = store.open_or_advance(cfg.science_repo, child, parent(cfg.root, child))
+    advanced = store.open_or_advance(cfg.science_repo, child, _lineage_parent(cfg, child))
     assert advanced.get("blocked_by_escalation") is True
 
 

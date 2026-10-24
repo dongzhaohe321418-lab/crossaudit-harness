@@ -49,7 +49,8 @@ def _rows(root: Path) -> list[dict]:
     path = root / LOG
     if not path.exists():
         return []
-    return [json.loads(line) for line in path.read_text().split("\n") if line]
+    rows = [json.loads(line) for line in path.read_text().split("\n") if line]
+    return [r for r in rows if r.get("kind") != "escalation"]   # escalation rows are not rulings (D176 ruling 43)
 
 
 def _fail_phase3_write(monkeypatch, *, thread: str | None = None):
@@ -226,7 +227,8 @@ def test_a_commit_that_fails_clears_its_intent(escalated, monkeypatch):
     landed) keeps it, which this test also checks. Mutations caught: leaving
     the intent behind after a refused commit (the next ruling would report an
     earlier attempt that never happened); clearing it on an uncertain
-    outcome; and phase 3 not remembering the nonce in `ruling_intents`."""
+    outcome. (It also checked the nonce in `ruling_intents`, which D176
+    ruling 43 retired.)"""
     root, cid = escalated
     head = git("rev-parse", "HEAD", cwd=root)
     real = rulings.record
@@ -249,8 +251,9 @@ def test_a_commit_that_fails_clears_its_intent(escalated, monkeypatch):
     result = rulings.rule(load(), _store(root), cid, "close", REASON)
     assert result.get("intent_cleared") is True        # the uncertain one had no row
     assert _commit_count(root, head) == 1
-    # Phase 3 remembers the nonce, so status never reads this row as foreign.
-    assert _rows(root)[-1]["intent"] in _state(root)["cycles"][cid]["ruling_intents"]
+    # The row is signed and names the current escalation (D176 ruling 43;
+    # `ruling_intents` is no longer kept).
+    assert rulings.row_verifies(_rows(root)[-1], rulings._project_pubkey(load()))
 
 
 # ---------------------------------------------------------- the post-commit failure
@@ -285,7 +288,6 @@ def test_a_post_commit_failure_keeps_the_intent_and_recovers_from_it(
     state = _state(root)
     assert state["cycles"][cid]["status"] == "BLOCKED"
     assert cid not in state.get("pending_rulings", {})
-    assert intent["nonce"] in state["cycles"][cid]["ruling_intents"]
 
 
 def test_a_legacy_cycle_without_escalated_at_takes_the_same_path(

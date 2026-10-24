@@ -63,8 +63,9 @@ def _state(root: Path) -> dict:
 
 
 def _rows(root: Path) -> list[dict]:
-    return [json.loads(line) for line in
+    rows = [json.loads(line) for line in
             (root / "cycles" / "rulings.jsonl").read_text().split("\n") if line]
+    return [r for r in rows if r.get("kind") != "escalation"]   # escalation rows are not rulings (D176 ruling 43)
 
 
 def _status_row(capsys, cid):

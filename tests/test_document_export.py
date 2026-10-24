@@ -165,7 +165,11 @@ def test_build_loop_commits_only_the_final_document(
     assert build_mod.run_loop(scoped, task) == EXIT_ESCALATED
     final = source.removesuffix(SOURCE_SUFFIX) + "." + format_name
     from tests.conftest import git
-    committed = git("show", "--pretty=", "--name-only", "HEAD", cwd=science).splitlines()
+    # The work commit: since D176 ruling 43 the escalation that ends the loop
+    # is itself a ledger-only commit on top of it.
+    from crossaudit.gitio import past_ledger_commits
+    work = past_ledger_commits(science, cfg.ledger_dir, git("rev-parse", "HEAD", cwd=science))
+    committed = git("show", "--pretty=", "--name-only", work, cwd=science).splitlines()
     assert final in committed and source not in committed
     assert not (science / source).exists()
     assert extract_document(final, (science / final).read_bytes()).valid

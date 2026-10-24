@@ -446,3 +446,5 @@
 {"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (fatal: cannot read packed-refs); no ruling is made until it can be"}
 {"kind": "IntegrityDenial", "reason": "a committed ruling for cycle d2997cd18ed2dd0c (f2eda0f15a57) carries no valid signature from this project; nothing was applied, and no new ruling is made until the repository is repaired"}
 {"kind": "ConfigDenial", "reason": "the project signing key at /tmp/T/not-a-directory/ed25519.seed is not available (File exists); a ruling must be signed, so none was made"}
+{"kind": "IntegrityDenial", "reason": "the escalation of cycle 60aa693f05b053a7 is not committed to the ledger (pre-commit: refused by policy); rule on it after the repository is repaired"}
+{"kind": "ConfigDenial", "reason": "the project signing key at /tmp/T/proj/.crossaudit/signing/ed25519.seed is missing but signed rulings or receipts exist; restore it from your backup, since a new key would not verify them"}

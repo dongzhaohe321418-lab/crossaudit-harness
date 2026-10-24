@@ -43,8 +43,9 @@ def _state(root: Path) -> dict:
 
 def _rows(root: Path) -> list[dict]:
     path = root / LOG
-    return ([json.loads(ln) for ln in path.read_text().split("\n") if ln]
+    rows = ([json.loads(ln) for ln in path.read_text().split("\n") if ln]
             if path.exists() else [])
+    return [r for r in rows if r.get("kind") != "escalation"]   # D176 ruling 43
 
 
 def _commit_row(root: Path, row: dict) -> str:
@@ -158,10 +159,10 @@ def test_a_genuine_row_whose_signature_was_stripped_is_refused(escalated, monkey
     root, cid = escalated
     cfg = load()
     _post_commit_failure(root, cid, cfg, monkeypatch)
-    rows = _rows(root)
-    rows[-1].pop("sig")
+    every = [json.loads(ln) for ln in (root / LOG).read_text().split("\n") if ln]
+    every[-1].pop("sig")                      # the last row is the ruling
     (root / LOG).write_text("".join(json.dumps(r, ensure_ascii=False, sort_keys=True)
-                                    + "\n" for r in rows))
+                                    + "\n" for r in every))
     git("add", "--", LOG, cwd=root)
     git("commit", "-q", "-m", "strip a signature", "--", LOG, cwd=root)
     sha = git("rev-parse", "HEAD", cwd=root)
@@ -201,14 +202,20 @@ def test_every_ruling_row_is_signed_and_names_its_escalation(escalated):
     row = _rows(root)[-1]
     assert row["escalation_commit"] == identity and identity
     assert row["keyid"] and rulings.row_verifies(row, rulings._project_pubkey(cfg))
-    receipt_path = git("show", "--name-only", "--format=", identity, cwd=root).split()
-    assert any(p.endswith("/receipt.json") for p in receipt_path)
+    # Since D176 ruling 43 the identity is the commit of the cycle's signed
+    # escalation row.
+    added = git("show", "--format=", identity, "--", LOG, cwd=root)
+    escalation = json.loads(next(ln[1:] for ln in added.splitlines()
+                                 if ln.startswith("+{")))
+    assert escalation["kind"] == "escalation" and escalation["cycle_id"] == cid
 
 
 def test_no_signing_key_no_ruling(escalated, monkeypatch, tmp_path):
-    """The signing key cannot be loaded or created (its directory is a
-    regular file). Mutation caught: signing a ruling fail-open, like a
-    receipt -- an unsigned row would be committed."""
+    """The signing key cannot be loaded (it is pointed at a place that holds
+    none) while the project already holds signed rows. Since D176 ruling 44
+    that is the "missing key" refusal, and no new key is created. Mutation
+    caught: signing a ruling fail-open, like a receipt -- an unsigned row
+    would be committed."""
     root, cid = escalated
     cfg = load()
     blocker = tmp_path / "not-a-directory"
@@ -217,10 +224,10 @@ def test_no_signing_key_no_ruling(escalated, monkeypatch, tmp_path):
     head = git("rev-parse", "HEAD", cwd=root)
     with pytest.raises(ConfigDenial) as denied:
         rulings.rule(cfg, _store(root), cid, "close", REASON)
-    assert denied.value.reason.startswith(
-        f"the project signing key at {blocker / 'ed25519.seed'} is not available (")
-    assert denied.value.reason.endswith(
-        "); a ruling must be signed, so none was made")
+    assert denied.value.reason == (
+        f"the project signing key at {blocker.resolve() / 'ed25519.seed'} is missing "
+        f"but signed rulings or receipts exist; restore it from your backup, since a "
+        f"new key would not verify them")
     assert git("rev-parse", "HEAD", cwd=root) == head
     assert _rows(root) == []
     state = _state(root)
