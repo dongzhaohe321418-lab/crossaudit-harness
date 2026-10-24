@@ -40,10 +40,11 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   continue, and the provider-failure retry) used to change only the local
   controller state; every surface now rules through one path with two phases
   joined by a local note of intent: the row is appended to `cycles/rulings.jsonl`
-  and committed first, then the state changes. If the commit fails (a rejecting
-  hook, a full disk), the cycle stays ESCALATED, the log is restored byte for
-  byte, nothing stays staged, and the refusal says so, in English and Chinese.
-  If the state change fails after the commit, the refusal names the commit,
+  and committed first, then the state changes. If Git is positively known not to
+  have committed (a rejecting hook, a full disk; `HEAD` unchanged), the cycle
+  stays ESCALATED, the log is restored byte for byte, nothing stays staged, and
+  the refusal says so, in English and Chinese. If the outcome is uncertain or
+  the state change fails after the commit, the refusal says so and names the commit when there is one,
   `status` shows "ruling committed, state pending", and the next ruling on that
   cycle applies the committed ruling instead of writing a second one; a ruling
   line the controller did not make is listed by `status` and never acted on.

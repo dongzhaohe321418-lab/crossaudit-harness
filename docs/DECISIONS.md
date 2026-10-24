@@ -8400,11 +8400,12 @@ RULINGS:
    (known cycle, ESCALATED, non-empty reason, reopen or close), calls the commit step,
    and only then applies the state change and the `human_resolution` entry.
    `rulings.record` appends the row to `cycles/rulings.jsonl` and commits exactly that
-   file; if the append, `git add` or `git commit` fails it restores the log byte for byte
-   (or removes it), runs `git reset -- <path>` so nothing stays staged, and raises
+   file; if the append, `git add` or `git commit` fails *and Git is positively known not
+   to have committed (`HEAD` read before and after, equal)* it restores the log byte for
+   byte (or removes it), runs `git reset -- <path>` so nothing stays staged, and raises
    `IntegrityDenial`: "the ruling on cycle … could not be committed to the ledger (…);
    the cycle stays ESCALATED and nothing was recorded" (Chinese parity in
-   `denials_zh`). `rulings.rule` wraps the two and performs the after-close settling
+   `denials_zh`); any uncertainty keeps the intent and says so (rulings 33 and 36). `rulings.rule` wraps the two and performs the after-close settling
    (`daemon.settle_closed_escalation`, `settle_human_wait`, moved out of the CLI) so a
    close from any surface ends the run that was waiting. Callers: `cmd_resolve`,
    `resolve_cycle` (the TUI), `talk`'s resolve lane, and both console branches of
@@ -8768,10 +8769,35 @@ only once its text exists):
 35. **This record's older wording is corrected.** The title and ruling 1 said "one
     failure-atomic transaction"; they now say what rulings 30–33 built.
 
+**Round 11** (`…-r11.md`): the round-10 repairs verified in their tested paths, then
+three P1, all in how uncertainty is read, and one P2, repaired on this branch (the
+verification is the next round, cited only once its text exists):
+
+36. **An unreadable `HEAD` never proves anything.** The pre- and post-commit reads of
+    `HEAD` returned "" on failure, so two failed reads compared equal and a landed commit
+    was marked "did not land", its intent cleared, the log "restored" over a committed
+    row. Each read now carries its status; the intent is cleared, and the log restored,
+    only when both reads positively succeeded and are equal; any unreadable check is
+    "uncertain": nothing restored, nothing reset, the intent kept.
+37. **"Branch absent" means Git said so.** Strict recovery accepted any non-zero
+    `show-ref` as the unborn-branch case. Only Git's own "ref missing" result (exit 1
+    with no error text) does now; every other failure is the "could not be read"
+    refusal.
+38. **A committed row for the current escalation that does not match completely is a
+    refusal, not "no row".** A clean filter that rewrote the nonce produced a row that
+    was no match; recovery then assumed no commit, cleared the intent and wrote a second
+    ruling. With an intent pending, any committed row for this cycle's current escalation
+    that the state does not reflect and that is not a complete bound match now refuses
+    and keeps the intent, naming the mismatch; repairing the repository is the way out,
+    as for ruling 34.
+39. **The three documents are qualified.** README, CHANGELOG and ruling 1 said a failed
+    commit means "nothing is recorded"; they now say that holds when Git is positively
+    known not to have committed, and that uncertainty keeps the intent.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
-paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 10 are recorded
+paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 11 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,
