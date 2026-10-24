@@ -1018,9 +1018,10 @@ is uncertain, or the state change fails after the commit, the refusal says so
 and names the commit when there is one, `status` shows the cycle as "ruling
 committed, state pending", and the next ruling on that cycle recovers the
 committed ruling instead of writing a second one; nothing is cleared while the
-repository cannot be read. A ruling line that this
-project's controller did not make (someone else committed it to the
-repository) is listed by `status` and never acted on.
+repository cannot be read. Every ruling line is signed with the project's key
+and names the escalation it answers; a line without this project's valid
+signature (someone else committed it, or an older line) is listed by `status`
+as unverified and never acted on.
 
 ## Configuration
 

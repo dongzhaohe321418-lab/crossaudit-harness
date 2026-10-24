@@ -8814,19 +8814,25 @@ verification is the next round, cited only once its text exists):
     commit existed; a writer of `.crossaudit/state.json` could move the cursor to hide a
     committed ruling and cause a second one, or shape an intent to make a foreign row
     apply — exactly what `locks.py` says the state file cannot be trusted to prevent.
-    Now a ruling row is signed with the project's Ed25519 key (the key receipts are
-    signed with, `receipt/sign.py`; for rulings the signing is fail-closed: no key, no
-    ruling) over its canonical bytes, and carries the committed identity of the
-    escalation it answers (`escalation_commit`: the commit of the audit round that
-    escalated the cycle, which recovery verifies in git holds this cycle's escalating
-    report). Recovery reads the committed log strictly and considers only rows for this
-    cycle whose `escalation_commit` is the current escalation's; a row whose signature
-    verifies with the project public key and whose action is valid is the authority: if
-    the state does not reflect it, it is applied, whatever the local intent says; a
-    candidate that does not verify, or carries no signature, is refused by name and
-    never applied or treated as "no row"; no candidate means the new ruling proceeds.
-    The local intent remains only for the "an earlier attempt left no commit" message
-    and for `record()`'s nonce check; `rows_before` is gone.
+    Now a ruling row is signed with the project's Ed25519 key — the receipt key,
+    `crypto.keys.load_or_create`, created on first use as receipts create it; for
+    rulings the signing is fail-closed: a key that cannot be loaded or created refuses
+    the ruling and writes nothing — over its canonical bytes (`keyid` inside, `sig` and
+    `commit` outside), and carries `escalation_commit`, the identity of the escalation it
+    answers, established from git, not from the state: the commit that introduced this
+    cycle's highest-round receipt at `HEAD`, advanced to the commit of each verified
+    ruling that follows, so every escalation after a ruling has a distinct identity even
+    without a new receipt (a cycle with no committed receipt, a build or provider stop,
+    starts at the empty identity and advances the same way; the escalating round's
+    receipt says BLOCKED, so the verdict itself is not the fact checked). Recovery reads
+    the committed log strictly and walks it in order: a row naming the current identity
+    must verify with the project public key and carry a valid action, else it is refused
+    by name and never skipped; the last verified row is applied if the cycle is
+    ESCALATED and the state does not reflect it, whatever the local intent says; no
+    candidate means the new ruling proceeds. The local intent remains only for the "an
+    earlier attempt left no commit" message and for `record()`'s nonce check;
+    `rows_before` is gone. Cost: a ruling, and `status` for an escalated cycle, reads
+    every receipt at `HEAD`.
 41. **Unsigned and legacy rows are history, not authority.** A row with no signature or
     no `escalation_commit` (written before this ruling) is never a recovery candidate;
     `status` lists it as unverified. A repository writer can add rows to the log, with
@@ -8844,7 +8850,13 @@ resolution rests on the token staying with the person (SECURITY.md's console
 paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, which no
 ruling path can prevent; what rulings 40–41 close is that such a writer, or a
 repository writer, could make the ledger hold conflicting rulings through CrossAudit's
-own recovery. The TUI (D175) was reviewed cold in round 2; rounds 3 to 12 are recorded
+own recovery. One residual case consults the state: git cannot tell a verified `reopen`
+whose state write failed from a `reopen` followed by a new stop that left no receipt, so
+for a `reopen` answering the current identity the state's `ruling_intents` decides
+between "apply it" and "a new escalation"; a writer of `state.json` could add that
+nonce, and the person would rule `reopen` again, giving two `reopen` rows for one
+escalation (the same action, not conflicting ones). `close` has no such case. Closing
+it needs escalations themselves committed to git, which today only receipts are. The TUI (D175) was reviewed cold in round 2; rounds 3 to 12 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,

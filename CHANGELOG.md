@@ -46,8 +46,10 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   the refusal says so, in English and Chinese. If the outcome is uncertain or
   the state change fails after the commit, the refusal says so and names the commit when there is one,
   `status` shows "ruling committed, state pending", and the next ruling on that
-  cycle applies the committed ruling instead of writing a second one; a ruling
-  line the controller did not make is listed by `status` and never acted on.
+  cycle applies the committed ruling instead of writing a second one. Ruling lines
+  are signed with the project key and name the escalation they answer; a line
+  without this project's valid signature is listed by `status` as unverified and
+  never acted on.
   The controller and evidence-ledger locks are held by the kernel, so a crashed
   process releases them and no lock file is ever deleted. Found and refined by
   nine rounds of independent cross-vendor review of this release's changes
