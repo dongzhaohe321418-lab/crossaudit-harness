@@ -8684,10 +8684,43 @@ branch (the verification is the next round, cited only once its text exists):
     `OSError` although one valid entry was on disk; the sentence for that case says the
     entry may have been recorded and that the next append verifies the chain.
 
+**Round 9** (`…-r9.md`): the round-8 repairs verified in the serial case, then one P1 in
+three parts and two P2, repaired on this branch (the verification is the next round,
+cited only once its text exists):
+
+30. **A ruling is two-phase, with a local intent, and reconciliation applies only what
+    this controller intended.** Ruling 27's reconciliation read the committed log before
+    the controller lock (two resolvers could commit opposite rulings), treated an
+    unreadable log as "no pending ruling" (fail-open), and applied any syntactically
+    valid committed row, which anyone able to commit to the audit repository could forge
+    without access to the local state. Now, all under the controller lock: (1) the
+    intent — cycle, action, reason hash, who, a random nonce — is written into the local
+    state store first; if that write fails, nothing is committed; (2) `rulings.record`
+    appends and commits the row, which carries the intent's nonce; (3) the state change
+    is applied and the intent cleared in one write. If (3) fails, the refusal names the
+    committed sha and the intent stays. Recovery, also under the lock, at the next ruling
+    on that cycle: the committed log at `HEAD` is read (a read or parse failure is an
+    `IntegrityDenial`, never "nothing pending"); a committed row with the intent's nonce
+    is applied and reported as reconciled, with no new row; an intent with no committed
+    row (the process died between phases) is cleared and the new ruling proceeds as a
+    fresh one; a request for the other action while a committed row stands is refused.
+    The timestamp heuristics of ruling 27 (`escalated_at`, `updated_at`) are gone; the
+    nonce identifies the escalation exactly, for legacy cycles too.
+31. **A committed row this controller did not intend is never applied.** Such a row is
+    listed by `status` as "ruling row in the ledger not made by this controller (sha)",
+    in English and Chinese; an explicit human ruling still proceeds and supersedes it,
+    and the ledger shows both rows. A repository writer can add lines to the log; they
+    cannot make this controller act on them.
+32. **The words match the mechanism.** "Failure-atomic" and "never ruled twice" are
+    replaced, here and in the README and CHANGELOG, by what holds: a ruling's commit and
+    its state change are two phases joined by a local intent; a failure between them is
+    recovered from the intent at the next ruling, and the person is told at each step
+    what was and was not recorded.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
-paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 8 are recorded
+paragraph). The TUI (D175) was reviewed cold in round 2; rounds 3 to 9 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,
