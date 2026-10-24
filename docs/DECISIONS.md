@@ -8899,13 +8899,48 @@ this branch (the verification is the next round, cited only once its text exists
     and that the recovery "instead of writing a second one" rests on the committed
     escalation row of ruling 43.
 
+**Round 14** (`…-r14.md`): the round-13 identity repair held in every targeted case and
+no tested path remains for two committed rulings on one committed escalation; two P1 in
+the new code and one P2, repaired on this branch (the verification is the next round,
+cited only once its text exists):
+
+46. **An escalation whose ledger confirmation fails is still an escalation.** After a
+    successful `git commit` of the escalation row, a `git cat-file` confirmation that
+    timed out or could not start raised the internal step error unwrapped; no caller
+    catches it, the state write was abandoned and the cycle stayed OPEN. The whole
+    post-commit path (`rev-parse`, the confirming `cat-file`, the parse, the comparison)
+    is now inside the conversion: any failure there records ESCALATED with an empty
+    `escalation_commit`, the cause in `escalation_error` and the row's nonce in
+    `escalation_nonce`, exactly as a failed commit does; the next ruling's retry first
+    looks at `HEAD` for a verified escalation row with that nonce and adopts its commit,
+    so a row that did land is never written twice; while the log cannot be read, the
+    ruling refuses by name. A last-resort catch means escalation never fails to happen.
+47. **The lineage walk has no silent cap.** `gitio.past_ledger_commits` stopped after 64
+    ledger-only commits and returned the last ledger commit, so a work commit following
+    a long run of reports, receipts and escalation rows found no cycle and opened a new
+    one, past the pending-decision lock. The walk now has no cap: it continues to the
+    first commit that is not ledger-only, or to the repository's first commit.
+48. **README and CHANGELOG state the exception.** "Every committed escalation or ruling
+    row written by this version is signed; an escalation whose row cannot be committed
+    stays ESCALATED and cannot be ruled on until the repository is repaired."
+49. **A ledger-row commit is bounded by the smaller of 90 s and the configured git
+    timeout.** The release gate (a 30 s per-test cap) caught it: a work commit that had
+    just timed out through a hung pre-commit hook (`CROSSAUDIT_GIT_TIMEOUT=2`) was
+    followed by the escalation row's commit running the same hook for its full 30 s
+    under the controller lock, because the row budget was the 90 s of ruling 7 alone.
+    `rulings.row_budget()` is now `min(COMMIT_TIMEOUT_S, CROSSAUDIT_GIT_TIMEOUT)` for
+    escalation and ruling rows alike, the timed-out refusal names the actual budget, and
+    ruling 7's sentence that `CROSSAUDIT_GIT_TIMEOUT` does not apply is superseded: the
+    owner's bound on git applies to rows too, capped at 90 s for the lock's window. The
+    README's row for the variable says so.
+
 **Open.** Anyone holding the console token can rule over HTTP, as before; that ruling
 is now committed, but the README's sentence that neither model can produce a
 resolution rests on the token staying with the person (SECURITY.md's console
 paragraph). A writer of `.crossaudit/` can still edit `state.json` directly, which no
 ruling path can prevent; a holder of the project's private seed (`.crossaudit/signing/`,
 mode 0600) who can also write the repository can forge rulings and escalations, the
-same trust boundary as receipt signing. The TUI (D175) was reviewed cold in round 2; rounds 3 to 13 are recorded
+same trust boundary as receipt signing. The TUI (D175) was reviewed cold in round 2; rounds 3 to 14 are recorded
 above, each citing the text that exists. The Windows lock branch (`msvcrt.locking`)
 has not run on Windows and no network filesystem was tried (the ENOLCK test simulates
 the error); a plain `os.fork()` without exec would share a held lock with the child,

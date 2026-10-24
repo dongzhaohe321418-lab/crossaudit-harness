@@ -647,6 +647,7 @@ ENTRIES: tuple[tuple[str, str], ...] = (
     ("a committed ruling for cycle {} ({}) carries no valid signature from this project; "
      "nothing was applied, and no new ruling is made until the repository is repaired",
      "周期 {} 的一条已提交裁决（{}）没有本项目的有效签名；未应用任何内容，在仓库修复之前不会作出新的裁决"),
+    ("the committed escalation row could not be confirmed: {}", "无法确认已提交的升级行：{}"),
     ("escalated by an older version of CrossAudit, and committing its escalation now "
      "failed: {}",
      "由旧版 CrossAudit 升级，且现在提交其升级失败：{}"),
@@ -1730,6 +1731,7 @@ COMPOSITES: frozenset[str] = frozenset({
     "stays ESCALATED and nothing was recorded",
     "escalated by an older version of CrossAudit, and committing its escalation now "
     "failed: {}",
+    "the committed escalation row could not be confirmed: {}",
     "the evidence ledger at {} could not be written ({}: {}); check the file and its "
     "directory are writable",
     "commit refused: the staged changes appear to contain {}; remove the secret "

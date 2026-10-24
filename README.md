@@ -1018,12 +1018,15 @@ is uncertain, or the state change fails after the commit, the refusal says so
 and names the commit when there is one, `status` shows the cycle as "ruling
 committed, state pending", and the next ruling on that cycle recovers the
 committed ruling instead of writing a second one; nothing is cleared while the
-repository cannot be read. From this version on, every escalation and every
-ruling is a line signed with the project's key, and a ruling names the
-committed escalation line it answers; that is what lets the next ruling recover
-a committed one rather than write a second. A line without this project's valid
-signature (someone else committed it, or a line written by an older version) is
-listed by `status` as unverified and never acted on. The signing key lives in
+repository cannot be read. From this version on, every committed escalation or
+ruling line is signed with the project's key, and a ruling names the committed
+escalation line it answers; that is what lets the next ruling recover a
+committed one rather than write a second. An escalation whose line cannot be
+committed (a rejecting hook, a full disk) still escalates the cycle, which then
+cannot be ruled on until the repository is repaired; `status` says so. A line
+without this project's valid signature (someone else committed it, or a line
+written by an older version) is listed by `status` as unverified and never acted
+on. The signing key lives in
 `.crossaudit/signing/` and is not recreated once anything is signed: keep a
 backup, because a new key would not verify the old lines.
 
@@ -1225,7 +1228,7 @@ and [consumer terms](https://www.anthropic.com/legal/consumer-terms).
 | `CROSSAUDIT_SIGNING_KEYFILE` | Directory holding the project's Ed25519 receipt-signing keypair; defaults to `<state-dir>/signing`. Point it at a shared secure location to sign several projects with one key. |
 | `CROSSAUDIT_SHOW_KEYS` | Show key input during setup when explicitly set to `1`; hidden is the secure default. |
 | `CROSSAUDIT_CA_BUNDLE` | Trust a specific CA bundle without disabling TLS verification. |
-| `CROSSAUDIT_GIT_TIMEOUT` | Seconds a single git operation may run before it is abandoned (default `240`). Raise it only for unusually large repositories. A human ruling's ledger commit has its own 90 s bound instead (D176). |
+| `CROSSAUDIT_GIT_TIMEOUT` | Seconds a single git operation may run before it is abandoned (default `240`). Raise it only for unusually large repositories. A human ruling's or an escalation's ledger commit is bounded by the smaller of this value and 90 s (D176). |
 | `CROSSAUDIT_MAX_DOC_BYTES` | Byte ceiling for a single PDF/DOCX blob before it is refused as too large to audit rather than read into memory (default `67108864`, i.e. 64 MiB). Must match between the audit host and the verify host, exactly as the blob read caps must. |
 | `CROSSAUDIT_ALLOW_CUSTOM_ENDPOINT` | Explicitly allow sending a configured key to a non-built-in endpoint. |
 | `CROSSAUDIT_MAX_ACTIVE_PROJECTS` | Maximum simultaneous project builds in one workspace (default `4`, range `1`–`32`). |

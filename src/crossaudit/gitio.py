@@ -185,9 +185,11 @@ def past_ledger_commits(repo: Path, ledger_dir: str, sha: str | None) -> str | N
     anchor of a stop look through it to the work it records."""
     ledger = Path(ledger_dir).as_posix().rstrip("/") + "/"
     current = sha
-    for _ in range(64):
-        if not current:
-            return current
+    # No cap (D176 ruling 47): a run of reports, receipts and escalation rows
+    # of any length is walked to the work behind it; returning a ledger
+    # commit instead would let a child open a fresh cycle past the
+    # pending-decision lock. The walk ends at the repository's first commit.
+    while current:
         paths = changed_paths(repo, current)
         if not paths or not all(p.startswith(ledger) for p in paths):
             return current

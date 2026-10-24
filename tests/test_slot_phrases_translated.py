@@ -35,6 +35,8 @@ PHRASES = [
     (ESC, "no project configuration was found for this state"),
     (ESC, "the committed escalation row could not be confirmed"),
     (ESC, "git commit timed out after 90s"),
+    (ESC, "the committed escalation row could not be confirmed: git cat-file timed out "
+          "after 5s"),
     (RULING, "git commit failed and said nothing"),
     (RULING, "the log could not be written: No space left on device"),
     (RULING, "git add could not run: No such file or directory"),

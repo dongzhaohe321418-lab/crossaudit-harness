@@ -72,9 +72,21 @@ RULINGS_LOG = "rulings.jsonl"
 #: plus a slow hook held the lock far longer). Since round 4 the lock is
 #: kernel-held and cannot be taken from a live holder at all; the bound is
 #: what keeps other processes from waiting on a broken hook indefinitely
-#: (they give up after ``controller.state.LOCK_TIMEOUT_S``). Not
-#: ``CROSSAUDIT_GIT_TIMEOUT``, which may legitimately be raised for large trees.
+#: (they give up after ``controller.state.LOCK_TIMEOUT_S``). The budget
+#: actually used for a ledger row (a ruling or an escalation) is
+#: :func:`row_budget`: the smaller of this and ``CROSSAUDIT_GIT_TIMEOUT``, so a
+#: repository whose owner bounded git to N seconds never holds the lock
+#: longer than N for a row either, while a large configured timeout is still
+#: capped here.
 COMMIT_TIMEOUT_S = 90.0
+
+
+def row_budget() -> float:
+    """The budget for one ledger row's commit: min(:data:`COMMIT_TIMEOUT_S`,
+    the configured git timeout, ``CROSSAUDIT_GIT_TIMEOUT``, default 240 s)."""
+    from .gitio import _git_timeout
+
+    return min(COMMIT_TIMEOUT_S, _git_timeout())
 
 #: Per-step bound on the cleanup after a failed commit (two steps at most).
 CLEANUP_TIMEOUT_S = 5.0
@@ -120,7 +132,7 @@ def _bounded_bytes(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, by
 
     timeout = _remaining(deadline)
     if timeout <= 0:
-        raise _StepFailed(f"git {args[0]} timed out after {COMMIT_TIMEOUT_S:g}s")
+        raise _StepFailed(f"git {args[0]} timed out after {row_budget():g}s")
     posix = os.name != "nt"
     with tempfile.TemporaryFile() as out_f, tempfile.TemporaryFile() as err_f:
         try:
@@ -144,7 +156,7 @@ def _bounded_bytes(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, by
             except subprocess.TimeoutExpired:
                 pass
             left = _drop_index_locks(cfg, proc.pid)
-            raise _StepFailed(f"git {args[0]} timed out after {COMMIT_TIMEOUT_S:g}s",
+            raise _StepFailed(f"git {args[0]} timed out after {row_budget():g}s",
                               index_lock_left=left) from exc
         out_f.seek(0)
         err_f.seek(0)
@@ -385,7 +397,7 @@ def _record(cfg, cycle: dict, action: str, reason: str, *,
     returns), so ``cycle`` is the record as it was before the ruling.
 
     ``deadline`` (``time.monotonic()``) bounds every git step of the
-    transaction together; by default it is :data:`COMMIT_TIMEOUT_S` from now.
+    transaction together; by default it is :func:`row_budget` from now.
 
     ``intent`` is the nonce of the local ruling intent ``store`` records for
     this cycle (phase 1 of ``StateStore.rule_escalation``; D176 ruling 30).
@@ -405,7 +417,7 @@ def _record(cfg, cycle: dict, action: str, reason: str, *,
     from .controller.state import RESOLUTION_STATUS
 
     if deadline is None:
-        deadline = time.monotonic() + COMMIT_TIMEOUT_S
+        deadline = time.monotonic() + row_budget()
     path = log_path(cfg)
     rel = path.relative_to(cfg.root).as_posix()
     cid = cycle["cycle_id"]
@@ -710,9 +722,35 @@ class EscalationNotCommitted(Exception):
     Denial: an escalation always happens in the state, and this reason is
     kept beside it for the refusal a later ruling gives (D176 ruling 43)."""
 
-    def __init__(self, why: str) -> None:
+    def __init__(self, why: str, *, nonce: str = "") -> None:
         super().__init__(why)
         self.why = why
+        #: The nonce of a row that may already be in a commit (its commit
+        #: landed but could not be confirmed): the next attempt looks for it
+        #: before writing another row.
+        self.nonce = nonce
+
+
+def _escalation_already_committed(cfg, cycle: dict) -> str:
+    """The commit of a verified escalation row for this cycle carrying the
+    nonce of an earlier attempt whose commit could not be confirmed, or "".
+    Read strictly: a read failure is raised (as EscalationNotCommitted)."""
+    nonce = str(cycle.get("escalation_nonce") or "")
+    if not nonce:
+        return ""
+    cid = str(cycle["cycle_id"])
+    try:
+        rows = committed_rows(cfg, strict=True)
+        pubkey = _verifying_key(cfg)
+    except Denial as exc:
+        raise EscalationNotCommitted(exc.reason, nonce=nonce) from exc
+    for row in reversed(rows):
+        if (is_escalation(row) and str(row.get("cycle_id")) == cid
+                and row.get("nonce") == nonce and row_verifies(row, pubkey)):
+            sha = commit_of(cfg, row)
+            if sha:
+                return sha
+    return ""
 
 
 def record_escalation(cfg, cycle: dict) -> str:
@@ -721,7 +759,7 @@ def record_escalation(cfg, cycle: dict) -> str:
     ruling's: the log's prior bytes are put back and the path unstaged only
     when ``git commit`` failed with HEAD positively unchanged. Any failure,
     including no signing key, raises :class:`EscalationNotCommitted`."""
-    deadline = time.monotonic() + COMMIT_TIMEOUT_S
+    deadline = time.monotonic() + row_budget()
     path = log_path(cfg)
     rel = path.relative_to(cfg.root).as_posix()
     cid = str(cycle["cycle_id"])
@@ -730,6 +768,11 @@ def record_escalation(cfg, cycle: dict) -> str:
         prior = _read_nofollow(path)
     except (Denial, OSError) as exc:
         raise EscalationNotCommitted(getattr(exc, "reason", None) or str(exc)) from exc
+    # An earlier attempt whose commit landed but could not be confirmed is
+    # recognised rather than written twice.
+    already = _escalation_already_committed(cfg, cycle)
+    if already:
+        return already
     kind = str(cycle.get("escalation_kind") or "escalation")
     text = str(cycle.get("escalation_reason", ""))
     try:
@@ -772,16 +815,26 @@ def record_escalation(cfg, cycle: dict) -> str:
         raise EscalationNotCommitted(exc.reason) from exc
     except _StepFailed as exc:
         raise EscalationNotCommitted(exc.why) from exc
-    sha = _cleanup_git(cfg, "rev-parse", "HEAD")
-    code, blob, _err = _bounded_bytes(cfg, ("cat-file", "blob", f"HEAD:{rel}"),
-                                      time.monotonic() + CLEANUP_TIMEOUT_S)
-    lines = [ln for ln in blob.decode("utf-8", "replace").split("\n") if ln.strip()]
+    # The whole post-commit path is inside the conversion (D176 ruling 46): a
+    # confirmation that times out or cannot start leaves the cycle ESCALATED
+    # with its row uncommitted in the state, never a traceback.
     try:
+        sha = _cleanup_git(cfg, "rev-parse", "HEAD")
+        code, blob, _err = _bounded_bytes(cfg, ("cat-file", "blob", f"HEAD:{rel}"),
+                                          time.monotonic() + CLEANUP_TIMEOUT_S)
+        lines = [ln for ln in blob.decode("utf-8", "replace").split("\n") if ln.strip()]
         landed = json.loads(lines[-1]) if code == 0 and lines else None
-    except ValueError:
-        landed = None
+    except _StepFailed as exc:
+        raise EscalationNotCommitted(
+            f"the committed escalation row could not be confirmed: {exc.why}",
+            nonce=row["nonce"]) from exc
+    except (OSError, ValueError) as exc:
+        raise EscalationNotCommitted(
+            "the committed escalation row could not be confirmed",
+            nonce=row["nonce"]) from exc
     if not sha or not isinstance(landed, dict) or _canonical(landed) != _canonical(row):
-        raise EscalationNotCommitted("the committed escalation row could not be confirmed")
+        raise EscalationNotCommitted("the committed escalation row could not be confirmed",
+                                     nonce=row["nonce"])
     return sha
 
 
@@ -934,7 +987,7 @@ def rule(cfg, store, cycle_id: str, action: str, reason: str) -> dict:
     def commit(snapshot: dict, nonce: str, identity: str) -> dict:
         # The budget starts here, with the controller lock held.
         row = record(cfg, snapshot, action, reason, intent=nonce, store=store,
-                     deadline=time.monotonic() + COMMIT_TIMEOUT_S,
+                     deadline=time.monotonic() + row_budget(),
                      escalation_commit=identity)
         landed.update(row)
         return row
