@@ -6,7 +6,6 @@ catches.
 from __future__ import annotations
 
 import json
-import time
 from pathlib import Path
 
 import pytest
@@ -245,7 +244,7 @@ def test_confirm_committed_refuses_a_row_whose_nonce_differs(escalated):
     cfg = load()
     rulings.rule(cfg, _store(root), cid, "close", REASON)
     row = dict(_rows(root)[-1], commit=git("rev-parse", "HEAD", cwd=root))
-    rulings._confirm_committed(cfg, root / LOG, LOG, dict(row), time.monotonic() + 5)
+    rulings._confirm_committed(cfg, root / LOG, LOG, dict(row))
     row["intent"] = "c" * 32
     with pytest.raises(IntegrityDenial):
-        rulings._confirm_committed(cfg, root / LOG, LOG, row, time.monotonic() + 5)
+        rulings._confirm_committed(cfg, root / LOG, LOG, row)
