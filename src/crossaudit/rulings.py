@@ -46,6 +46,7 @@ from __future__ import annotations
 import errno
 import hashlib
 import json
+import math
 import os
 import secrets
 import signal
@@ -186,6 +187,10 @@ def _bounded_bytes(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, by
     timeout = _remaining(deadline)
     if timeout <= 0:
         raise _StepFailed(f"git {_verb(args)} timed out after {row_budget():g}s")
+    # The refusal names the time this step was given (a cleanup or lookup
+    # step has CLEANUP_TIMEOUT_S, a row's step what is left of the row
+    # budget), never a budget it did not have (D176 ruling 57).
+    bound = math.ceil(timeout)
     posix = os.name != "nt"
     with tempfile.TemporaryFile() as out_f, tempfile.TemporaryFile() as err_f:
         try:
@@ -210,7 +215,7 @@ def _bounded_bytes(cfg, args: tuple[str, ...], deadline: float) -> tuple[int, by
             except subprocess.TimeoutExpired:
                 pass
             left = _drop_index_locks(cfg, proc.pid)
-            raise _StepFailed(f"git {_verb(args)} timed out after {row_budget():g}s",
+            raise _StepFailed(f"git {_verb(args)} timed out after {bound:g}s",
                               index_lock_left=left) from exc
         out_f.seek(0)
         err_f.seek(0)
@@ -620,6 +625,14 @@ def read_head(cfg) -> tuple[bool, str, str]:
         return False, "", exc.why
 
 
+def _unreadable(why: str) -> IntegrityDenial:
+    """The refusal for a read of the committed log that git could not answer
+    (D176 rulings 30, 33 and 57): never read as "no rows" or "no commit"."""
+    return IntegrityDenial(
+        f"the committed rulings log could not be read ({why}); no ruling is made "
+        f"until it can be", issue="rulings_unreadable")
+
+
 def committed_rows(cfg, *, strict: bool = False) -> list[dict]:
     """The ruling rows in the COMMITTED log (the blob at HEAD), not the
     working file, so a provisional line during another ruling is not read.
@@ -632,11 +645,7 @@ def committed_rows(cfg, *, strict: bool = False) -> list[dict]:
     Not strict (``status``, read-only): any failure reads as no rows.
     """
     rel = log_path(cfg).relative_to(cfg.root).as_posix()
-
-    def refuse(why: str) -> IntegrityDenial:
-        return IntegrityDenial(
-            f"the committed rulings log could not be read ({why}); no ruling is made "
-            f"until it can be", issue="rulings_unreadable")
+    refuse = _unreadable
 
     try:
         ok, head, err = read_head(cfg)
@@ -803,7 +812,10 @@ def _escalation_already_committed(cfg, cycle: dict) -> str:
     for row in reversed(rows):
         if (is_escalation(row) and str(row.get("cycle_id")) == cid
                 and row.get("nonce") == nonce and row_verifies(row, pubkey)):
-            sha = commit_of(cfg, row)
+            try:
+                sha = commit_of(cfg, row, strict=True)
+            except Denial as exc:
+                raise EscalationNotCommitted(exc.reason, nonce=nonce) from exc
             if sha:
                 return sha
     return ""
@@ -927,7 +939,7 @@ def escalation_identity(cfg, cycle_id: str) -> str:
             and row_verifies(r, pubkey)]
     if not mine:
         return ""
-    return commit_of(cfg, mine[-1])
+    return commit_of(cfg, mine[-1], strict=True)
 
 
 def assess(cfg, cycle_id: str, cycle: dict) -> dict:
@@ -950,7 +962,7 @@ def assess(cfg, cycle_id: str, cycle: dict) -> dict:
     pubkey = _verifying_key(cfg)
     escalations = [r for r in rows if is_escalation(r)
                    and str(r.get("cycle_id")) == cycle_id and row_verifies(r, pubkey)]
-    identity = commit_of(cfg, escalations[-1]) if escalations else ""
+    identity = commit_of(cfg, escalations[-1], strict=True) if escalations else ""
     if cycle.get("status") == "ESCALATED":
         recorded = cycle.get("escalation_commit")
         if not identity or recorded != identity:
@@ -973,7 +985,7 @@ def assess(cfg, cycle_id: str, cycle: dict) -> dict:
                 or "escalation_commit" not in row or not identity
                 or row.get("escalation_commit") != identity):
             continue
-        sha = commit_of(cfg, row)
+        sha = commit_of(cfg, row, strict=True)
         if not row_verifies(row, pubkey) or row.get("action") not in RESOLUTION_STATUS:
             raise IntegrityDenial(
                 f"a committed ruling for cycle {cycle_id} ({sha[:12] or '?'}) carries no "
@@ -1009,18 +1021,40 @@ def unverified_rows(cfg, cycle_id: str, cycle: dict, rows: list[dict]) -> list[d
     return out
 
 
-def commit_of(cfg, row: dict) -> str:
-    """The sha of the commit that carries ``row`` (its subject names the
-    cycle and the action; the latest such commit touching the log)."""
+def commit_of(cfg, row: dict, *, strict: bool = False) -> str:
+    """The sha of the commit that carries ``row``: the commit that added this
+    exact line (as :func:`record` serialises it), else, for a ruling row, the
+    latest commit whose subject names the cycle and the action.
+
+    ``strict`` (recovery and rulings; D176 ruling 57): a ``git log`` that
+    cannot run, times out (CLEANUP_TIMEOUT_S) or fails is refused as the
+    committed log being unreadable, never read as "no commit": a verified
+    row at HEAD whose commit could not be located must not be written a
+    second time. Not strict (``status``, display): "" on any failure, as for
+    a row no commit carries.
+    """
     rel = log_path(cfg).relative_to(cfg.root).as_posix()
     line = json.dumps({k: v for k, v in row.items() if k != "commit"},
                       ensure_ascii=False, sort_keys=True)
-    # The commit that added this exact line (as record() serialises it);
-    # else the latest commit whose subject names the cycle and the action.
-    return (_cleanup_git(cfg, "log", "-n", "1", "--format=%H", "-S", line, "--", rel)
-            or _cleanup_git(cfg, "log", "-n", "1", "--format=%H", "--fixed-strings",
-                            f"--grep=ruling {row.get('cycle_id')} {row.get('action')}:",
-                            "--", rel))
+    lookups = [("log", "-n", "1", "--format=%H", "-S", line, "--", rel)]
+    if not is_escalation(row):
+        lookups.append(("log", "-n", "1", "--format=%H", "--fixed-strings",
+                        f"--grep=ruling {row.get('cycle_id')} {row.get('action')}:",
+                        "--", rel))
+    for args in lookups:
+        try:
+            code, out, err = _bounded(cfg, args, time.monotonic() + CLEANUP_TIMEOUT_S)
+        except _StepFailed as exc:
+            if strict:
+                raise _unreadable(exc.why) from exc
+            return ""
+        if code != 0:
+            if strict:
+                raise _unreadable(err.strip().split("\n")[0][:120] or "git log failed")
+            return ""
+        if out.strip():
+            return out.strip()
+    return ""
 
 
 def rule(cfg, store, cycle_id: str, action: str, reason: str) -> dict:

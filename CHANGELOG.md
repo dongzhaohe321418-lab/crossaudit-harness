@@ -59,6 +59,15 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   process releases them and no lock file is ever deleted. Found and refined by
   nine rounds of independent cross-vendor review of this release's changes
   (D176).
+- **A Git read that cannot answer during a ruling is a refusal, not a fact.**
+  Locating the commit that carries a ledger line (`git log`, bounded at 5 s) used to
+  read a timeout, a failure to start or a non-zero exit as "no commit", and the next
+  ruling after an escalation whose line had committed but could not be confirmed then
+  wrote the escalation line a second time (seen once on the pull request's CI). It now
+  refuses by name -- "the committed rulings log could not be read (git log timed out
+  after 5s); no ruling is made until it can be" -- writes nothing, and recognises the
+  line at HEAD once Git answers; `status` still shows what it can. A timed-out Git step
+  names the time it was given, not the 90 s row budget (D176 ruling 57).
 - **A provider key held under a nonconventional configured name no longer
   reaches Git, `gh`, SSH or the Codex runtime.** `child_env()` stripped only
   `CROSSAUDIT_*_KEY` and `*_API_KEY` names; it now also strips every `key_env`

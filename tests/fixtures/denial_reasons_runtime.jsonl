@@ -471,3 +471,4 @@
 {"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (git cat-file timed out after 5s); no ruling is made until it can be"}
 {"kind": "ConfigDenial", "reason": "the evidence ledger at /tmp/T/evidence.jsonl could not be written (ENOSPC: short write to the evidence ledger); check the file and its directory are writable"}
 {"kind": "IntegrityDenial", "reason": "the escalation of cycle 60aa693f05b053a7 is not committed to the ledger (the committed escalation row could not be confirmed: git cat-file timed out after 5s); rule on it after the repository is repaired"}
+{"kind": "IntegrityDenial", "reason": "the committed rulings log could not be read (git log timed out after 5s); no ruling is made until it can be"}
