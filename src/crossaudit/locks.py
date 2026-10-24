@@ -164,7 +164,7 @@ def acquire(path: Path, timeout: float,
     removed.
     """
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_directory(path.parent, "the lock file")
     deadline = time.monotonic() + timeout
     while True:
         try:
@@ -190,6 +190,35 @@ def acquire(path: Path, timeout: float,
         if time.monotonic() > deadline:
             raise busy(holder_pid(path))
         time.sleep(_POLL_S)
+
+
+def ensure_directory(path: Path, what: str) -> None:
+    """``mkdir(parents=True, exist_ok=True)`` for the directory that holds
+    ``what`` (the controller state, the evidence ledger, a lock file), with
+    any ``OSError`` -- a regular file where the directory should be, no
+    permission, a read-only filesystem -- turned into a ``ConfigDenial``
+    rather than a traceback (review 2026-10-23 round 6, finding 1)."""
+    path = Path(path)
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        name = errno.errorcode.get(exc.errno or 0, str(exc.errno))
+        why = exc.strerror or str(exc)
+        # One literal sentence per kind of file, so each is translated whole.
+        if what == "the controller state":
+            raise ConfigDenial(
+                f"the directory {path} for the controller state could not be "
+                f"created ({name}: {why}); check the path is a directory you "
+                f"can write", issue="directory_unavailable", path=str(path)) from exc
+        if what == "the evidence ledger":
+            raise ConfigDenial(
+                f"the directory {path} for the evidence ledger could not be "
+                f"created ({name}: {why}); check the path is a directory you "
+                f"can write", issue="directory_unavailable", path=str(path)) from exc
+        raise ConfigDenial(
+            f"the directory {path} for the lock file could not be created "
+            f"({name}: {why}); check the path is a directory you can write",
+            issue="directory_unavailable", path=str(path)) from exc
 
 
 def _unsupported(path: Path, exc: OSError) -> ConfigDenial:

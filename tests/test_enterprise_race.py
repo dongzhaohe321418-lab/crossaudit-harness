@@ -4,7 +4,7 @@ double-grant an approval.
 Two components carry hard concurrency invariants that an attacker (or a mere
 scheduling accident) could try to break:
 
-* The **EvidenceLedger** serialises every append behind an ``O_EXCL`` lock.
+* The **EvidenceLedger** serialises every append behind a kernel-held file lock.
   If two writers ever read the same head and both wrote, the chain would
   *fork*: a duplicated ``seq``/``prev`` that ``verify()`` must reject. We hammer
   ONE ledger with N threads x K appends and assert the survivors are a single,
@@ -34,7 +34,7 @@ from crossaudit.ledger import EvidenceLedger
 # Attack (a) — concurrent appends must not FORK the evidence chain.
 # ===========================================================================
 def test_concurrent_ledger_appends_never_fork_the_chain(tmp_path):
-    """N threads each append K entries to ONE ledger. The O_EXCL lock must
+    """N threads each append K entries to ONE ledger. The kernel-held file lock must
     serialise them into a single chain: verify() ok, count == N*K, seqs are a
     contiguous 0..N*K-1, and every digest is unique. A fork (two writers taking
     the same head) would duplicate a seq/prev and verify() would reject it."""
@@ -82,7 +82,7 @@ def test_concurrent_ledger_appends_never_fork_the_chain(tmp_path):
 
 def test_two_ledger_instances_on_one_path_still_chain(tmp_path):
     """Two independent EvidenceLedger objects over the SAME file (as separate
-    threads would each construct) share the on-disk O_EXCL lock. Interleaved
+    threads would each construct) share the kernel-held file lock. Interleaved
     appends from both must still produce one valid, contiguous chain — neither
     instance's head cache is allowed to fork the file."""
     path = tmp_path / "evidence.jsonl"
