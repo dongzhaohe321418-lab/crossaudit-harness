@@ -595,10 +595,16 @@ def _spawn_tui(root: Path, rows: int = 60, cols: int = 120, *,
 def _own_the_terminal():
     """In the child: a new session whose controlling terminal is the pty, as
     a shell in a terminal window has. Without it the pty has no foreground
-    process group, so Ctrl-C there signals nobody."""
+    process group, so Ctrl-C there signals nobody. SIGINT is reset to its
+    default too: a test run started in the background of a non-interactive
+    shell inherits it ignored, and Python then never raises
+    KeyboardInterrupt (found when this passed alone and failed in the suite).
+    """
     import fcntl
+    import signal
     import termios
 
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     os.setsid()
     fcntl.ioctl(0, termios.TIOCSCTTY, 0)
 
