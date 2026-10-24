@@ -78,7 +78,9 @@ All notable changes to CrossAudit are recorded here. Versions follow the
   refuses by name -- "the committed rulings log could not be read (git log timed out
   after 5s); no ruling is made until it can be" -- writes nothing, and recognises the
   line at HEAD once Git answers; `status` still shows what it can. A timed-out Git step
-  names the time it was given, not the 90 s row budget (D176 ruling 57).
+  names the bound in force for it -- the row budget for the row's own steps, 5 s for
+  a lookup or confirmation, which used to be reported as the row budget too -- and a
+  step reached with no time left says it was not started (D176 ruling 57).
 - **A provider key held under a nonconventional configured name no longer
   reaches Git, `gh`, SSH or the Codex runtime.** `child_env()` stripped only
   `CROSSAUDIT_*_KEY` and `*_API_KEY` names; it now also strips every `key_env`

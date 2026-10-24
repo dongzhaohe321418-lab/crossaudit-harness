@@ -1604,6 +1604,8 @@ CLAUSES: tuple[tuple[str, str], ...] = (
     # Chinese reader never meets them in English.
     ("git {} failed and said nothing", "git {} 失败且没有给出任何信息"),
     ("git {} timed out after {}s", "git {} 在 {} 秒后超时"),
+    ("git {} was not started: its time budget was already spent",
+     "git {} 未启动：其时间预算已经用尽"),
     ("git {} could not run: {}", "git {} 无法运行：{}"),
     ("git said nothing", "git 没有给出任何信息"),
     ("the log could not be written: {}", "无法写入日志：{}"),
