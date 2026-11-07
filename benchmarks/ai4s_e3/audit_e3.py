@@ -1,0 +1,138 @@
+"""E3 model audits (PREREGISTRATION-E3.md): tool-using and reading-only auditors on the E3 data items.
+
+  agentic   the auditor runs in the item's directory (data.csv, CARD.md only) and may inspect the files with
+            the shell and Python; Codex (read-only sandbox, isolated CODEX_HOME, --json) or Claude Code
+            (Bash and Read allowed; Write and Edit denied). One reading per item and auditor.
+  reading   the same instructions with both files inlined and every tool disabled; 120-row items only; two
+            readings per item and auditor. A Codex reading that invokes a tool is discarded.
+
+Every reply is JSON with typed findings, scored by code against the injection manifest (score_e3.py).
+
+    python benchmarks/ai4s_e3/audit_e3.py --mode agentic --split dev --workers 6
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import random
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent / "code" / "icml"))
+sys.path.insert(0, str(HERE.parent / "code"))
+import e1  # noqa: E402  (routes, isolation, JSON helpers)
+from build_e3 import ITEM_ROOT, REC  # noqa: E402
+from spec_e3 import FAULT_NAMES  # noqa: E402
+
+OUT = REC / "audits.jsonl"
+TYPES = sorted(set(FAULT_NAMES.values())) + ["other"]
+PROMPT = """You are auditing a dataset delivered for a scientific analysis before anyone uses it. {where}
+
+Decide whether the data can be used as delivered. Check it against its card (columns, units, stated ranges,
+what each row is) and for internal problems. Report every problem you find. Grade a finding BLOCKER if the
+data should not be used until it is fixed, ADVISORY otherwise. Do not report problems with the card's
+wording unless they make the data unusable.
+
+Reply with exactly one JSON object and nothing else:
+{{"verdict": "accept" | "reject",
+  "findings": [{{"severity": "BLOCKER" | "ADVISORY",
+                "fault_type": one of {types},
+                "columns": [column names involved, if any],
+                "rows": [up to 10 zero-based row indices that show the problem, if any],
+                "evidence": "one or two sentences"}}]}}
+"""
+AGENTIC_WHERE = ("The current directory contains data.csv and CARD.md. You may inspect them with the shell "
+                 "and Python (standard library; numpy or pandas only if importable). Do not modify any file.")
+
+
+def route_cmd(auditor: str, mode: str, item_dir: Path) -> tuple[str, list[str]]:
+    if auditor == "aud-gpt-terra":
+        argv = ["codex", "exec", "--ignore-user-config", "--ignore-rules", "--ephemeral", "--json",
+                "-m", "gpt-5.6-terra", "-c", 'model_reasoning_effort="medium"', "--sandbox", "read-only",
+                "--skip-git-repo-check", "-C", str(item_dir if mode == "agentic" else e1.EMPTY), "-"]
+        return "codex", argv
+    tools = ["--allowedTools", "Bash,Read", "--disallowedTools", "Write,Edit,NotebookEdit,WebFetch,WebSearch"] \
+        if mode == "agentic" else ["--tools", ""]
+    argv = ["claude", "-p", "--model", "claude-sonnet-5-5", *tools, "--setting-sources", "",
+            "--strict-mcp-config", "--disable-slash-commands", "--no-session-persistence",
+            "--system-prompt", "Answer the user's request."]
+    return "claude", argv
+
+
+def run(auditor: str, mode: str, item: dict, timeout: float = 1500.0) -> dict:
+    item_dir = ITEM_ROOT / item["item"]
+    if mode == "agentic":
+        payload = PROMPT.format(where=AGENTIC_WHERE, types=TYPES)
+    else:
+        where = ("The card and the data follow.\n\nCARD.md:\n" + (item_dir / "CARD.md").read_text() +
+                 "\n\ndata.csv:\n" + (item_dir / "data.csv").read_text())
+        payload = PROMPT.format(where=where, types=TYPES)
+    kind, argv = route_cmd(auditor, mode, item_dir)
+    env = dict(e1.os.environ)
+    if kind == "codex":
+        env["CODEX_HOME"] = e1.iso_home(f"{auditor}-e3")
+    started = time.monotonic()
+    try:
+        done = subprocess.run(argv, input=payload, cwd=str(item_dir if mode == "agentic" else e1.EMPTY),
+                              capture_output=True, text=True, timeout=timeout, env=env)
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": "timeout", "wall_s": round(time.monotonic() - started, 1)}
+    wall = round(time.monotonic() - started, 1)
+    raw, text, tools_used = done.stdout or "", done.stdout or "", 0
+    if kind == "codex":
+        msgs = []
+        for line in raw.splitlines():
+            try:
+                ev = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            it = ev.get("item") or {}
+            if ev.get("type") == "item.completed" and it.get("type") in e1.NON_MESSAGE_ITEMS:
+                tools_used += 1
+            if ev.get("type") == "item.completed" and it.get("type") == "agent_message":
+                msgs.append(it.get("text", ""))
+        text = msgs[-1] if msgs else ""
+    obj = e1.parse_json(text)
+    ok = done.returncode == 0 and isinstance(obj, dict) and isinstance(obj.get("findings"), list)
+    if mode == "reading" and tools_used:
+        ok = False
+    return {"ok": ok, "wall_s": wall, "tools_used": tools_used, "reply": obj if ok else None,
+            "text": text[:20000], "error": "" if ok else f"exit {done.returncode}; tools {tools_used}; "
+                                                       f"{(done.stderr or '')[-200:]}"}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--mode", choices=["agentic", "reading"], required=True)
+    ap.add_argument("--split", choices=["dev", "test"], required=True)
+    ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--auditors", default="aud-gpt-terra,aud-claude-sonnet")
+    a = ap.parse_args()
+    items = [i for i in json.loads((REC / "items.json").read_text())["items"] if i["split"] == a.split]
+    if a.mode == "reading":
+        items = [i for i in items if i["size"] == 120]
+    readings = 1 if a.mode == "agentic" else 2
+    rows = e1.load(OUT)
+    done_keys = {(r["item"], r["mode"], r["auditor"], r["reading"]) for r in rows if r.get("ok")}
+    tries: dict = {}
+    for r in rows:
+        k = (r["item"], r["mode"], r["auditor"], r["reading"])
+        tries[k] = tries.get(k, 0) + 1
+    jobs = [(i, au, k) for i in items for au in a.auditors.split(",") for k in range(readings)
+            if (i["item"], a.mode, au, k) not in done_keys and tries.get((i["item"], a.mode, au, k), 0) < 2]
+    random.Random(11).shuffle(jobs)
+
+    def one(job):
+        item, au, k = job
+        res = run(au, a.mode, item)
+        e1.append(OUT, {"item": item["item"], "mode": a.mode, "auditor": au, "reading": k, "split": a.split,
+                        **res})
+    e1.run_pool(jobs, one, a.workers, f"e3 {a.mode} {a.split}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
