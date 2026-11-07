@@ -199,7 +199,7 @@ supplementation. The development split is rerun under e1-v3 as a pipeline check 
 either split: of 150 selected items, the candidate-blind constructor skipped 79 (its stated reasons: the
 task's words already determine the behaviour, or the reference's behaviour contradicts the task or is an
 implementation artefact), 7 failed the execution gates, 64 passed them, and 38 were admitted by both
-adjudicators (8 development, 30 test). Development-split e1-v3 audits were started as a pipeline check.
+adjudicators (9 development, 29 test). Development-split e1-v3 audits were started as a pipeline check.
 
 **Why.** The skip rate means the clause intervention can only address a minority of hidden-test failures, and
 that the hidden-test definition of "defective" mixes three different situations. Measuring the auditors on
@@ -223,5 +223,5 @@ Supported if the lower bound exceeds 0. Secondary, without correction: the same 
 AT_ODDS, per auditor, and every class's levels of flag, verified diagnosis and witnessed disagreement on
 defective items and flags on test-passing controls. DISPUTED items are reported but enter no contrast.
 
-**Unchanged.** H1-H5 and everything in Amendment 2. Sample size for H1-H5 is the 30 admitted test items; no
+**Unchanged.** H1-H5 and everything in Amendment 2. Sample size for H1-H5 is the 29 admitted test items; no
 items will be added to the intervention after test audits begin.
