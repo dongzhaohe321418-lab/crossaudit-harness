@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import math
 import base64
 import hashlib
 import itertools
@@ -230,7 +231,7 @@ if spec.get("candidate") is not None:
     res["candidate"] = {"status": cs, "repr": cr}
     if rs == "ok" and cs == "ok":
         res["agree"] = agrees(cv, rv)
-if spec.get("expected") is not None and rs == "ok":
+if spec.get("has_expected") and rs == "ok":
     res["expected_correct"] = agrees(pickle.loads(base64.b64decode(spec["expected"].encode())), rv)
 sys.stdout.write("JUDGE " + json.dumps(res))
 '''
@@ -248,7 +249,7 @@ def suite_assertion(p: Problem) -> tuple[str, str]:
 
 
 def judge_call(p: Problem, args: tuple, kwargs: dict, candidate: str | None = None,
-               expected=None, limit: int = 10) -> dict:
+               expected=None, limit: int = 10, has_expected: bool = False) -> dict:
     """Run the reference (and a candidate) on freshly unpickled copies of the same arguments in one executor
     process, and compare outputs with the suite's own assertion and tolerance."""
     helpers, atol = suite_assertion(p)
@@ -256,7 +257,8 @@ def judge_call(p: Problem, args: tuple, kwargs: dict, candidate: str | None = No
             "blob": base64.b64encode(pickle.dumps((tuple(args), dict(kwargs)))).decode(),
             "reference": imports_of(p) + "\n" + p.canonical_solution,
             "candidate": None if candidate is None else imports_of(p) + "\n" + candidate,
-            "expected": None if expected is None else base64.b64encode(pickle.dumps(expected)).decode()}
+            "has_expected": has_expected,   # an expected value of None is a legitimate value, not "absent"
+            "expected": base64.b64encode(pickle.dumps(expected)).decode() if has_expected else None}
     with tempfile.TemporaryDirectory() as tmp:
         (Path(tmp) / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
         (Path(tmp) / "judge.py").write_text(JUDGE, encoding="utf-8")
@@ -283,6 +285,35 @@ def hidden_program_v3(p: Problem, solution: str) -> tuple[str, bool]:
     return f"{solution}\n\n{body}\n", inst
 
 
+class _NonFinite(ast.NodeTransformer):
+    """float('inf'), float('-inf'), float('nan'), math.inf, math.nan, inf and nan become constants."""
+    NAMES = {"inf": math.inf, "nan": math.nan}
+
+    def visit_Call(self, node):
+        self.generic_visit(node)
+        if (isinstance(node.func, ast.Name) and node.func.id == "float" and len(node.args) == 1 and not node.keywords
+                and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str)):
+            v = node.args[0].value.strip().lower()
+            if v in ("inf", "+inf", "-inf", "infinity", "-infinity", "nan"):
+                return ast.copy_location(ast.Constant(float(v)), node)
+        return node
+
+    def visit_Attribute(self, node):
+        if isinstance(node.value, ast.Name) and node.value.id == "math" and node.attr in self.NAMES:
+            return ast.copy_location(ast.Constant(self.NAMES[node.attr]), node)
+        return node
+
+    def visit_Name(self, node):
+        return ast.copy_location(ast.Constant(self.NAMES[node.id]), node) if node.id in self.NAMES else node
+
+
+def literal(src):
+    """ast.literal_eval extended with non-finite floats (scorer judge-v3.1)."""
+    node = ast.parse(src, mode="eval") if isinstance(src, str) else ast.Expression(body=src)
+    node = ast.fix_missing_locations(_NonFinite().visit(node))
+    return ast.literal_eval(node.body)
+
+
 def parse_call(src: str, entry: str) -> tuple[tuple, dict] | None:
     """A witness call must be entry(<literals>, name=<literal>); anything else is unparseable."""
     try:
@@ -292,8 +323,8 @@ def parse_call(src: str, entry: str) -> tuple[tuple, dict] | None:
     if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == entry):
         return None
     try:
-        args = tuple(ast.literal_eval(a) for a in node.args)
-        kwargs = {k.arg: ast.literal_eval(k.value) for k in node.keywords if k.arg}
+        args = tuple(literal(a) for a in node.args)
+        kwargs = {k.arg: literal(k.value) for k in node.keywords if k.arg}
     except (ValueError, SyntaxError, TypeError):
         return None
     if any(k.arg is None for k in node.keywords):
@@ -996,7 +1027,7 @@ def stage_audit(split: str, workers: int, auditors: list[str], orig_rest: bool =
 # witnesses
 # ---------------------------------------------------------------------------------------------
 WIT_PATH = REC / "witnesses_v3.jsonl"
-SCORER = "judge-v3"
+SCORER = "judge-v3.1"   # v3.1: an expected None is scored; non-finite float literals parse
 
 
 def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str) -> dict:
@@ -1005,11 +1036,11 @@ def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str) -
         return {"status": "unparseable"}
     args, kwargs = parsed
     try:
-        expected = ast.literal_eval(expected_src.strip().rstrip("."))
+        expected = literal(expected_src.strip().rstrip("."))
         has_expected = True
     except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
         expected, has_expected = None, False
-    j = judge_call(p, args, kwargs, candidate=solution, expected=expected if has_expected else None)
+    j = judge_call(p, args, kwargs, candidate=solution, expected=expected, has_expected=has_expected)
     if "infra" in j:
         return {"status": "infra", "detail": str(j["infra"])[:200]}
     ref, cand = j["reference"], j["candidate"]

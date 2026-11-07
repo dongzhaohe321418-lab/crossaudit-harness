@@ -1,0 +1,187 @@
+{
+ "split": "dev",
+ "n_items": 43,
+ "class_counts": {
+  "DETERMINED": 6,
+  "OPEN": 12,
+  "AT_ODDS": 19,
+  "DISPUTED": 6
+ },
+ "completeness": {
+  "scheduled": 904,
+  "valid": 904,
+  "missing": []
+ },
+ "admitted_by_class": {
+  "DETERMINED": 1,
+  "OPEN": 7,
+  "AT_ODDS": 0,
+  "DISPUTED": 1
+ },
+ "agreement": {
+  "n": 43,
+  "observed": 0.8604651162790697,
+  "kappa": 0.7716814159292035
+ },
+ "levels": {
+  "DETERMINED|defective|vd|orig4": {
+   "est": 66.66666666666666,
+   "lo": 33.33333333333333,
+   "hi": 91.66666666666666,
+   "n_items": 6,
+   "n_problems": 6
+  },
+  "DETERMINED|defective|wd|orig4": {
+   "est": 66.66666666666666,
+   "lo": 33.33333333333333,
+   "hi": 91.66666666666666,
+   "n_items": 6,
+   "n_problems": 6
+  },
+  "DETERMINED|defective|flag|orig4": {
+   "est": 66.66666666666666,
+   "lo": 33.33333333333333,
+   "hi": 91.66666666666666,
+   "n_items": 6,
+   "n_problems": 6
+  },
+  "DETERMINED|correct|flag|orig4": {
+   "est": 25.0,
+   "lo": 8.333333333333332,
+   "hi": 41.66666666666667,
+   "n_items": 6,
+   "n_problems": 6
+  },
+  "OPEN|defective|vd|orig4": {
+   "est": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n_items": 12,
+   "n_problems": 9
+  },
+  "OPEN|defective|wd|orig4": {
+   "est": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n_items": 12,
+   "n_problems": 9
+  },
+  "OPEN|defective|flag|orig4": {
+   "est": 4.166666666666666,
+   "lo": 0.0,
+   "hi": 11.538461538461538,
+   "n_items": 12,
+   "n_problems": 9
+  },
+  "OPEN|correct|flag|orig4": {
+   "est": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n_items": 12,
+   "n_problems": 9
+  },
+  "AT_ODDS|defective|vd|orig4": {
+   "est": 2.631578947368421,
+   "lo": 0.0,
+   "hi": 7.894736842105263,
+   "n_items": 19,
+   "n_problems": 11
+  },
+  "AT_ODDS|defective|wd|orig4": {
+   "est": 2.631578947368421,
+   "lo": 0.0,
+   "hi": 7.894736842105263,
+   "n_items": 19,
+   "n_problems": 11
+  },
+  "AT_ODDS|defective|flag|orig4": {
+   "est": 10.526315789473683,
+   "lo": 0.0,
+   "hi": 23.684210526315788,
+   "n_items": 19,
+   "n_problems": 11
+  },
+  "AT_ODDS|correct|flag|orig4": {
+   "est": 71.05263157894737,
+   "lo": 47.5,
+   "hi": 90.9090909090909,
+   "n_items": 19,
+   "n_problems": 11
+  },
+  "DISPUTED|defective|vd|orig4": {
+   "est": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n_items": 6,
+   "n_problems": 4
+  },
+  "DISPUTED|defective|wd|orig4": {
+   "est": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n_items": 6,
+   "n_problems": 4
+  },
+  "DISPUTED|defective|flag|orig4": {
+   "est": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n_items": 6,
+   "n_problems": 4
+  },
+  "DISPUTED|correct|flag|orig4": {
+   "est": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n_items": 6,
+   "n_problems": 4
+  }
+ },
+ "H6_vd_orig4_determined_minus_open": {
+  "est": 66.66666666666666,
+  "lo": 33.33333333333333,
+  "hi": 100.0,
+  "n_g1": 6,
+  "n_g2": 12,
+  "valid_draws": 9994
+ },
+ "verdicts": {
+  "H6": true
+ },
+ "secondary": {
+  "flag_orig4_determined_minus_open": {
+   "est": 62.5,
+   "lo": 27.45098039215686,
+   "hi": 94.44444444444444,
+   "n_g1": 6,
+   "n_g2": 12,
+   "valid_draws": 9994
+  },
+  "vd_orig4_determined_minus_at_odds": {
+   "est": 64.03508771929825,
+   "lo": 30.555555555555554,
+   "hi": 97.05882352941177,
+   "n_g1": 6,
+   "n_g2": 19,
+   "valid_draws": 9996
+  },
+  "per_auditor": {
+   "aud-gpt-terra": {
+    "est": 83.33333333333334,
+    "lo": 50.0,
+    "hi": 100.0,
+    "n_g1": 6,
+    "n_g2": 12,
+    "valid_draws": 9994
+   },
+   "aud-claude-sonnet": {
+    "est": 50.0,
+    "lo": 0.0,
+    "hi": 100.0,
+    "n_g1": 6,
+    "n_g2": 12,
+    "valid_draws": 9994
+   }
+  }
+ }
+}
