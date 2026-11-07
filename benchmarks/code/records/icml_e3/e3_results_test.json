@@ -1,0 +1,387 @@
+{
+ "split": "test",
+ "n_faulty": 266,
+ "n_clean": 266,
+ "readings_ok": 1960,
+ "missing_by_mode_auditor": {
+  "agentic|aud-gpt-terra": 0,
+  "agentic|aud-claude-sonnet": 0,
+  "reading|aud-gpt-terra": 0,
+  "reading|aud-claude-sonnet": 0
+ },
+ "H1_loc_union_minus_profile": {
+  "est": 2.2556390977443606,
+  "lo": 0.3968253968253968,
+  "hi": 4.761904761904762,
+  "n_items": 266,
+  "n_datasets": 8
+ },
+ "H2_cleanflag_union_minus_profile": {
+  "est": 15.977443609022558,
+  "lo": 3.1512605042016806,
+  "hi": 31.428571428571427,
+  "n_items": 266,
+  "n_datasets": 8
+ },
+ "H3_loc_gain_12000": {
+  "est": 0.0,
+  "lo": 0.0,
+  "hi": 0.0,
+  "n_items": 42,
+  "n_datasets": 3
+ },
+ "H4_agentic_minus_reading_loc_120": {
+  "est": 1.3392857142857142,
+  "lo": -2.6785714285714284,
+  "hi": 5.803571428571429,
+  "n_items": 112,
+  "n_datasets": 8
+ },
+ "verdicts": {
+  "H1": true,
+  "H2": false,
+  "H3": false,
+  "H4": false
+ },
+ "levels": {
+  "faulty|flag|profile": {
+   "est": 91.35338345864662,
+   "lo": 85.71428571428571,
+   "hi": 96.42857142857143,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "faulty|flag|card": {
+   "est": 67.66917293233082,
+   "lo": 59.523809523809526,
+   "hi": 75.93984962406014,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "faulty|flag|model_agentic": {
+   "est": 89.47368421052632,
+   "lo": 83.61344537815127,
+   "hi": 94.3609022556391,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "faulty|flag|union_profile_agentic": {
+   "est": 94.17293233082707,
+   "lo": 88.7218045112782,
+   "hi": 98.4126984126984,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "faulty|flag|model_reading": {
+   "est": 91.51785714285714,
+   "lo": 84.82142857142857,
+   "hi": 96.875,
+   "n_items": 112,
+   "n_datasets": 8
+  },
+  "faulty|flag|union_profile_reading": {
+   "est": 94.64285714285714,
+   "lo": 88.83928571428571,
+   "hi": 99.10714285714286,
+   "n_items": 112,
+   "n_datasets": 8
+  },
+  "faulty|loc|profile": {
+   "est": 90.97744360902256,
+   "lo": 84.64285714285714,
+   "hi": 96.25850340136054,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "faulty|loc|card": {
+   "est": 67.66917293233082,
+   "lo": 59.523809523809526,
+   "hi": 75.93984962406014,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "faulty|loc|model_agentic": {
+   "est": 84.21052631578947,
+   "lo": 78.57142857142857,
+   "hi": 89.10714285714286,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "faulty|loc|union_profile_agentic": {
+   "est": 93.23308270676691,
+   "lo": 87.5,
+   "hi": 97.98136645962732,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "faulty|loc|model_reading": {
+   "est": 84.375,
+   "lo": 76.78571428571429,
+   "hi": 91.51785714285714,
+   "n_items": 112,
+   "n_datasets": 8
+  },
+  "faulty|loc|union_profile_reading": {
+   "est": 92.85714285714286,
+   "lo": 86.16071428571429,
+   "hi": 98.21428571428571,
+   "n_items": 112,
+   "n_datasets": 8
+  },
+  "clean|flag|profile": {
+   "est": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "clean|flag|card": {
+   "est": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "clean|flag|model_agentic": {
+   "est": 15.977443609022558,
+   "lo": 3.1512605042016806,
+   "hi": 31.428571428571427,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "clean|flag|union_profile_agentic": {
+   "est": 15.977443609022558,
+   "lo": 3.1512605042016806,
+   "hi": 31.428571428571427,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "clean|flag|model_reading": {
+   "est": 28.57142857142857,
+   "lo": 15.178571428571427,
+   "hi": 41.517857142857146,
+   "n_items": 112,
+   "n_datasets": 8
+  },
+  "clean|flag|union_profile_reading": {
+   "est": 28.57142857142857,
+   "lo": 15.178571428571427,
+   "hi": 41.517857142857146,
+   "n_items": 112,
+   "n_datasets": 8
+  }
+ },
+ "by_fault": {
+  "F1": {
+   "profile_loc": {
+    "est": 97.36842105263158,
+    "lo": 88.23529411764706,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "model_agentic_loc": {
+    "est": 98.68421052631578,
+    "lo": 94.44444444444444,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "union_loc": {
+    "est": 100.0,
+    "lo": 100.0,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   }
+  },
+  "F2": {
+   "profile_loc": {
+    "est": 100.0,
+    "lo": 100.0,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "model_agentic_loc": {
+    "est": 98.68421052631578,
+    "lo": 94.11764705882352,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "union_loc": {
+    "est": 100.0,
+    "lo": 100.0,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   }
+  },
+  "F3": {
+   "profile_loc": {
+    "est": 100.0,
+    "lo": 100.0,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "model_agentic_loc": {
+    "est": 96.05263157894737,
+    "lo": 89.70588235294117,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "union_loc": {
+    "est": 100.0,
+    "lo": 100.0,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   }
+  },
+  "F4": {
+   "profile_loc": {
+    "est": 42.10526315789473,
+    "lo": 11.76470588235294,
+    "hi": 70.45454545454545,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "model_agentic_loc": {
+    "est": 44.73684210526316,
+    "lo": 12.5,
+    "hi": 73.86363636363636,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "union_loc": {
+    "est": 55.26315789473685,
+    "lo": 22.36842105263158,
+    "hi": 83.33333333333334,
+    "n_items": 38,
+    "n_datasets": 8
+   }
+  },
+  "F5": {
+   "profile_loc": {
+    "est": 100.0,
+    "lo": 100.0,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "model_agentic_loc": {
+    "est": 94.73684210526315,
+    "lo": 86.11111111111111,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "union_loc": {
+    "est": 100.0,
+    "lo": 100.0,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   }
+  },
+  "F6": {
+   "profile_loc": {
+    "est": 100.0,
+    "lo": 100.0,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "model_agentic_loc": {
+    "est": 100.0,
+    "lo": 100.0,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "union_loc": {
+    "est": 100.0,
+    "lo": 100.0,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   }
+  },
+  "F7": {
+   "profile_loc": {
+    "est": 97.36842105263158,
+    "lo": 88.23529411764706,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "model_agentic_loc": {
+    "est": 56.57894736842105,
+    "lo": 41.17647058823529,
+    "hi": 72.05882352941177,
+    "n_items": 38,
+    "n_datasets": 8
+   },
+   "union_loc": {
+    "est": 97.36842105263158,
+    "lo": 88.23529411764706,
+    "hi": 100.0,
+    "n_items": 38,
+    "n_datasets": 8
+   }
+  }
+ },
+ "per_auditor": {
+  "aud-gpt-terra": {
+   "H1": {
+    "est": 2.2556390977443606,
+    "lo": 0.0,
+    "hi": 5.46218487394958,
+    "n_items": 266,
+    "n_datasets": 8
+   },
+   "H2": {
+    "est": 27.44360902255639,
+    "lo": 4.511278195488721,
+    "hi": 55.639097744360896,
+    "n_items": 266,
+    "n_datasets": 8
+   }
+  },
+  "aud-claude-sonnet": {
+   "H1": {
+    "est": 2.2556390977443606,
+    "lo": 0.37593984962406013,
+    "hi": 4.761904761904762,
+    "n_items": 266,
+    "n_datasets": 8
+   },
+   "H2": {
+    "est": 4.511278195488721,
+    "lo": 1.0714285714285714,
+    "hi": 9.022556390977442,
+    "n_items": 266,
+    "n_datasets": 8
+   }
+  }
+ },
+ "card_instead": {
+  "loc_gain": {
+   "est": 23.308270676691727,
+   "lo": 13.157894736842104,
+   "hi": 33.33333333333333,
+   "n_items": 266,
+   "n_datasets": 8
+  },
+  "cleanflag_gain": {
+   "est": 15.977443609022558,
+   "lo": 3.1512605042016806,
+   "hi": 31.428571428571427,
+   "n_items": 266,
+   "n_datasets": 8
+  }
+ }
+}
