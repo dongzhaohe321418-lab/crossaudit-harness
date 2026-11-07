@@ -154,6 +154,8 @@ fns = {k: load_fn(v) for k, v in spec["programs"].items()}
 def run(fn, inp):
     if fn is None:
         return "load", None
+    if spec.get("hard"):
+        return run_forked(fn, inp)
     args = pickle.loads(pickle.dumps(inp))
     signal.alarm(spec["limit"])
     try:
@@ -165,6 +167,47 @@ def run(fn, inp):
     except BaseException as e:
         signal.alarm(0)
         return "exc:" + type(e).__name__, None
+
+def run_forked(fn, inp):
+    """Hard-timeout mode: each call in its own child, killed after the limit (calls the alarm cannot interrupt,
+    such as long computations inside C code, become timeouts instead of stalling the batch)."""
+    import os, select
+    r, w = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(r)
+        try:
+            res = ("ok", fn(*pickle.loads(pickle.dumps(inp))))
+        except BaseException as e:
+            res = ("exc:" + type(e).__name__, None)
+        try:
+            data = pickle.dumps(res)
+        except BaseException:
+            data = pickle.dumps(("exc:Unpicklable", None))
+        with os.fdopen(w, "wb") as fh:
+            fh.write(data)
+        os._exit(0)
+    os.close(w)
+    chunks, deadline = [], spec["limit"] + 1
+    import time
+    end = time.monotonic() + deadline
+    while True:
+        left = end - time.monotonic()
+        if left <= 0 or not select.select([r], [], [], left)[0]:
+            os.kill(pid, 9)
+            os.waitpid(pid, 0)
+            os.close(r)
+            return "timeout", None
+        b = os.read(r, 1 << 20)
+        if not b:
+            break
+        chunks.append(b)
+    os.close(r)
+    os.waitpid(pid, 0)
+    try:
+        return pickle.loads(b"".join(chunks))
+    except BaseException:
+        return "exc:ChildDied", None
 
 def agrees(a, b):
     sa, va = a
@@ -205,14 +248,21 @@ def multi_compare(p, programs: dict, pairs: list, inputs: list, limit: int = 5, 
                 "capture": list(capture)}
         (Path(tmp) / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
         (Path(tmp) / "multi.py").write_text(MULTI, encoding="utf-8")
+        cmd = [execute.EXECUTOR, str(Path(tmp) / "multi.py"), str(Path(tmp) / "spec.json")]
         try:
-            done = subprocess.run([execute.EXECUTOR, str(Path(tmp) / "multi.py"), str(Path(tmp) / "spec.json")],
-                                  capture_output=True, text=True, timeout=limit * 3 * len(inputs) * len(programs) + 120,
-                                  cwd=tmp, env=e1.EXEC_ENV)
+            done = subprocess.run(cmd, capture_output=True, text=True, timeout=900, cwd=tmp, env=e1.EXEC_ENV)
         except subprocess.TimeoutExpired:
-            return {"infra": "timeout"}
+            # v4.3: a batch that stalls (a call the alarm cannot interrupt) is rerun with one killed child per call;
+            # results differ from the alarm mode only on such calls, which become timeouts
+            spec["hard"] = True
+            (Path(tmp) / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
+            try:
+                done = subprocess.run(cmd, capture_output=True, text=True,
+                                      timeout=(limit + 2) * len(inputs) * len(programs) + 120, cwd=tmp, env=e1.EXEC_ENV)
+            except subprocess.TimeoutExpired:
+                return {"infra": "timeout"}
         try:
-            return {"rows": json.loads((Path(tmp) / "out.json").read_text())}
+            return {"rows": json.loads((Path(tmp) / "out.json").read_text()), "hard": bool(spec.get("hard"))}
         except (OSError, json.JSONDecodeError):
             return {"infra": (done.stderr or "")[-300:] or "no result"}
 
@@ -622,7 +672,7 @@ def stage_validate4(split: str, workers: int) -> None:
                   "separates_2": n_sep >= 2, "predicates_match_proposer": consistent}
         admitted = all(checks.values())
         append(UNITS, {**row, "admitted": admitted, "checks": checks, "n_inputs": len(inputs), "n_stress": len(stress),
-                       "n_outside_interface_dropped": n_drop,
+                       "n_outside_interface_dropped": n_drop, "hard_timeout_mode": res.get("hard", False),
                        "n_separating": n_sep,
                        "n_valid": sum(1 for r in rows if r["value"].get("valid")),
                        "n_in_class": sum(1 for r in rows if r["value"].get("valid") and r["value"].get("in_class")),
