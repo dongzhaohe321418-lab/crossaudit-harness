@@ -217,23 +217,38 @@ def run(src):
         return "exc", None, type(e).__name__
 
 def agrees(out, exp):
+    """The suite's own assertion, bounded in time. Any exception is a rejection, as in the suite; the kind is kept."""
+    signal.alarm(spec["limit"])
     try:
         helpers["assertion"](out, exp, spec["atol"])
-        return True
-    except BaseException:
-        return False
+        signal.alarm(0)
+        return True, None
+    except _Late:
+        return False, "comparator_timeout"
+    except AssertionError:
+        signal.alarm(0)
+        return False, None
+    except BaseException as e:
+        signal.alarm(0)
+        return False, type(e).__name__
 
 res = {}
 rs, rv, rr = run(spec["reference"])
 res["reference"] = {"status": rs, "repr": rr}
+if rs == "ok":
+    # a comparator that cannot accept the reference against itself cannot score this call (judge-v3.2)
+    self_ok, self_err = agrees(pickle.loads(pickle.dumps(rv)), rv)
+    res["comparator_ok"] = self_ok
+    res["comparator_error"] = self_err
 if spec.get("candidate") is not None:
     cs, cv, cr = run(spec["candidate"])
     res["candidate"] = {"status": cs, "repr": cr}
     if rs == "ok" and cs == "ok":
-        res["agree"] = agrees(cv, rv)
+        res["agree"], res["agree_error"] = agrees(cv, rv)
 if spec.get("has_expected") and rs == "ok":
-    res["expected_correct"] = agrees(pickle.loads(base64.b64decode(spec["expected"].encode())), rv)
-sys.stdout.write("JUDGE " + json.dumps(res))
+    res["expected_correct"], res["expected_error"] = agrees(pickle.loads(base64.b64decode(spec["expected"].encode())), rv)
+with open(spec["out"], "w") as fh:          # framed by a file, not by a marker in stdout (judge-v3.2)
+    fh.write(json.dumps(res))
 '''
 _ASSERT_CALL = re.compile(r"^\s*assertion\((?P<body>.*)\)\s*$", re.M)
 
@@ -260,17 +275,18 @@ def judge_call(p: Problem, args: tuple, kwargs: dict, candidate: str | None = No
             "has_expected": has_expected,   # an expected value of None is a legitimate value, not "absent"
             "expected": base64.b64encode(pickle.dumps(expected)).decode() if has_expected else None}
     with tempfile.TemporaryDirectory() as tmp:
+        spec["out"] = str(Path(tmp) / "result.json")
         (Path(tmp) / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
         (Path(tmp) / "judge.py").write_text(JUDGE, encoding="utf-8")
         try:
             done = subprocess.run([execute.EXECUTOR, str(Path(tmp) / "judge.py"), str(Path(tmp) / "spec.json")],
-                                  capture_output=True, text=True, timeout=4 * limit + 30, cwd=tmp, env=EXEC_ENV)
+                                  capture_output=True, text=True, timeout=6 * limit + 30, cwd=tmp, env=EXEC_ENV)
         except subprocess.TimeoutExpired:
             return {"infra": "timeout"}
-    out = done.stdout
-    if "JUDGE " not in out:
-        return {"infra": (done.stderr or "")[-300:]}
-    return json.loads(out[out.rfind("JUDGE ") + 6:])
+        try:
+            return json.loads((Path(tmp) / "result.json").read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {"infra": (done.stderr or "")[-300:] or "no result"}
 
 
 def hidden_program_v3(p: Problem, solution: str) -> tuple[str, bool]:
@@ -1027,7 +1043,8 @@ def stage_audit(split: str, workers: int, auditors: list[str], orig_rest: bool =
 # witnesses
 # ---------------------------------------------------------------------------------------------
 WIT_PATH = REC / "witnesses_v3.jsonl"
-SCORER = "judge-v3.1"   # v3.1: an expected None is scored; non-finite float literals parse
+SCORER = "judge-v3.2"   # v3.1: expected None scored, non-finite literals; v3.2: file-framed result, bounded comparator,
+                        # comparator self-check, exception kinds kept
 
 
 def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str) -> dict:
@@ -1048,17 +1065,25 @@ def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str) -
         return {"status": "infra", "detail": "reference timeout"}
     if ref["status"] != "ok":
         return {"status": "outside_domain", "reference": ref["status"]}
+    if not j.get("comparator_ok", True):
+        return {"status": "infra", "detail": f"comparator rejects reference: {j.get('comparator_error')}"}
     if cand["status"] == "timeout":
         return {"status": "candidate_timeout", "expected_parsed": has_expected}
+    if j.get("agree_error") == "comparator_timeout" or j.get("expected_error") == "comparator_timeout":
+        return {"status": "infra", "detail": "comparator timeout"}
     disagrees = cand["status"] != "ok" or j.get("agree") is False
     expected_ok = bool(j.get("expected_correct")) if has_expected else False
     return {"status": "disagrees" if disagrees else "agrees", "expected_parsed": has_expected,
-            "expected_correct": expected_ok, "verified_diagnosis": disagrees and expected_ok}
+            "expected_correct": expected_ok, "verified_diagnosis": disagrees and expected_ok,
+            "agree_error": j.get("agree_error"), "expected_error": j.get("expected_error")}
 
 
 def witness_key(r: dict, item: dict, p: Problem) -> str:
-    return sha(json.dumps([SCORER, sha(item[f"{r['kind']}_solution"]), sha(p.canonical_solution),
-                           r["witnesses"]], sort_keys=True))
+    """Binds the scorer version and implementation, the suite's comparator and tolerance, both programs and the
+    witness text."""
+    return sha(json.dumps([SCORER, sha(JUDGE), sha(json.dumps(suite_assertion(p))), sha(_NonFinite.__doc__ or ""),
+                           sha(item[f"{r['kind']}_solution"]), sha(p.canonical_solution), r["witnesses"]],
+                          sort_keys=True))
 
 
 def stage_witness(workers: int) -> None:
@@ -1084,6 +1109,19 @@ def stage_witness(workers: int) -> None:
     run_pool(jobs, one, workers, "witness")
 
 
+def expected_universe(split: str, auditors: list[str] = PRIMARY_AUDITORS) -> list[tuple]:
+    """Every reading the registered analysis needs, rebuilt from the frozen items and admissions rather than from
+    whatever schedule files exist (A4 B5): all arms for admitted items, the original arm for the rest."""
+    items = [i["item_id"] for i in json.loads(ITEMS_PATH.read_text()) if i["split"] == split]
+    cons = admitted_constructions()
+    out = []
+    for iid in items:
+        arms = ARMS if iid in cons else ("orig",)
+        out += [(iid, kind, arm, a, k) for kind in ("defective", "correct") for arm in arms for a in auditors
+                for k in range(READINGS[arm])]
+    return out
+
+
 def completeness(split: str) -> dict:
     """Every scheduled key is either valid or exhausted, and every valid reading with witnesses has a current,
     infrastructure-free witness record. Raises if work is unfinished."""
@@ -1095,8 +1133,15 @@ def completeness(split: str) -> dict:
     for r in rows:
         k = (r["item_id"], r["kind"], r["arm"], r["auditor"], r["reading"])
         tries[k] = tries.get(k, 0) + 1
-    sched = [tuple(j) for name in (f"schedule_v3_{split}.json", f"schedule_v3_orig_{split}.json")
-             if (REC / name).exists() for j in json.loads((REC / name).read_text())]
+    sched = expected_universe(split)
+    for name in (f"schedule_v3_{split}.json", f"schedule_v3_orig_{split}.json"):
+        if (REC / name).exists():
+            extra = {tuple(j) for j in json.loads((REC / name).read_text())} - set(sched)
+            if extra:
+                raise SystemExit(f"{name} holds {len(extra)} keys outside the required universe")
+    unexpected = [k for k in tries if k not in set(sched)]
+    if unexpected:
+        raise SystemExit(f"{len(unexpected)} audit keys outside the required universe, e.g. {unexpected[0]}")
     unfinished = [k for k in sched if k not in ok and tries.get(k, 0) < MAX_ATTEMPTS]
     missing = [k for k in sched if k not in ok and tries.get(k, 0) >= MAX_ATTEMPTS]
     wits = {r["input_sha256"]: r for r in load(WIT_PATH) if not r.get("infra")}

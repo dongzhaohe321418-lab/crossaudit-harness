@@ -149,15 +149,31 @@
   "H6": true
  },
  "secondary": {
-  "flag_orig4_determined_minus_open": {
-   "est": 62.5,
-   "lo": 27.45098039215686,
-   "hi": 94.44444444444444,
+  "vd|DETERMINED-OPEN|pooled": {
+   "est": 66.66666666666666,
+   "lo": 33.33333333333333,
+   "hi": 100.0,
    "n_g1": 6,
    "n_g2": 12,
    "valid_draws": 9994
   },
-  "vd_orig4_determined_minus_at_odds": {
+  "vd|DETERMINED-OPEN|aud-gpt-terra": {
+   "est": 83.33333333333334,
+   "lo": 50.0,
+   "hi": 100.0,
+   "n_g1": 6,
+   "n_g2": 12,
+   "valid_draws": 9994
+  },
+  "vd|DETERMINED-OPEN|aud-claude-sonnet": {
+   "est": 50.0,
+   "lo": 0.0,
+   "hi": 100.0,
+   "n_g1": 6,
+   "n_g2": 12,
+   "valid_draws": 9994
+  },
+  "vd|DETERMINED-AT_ODDS|pooled": {
    "est": 64.03508771929825,
    "lo": 30.555555555555554,
    "hi": 97.05882352941177,
@@ -165,23 +181,69 @@
    "n_g2": 19,
    "valid_draws": 9996
   },
-  "per_auditor": {
-   "aud-gpt-terra": {
-    "est": 83.33333333333334,
-    "lo": 50.0,
-    "hi": 100.0,
-    "n_g1": 6,
-    "n_g2": 12,
-    "valid_draws": 9994
-   },
-   "aud-claude-sonnet": {
-    "est": 50.0,
-    "lo": 0.0,
-    "hi": 100.0,
-    "n_g1": 6,
-    "n_g2": 12,
-    "valid_draws": 9994
-   }
+  "vd|DETERMINED-AT_ODDS|aud-gpt-terra": {
+   "est": 83.33333333333334,
+   "lo": 50.0,
+   "hi": 100.0,
+   "n_g1": 6,
+   "n_g2": 19,
+   "valid_draws": 9996
+  },
+  "vd|DETERMINED-AT_ODDS|aud-claude-sonnet": {
+   "est": 44.73684210526316,
+   "lo": -4.0,
+   "hi": 94.11764705882352,
+   "n_g1": 6,
+   "n_g2": 19,
+   "valid_draws": 9996
+  },
+  "flag|DETERMINED-OPEN|pooled": {
+   "est": 62.5,
+   "lo": 27.45098039215686,
+   "hi": 94.44444444444444,
+   "n_g1": 6,
+   "n_g2": 12,
+   "valid_draws": 9994
+  },
+  "flag|DETERMINED-OPEN|aud-gpt-terra": {
+   "est": 75.0,
+   "lo": 34.61538461538461,
+   "hi": 100.0,
+   "n_g1": 6,
+   "n_g2": 12,
+   "valid_draws": 9994
+  },
+  "flag|DETERMINED-OPEN|aud-claude-sonnet": {
+   "est": 50.0,
+   "lo": 0.0,
+   "hi": 100.0,
+   "n_g1": 6,
+   "n_g2": 12,
+   "valid_draws": 9994
+  },
+  "flag|DETERMINED-AT_ODDS|pooled": {
+   "est": 56.14035087719298,
+   "lo": 20.089285714285715,
+   "hi": 88.09523809523809,
+   "n_g1": 6,
+   "n_g2": 19,
+   "valid_draws": 9996
+  },
+  "flag|DETERMINED-AT_ODDS|aud-gpt-terra": {
+   "est": 72.80701754385966,
+   "lo": 33.333333333333336,
+   "hi": 100.0,
+   "n_g1": 6,
+   "n_g2": 19,
+   "valid_draws": 9996
+  },
+  "flag|DETERMINED-AT_ODDS|aud-claude-sonnet": {
+   "est": 39.473684210526315,
+   "lo": -9.090909090909092,
+   "hi": 86.95652173913044,
+   "n_g1": 6,
+   "n_g2": 19,
+   "valid_draws": 9996
   }
  }
 }

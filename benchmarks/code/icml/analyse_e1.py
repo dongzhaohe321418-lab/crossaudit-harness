@@ -233,7 +233,9 @@ def analyse_taxonomy(split: str) -> dict:
     items), and H6: four-reading verified diagnosis on DETERMINED items exceeds that on OPEN items."""
     items, table, status = readings_table(split, admitted_only=False)
     tax = e1.taxonomy()
-    items = {k: v for k, v in items.items() if k in tax}
+    unclassified = [k for k in items if k not in tax]
+    if unclassified:      # A4 B6: every selected item needs both classifications; nothing is dropped silently
+        raise SystemExit(f"{len(unclassified)} selected items lack two taxonomy classifications")
     cons = e1.admitted_constructions()
     res = {"split": split, "n_items": len(items), "class_counts": {}, "completeness": status}
     for c in e1.TAX_CLASSES + ("DISPUTED",):
@@ -262,12 +264,16 @@ def analyse_taxonomy(split: str) -> dict:
     res["H6_vd_orig4_determined_minus_open"] = two_group_boot(vd, tax, "DETERMINED", "OPEN", items)
     res["verdicts"] = {"H6": bool(res["H6_vd_orig4_determined_minus_open"]
                                   and res["H6_vd_orig4_determined_minus_open"]["lo"] > 0)}
-    res["secondary"] = {
-        "flag_orig4_determined_minus_open": two_group_boot(fl, tax, "DETERMINED", "OPEN", items),
-        "vd_orig4_determined_minus_at_odds": two_group_boot(vd, tax, "DETERMINED", "AT_ODDS", items),
-        "per_auditor": {au: two_group_boot(level_values(items, table, "defective", "orig", 4, "vd", [au]),
-                                           tax, "DETERMINED", "OPEN", items) for au in AUDITORS},
-    }
+    # A4 B6: the full registered secondary matrix: {vd, flag} x {DETERMINED-OPEN, DETERMINED-AT_ODDS} x
+    # {pooled, each auditor}, with effective counts in every cell
+    sec = {}
+    for metric in ("vd", "flag"):
+        for other in ("OPEN", "AT_ODDS"):
+            for who in ["pooled"] + AUDITORS:
+                aus = AUDITORS if who == "pooled" else [who]
+                vals = level_values(items, table, "defective", "orig", 4, metric, aus)
+                sec[f"{metric}|DETERMINED-{other}|{who}"] = two_group_boot(vals, tax, "DETERMINED", other, items)
+    res["secondary"] = sec
     return res
 
 
