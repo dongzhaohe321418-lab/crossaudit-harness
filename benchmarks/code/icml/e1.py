@@ -249,7 +249,7 @@ def parse_call(src: str, entry: str) -> tuple[tuple, dict] | None:
 # ---------------------------------------------------------------------------------------------
 # generate
 # ---------------------------------------------------------------------------------------------
-SAMPLES = 3
+SAMPLES = 6                          # amendment 1: six samples per problem and generator (was three)
 GEN_PATH = REC / "generations.jsonl"
 
 
@@ -404,6 +404,7 @@ def stage_select(force: bool = False) -> None:
     if incomplete:
         raise SystemExit(f"generation incomplete: {len(incomplete)} samples neither generated nor exhausted")
     execs = {(e["generator"], e["problem_id"], e["sample"]): e for e in load(EXEC_PATH)}
+    problems_by_id = {p.problem_id: p for p in load_problems()}
     funnel = {"pairs": 0, "invalid_oracle": 0, "no_defect": 0, "no_correct": 0, "items": 0}
     items = []
     for g in GENERATORS:
@@ -415,19 +416,30 @@ def stage_select(force: bool = False) -> None:
             rows = [execs[(g, pid, s)] for s in range(SAMPLES) if (g, pid, s) in execs]
             defect = next((e for e in rows if e["visible_passed"] and not e["hidden_passed"]
                            and e.get("first_fail", {}).get("reference", {}).get("status") == "ok"), None)
-            correct = next((e for e in rows if e["visible_passed"] and e["hidden_passed"]), None)
             if not defect:
                 funnel["no_defect"] += 1
                 continue
-            if not correct:
+            # amendment 1: the test-passing control is the same generator's first passing sample, else the
+            # other generator's, else the reference solution (recorded, and excluded in a sensitivity analysis)
+            other = [x for x in GENERATORS if x != g][0]
+            correct, source = next((e for e in rows if e["visible_passed"] and e["hidden_passed"]), None), "same"
+            if correct is None:
+                orows = [execs[(other, pid, s)] for s in range(SAMPLES) if (other, pid, s) in execs]
+                correct, source = next((e for e in orows if e["visible_passed"] and e["hidden_passed"]), None), "other"
+            if correct is None:
+                source = "reference"
                 funnel["no_correct"] += 1
-                continue
             funnel["items"] += 1
+            if source == "reference":
+                ctrl_sol = problems_by_id[pid].canonical_solution
+            else:
+                ctrl_sol = gens[(correct["generator"], pid, correct["sample"])]["solution"]
             items.append({"item_id": f"{g}|{pid}", "generator": g, "problem_id": pid, "split": split[pid],
-                          "defective_sample": defect["sample"], "correct_sample": correct["sample"],
+                          "defective_sample": defect["sample"], "control_source": source,
+                          "correct_sample": None if correct is None else [correct["generator"], correct["sample"]],
                           "first_fail": defect["first_fail"],
                           "defective_solution": gens[(g, pid, defect["sample"])]["solution"],
-                          "correct_solution": gens[(g, pid, correct["sample"])]["solution"]})
+                          "correct_solution": ctrl_sol})
     ITEMS_PATH.write_text(json.dumps(items, indent=1), encoding="utf-8")
     (REC / "funnel_select.json").write_text(json.dumps(funnel, indent=1))
     print(json.dumps(funnel), {s: sum(i["split"] == s for i in items) for s in ("dev", "test")})

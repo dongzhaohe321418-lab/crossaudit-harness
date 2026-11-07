@@ -117,3 +117,14 @@ from that auditor's paired analyses, and the counts are reported. No item is dro
 H1 not supported, or supported only together with a correct-item flag increase beyond the H2 margin, would
 mean that stating the requirement does not move what auditors can establish, and the specification account
 would stay a post hoc description.
+
+## Amendment 1 (before any audit call; after generation, execution and selection with three samples)
+
+Selection with three samples per problem gave 38 items: only 136 (generator, problem) pairs had a defective
+sample, and 98 of them had no test-passing sample. Two changes, made before construction or any audit:
+(a) six samples per problem and generator (samples 3-5 added with the same prompt and routes);
+(b) the test-passing control is the same generator's first passing sample, else the other generator's first
+passing sample, else the reference solution; `control_source` records which. H1, H3 and H4 do not use controls.
+H2 is reported on all items and, as a sensitivity analysis, on items whose control is generated
+(control_source in {same, other}). Seen before this amendment: the selection funnel counts only; no
+construction, adjudication or audit output existed.
