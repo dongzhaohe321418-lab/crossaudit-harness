@@ -40,7 +40,7 @@ KIND = "open"            # "det": positive controls, where the task's words deci
 
 def set_kind(kind: str) -> None:
     """Point every stage at the record files of one unit kind."""
-    global KIND, PROPOSALS, IMPLS, PREUNITS, PROBES, UNITS, JUDGE, BEHAV, AUD, AUD_RAW, WIT, ARMS
+    global KIND, PROPOSALS, IMPLS, PREUNITS, PROBES, UNITS, JUDGE, BEHAV, AUD, AUD_RAW, WIT, REDTEAM, ARMS
     KIND = kind
     pre = {"open": "e6_", "det": "e6det_", "open2": "e6b_"}[kind]   # open2: second construction attempt
     PROPOSALS, IMPLS = REC / f"{pre}proposals.jsonl", REC / f"{pre}impls.jsonl"
@@ -49,6 +49,7 @@ def set_kind(kind: str) -> None:
     JUDGE, BEHAV = REC / f"{pre}judgements2.jsonl", REC / f"{pre}behaviour4.jsonl"
     AUD, AUD_RAW = REC / f"{pre}audits_v4.jsonl", REC / f"{pre}audits_raw_v4.jsonl"
     WIT = REC / f"{pre}witnesses_v4.jsonl"
+    REDTEAM = REC / f"{pre}redteam.jsonl"         # v4.3: adversarial admission probes by a third model
     ARMS = ("none",) if kind == "det" else OPEN_ARMS
 PROPOSE_ROUTE = "con-gpt-astra"
 IMPL_ROUTES = ("adj-gpt-sol", "adj-claude-opus")     # two vendors, same prompt
@@ -435,8 +436,8 @@ def stage_classpred(split: str, workers: int) -> None:
 
 
 _STR_MUT = ["", " ", "\v", "\f", "\u00a0", "\u2003", "\t\n", "è", "É", "ß", "Σ", "ΟΣ", "Ο\u0301Σ", "İ", "ǅ",
-            "\u0301", "😀", "a" * 300]
-_NUM_MUT = [0, -1, 1, 10 ** 16, -(10 ** 16), 2 ** 63, 0.5, -0.0, 1e308, -1e308, 1e-308, 3.5]
+            "\u0301", "😀", "a" * 300, "\u0301\u0301", "a\u0903", "e\u0301", "\u200b", "\ufeff", "Ⅻ", "١٢"]
+_NUM_MUT = [0, -1, -2, 1, 10 ** 16, -(10 ** 16), 2 ** 63, 0.5, -0.0, 1e308, -1e308, 1e-308, 3.5]
 
 
 def _mutants(x, rng, depth=0):
@@ -449,9 +450,9 @@ def _mutants(x, rng, depth=0):
         out += [m for m in _STR_MUT] + [x + m for m in _STR_MUT[1:8]] + [m + x for m in ("\u00a0", "Σ", "è")]
         out += [x.upper(), x.lower(), x * 3]
     elif isinstance(x, int):
-        out += _NUM_MUT + [x + 0.5, float(x), -x, x * 10 ** 12, complex(x, 1), complex(x, -1)]
+        out += _NUM_MUT + [x + 0.5, float(x), -x, -x - 1, x * 10 ** 12, complex(x, 0), complex(x, 1), complex(x, -1)]
     elif isinstance(x, float):
-        out += _NUM_MUT + [round(x), -x, x * 1e300, complex(x, 1)]
+        out += _NUM_MUT + [round(x), -x, x * 1e300, complex(x, 0), complex(x, 1)]
     elif isinstance(x, complex):
         out += [complex(0, 0), complex(1, 1), complex(1, -1), complex(-1, 0), complex(0, -1), x.conjugate(), -x,
                 complex(1e308, 1e308)]
@@ -477,7 +478,7 @@ def _mutants(x, rng, depth=0):
     return out
 
 
-def stress_inputs(hidden: list, n: int = 120, seed: str = "") -> list:
+def stress_inputs(hidden: list, n: int = 300, seed: str = "") -> list:
     """Deterministic stress inputs: each argument of a few hidden inputs replaced by its mutants (P4 blocker 1)."""
     rng = random.Random(int(sha("stress|" + seed), 16))
     base = [h for h in hidden if isinstance(h, (list, tuple))][:6]
@@ -500,6 +501,39 @@ def predicate_src(src: str, name: str, entry: str) -> str:
     return src + f"\n\n{entry} = {name}\n"
 
 
+def agreement_violations(rows: list) -> tuple[dict, int]:
+    """Admission agreement checks over executed rows (v4.2): on every input the reference evaluates, both B programs
+    equal the reference; outside the class both A programs equal it; inside it the A programs agree. `valid` restricts
+    witness credit only; separation counts valid class inputs."""
+    bad = {"b_vs_ref": [], "outside_class": [], "a_disagree": []}
+    n_sep = 0
+    for i, r in enumerate(rows):
+        if r["status"]["ref"] != "ok":
+            continue
+        ag = r["agree"]
+        if not (ag["ref~b1"] and ag["ref~b2"]):
+            bad["b_vs_ref"].append(i)
+        if r["value"].get("in_class"):
+            if not ag["a1~a2"]:
+                bad["a_disagree"].append(i)
+            if r["value"].get("valid") and ag["a1~b1"] is False and ag["a2~b2"] is False:
+                n_sep += 1
+        elif not (ag["ref~a1"] and ag["ref~a2"]):
+            bad["outside_class"].append(i)
+    return bad, n_sep
+
+
+ADMIT_PAIRS = [["ref", "b1"], ["ref", "b2"], ["a1", "a2"], ["ref", "a1"], ["ref", "a2"], ["a1", "b1"], ["a2", "b2"]]
+
+
+def unit_programs(p, pid: str, impls: dict, pb: dict) -> dict:
+    g, c = IMPL_ROUTES
+    return {"ref": p.canonical_solution, "a1": impls[(pid, "a", g)], "a2": impls[(pid, "a", c)],
+            "b1": impls[(pid, "b", g)], "b2": impls[(pid, "b", c)],
+            "valid": predicate_src(pb["valid"], "valid", p.entry_point),
+            "in_class": predicate_src(pb["in_class_proposer"], "in_class", p.entry_point)}
+
+
 def stage_validate4(split: str, workers: int) -> None:
     """Admission v4: on every valid input (by the executable `valid` predicate) among the hidden inputs, the proposer's
     inputs and the independent probes, both B implementations agree with the reference; outside the class (by
@@ -515,11 +549,7 @@ def stage_validate4(split: str, workers: int) -> None:
 
     def one(pid):
         p, pr, pb = probs[pid], props[pid], pr_rows[pid]
-        g, c = IMPL_ROUTES
-        progs = {"ref": p.canonical_solution, "a1": impls[(pid, "a", g)], "a2": impls[(pid, "a", c)],
-                 "b1": impls[(pid, "b", g)], "b2": impls[(pid, "b", c)],
-                 "valid": predicate_src(pb["valid"], "valid", p.entry_point),
-                 "in_class": predicate_src(pb["in_class_proposer"], "in_class", p.entry_point)}
+        progs = unit_programs(p, pid, impls, pb)
         row = {"problem_id": pid, "split": split, "impl_sha256": {k: sha(v) for k, v in progs.items()},
                "probe_sha256": sha(json.dumps(pb, sort_keys=True))}
         vis = {k: execute.run_suite(p.visible_program(progs[k]), instrumented=p.visible_instrumented).passed
@@ -530,32 +560,14 @@ def stage_validate4(split: str, workers: int) -> None:
         prb = [literal_tuple(x) for x in pb["probes"]]
         stress = stress_inputs(list(hidden) + cls + oth, seed=pid)
         inputs = list(hidden) + cls + oth + prb + stress
-        pairs = [["ref", "b1"], ["ref", "b2"], ["a1", "a2"], ["ref", "a1"], ["ref", "a2"], ["a1", "b1"], ["a2", "b2"]]
-        res = multi_compare(p, progs, pairs, inputs, capture=["valid", "in_class"])
+        res = multi_compare(p, progs, ADMIT_PAIRS, inputs, capture=["valid", "in_class"])
         if "infra" in res:
             append(UNITS, {**row, "admitted": False, "reason": "infra", "infra": res["infra"]})
             return
         rows = res["rows"]
         pred_ok = all(r["status"]["valid"] == "ok" and r["status"]["in_class"] == "ok"
                       and "valid" in r["value"] and "in_class" in r["value"] for r in rows)
-        bad = {"b_vs_ref": [], "outside_class": [], "a_disagree": []}
-        n_sep = 0
-        # v4.2 (GPT review P5): program agreement is required on every input the reference evaluates, not only on
-        # inputs `valid` accepts, so that "correct program" labels hold for the whole program the auditor reads;
-        # `valid` restricts witness credit only. Separation still counts valid class inputs.
-        for i, r in enumerate(rows):
-            if r["status"]["ref"] != "ok":
-                continue
-            ag = r["agree"]
-            if not (ag["ref~b1"] and ag["ref~b2"]):
-                bad["b_vs_ref"].append(i)
-            if r["value"].get("in_class"):
-                if not ag["a1~a2"]:
-                    bad["a_disagree"].append(i)
-                if r["value"].get("valid") and ag["a1~b1"] is False and ag["a2~b2"] is False:
-                    n_sep += 1
-            elif not (ag["ref~a1"] and ag["ref~a2"]):
-                bad["outside_class"].append(i)
+        bad, n_sep = agreement_violations(rows)
         nh, nc, no = len(hidden), len(cls), len(oth)
         cls_rows, oth_rows = rows[nh:nh + nc], rows[nh + nc:nh + nc + no]
         consistent = (all(r["value"].get("valid") and r["value"].get("in_class") for r in cls_rows)
@@ -571,6 +583,103 @@ def stage_validate4(split: str, workers: int) -> None:
                        "bad": {k: v[:20] for k, v in bad.items()},
                        "reason": "ok" if admitted else ",".join(k for k, v in checks.items() if not v)})
     e1.run_pool(jobs, one, workers, f"e6 validate4 {split}")
+
+
+REDTEAM_ROUTE = "adj-gpt-sol"        # neither proposed the rules nor wrote the predicates or probes
+REDTEAM_PROMPT = """You are testing material for a study of code review. Below are a programming task, the benchmark's
+reference implementation, two rules for a class of inputs, a predicate `in_class` that defines the class, a predicate
+`valid` for the task's domain, and four implementations: A1 and A2 follow rule A, B1 and B2 follow rule B.
+
+The material is correct only if all of the following hold on every input on which the reference runs without
+raising: B1 and B2 return the same result as the reference; whenever `in_class` is False, A1 and A2 also return the
+same result as the reference; whenever `in_class` is True, A1 and A2 return the same result as each other. Both
+predicates must never raise.
+
+Find inputs that break any of these conditions. Think about unusual types the code accepts (complex numbers, bools,
+floats equal to integers, subclasses), Unicode (combining marks, case folding, non-ASCII digits and whitespace),
+negative or out-of-range indices, empty, singleton and nested containers, duplicates, ties, very large or very small
+numbers, and inputs on which `in_class` and the implementations disagree about what the class is.
+
+TASK:
+{spec}
+
+REFERENCE:
+{ref}
+
+RULE A: {rule_a}
+RULE B: {rule_b}
+
+IN_CLASS:
+{in_class}
+
+VALID:
+{valid}
+
+A1:
+{a1}
+
+A2:
+{a2}
+
+B1:
+{b1}
+
+B2:
+{b2}
+
+Reply with exactly one JSON object holding up to 40 calls, each a Python literal tuple of positional arguments
+(one-argument calls written "(x,)"): {{"inputs": ["(...)", ...]}}
+"""
+
+
+def stage_redteam(split: str, workers: int) -> None:
+    """Admission v4.3 (GPT review P6): a third model, shown every implementation and both predicates, searches for
+    inputs that break the admission conditions; the inputs are executed with the admission checks, and any violation
+    rejects the unit. One attempt per unit; an unparseable reply contributes no inputs."""
+    probs = {p.problem_id: p for p in problems(split)}
+    props = proposals(split)
+    pr_rows = {r["problem_id"]: r for r in load(PROBES) if r.get("ok") and r.get("in_class_proposer")}
+    impls = {(r["problem_id"], r["contract"], r["route"]): r["code"] for r in load(IMPLS) if r.get("ok")}
+    rows_rt = load(REDTEAM)
+    have = {r["problem_id"] for r in rows_rt if r.get("passed") is not None}
+    # a reply that reached the model is never requested again; only its execution is retried
+    replied = {r["problem_id"]: r for r in rows_rt if r.get("ok") and r.get("passed") is None}
+    jobs = [u["problem_id"] for u in load(UNITS)
+            if u.get("admitted") and u["split"] == split and u["problem_id"] not in have]
+
+    def one(pid):
+        p, pr, pb = probs[pid], props[pid], pr_rows[pid]
+        progs = unit_programs(p, pid, impls, pb)
+        payload = REDTEAM_PROMPT.format(spec=p.spec.rstrip(), ref=p.canonical_solution.strip(), rule_a=pr["rule_a"],
+                                        rule_b=pr["rule_b"], in_class=pb["in_class_proposer"].strip(),
+                                        valid=pb["valid"].strip(), **{k: progs[k].strip() for k in ("a1", "a2", "b1", "b2")})
+        if pid in replied:
+            res, raw = {"ok": True}, replied[pid]["inputs"]
+        else:
+            res = e1.call(REDTEAM_ROUTE, payload)
+            obj = e1.parse_json(res["text"]) if res["ok"] else None
+            raw = obj.get("inputs") if isinstance(obj, dict) and isinstance(obj.get("inputs"), list) else []
+        inputs = [x for x in (literal_tuple(str(v)) for v in raw[:40]) if x is not None]
+        row = {"problem_id": pid, "split": split, "route": REDTEAM_ROUTE, "prompt_sha256": sha(payload),
+               "ok": res["ok"], "error": res.get("error", "") if not res["ok"] else "",
+               "impl_sha256": {k: sha(v) for k, v in progs.items()}, "inputs": [repr(x) for x in inputs]}
+        if not res["ok"] and not counts_as_attempt(row):
+            append(REDTEAM, {**row, "passed": None})
+            return
+        if not inputs:
+            append(REDTEAM, {**row, "passed": True, "n_inputs": 0, "bad": {}})
+            return
+        out = multi_compare(p, progs, ADMIT_PAIRS, inputs, capture=["valid", "in_class"])
+        if "infra" in out:
+            append(REDTEAM, {**row, "executor_infra": str(out["infra"])[:200], "passed": None})
+            return
+        rows = out["rows"]
+        pred_ok = all(r["status"]["valid"] == "ok" and r["status"]["in_class"] == "ok" for r in rows)
+        bad, _ = agreement_violations(rows)
+        passed = pred_ok and not any(bad.values())
+        append(REDTEAM, {**row, "passed": passed, "n_inputs": len(inputs), "predicates_total": pred_ok,
+                         "bad": {k: [repr(inputs[i])[:200] for i in v[:10]] for k, v in bad.items()}})
+    e1.run_pool(jobs, one, workers, f"e6 redteam {split}")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -694,11 +803,14 @@ def units(split: str) -> dict:
     probes = {r["problem_id"]: r for r in load(PROBES) if r.get("ok") and r.get("in_class_proposer")}
     pmap = {p.problem_id: p for p in problems(split)}
     refs = {pid: p.canonical_solution for pid, p in pmap.items()}
+    redteam = {r["problem_id"]: r for r in load(REDTEAM) if r.get("passed") is not None}
     out = {}
     for u in load(UNITS):
         if not (u.get("admitted") and u["split"] == split):
             continue
         pid = u["problem_id"]
+        if not redteam.get(pid, {}).get("passed"):         # v4.3: red-team admission
+            continue
         shown = IMPL_ROUTES[int(sha(pid), 16) % 2]
         other = IMPL_ROUTES[1 - IMPL_ROUTES.index(shown)]
         first_a = int(sha("menu-order|" + pid), 16) % 2 == 0          # menu order, fixed per unit
@@ -900,7 +1012,8 @@ set_kind("open")
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=["propose", "implement", "validate", "probe", "classpred", "validate4", "judge", "behaviour",
+    ap.add_argument("stage", choices=["propose", "implement", "validate", "probe", "classpred", "validate4", "redteam",
+                                      "judge", "behaviour",
                                       "audit", "witness"])
     ap.add_argument("--split", default="dev")
     ap.add_argument("--workers", type=int, default=6)
@@ -908,6 +1021,6 @@ if __name__ == "__main__":
     a = ap.parse_args()
     set_kind(a.kind)
     {"propose": stage_propose, "implement": stage_implement, "validate": stage_validate, "probe": stage_probe,
-     "classpred": stage_classpred, "validate4": stage_validate4, "judge": stage_judge,
+     "classpred": stage_classpred, "validate4": stage_validate4, "redteam": stage_redteam, "judge": stage_judge,
      "behaviour": stage_behaviour, "audit": stage_audit,
      "witness": stage_witness}[a.stage](a.split, a.workers)

@@ -1,6 +1,6 @@
-# E6 preregistration: contract-randomised information release (protocol e6-v4.2)
+# E6 preregistration: contract-randomised information release (protocol e6-v4.3)
 
-Draft v4.2, 2026-11-07 (after GPT reviews P4 and P5). Frozen when committed with the verified pre-test bundle (section 10), before any E6 test
+Draft v4.3, 2026-11-07 (after GPT reviews P4, P5 and P6). Frozen when committed with the verified pre-test bundle (section 10), before any E6 test
 audit. Code: `icml/e6.py` (construction, audits, witnesses, completeness), `icml/analyse_e6.py` (analysis),
 `icml/e1.py` (judge-v3.2, routes). Rationale: `audit-ceiling-paper/plan/icml2027/CEILING_PROGRAM.md` v3; GPT reviews
 P1, P2, P3 (`review_gpt_P3.md`: test release refused; every blocker is addressed below).
@@ -50,6 +50,18 @@ One open unit and at most one positive-control unit per problem.
    under v4.1). Predicate history: the first v4 admission used an independent class predicate and admitted
    10 of 55 development units; it was replaced by the proposer's predicate (43 of 55; 39 after stress inputs). Both
    versions and their rejection reasons are kept. The construction is execution-checked, not independently validated.
+   *v4.3 (after P6, before any test audit).* GPT review P6 found three retained development units broken by inputs
+   outside the stress set: a complex number equal to an integer (open Mbpp/405), a string of combining marks
+   (open2 HumanEval/74) and negative indices (control Mbpp/170). Two changes, applied to every kind and split and
+   rerun from the stored implementations: (i) the stress generator adds complex values equal to the int or float,
+   combining and spacing marks, zero-width and byte-order characters, non-ASCII digits and negative indices, and keeps
+   up to 300 inputs per unit; (ii) *red-team admission* (`stage_redteam`): a third model (adj-gpt-sol), shown the task,
+   the reference, both rules, both predicates and all four implementations, proposes up to 40 inputs intended to break
+   the admission conditions; they are executed with the same checks, and any violation (or a predicate that raises)
+   rejects the unit. One attempt per unit; a reply that contains no parseable input contributes none. The red-team
+   model sees the reference and the rules but no audit; its use is outcome-blind. Finite testing still cannot prove
+   the labels; the stated guarantee is agreement on the registered input set (hidden suite, proposer inputs, probes,
+   stress inputs and red-team inputs). The v4.2 admissions are archived (`*_units4_v42.jsonl`).
 6. *Judge panel v2* (adj-claude-opus, adj-gpt-sol; blind; rule order randomised by problem hash; complete visible
    tests; no class description): domain valid / invalid / unresolved, and each rule compatible / incompatible /
    unresolved, with the instruction that a missing example is not permission.
@@ -162,7 +174,7 @@ such; the margin is not changed. If fewer than 30 open test units had been admit
 as underpowered. No further enlargement.
 
 Bundle (checksummed, verified before the first test call): corpus and split; proposals, implementations, probes,
-predicates, admission records with exclusions; judge prompts, votes and reasons; behaviour records; frozen populations
+predicates, admission records with exclusions, red-team inputs and verdicts; judge prompts, votes and reasons; behaviour records; frozen populations
 (problem ids); shown-vendor and menu-order mappings; the rendered audit prompts and the required schedule;
 constitution, parser and policy; judge, comparator, tolerance and analysis code; model routes and CLI versions;
 interpreter and package versions; git commit.

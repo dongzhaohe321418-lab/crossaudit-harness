@@ -186,7 +186,8 @@ def analyse(split: str) -> dict:
     res["secondary"] = sec
     # Amendment 4 item 8: witness bridge (requires complete, current classifications)
     e1.bridge_complete(split)
-    bc = e1.bridge_classes()
+    bc = e1.bridge_classes(split)
+    tax = e1.taxonomy2()            # P6: the primary path had no taxonomy in scope
     per_item: dict = {}
     for (iid, _call), cl in bc.items():
         if iid in items:
@@ -300,7 +301,7 @@ def analyse_taxonomy(split: str) -> dict:
     res["secondary"] = sec
     # Amendment 4 item 8: witness bridge (requires complete, current classifications)
     e1.bridge_complete(split)
-    bc = e1.bridge_classes()
+    bc = e1.bridge_classes(split)
     per_item: dict = {}
     for (iid, _call), cl in bc.items():
         if iid in items:

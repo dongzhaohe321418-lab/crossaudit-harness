@@ -1491,20 +1491,24 @@ def bridge_complete(split: str) -> dict:
     return {"witnesses": len(bridge_witnesses(split))}
 
 
-def bridge_classes() -> dict:
-    """(item, call) -> class both adjudicators give on the witness's evidence (pooled by identical evidence), else
-    DISPUTED. DETERMINED witnesses are contract-independent; the other classes (OPEN, AT_ODDS, OUT_OF_DOMAIN, NEITHER,
-    DISPUTED) are kept separate and called "not established as contract-independent", not convention-dependent."""
-    by_ev, key_ev = {}, {}
+def bridge_classes(split: str) -> dict:
+    """(item, call) -> class both adjudicators give on the witness's CURRENT evidence (pooled by identical evidence;
+    each adjudicator's latest vote on that evidence), else DISPUTED. Votes on superseded evidence are never used (P6).
+    DETERMINED witnesses are contract-independent; the other classes (OPEN, AT_ODDS, OUT_OF_DOMAIN, NEITHER, DISPUTED)
+    are kept separate and called "not established as contract-independent", not convention-dependent."""
+    problems = {p.problem_id: p for p in load_problems()}
+    items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
+    votes = {}
     for r in load(BRIDGE_PATH):
         if r.get("ok"):
-            by_ev.setdefault(r["evidence_sha256"], []).append(r["class"])
-            key_ev.setdefault((r["item_id"], r["call"]), {})[r["adjudicator"]] = r["evidence_sha256"]
+            votes.setdefault(r["evidence_sha256"], {})[r["adjudicator"]] = r["class"]
     out = {}
-    for k, ev in key_ev.items():
-        if len(ev) == len(ADJUDICATORS):
-            votes = [c for e in set(ev.values()) for c in by_ev[e]]
-            out[k] = votes[0] if len(set(votes)) == 1 else "DISPUTED"
+    for (iid, call_src) in bridge_witnesses(split):
+        built = bridge_payload(problems[items[iid]["problem_id"]], items[iid], call_src)
+        v = votes.get(sha(built[0]), {}) if built else {}
+        if all(a in v for a in ADJUDICATORS):
+            cls = {v[a] for a in ADJUDICATORS}
+            out[(iid, call_src)] = cls.pop() if len(cls) == 1 else "DISPUTED"
     return out
 
 

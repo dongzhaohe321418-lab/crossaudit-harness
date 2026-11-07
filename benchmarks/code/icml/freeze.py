@@ -1,4 +1,4 @@
-"""Pre-test freeze bundle for E1 (Amendment 4) and E6 (e6-v4.1).
+"""Pre-test freeze bundle for E1 (Amendment 4) and E6 (e6-v4.3).
 
 `write` records, with SHA-256 checksums: every input record file, the frozen populations, the required reading
 universes, the hash of every rendered test audit prompt, the code, the registrations, the model routes, the CLI and
@@ -31,7 +31,8 @@ RECORDS = ["split.json", "items_v3.json", "oracles_v3.json", "executions_v3.json
            "e6det_proposals.jsonl", "e6det_impls.jsonl", "e6det_units.jsonl", "e6det_probes.jsonl",
            "e6det_units4.jsonl", "e6det_judgements2.jsonl",
            "e6b_proposals.jsonl", "e6b_impls.jsonl", "e6b_units.jsonl", "e6b_probes.jsonl", "e6b_units4.jsonl",
-           "e6b_judgements2.jsonl", "e6b_behaviour4.jsonl", "e1_behaviour_v4.json"]
+           "e6b_judgements2.jsonl", "e6b_behaviour4.jsonl", "e1_behaviour_v4.json",
+           "e6_redteam.jsonl", "e6b_redteam.jsonl", "e6det_redteam.jsonl", "bridge_v4.jsonl"]
 CODE = ["e1.py", "e6.py", "analyse_e1.py", "analyse_e6.py", "isolate.py", "freeze.py",
         "PREREGISTRATION-E1.md", "PREREGISTRATION-E6.md"]
 BENCH = HERE.parent                                   # benchmarks/code: corpus, execution, prompts, data
@@ -42,7 +43,7 @@ REQUIRED = ("records", "code", "dependencies", "routes", "versions", "git_commit
 
 def tree_sha(root: Path, patterns: tuple) -> dict:
     return {str(f.relative_to(root)): fsha(f) for pat in patterns for f in sorted(root.rglob(pat))
-            if "__pycache__" not in f.parts}
+            if f.is_file() and "__pycache__" not in f.parts}
 
 
 def fsha(path: Path) -> str:
@@ -58,6 +59,7 @@ def version(cmd: list) -> str:
 
 def e6_state(kind: str) -> dict:
     import analyse_e6
+    previous = e6.KIND                    # P6: verification must not change the caller's selected kind
     e6.set_kind(kind)
     units = e6.units("test")
     pop = analyse_e6.population("test")
@@ -72,8 +74,9 @@ def e6_state(kind: str) -> dict:
            "schedule_sha256": hashlib.sha256(json.dumps(sched).encode()).hexdigest(),
            "prompt_sha256": prompts,
            "shown_vendor": {pid: u["shown_route"] for pid, u in units.items()},
-           "menu_first_a": {pid: u["first_a"] for pid, u in units.items()}}
-    e6.set_kind("open")
+           "menu_first_a": {pid: u["first_a"] for pid, u in units.items()},
+           "redteam_sha256": fsha(e6.REDTEAM)}
+    e6.set_kind(previous)
     return out
 
 
@@ -90,7 +93,14 @@ def e1_state() -> dict:
             prompts[key] = e1.sha(e1.audit_prompt(p, items[iid][f"{kind}_solution"],
                                                   e1.task_text(p.spec, arm, cons.get(iid))))
     beh = e1.REC / "e1_behaviour_v4.json"
-    return {"retained_admissions": sorted(cons), "taxonomy_v4": e1.taxonomy2(),
+    # P6: the persisted test schedules are what stage_audit runs; bind them and require that together they are
+    # exactly the required universe (they are created here, deterministically, if absent)
+    main = e1.schedule("test", e1.PRIMARY_AUDITORS)
+    rest = e1.schedule("test", e1.PRIMARY_AUDITORS, orig_rest=True)
+    if sorted(map(tuple, main + rest)) != sorted(map(tuple, uni)) or len(main + rest) != len(uni):
+        raise SystemExit("E1 test schedules do not equal the required universe")
+    sched = {f: fsha(e1.REC / f) for f in ("schedule_v3_test.json", "schedule_v3_orig_test.json")}
+    return {"retained_admissions": sorted(cons), "taxonomy_v4": e1.taxonomy2(), "schedule_sha256": sched,
             "n_required_readings": len(uni),
             "universe_sha256": hashlib.sha256(json.dumps(sorted(map(list, uni))).encode()).hexdigest(),
             "prompt_sha256": prompts, "behaviour_sha256": fsha(beh)}

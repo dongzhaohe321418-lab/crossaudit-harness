@@ -231,6 +231,13 @@ def level(cells, units, g, cfgs, t):
     return out, uv
 
 
+def convention(cells, units, cfgs, t) -> dict:
+    """Convention advantage (r_B - r_A) / 2 in the none arm, with the registered missing-data bounds (P6)."""
+    _, nv = level(cells, units, "none", cfgs, t)
+    vals = {k: (v["r_b"] - v["r_a"]) / 2 for k, v in nv.items()}
+    return with_bounds(boot(vals), vals, len(units) - len(nv), lo=-0.5, hi=0.5)
+
+
 def routing(cells, units, arm, cfg):
     """Menu decision routing: share of readings that block, escalate, or neither (pass)."""
     rs = [x for pid in units for prog in "ab" for x in cells.get((pid, prog, arm, cfg), [])]
@@ -245,6 +252,7 @@ def merged_open(split: str, allow_incomplete: bool):
     problems without a first-attempt primary unit. Cells, units, completeness and behaviour of both kinds."""
     cells, units, status, beh = {}, [], {}, {}
     taken: set = set()
+    previous = e6.KIND
     for kind in ("open", "open2"):
         e6.set_kind(kind)
         if not e6.UNITS.exists():
@@ -253,7 +261,7 @@ def merged_open(split: str, allow_incomplete: bool):
             status[kind] = e6.completeness(split)
         except SystemExit as err:
             if not allow_incomplete:
-                e6.set_kind("open")
+                e6.set_kind(previous)
                 raise
             status[kind] = {"incomplete": str(err)}
         c, _ = table(split)
@@ -262,7 +270,7 @@ def merged_open(split: str, allow_incomplete: bool):
         cells.update({k: v for k, v in c.items() if k[0] in pop})
         units += pop
         beh.update({r["problem_id"]: r for r in e1.load(e6.BEHAV) if "n_A" in r and r["problem_id"] in pop})
-    e6.set_kind("open")
+    e6.set_kind(previous)
     return cells, sorted(units), status, beh
 
 
@@ -283,8 +291,7 @@ def analyse(split: str, allow_incomplete: bool) -> dict:
     res["E6_1_abs_resolve_cov"] = lv["all|resolve"]["cov"]
     res["E6_1_abs_resolve_fpr_bound"] = lv["all|resolve"]["fpr_bound"]
     _, nv = level(cells, units, "none", C, t)
-    e62 = {k: (v["r_b"] - v["r_a"]) / 2 for k, v in nv.items()}
-    res["E6_2_convention_advantage_none"] = with_bounds(boot(e62), e62, len(units) - len(nv), lo=-0.5, hi=0.5)
+    res["E6_2_convention_advantage_none"] = convention(cells, units, C, t)
     res["E6_3_cov_high_minus_low_resolve"] = contrast(cells, units, "resolve", "resolve",
                                                       [c for c in C if c.endswith("high")],
                                                       [c for c in C if c.endswith("low")], "cov", t)
@@ -293,23 +300,18 @@ def analyse(split: str, allow_incomplete: bool) -> dict:
     res["check_unrevealed_J_none"] = boot({k: v["tpr"] - v["fpr"] for k, v in nv.items()})
     res["flag_pref_a_minus_b_none"] = boot({k: v["flag_a"] - v["flag_b"] for k, v in nv.items()})
     res["per_config"] = {c: {"E6_1": contrast(cells, units, "resolve", "menu", (c,), (c,), "cov", t),
-                             "E6_2": boot({k: (v["r_b"] - v["r_a"]) / 2
-                                           for k, v in level(cells, units, "none", (c,), t)[1].items()})}
+                             "E6_2": convention(cells, units, (c,), t)}
                          for c in C}
     vendors = {"gpt": [c for c in C if "gpt" in c], "claude": [c for c in C if "claude" in c]}
     res["per_vendor"] = {v: {"levels": {g: level(cells, units, g, cs, t)[0] for g in ("none", "menu", "resolve")},
                              "E6_1": contrast(cells, units, "resolve", "menu", cs, cs, "cov", t),
-                             "E6_2": boot({k: (x["r_b"] - x["r_a"]) / 2
-                                           for k, x in level(cells, units, "none", cs, t)[1].items()})}
+                             "E6_2": convention(cells, units, cs, t)}
                          for v, cs in vendors.items()}
     bench = {"humaneval": [u for u in units if u.startswith("HumanEval")], "mbpp": [u for u in units if u.startswith("Mbpp")]}
-    res["per_benchmark_E6_2"] = {b: boot({k: (x["r_b"] - x["r_a"]) / 2
-                                          for k, x in level(cells, us_, "none", C, t)[1].items()})
-                                 for b, us_ in bench.items()}
+    res["per_benchmark_E6_2"] = {b: convention(cells, us_, C, t) for b, us_ in bench.items()}
     both = [u for u in units if beh.get(u, {}).get("n_A", 0) >= 1 and beh.get(u, {}).get("n_B", 0) >= 1]
     res["behavioural_subset"] = {"n": len(both), "E6_1": contrast(cells, both, "resolve", "menu", C, C, "cov", t),
-                                 "E6_2": boot({k: (x["r_b"] - x["r_a"]) / 2
-                                               for k, x in level(cells, both, "none", C, t)[1].items()})}
+                                 "E6_2": convention(cells, both, C, t)}
     res["behaviour_counts"] = {k: sum(beh.get(u, {}).get(k, 0) for u in units) for k in ("n_A", "n_B", "n_other")}
     res["t2"] = {"E6_1": contrast(cells, units, "resolve", "menu", C, C, "cov", 2),
                  "resolve": level(cells, units, "resolve", C, 2)[0]}
