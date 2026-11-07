@@ -1,4 +1,11 @@
-"""Registered analysis for E1/E2 (PREREGISTRATION-E1.md, "Hypotheses" and "E2"). Frozen before test audits.
+"""Registered analysis for E1/E2 (PREREGISTRATION-E1.md, "Hypotheses", "E2" and Amendment 2). Frozen before
+test audits.
+
+Missing data (Amendment 2): an arm's union is taken over its valid readings and is missing only if the arm has
+none; the two-reading original-arm value averages the six two-reading subsets whose readings are both valid;
+an item's pooled value is the mean over the auditors whose contrast exists, and the item is dropped only if no
+auditor's contrast exists. Bootstrap percentile convention: with the B sorted draws indexed from 0, the
+interval is [draw floor(0.025 B), draw ceil(0.975 B) - 1].
 
     python benchmarks/code/icml/analyse_e1.py --split test [--out records/icml/e1_results_test.json]
 """
@@ -20,25 +27,32 @@ B, SEED = 10000, 20261110
 
 
 def readings_table(split: str):
+    status = e1.completeness(split)
+    problems = {p.problem_id: p for p in e1.load_problems()}
     items = {i["item_id"]: i for i in json.loads(e1.ITEMS_PATH.read_text()) if i["split"] == split}
     cons = e1.admitted_constructions()
     items = {k: v for k, v in items.items() if k in cons}
-    wit = {(r["item_id"], r["kind"], r["arm"], r["auditor"], r["reading"]): r for r in e1.load(e1.WIT_PATH)}
+    wit = {r["input_sha256"]: r for r in e1.load(e1.WIT_PATH) if not r.get("infra")}
     table: dict = {}
     for r in e1.load(e1.AUD_PATH):
         if not r.get("ok") or r["item_id"] not in items:
             continue
         key = (r["item_id"], r["kind"], r["arm"], r["auditor"], r["reading"])
-        w = wit.get(key, {})
+        item = items[r["item_id"]]
+        w = wit[e1.witness_key(r, item, problems[item["problem_id"]])] if r.get("witnesses") else {}
         table[key] = {"flag": bool(r["flagged"]), "any": bool(r.get("any_finding")),
                       "vd": bool(r["flagged"] and w.get("verified_diagnosis")),
                       "wd": bool(r["flagged"] and w.get("disagreement"))}
-    return items, table
+    return items, table, status
 
 
-def union(table, iid, kind, arm, auditor, readings, metric):
+def union(table, iid, kind, arm, auditor, readings, metric, complete=False):
+    """Union over the valid readings among `readings` (all of them required when `complete`)."""
     vals = [table.get((iid, kind, arm, auditor, k)) for k in readings]
-    if any(v is None for v in vals):
+    if complete and any(v is None for v in vals):
+        return None
+    vals = [v for v in vals if v is not None]
+    if not vals:
         return None
     return float(any(v[metric] for v in vals))
 
@@ -46,25 +60,24 @@ def union(table, iid, kind, arm, auditor, readings, metric):
 def arm_value(table, iid, kind, arm, auditor, metric, size):
     """C2/P2: both readings; O4: all four; O2: mean over the six two-subsets of the four."""
     if arm == "orig" and size == 2:
-        vals = [union(table, iid, kind, "orig", auditor, s, metric) for s in itertools.combinations(range(4), 2)]
+        vals = [union(table, iid, kind, "orig", auditor, s, metric, complete=True)
+                for s in itertools.combinations(range(4), 2)]
         vals = [v for v in vals if v is not None]
         return sum(vals) / len(vals) if vals else None
-    n = 4 if arm == "orig" else 2
-    return union(table, iid, kind, arm, auditor, range(n), metric)
+    return union(table, iid, kind, arm, auditor, range(e1.READINGS[arm]), metric)
 
 
 def item_values(items, table, kind, a, sa, b, sb, metric, auditors):
-    """Per item: mean over auditors of (value(a) - value(b)); items missing any value are dropped."""
+    """Per item: mean over the auditors whose contrast exists; an item with no auditor's contrast is dropped."""
     out = {}
     for iid in items:
         diffs = []
         for au in auditors:
             va = arm_value(table, iid, kind, a, au, metric, sa)
             vb = arm_value(table, iid, kind, b, au, metric, sb)
-            if va is None or vb is None:
-                break
-            diffs.append(va - vb)
-        else:
+            if va is not None and vb is not None:
+                diffs.append(va - vb)
+        if diffs:
             out[iid] = sum(diffs) / len(diffs)
     return out
 
@@ -72,8 +85,8 @@ def item_values(items, table, kind, a, sa, b, sb, metric, auditors):
 def level_values(items, table, kind, arm, size, metric, auditors):
     out = {}
     for iid in items:
-        vals = [arm_value(table, iid, kind, arm, au, metric, size) for au in auditors]
-        if all(v is not None for v in vals):
+        vals = [v for v in (arm_value(table, iid, kind, arm, au, metric, size) for au in auditors) if v is not None]
+        if vals:
             out[iid] = sum(vals) / len(vals)
     return out
 
@@ -104,14 +117,21 @@ def subset_items(items, gen):
     return {k: v for k, v in items.items() if v["generator"] == gen}
 
 
+CONTRASTS = {  # name: (kind, arm a, size a, arm b, size b, metric)
+    "H1_vd_clause_minus_placebo": ("defective", "clause", 2, "placebo", 2, "vd"),
+    "H2_flag_correct_clause_minus_placebo": ("correct", "clause", 2, "placebo", 2, "flag"),
+    "H3_vd_clause2_minus_orig4": ("defective", "clause", 2, "orig", 4, "vd"),
+    "H4_vd_placebo2_minus_orig2": ("defective", "placebo", 2, "orig", 2, "vd"),
+    "H5_vd_clause_minus_pointer": ("defective", "clause", 2, "pointer", 2, "vd"),
+}
+
+
 def analyse(split: str) -> dict:
-    items, table = readings_table(split)
+    items, table, status = readings_table(split)
     res = {"split": split, "n_items": len(items), "n_problems": len({v["problem_id"] for v in items.values()}),
-           "readings_valid": len(table)}
-    res["H1_vd_clause_minus_placebo"] = contrast(items, table, "defective", "clause", 2, "placebo", 2, "vd")
-    res["H2_flag_correct_clause_minus_placebo"] = contrast(items, table, "correct", "clause", 2, "placebo", 2, "flag")
-    res["H3_vd_clause2_minus_orig4"] = contrast(items, table, "defective", "clause", 2, "orig", 4, "vd")
-    res["H4_vd_placebo2_minus_orig2"] = contrast(items, table, "defective", "placebo", 2, "orig", 2, "vd")
+           "readings_valid": len(table), "completeness": status}
+    for name, (kind, a, sa, b, sb, metric) in CONTRASTS.items():
+        res[name] = contrast(items, table, kind, a, sa, b, sb, metric)
     h = res
     res["verdicts"] = {
         "H1": h["H1_vd_clause_minus_placebo"] and h["H1_vd_clause_minus_placebo"]["lo"] > 0,
@@ -120,24 +140,33 @@ def analyse(split: str) -> dict:
         "H3": h["H3_vd_clause2_minus_orig4"] and h["H3_vd_clause2_minus_orig4"]["lo"] > 0,
         "H4": h["H4_vd_placebo2_minus_orig2"] and -5 <= h["H4_vd_placebo2_minus_orig2"]["lo"]
               and h["H4_vd_placebo2_minus_orig2"]["hi"] <= 5,
+        "H5": h["H5_vd_clause_minus_pointer"] and h["H5_vd_clause_minus_pointer"]["lo"] > 0,
+    }
+    res["descriptive"] = {
+        "vd_pointer_minus_placebo": contrast(items, table, "defective", "pointer", 2, "placebo", 2, "vd"),
+        "flag_correct_pointer_minus_placebo": contrast(items, table, "correct", "pointer", 2, "placebo", 2, "flag"),
     }
     levels = {}
     for kind, metric in (("defective", "vd"), ("defective", "wd"), ("defective", "flag"), ("correct", "flag")):
-        for arm, size in (("orig", 2), ("orig", 4), ("clause", 2), ("placebo", 2)):
+        for arm, size in (("orig", 2), ("orig", 4), ("clause", 2), ("placebo", 2), ("pointer", 2)):
             levels[f"{kind}|{metric}|{arm}{size}"] = cluster_boot(
                 level_values(items, table, kind, arm, size, metric, AUDITORS), items)
     res["levels"] = levels
     sec = {}
-    for au in AUDITORS:
-        sec[au] = {"H1": contrast(items, table, "defective", "clause", 2, "placebo", 2, "vd", [au]),
-                   "H2": contrast(items, table, "correct", "clause", 2, "placebo", 2, "flag", [au]),
-                   "H3": contrast(items, table, "defective", "clause", 2, "orig", 4, "vd", [au]),
-                   "flag_defective_clause_minus_placebo":
-                       contrast(items, table, "defective", "clause", 2, "placebo", 2, "flag", [au])}
-    for g in e1.GENERATORS:
-        sub = subset_items(items, g)
-        sec[g] = {"H1": contrast(sub, table, "defective", "clause", 2, "placebo", 2, "vd"),
-                  "H2": contrast(sub, table, "correct", "clause", 2, "placebo", 2, "flag")}
+    subsets = {au: (items, [au]) for au in AUDITORS}
+    subsets.update({g: (subset_items(items, g), AUDITORS) for g in e1.GENERATORS})
+    for name, (sub, aus) in subsets.items():
+        sec[name] = {}
+        for cname, (kind, a, sa, b, sb, metric) in CONTRASTS.items():
+            sec[name][cname] = contrast(sub, table, kind, a, sa, b, sb, metric, aus)
+            if kind == "defective":
+                for alt in ("flag", "wd"):
+                    sec[name][cname.replace("_vd_", f"_{alt}_")] = contrast(sub, table, kind, a, sa, b, sb, alt, aus)
+    for cname, (kind, a, sa, b, sb, metric) in CONTRASTS.items():
+        if kind == "defective":
+            for alt in ("flag", "wd"):
+                sec.setdefault("pooled_alt_metrics", {})[cname.replace("_vd_", f"_{alt}_")] = contrast(
+                    items, table, kind, a, sa, b, sb, alt)
     gen_ctl = {k: v for k, v in items.items() if v.get("control_source") in ("same", "other")}
     sec["H2_generated_controls_only"] = contrast(gen_ctl, table, "correct", "clause", 2, "placebo", 2, "flag")
     sec["correct_flag_by_control_source"] = {
@@ -157,7 +186,7 @@ def analyse(split: str) -> dict:
                         vals = []
                         for iid in sub:
                             us = [union(table, iid, kind, "orig", au, s, rule if kind == "defective" or rule != "vd"
-                                        else "flag") for s in itertools.combinations(range(4), K)]
+                                        else "flag", complete=True) for s in itertools.combinations(range(4), K)]
                             us = [u for u in us if u is not None]
                             if us:
                                 vals.append(sum(us) / len(us))
@@ -177,6 +206,5 @@ if __name__ == "__main__":
     path = Path(a.out) if a.out else e1.REC / f"e1_results_{a.split}.json"
     path.write_text(json.dumps(out, indent=1))
     print(json.dumps({k: out[k] for k in ("n_items", "n_problems", "readings_valid", "verdicts")}, indent=1))
-    for k in ("H1_vd_clause_minus_placebo", "H2_flag_correct_clause_minus_placebo", "H3_vd_clause2_minus_orig4",
-              "H4_vd_placebo2_minus_orig2"):
+    for k in CONTRASTS:
         print(k, out[k])

@@ -128,3 +128,67 @@ passing sample, else the reference solution; `control_source` records which. H1,
 H2 is reported on all items and, as a sensitivity analysis, on items whose control is generated
 (control_source in {same, other}). Seen before this amendment: the selection funnel counts only; no
 construction, adjudication or audit output existed.
+
+## Amendment 2 (after the development split was audited under protocol e1-v2; before any test audit)
+
+**What was seen.** All development-split audits and witness results under e1-v2 (36 items; 1,152 readings),
+the registered analysis on that split, and a cross-vendor methods review of the pipeline (GPT,
+`records/icml/v2/review_gpt_A3.md`). No test-split audit call has been made. Development outcomes: the clause
+arm reached verified diagnosis on every development item for both auditors; the placebo-original contrast was
++4.2 points [+0.5, +10.3]. The e1-v2 records are archived unchanged with checksums in `records/icml/v2/` and
+will be reported as a pilot; none of them enters a test analysis.
+
+**Why.** The review found that (i) some admitted clauses contradicted the task's words or codified reference
+quirks, with inconsistent adjudication across generators; (ii) the placebo controls length but not diagnostic
+relevance, so a clause that names the failing input class confounds behavioural information with attention;
+(iii) the hidden-suite instrumentation replaced task-specific tolerances and the witness comparator differed
+from the benchmark's (tolerance, set comparison for some problems, string-to-float coercion, timeouts counted
+as disagreement, unfixed hash seed); (iv) construction cases lost tuple types through JSON and could admit a
+control that violates the clause; (v) the analysis dropped arms with any missing reading, contrary to the
+registered missing-data rule; (vi) unfinished or stale witness scoring could silently become negatives;
+(vii) several registered secondary outputs were absent.
+
+**Changes (protocol e1-v3; all stages from oracle validation onwards are rerun on both splits).**
+
+1. *Ground truth.* Hidden suites run with their own assertion call, including task-specific tolerance.
+   Construction cases, first failing inputs and witnesses are compared with the suite's own `assertion`
+   function and tolerance, in one executor process per call with PYTHONHASHSEED fixed and the arguments
+   unpickled afresh for each program. A candidate timeout on a witness is recorded as `candidate_timeout` and
+   does not count as disagreement; a reference timeout is an infrastructure failure and is retried.
+2. *Construction.* The constructor no longer sees the defective candidate or its output; it sees the task,
+   visible tests, reference, the first failing input and the reference's output on it, and must skip items
+   where the task's words already determine the behaviour, or where the reference's behaviour contradicts
+   them or looks like an arbitrary quirk. Cases are Python literal tuples (types preserved), must fall inside
+   the per-position type signatures of the hidden suite's inputs, must show at least two distinct reference
+   outputs, and the test-passing control must agree with the reference on every case. The constructor also
+   writes a **pointer**: a length-matched sentence that names the same kind of input as the clause without
+   stating or implying the correct output.
+3. *Adjudication.* Two adjudicators from different vendors (claude-opus-5-5 and gpt-6.1-sol, high effort),
+   each blind to the candidates and to every audit, answer nine questions (correspondence; determined by the
+   task's words, where agreement with visible tests is explicitly insufficient; contradiction; leakage or
+   technique; plausible author intent; placebo neutrality and unrelatedness; pointer relevance; pointer
+   non-resolution). An item is admitted only if both admit.
+4. *Arms.* orig (4 readings), clause (2), placebo (2), pointer (2).
+5. *Missing data* as registered: an arm's union is over its valid readings; O2 averages the two-reading
+   subsets whose readings are both valid; an item's pooled value is the mean over the auditors whose contrast
+   exists, and the item is dropped only if none exists. Omissions are reported by arm, auditor and contrast.
+6. *Completeness and provenance.* The analysis refuses to run while any scheduled reading is unfinished or any
+   valid reading's witnesses lack a current score; witness scores are bound to a hash of the scorer version,
+   the solution, the reference and the witnesses; infrastructure failures are retried, never scored negative.
+   Raw Codex event streams are stored with each reading. A checksummed bundle of the frozen test inputs
+   (items, constructions, adjudications, schedule, code commit) is committed before the first test audit.
+7. *Secondary outputs* now include every hypothesis per auditor and per generator, and flag and
+   witnessed-disagreement versions of every defective-item contrast. E2's verified-diagnosis curve uses
+   BLOCKER witnesses under both counting rules; the any-finding rule changes only the flag curves.
+8. *Bootstrap convention* (unchanged code, now named): with sorted draws indexed from 0, the interval is
+   [draw floor(0.025 B), draw ceil(0.975 B) - 1].
+
+**New hypothesis.** *H5.* Verified diagnosis on defective items: C2 - R2 > 0, where R2 is the two-reading
+union of the pointer arm: stating the behaviour helps beyond directing attention to the input class.
+Supported if the interval's lower bound exceeds 0. Descriptive, without a test: R2 - P2 for verified
+diagnosis on defective items and for flags on test-passing controls.
+
+**Unchanged.** H1-H4, their thresholds and margins, the estimand weighting, the bootstrap, the split, the
+auditors and the sample. H2 remains a flag rate on test-passing controls, not a false-positive rate on
+known-correct programs. The paper will describe the intervention as failure-informed specification
+supplementation. The development split is rerun under e1-v3 as a pipeline check only.

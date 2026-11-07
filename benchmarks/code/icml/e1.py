@@ -8,9 +8,11 @@ Stages, each resumable and cached as JSONL under ``records/icml/``:
     oracle     validate every hidden and visible suite: the reference passes, two wrong implementations fail
     execute    visible and hidden suites per sample; first failing hidden input with both outputs
     select     freeze one defective and one test-passing sample per (problem, generator); frozen split
-    construct  a missing requirement (clause) with behavioural cases and a placebo, validated by execution
-    adjudicate a second vendor checks clause/case correspondence, novelty, leakage and placebo neutrality
-    audit      arms {orig, clause, placebo} x auditors x readings, one persisted randomised schedule
+    construct  a missing requirement (clause) with typed behavioural cases, a pointer and a placebo, written
+               without seeing the defective candidate and validated by execution (amendment 2)
+    adjudicate two vendors, blind to the candidates, check correspondence, novelty, non-contradiction,
+               leakage, pointer non-resolution and placebo neutrality; both must admit (amendment 2)
+    audit      arms {orig, clause, placebo, pointer} x auditors x readings, one persisted randomised schedule
     witness    execute auditor witnesses against the reference
     analyse    unions, H1-H4, E2 curves
 
@@ -18,6 +20,10 @@ Isolation. Codex routes run with their own CODEX_HOME holding only the login, wi
 session persistence disabled, from an empty working directory, and with --json so that any tool call is
 visible; a reading that used a tool is discarded and retried once. Claude routes run with every tool
 disabled and no session persistence. Neither CLI exposes a temperature.
+
+Ground truth (amendment 2). Hidden suites run with their own assertion call, including any task-specific
+tolerance; construction cases and witnesses are compared with the suite's own ``assertion`` function in one
+executor process per call, with PYTHONHASHSEED fixed and arguments deserialised afresh for each program.
 """
 from __future__ import annotations
 
@@ -27,7 +33,6 @@ import base64
 import hashlib
 import itertools
 import json
-import math
 import os
 import pickle
 import random
@@ -50,7 +55,7 @@ import execute  # noqa: E402
 import generate as gen_mod  # noqa: E402  (the original study's generation prompts, unchanged)
 from corpus import Problem, load_problems  # noqa: E402
 
-PROTOCOL = "e1-v2"
+PROTOCOL = "e1-v3"
 REC = CODE / "records" / "icml"
 REC.mkdir(parents=True, exist_ok=True)
 ISO_ROOT = CODE.parents[2] / ".codex_iso"          # outside the repository
@@ -76,6 +81,7 @@ ROUTES = {
     "gen-gpt-terra": ("codex", codex("gpt-5.6-terra", "low")),
     "con-gpt-astra": ("codex", codex("gpt-6-astra", "high")),
     "adj-claude-opus": ("claude", CLAUDE + ["--model", "claude-opus-5-5"]),
+    "adj-gpt-sol": ("codex", codex("gpt-6.1-sol", "high")),
     "aud-gpt-terra": ("codex", codex("gpt-5.6-terra", "medium")),
     "aud-claude-sonnet": ("claude", CLAUDE + ["--model", "claude-sonnet-5-5"]),
     "aud-gpt-sol": ("codex", codex("gpt-6.1-sol", "medium")),
@@ -83,6 +89,7 @@ ROUTES = {
 }
 GENERATORS = ["gen-claude-haiku45", "gen-gpt-terra"]
 PRIMARY_AUDITORS = ["aud-gpt-terra", "aud-claude-sonnet"]
+ADJUDICATORS = ["adj-claude-opus", "adj-gpt-sol"]
 NON_MESSAGE_ITEMS = {"command_execution", "mcp_tool_call", "web_search", "file_change", "patch_apply",
                      "tool_call", "function_call"}
 
@@ -170,62 +177,110 @@ def imports_of(p: Problem) -> str:
 
 
 # ---------------------------------------------------------------------------------------------
-# sandboxed calls on materialised arguments
+# sandboxed calls on materialised arguments, judged with the suite's own assertion
 # ---------------------------------------------------------------------------------------------
-RUNNER = r'''
-import pickle, sys, base64
+EXEC_ENV = {**os.environ, "PYTHONHASHSEED": "0", "OMP_NUM_THREADS": "1"}
+JUDGE = r'''
+import pickle, sys, base64, signal, json
 sys.setrecursionlimit(10000)
-args, kwargs = pickle.loads(base64.b64decode(sys.argv[1].encode()))
-ns = {}
-exec(compile(open(sys.argv[2]).read(), "solution", "exec"), ns)
-fn = ns[sys.argv[3]]
-try:
-    r = fn(*args, **kwargs)
-    sys.stdout.write("OK " + base64.b64encode(pickle.dumps(r)).decode())
-except BaseException as e:
-    sys.stdout.write("EXC " + type(e).__name__)
-'''
+spec = json.loads(open(sys.argv[1]).read())
+blob = base64.b64decode(spec["blob"].encode())
 
+class _Late(BaseException):
+    pass
 
-def run_on(solution: str, entry: str, args: tuple, kwargs: dict, imports: str,
-           timeout: float = 20.0) -> dict:
-    """Call entry(*args, **kwargs) in a fresh executor process on pickled (identical) arguments."""
-    with tempfile.TemporaryDirectory() as tmp:
-        src = Path(tmp) / "solution.py"
-        src.write_text(imports + "\n" + solution, encoding="utf-8")
-        runner = Path(tmp) / "runner.py"
-        runner.write_text(RUNNER, encoding="utf-8")
-        blob = base64.b64encode(pickle.dumps((tuple(args), dict(kwargs)))).decode()
-        try:
-            done = subprocess.run([execute.EXECUTOR, str(runner), blob, str(src), entry],
-                                  capture_output=True, text=True, timeout=timeout, cwd=tmp)
-        except subprocess.TimeoutExpired:
-            return {"status": "timeout"}
-    out = done.stdout
-    if out.startswith("OK "):
-        try:
-            value = pickle.loads(base64.b64decode(out[3:]))
-        except Exception:  # noqa: BLE001
-            return {"status": "unpicklable"}
-        return {"status": "ok", "value": value, "repr": repr(value)[:2000]}
-    if out.startswith("EXC "):
-        return {"status": "exc", "repr": out[4:]}
-    return {"status": "infra", "repr": (done.stderr or "")[-300:]}
+def _alarm(*_):
+    raise _Late()
 
+signal.signal(signal.SIGALRM, _alarm)
+helpers = {}
+exec(compile(spec["helpers"], "suite_helpers", "exec"), helpers)
 
-def same(a, b, tol: float = 1e-6) -> bool:
-    """Equality with the benchmark's float tolerance, recursively."""
-    if isinstance(a, float) or isinstance(b, float):
-        try:
-            return math.isclose(float(a), float(b), rel_tol=tol, abs_tol=tol) or (a != a and b != b)
-        except (TypeError, ValueError):
-            return False
-    if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
-        return type(a) is type(b) and len(a) == len(b) and all(same(x, y, tol) for x, y in zip(a, b))
+def run(src):
+    ns = {}
     try:
-        return bool(a == b)
-    except Exception:  # noqa: BLE001
+        exec(compile(src, "solution", "exec"), ns)
+        fn = ns[spec["entry"]]
+    except BaseException as e:
+        return "load", None, type(e).__name__
+    args, kwargs = pickle.loads(blob)
+    signal.alarm(spec["limit"])
+    try:
+        value = fn(*args, **kwargs)
+        signal.alarm(0)
+        return "ok", value, repr(value)[:2000]
+    except _Late:
+        return "timeout", None, "timeout"
+    except BaseException as e:
+        signal.alarm(0)
+        return "exc", None, type(e).__name__
+
+def agrees(out, exp):
+    try:
+        helpers["assertion"](out, exp, spec["atol"])
+        return True
+    except BaseException:
         return False
+
+res = {}
+rs, rv, rr = run(spec["reference"])
+res["reference"] = {"status": rs, "repr": rr}
+if spec.get("candidate") is not None:
+    cs, cv, cr = run(spec["candidate"])
+    res["candidate"] = {"status": cs, "repr": cr}
+    if rs == "ok" and cs == "ok":
+        res["agree"] = agrees(cv, rv)
+if spec.get("expected") is not None and rs == "ok":
+    res["expected_correct"] = agrees(pickle.loads(base64.b64decode(spec["expected"].encode())), rv)
+sys.stdout.write("JUDGE " + json.dumps(res))
+'''
+_ASSERT_CALL = re.compile(r"^\s*assertion\((?P<body>.*)\)\s*$", re.M)
+
+
+def suite_assertion(p: Problem) -> tuple[str, str]:
+    """(helpers source, tolerance source) of the problem's own hidden suite."""
+    code = p._hidden_test
+    cut = code.find("def check(candidate):") if p.benchmark == "humaneval" else code.find("inputs =")
+    helpers = ("import math\n" + imports_of(p) + "\n" + code[:cut]) if cut > 0 else ""
+    calls = _ASSERT_CALL.findall(code)
+    atol = calls[-1].rsplit(",", 1)[1].strip() if calls else "0"
+    return helpers, atol
+
+
+def judge_call(p: Problem, args: tuple, kwargs: dict, candidate: str | None = None,
+               expected=None, limit: int = 10) -> dict:
+    """Run the reference (and a candidate) on freshly unpickled copies of the same arguments in one executor
+    process, and compare outputs with the suite's own assertion and tolerance."""
+    helpers, atol = suite_assertion(p)
+    spec = {"helpers": helpers, "atol": float(ast.literal_eval(atol)), "entry": p.entry_point, "limit": limit,
+            "blob": base64.b64encode(pickle.dumps((tuple(args), dict(kwargs)))).decode(),
+            "reference": imports_of(p) + "\n" + p.canonical_solution,
+            "candidate": None if candidate is None else imports_of(p) + "\n" + candidate,
+            "expected": None if expected is None else base64.b64encode(pickle.dumps(expected)).decode()}
+    with tempfile.TemporaryDirectory() as tmp:
+        (Path(tmp) / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
+        (Path(tmp) / "judge.py").write_text(JUDGE, encoding="utf-8")
+        try:
+            done = subprocess.run([execute.EXECUTOR, str(Path(tmp) / "judge.py"), str(Path(tmp) / "spec.json")],
+                                  capture_output=True, text=True, timeout=4 * limit + 30, cwd=tmp, env=EXEC_ENV)
+        except subprocess.TimeoutExpired:
+            return {"infra": "timeout"}
+    out = done.stdout
+    if "JUDGE " not in out:
+        return {"infra": (done.stderr or "")[-300:]}
+    return json.loads(out[out.rfind("JUDGE ") + 6:])
+
+
+def hidden_program_v3(p: Problem, solution: str) -> tuple[str, bool]:
+    """The hidden suite with its own assertion call (task-specific tolerance kept), collecting every failure."""
+    calls = _ASSERT_CALL.findall(p._hidden_test)
+    if not calls:
+        return p.hidden_program(solution)
+    call_src = "assertion(" + calls[-1].strip() + ")"
+    body, inst = execute.instrument_plus_suite(p._hidden_test, call_src)
+    if p.benchmark == "humaneval":
+        return f"{solution}\n\n{body}\n\ncheck({p.entry_point})\n", inst
+    return f"{solution}\n\n{body}\n", inst
 
 
 def parse_call(src: str, entry: str) -> tuple[tuple, dict] | None:
@@ -283,7 +338,7 @@ def stage_generate(workers: int, attempts: int = 2) -> None:
 # ---------------------------------------------------------------------------------------------
 # oracle validation
 # ---------------------------------------------------------------------------------------------
-ORACLE_PATH = REC / "oracles.json"
+ORACLE_PATH = REC / "oracles_v3.json"
 WRONG = {"returns_none": "def {e}(*args, **kwargs):\n    return None\n",
          "raises": "def {e}(*args, **kwargs):\n    raise ValueError('wrong')\n"}
 
@@ -294,12 +349,12 @@ def stage_oracle(workers: int) -> None:
 
     def one(p: Problem):
         vis = execute.run_suite(p.visible_program(p.canonical_solution), instrumented=p.visible_instrumented)
-        hid_prog, inst = p.hidden_program(p.canonical_solution)
+        hid_prog, inst = hidden_program_v3(p, p.canonical_solution)
         hid = execute.run_suite(hid_prog, instrumented=inst)
         wrong = {}
         for name, tmpl in WRONG.items():
             sol = imports_of(p) + "\n" + tmpl.format(e=p.entry_point)
-            prog, inst2 = p.hidden_program(sol)
+            prog, inst2 = hidden_program_v3(p, sol)
             wrong[name] = execute.run_suite(prog, instrumented=inst2).passed
         valid = vis.passed and hid.passed and not any(wrong.values())
         with _lock:
@@ -315,7 +370,7 @@ def stage_oracle(workers: int) -> None:
 # ---------------------------------------------------------------------------------------------
 # execute
 # ---------------------------------------------------------------------------------------------
-EXEC_PATH = REC / "executions.jsonl"
+EXEC_PATH = REC / "executions_v3.jsonl"
 
 
 def hidden_inputs(problem: Problem):
@@ -331,7 +386,7 @@ def hidden_inputs(problem: Problem):
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "inp.py"
         path.write_text(prog, encoding="utf-8")
-        done = subprocess.run([execute.EXECUTOR, str(path)], capture_output=True, text=True, timeout=120)
+        done = subprocess.run([execute.EXECUTOR, str(path)], capture_output=True, text=True, timeout=120, env=EXEC_ENV)
     if done.returncode != 0:
         return None
     return pickle.loads(base64.b64decode(done.stdout))
@@ -348,7 +403,7 @@ def stage_execute(workers: int) -> None:
         p = problems[r["problem_id"]]
         sol = r["solution"]
         vr = execute.run_suite(p.visible_program(sol), instrumented=p.visible_instrumented)
-        prog, inst = p.hidden_program(sol)
+        prog, inst = hidden_program_v3(p, sol)
         hr = execute.run_suite(prog, instrumented=inst)
         row = {"generator": r["generator"], "problem_id": r["problem_id"], "sample": r["sample"],
                "solution_sha256": sha(sol), "visible_passed": vr.passed, "hidden_passed": hr.passed,
@@ -361,11 +416,12 @@ def stage_execute(workers: int) -> None:
             if inputs is not None:
                 idx = hr.failed_indices[0]
                 args = tuple(inputs[idx])
-                ref = run_on(p.canonical_solution, p.entry_point, args, {}, imports_of(p))
-                cand = run_on(sol, p.entry_point, args, {}, imports_of(p))
+                j = judge_call(p, args, {}, candidate=sol)
                 row["first_fail"] = {"index": idx, "args_repr": repr(args)[:4000],
-                                     "reference": {k: v for k, v in ref.items() if k != "value"},
-                                     "candidate": {k: v for k, v in cand.items() if k != "value"}}
+                                     "args_b64": base64.b64encode(pickle.dumps(args)).decode(),
+                                     "reference": j.get("reference", {"status": "infra"}),
+                                     "candidate": j.get("candidate", {"status": "infra"}),
+                                     "agree": j.get("agree")}
         append(EXEC_PATH, row)
     run_pool(jobs, one, workers, "execute")
 
@@ -374,7 +430,7 @@ def stage_execute(workers: int) -> None:
 # select (frozen)
 # ---------------------------------------------------------------------------------------------
 SPLIT_PATH = REC / "split.json"
-ITEMS_PATH = REC / "items.json"
+ITEMS_PATH = REC / "items_v3.json"
 SPLIT_SEED = 20261109
 DEV_FRACTION = 0.25
 
@@ -415,7 +471,8 @@ def stage_select(force: bool = False) -> None:
                 continue
             rows = [execs[(g, pid, s)] for s in range(SAMPLES) if (g, pid, s) in execs]
             defect = next((e for e in rows if e["visible_passed"] and not e["hidden_passed"]
-                           and e.get("first_fail", {}).get("reference", {}).get("status") == "ok"), None)
+                           and e.get("first_fail", {}).get("reference", {}).get("status") == "ok"
+                           and e["first_fail"].get("agree") is not True), None)
             if not defect:
                 funnel["no_defect"] += 1
                 continue
@@ -441,33 +498,46 @@ def stage_select(force: bool = False) -> None:
                           "defective_solution": gens[(g, pid, defect["sample"])]["solution"],
                           "correct_solution": ctrl_sol})
     ITEMS_PATH.write_text(json.dumps(items, indent=1), encoding="utf-8")
-    (REC / "funnel_select.json").write_text(json.dumps(funnel, indent=1))
+    (REC / "funnel_select_v3.json").write_text(json.dumps(funnel, indent=1))
     print(json.dumps(funnel), {s: sum(i["split"] == s for i in items) for s in ("dev", "test")})
 
 
 # ---------------------------------------------------------------------------------------------
 # construct
 # ---------------------------------------------------------------------------------------------
-CON_PATH = REC / "constructions.jsonl"
+CON_PATH = REC / "constructions_v3.jsonl"
 CON_PROMPT = """You are helping build a controlled experiment on code review.
 
 Below is a programming task as given to a programmer, its visible tests, a REFERENCE solution that is
-correct, a CANDIDATE solution that passes the visible tests but is wrong, and one input on which they disagree.
+correct, and one input on which a plausible solution that passes the visible tests returned something other
+than the reference's output. You are not shown that solution.
 
-Write:
+Decide first whether the task's own words leave the reference's behaviour on inputs like this one open, so
+that a careful reader could reasonably implement either the reference's behaviour or a different one. If the
+task's words already determine the behaviour, or if the reference's behaviour on such inputs contradicts the
+task's words or looks like an arbitrary implementation quirk that no task author would intend, reply with
+{{"skip": "one sentence"}} and nothing else.
 
-1. CLAUSE: one sentence, at most 40 words, stating a general requirement that the task leaves unstated or
-   ambiguous, that the reference satisfies and the candidate violates. It must read like an ordinary line of
-   a task description, state required behaviour (not an implementation technique), and must NOT mention any
-   specific input or output value, tests, the candidate or the reference.
-2. CASES: between 3 and 8 calls of the function, each given as a JSON array of positional arguments, that
-   exercise exactly the requirement in the CLAUSE. Use valid inputs for the task. Do not reuse the input
-   shown below. The expected outputs will be computed from the reference, so do not give them.
+Otherwise write:
+
+1. CLAUSE: one sentence, at most 40 words, stating the general requirement that the task leaves open and
+   that the reference satisfies. It must read like an ordinary line a task author could have written, be
+   consistent with every word of the task and the visible tests, state required behaviour (not an
+   implementation technique), and must NOT mention any specific input or output value, tests or solutions.
+2. POINTER: one sentence of about the same length that draws attention to the same kind of input as the
+   CLAUSE (for example "Inputs may contain ...") but does not state or imply what the correct output is for
+   such inputs, so that adding it does not change which outputs are correct.
 3. PLACEBO: one sentence of about the same length that reads like an ordinary line of a task description,
    does not change which outputs are correct for any input (for example, restating a property every
-   solution already has), and says nothing related to the behaviour on which the two solutions differ.
+   solution already has), and says nothing related to the kind of input the CLAUSE concerns.
+4. CASES: between 4 and 8 calls of the function that exercise the CLAUSE, each written as a Python literal
+   tuple of the positional arguments, with the exact argument types the task uses (a tuple where the task
+   passes a tuple; a one-argument call is written "(x,)"). Use valid inputs for the task. Include calls on
+   which the CLAUSE leads to different outputs (both sides of any condition it states). Do not reuse the
+   input shown below. The expected outputs will be computed from the reference, so do not give them.
 
-Reply with exactly one JSON object: {{"clause": "...", "cases": [[...], ...], "placebo": "..."}}
+Reply with exactly one JSON object:
+{{"clause": "...", "pointer": "...", "placebo": "...", "cases": ["(...)", "(...)", ...]}}
 
 TASK:
 {spec}
@@ -480,14 +550,8 @@ REFERENCE:
 {reference}
 ```
 
-CANDIDATE:
-```python
-{candidate}
-```
-
-INPUT ON WHICH THEY DISAGREE (arguments): {args}
-REFERENCE OUTPUT: {ref_out}
-CANDIDATE OUTPUT: {cand_out}
+INPUT (positional arguments): {args}
+REFERENCE OUTPUT ON IT: {ref_out}
 """
 
 
@@ -521,35 +585,92 @@ def leaks(sentence: str, item: dict) -> bool:
     return any(re.search(r"(?<![\w.])" + re.escape(t.lower()) + r"(?![\w.])", low) for t in literal_tokens(item))
 
 
+def type_sig(x, depth: int = 2):
+    t = type(x).__name__
+    t = "num" if t in ("int", "float") else t
+    if depth and isinstance(x, (list, tuple, set, frozenset)) and x:
+        return (t, type_sig(next(iter(x)), depth - 1))
+    if depth and isinstance(x, dict) and x:
+        k, v = next(iter(x.items()))
+        return (t, type_sig(k, depth - 1), type_sig(v, depth - 1))
+    return (t,)
+
+
+_domain_cache: dict = {}
+
+
+def domain_of(p: Problem):
+    """Per-arity, per-position type signatures of the hidden suite's inputs (None if not recoverable)."""
+    with _lock:
+        if p.problem_id in _domain_cache:
+            return _domain_cache[p.problem_id]
+    inputs = hidden_inputs(p)
+    dom = None
+    if inputs:
+        dom = {}
+        for inp in inputs:
+            inp = tuple(inp)
+            for i, x in enumerate(inp):
+                dom.setdefault(len(inp), [set() for _ in inp])[i].add(type_sig(x))
+    with _lock:
+        _domain_cache[p.problem_id] = dom
+    return dom
+
+
+def in_domain(args: tuple, dom) -> bool:
+    if dom is None:
+        return True
+    if len(args) not in dom:
+        return False
+    for x, allowed in zip(args, dom[len(args)]):
+        sg = type_sig(x)
+        if sg not in allowed and not (len(sg) == 1 and any(a[0] == sg[0] for a in allowed)):
+            return False
+    return True
+
+
 def validate_cases(cases, p: Problem, item: dict) -> tuple[list, list[str]]:
+    """Typed cases: parsed as Python literals, inside the suite's input types, run on the reference, the
+    test-passing control and the defective candidate, compared with the suite's own assertion."""
     reasons, evaluated = [], []
-    if not isinstance(cases, list) or not 3 <= len(cases) <= 8:
-        return [], ["cases: need 3-8"]
-    failing = item["first_fail"]["args_repr"]
-    imports = imports_of(p)
-    separates = False
+    if not isinstance(cases, list) or not 4 <= len(cases) <= 8:
+        return [], ["cases: need 4-8"]
+    failing = pickle.loads(base64.b64decode(item["first_fail"]["args_b64"]))
+    dom = domain_of(p)
+    separates, outcomes = False, set()
     for c in cases:
-        if not isinstance(c, list):
-            reasons.append("case not a list")
+        try:
+            args = ast.literal_eval(c) if isinstance(c, str) else None
+        except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+            args = None
+        if not isinstance(args, tuple):
+            reasons.append("case is not a Python literal tuple")
             continue
-        args = tuple(c)
-        if repr(args) == failing:
+        if repr(args) == repr(tuple(failing)):
             reasons.append("case reuses the failing input")
             continue
-        ref = run_on(p.canonical_solution, p.entry_point, args, {}, imports)
-        if ref["status"] != "ok":
-            reasons.append(f"reference does not run on a case ({ref['status']})")
+        if not in_domain(args, dom):
+            reasons.append("case outside the suite's input types")
             continue
-        cor = run_on(item["correct_solution"], p.entry_point, args, {}, imports)
-        dfc = run_on(item["defective_solution"], p.entry_point, args, {}, imports)
-        if cor["status"] != "ok" or not same(cor["value"], ref["value"]):
+        cor = judge_call(p, args, {}, candidate=item["correct_solution"])
+        dfc = judge_call(p, args, {}, candidate=item["defective_solution"])
+        if "infra" in cor or "infra" in dfc:
+            reasons.append("infrastructure failure on a case")
+            continue
+        if cor["reference"]["status"] != "ok":
+            reasons.append(f"reference does not run on a case ({cor['reference']['status']})")
+            continue
+        if cor.get("agree") is not True:
             reasons.append("test-passing control disagrees with the reference on a case")
-        if dfc["status"] != "ok" or not same(dfc["value"], ref["value"]):
+        if dfc.get("agree") is not True:
             separates = True
-        evaluated.append({"args_repr": repr(args)[:1000], "reference_repr": ref["repr"][:500],
-                          "defective_repr": dfc.get("repr", "")[:500]})
+        outcomes.add(cor["reference"]["repr"])
+        evaluated.append({"args_repr": repr(args)[:1000], "reference_repr": cor["reference"]["repr"][:500],
+                          "defective_repr": dfc["candidate"]["repr"][:500], "defective_agrees": dfc.get("agree")})
     if not separates:
         reasons.append("no case separates the defective candidate from the reference")
+    if len(outcomes) < 2:
+        reasons.append("cases do not show two different reference outputs")
     return evaluated, reasons
 
 
@@ -563,31 +684,38 @@ def stage_construct(workers: int, attempts: int = 3) -> None:
         p = problems[item["problem_id"]]
         ff = item["first_fail"]
         payload = CON_PROMPT.format(spec=p.spec.rstrip(), visible=p.visible_tests_text(),
-                                    reference=p.canonical_solution, candidate=item["defective_solution"],
-                                    args=ff["args_repr"][:1500], ref_out=ff["reference"]["repr"][:800],
-                                    cand_out=ff["candidate"].get("repr", "")[:800])
+                                    reference=p.canonical_solution, args=ff["args_repr"][:1500],
+                                    ref_out=ff["reference"]["repr"][:800])
         log = []
         for attempt in range(attempts):
             res = call("con-gpt-astra", payload, timeout=900)
             obj = parse_json(res["text"]) if res["ok"] else None
-            if not obj or not all(k in obj for k in ("clause", "cases", "placebo")):
+            if obj and "skip" in obj and "clause" not in obj:
+                append(CON_PATH, {"item_id": item["item_id"], "final": True, "admitted_by_execution": False,
+                                  "skipped": str(obj["skip"])[:500], "attempt": attempt,
+                                  "prompt_sha256": sha(payload), "protocol": PROTOCOL})
+                return
+            if not obj or not all(k in obj for k in ("clause", "pointer", "placebo", "cases")):
                 log.append({"attempt": attempt, "reasons": ["unparseable or call failed"],
                             "error": res.get("error", "")})
                 continue
             evaluated, reasons = validate_cases(obj["cases"], p, item)
-            wc, wp = len(obj["clause"].split()), len(obj["placebo"].split())
+            wc = len(obj["clause"].split())
+            wr, wp = len(obj["pointer"].split()), len(obj["placebo"].split())
             if wc > 40:
                 reasons.append("clause too long")
             if not (0.6 * wc <= wp <= 1.5 * wc):
                 reasons.append("placebo length unmatched")
-            if leaks(obj["clause"], item):
-                reasons.append("clause contains a failing-case literal")
-            if leaks(obj["placebo"], item):
-                reasons.append("placebo contains a failing-case literal")
+            if not (0.6 * wc <= wr <= 1.5 * wc):
+                reasons.append("pointer length unmatched")
+            for name in ("clause", "pointer", "placebo"):
+                if leaks(obj[name], item):
+                    reasons.append(f"{name} contains a failing-case literal")
             row = {"item_id": item["item_id"], "attempt": attempt, "clause": obj["clause"],
-                   "placebo": obj["placebo"], "cases": evaluated, "clause_words": wc,
-                   "placebo_words": wp, "reasons": reasons, "admitted_by_execution": not reasons,
-                   "prompt_sha256": sha(payload), "raw": res["text"][:6000], "protocol": PROTOCOL}
+                   "pointer": obj["pointer"], "placebo": obj["placebo"], "cases": evaluated,
+                   "clause_words": wc, "pointer_words": wr, "placebo_words": wp, "reasons": reasons,
+                   "admitted_by_execution": not reasons, "prompt_sha256": sha(payload),
+                   "raw": res["text"][:6000], "protocol": PROTOCOL}
             append(CON_PATH, row)
             if not reasons:
                 return
@@ -600,8 +728,9 @@ def stage_construct(workers: int, attempts: int = 3) -> None:
 # ---------------------------------------------------------------------------------------------
 # adjudicate (second vendor, blind to which solution is which)
 # ---------------------------------------------------------------------------------------------
-ADJ_PATH = REC / "adjudications.jsonl"
-ADJ_PROMPT = """You are checking materials for a controlled experiment. Answer strictly.
+ADJ_PATH = REC / "adjudications_v3.jsonl"
+ADJ_PROMPT = """You are checking materials for a controlled experiment. Answer strictly; when in doubt, answer
+in the direction that rejects the materials.
 
 TASK (as given to a programmer):
 {spec}
@@ -614,74 +743,93 @@ PROPOSED ADDITIONAL REQUIREMENT (A): {clause}
 CALLS ILLUSTRATING (A), with the outputs a correct solution returns:
 {cases}
 
+PROPOSED POINTER SENTENCE (R): {pointer}
+
 PROPOSED NEUTRAL SENTENCE (B): {placebo}
 
 Answer each question true or false:
 q1: Does (A) correctly describe what the illustrated outputs show, so that a solution satisfying (A) and
     the task would return exactly these outputs?
-q2: Is (A) already fully determined by the TASK and VISIBLE TESTS as given (so adding it changes nothing)?
-q3: Does (A) contradict the TASK or the VISIBLE TESTS?
+q2: Is the behaviour (A) requires already determined by the TASK's words and the VISIBLE TESTS, so that a
+    careful reader would implement it without (A)? (Agreement with the visible tests is not enough to answer
+    false: answer false only if the task's words genuinely permit a different behaviour.)
+q3: Does (A) contradict any word of the TASK or any VISIBLE TEST, or change what the task asks for?
 q4: Does (A) reveal a specific test input or output value, or prescribe an implementation technique rather
     than behaviour?
-q5: Would adding (B) to the task change which outputs are correct for any valid input?
-q6: Does (B) relate to the behaviour that (A) describes, or hint at it?
+q5: Could a reasonable author of this task have intended (A), rather than (A) codifying an arbitrary quirk
+    with no basis in the task's words?
+q6: Would adding (B) to the task change which outputs are correct for any valid input?
+q7: Does (B) relate to the behaviour that (A) describes, or hint at it?
+q8: Does (R) concern the same kind of input as (A)?
+q9: Does (R) state or imply which output is correct for those inputs, or otherwise narrow which behaviour is
+    correct?
 
 Reply with exactly one JSON object: {{"q1": true|false, "q2": ..., "q3": ..., "q4": ..., "q5": ..., "q6": ...,
-"note": "one sentence"}}
+"q7": ..., "q8": ..., "q9": ..., "permits_both": "one sentence: which two behaviours the TASK's words permit
+on such inputs, or why it does not", "note": "one sentence"}}
 """
+ADJ_PASS = {"q1": True, "q2": False, "q3": False, "q4": False, "q5": True, "q6": False, "q7": False,
+            "q8": True, "q9": False}
 
 
 def stage_adjudicate(workers: int) -> None:
+    """Two vendors, each blind to the candidates and to every audit; an item is admitted only if both admit."""
     problems = {p.problem_id: p for p in load_problems()}
     items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
     cons = {r["item_id"]: r for r in load(CON_PATH) if r.get("admitted_by_execution")}
-    have = {r["item_id"] for r in load(ADJ_PATH) if r.get("ok")}
-    jobs = [c for iid, c in cons.items() if iid not in have]
+    have = {(r["item_id"], r["adjudicator"]) for r in load(ADJ_PATH) if r.get("ok")}
+    jobs = [(c, a) for iid, c in cons.items() for a in ADJUDICATORS if (iid, a) not in have]
 
-    def one(con):
+    def one(job):
+        con, adj = job
         item = items[con["item_id"]]
         p = problems[item["problem_id"]]
         cases = "\n".join(f"  {p.entry_point}(*{c['args_repr']}) -> {c['reference_repr']}" for c in con["cases"])
         payload = ADJ_PROMPT.format(spec=p.spec.rstrip(), visible=p.visible_tests_text(), clause=con["clause"],
-                                    cases=cases, placebo=con["placebo"])
+                                    cases=cases, pointer=con["pointer"], placebo=con["placebo"])
         for attempt in range(2):
-            res = call("adj-claude-opus", payload, timeout=900)
+            res = call(adj, payload, timeout=900)
             obj = parse_json(res["text"]) if res["ok"] else None
-            if obj and all(f"q{k}" in obj for k in range(1, 7)):
-                admitted = (obj["q1"] is True and not any(obj[f"q{k}"] is True for k in range(2, 7)))
-                append(ADJ_PATH, {"item_id": con["item_id"], "ok": True, "answers": obj,
+            if obj and all(k in obj for k in ADJ_PASS):
+                admitted = all(obj[k] is v for k, v in ADJ_PASS.items())
+                append(ADJ_PATH, {"item_id": con["item_id"], "adjudicator": adj, "ok": True, "answers": obj,
                                   "admitted": admitted, "prompt_sha256": sha(payload), "protocol": PROTOCOL})
                 return
-        append(ADJ_PATH, {"item_id": con["item_id"], "ok": False, "admitted": False, "protocol": PROTOCOL})
+        append(ADJ_PATH, {"item_id": con["item_id"], "adjudicator": adj, "ok": False, "admitted": False,
+                          "protocol": PROTOCOL})
     run_pool(jobs, one, workers, "adjudicate")
 
 
 def admitted_constructions() -> dict:
     cons = {r["item_id"]: r for r in load(CON_PATH) if r.get("admitted_by_execution")}
-    adj = {r["item_id"]: r for r in load(ADJ_PATH) if r.get("ok")}
-    return {iid: c for iid, c in cons.items() if adj.get(iid, {}).get("admitted")}
+    votes: dict = {}
+    for r in load(ADJ_PATH):
+        if r.get("ok"):
+            votes.setdefault(r["item_id"], {})[r["adjudicator"]] = r["admitted"]
+    return {iid: c for iid, c in cons.items()
+            if all(votes.get(iid, {}).get(a) is True for a in ADJUDICATORS)}
 
 
 # ---------------------------------------------------------------------------------------------
 # audit
 # ---------------------------------------------------------------------------------------------
-AUD_PATH = REC / "audits.jsonl"
-RAW_PATH = REC / "audits_raw.jsonl"
+AUD_PATH = REC / "audits_v3.jsonl"
+RAW_PATH = REC / "audits_raw_v3.jsonl"
 WITNESS_RULE = (
     "\n\n## Evidence for behavioural findings\n\n"
     "When you grade a finding about the program's behaviour as BLOCKER, end its observation with one "
     "line of the form `WITNESS: <call> -> <expected value>`, giving a concrete call of the function, "
     "written as a Python call with literal arguments, on which you believe the program returns the wrong "
     "value, and the value it should return, written as a Python literal.\n")
-ARMS = ("orig", "clause", "placebo")
-READINGS = {"orig": 4, "clause": 2, "placebo": 2}
+ARMS = ("orig", "clause", "placebo", "pointer")
+READINGS = {"orig": 4, "clause": 2, "placebo": 2, "pointer": 2}
 MAX_ATTEMPTS = 2
 
 
 def task_text(spec: str, arm: str, con: dict) -> str:
     if arm == "orig":
         return spec
-    sentence = con["clause"] if arm == "clause" else con["placebo"]
+    sentence = con[arm]
     return spec.rstrip() + "\n\nAdditional requirement: " + sentence.strip() + "\n"
 
 
@@ -709,7 +857,7 @@ _WIT = re.compile(r"WITNESS:\s*`?(.+?)`?\s*->\s*`?(.+?)`?\s*$", re.M)
 
 
 def schedule(split: str, auditors: list[str]) -> list[list]:
-    path = REC / f"schedule_{split}.json"
+    path = REC / f"schedule_v3_{split}.json"
     if path.exists():
         return json.loads(path.read_text())
     items = [i for i in json.loads(ITEMS_PATH.read_text()) if i["split"] == split]
@@ -746,7 +894,7 @@ def stage_audit(split: str, workers: int, auditors: list[str]) -> None:
                "prompt_sha256": sha(payload), "wall_s": res["wall_s"], "tool_used": res["tool_used"],
                "usage": res.get("usage"), "attempt": attempts.get(job, 0) + 1, "protocol": PROTOCOL}
         append(RAW_PATH, {k2: row[k2] for k2 in ("item_id", "kind", "arm", "auditor", "reading", "attempt")}
-               | {"text": res["text"], "error": res.get("error", "")})
+               | {"text": res["text"], "raw": res.get("raw", ""), "error": res.get("error", "")})
         if not res["ok"]:
             row.update({"ok": False, "error": res.get("error", "")[:200]})
             append(AUD_PATH, row)
@@ -773,7 +921,8 @@ def stage_audit(split: str, workers: int, auditors: list[str]) -> None:
 # ---------------------------------------------------------------------------------------------
 # witnesses
 # ---------------------------------------------------------------------------------------------
-WIT_PATH = REC / "witnesses.jsonl"
+WIT_PATH = REC / "witnesses_v3.jsonl"
+SCORER = "judge-v3"
 
 
 def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str) -> dict:
@@ -781,40 +930,75 @@ def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str) -
     if parsed is None:
         return {"status": "unparseable"}
     args, kwargs = parsed
-    ref = run_on(p.canonical_solution, p.entry_point, args, kwargs, imports_of(p))
-    if ref["status"] == "infra":
-        return {"status": "infra"}
-    if ref["status"] != "ok":
-        return {"status": "outside_domain", "reference": ref["status"]}
-    cand = run_on(solution, p.entry_point, args, kwargs, imports_of(p))
-    if cand["status"] == "infra":
-        return {"status": "infra"}
-    disagrees = cand["status"] != "ok" or not same(cand["value"], ref["value"])
     try:
         expected = ast.literal_eval(expected_src.strip().rstrip("."))
-        expected_ok = same(expected, ref["value"])
+        has_expected = True
     except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
-        expected_ok = False
-    return {"status": "disagrees" if disagrees else "agrees", "expected_correct": expected_ok,
-            "verified_diagnosis": disagrees and expected_ok}
+        expected, has_expected = None, False
+    j = judge_call(p, args, kwargs, candidate=solution, expected=expected if has_expected else None)
+    if "infra" in j:
+        return {"status": "infra", "detail": str(j["infra"])[:200]}
+    ref, cand = j["reference"], j["candidate"]
+    if ref["status"] == "timeout":
+        return {"status": "infra", "detail": "reference timeout"}
+    if ref["status"] != "ok":
+        return {"status": "outside_domain", "reference": ref["status"]}
+    if cand["status"] == "timeout":
+        return {"status": "candidate_timeout", "expected_parsed": has_expected}
+    disagrees = cand["status"] != "ok" or j.get("agree") is False
+    expected_ok = bool(j.get("expected_correct")) if has_expected else False
+    return {"status": "disagrees" if disagrees else "agrees", "expected_parsed": has_expected,
+            "expected_correct": expected_ok, "verified_diagnosis": disagrees and expected_ok}
+
+
+def witness_key(r: dict, item: dict, p: Problem) -> str:
+    return sha(json.dumps([SCORER, sha(item[f"{r['kind']}_solution"]), sha(p.canonical_solution),
+                           r["witnesses"]], sort_keys=True))
 
 
 def stage_witness(workers: int) -> None:
     problems = {p.problem_id: p for p in load_problems()}
     items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
-    key = lambda r: (r["item_id"], r["kind"], r["arm"], r["auditor"], r["reading"])  # noqa: E731
-    have = {key(r) for r in load(WIT_PATH)}
-    jobs = [r for r in load(AUD_PATH) if r.get("ok") and r.get("witnesses") and key(r) not in have]
+    have = {r["input_sha256"] for r in load(WIT_PATH) if not r.get("infra")}
+    jobs = []
+    for r in load(AUD_PATH):
+        if r.get("ok") and r.get("witnesses"):
+            item = items[r["item_id"]]
+            if witness_key(r, item, problems[item["problem_id"]]) not in have:
+                jobs.append(r)
 
     def one(r):
         item = items[r["item_id"]]
         p = problems[item["problem_id"]]
         res = [judge_witness(p, item[f"{r['kind']}_solution"], w["call"], w["expected"]) for w in r["witnesses"]]
         append(WIT_PATH, {"item_id": r["item_id"], "kind": r["kind"], "arm": r["arm"], "auditor": r["auditor"],
-                          "reading": r["reading"], "results": res,
+                          "reading": r["reading"], "input_sha256": witness_key(r, item, p), "scorer": SCORER,
+                          "results": res, "infra": any(x["status"] == "infra" for x in res),
                           "disagreement": any(x.get("status") == "disagrees" for x in res),
                           "verified_diagnosis": any(x.get("verified_diagnosis") for x in res)})
     run_pool(jobs, one, workers, "witness")
+
+
+def completeness(split: str) -> dict:
+    """Every scheduled key is either valid or exhausted, and every valid reading with witnesses has a current,
+    infrastructure-free witness record. Raises if work is unfinished."""
+    problems = {p.problem_id: p for p in load_problems()}
+    items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
+    rows = [r for r in load(AUD_PATH) if r.get("split") == split]
+    ok = {(r["item_id"], r["kind"], r["arm"], r["auditor"], r["reading"]): r for r in rows if r.get("ok")}
+    tries: dict = {}
+    for r in rows:
+        k = (r["item_id"], r["kind"], r["arm"], r["auditor"], r["reading"])
+        tries[k] = tries.get(k, 0) + 1
+    sched = [tuple(j) for j in json.loads((REC / f"schedule_v3_{split}.json").read_text())]
+    unfinished = [k for k in sched if k not in ok and tries.get(k, 0) < MAX_ATTEMPTS]
+    missing = [k for k in sched if k not in ok and tries.get(k, 0) >= MAX_ATTEMPTS]
+    wits = {r["input_sha256"]: r for r in load(WIT_PATH) if not r.get("infra")}
+    unscored = [k for k, r in ok.items() if r.get("witnesses") and
+                witness_key(r, items[r["item_id"]], problems[items[r["item_id"]]["problem_id"]]) not in wits]
+    if unfinished or unscored:
+        raise SystemExit(f"incomplete: {len(unfinished)} unfinished readings, {len(unscored)} unscored witnesses")
+    return {"scheduled": len(sched), "valid": len(ok), "missing": [list(k) for k in missing]}
 
 
 def main(argv=None) -> int:
