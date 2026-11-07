@@ -42,14 +42,14 @@ def set_kind(kind: str) -> None:
     """Point every stage at the record files of one unit kind."""
     global KIND, PROPOSALS, IMPLS, PREUNITS, PROBES, UNITS, JUDGE, BEHAV, AUD, AUD_RAW, WIT, ARMS
     KIND = kind
-    pre = "e6_" if kind == "open" else "e6det_"
+    pre = {"open": "e6_", "det": "e6det_", "open2": "e6b_"}[kind]   # open2: second construction attempt
     PROPOSALS, IMPLS = REC / f"{pre}proposals.jsonl", REC / f"{pre}impls.jsonl"
     PREUNITS = REC / f"{pre}units.jsonl"          # pre-admission (stage_validate): decides who receives probes
     PROBES, UNITS = REC / f"{pre}probes.jsonl", REC / f"{pre}units4.jsonl"
     JUDGE, BEHAV = REC / f"{pre}judgements2.jsonl", REC / f"{pre}behaviour4.jsonl"
     AUD, AUD_RAW = REC / f"{pre}audits_v4.jsonl", REC / f"{pre}audits_raw_v4.jsonl"
     WIT = REC / f"{pre}witnesses_v4.jsonl"
-    ARMS = OPEN_ARMS if kind == "open" else ("none",)
+    ARMS = ("none",) if kind == "det" else OPEN_ARMS
 PROPOSE_ROUTE = "con-gpt-astra"
 IMPL_ROUTES = ("adj-gpt-sol", "adj-claude-opus")     # two vendors, same prompt
 
@@ -229,12 +229,26 @@ def literal_tuple(src: str):
     return v if isinstance(v, tuple) else None
 
 
+def primary_first_attempt(split: str) -> set:
+    """Problems whose first-attempt open unit is in the primary population (admission v4.2 plus both judges)."""
+    import analyse_e6
+    kind = KIND
+    set_kind("open")
+    try:
+        return set(analyse_e6.population(split))
+    finally:
+        set_kind(kind)
+
+
 def stage_propose(split: str, workers: int) -> None:
-    have = {r["problem_id"] for r in load(PROPOSALS) if r.get("ok")}
+    have = {r["problem_id"] for r in load(PROPOSALS)}          # one attempt per problem and kind (registered)
     jobs = [p for p in problems(split) if p.problem_id not in have]
+    if KIND == "open2":           # second attempt only where the first produced no primary unit (outcome-blind)
+        first = primary_first_attempt(split)
+        jobs = [p for p in jobs if p.problem_id not in first]
 
     def one(p):
-        payload = (PROPOSE_PROMPT if KIND == "open" else PROPOSE_DET_PROMPT).format(spec=p.spec,
+        payload = (PROPOSE_DET_PROMPT if KIND == "det" else PROPOSE_PROMPT).format(spec=p.spec,
                                                                                   reference=p.canonical_solution)
         res = e1.call(PROPOSE_ROUTE, payload)
         obj = e1.parse_json(res["text"]) if res["ok"] else None
@@ -260,7 +274,7 @@ def proposals(split: str) -> dict:
 def stage_implement(split: str, workers: int) -> None:
     props = proposals(split)
     probs = {p.problem_id: p for p in problems(split)}
-    have = {(r["problem_id"], r["contract"], r["route"]) for r in load(IMPLS) if r.get("ok")}
+    have = {(r["problem_id"], r["contract"], r["route"]) for r in load(IMPLS)}   # one attempt each (registered)
     jobs = [(pid, c, rt) for pid in props for c in ("a", "b") for rt in IMPL_ROUTES if (pid, c, rt) not in have]
 
     def one(job):
@@ -435,12 +449,19 @@ def _mutants(x, rng, depth=0):
         out += [m for m in _STR_MUT] + [x + m for m in _STR_MUT[1:8]] + [m + x for m in ("\u00a0", "Σ", "è")]
         out += [x.upper(), x.lower(), x * 3]
     elif isinstance(x, int):
-        out += _NUM_MUT + [x + 0.5, float(x), -x, x * 10 ** 12]
+        out += _NUM_MUT + [x + 0.5, float(x), -x, x * 10 ** 12, complex(x, 1), complex(x, -1)]
     elif isinstance(x, float):
-        out += _NUM_MUT + [round(x), -x, x * 1e300]
+        out += _NUM_MUT + [round(x), -x, x * 1e300, complex(x, 1)]
+    elif isinstance(x, complex):
+        out += [complex(0, 0), complex(1, 1), complex(1, -1), complex(-1, 0), complex(0, -1), x.conjugate(), -x,
+                complex(1e308, 1e308)]
     elif isinstance(x, (list, tuple)) and depth < 2:
         t = type(x)
         out += [t(), t(x[:1]), t(list(x) + list(x[:1])), t(list(x)[::-1])]
+        if any(isinstance(v, (int, float, list, tuple)) and not isinstance(v, bool) for v in x):
+            # floating-point cancellation, flat and nested (P5: recursive sums)
+            out += [t([1e16, 1.0, -1e16]), t([10 ** 16, 1, -(10 ** 16)]), t([[1e16], 1.0, [-1e16]]),
+                    t([1e16, [1.0, -1e16]])]
         if x and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in x):
             out += [t([-1e308, 1e308]), t([1e308, 1e308]), t([10 ** 16, 1, -(10 ** 16)]), t([0.1, 0.2, 0.3]),
                     t([-0.0, 0.0]), t([v + 0.5 for v in x])]
@@ -519,8 +540,11 @@ def stage_validate4(split: str, workers: int) -> None:
                       and "valid" in r["value"] and "in_class" in r["value"] for r in rows)
         bad = {"b_vs_ref": [], "outside_class": [], "a_disagree": []}
         n_sep = 0
+        # v4.2 (GPT review P5): program agreement is required on every input the reference evaluates, not only on
+        # inputs `valid` accepts, so that "correct program" labels hold for the whole program the auditor reads;
+        # `valid` restricts witness credit only. Separation still counts valid class inputs.
         for i, r in enumerate(rows):
-            if not (r["value"].get("valid") and r["status"]["ref"] == "ok"):
+            if r["status"]["ref"] != "ok":
                 continue
             ag = r["agree"]
             if not (ag["ref~b1"] and ag["ref~b2"]):
@@ -528,7 +552,7 @@ def stage_validate4(split: str, workers: int) -> None:
             if r["value"].get("in_class"):
                 if not ag["a1~a2"]:
                     bad["a_disagree"].append(i)
-                if ag["a1~b1"] is False and ag["a2~b2"] is False:
+                if r["value"].get("valid") and ag["a1~b1"] is False and ag["a2~b2"] is False:
                     n_sep += 1
             elif not (ag["ref~a1"] and ag["ref~a2"]):
                 bad["outside_class"].append(i)
@@ -858,10 +882,11 @@ def completeness(split: str, check_prompts: bool = True) -> dict:
     scores: dict = {}
     for w in load(WIT):
         if not w.get("infra"):
+            val = tuple(w.get(f) for f in ("verified_diagnosis", "verified_refdomain", "verified_offclass"))
             prev = scores.get(w["input_sha256"])
-            if prev is not None and prev != w["verified_diagnosis"]:
+            if prev is not None and prev != val:
                 raise SystemExit(f"conflicting witness scores under one key: {w['key']}")
-            scores[w["input_sha256"]] = w["verified_diagnosis"]
+            scores[w["input_sha256"]] = val
     unscored = [k for k, r in ok.items() if r.get("witnesses")
                 and any(witness_key(r, us[k[0]], c, probs[k[0]]) not in scores for c in "ab")]
     if unfinished or unscored:
@@ -879,7 +904,7 @@ if __name__ == "__main__":
                                       "audit", "witness"])
     ap.add_argument("--split", default="dev")
     ap.add_argument("--workers", type=int, default=6)
-    ap.add_argument("--kind", choices=["open", "det"], default="open")
+    ap.add_argument("--kind", choices=["open", "open2", "det"], default="open")
     a = ap.parse_args()
     set_kind(a.kind)
     {"propose": stage_propose, "implement": stage_implement, "validate": stage_validate, "probe": stage_probe,

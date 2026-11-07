@@ -276,8 +276,11 @@ failure modes (B4); a completeness check that trusts whatever schedule files exi
 8. *Witness bridge (added after GPT review P3, before any test audit).* Every distinct verified witness on a
    defective program in the original arm is classified with the taxonomy-v4 prompt by both adjudicators, the
    witness input and both programs' results on it standing in for the first failing input (votes pooled on identical
-   evidence; DISPUTED otherwise). A witness is contract-independent if classified DETERMINED and convention-dependent
-   otherwise. Reported (secondary, descriptive): the share of items with an original-arm verified diagnosis that have
-   at least one contract-independent witness, and the share supported only by convention-dependent witnesses, overall
-   and by taxonomy-v4 class of the item; the development pilot (6 items, 23 witnesses: 5 items with a DETERMINED
+   evidence; DISPUTED otherwise). Keyword arguments are shown as written in the call. A witness is
+   contract-independent if classified DETERMINED; the other classes (OPEN, AT_ODDS, OUT_OF_DOMAIN, NEITHER,
+   DISPUTED) are kept separate and called "not established as contract-independent". A classification is reused only
+   if its evidence hash equals the current evidence, and the analysis refuses to run unless every witness carries
+   both adjudicators' classifications. Reported (secondary, descriptive): the share of items with an original-arm
+   verified diagnosis that have at least one contract-independent witness, the counts of every witness class, and the
+   same by taxonomy-v4 class of the item; the development pilot (6 items, 23 witnesses: 5 items with a DETERMINED
    witness) is reported as such.

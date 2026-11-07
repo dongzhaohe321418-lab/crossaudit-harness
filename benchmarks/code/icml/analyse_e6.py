@@ -43,7 +43,9 @@ def table(split: str) -> tuple[dict, dict]:
     wit = {}
     for r in e1.load(e6.WIT):
         if not r.get("infra"):
-            if r["input_sha256"] in wit and wit[r["input_sha256"]]["verified_diagnosis"] != r["verified_diagnosis"]:
+            prev = wit.get(r["input_sha256"])
+            if prev is not None and any(prev.get(f) != r.get(f) for f in
+                                        ("verified_diagnosis", "verified_refdomain", "verified_offclass")):
                 raise SystemExit(f"conflicting witness scores {r['key']}")
             wit[r["input_sha256"]] = r
     cells: dict = {}
@@ -141,12 +143,12 @@ def betting_upper(xs: list, alpha: float = 0.05, seed: int = SEED) -> float:
     def excluded(m: float) -> bool:
         cap = 1.0
         for x, lam in zip(xs, lams):
-            cap *= 1 - min(lam, 0.75 / m) * (x - m)
+            cap *= 1 - min(lam, 0.75 / (1 - m)) * (x - m)   # bet that the mean is below m; factor >= 0.25 > 0
             if cap >= 1 / alpha:
                 return True
         return False
     lo, hi = sum(xs) / n, 1.0
-    if not excluded(1.0 - 1e-9):
+    if not excluded(1.0 - 1e-6):
         return 1.0
     for _ in range(40):
         mid = (lo + hi) / 2
@@ -179,7 +181,7 @@ def fpr_compliant(level_row: dict) -> bool:
 def population(split: str) -> list:
     """Registered population: v4-admitted units; both registered judges, by identity, rate the domain valid and (open)
     both rules compatible or (det) RULE_A incompatible and RULE_B compatible."""
-    want = ("compatible", "compatible") if e6.KIND == "open" else ("incompatible", "compatible")
+    want = ("incompatible", "compatible") if e6.KIND == "det" else ("compatible", "compatible")
     props = e6.proposals(split)
     probs = {p.problem_id: p for p in e6.problems(split)}
     votes: dict = {}
@@ -205,18 +207,24 @@ def contrast(cells, units, g1, g2, cfgs1, cfgs2, metric, t):
             missing += 1
             continue
         vals[pid] = x[metric] - y[metric]
-    out = boot(vals)
-    if out:
-        out["excluded_missing"] = missing
-        n = len(vals) + missing          # registered bounds: every excluded unit at the worst and best difference
-        out["bound_worst"] = 100 * (sum(vals.values()) - missing) / n
-        out["bound_best"] = 100 * (sum(vals.values()) + missing) / n
+    return with_bounds(boot(vals), vals, missing, lo=-1.0, hi=1.0)
+
+
+def with_bounds(b: dict | None, values: dict, missing: int, lo: float = 0.0, hi: float = 1.0) -> dict:
+    """Attach the registered missing-data bounds (excluded units at the worst and best value) and counts."""
+    out = dict(b) if b else {"est": None}
+    n = len(values) + missing
+    out["excluded_missing"] = missing
+    out["bound_low"] = 100 * (sum(values.values()) + lo * missing) / n if n else None
+    out["bound_high"] = 100 * (sum(values.values()) + hi * missing) / n if n else None
     return out
 
 
 def level(cells, units, g, cfgs, t):
     uv = {pid: v for pid in units if (v := unit_value(cells, pid, g, cfgs, t)) is not None}
-    out = {m: boot({k: v[m] for k, v in uv.items()}) for m in ("tpr", "fpr", "cov")}
+    miss = len(units) - len(uv)
+    out = {m: with_bounds(boot({k: v[m] for k, v in uv.items()}), {k: v[m] for k, v in uv.items()}, miss)
+           for m in ("tpr", "fpr", "cov")}
     out["fpr_bound"] = fpr_bound(uv)
     out["fpr_betting_upper95"] = 100 * betting_upper([v["fpr"] for v in uv.values()])
     out["excluded_missing"] = len(units) - len(uv)
@@ -232,16 +240,34 @@ def routing(cells, units, arm, cfg):
             "pass": sum(not x["flag"] and not x["esc"] for x in rs) / n}
 
 
+def merged_open(split: str, allow_incomplete: bool):
+    """The registered open population: first-attempt primary units, plus second-attempt (open2) primary units for
+    problems without a first-attempt primary unit. Cells, units, completeness and behaviour of both kinds."""
+    cells, units, status, beh = {}, [], {}, {}
+    taken: set = set()
+    for kind in ("open", "open2"):
+        e6.set_kind(kind)
+        if not e6.UNITS.exists():
+            continue
+        try:
+            status[kind] = e6.completeness(split)
+        except SystemExit as err:
+            if not allow_incomplete:
+                e6.set_kind("open")
+                raise
+            status[kind] = {"incomplete": str(err)}
+        c, _ = table(split)
+        pop = [u for u in population(split) if u not in taken]
+        taken |= set(pop)
+        cells.update({k: v for k, v in c.items() if k[0] in pop})
+        units += pop
+        beh.update({r["problem_id"]: r for r in e1.load(e6.BEHAV) if "n_A" in r and r["problem_id"] in pop})
+    e6.set_kind("open")
+    return cells, sorted(units), status, beh
+
+
 def analyse(split: str, allow_incomplete: bool) -> dict:
-    status = None
-    try:
-        status = e6.completeness(split)
-    except SystemExit as err:
-        if not allow_incomplete:
-            raise
-        status = {"incomplete": str(err)}
-    cells, _ = table(split)
-    units = population(split)
+    cells, units, status, beh = merged_open(split, allow_incomplete)
     C, S = e6.CONFIGS, e6.SENTENCE_CONFIGS
     res = {"split": split, "protocol": e6.PROTOCOL, "n_units": len(units), "completeness": status}
     t = 1
@@ -257,7 +283,8 @@ def analyse(split: str, allow_incomplete: bool) -> dict:
     res["E6_1_abs_resolve_cov"] = lv["all|resolve"]["cov"]
     res["E6_1_abs_resolve_fpr_bound"] = lv["all|resolve"]["fpr_bound"]
     _, nv = level(cells, units, "none", C, t)
-    res["E6_2_convention_advantage_none"] = boot({k: (v["r_b"] - v["r_a"]) / 2 for k, v in nv.items()})
+    e62 = {k: (v["r_b"] - v["r_a"]) / 2 for k, v in nv.items()}
+    res["E6_2_convention_advantage_none"] = with_bounds(boot(e62), e62, len(units) - len(nv), lo=-0.5, hi=0.5)
     res["E6_3_cov_high_minus_low_resolve"] = contrast(cells, units, "resolve", "resolve",
                                                       [c for c in C if c.endswith("high")],
                                                       [c for c in C if c.endswith("low")], "cov", t)
@@ -270,7 +297,8 @@ def analyse(split: str, allow_incomplete: bool) -> dict:
                                            for k, v in level(cells, units, "none", (c,), t)[1].items()})}
                          for c in C}
     vendors = {"gpt": [c for c in C if "gpt" in c], "claude": [c for c in C if "claude" in c]}
-    res["per_vendor"] = {v: {"E6_1": contrast(cells, units, "resolve", "menu", cs, cs, "cov", t),
+    res["per_vendor"] = {v: {"levels": {g: level(cells, units, g, cs, t)[0] for g in ("none", "menu", "resolve")},
+                             "E6_1": contrast(cells, units, "resolve", "menu", cs, cs, "cov", t),
                              "E6_2": boot({k: (x["r_b"] - x["r_a"]) / 2
                                            for k, x in level(cells, units, "none", cs, t)[1].items()})}
                          for v, cs in vendors.items()}
@@ -278,7 +306,6 @@ def analyse(split: str, allow_incomplete: bool) -> dict:
     res["per_benchmark_E6_2"] = {b: boot({k: (x["r_b"] - x["r_a"]) / 2
                                           for k, x in level(cells, us_, "none", C, t)[1].items()})
                                  for b, us_ in bench.items()}
-    beh = {r["problem_id"]: r for r in e1.load(e6.BEHAV) if "n_A" in r}
     both = [u for u in units if beh.get(u, {}).get("n_A", 0) >= 1 and beh.get(u, {}).get("n_B", 0) >= 1]
     res["behavioural_subset"] = {"n": len(both), "E6_1": contrast(cells, both, "resolve", "menu", C, C, "cov", t),
                                  "E6_2": boot({k: (x["r_b"] - x["r_a"]) / 2
@@ -289,7 +316,7 @@ def analyse(split: str, allow_incomplete: bool) -> dict:
     res["routing_menu"] = {c: routing(cells, units, "menu", c) for c in C}
     res["routing_none"] = {c: routing(cells, units, "none", c) for c in C}
     eq = res["E6_3_cov_high_minus_low_resolve"]
-    if eq:
+    if eq.get("est") is not None:
         hi_c = [c for c in C if c.endswith("high")]
         lo_c = [c for c in C if c.endswith("low")]
         ds = []
@@ -300,12 +327,16 @@ def analyse(split: str, allow_incomplete: bool) -> dict:
         bl, bu = betting_interval(ds)
         eq["betting_lo"], eq["betting_hi"] = 100 * bl, 100 * bu
     res["verdicts"] = {
-        "E6_1": bool(res["E6_1_cov_resolve_minus_menu"] and res["E6_1_cov_resolve_minus_menu"]["lo"] > 0
-                     and lv["all|resolve"]["cov"] and lv["all|resolve"]["cov"]["lo"] >= 50
-                     and fpr_compliant(lv["all|resolve"])),
-        "E6_2": bool(res["E6_2_convention_advantage_none"] and res["E6_2_convention_advantage_none"]["lo"] > 0),
-        "E6_3_equivalent_within_10": bool(eq and eq["betting_lo"] > -10 and eq["betting_hi"] < 10),
-        "E6_5": bool(res["E6_5_cov_sentence_minus_none"] and res["E6_5_cov_sentence_minus_none"]["lo"] > 0),
+        "E6_1": bool(res["E6_1_cov_resolve_minus_menu"].get("lo") is not None
+                     and res["E6_1_cov_resolve_minus_menu"]["lo"] > 0
+                     and lv["all|resolve"]["cov"].get("lo") is not None and lv["all|resolve"]["cov"]["lo"] >= 50),
+        "E6_1b_fpr_budget": fpr_compliant(lv["all|resolve"]),
+        "E6_2": bool(res["E6_2_convention_advantage_none"].get("lo") is not None
+                     and res["E6_2_convention_advantage_none"]["lo"] > 0),
+        "E6_3_equivalent_within_10": bool(eq.get("betting_lo") is not None and eq["betting_lo"] > -10
+                                          and eq["betting_hi"] < 10),
+        "E6_5": bool(res["E6_5_cov_sentence_minus_none"].get("lo") is not None
+                     and res["E6_5_cov_sentence_minus_none"]["lo"] > 0),
     }
     # registered order: each claimed only if all earlier ones hold
     v, chain = res["verdicts"], True
@@ -340,17 +371,19 @@ def analyse_det(split: str, allow_incomplete: bool) -> dict:
             missing += 1
             continue
         out[pid] = {k: statistics.mean(v[k] for v in vals) for k in vals[0]}
+    jv = {k: v["j"] for k, v in out.items()}
     res = {"split": split, "n_units": len(units), "excluded_missing": missing, "completeness": status,
-           "E6_4_J_none": boot({k: v["j"] for k, v in out.items()}),
-           **{m: boot({k: v[m] for k, v in out.items()}) for m in ("tpr", "fpr", "cov")}}
-    res["verdicts"] = {"E6_4": bool(res["E6_4_J_none"] and res["E6_4_J_none"]["lo"] > 0)}
+           "E6_4_J_none": with_bounds(boot(jv), jv, missing, lo=-1.0, hi=1.0),
+           **{m: with_bounds(boot({k: v[m] for k, v in out.items()}), {k: v[m] for k, v in out.items()}, missing)
+              for m in ("tpr", "fpr", "cov")}}
+    res["verdicts"] = {"E6_4": bool(res["E6_4_J_none"].get("lo") is not None and res["E6_4_J_none"]["lo"] > 0)}
     return res
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", default="dev")
-    ap.add_argument("--kind", choices=["open", "det"], default="open")
+    ap.add_argument("--kind", choices=["open", "open2", "det"], default="open")
     ap.add_argument("--allow-incomplete", action="store_true", help="development use only")
     ap.add_argument("--credit", choices=["verified_diagnosis", "verified_refdomain", "verified_offclass"],
                     default="verified_diagnosis", help="registered sensitivity analyses of witness credit")

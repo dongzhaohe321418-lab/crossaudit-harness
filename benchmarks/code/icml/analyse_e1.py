@@ -109,9 +109,12 @@ def cluster_boot(values: dict, items: dict, seed=SEED, b=B):
     draws.sort()
     out = {"est": 100 * est, "lo": 100 * draws[int(0.025 * b)], "hi": 100 * draws[int(0.975 * b) - 1],
            "n_items": len(values), "n_problems": len(probs)}
-    if all(v == 0 for v in values.values()):
-        # Amendment 4 (B7): the percentile interval collapses to [0, 0]; report the exact one-sided 95% upper bound
-        # for a problem-level event probability with zero events in n problems, 1 - 0.05 ** (1 / n)
+    if all(sum(by_problem[q]) == 0 and all(v == 0 for v in by_problem[q]) for q in probs) or \
+            all(abs(sum(by_problem[q]) / len(by_problem[q])) == 0 for q in probs):
+        # every problem-level contrast is zero (registered wording), including +1/-1 cancelling within a problem
+        # Amendment 4 (B7): the percentile interval collapses to [0, 0]; report, as a sensitivity that does not change
+        # the H2/H4 verdict rules, the exact one-sided 95% upper bound for a problem-level event probability with
+        # zero events in n problems, 1 - 0.05 ** (1 / n)
         out["exact_upper95_if_all_zero"] = 100 * (1 - 0.05 ** (1 / len(probs)))
     return out
 
@@ -181,6 +184,22 @@ def analyse(split: str) -> dict:
                                        table, "correct", "orig", 4, "flag", AUDITORS), items)
         for src in ("same", "other", "reference")}
     res["secondary"] = sec
+    # Amendment 4 item 8: witness bridge (requires complete, current classifications)
+    e1.bridge_complete(split)
+    bc = e1.bridge_classes()
+    per_item: dict = {}
+    for (iid, _call), cl in bc.items():
+        if iid in items:
+            per_item.setdefault(iid, []).append(cl)
+    res["bridge"] = {"items_with_verified_diagnosis": len(per_item),
+                     "with_determined_witness": sum("DETERMINED" in v for v in per_item.values()),
+                     "not_established_contract_independent": sum("DETERMINED" not in v for v in per_item.values()),
+                     "witness_classes": {c: sum(v.count(c) for v in per_item.values())
+                                         for c in e1.TAX2_CLASSES + ("DISPUTED",)},
+                     "by_item_class": {c: {"items": sum(1 for k in per_item if tax.get(k) == c),
+                                           "with_determined": sum(1 for k, v in per_item.items()
+                                                                  if tax.get(k) == c and "DETERMINED" in v)}
+                                       for c in e1.TAX2_CLASSES + ("DISPUTED",)}}
     # E2: operating characteristics on the original arm, exact subset averaging over K = 1..4
     e2 = {}
     for au in AUDITORS:
@@ -279,6 +298,22 @@ def analyse_taxonomy(split: str) -> dict:
                 vals = level_values(items, table, "defective", "orig", 4, metric, aus)
                 sec[f"{metric}|DETERMINED-{other}|{who}"] = two_group_boot(vals, tax, "DETERMINED", other, items)
     res["secondary"] = sec
+    # Amendment 4 item 8: witness bridge (requires complete, current classifications)
+    e1.bridge_complete(split)
+    bc = e1.bridge_classes()
+    per_item: dict = {}
+    for (iid, _call), cl in bc.items():
+        if iid in items:
+            per_item.setdefault(iid, []).append(cl)
+    res["bridge"] = {"items_with_verified_diagnosis": len(per_item),
+                     "with_determined_witness": sum("DETERMINED" in v for v in per_item.values()),
+                     "not_established_contract_independent": sum("DETERMINED" not in v for v in per_item.values()),
+                     "witness_classes": {c: sum(v.count(c) for v in per_item.values())
+                                         for c in e1.TAX2_CLASSES + ("DISPUTED",)},
+                     "by_item_class": {c: {"items": sum(1 for k in per_item if tax.get(k) == c),
+                                           "with_determined": sum(1 for k, v in per_item.items()
+                                                                  if tax.get(k) == c and "DETERMINED" in v)}
+                                       for c in e1.TAX2_CLASSES + ("DISPUTED",)}}
     return res
 
 

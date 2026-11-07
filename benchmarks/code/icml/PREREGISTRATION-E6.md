@@ -1,6 +1,6 @@
-# E6 preregistration: contract-randomised information release (protocol e6-v4.1)
+# E6 preregistration: contract-randomised information release (protocol e6-v4.2)
 
-Draft v4.1, 2026-11-07 (after GPT review P4). Frozen when committed with the verified pre-test bundle (section 10), before any E6 test
+Draft v4.2, 2026-11-07 (after GPT reviews P4 and P5). Frozen when committed with the verified pre-test bundle (section 10), before any E6 test
 audit. Code: `icml/e6.py` (construction, audits, witnesses, completeness), `icml/analyse_e6.py` (analysis),
 `icml/e1.py` (judge-v3.2, routes). Rationale: `audit-ceiling-paper/plan/icml2027/CEILING_PROGRAM.md` v3; GPT reviews
 P1, P2, P3 (`review_gpt_P3.md`: test release refused; every blocker is addressed below).
@@ -36,15 +36,18 @@ One open unit and at most one positive-control unit per problem.
 4. *Independent probes and domain predicate* (adj-claude-opus, which did not propose): `valid(*args)` and 16-24
    probe inputs (target, boundary, non-target, invalid). *Class predicate* `in_class(*args)` from the proposer, which
    defined the class (must classify its own class and other inputs correctly).
-5. *Admission v4* (`stage_validate4`): on every input the `valid` predicate accepts and the reference evaluates,
-   among the hidden suite, the proposer's inputs and the probes: both B implementations agree with the reference;
+5. *Admission v4.2* (`stage_validate4`): on every input the reference evaluates without error (not only on inputs
+   `valid` accepts, so that "correct program" labels hold for the whole program an auditor reads), among the hidden
+   suite, the proposer's inputs, the probes and the stress inputs: both B implementations agree with the reference;
    outside the class all four implementations agree with the reference; inside it the two A implementations agree;
-   A and B differ on at least two valid class inputs; predicates never raise; all implementations pass the visible
-   tests. v4.1 adds deterministic, type-guided stress inputs (unicode and special whitespace, extreme and
+   A and B differ on at least two class inputs that `valid` accepts; predicates never raise; all implementations pass
+   the visible tests. Stress inputs (v4.1, extended in v4.2 with complex numbers and flat and nested floating-point
+   cancellation after P5) are listed below. v4.1 adds deterministic, type-guided stress inputs (unicode and special whitespace, extreme and
    overflowing floats, large integers, int/float widening, empty, singleton, duplicated and mixed containers;
    `stress_inputs`, up to 120 per unit) to the validation set, after GPT review P4 found outside-class and
    reference-oracle failures that the sampled inputs missed. Infrastructure failures are reported separately from
-   substantive rejections. Predicate history: the first v4 admission used an independent class predicate and admitted
+   substantive rejections. Development effect of v4.2: 25 of 55 open and 21 of 70 control units admitted (39 and 48
+   under v4.1). Predicate history: the first v4 admission used an independent class predicate and admitted
    10 of 55 development units; it was replaced by the proposer's predicate (43 of 55; 39 after stress inputs). Both
    versions and their rejection reasons are kept. The construction is execution-checked, not independently validated.
 6. *Judge panel v2* (adj-claude-opus, adj-gpt-sol; blind; rule order randomised by problem hash; complete visible
@@ -99,24 +102,27 @@ contract and witness text.
 
 Under contract X, program X is correct and the other program defective. Unit value: equally weighted mean over the
 configurations of the arm; a unit missing any required cell (only possible after exhausted attempts) is excluded from
-that contrast, counted, and bounded in the report (every excluded unit at the worst and at the best difference).
+that contrast, counted, and bounded in the report (every excluded unit at the worst and at the best value) for every
+registered endpoint: contrasts, E6-2, E6-4 and levels.
 
 ## 7. Clean-flag budget
 
-alpha_FPR = 10% (a budget, distinct from the 5% significance level). Compliance of the pooled resolved arm: the
-one-sided 95% upper confidence bound for the mean problem-level resolved clean-flag rate, computed by the hedged
-capital-betting method for bounded means (Waudby-Smith and Ramdas, JRSS-B 2024; `betting_upper`, values in a seeded
-random order), is below 10%. This replaces the v4 rule, which GPT review P4 showed to be miscalibrated; the budget
-of 10% and the method were chosen after seeing development data (resolved FPR 2.1%, betting bound 7.5% on 24 units),
-which is disclosed. The exact bound on the problem-level any-clean-flag indicator and per-configuration bounds are
-reported; pooled compliance is not claimed for individual configurations.
+alpha_FPR = 10% (a budget, distinct from the 5% significance level). Compliance of the pooled resolved arm (claim
+E6-1b, reported separately and not gating Family 1): the one-sided 95% upper confidence bound for the mean
+problem-level resolved clean-flag rate, by the hedged capital-betting method for bounded means (Waudby-Smith and
+Ramdas, JRSS-B 2024, Theorem 3; bets capped at 0.75 / (1 - m) so that every capital factor stays positive;
+`betting_upper`, values in a seeded random order), is below 10%. History: v4 used a bootstrap rule that P4 showed to
+be miscalibrated; v4.1's betting implementation capped bets by the wrong denominator (P5), which made it anti-
+conservative (dev bound 7.5%); corrected, the dev bound is about 17% on 24 units. The budget and method were chosen
+after seeing development data, which is disclosed. The exact bound on the problem-level any-clean-flag indicator and
+per-configuration and per-vendor bounds are reported; pooled compliance is not claimed for any configuration.
 
 ## 8. Hypotheses (problem-level bootstrap, 10,000 draws, seed 20261113; two-sided 95% percentile intervals,
 indices [floor(0.025B), ceil(0.975B) - 1])
 
 Family 1 (open units), tested in order; each is claimed only if all earlier ones hold:
 - **E6-1 (information release).** Verified coverage, resolve minus menu, lower bound > 0; and resolved coverage
-  lower bound >= 50%; and the budget rule of section 7.
+  lower bound >= 50%. (The budget of section 7 is claim E6-1b, reported beside it.)
 - **E6-2 (benchmark-convention advantage).** None arm, (r_B - r_A)/2 (r_B: verified diagnosis of program a under
   contract B; r_A: of program b under contract A); lower bound > 0.
 - **E6-5 (ordinary-language reveal).** Sentence minus none verified coverage (sentence configurations), lower

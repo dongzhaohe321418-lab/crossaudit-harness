@@ -32,6 +32,14 @@ RECORDS = ["split.json", "items_v3.json", "oracles_v3.json", "executions_v3.json
            "e6det_units4.jsonl", "e6det_judgements2.jsonl"]
 CODE = ["e1.py", "e6.py", "analyse_e1.py", "analyse_e6.py", "isolate.py", "freeze.py",
         "PREREGISTRATION-E1.md", "PREREGISTRATION-E6.md"]
+BENCH = HERE.parent                                   # benchmarks/code: corpus, execution, prompts, data
+SRC = HERE.parents[2] / "src" / "crossaudit"         # auditor prompt, parser, validator, rulebook, checks
+REQUIRED = ("records", "code", "dependencies", "routes", "versions", "git_commit", "e1", "e6_open", "e6_det")
+
+
+def tree_sha(root: Path, patterns: tuple) -> dict:
+    return {str(f.relative_to(root)): fsha(f) for pat in patterns for f in sorted(root.rglob(pat))
+            if "__pycache__" not in f.parts}
 
 
 def fsha(path: Path) -> str:
@@ -69,9 +77,20 @@ def e6_state(kind: str) -> dict:
 def e1_state() -> dict:
     cons = e1.admitted_constructions()
     uni = e1.expected_universe("test")
+    items = {i["item_id"]: i for i in json.loads(e1.ITEMS_PATH.read_text())}
+    problems = {p.problem_id: p for p in e1.load_problems()}
+    prompts = {}
+    for iid, kind, arm, _a, _k in uni:
+        key = f"{iid}|{kind}|{arm}"
+        if key not in prompts:
+            p = problems[items[iid]["problem_id"]]
+            prompts[key] = e1.sha(e1.audit_prompt(p, items[iid][f"{kind}_solution"],
+                                                  e1.task_text(p.spec, arm, cons.get(iid))))
+    beh = e1.REC / "e1_behaviour_v4.json"
     return {"retained_admissions": sorted(cons), "taxonomy_v4": e1.taxonomy2(),
             "n_required_readings": len(uni),
-            "universe_sha256": hashlib.sha256(json.dumps(sorted(map(list, uni))).encode()).hexdigest()}
+            "universe_sha256": hashlib.sha256(json.dumps(sorted(map(list, uni))).encode()).hexdigest(),
+            "prompt_sha256": prompts, "behaviour_sha256": fsha(beh)}
 
 
 def build() -> dict:
@@ -80,21 +99,38 @@ def build() -> dict:
     return {
         "records": {f: fsha(e1.REC / f) for f in RECORDS},
         "code": {f: fsha(HERE / f) for f in CODE},
+        "dependencies": {"benchmarks_code": tree_sha(BENCH, ("*.py",)), "corpus_data": tree_sha(BENCH / "data", ("*",)),
+                         "crossaudit_src": tree_sha(SRC, ("*.py", "*.md", "*.yml", "*.yaml", "*.json")),
+                         "audit_project": tree_sha(e1.REC / "project", ("*",))},
         "routes": {k: v[1] for k, v in e1.ROUTES.items()},
         "versions": {"python": sys.version, "platform": platform.platform(),
                      "executor": version([str(e1.execute.EXECUTOR), "--version"]),
-                     "codex": version(["codex", "--version"]), "claude": version(["claude", "--version"])},
+                     "codex": version(["codex", "--version"]), "claude": version(["claude", "--version"]),
+                     "venv_packages": subprocess.run([sys.executable, "-m", "pip", "freeze"], capture_output=True,
+                                                     text=True).stdout,
+                     "executor_packages": subprocess.run([str(e1.execute.EXECUTOR), "-m", "pip", "freeze"],
+                                                         capture_output=True, text=True).stdout},
         "git_commit": git, "git_dirty_icml": dirty,
         "e1": e1_state(), "e6_open": e6_state("open"), "e6_det": e6_state("det"),
     }
 
 
+def check_schema(state: dict) -> None:
+    missing_keys = [k for k in REQUIRED if k not in state]
+    missing_files = [f for f, h in state["records"].items() if h == "missing"] + \
+                    [f for f, h in state["code"].items() if h == "missing"]
+    if missing_keys or missing_files:
+        raise SystemExit(f"freeze schema: missing keys {missing_keys}, missing files {missing_files}")
+
+
 def verify() -> None:
-    """Refuse unless the current state equals the frozen manifest (called before any test audit)."""
+    """Refuse unless the current state, versions included, equals the frozen manifest (called before any test
+    audit)."""
     if not MANIFEST.exists():
         raise SystemExit("no freeze manifest: run freeze.py write after the final review")
     old, state = json.loads(MANIFEST.read_text()), build()
-    diffs = [k for k in old if k != "versions" and old[k] != state.get(k)]
+    check_schema(old)
+    diffs = [k for k in REQUIRED if old.get(k) != state.get(k)]
     if diffs:
         raise SystemExit(f"freeze verification failed: {diffs}")
 
@@ -105,6 +141,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
     state = build()
     if a.action == "write":
+        check_schema(state)
         if state["git_dirty_icml"]:
             raise SystemExit("commit the icml code and registrations before freezing:\n" + state["git_dirty_icml"])
         MANIFEST.write_text(json.dumps(state, indent=1, sort_keys=True))

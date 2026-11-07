@@ -1394,35 +1394,79 @@ def bridge_witnesses(split: str) -> dict:
     return out
 
 
+BEHAV1_PATH = REC / "e1_behaviour_v4.json"
+
+
+def stage_behaviour1(workers: int) -> None:
+    """Amendment 4 item 3: for every selected item, how many of the twelve task-only generations of its problem that
+    pass the visible tests return the reference's result, the defective program's result, or neither, on the first
+    failing input. No model calls; written once as a frozen artefact."""
+    import e6
+    items = json.loads(ITEMS_PATH.read_text())
+    problems = {p.problem_id: p for p in load_problems()}
+    gens: dict = {}
+    for r in load(GEN_PATH):
+        if r.get("ok") and r.get("solution"):
+            gens.setdefault(r["problem_id"], []).append(r)
+    out: dict = {}
+
+    def one(item):
+        p = problems[item["problem_id"]]
+        args = pickle.loads(base64.b64decode(item["first_fail"]["args_b64"]))
+        progs = {"ref": p.canonical_solution, "def": item["defective_solution"]}
+        keys = []
+        for g in gens.get(p.problem_id, []):
+            if execute.run_suite(p.visible_program(g["solution"]), instrumented=p.visible_instrumented).passed:
+                k = f"g{len(keys)}"
+                progs[k] = g["solution"]
+                keys.append(k)
+        res = e6.multi_compare(p, progs, [[k, x] for k in keys for x in ("ref", "def")], [tuple(args)])
+        if "infra" in res:
+            out[item["item_id"]] = {"infra": res["infra"][:200]}
+            return
+        ag = res["rows"][0]["agree"]
+        out[item["item_id"]] = {"n_visible_passing": len(keys),
+                                "n_reference": sum(1 for k in keys if ag[f"{k}~ref"]),
+                                "n_defective": sum(1 for k in keys if ag[f"{k}~def"] and not ag[f"{k}~ref"]),
+                                "n_other": sum(1 for k in keys if not ag[f"{k}~ref"] and not ag[f"{k}~def"])}
+    run_pool(items, one, workers, "behaviour v4")
+    BEHAV1_PATH.write_text(json.dumps(out, indent=1, sort_keys=True))
+
+
+def bridge_payload(p, item, call_src: str) -> tuple[str, dict] | None:
+    """The taxonomy-v4 prompt with the witness call (keyword arguments included, as written) and both programs'
+    results on it in place of the first failing input; None if the call does not execute in the judge."""
+    args, kwargs = parse_call(call_src, p.entry_point)
+    j = judge_call(p, args, kwargs, candidate=item["defective_solution"])
+    if "infra" in j:
+        return None
+    ff = {"args_repr": call_src, "reference": j["reference"], "candidate": j["candidate"]}
+    flip = int(sha("tax2|" + json.dumps([item["problem_id"], ff["args_repr"], ff["reference"], ff["candidate"]],
+                                        sort_keys=True)), 16) % 2 == 1
+    payload = tax2_payload(p, {**item, "first_fail": ff}, flip)
+    payload = payload.replace("INPUT (positional arguments): " + call_src[:1500], "CALL: " + call_src[:1500])
+    return payload, ff
+
+
 def stage_bridge(split: str, workers: int) -> None:
-    """Classify the discrepancy each verified witness diagnoses with the taxonomy-v4 prompt and both adjudicators:
-    the witness input and the two programs' results on it replace the first failing input."""
+    """Classify the discrepancy each verified witness diagnoses with the taxonomy-v4 prompt and both adjudicators.
+    A classification is reused only if its evidence hash equals the current evidence."""
     problems = {p.problem_id: p for p in load_problems()}
     items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
     have = {(r["item_id"], r["call"], r["adjudicator"], r.get("evidence_sha256")) for r in load(BRIDGE_PATH) if r.get("ok")}
-    have_keys = {(a, b, c) for a, b, c, _ in have}
-    jobs = [(iid, call_src, adj) for (iid, call_src) in bridge_witnesses(split) for adj in ADJUDICATORS
-            if (iid, call_src, adj) not in have_keys]
+    jobs = [(iid, call_src, adj) for (iid, call_src) in bridge_witnesses(split) for adj in ADJUDICATORS]
 
     def one(job):
         iid, call_src, adj = job
         item = items[iid]
         p = problems[item["problem_id"]]
-        args, kwargs = parse_call(call_src, p.entry_point)
-        if kwargs:          # the taxonomy prompt renders positional arguments only
-            append(BRIDGE_PATH, {"item_id": iid, "call": call_src, "adjudicator": adj, "ok": False,
-                                 "error": "keyword arguments"})
-            return
-        j = judge_call(p, args, kwargs, candidate=item["defective_solution"])
-        if "infra" in j:
+        built = bridge_payload(p, item, call_src)
+        if built is None:
             append(BRIDGE_PATH, {"item_id": iid, "call": call_src, "adjudicator": adj, "ok": False, "error": "infra"})
             return
-        pseudo = {**item, "first_fail": {"args_repr": repr(tuple(args)), "reference": j["reference"],
-                                         "candidate": j["candidate"]}}
-        ff = pseudo["first_fail"]
-        flip = int(sha("tax2|" + json.dumps([item["problem_id"], ff["args_repr"], ff["reference"], ff["candidate"]],
-                                            sort_keys=True)), 16) % 2 == 1
-        payload = tax2_payload(p, pseudo, flip)
+        payload, _ff = built
+        if (iid, call_src, adj, sha(payload)) in have:
+            return
         res = call(adj, payload)
         obj = parse_json(res["text"]) if res["ok"] else None
         ok = isinstance(obj, dict) and obj.get("class") in TAX2_CLASSES
@@ -1430,6 +1474,21 @@ def stage_bridge(split: str, workers: int) -> None:
                              "evidence_sha256": sha(payload), "class": obj.get("class") if ok else None,
                              "reason": (obj or {}).get("reason", ""), "error": "" if ok else res.get("error", "parse")})
     run_pool(jobs, one, workers, f"bridge {split}")
+
+
+def bridge_complete(split: str) -> dict:
+    """Every distinct verified witness has an ok classification from every adjudicator on its current evidence."""
+    problems = {p.problem_id: p for p in load_problems()}
+    items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
+    have = {(r["item_id"], r["call"], r["adjudicator"], r["evidence_sha256"]) for r in load(BRIDGE_PATH) if r.get("ok")}
+    missing = []
+    for (iid, call_src) in bridge_witnesses(split):
+        built = bridge_payload(problems[items[iid]["problem_id"]], items[iid], call_src)
+        ev = sha(built[0]) if built else None
+        missing += [(iid, call_src, a) for a in ADJUDICATORS if (iid, call_src, a, ev) not in have]
+    if missing:
+        raise SystemExit(f"bridge incomplete: {len(missing)} classifications missing or stale")
+    return {"witnesses": len(bridge_witnesses(split))}
 
 
 def bridge_classes() -> dict:
@@ -1503,7 +1562,8 @@ def completeness(split: str) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("stage", choices=["generate", "oracle", "execute", "select", "construct", "adjudicate",
-                                      "taxonomy", "taxonomy2", "controls", "bridge", "audit", "witness"])
+                                      "taxonomy", "taxonomy2", "controls", "bridge", "behaviour1", "audit",
+                                      "witness"])
     ap.add_argument("--orig-rest", action="store_true", help="original arm for the non-admitted items")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--split", default="dev", choices=["dev", "test"])
@@ -1515,6 +1575,7 @@ def main(argv=None) -> int:
      "construct": lambda: stage_construct(a.workers), "adjudicate": lambda: stage_adjudicate(a.workers),
      "taxonomy": lambda: stage_taxonomy(a.workers), "taxonomy2": lambda: stage_taxonomy2(a.workers),
      "controls": lambda: stage_controls(a.workers), "bridge": lambda: stage_bridge(a.split, a.workers),
+     "behaviour1": lambda: stage_behaviour1(a.workers),
      "audit": lambda: stage_audit(a.split, a.workers, a.auditors.split(","), a.orig_rest),
      "witness": lambda: stage_witness(a.workers)}[a.stage]()
     return 0
