@@ -716,6 +716,9 @@ def schedule(split: str) -> list[tuple]:
 
 
 def stage_audit(split: str, workers: int) -> None:
+    if split == "test":
+        import freeze
+        freeze.verify()
     from crossaudit.auditor.validate import known_rules, parse_reply, validate_reply
     import ceiling
     us = units(split)

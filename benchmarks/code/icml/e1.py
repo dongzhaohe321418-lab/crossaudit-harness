@@ -1239,6 +1239,9 @@ def schedule(split: str, auditors: list[str], orig_rest: bool = False) -> list[l
 
 
 def stage_audit(split: str, workers: int, auditors: list[str], orig_rest: bool = False) -> None:
+    if split == "test":
+        import freeze
+        freeze.verify()
     from crossaudit.auditor.validate import known_rules, parse_reply, validate_reply
     problems = {p.problem_id: p for p in load_problems()}
     items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
