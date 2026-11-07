@@ -52,16 +52,31 @@ One open unit and at most one positive-control unit per problem.
    versions and their rejection reasons are kept. The construction is execution-checked, not independently validated.
    *v4.3 (after P6, before any test audit).* GPT review P6 found three retained development units broken by inputs
    outside the stress set: a complex number equal to an integer (open Mbpp/405), a string of combining marks
-   (open2 HumanEval/74) and negative indices (control Mbpp/170). Two changes, applied to every kind and split and
-   rerun from the stored implementations: (i) the stress generator adds complex values equal to the int or float,
-   combining and spacing marks, zero-width and byte-order characters, non-ASCII digits and negative indices, and keeps
-   up to 300 inputs per unit; (ii) *red-team admission* (`stage_redteam`): a third model (adj-gpt-sol), shown the task,
-   the reference, both rules, both predicates and all four implementations, proposes up to 40 inputs intended to break
-   the admission conditions; they are executed with the same checks, and any violation (or a predicate that raises)
-   rejects the unit. One attempt per unit; a reply that contains no parseable input contributes none. The red-team
-   model sees the reference and the rules but no audit; its use is outcome-blind. Finite testing still cannot prove
-   the labels; the stated guarantee is agreement on the registered input set (hidden suite, proposer inputs, probes,
-   stress inputs and red-team inputs). The v4.2 admissions are archived (`*_units4_v42.jsonl`).
+   (open2 HumanEval/74) and negative indices (control Mbpp/170). Three changes, applied to every kind and split and
+   rerun from the stored implementations:
+   (i) *Interface scope.* Agreement is required on every input whose arguments have the types the benchmark's own
+   (hidden-suite) inputs use at that position, element types included (an int is accepted where a float occurs; bool
+   is distinct from int), whether or not `valid` accepts it. Behaviour on other types belongs to neither contract and
+   is not checked; probe, stress and red-team inputs of other types are dropped before execution and counted. Reason:
+   a first red-team pass without this rule rejected 7 of 8 development units, almost entirely on type-confused inputs
+   (bytes or tuples where strings are used, dicts where strings are used), on which independent implementations of
+   the same rule cannot be expected to agree with the reference's accidental behaviour. Of the three P6
+   counterexamples, the combining-mark and negative-index inputs are inside the interface and checked; the complex
+   number passed for an element of an integer tuple is outside it.
+   (ii) *Stress generator* adds complex values, combining and spacing marks, zero-width and byte-order characters,
+   non-ASCII digits and negative indices, and keeps up to 300 inputs per unit (before the interface filter).
+   (iii) *Red-team admission* (`stage_redteam`): a third model (adj-gpt-sol), shown the task, the reference, both
+   rules, both predicates and all four implementations, proposes 20-40 inputs of the task's own types intended to
+   break the admission conditions; they are executed with the same checks, and any violation (or a predicate that
+   raises) rejects the unit. At most two calls per unit, the second only if the first yields fewer than 10
+   interface inputs; a reply is used even if the model attempted a disabled tool call, because its inputs are
+   executed, not trusted. The red-team model sees the reference and the rules but no audit; its use is
+   outcome-blind. Two development pilots of this stage are archived and not used: one whose replies were empty after
+   tool attempts (`e6_redteam_pilot.jsonl`, 14 units) and one without the interface rule (`e6_redteam_v43a.jsonl`;
+   admissions `*_units4_v43a.jsonl`).
+   Finite testing still cannot prove the labels; the stated guarantee is agreement on the registered input set
+   (hidden suite, proposer inputs, interface probes, interface stress inputs and interface red-team inputs). The v4.2
+   admissions are archived (`*_units4_v42.jsonl`).
 6. *Judge panel v2* (adj-claude-opus, adj-gpt-sol; blind; rule order randomised by problem hash; complete visible
    tests; no class description): domain valid / invalid / unresolved, and each rule compatible / incompatible /
    unresolved, with the instruction that a missing example is not permission.

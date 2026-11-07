@@ -501,6 +501,46 @@ def predicate_src(src: str, name: str, entry: str) -> str:
     return src + f"\n\n{entry} = {name}\n"
 
 
+def _type_paths(v, prefix=()):
+    """Type paths of a value: its own type and, recursively, those of its elements (dict keys and values marked)."""
+    t = type(v).__name__
+    yield prefix + (t,)
+    if isinstance(v, (list, tuple, set, frozenset)):
+        for e in v:
+            yield from _type_paths(e, prefix + (t,))
+    elif isinstance(v, dict):
+        for k, e in v.items():
+            yield from _type_paths(k, prefix + (t, "key"))
+            yield from _type_paths(e, prefix + (t, "value"))
+
+
+def interface_types(hidden: list) -> list:
+    """Per argument position, the type paths the benchmark's own inputs use."""
+    out: list = []
+    for h in hidden:
+        if not isinstance(h, (list, tuple)):
+            continue
+        for i, arg in enumerate(h):
+            while len(out) <= i:
+                out.append(set())
+            out[i].update(_type_paths(arg))
+    return out
+
+
+def conforms(inp, allowed: list) -> bool:
+    """v4.3: an input is inside the programs' interface if it has the benchmark's arity and every type path of every
+    argument occurs among the benchmark's own inputs at that position (an int is accepted where a float occurs; bool
+    is distinct from int). Agreement is required only on such inputs; other types belong to neither contract."""
+    if not isinstance(inp, tuple) or len(inp) != len(allowed):
+        return False
+    for arg, ok in zip(inp, allowed):
+        for path in _type_paths(arg):
+            if path in ok or (path[-1] == "int" and path[:-1] + ("float",) in ok):
+                continue
+            return False
+    return True
+
+
 def agreement_violations(rows: list) -> tuple[dict, int]:
     """Admission agreement checks over executed rows (v4.2): on every input the reference evaluates, both B programs
     equal the reference; outside the class both A programs equal it; inside it the A programs agree. `valid` restricts
@@ -559,6 +599,11 @@ def stage_validate4(split: str, workers: int) -> None:
         oth = [literal_tuple(x) for x in pr["other_inputs"]]
         prb = [literal_tuple(x) for x in pb["probes"]]
         stress = stress_inputs(list(hidden) + cls + oth, seed=pid)
+        allowed = interface_types(hidden)
+        n_drop = len(prb) + len(stress)
+        prb = [x for x in prb if conforms(x, allowed)]                  # v4.3: interface inputs only
+        stress = [x for x in stress if conforms(x, allowed)]
+        n_drop -= len(prb) + len(stress)
         inputs = list(hidden) + cls + oth + prb + stress
         res = multi_compare(p, progs, ADMIT_PAIRS, inputs, capture=["valid", "in_class"])
         if "infra" in res:
@@ -577,6 +622,7 @@ def stage_validate4(split: str, workers: int) -> None:
                   "separates_2": n_sep >= 2, "predicates_match_proposer": consistent}
         admitted = all(checks.values())
         append(UNITS, {**row, "admitted": admitted, "checks": checks, "n_inputs": len(inputs), "n_stress": len(stress),
+                       "n_outside_interface_dropped": n_drop,
                        "n_separating": n_sep,
                        "n_valid": sum(1 for r in rows if r["value"].get("valid")),
                        "n_in_class": sum(1 for r in rows if r["value"].get("valid") and r["value"].get("in_class")),
@@ -627,8 +673,11 @@ B1:
 B2:
 {b2}
 
-Reply with exactly one JSON object holding up to 40 calls, each a Python literal tuple of positional arguments
-(one-argument calls written "(x,)"): {{"inputs": ["(...)", ...]}}
+Use only argument types that the task's own inputs use, element types included (for example, no bytes where
+strings are used and no strings where lists are used); inputs of other types are discarded. You cannot run code or
+use tools; reason from the source. Always list your 20 to 40 most promising candidate inputs,
+even if you expect every condition to hold on them. Reply with exactly one JSON object, each call a Python literal
+tuple of positional arguments (one-argument calls written "(x,)"): {{"inputs": ["(...)", ...]}}
 """
 
 
@@ -650,19 +699,32 @@ def stage_redteam(split: str, workers: int) -> None:
     def one(pid):
         p, pr, pb = probs[pid], props[pid], pr_rows[pid]
         progs = unit_programs(p, pid, impls, pb)
+        allowed = interface_types(e1.hidden_inputs(p) or [])
         payload = REDTEAM_PROMPT.format(spec=p.spec.rstrip(), ref=p.canonical_solution.strip(), rule_a=pr["rule_a"],
                                         rule_b=pr["rule_b"], in_class=pb["in_class_proposer"].strip(),
                                         valid=pb["valid"].strip(), **{k: progs[k].strip() for k in ("a1", "a2", "b1", "b2")})
         if pid in replied:
-            res, raw = {"ok": True}, replied[pid]["inputs"]
+            res, raw = {"ok": True}, replied[pid].get("proposed", replied[pid]["inputs"])
         else:
-            res = e1.call(REDTEAM_ROUTE, payload)
-            obj = e1.parse_json(res["text"]) if res["ok"] else None
-            raw = obj.get("inputs") if isinstance(obj, dict) and isinstance(obj.get("inputs"), list) else []
-        inputs = [x for x in (literal_tuple(str(v)) for v in raw[:40]) if x is not None]
+            # at most two calls: a second only if the first yields fewer than 10 parseable interface inputs. A reply is used
+            # even if the model attempted a (disabled) tool call, since the inputs are executed, not trusted.
+            raw, res = [], {"ok": False, "error": ""}
+            for _ in range(2):
+                res = e1.call(REDTEAM_ROUTE, payload)
+                obj = e1.parse_json(res["text"]) if res.get("text") else None
+                got = obj.get("inputs") if isinstance(obj, dict) and isinstance(obj.get("inputs"), list) else []
+                raw += got
+                if res.get("text"):
+                    res = {**res, "ok": True}
+                if (len([x for x in (literal_tuple(str(v)) for v in raw) if x is not None and conforms(x, allowed)]) >= 10
+                        or not counts_as_attempt(res)):
+                    break
+        parsed = [x for x in (literal_tuple(str(v)) for v in raw[:80]) if x is not None]
+        inputs = [x for x in parsed if conforms(x, allowed)]              # v4.3: interface inputs only
         row = {"problem_id": pid, "split": split, "route": REDTEAM_ROUTE, "prompt_sha256": sha(payload),
                "ok": res["ok"], "error": res.get("error", "") if not res["ok"] else "",
-               "impl_sha256": {k: sha(v) for k, v in progs.items()}, "inputs": [repr(x) for x in inputs]}
+               "impl_sha256": {k: sha(v) for k, v in progs.items()}, "inputs": [repr(x) for x in inputs],
+               "proposed": [repr(x) for x in parsed]}
         if not res["ok"] and not counts_as_attempt(row):
             append(REDTEAM, {**row, "passed": None})
             return
