@@ -1,10 +1,11 @@
 """E3 model audits (PREREGISTRATION-E3.md): tool-using and reading-only auditors on the E3 data items.
 
-  agentic   the auditor runs in a fresh temporary copy of the item (data.csv, CARD.md only) and may inspect
-            the files with the shell and Python; Codex (read-only sandbox, isolated CODEX_HOME, --json, web
-            search disabled) or Claude Code (Bash and Read only, inside Claude Code's sandbox with no network,
-            stream-json transcript). One reading per item and auditor. Amendment 2: every command is kept, and
-            a reading whose commands reach the network or anything outside its own copy is discarded.
+  agentic   the auditor runs in a fresh copy of the item (data.csv, CARD.md only) and may inspect the files
+            with the shell and Python; Codex (isolated CODEX_HOME, --json, web search disabled) or Claude Code
+            (Bash and Read only, stream-json transcript). One reading per item and auditor. Amendment 3: the
+            whole CLI runs inside an OS seatbelt profile (icml/isolate.py) that denies reading the home and
+            temporary directories outside its copy and all network except the vendor's API via an allowlist
+            proxy; every command is kept and out-of-scope attempts are recorded, not discarded.
   reading   the same instructions with both files inlined and every tool disabled; 120-row items only; two
             readings per item and auditor. Codex runs with its shell tools disabled (amendment 1); a reading
             that invokes a tool is still discarded.
@@ -31,17 +32,19 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "code" / "icml"))
 sys.path.insert(0, str(HERE.parent / "code"))
 import e1  # noqa: E402  (routes, isolation, JSON helpers)
+import isolate  # noqa: E402  (seatbelt profile and egress proxy)
 from build_e3 import ITEM_ROOT, REC  # noqa: E402
 from spec_e3 import FAULT_NAMES  # noqa: E402
 
 OUT = REC / "audits.jsonl"
 RAW = REC / "audits_raw.jsonl"
-ROUTE_VERSION = "isolated-v2"     # amendment 2: every route, both modes; earlier rows are archived
+ROUTE_VERSION = "isolated-v3"     # amendment 3: OS-level isolation for agentic readings; earlier rows are archived
 
 
 def current(r: dict) -> bool:
-    """Rows made with the route version the study now uses."""
-    return r.get("route", "") == ROUTE_VERSION
+    """Rows made with the routes the study now uses: agentic under amendment 3, reading under amendment 2 (the
+    reading route did not change)."""
+    return r.get("route", "") == ROUTE_VERSION or (r.get("mode") == "reading" and r.get("route") == "isolated-v2")
 
 
 SANDBOX = json.dumps({"sandbox": {"enabled": True, "autoAllowBashIfSandboxed": True,
@@ -83,13 +86,15 @@ AGENTIC_WHERE = ("The current directory contains data.csv and CARD.md. You may i
 def route_cmd(auditor: str, mode: str, item_dir: Path) -> tuple[str, list[str]]:
     if auditor == "aud-gpt-terra":
         notools = ["--disable", "shell_tool", "--disable", "unified_exec"] if mode == "reading" else []
+        # agentic: Codex's own seatbelt cannot nest inside isolate's, so it runs with full access inside it
+        sandbox = "danger-full-access" if mode == "agentic" else "read-only"
         argv = ["codex", "exec", "--ignore-user-config", "--ignore-rules", "--ephemeral", "--json", *notools,
                 "-c", 'web_search="disabled"',
-                "-m", "gpt-5.6-terra", "-c", 'model_reasoning_effort="medium"', "--sandbox", "read-only",
+                "-m", "gpt-5.6-terra", "-c", 'model_reasoning_effort="medium"', "--sandbox", sandbox,
                 "--skip-git-repo-check", "-C", str(item_dir if mode == "agentic" else e1.EMPTY), "-"]
         return "codex", argv
-    tools = ["--allowedTools", "Bash,Read", "--disallowedTools", "Write,Edit,NotebookEdit,WebFetch,WebSearch",
-             "--settings", SANDBOX, "--output-format", "stream-json", "--verbose"] \
+    tools = ["--tools", "Bash,Read",
+             "--dangerously-skip-permissions", "--output-format", "stream-json", "--verbose"] \
         if mode == "agentic" else ["--tools", ""]
     argv = ["claude", "-p", "--model", "claude-sonnet-5-5", *tools, "--setting-sources", "",
             "--strict-mcp-config", "--disable-slash-commands", "--no-session-persistence",
@@ -99,7 +104,7 @@ def route_cmd(auditor: str, mode: str, item_dir: Path) -> tuple[str, list[str]]:
 
 def run(auditor: str, mode: str, item: dict, timeout: float = 1500.0) -> dict:
     src = ITEM_ROOT / item["item"]
-    work = Path(tempfile.mkdtemp(prefix="audit_"))
+    work = isolate.workdir() if mode == "agentic" else Path(tempfile.mkdtemp(prefix="audit_"))
     for name in ("data.csv", "CARD.md"):
         shutil.copy2(src / name, work / name)
     try:
@@ -120,6 +125,9 @@ def _run(auditor: str, mode: str, work: Path, timeout: float) -> dict:
     if kind == "codex":
         env["CODEX_HOME"] = e1.iso_home(f"{auditor}-e3")
     cwd = str(work if mode == "agentic" else e1.EMPTY)
+    if mode == "agentic":
+        home = [Path(env["CODEX_HOME"])] if kind == "codex" else []
+        argv, env = isolate.wrap(kind, argv, work, env, extra_read=home, extra_write=home)
     started = time.monotonic()
     try:
         done = subprocess.run(argv, input=payload, cwd=cwd, capture_output=True, text=True, timeout=timeout, env=env)
@@ -172,8 +180,9 @@ def _run(auditor: str, mode: str, work: Path, timeout: float) -> dict:
         ok, error = False, f"tools {tools_used}"
     if other_tools:
         ok, error = False, f"non-shell tools {other_tools[:5]}"
-    if violations:
-        ok, error = False, "out-of-scope access"
+    # amendment 3: the OS denies out-of-scope reads and non-vendor network, so an attempt yields nothing; it is
+    # recorded (violations) and reported, and no longer discards the reading, which would make missingness
+    # depend on the item
     if not ok and not error:
         error = f"exit {done.returncode}; {(done.stderr or '')[-200:]}"
     return {"ok": ok, "wall_s": wall, "tools_used": tools_used, "commands": commands[:200],

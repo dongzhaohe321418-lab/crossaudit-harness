@@ -114,3 +114,34 @@ copy (other temporary or user directories, the item store, the repository) or an
 discarded as a failed attempt; raw transcripts are kept. (5) Every earlier E3 reading, on both splits and in
 both modes, is excluded by a route tag and kept in the records; all audits are rerun under the new routes.
 Hypotheses, thresholds, items, validators and Amendment 1's missing-data rule are unchanged.
+
+## Amendment 3 (after the Amendment 2 rerun; test scores under Amendment 2 have been computed)
+
+**What was seen, in order.** The Amendment 2 rerun finished on both splits. The registered analysis was then
+run on both splits (test, Amendment 2 routes: H1 +1.5 [0.0, +3.4], not supported; H2 +19.2 [+4.8, +35.4],
+not supported; H3 0.0; H4 -2.2 [-7.1, +2.2]). Only afterwards were the discarded readings inspected: 174 of
+829 Codex agentic readings (21%; dev 85, test 89) had been discarded as out of scope, and none of Claude's.
+The commands show the auditor looking for the clean source: `curl` to the UCI archive and GitHub mirrors,
+and `find`/`rg` over the user's home directory, the temporary directory holding other items' copies, and
+system directories. Several located and read the clean source files kept on the machine for item building.
+Seven kept readings also searched system directories in ways the filter did not match.
+
+**Why.** Discarding on attempt makes missingness depend on the item and the auditor (attempts concentrate where
+the auditor cannot settle a question from the file), which biases every contrast involving the Codex agentic
+arm; a post hoc command filter is also incomplete. The defect is in the isolation, not in the hypotheses.
+
+**Changes.** (1) Every agentic reading runs its CLI inside a macOS seatbelt profile (`code/icml/isolate.py`):
+reads are denied under the user's home directory, the temporary directories and mounted volumes, except the
+reading's own fresh copy (now under a dedicated root, itself unreadable to other readings) and the files the
+CLI needs (its installation and isolated login home); writes are denied outside the copy and the CLI's own
+state; all network is denied except one loopback port, where an egress proxy admits HTTPS CONNECT only to the
+vendor API hosts and logs every request. Checked before any reading: `ls ~`, the temporary directory, other
+copies, `curl` and Python HTTP to the UCI archive and to an arbitrary host are all refused; a search of the
+system directories found no copy of any E3 source dataset. Because seatbelt cannot nest, Codex runs with its
+own sandbox off and Claude without its sandbox settings, inside this profile. (2) Out-of-scope attempts are
+recorded per reading and reported (a secondary, descriptive outcome: rate of attempts to obtain the source,
+by auditor), but no longer discard the reading, since under (1) an attempt cannot return information.
+(3) All agentic readings, on both splits, are rerun under route `isolated-v3`; Amendment 2 agentic rows are
+kept and excluded by the route tag. Reading-only rows from Amendment 2 are kept: that route has no tools.
+(4) The Amendment 2 test results above are reported in the appendix beside the Amendment 3 results.
+Hypotheses, thresholds, items, validators, the scoring code and the missing-data rule are unchanged.
