@@ -15,7 +15,12 @@ witness credit was tightened, and the budget and E6-3 rules were changed (sectio
 e6-v4.1 (24 open units in the registered population; 3,120 readings): unrevealed flags equal on defective and correct
 programs; resolved verified coverage 91.7%, resolved FPR 2.1% (betting bound 7.5%); E6-1 +91.7 [84.4, 97.4]; E6-2
 +13.5 [6.8, 21.4]; E6-5 +77.1 [67.7, 86.5]; sentence minus resolve -1.0 [-5.2, 3.1]; E6-3 0.0, bootstrap [-4.2, 4.2],
-betting [-28.9, 28.9]. Test units were constructed
+betting [-28.9, 28.9]. (d) After P5 and P6, admission v4.2 and then v4.3 (section 3, item 5) were applied; under
+v4.3 the registered development population is 20 open units (16 first-attempt, 4 second-attempt) and 31 controls:
+unrevealed flag rates 18.1% on both defective and correct programs; resolved verified coverage 93.8%, resolved FPR
+0.6% (betting bound 18.3%); E6-1 +93.8 [86.2, 99.4]; E6-2 +14.4 [6.2, 23.1]; E6-5 +77.5 [66.2, 87.5]; sentence minus
+resolve -2.5 [-7.5, 2.5]; E6-3 0.0, bootstrap [-3.8, 3.8], betting [-21.9, 21.9]; E6-4 J 89.5 [79.8, 97.6]. Test
+units were constructed
 before registration (proposal, implementation, admission, probes, predicates, judging, behaviour); no test audit
 exists.
 
@@ -186,12 +191,13 @@ the same requirement are not used as a subset (no frozen rubric). Behavioural co
 ## 10. Precision and bundle
 
 Development problem-level SDs under e6-v4 (points): E6-1 16.3, E6-2 18.0, E6-3 9.8, E6-5 23.7. The registered open
-test population after the enlargement (section 4) has 40 units (32 first-attempt, 8 second-attempt; 40 problems), and
-the positive-control population 54. With n units the bootstrap 95% half-width is about 1.96 SD / sqrt(n): at n = 40,
-about 5, 5.5, 3 and 7.5 points. The betting interval for E6-3 is wider: simulated at the development SD it is about
-+/-12 points at n = 40, so the E6-3 equivalence claim (margin 10) is expected to be inconclusive and is reported as
-such; the margin is not changed. If fewer than 30 open test units had been admitted, all claims would be reported
-as underpowered. No further enlargement.
+test population under v4.3 (sections 3-4) has 52 units from 52 problems (41 first-attempt and 11 second-attempt
+primary units; the second attempt was constructed, under v4.2, for problems without a v4.2 first-attempt primary
+unit, and `merged_open` takes a second-attempt unit only for problems without a v4.3 first-attempt primary unit),
+and the positive-control population 85. With n units the bootstrap 95% half-width is about 1.96 SD / sqrt(n): at
+n = 52, about 4.5, 5, 2.7 and 6.5 points. The betting interval for E6-3 is wider: simulated at the development SD
+it is about +/-9.4 points at n = 52, so the E6-3 equivalence claim (margin 10) may be inconclusive; the margin is
+not changed. If fewer than 30 open test units had been admitted, all claims would be reported as underpowered. No further enlargement.
 
 Bundle (checksummed, verified before the first test call): corpus and split; proposals, implementations, probes,
 predicates, admission records with exclusions, red-team inputs and verdicts; judge prompts, votes and reasons; behaviour records; frozen populations
