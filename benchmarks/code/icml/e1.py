@@ -87,6 +87,11 @@ ROUTES = {
     "aud-claude-sonnet": ("claude", CLAUDE + ["--model", "claude-sonnet-5-5"]),
     "aud-gpt-sol": ("codex", codex("gpt-6.1-sol", "medium")),
     "aud-claude-opus": ("claude", CLAUDE + ["--model", "claude-opus-5-5"]),
+    # E6 capacity factor: two reasoning budgets of the same model per vendor
+    "aud-gpt-terra-low": ("codex", codex("gpt-5.6-terra", "low")),
+    "aud-gpt-terra-high": ("codex", codex("gpt-5.6-terra", "high")),
+    "aud-claude-sonnet-low": ("claude", CLAUDE + ["--model", "claude-sonnet-5-5", "--effort", "low"]),
+    "aud-claude-sonnet-high": ("claude", CLAUDE + ["--model", "claude-sonnet-5-5", "--effort", "high"]),
 }
 GENERATORS = ["gen-claude-haiku45", "gen-gpt-terra"]
 PRIMARY_AUDITORS = ["aud-gpt-terra", "aud-claude-sonnet"]
@@ -264,13 +269,13 @@ def suite_assertion(p: Problem) -> tuple[str, str]:
 
 
 def judge_call(p: Problem, args: tuple, kwargs: dict, candidate: str | None = None,
-               expected=None, limit: int = 10, has_expected: bool = False) -> dict:
+               expected=None, limit: int = 10, has_expected: bool = False, reference: str | None = None) -> dict:
     """Run the reference (and a candidate) on freshly unpickled copies of the same arguments in one executor
     process, and compare outputs with the suite's own assertion and tolerance."""
     helpers, atol = suite_assertion(p)
     spec = {"helpers": helpers, "atol": float(ast.literal_eval(atol)), "entry": p.entry_point, "limit": limit,
             "blob": base64.b64encode(pickle.dumps((tuple(args), dict(kwargs)))).decode(),
-            "reference": imports_of(p) + "\n" + p.canonical_solution,
+            "reference": imports_of(p) + "\n" + (p.canonical_solution if reference is None else reference),
             "candidate": None if candidate is None else imports_of(p) + "\n" + candidate,
             "has_expected": has_expected,   # an expected value of None is a legitimate value, not "absent"
             "expected": base64.b64encode(pickle.dumps(expected)).decode() if has_expected else None}
@@ -915,6 +920,97 @@ def stage_taxonomy(workers: int) -> None:
     run_pool(jobs, one, workers, "taxonomy")
 
 
+TAX2_PATH = REC / "taxonomy_v4.jsonl"
+TAX2_CLASSES = ("OUT_OF_DOMAIN", "DETERMINED", "OPEN", "AT_ODDS", "NEITHER")
+TAX2_PROMPT = """You are classifying items for a study of code review. Answer strictly from the task's words and the
+visible tests; do not run code.
+
+TASK (as given to a programmer):
+{spec}
+
+VISIBLE TESTS:
+{visible}
+
+On the input below, two programs return different results. A result written "raises X" means the call raised
+exception X. Results are compared as the benchmark's tests compare them: {comparator}
+
+INPUT (positional arguments): {args}
+RESULT 1: {out1}
+RESULT 2: {out2}
+
+First decide whether the input is valid for the task: whether it lies inside the domain the task's words and
+visible tests allow (types, ranges, preconditions such as "sorted" or "same length"). Then, if it is valid, decide
+for each result separately whether a careful programmer reading only the task and the visible tests would accept it.
+
+Classify the item as exactly one of:
+OUT_OF_DOMAIN  the input violates the task's stated domain or preconditions, so the task does not constrain the result;
+DETERMINED     only RESULT {det} is acceptable;
+OPEN           both results are acceptable (the task leaves this behaviour open);
+AT_ODDS        only RESULT {odd} is acceptable;
+NEITHER        neither result is acceptable.
+
+Reply with exactly one JSON object: {{"class": "<one of the five>", "domain_reason": "one sentence",
+"reason": "one sentence citing the words or tests that decide it"}}
+"""
+
+
+def tax2_payload(p, item, flip: bool) -> str:
+    """Taxonomy v4 (Amendment 4): domain first, exhaustive classes, comparator semantics stated, result order
+    randomised per item (which result is the reference is hidden; the class names are mapped back by code)."""
+    ff = item["first_fail"]
+    show = lambda o: o["repr"] if o["status"] == "ok" else f"raises {o['repr'] or o['status']}"
+    ref, cand = show(ff["reference"]), show(ff["candidate"])
+    out1, out2 = (cand, ref) if flip else (ref, cand)
+    _helpers, atol = suite_assertion(p)
+    comparator = ("exact equality, except that floats agree within the tolerance " + atol + "."
+                  if p.benchmark == "humaneval" else
+                  "by the benchmark's assertion helper with tolerance " + atol + " (floats within tolerance agree).")
+    return TAX2_PROMPT.format(spec=p.spec.rstrip(), visible=p.visible_tests_text(),
+                              comparator=comparator, args=ff["args_repr"][:1500], out1=out1[:800], out2=out2[:800],
+                              det=2 if flip else 1, odd=1 if flip else 2)
+
+
+def stage_taxonomy2(workers: int) -> None:
+    items = json.loads(ITEMS_PATH.read_text())
+    problems = {p.problem_id: p for p in load_problems()}
+    have = {(r["item_id"], r["adjudicator"]) for r in load(TAX2_PATH) if r.get("ok")}
+    jobs = [(i, a) for i in items for a in ADJUDICATORS if (i["item_id"], a) not in have]
+
+    def one(job):
+        item, adj = job
+        ff = item["first_fail"]       # order depends on the evidence only, so identical evidence -> identical prompt
+        flip = int(sha("tax2|" + json.dumps([item["problem_id"], ff["args_repr"], ff["reference"], ff["candidate"]],
+                                            sort_keys=True)), 16) % 2 == 1
+        payload = tax2_payload(problems[item["problem_id"]], item, flip)
+        res = call(adj, payload)
+        obj = parse_json(res["text"]) if res["ok"] else None
+        ok = isinstance(obj, dict) and obj.get("class") in TAX2_CLASSES
+        append(TAX2_PATH, {"item_id": item["item_id"], "adjudicator": adj, "ok": ok, "prompt_sha256": sha(payload),
+                           "evidence_sha256": sha(payload), "class": obj.get("class") if ok else None,
+                           "reason": (obj or {}).get("reason", ""), "domain_reason": (obj or {}).get("domain_reason", ""),
+                           "error": "" if ok else res.get("error", "parse")})
+    run_pool(jobs, one, workers, "taxonomy v4")
+
+
+def taxonomy2() -> dict:
+    """Amendment 4: an item's class is the class every vote on identical evidence gives (votes of all items whose
+    prompts are byte-identical are pooled, so identical evidence cannot receive different classes); else DISPUTED.
+    Every selected item needs both adjudicators' votes."""
+    by_ev: dict = {}
+    item_ev: dict = {}
+    for r in load(TAX2_PATH):
+        if r.get("ok"):
+            by_ev.setdefault(r["evidence_sha256"], []).append(r["class"])
+            item_ev.setdefault(r["item_id"], {})[r["adjudicator"]] = r["evidence_sha256"]
+    out = {}
+    for iid, ev in item_ev.items():
+        if len(ev) < 2:
+            continue
+        votes = [c for e in set(ev.values()) for c in by_ev[e]]
+        out[iid] = votes[0] if len(set(votes)) == 1 else "DISPUTED"
+    return out
+
+
 def taxonomy() -> dict:
     """Item class: the class both adjudicators gave, else DISPUTED."""
     votes: dict = {}
@@ -1047,17 +1143,26 @@ SCORER = "judge-v3.2"   # v3.1: expected None scored, non-finite literals; v3.2:
                         # comparator self-check, exception kinds kept
 
 
-def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str) -> dict:
+def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str, oracle: str | None = None) -> dict:
+    """Score one witness against the benchmark reference, or (E6) against a contract's oracle implementation; with an
+    oracle, the input must still be in the benchmark's domain (the reference runs on it)."""
     parsed = parse_call(call_src, p.entry_point)
     if parsed is None:
         return {"status": "unparseable"}
     args, kwargs = parsed
+    if oracle is not None:
+        dom = judge_call(p, args, kwargs)
+        if "infra" in dom:
+            return {"status": "infra", "detail": str(dom["infra"])[:200]}
+        if dom["reference"]["status"] != "ok":
+            return {"status": "outside_domain", "reference": dom["reference"]["status"]}
     try:
         expected = literal(expected_src.strip().rstrip("."))
         has_expected = True
     except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
         expected, has_expected = None, False
-    j = judge_call(p, args, kwargs, candidate=solution, expected=expected, has_expected=has_expected)
+    j = judge_call(p, args, kwargs, candidate=solution, expected=expected, has_expected=has_expected,
+                   reference=oracle)
     if "infra" in j:
         return {"status": "infra", "detail": str(j["infra"])[:200]}
     ref, cand = j["reference"], j["candidate"]
@@ -1155,7 +1260,7 @@ def completeness(split: str) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("stage", choices=["generate", "oracle", "execute", "select", "construct", "adjudicate",
-                                      "taxonomy", "audit", "witness"])
+                                      "taxonomy", "taxonomy2", "audit", "witness"])
     ap.add_argument("--orig-rest", action="store_true", help="original arm for the non-admitted items")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--split", default="dev", choices=["dev", "test"])
@@ -1165,7 +1270,7 @@ def main(argv=None) -> int:
     {"generate": lambda: stage_generate(a.workers), "oracle": lambda: stage_oracle(a.workers),
      "execute": lambda: stage_execute(a.workers), "select": lambda: stage_select(a.force),
      "construct": lambda: stage_construct(a.workers), "adjudicate": lambda: stage_adjudicate(a.workers),
-     "taxonomy": lambda: stage_taxonomy(a.workers),
+     "taxonomy": lambda: stage_taxonomy(a.workers), "taxonomy2": lambda: stage_taxonomy2(a.workers),
      "audit": lambda: stage_audit(a.split, a.workers, a.auditors.split(","), a.orig_rest),
      "witness": lambda: stage_witness(a.workers)}[a.stage]()
     return 0

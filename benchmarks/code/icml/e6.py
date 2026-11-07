@@ -1,16 +1,26 @@
-"""E6: contract-randomised information release (CEILING_PROGRAM.md v2, section 3). Construction stages.
+"""E6: contract-randomised information release (CEILING_PROGRAM.md v3). Construction stages.
 
-A discrepancy unit comes from an E1 item: the task, the reference R, the defective program D and the first hidden
-input x0 on which they differ. The minimal pair C_A is R rewritten to behave like D on inputs of x0's kind and like
-R elsewhere. It is admitted only if, on every hidden input, either C_A agrees with R, or C_A agrees with D (and the
-set of such inputs contains x0); and C_A passes the visible tests. Comparisons use the suite's own assertion.
+Contracts first (GPT review P2): for each problem, a proposer names an input class on which the task text and the
+visible tests leave the behaviour open, and states two behavioural rules of equal specificity: B, the one the
+benchmark reference follows, and A, an alternative. Each rule is then implemented independently, from the task
+plus the rule alone, by two different vendors with the same prompt; neither implementation sees the reference.
+A unit is admitted only if all four implementations pass the visible tests, both B implementations pass the full
+hidden suite, the two A implementations agree with each other on every validation input, A and B differ on at
+least two class inputs, and they agree on every non-class input. The audited programs are one A and one B
+implementation from the same vendor, so the two programs share provenance and style.
 
-    python benchmarks/code/icml/e6.py pairs --split dev --workers 4
-    python benchmarks/code/icml/e6.py validate --workers 6
+    python benchmarks/code/icml/e6.py propose --split dev --workers 6
+    python benchmarks/code/icml/e6.py implement --split dev --workers 6
+    python benchmarks/code/icml/e6.py validate --split dev --workers 6
+    python benchmarks/code/icml/e6.py audit --split dev --workers 8
+    python benchmarks/code/icml/e6.py witness --split dev --workers 6
+
+The pilot of the earlier minimal-pair design (CEILING_PROGRAM v2) is kept in e6_pairs.jsonl / e6_validation.jsonl.
 """
 from __future__ import annotations
 
 import argparse
+import ast
 import base64
 import json
 import pickle
@@ -21,19 +31,35 @@ from pathlib import Path
 import e1
 from e1 import REC, execute, imports_of, load, append, sha, suite_assertion
 
-PAIRS = REC / "e6_pairs.jsonl"
-VALID = REC / "e6_validation.jsonl"
-PAIR_ROUTE = "con-gpt-astra"
+PROPOSALS = REC / "e6_proposals.jsonl"
+IMPLS = REC / "e6_impls.jsonl"
+UNITS = REC / "e6_units.jsonl"
+PROPOSE_ROUTE = "con-gpt-astra"
+IMPL_ROUTES = ("adj-gpt-sol", "adj-claude-opus")     # two vendors, same prompt
 
-PAIR_PROMPT = """Below are a programming task, a reference implementation, and a second implementation that behaves
-differently on one input. Rewrite the REFERENCE so that it behaves like the second implementation on this input and on
-other inputs of the same kind (the same edge case or convention), and exactly like the reference on every other input.
-Make the smallest change that does this. Keep the reference's function name, signature and imports. Write the change as
-ordinary code: no comments or names that mention a reference, another implementation, tests, edge cases or this
-instruction.
+PROPOSE_PROMPT = """You are preparing material for a study of code review. Below are a programming task as a
+programmer receives it (description and visible tests) and the benchmark's reference implementation.
 
-Reply with exactly one JSON object: {{"code": "<the complete rewritten function, with any imports it needs>",
-"kind": "<one sentence describing the kind of input on which the behaviour changes>"}}
+Find ONE kind of valid input on which the task's words and the visible tests genuinely leave the correct behaviour
+open: two different behaviours would each be accepted by a careful programmer reading only the task and the visible
+tests. Typical cases are unstated tie-breaking, ordering, duplicates, empty or boundary inputs that the task's stated
+domain allows, rounding, case, or which of two natural readings of a phrase applies. Do not use inputs the task's
+domain excludes, behaviour that a careful reading of the words already decides, or quirks of the reference that no
+reading of the words supports.
+
+State two behavioural rules for that kind of input, each one sentence, equally specific, written as requirements a
+task author could add (for example "If several words are equally long, return the first of them."):
+- RULE_B: the behaviour the reference implementation follows;
+- RULE_A: a different behaviour that is equally compatible with the task's words and visible tests.
+Neither rule may mention the reference, tests, or this study. Then give inputs, each a Python literal tuple of the
+positional arguments with the exact argument types the task uses (a one-argument call is written "(x,)"):
+- CLASS_INPUTS: 4 to 8 inputs of that kind, including inputs on which RULE_A and RULE_B give different outputs;
+- OTHER_INPUTS: 3 to 5 valid inputs of other kinds, on which both rules agree.
+
+If no such genuinely open behaviour exists, reply {{"skip": "<one sentence why>"}}. Otherwise reply with exactly one
+JSON object:
+{{"class": "<one sentence describing the kind of input>", "rule_a": "...", "rule_b": "...",
+  "class_inputs": ["(...)", ...], "other_inputs": ["(...)", ...]}}
 
 TASK:
 {spec}
@@ -42,18 +68,21 @@ REFERENCE:
 ```python
 {reference}
 ```
-
-SECOND IMPLEMENTATION:
-```python
-{defective}
-```
-
-INPUT (positional arguments): {args}
-REFERENCE OUTPUT: {ref_out}
-SECOND IMPLEMENTATION OUTPUT: {def_out}
 """
 
-BATCH = r'''
+IMPL_PROMPT = """Write a Python function for the task below. It must pass the visible tests and must also follow the
+additional requirement exactly. Use only the standard library. Write ordinary, clean code: no comments about the
+requirement, the tests or these instructions.
+
+TASK:
+{spec}
+
+ADDITIONAL REQUIREMENT: {rule}
+
+Reply with exactly one JSON object: {{"code": "<the complete function definition, with any imports it needs>"}}
+"""
+
+MULTI = r'''
 import pickle, sys, base64, signal, json
 sys.setrecursionlimit(10000)
 spec = json.loads(open(sys.argv[1]).read())
@@ -71,12 +100,17 @@ exec(compile(spec["helpers"], "suite_helpers", "exec"), helpers)
 
 def load_fn(src):
     ns = {}
-    exec(compile(src, "solution", "exec"), ns)
-    return ns[spec["entry"]]
+    try:
+        exec(compile(src, "solution", "exec"), ns)
+        return ns[spec["entry"]]
+    except BaseException:
+        return None
 
-fns = {k: load_fn(spec[k]) for k in ("reference", "candidate", "defective")}
+fns = {k: load_fn(v) for k, v in spec["programs"].items()}
 
 def run(fn, inp):
+    if fn is None:
+        return "load", None
     args = pickle.loads(pickle.dumps(inp))
     signal.alarm(spec["limit"])
     try:
@@ -94,108 +128,277 @@ def agrees(a, b):
     sb, vb = b
     if sa != "ok" or sb != "ok":
         return sa == sb
+    signal.alarm(spec["limit"])
     try:
         helpers["assertion"](va, vb, spec["atol"])
+        signal.alarm(0)
         return True
+    except _Late:
+        return None
     except BaseException:
+        signal.alarm(0)
         return False
 
 rows = []
-for i, inp in enumerate(inputs):
-    r, c, d = (run(fns[k], inp) for k in ("reference", "candidate", "defective"))
-    rows.append([i, agrees(c, r), agrees(c, d), agrees(d, r), r[0], c[0]])
-sys.stdout.write("BATCH " + json.dumps(rows))
+for inp in inputs:
+    out = {k: run(f, inp) for k, f in fns.items()}
+    rows.append({"status": {k: v[0] for k, v in out.items()},
+                 "agree": {f"{a}~{b}": agrees(out[a], out[b]) for a, b in spec["pairs"]}})
+with open(spec["out"], "w") as fh:
+    fh.write(json.dumps(rows))
 '''
 
 
-def batch_compare(p, reference: str, candidate: str, defective: str, inputs: list, limit: int = 5) -> dict:
+def multi_compare(p, programs: dict, pairs: list, inputs: list, limit: int = 5) -> dict:
+    """Run every program on every input in one executor process; compare the given pairs with the suite's own
+    assertion. Results come back through a file."""
     helpers, atol = suite_assertion(p)
     pre = imports_of(p) + "\n"
-    spec = {"helpers": helpers, "atol": float(e1.literal(atol)), "entry": p.entry_point, "limit": limit,
-            "inputs": base64.b64encode(pickle.dumps(inputs)).decode(),
-            "reference": pre + p.canonical_solution, "candidate": pre + candidate, "defective": pre + defective}
     with tempfile.TemporaryDirectory() as tmp:
+        spec = {"helpers": helpers, "atol": float(e1.literal(atol)), "entry": p.entry_point, "limit": limit,
+                "inputs": base64.b64encode(pickle.dumps(inputs)).decode(), "pairs": pairs,
+                "programs": {k: pre + v for k, v in programs.items()}, "out": str(Path(tmp) / "out.json")}
         (Path(tmp) / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
-        (Path(tmp) / "batch.py").write_text(BATCH, encoding="utf-8")
+        (Path(tmp) / "multi.py").write_text(MULTI, encoding="utf-8")
         try:
-            done = subprocess.run([execute.EXECUTOR, str(Path(tmp) / "batch.py"), str(Path(tmp) / "spec.json")],
-                                  capture_output=True, text=True, timeout=limit * len(inputs) * 3 + 120, cwd=tmp,
-                                  env=e1.EXEC_ENV)
+            done = subprocess.run([execute.EXECUTOR, str(Path(tmp) / "multi.py"), str(Path(tmp) / "spec.json")],
+                                  capture_output=True, text=True, timeout=limit * 3 * len(inputs) * len(programs) + 120,
+                                  cwd=tmp, env=e1.EXEC_ENV)
         except subprocess.TimeoutExpired:
             return {"infra": "timeout"}
-    if "BATCH " not in done.stdout:
-        return {"infra": (done.stderr or "")[-300:]}
-    return {"rows": json.loads(done.stdout[done.stdout.rfind("BATCH ") + 6:])}
+        try:
+            return {"rows": json.loads((Path(tmp) / "out.json").read_text())}
+        except (OSError, json.JSONDecodeError):
+            return {"infra": (done.stderr or "")[-300:] or "no result"}
 
 
-def problems() -> dict:
-    return {p.problem_id: p for p in e1.load_problems()}
+def problems(split: str) -> list:
+    split_of = e1.frozen_split()
+    return [p for p in e1.load_problems() if split_of[p.problem_id] == split]
 
 
-def stage_pairs(split: str, workers: int) -> None:
-    items = [i for i in json.loads((REC / "items_v3.json").read_text()) if i["split"] == split]
-    probs = problems()
-    have = {r["item_id"] for r in load(PAIRS) if r.get("ok")}
-    jobs = [i for i in items if i["item_id"] not in have]
+def literal_tuple(src: str):
+    try:
+        v = e1.literal(src.strip())
+    except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+        return None
+    return v if isinstance(v, tuple) else None
 
-    def one(it):
-        p, ff = probs[it["problem_id"]], it["first_fail"]
-        payload = PAIR_PROMPT.format(spec=p.spec, reference=p.canonical_solution, defective=it["defective_solution"],
-                                     args=ff["args_repr"], ref_out=ff["reference"]["repr"],
-                                     def_out=ff["candidate"]["repr"])
-        res = e1.call(PAIR_ROUTE, payload)
+
+def stage_propose(split: str, workers: int) -> None:
+    have = {r["problem_id"] for r in load(PROPOSALS) if r.get("ok")}
+    jobs = [p for p in problems(split) if p.problem_id not in have]
+
+    def one(p):
+        payload = PROPOSE_PROMPT.format(spec=p.spec, reference=p.canonical_solution)
+        res = e1.call(PROPOSE_ROUTE, payload)
         obj = e1.parse_json(res["text"]) if res["ok"] else None
-        ok = isinstance(obj, dict) and isinstance(obj.get("code"), str) and obj["code"].strip() != ""
-        append(PAIRS, {"item_id": it["item_id"], "split": split, "route": PAIR_ROUTE, "ok": ok,
-                       "prompt_sha256": sha(payload), "code": obj.get("code") if ok else None,
-                       "kind": obj.get("kind") if ok else None, "error": res.get("error", "" if ok else "parse")})
-    e1.run_pool(jobs, one, workers, f"e6 pairs {split}")
-
-
-def stage_validate(workers: int) -> None:
-    items = {i["item_id"]: i for i in json.loads((REC / "items_v3.json").read_text())}
-    probs = problems()
-    pairs = {r["item_id"]: r for r in load(PAIRS) if r.get("ok")}
-    have = {r["pair_sha256"] for r in load(VALID)}
-    jobs = [r for r in pairs.values() if sha(r["code"]) not in have]
-    inp_cache: dict = {}
-
-    def one(pr):
-        it = items[pr["item_id"]]
-        p = probs[it["problem_id"]]
-        if p.problem_id not in inp_cache:
-            inp_cache[p.problem_id] = e1.hidden_inputs(p)
-        inputs = inp_cache[p.problem_id]
-        x0 = it["first_fail"]["index"]
-        vis = execute.run_suite(p.visible_program(pr["code"]),
-                                instrumented=p.visible_instrumented)
-        row = {"item_id": pr["item_id"], "pair_sha256": sha(pr["code"]), "visible_passed": vis.passed}
-        if inputs is None:
-            append(VALID, {**row, "admitted": False, "reason": "no hidden inputs"})
+        row = {"problem_id": p.problem_id, "split": split, "route": PROPOSE_ROUTE, "prompt_sha256": sha(payload)}
+        if isinstance(obj, dict) and "skip" in obj:
+            append(PROPOSALS, {**row, "ok": True, "skip": str(obj["skip"])[:500]})
             return
-        b = batch_compare(p, p.canonical_solution, pr["code"], it["defective_solution"], inputs)
-        if "infra" in b:
-            append(VALID, {**row, "admitted": False, "reason": "infra", "infra": b["infra"]})
+        keys = ("class", "rule_a", "rule_b", "class_inputs", "other_inputs")
+        ok = isinstance(obj, dict) and all(k in obj for k in keys)
+        if ok:
+            ci = [literal_tuple(x) for x in obj["class_inputs"]] if isinstance(obj["class_inputs"], list) else []
+            oi = [literal_tuple(x) for x in obj["other_inputs"]] if isinstance(obj["other_inputs"], list) else []
+            ok = len(ci) >= 4 and len(oi) >= 3 and None not in ci and None not in oi
+        append(PROPOSALS, {**row, "ok": ok, **({k: obj[k] for k in keys} if ok else {}),
+                           "error": "" if ok else res.get("error", "parse")})
+    e1.run_pool(jobs, one, workers, f"e6 propose {split}")
+
+
+def proposals(split: str) -> dict:
+    return {r["problem_id"]: r for r in load(PROPOSALS) if r.get("ok") and not r.get("skip") and r["split"] == split}
+
+
+def stage_implement(split: str, workers: int) -> None:
+    props = proposals(split)
+    probs = {p.problem_id: p for p in problems(split)}
+    have = {(r["problem_id"], r["contract"], r["route"]) for r in load(IMPLS) if r.get("ok")}
+    jobs = [(pid, c, rt) for pid in props for c in ("a", "b") for rt in IMPL_ROUTES if (pid, c, rt) not in have]
+
+    def one(job):
+        pid, c, rt = job
+        p, pr = probs[pid], props[pid]
+        payload = IMPL_PROMPT.format(spec=p.spec, rule=pr[f"rule_{c}"])
+        res = e1.call(rt, payload)
+        obj = e1.parse_json(res["text"]) if res["ok"] else None
+        ok = isinstance(obj, dict) and isinstance(obj.get("code"), str) and p.entry_point in obj["code"]
+        append(IMPLS, {"problem_id": pid, "contract": c, "route": rt, "ok": ok, "prompt_sha256": sha(payload),
+                       "code": obj["code"] if ok else None, "error": "" if ok else res.get("error", "parse")})
+    e1.run_pool(jobs, one, workers, f"e6 implement {split}")
+
+
+def stage_validate(split: str, workers: int) -> None:
+    props = proposals(split)
+    probs = {p.problem_id: p for p in problems(split)}
+    impls: dict = {}
+    for r in load(IMPLS):
+        if r.get("ok"):
+            impls[(r["problem_id"], r["contract"], r["route"])] = r["code"]
+    done_ids = {r["problem_id"] for r in load(UNITS)}
+    jobs = [pid for pid in props if pid not in done_ids
+            and all((pid, c, rt) in impls for c in ("a", "b") for rt in IMPL_ROUTES)]
+
+    def one(pid):
+        p, pr = probs[pid], props[pid]
+        g, c = IMPL_ROUTES
+        progs = {"ref": p.canonical_solution, "a1": impls[(pid, "a", g)], "a2": impls[(pid, "a", c)],
+                 "b1": impls[(pid, "b", g)], "b2": impls[(pid, "b", c)]}
+        row = {"problem_id": pid, "split": split, "impl_sha256": {k: sha(v) for k, v in progs.items()}}
+        vis = {k: execute.run_suite(p.visible_program(v), instrumented=p.visible_instrumented).passed
+               for k, v in progs.items() if k != "ref"}
+        hidden = e1.hidden_inputs(p)
+        if hidden is None:
+            append(UNITS, {**row, "admitted": False, "reason": "no hidden inputs"})
             return
-        changed = [r[0] for r in b["rows"] if not r[1]]                 # C_A differs from R
-        new_defect = [r[0] for r in b["rows"] if not r[1] and not r[2]]  # ... and from D: not D's behaviour
-        d_only = [r[0] for r in b["rows"] if not r[3] and r[1]]          # D differs, C_A kept R
-        admitted = vis.passed and bool(changed) and not new_defect and x0 in changed
-        reason = ("ok" if admitted else "visible" if not vis.passed else "no change" if not changed
-                  else "new defect" if new_defect else "x0 unchanged")
-        append(VALID, {**row, "admitted": admitted, "reason": reason, "n_inputs": len(inputs),
-                       "changed": changed[:500], "n_changed": len(changed), "n_new_defect": len(new_defect),
-                       "n_d_only": len(d_only), "x0": x0})
-    e1.run_pool(jobs, one, workers, "e6 validate")
+        cls = [literal_tuple(x) for x in pr["class_inputs"]]
+        oth = [literal_tuple(x) for x in pr["other_inputs"]]
+        inputs = list(hidden) + cls + oth
+        pairs = [["ref", "b1"], ["ref", "b2"], ["a1", "a2"], ["a1", "b1"], ["a2", "b2"], ["ref", "a1"]]
+        res = multi_compare(p, progs, pairs, inputs)
+        if "infra" in res:
+            append(UNITS, {**row, "admitted": False, "reason": "infra", "infra": res["infra"]})
+            return
+        rows = res["rows"]
+        nh, nc = len(hidden), len(cls)
+        H, C, O = rows[:nh], rows[nh:nh + nc], rows[nh + nc:]
+        ref_valid = [r["status"]["ref"] == "ok" for r in rows]
+        b_full = all(r["agree"]["ref~b1"] and r["agree"]["ref~b2"] for r in H)
+        a_same = all(r["agree"]["a1~a2"] for r in rows)
+        class_diff = sum(1 for r in C if r["agree"]["a1~b1"] is False and r["agree"]["a2~b2"] is False)
+        other_same = all(r["agree"]["a1~b1"] and r["agree"]["a2~b2"] for r in O)
+        hidden_changed = [i for i, r in enumerate(H) if r["agree"]["a1~b1"] is False]
+        checks = {"visible": all(vis.values()), "b_pass_hidden": b_full, "a_impls_agree": a_same,
+                  "class_differs_2": class_diff >= 2, "other_agree": other_same,
+                  "class_inputs_valid": all(ref_valid[nh:nh + nc]), "other_inputs_valid": all(ref_valid[nh + nc:])}
+        admitted = all(checks.values())
+        append(UNITS, {**row, "admitted": admitted, "checks": checks, "visible": vis, "n_hidden": nh,
+                       "n_class_differ": class_diff, "n_hidden_changed": len(hidden_changed),
+                       "hidden_changed": hidden_changed[:200],
+                       "reason": "ok" if admitted else ",".join(k for k, v in checks.items() if not v)})
+    e1.run_pool(jobs, one, workers, f"e6 validate {split}")
+
+
+# ---------------------------------------------------------------------------------------------
+# audits
+# ---------------------------------------------------------------------------------------------
+AUD = REC / "e6_audits.jsonl"
+AUD_RAW = REC / "e6_audits_raw.jsonl"
+WIT = REC / "e6_witnesses.jsonl"
+ARMS = ("none", "menu", "resolve-a", "resolve-b")
+CONFIGS = ("aud-gpt-terra-low", "aud-gpt-terra-high", "aud-claude-sonnet-low", "aud-claude-sonnet-high")
+READINGS = 2
+MAX_ATTEMPTS = 3
+
+
+def units(split: str) -> dict:
+    """Admitted units with their audited and oracle implementations. The audited vendor alternates by a hash of the
+    problem id; the oracle for each contract is the other vendor's implementation of it."""
+    props = proposals(split)
+    impls = {(r["problem_id"], r["contract"], r["route"]): r["code"] for r in load(IMPLS) if r.get("ok")}
+    out = {}
+    for u in load(UNITS):
+        if not (u.get("admitted") and u["split"] == split):
+            continue
+        pid = u["problem_id"]
+        shown = IMPL_ROUTES[int(sha(pid), 16) % 2]
+        other = IMPL_ROUTES[1 - IMPL_ROUTES.index(shown)]
+        first_a = int(sha("menu-order|" + pid), 16) % 2 == 0          # menu order, fixed per unit
+        out[pid] = {**props[pid], "shown_route": shown, "first_a": first_a,
+                    "program": {c: impls[(pid, c, shown)] for c in "ab"},
+                    "oracle": {c: impls[(pid, c, other)] for c in "ab"}}
+    return out
+
+
+def arm_text(u: dict, arm: str) -> str:
+    """Text appended to the task. The menu bytes are identical in every arm that shows them and do not depend on
+    the contract; a resolving arm adds one selection sentence of equal form for either contract."""
+    if arm == "none":
+        return ""
+    first, second = ("a", "b") if u["first_a"] else ("b", "a")
+    menu = ("\n\nAdditional requirement. " + u["class"].strip().rstrip(".") + ": the function must follow exactly one "
+            "of these two rules, and the task author has fixed which.\n"
+            f"(1) {u['rule_' + first].strip()}\n(2) {u['rule_' + second].strip()}")
+    if arm == "menu":
+        return menu + "\nThe task does not say which of the two rules applies."
+    chosen = arm.split("-")[1]
+    return menu + f"\nThe function must follow rule ({1 if chosen == first else 2})."
+
+
+def schedule(split: str) -> list[tuple]:
+    return [(pid, prog, arm, cfg, k) for pid in sorted(units(split)) for prog in "ab" for arm in ARMS
+            for cfg in CONFIGS for k in range(READINGS)]
+
+
+def stage_audit(split: str, workers: int) -> None:
+    from crossaudit.auditor.validate import known_rules, parse_reply, validate_reply
+    import ceiling
+    us = units(split)
+    probs = {p.problem_id: p for p in problems(split)}
+    rows = load(AUD)
+    ok_keys = {tuple(r["key"]) for r in rows if r.get("ok")}
+    tries: dict = {}
+    for r in rows:
+        tries[tuple(r["key"])] = tries.get(tuple(r["key"]), 0) + 1
+    jobs = [j for j in schedule(split) if j not in ok_keys and tries.get(j, 0) < MAX_ATTEMPTS]
+    __import__("random").Random(17).shuffle(jobs)
+
+    def one(job):
+        pid, prog, arm, cfg, k = job
+        p, u = probs[pid], us[pid]
+        payload = e1.audit_prompt(p, u["program"][prog], p.spec + arm_text(u, arm))
+        res = e1.call(cfg, payload, timeout=900)
+        row = {"key": list(job), "split": split, "prompt_sha256": sha(payload), "wall_s": res["wall_s"],
+               "usage": res.get("usage"), "attempt": tries.get(job, 0) + 1}
+        append(AUD_RAW, {"key": list(job), "attempt": row["attempt"], "text": res["text"], "raw": res.get("raw", ""),
+                         "error": res.get("error", "")})
+        if not res["ok"]:
+            append(AUD, {**row, "ok": False, "error": res.get("error", "")[:200]})
+            return
+        text, _ = ceiling.astra_extract(res["text"])
+        reply, err = parse_reply(text)
+        invalid = validate_reply(reply, known_rules(e1._cfg["constitution"])) if reply is not None else "unparsed"
+        if reply is None or invalid:
+            append(AUD, {**row, "ok": False, "error": f"invalid reply: {err or invalid}"[:200]})
+            return
+        findings = reply.get("findings") or []
+        blockers = [f for f in findings if f.get("severity") == "BLOCKER"]
+        witnesses = [{"call": c.strip(), "expected": e.strip()}
+                     for f in blockers for c, e in e1._WIT.findall(f.get("observation", ""))]
+        append(AUD, {**row, "ok": True, "flagged": bool(blockers), "n_findings": len(findings),
+                     "n_blockers": len(blockers), "witnesses": witnesses[:6], "verdict": reply.get("verdict", ""),
+                     "blocker_text": [str(f.get("observation", ""))[:600] for f in blockers][:6]})
+    e1.run_pool(jobs, one, workers, f"e6 audit {split}")
+
+
+def stage_witness(split: str, workers: int) -> None:
+    """Score each reading's witnesses under BOTH contracts (the oracle implementations): under contract X the shown
+    program is defective iff it implements the other contract."""
+    us = units(split)
+    probs = {p.problem_id: p for p in problems(split)}
+    have = {(tuple(r["key"]), r["contract"]) for r in load(WIT) if not r.get("infra")}
+    jobs = [(r, c) for r in load(AUD) if r.get("ok") and r.get("witnesses") and r["split"] == split
+            for c in "ab" if (tuple(r["key"]), c) not in have]
+
+    def one(job):
+        r, c = job
+        pid, prog = r["key"][0], r["key"][1]
+        p, u = probs[pid], us[pid]
+        res = [e1.judge_witness(p, u["program"][prog], w["call"], w["expected"], oracle=u["oracle"][c])
+               for w in r["witnesses"]]
+        append(WIT, {"key": r["key"], "contract": c, "scorer": e1.SCORER, "results": res,
+                     "infra": any(x["status"] == "infra" for x in res),
+                     "verified_diagnosis": any(x.get("verified_diagnosis") for x in res)})
+    e1.run_pool(jobs, one, workers, f"e6 witness {split}")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=["pairs", "validate"])
+    ap.add_argument("stage", choices=["propose", "implement", "validate", "audit", "witness"])
     ap.add_argument("--split", default="dev")
-    ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--workers", type=int, default=6)
     a = ap.parse_args()
-    if a.stage == "pairs":
-        stage_pairs(a.split, a.workers)
-    else:
-        stage_validate(a.workers)
+    {"propose": stage_propose, "implement": stage_implement, "validate": stage_validate, "audit": stage_audit,
+     "witness": stage_witness}[a.stage](a.split, a.workers)
