@@ -107,8 +107,13 @@ def cluster_boot(values: dict, items: dict, seed=SEED, b=B):
         vs = [x for p in (rng.choice(probs) for _ in probs) for x in by_problem[p]]
         draws.append(sum(vs) / len(vs))
     draws.sort()
-    return {"est": 100 * est, "lo": 100 * draws[int(0.025 * b)], "hi": 100 * draws[int(0.975 * b) - 1],
-            "n_items": len(values), "n_problems": len(probs)}
+    out = {"est": 100 * est, "lo": 100 * draws[int(0.025 * b)], "hi": 100 * draws[int(0.975 * b) - 1],
+           "n_items": len(values), "n_problems": len(probs)}
+    if all(v == 0 for v in values.values()):
+        # Amendment 4 (B7): the percentile interval collapses to [0, 0]; report the exact one-sided 95% upper bound
+        # for a problem-level event probability with zero events in n problems, 1 - 0.05 ** (1 / n)
+        out["exact_upper95_if_all_zero"] = 100 * (1 - 0.05 ** (1 / len(probs)))
+    return out
 
 
 def contrast(items, table, kind, a, sa, b, sb, metric, auditors=AUDITORS):
@@ -232,28 +237,28 @@ def analyse_taxonomy(split: str) -> dict:
     """Amendment 3: original-arm rates by what the task's words say about the first failing input (all selected
     items), and H6: four-reading verified diagnosis on DETERMINED items exceeds that on OPEN items."""
     items, table, status = readings_table(split, admitted_only=False)
-    tax = e1.taxonomy()
+    tax = e1.taxonomy2()           # Amendment 4: taxonomy v4
     unclassified = [k for k in items if k not in tax]
     if unclassified:      # A4 B6: every selected item needs both classifications; nothing is dropped silently
         raise SystemExit(f"{len(unclassified)} selected items lack two taxonomy classifications")
     cons = e1.admitted_constructions()
     res = {"split": split, "n_items": len(items), "class_counts": {}, "completeness": status}
-    for c in e1.TAX_CLASSES + ("DISPUTED",):
+    for c in e1.TAX2_CLASSES + ("DISPUTED",):
         res["class_counts"][c] = sum(1 for k in items if tax[k] == c)
     res["admitted_by_class"] = {c: sum(1 for k in items if tax[k] == c and k in cons)
-                                for c in e1.TAX_CLASSES + ("DISPUTED",)}
+                                for c in e1.TAX2_CLASSES + ("DISPUTED",)}
     votes: dict = {}
-    for r in e1.load(e1.TAX_PATH):
+    for r in e1.load(e1.TAX2_PATH):
         if r.get("ok") and r["item_id"] in items:
             votes.setdefault(r["item_id"], {})[r["adjudicator"]] = r["class"]
     pairs = [tuple(v[a] for a in e1.ADJUDICATORS) for v in votes.values() if len(v) == 2]
     if pairs:
         po = sum(x == y for x, y in pairs) / len(pairs)
         pe = sum((sum(x == c for x, _ in pairs) / len(pairs)) * (sum(y == c for _, y in pairs) / len(pairs))
-                 for c in e1.TAX_CLASSES)
+                 for c in e1.TAX2_CLASSES)
         res["agreement"] = {"n": len(pairs), "observed": po, "kappa": (po - pe) / (1 - pe) if pe < 1 else None}
     levels = {}
-    for c in e1.TAX_CLASSES + ("DISPUTED",):
+    for c in e1.TAX2_CLASSES + ("DISPUTED",):
         sub = {k: v for k, v in items.items() if tax[k] == c}
         for kind, metric in (("defective", "vd"), ("defective", "wd"), ("defective", "flag"), ("correct", "flag")):
             levels[f"{c}|{kind}|{metric}|orig4"] = cluster_boot(

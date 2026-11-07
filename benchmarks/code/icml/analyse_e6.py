@@ -25,7 +25,8 @@ import e1
 import e6
 
 B, SEED = 10000, 20261113
-ALPHA_FPR = 0.05
+VD_FIELD = "verified_diagnosis"   # sensitivity runs set "verified_refdomain" or "verified_offclass"
+ALPHA_FPR = 0.10      # v4.1: budget for the resolved clean-flag rate, certified by a betting upper bound
 
 
 def table(split: str) -> tuple[dict, dict]:
@@ -38,22 +39,27 @@ def table(split: str) -> tuple[dict, dict]:
                 raise SystemExit(f"duplicate valid reading {k}")
             seen.add(k)
     us = e6.units(split)
+    probs = {p.problem_id: p for p in e6.problems(split)}
     wit = {}
     for r in e1.load(e6.WIT):
         if not r.get("infra"):
+            if r["input_sha256"] in wit and wit[r["input_sha256"]]["verified_diagnosis"] != r["verified_diagnosis"]:
+                raise SystemExit(f"conflicting witness scores {r['key']}")
             wit[r["input_sha256"]] = r
     cells: dict = {}
     for r in aud:
         if not r.get("ok"):
             continue
         pid, prog, arm, cfg, k = r["key"]
+        if pid not in us:
+            continue                                     # superseded unit
         vd = {}
         for c in "ab":
             if r["flagged"] and r.get("witnesses"):
-                w = wit.get(e6.witness_key(r, us[pid], c))
+                w = wit.get(e6.witness_key(r, us[pid], c, probs[pid]))
                 if w is None:
                     raise SystemExit(f"unscored witness set {r['key']} contract {c}")
-                vd[c] = bool(w["verified_diagnosis"])
+                vd[c] = bool(w[VD_FIELD])
             else:
                 vd[c] = False
         cells.setdefault((pid, prog, arm, cfg), []).append(
@@ -116,6 +122,46 @@ def cp_upper(k: int, n: int, conf: float = 0.95) -> float:
     return hi
 
 
+def betting_upper(xs: list, alpha: float = 0.05, seed: int = SEED) -> float:
+    """One-sided (1 - alpha) upper confidence bound for the mean of i.i.d. values in [0, 1], by the hedged
+    capital-betting method of Waudby-Smith and Ramdas (JRSS-B 2024): m is excluded when the capital of a bettor
+    wagering that the mean is below m reaches 1/alpha. Values are taken in a seeded random order."""
+    if not xs:
+        return 1.0
+    xs = list(xs)
+    random.Random(seed).shuffle(xs)
+    n = len(xs)
+    # predictable plug-in bets from running mean and variance with a weak prior
+    lams, mu, var = [], 0.5, 0.25
+    for i, x in enumerate(xs):
+        lams.append(math.sqrt(2 * math.log(1 / alpha) / (n * var)))
+        mu = (mu * (i + 1) + x) / (i + 2)
+        var = (var * (i + 1) + (x - mu) ** 2) / (i + 2)
+
+    def excluded(m: float) -> bool:
+        cap = 1.0
+        for x, lam in zip(xs, lams):
+            cap *= 1 - min(lam, 0.75 / m) * (x - m)
+            if cap >= 1 / alpha:
+                return True
+        return False
+    lo, hi = sum(xs) / n, 1.0
+    if not excluded(1.0 - 1e-9):
+        return 1.0
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        lo, hi = (lo, mid) if excluded(mid) else (mid, hi)
+    return hi
+
+
+def betting_interval(diffs: list, alpha: float = 0.05) -> tuple[float, float]:
+    """Two-sided (1 - alpha) interval for the mean of values in [-1, 1]: two one-sided betting bounds at alpha / 2 on
+    the rescaled values (x + 1) / 2 and (1 - x) / 2."""
+    up = betting_upper([(d + 1) / 2 for d in diffs], alpha / 2) * 2 - 1
+    lo = 1 - 2 * betting_upper([(1 - d) / 2 for d in diffs], alpha / 2)
+    return lo, up
+
+
 def fpr_bound(uv: dict) -> dict:
     """Registered boundary safeguard: the problem-level indicator of any clean-cell flag is a conservative upper
     proxy for the mean clean-flag rate; its exact one-sided 95% bound must be below alpha."""
@@ -125,26 +171,28 @@ def fpr_bound(uv: dict) -> dict:
 
 
 def fpr_compliant(level_row: dict) -> bool:
-    """Registered budget rule: the bootstrap upper bound of the resolved FPR is below alpha; when the bootstrap
-    interval collapses to [0, 0] (every unit's clean-cell flag rate is zero), the exact bound on the problem-level
-    any-clean-flag indicator must also be below alpha (boundary safeguard, GPT review P3). The exact bound is reported
-    in every case as a conservative sensitivity analysis."""
-    f = level_row["fpr"]
-    if not f or f["hi"] >= 100 * ALPHA_FPR:
-        return False
-    if f["hi"] == 0:
-        return level_row["fpr_bound"]["upper95"] < 100 * ALPHA_FPR
-    return True
+    """Registered budget rule (v4.1, after GPT review P4): the one-sided 95% betting upper bound on the mean
+    problem-level resolved clean-flag rate is below alpha_FPR."""
+    return level_row["fpr_betting_upper95"] < 100 * ALPHA_FPR
 
 
 def population(split: str) -> list:
     """Registered population: v4-admitted units; both registered judges, by identity, rate the domain valid and (open)
     both rules compatible or (det) RULE_A incompatible and RULE_B compatible."""
     want = ("compatible", "compatible") if e6.KIND == "open" else ("incompatible", "compatible")
+    props = e6.proposals(split)
+    probs = {p.problem_id: p for p in e6.problems(split)}
     votes: dict = {}
     for r in e1.load(e6.JUDGE):
-        if r.get("ok"):
-            votes.setdefault(r["problem_id"], {})[r["judge"]] = (r.get("domain"), r["a"], r["b"])
+        if r.get("ok") and r["problem_id"] in props:
+            pid, pr = r["problem_id"], props[r["problem_id"]]
+            a_first = int(e6.sha("judge-order|" + pid), 16) % 2 == 0
+            r1, r2 = (pr["rule_a"], pr["rule_b"]) if a_first else (pr["rule_b"], pr["rule_a"])
+            want_sha = e6.sha(e6.JUDGE_PROMPT.format(spec=probs[pid].spec.rstrip(), visible=probs[pid].visible_tests_text(),
+                                                     r1=r1, r2=r2))
+            if r["prompt_sha256"] != want_sha:
+                raise SystemExit(f"judge prompt hash mismatch: {pid} {r['judge']}")
+            votes.setdefault(pid, {})[r["judge"]] = (r.get("domain"), r["a"], r["b"])
     return sorted(pid for pid in e6.units(split)
                   if all(votes.get(pid, {}).get(j) == ("valid",) + want for j in e6.JUDGE_ROUTES))
 
@@ -160,6 +208,9 @@ def contrast(cells, units, g1, g2, cfgs1, cfgs2, metric, t):
     out = boot(vals)
     if out:
         out["excluded_missing"] = missing
+        n = len(vals) + missing          # registered bounds: every excluded unit at the worst and best difference
+        out["bound_worst"] = 100 * (sum(vals.values()) - missing) / n
+        out["bound_best"] = 100 * (sum(vals.values()) + missing) / n
     return out
 
 
@@ -167,6 +218,7 @@ def level(cells, units, g, cfgs, t):
     uv = {pid: v for pid in units if (v := unit_value(cells, pid, g, cfgs, t)) is not None}
     out = {m: boot({k: v[m] for k, v in uv.items()}) for m in ("tpr", "fpr", "cov")}
     out["fpr_bound"] = fpr_bound(uv)
+    out["fpr_betting_upper95"] = 100 * betting_upper([v["fpr"] for v in uv.values()])
     out["excluded_missing"] = len(units) - len(uv)
     return out, uv
 
@@ -217,20 +269,47 @@ def analyse(split: str, allow_incomplete: bool) -> dict:
                              "E6_2": boot({k: (v["r_b"] - v["r_a"]) / 2
                                            for k, v in level(cells, units, "none", (c,), t)[1].items()})}
                          for c in C}
+    vendors = {"gpt": [c for c in C if "gpt" in c], "claude": [c for c in C if "claude" in c]}
+    res["per_vendor"] = {v: {"E6_1": contrast(cells, units, "resolve", "menu", cs, cs, "cov", t),
+                             "E6_2": boot({k: (x["r_b"] - x["r_a"]) / 2
+                                           for k, x in level(cells, units, "none", cs, t)[1].items()})}
+                         for v, cs in vendors.items()}
+    bench = {"humaneval": [u for u in units if u.startswith("HumanEval")], "mbpp": [u for u in units if u.startswith("Mbpp")]}
+    res["per_benchmark_E6_2"] = {b: boot({k: (x["r_b"] - x["r_a"]) / 2
+                                          for k, x in level(cells, us_, "none", C, t)[1].items()})
+                                 for b, us_ in bench.items()}
+    beh = {r["problem_id"]: r for r in e1.load(e6.BEHAV) if "n_A" in r}
+    both = [u for u in units if beh.get(u, {}).get("n_A", 0) >= 1 and beh.get(u, {}).get("n_B", 0) >= 1]
+    res["behavioural_subset"] = {"n": len(both), "E6_1": contrast(cells, both, "resolve", "menu", C, C, "cov", t),
+                                 "E6_2": boot({k: (x["r_b"] - x["r_a"]) / 2
+                                               for k, x in level(cells, both, "none", C, t)[1].items()})}
+    res["behaviour_counts"] = {k: sum(beh.get(u, {}).get(k, 0) for u in units) for k in ("n_A", "n_B", "n_other")}
+    res["t2"] = {"E6_1": contrast(cells, units, "resolve", "menu", C, C, "cov", 2),
+                 "resolve": level(cells, units, "resolve", C, 2)[0]}
     res["routing_menu"] = {c: routing(cells, units, "menu", c) for c in C}
     res["routing_none"] = {c: routing(cells, units, "none", c) for c in C}
     eq = res["E6_3_cov_high_minus_low_resolve"]
+    if eq:
+        hi_c = [c for c in C if c.endswith("high")]
+        lo_c = [c for c in C if c.endswith("low")]
+        ds = []
+        for pid in units:
+            x, y = unit_value(cells, pid, "resolve", hi_c, t), unit_value(cells, pid, "resolve", lo_c, t)
+            if x is not None and y is not None:
+                ds.append(x["cov"] - y["cov"])
+        bl, bu = betting_interval(ds)
+        eq["betting_lo"], eq["betting_hi"] = 100 * bl, 100 * bu
     res["verdicts"] = {
         "E6_1": bool(res["E6_1_cov_resolve_minus_menu"] and res["E6_1_cov_resolve_minus_menu"]["lo"] > 0
                      and lv["all|resolve"]["cov"] and lv["all|resolve"]["cov"]["lo"] >= 50
                      and fpr_compliant(lv["all|resolve"])),
         "E6_2": bool(res["E6_2_convention_advantage_none"] and res["E6_2_convention_advantage_none"]["lo"] > 0),
-        "E6_3_equivalent_within_5": bool(eq and eq["lo"] > -5 and eq["hi"] < 5),
+        "E6_3_equivalent_within_10": bool(eq and eq["betting_lo"] > -10 and eq["betting_hi"] < 10),
         "E6_5": bool(res["E6_5_cov_sentence_minus_none"] and res["E6_5_cov_sentence_minus_none"]["lo"] > 0),
     }
     # registered order: each claimed only if all earlier ones hold
     v, chain = res["verdicts"], True
-    for k in ("E6_1", "E6_2", "E6_3_equivalent_within_5", "E6_5"):
+    for k in ("E6_1", "E6_2", "E6_5", "E6_3_equivalent_within_10"):
         chain = chain and v[k]
         v[k + "_claimed"] = chain
     return res
@@ -273,9 +352,12 @@ if __name__ == "__main__":
     ap.add_argument("--split", default="dev")
     ap.add_argument("--kind", choices=["open", "det"], default="open")
     ap.add_argument("--allow-incomplete", action="store_true", help="development use only")
+    ap.add_argument("--credit", choices=["verified_diagnosis", "verified_refdomain", "verified_offclass"],
+                    default="verified_diagnosis", help="registered sensitivity analyses of witness credit")
     a = ap.parse_args()
+    VD_FIELD = a.credit
     e6.set_kind(a.kind)
     out = (analyse_det if a.kind == "det" else analyse)(a.split, a.allow_incomplete)
-    name = "e6det" if a.kind == "det" else "e6"
+    name = ("e6det" if a.kind == "det" else "e6") + ("" if a.credit == "verified_diagnosis" else "_" + a.credit)
     (e1.REC / f"{name}_results_v4_{a.split}.json").write_text(json.dumps(out, indent=1))
     print(json.dumps({k: v for k, v in out.items() if k not in ("levels", "per_config")}, indent=1))

@@ -129,6 +129,18 @@ def iso_home(route: str) -> str:
 
 
 def call(route: str, payload: str, timeout: float = 900.0) -> dict:
+    """One model call. A Codex login-refresh failure (single-use refresh tokens shared across isolated homes) never
+    reaches the model: the home is resynchronised from the user's login and the call is made once more."""
+    out = _call(route, payload, timeout)
+    if not out["ok"] and "refresh token" in str(out.get("error", "")):
+        with _auth_lock:
+            main = Path.home() / ".codex" / "auth.json"
+            shutil.copy2(main, ISO_ROOT / route / "auth.json")
+        out = _call(route, payload, timeout)
+    return out
+
+
+def _call(route: str, payload: str, timeout: float = 900.0) -> dict:
     kind, argv = ROUTES[route]
     env = dict(os.environ)
     if kind == "codex":
@@ -138,6 +150,8 @@ def call(route: str, payload: str, timeout: float = 900.0) -> dict:
         done = subprocess.run(argv, input=payload, cwd=str(EMPTY), capture_output=True, text=True,
                               timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
+        if kind == "codex":
+            sync_auth(env["CODEX_HOME"], after=True)
         return {"ok": False, "error": "timeout", "wall_s": round(time.monotonic() - started, 1),
                 "text": "", "raw": "", "tool_used": False}
     wall = round(time.monotonic() - started, 1)
@@ -943,7 +957,7 @@ def stage_controls(workers: int) -> None:
     times) and recheck it."""
     items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
     problems = {p.problem_id: p for p in load_problems()}
-    cons = admitted_constructions()
+    cons = admitted_constructions_v3()
     done = {(r["item_id"], r["arm"]) for r in load(CTRL_PATH) if r.get("final")}
     jobs = [(iid, arm) for iid in cons for arm in ("placebo", "pointer") if (iid, arm) not in done]
 
@@ -977,6 +991,18 @@ def stage_controls(workers: int) -> None:
 
 
 def admitted_constructions() -> dict:
+    """Amendment 4: an e1-v3 admission is retained only if taxonomy v4 classifies the item OPEN and both of its control
+    texts have a passing final recheck (original or regenerated)."""
+    tax = taxonomy2()
+    final = {}
+    for r in load(CTRL_PATH):
+        if r.get("final"):
+            final[(r["item_id"], r["arm"])] = r.get("passed", False)
+    return {iid: c for iid, c in admitted_constructions_v3().items()
+            if tax.get(iid) == "OPEN" and final.get((iid, "placebo")) and final.get((iid, "pointer"))}
+
+
+def admitted_constructions_v3() -> dict:
     cons = {r["item_id"]: r for r in load(CON_PATH) if r.get("admitted_by_execution")}
     votes: dict = {}
     for r in load(ADJ_PATH):
@@ -1370,15 +1396,20 @@ def stage_bridge(split: str, workers: int) -> None:
     the witness input and the two programs' results on it replace the first failing input."""
     problems = {p.problem_id: p for p in load_problems()}
     items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
-    have = {(r["item_id"], r["call"], r["adjudicator"]) for r in load(BRIDGE_PATH) if r.get("ok")}
+    have = {(r["item_id"], r["call"], r["adjudicator"], r.get("evidence_sha256")) for r in load(BRIDGE_PATH) if r.get("ok")}
+    have_keys = {(a, b, c) for a, b, c, _ in have}
     jobs = [(iid, call_src, adj) for (iid, call_src) in bridge_witnesses(split) for adj in ADJUDICATORS
-            if (iid, call_src, adj) not in have]
+            if (iid, call_src, adj) not in have_keys]
 
     def one(job):
         iid, call_src, adj = job
         item = items[iid]
         p = problems[item["problem_id"]]
         args, kwargs = parse_call(call_src, p.entry_point)
+        if kwargs:          # the taxonomy prompt renders positional arguments only
+            append(BRIDGE_PATH, {"item_id": iid, "call": call_src, "adjudicator": adj, "ok": False,
+                                 "error": "keyword arguments"})
+            return
         j = judge_call(p, args, kwargs, candidate=item["defective_solution"])
         if "infra" in j:
             append(BRIDGE_PATH, {"item_id": iid, "call": call_src, "adjudicator": adj, "ok": False, "error": "infra"})
@@ -1400,7 +1431,8 @@ def stage_bridge(split: str, workers: int) -> None:
 
 def bridge_classes() -> dict:
     """(item, call) -> class both adjudicators give on the witness's evidence (pooled by identical evidence), else
-    DISPUTED. DETERMINED witnesses are contract-independent; every other class is convention-dependent."""
+    DISPUTED. DETERMINED witnesses are contract-independent; the other classes (OPEN, AT_ODDS, OUT_OF_DOMAIN, NEITHER,
+    DISPUTED) are kept separate and called "not established as contract-independent", not convention-dependent."""
     by_ev, key_ev = {}, {}
     for r in load(BRIDGE_PATH):
         if r.get("ok"):
@@ -1439,11 +1471,18 @@ def completeness(split: str) -> dict:
         k = (r["item_id"], r["kind"], r["arm"], r["auditor"], r["reading"])
         tries[k] = tries.get(k, 0) + 1
     sched = expected_universe(split)
+    dropped = set(admitted_constructions_v3()) - set(admitted_constructions())
     for name in (f"schedule_v3_{split}.json", f"schedule_v3_orig_{split}.json"):
         if (REC / name).exists():
-            extra = {tuple(j) for j in json.loads((REC / name).read_text())} - set(sched)
+            extra = {tuple(j) for j in json.loads((REC / name).read_text())
+                     if not (j[0] in dropped and j[2] != "orig")} - set(sched)
             if extra:
                 raise SystemExit(f"{name} holds {len(extra)} keys outside the required universe")
+    retained, v3 = set(admitted_constructions()), set(admitted_constructions_v3())
+    superseded = [k for k in tries if k[0] in v3 - retained and k[2] != "orig"]
+    for k in superseded:                 # intervention readings of items Amendment 4 removed: counted, not used
+        tries.pop(k)
+        ok.pop(k, None)
     unexpected = [k for k in tries if k not in set(sched)]
     if unexpected:
         raise SystemExit(f"{len(unexpected)} audit keys outside the required universe, e.g. {unexpected[0]}")
@@ -1454,7 +1493,8 @@ def completeness(split: str) -> dict:
                 witness_key(r, items[r["item_id"]], problems[items[r["item_id"]]["problem_id"]]) not in wits]
     if unfinished or unscored:
         raise SystemExit(f"incomplete: {len(unfinished)} unfinished readings, {len(unscored)} unscored witnesses")
-    return {"scheduled": len(sched), "valid": len(ok), "missing": [list(k) for k in missing]}
+    return {"scheduled": len(sched), "valid": len(ok), "missing": [list(k) for k in missing],
+            "superseded_readings": len(superseded)}
 
 
 def main(argv=None) -> int:

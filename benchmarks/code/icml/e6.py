@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import random
 import base64
 import json
 import pickle
@@ -39,10 +40,11 @@ KIND = "open"            # "det": positive controls, where the task's words deci
 
 def set_kind(kind: str) -> None:
     """Point every stage at the record files of one unit kind."""
-    global KIND, PROPOSALS, IMPLS, PROBES, UNITS, JUDGE, BEHAV, AUD, AUD_RAW, WIT, ARMS
+    global KIND, PROPOSALS, IMPLS, PREUNITS, PROBES, UNITS, JUDGE, BEHAV, AUD, AUD_RAW, WIT, ARMS
     KIND = kind
     pre = "e6_" if kind == "open" else "e6det_"
     PROPOSALS, IMPLS = REC / f"{pre}proposals.jsonl", REC / f"{pre}impls.jsonl"
+    PREUNITS = REC / f"{pre}units.jsonl"          # pre-admission (stage_validate): decides who receives probes
     PROBES, UNITS = REC / f"{pre}probes.jsonl", REC / f"{pre}units4.jsonl"
     JUDGE, BEHAV = REC / f"{pre}judgements2.jsonl", REC / f"{pre}behaviour4.jsonl"
     AUD, AUD_RAW = REC / f"{pre}audits_v4.jsonl", REC / f"{pre}audits_raw_v4.jsonl"
@@ -280,7 +282,7 @@ def stage_validate(split: str, workers: int) -> None:
     for r in load(IMPLS):
         if r.get("ok"):
             impls[(r["problem_id"], r["contract"], r["route"])] = r["code"]
-    done_ids = {r["problem_id"] for r in load(UNITS)}
+    done_ids = {r["problem_id"] for r in load(PREUNITS)}
     jobs = [pid for pid in props if pid not in done_ids
             and all((pid, c, rt) in impls for c in ("a", "b") for rt in IMPL_ROUTES)]
 
@@ -294,7 +296,7 @@ def stage_validate(split: str, workers: int) -> None:
                for k, v in progs.items() if k != "ref"}
         hidden = e1.hidden_inputs(p)
         if hidden is None:
-            append(UNITS, {**row, "admitted": False, "reason": "no hidden inputs"})
+            append(PREUNITS, {**row, "admitted": False, "reason": "no hidden inputs"})
             return
         cls = [literal_tuple(x) for x in pr["class_inputs"]]
         oth = [literal_tuple(x) for x in pr["other_inputs"]]
@@ -302,7 +304,7 @@ def stage_validate(split: str, workers: int) -> None:
         pairs = [["ref", "b1"], ["ref", "b2"], ["a1", "a2"], ["a1", "b1"], ["a2", "b2"], ["ref", "a1"]]
         res = multi_compare(p, progs, pairs, inputs)
         if "infra" in res:
-            append(UNITS, {**row, "admitted": False, "reason": "infra", "infra": res["infra"]})
+            append(PREUNITS, {**row, "admitted": False, "reason": "infra", "infra": res["infra"]})
             return
         rows = res["rows"]
         nh, nc = len(hidden), len(cls)
@@ -317,7 +319,7 @@ def stage_validate(split: str, workers: int) -> None:
                   "class_differs_2": class_diff >= 2, "other_agree": other_same,
                   "class_inputs_valid": all(ref_valid[nh:nh + nc]), "other_inputs_valid": all(ref_valid[nh + nc:])}
         admitted = all(checks.values())
-        append(UNITS, {**row, "admitted": admitted, "checks": checks, "visible": vis, "n_hidden": nh,
+        append(PREUNITS, {**row, "admitted": admitted, "checks": checks, "visible": vis, "n_hidden": nh,
                        "n_class_differ": class_diff, "n_hidden_changed": len(hidden_changed),
                        "hidden_changed": hidden_changed[:200],
                        "reason": "ok" if admitted else ",".join(k for k, v in checks.items() if not v)})
@@ -356,8 +358,7 @@ Both predicates must never raise. Reply with exactly one JSON object:
 def stage_probe(split: str, workers: int) -> None:
     props = proposals(split)
     probs = {p.problem_id: p for p in problems(split)}
-    ok_ids = {u["problem_id"] for u in load(REC / ("e6_units.jsonl" if KIND == "open" else "e6det_units.jsonl"))
-              if u.get("admitted")}
+    ok_ids = {u["problem_id"] for u in load(PREUNITS) if u.get("admitted")}
     have = {r["problem_id"] for r in load(PROBES) if r.get("ok")}
     jobs = [pid for pid in props if pid in ok_ids and pid not in have]
 
@@ -419,6 +420,61 @@ def stage_classpred(split: str, workers: int) -> None:
     e1.run_pool(jobs, one, workers, f"e6 classpred {split}")
 
 
+_STR_MUT = ["", " ", "\v", "\f", "\u00a0", "\u2003", "\t\n", "è", "É", "ß", "Σ", "ΟΣ", "Ο\u0301Σ", "İ", "ǅ",
+            "\u0301", "😀", "a" * 300]
+_NUM_MUT = [0, -1, 1, 10 ** 16, -(10 ** 16), 2 ** 63, 0.5, -0.0, 1e308, -1e308, 1e-308, 3.5]
+
+
+def _mutants(x, rng, depth=0):
+    """Type-guided stress values for one argument: unicode and whitespace for strings, extremes and int/float
+    widening for numbers, empty/singleton/duplicated/mixed containers."""
+    out = []
+    if isinstance(x, bool):
+        return [not x]
+    if isinstance(x, str):
+        out += [m for m in _STR_MUT] + [x + m for m in _STR_MUT[1:8]] + [m + x for m in ("\u00a0", "Σ", "è")]
+        out += [x.upper(), x.lower(), x * 3]
+    elif isinstance(x, int):
+        out += _NUM_MUT + [x + 0.5, float(x), -x, x * 10 ** 12]
+    elif isinstance(x, float):
+        out += _NUM_MUT + [round(x), -x, x * 1e300]
+    elif isinstance(x, (list, tuple)) and depth < 2:
+        t = type(x)
+        out += [t(), t(x[:1]), t(list(x) + list(x[:1])), t(list(x)[::-1])]
+        if x and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in x):
+            out += [t([-1e308, 1e308]), t([1e308, 1e308]), t([10 ** 16, 1, -(10 ** 16)]), t([0.1, 0.2, 0.3]),
+                    t([-0.0, 0.0]), t([v + 0.5 for v in x])]
+        if x and all(isinstance(v, str) for v in x):
+            out += [t(["Σ", "σ"]), t(["è", "e"]), t(["\u00a0", " "]), t(["", ""])]
+        if x:
+            for m in _mutants(x[0], rng, depth + 1)[:12]:
+                out.append(t([m] + list(x[1:])))
+                if len(x) > 1:
+                    out.append(t(list(x[:-1]) + [m]))
+    elif isinstance(x, dict) and depth < 2:
+        out += [{}, {**x, "": None}, {**x, "Σ": 0}]
+    return out
+
+
+def stress_inputs(hidden: list, n: int = 120, seed: str = "") -> list:
+    """Deterministic stress inputs: each argument of a few hidden inputs replaced by its mutants (P4 blocker 1)."""
+    rng = random.Random(int(sha("stress|" + seed), 16))
+    base = [h for h in hidden if isinstance(h, (list, tuple))][:6]
+    out = []
+    for h in base:
+        for i, arg in enumerate(h):
+            for m in _mutants(arg, rng):
+                out.append(tuple(list(h[:i]) + [m] + list(h[i + 1:])))
+    rng.shuffle(out)
+    seen, uniq = set(), []
+    for x in out:
+        k = repr(x)
+        if k not in seen and len(k) < 5000:
+            seen.add(k)
+            uniq.append(x)
+    return uniq[:n]
+
+
 def predicate_src(src: str, name: str, entry: str) -> str:
     return src + f"\n\n{entry} = {name}\n"
 
@@ -451,7 +507,8 @@ def stage_validate4(split: str, workers: int) -> None:
         cls = [literal_tuple(x) for x in pr["class_inputs"]]
         oth = [literal_tuple(x) for x in pr["other_inputs"]]
         prb = [literal_tuple(x) for x in pb["probes"]]
-        inputs = list(hidden) + cls + oth + prb
+        stress = stress_inputs(list(hidden) + cls + oth, seed=pid)
+        inputs = list(hidden) + cls + oth + prb + stress
         pairs = [["ref", "b1"], ["ref", "b2"], ["a1", "a2"], ["ref", "a1"], ["ref", "a2"], ["a1", "b1"], ["a2", "b2"]]
         res = multi_compare(p, progs, pairs, inputs, capture=["valid", "in_class"])
         if "infra" in res:
@@ -483,7 +540,8 @@ def stage_validate4(split: str, workers: int) -> None:
                   "outside_class_agree": not bad["outside_class"], "a_impls_agree": not bad["a_disagree"],
                   "separates_2": n_sep >= 2, "predicates_match_proposer": consistent}
         admitted = all(checks.values())
-        append(UNITS, {**row, "admitted": admitted, "checks": checks, "n_inputs": len(inputs), "n_separating": n_sep,
+        append(UNITS, {**row, "admitted": admitted, "checks": checks, "n_inputs": len(inputs), "n_stress": len(stress),
+                       "n_separating": n_sep,
                        "n_valid": sum(1 for r in rows if r["value"].get("valid")),
                        "n_in_class": sum(1 for r in rows if r["value"].get("valid") and r["value"].get("in_class")),
                        "bad": {k: v[:20] for k, v in bad.items()},
@@ -610,7 +668,8 @@ def units(split: str) -> dict:
     props = proposals(split)
     impls = {(r["problem_id"], r["contract"], r["route"]): r["code"] for r in load(IMPLS) if r.get("ok")}
     probes = {r["problem_id"]: r for r in load(PROBES) if r.get("ok") and r.get("in_class_proposer")}
-    refs = {p.problem_id: p.canonical_solution for p in problems(split)}
+    pmap = {p.problem_id: p for p in problems(split)}
+    refs = {pid: p.canonical_solution for pid, p in pmap.items()}
     out = {}
     for u in load(UNITS):
         if not (u.get("admitted") and u["split"] == split):
@@ -624,7 +683,8 @@ def units(split: str) -> dict:
         out[pid] = {**props[pid], "shown_route": shown, "first_a": first_a,
                     "program": {c: impls[(pid, c, shown)] for c in "ab"},
                     "oracle": {"a": impls[(pid, "a", other)], "b": refs[pid]},
-                    "valid": probes[pid]["valid"], "in_class": probes[pid]["in_class_proposer"]}
+                    "valid": probes[pid]["valid"], "in_class": probes[pid]["in_class_proposer"],
+                    "comparator_sha": sha(json.dumps(suite_assertion(pmap[pid])))}
     return out
 
 
@@ -664,7 +724,8 @@ def stage_audit(split: str, workers: int) -> None:
     ok_keys = {tuple(r["key"]) for r in rows if r.get("ok")}
     tries: dict = {}
     for r in rows:
-        tries[tuple(r["key"])] = tries.get(tuple(r["key"]), 0) + 1
+        if counts_as_attempt(r):
+            tries[tuple(r["key"])] = tries.get(tuple(r["key"]), 0) + 1
     jobs = [j for j in schedule(split) if j not in ok_keys and tries.get(j, 0) < MAX_ATTEMPTS]
     __import__("random").Random(17).shuffle(jobs)
 
@@ -697,11 +758,13 @@ def stage_audit(split: str, workers: int) -> None:
     e1.run_pool(jobs, one, workers, f"e6 audit {split}")
 
 
-def witness_key(r: dict, u: dict, contract: str) -> str:
-    """Binds scorer version and source, the suite comparator, program, oracle, predicates, contract and witness text."""
+def witness_key(r: dict, u: dict, contract: str, p=None) -> str:
+    """Binds scorer version and source, the suite comparator and tolerance, program, both oracles, predicates,
+    contract and witness text."""
     prog = r["key"][1]
-    return sha(json.dumps([e1.SCORER, sha(e1.JUDGE), sha(MULTI), u["program"][prog], u["oracle"][contract],
-                           u["valid"], u["in_class"], contract, r["witnesses"]], sort_keys=True))
+    comp = sha(json.dumps(suite_assertion(p))) if p is not None else u.get("comparator_sha", "")
+    return sha(json.dumps([e1.SCORER, sha(e1.JUDGE), sha(MULTI), comp, u["program"][prog], u["oracle"]["a"],
+                           u["oracle"]["b"], u["valid"], u["in_class"], contract, r["witnesses"]], sort_keys=True))
 
 
 def stage_witness(split: str, workers: int) -> None:
@@ -712,7 +775,7 @@ def stage_witness(split: str, workers: int) -> None:
     have = {r["input_sha256"] for r in load(WIT) if not r.get("infra")}
     jobs = [(r, c) for r in load(AUD) if r.get("ok") and r.get("witnesses") and r["split"] == split
             and r.get("protocol") == PROTOCOL for c in "ab"
-            if r["key"][0] in us and witness_key(r, us[r["key"][0]], c) not in have]
+            if r["key"][0] in us and witness_key(r, us[r["key"][0]], c, probs[r["key"][0]]) not in have]
 
     def one(job):
         r, c = job
@@ -725,47 +788,83 @@ def stage_witness(split: str, workers: int) -> None:
                 out.append({"status": "unparseable"})
                 continue
             pr = multi_compare(p, {"valid": predicate_src(u["valid"], "valid", p.entry_point),
-                                   "in_class": predicate_src(u["in_class"], "in_class", p.entry_point)},
-                               [], [parsed[0]], capture=["valid", "in_class"])
+                                   "in_class": predicate_src(u["in_class"], "in_class", p.entry_point),
+                                   "oa": u["oracle"]["a"], "ob": u["oracle"]["b"]},
+                               [["oa", "ob"]], [parsed[0]], capture=["valid", "in_class"])
             if "infra" in pr:
                 out.append({"status": "infra", "detail": pr["infra"][:200]})
                 continue
-            val = pr["rows"][0]["value"]
-            if not val.get("valid"):
-                out.append({"status": "outside_domain", "predicate": True})
-                continue
+            row = pr["rows"][0]
             res = e1.judge_witness(p, u["program"][prog], w["call"], w["expected"], oracle=u["oracle"][c])
-            out.append({**res, "in_class": bool(val.get("in_class"))})
-        append(WIT, {"key": r["key"], "contract": c, "input_sha256": witness_key(r, u, c), "scorer": e1.SCORER,
+            out.append({**res, "valid": bool(row["value"].get("valid")), "in_class": bool(row["value"].get("in_class")),
+                        "oracles_differ": row["agree"]["oa~ob"] is False})
+        target = lambda x: (x.get("verified_diagnosis") and x.get("valid") and x.get("in_class")
+                            and x.get("oracles_differ"))
+        append(WIT, {"key": r["key"], "contract": c, "input_sha256": witness_key(r, u, c, p), "scorer": e1.SCORER,
                      "results": out, "infra": any(x["status"] == "infra" for x in out),
-                     "verified_diagnosis": any(x.get("verified_diagnosis") and x.get("in_class") for x in out),
-                     "verified_any": any(x.get("verified_diagnosis") for x in out)})
+                     "verified_diagnosis": any(target(x) for x in out),
+                     # sensitivity: the benchmark reference's own domain (it runs) instead of the `valid` predicate
+                     "verified_refdomain": any(x.get("verified_diagnosis") and x.get("in_class")
+                                               and x.get("oracles_differ") for x in out),
+                     "verified_offclass": any(x.get("verified_diagnosis") and x.get("valid")
+                                              and not x.get("in_class") for x in out)})
     e1.run_pool(jobs, one, workers, f"e6 witness {split}")
 
 
-def completeness(split: str) -> dict:
-    """Every required reading valid or exhausted; no duplicate valid reading; every flagged valid reading with
-    witnesses has a current, infrastructure-free score under both contracts. Raises otherwise."""
+PRE_MODEL_INFRA = ("refresh token", "auth.openai.com", "Not logged in", "Please run /login", "ECONNREFUSED")
+
+
+def counts_as_attempt(r: dict) -> bool:
+    """A failure that never reached the model (login refresh, connection refused) does not consume an attempt."""
+    return r.get("ok") or not any(m in str(r.get("error", "")) for m in PRE_MODEL_INFRA)
+
+
+def expected_prompt_sha(u: dict, p, prog: str, arm: str, cache: dict) -> str:
+    k = (p.problem_id, prog, arm)
+    if k not in cache:
+        cache[k] = sha(e1.audit_prompt(p, u["program"][prog], p.spec + arm_text(u, arm)))
+    return cache[k]
+
+
+def completeness(split: str, check_prompts: bool = True) -> dict:
+    """Every required reading valid or exhausted (pre-model infrastructure failures excluded); no duplicate valid
+    reading; every valid reading's prompt hash equals the prompt rebuilt from the frozen unit; every flagged valid
+    reading with witnesses has exactly one, infrastructure-free score under each contract. Readings of units outside
+    the current population (superseded by a later admission) are counted, not used. Raises otherwise."""
+    us = units(split)
+    probs = {p.problem_id: p for p in problems(split)}
     rows = [r for r in load(AUD) if r["split"] == split and r.get("protocol") == PROTOCOL]
     need = set(schedule(split))
-    ok, tries = {}, {}
+    ok, tries, superseded, cache = {}, {}, 0, {}
     for r in rows:
         k = tuple(r["key"])
+        if k[0] not in us:
+            superseded += 1
+            continue
         if k not in need:
             raise SystemExit(f"reading outside the required universe: {k}")
-        tries[k] = tries.get(k, 0) + 1
+        if counts_as_attempt(r):
+            tries[k] = tries.get(k, 0) + 1
         if r.get("ok"):
             if k in ok:
                 raise SystemExit(f"duplicate valid reading: {k}")
+            if check_prompts and r["prompt_sha256"] != expected_prompt_sha(us[k[0]], probs[k[0]], k[1], k[2], cache):
+                raise SystemExit(f"prompt hash mismatch: {k}")
             ok[k] = r
     unfinished = [k for k in need if k not in ok and tries.get(k, 0) < MAX_ATTEMPTS]
-    us = units(split)
-    have = {r["input_sha256"] for r in load(WIT) if not r.get("infra")}
+    scores: dict = {}
+    for w in load(WIT):
+        if not w.get("infra"):
+            prev = scores.get(w["input_sha256"])
+            if prev is not None and prev != w["verified_diagnosis"]:
+                raise SystemExit(f"conflicting witness scores under one key: {w['key']}")
+            scores[w["input_sha256"]] = w["verified_diagnosis"]
     unscored = [k for k, r in ok.items() if r.get("witnesses")
-                and any(witness_key(r, us[k[0]], c) not in have for c in "ab")]
+                and any(witness_key(r, us[k[0]], c, probs[k[0]]) not in scores for c in "ab")]
     if unfinished or unscored:
         raise SystemExit(f"incomplete: {len(unfinished)} unfinished readings, {len(unscored)} unscored witness sets")
-    return {"required": len(need), "valid": len(ok), "exhausted": sorted(set(need) - set(ok))}
+    return {"required": len(need), "valid": len(ok), "superseded_readings": superseded,
+            "exhausted": sorted(set(need) - set(ok))}
 
 
 set_kind("open")
