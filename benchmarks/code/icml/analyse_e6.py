@@ -1,14 +1,17 @@
-"""E6 analysis (CEILING_PROGRAM.md v3, section 3). Development use: calibrate the deployable policy, describe the
-pilot, and estimate the problem-level variance for the power simulation. No model calls.
+"""E6 analysis, protocol e6-v4 (PREREGISTRATION-E6.md). No model calls.
 
-Cells. A unit (one problem) has programs a and b (implementations of rules A and B) and contracts A and B.
-Under contract X, program X is correct and the other program is defective.
-- Unrevealed arms (none, menu): the same readings are scored under both contracts (Lemma: flag TPR = FPR).
-- resolve-X: contract X only.
-Per (unit, config, arm, program), the deployable policy flags when at least t of the k readings flag; its verified
-diagnosis is any verified witness among the readings that flag (scored against the contract's oracle).
+Cells. A unit (one problem) has programs a and b (implementations of rules A and B) and contracts A and B. Under
+contract X, program X is correct and the other program defective.
+- Unrevealed arms (none, menu) are scored under both contracts with the same readings (balanced counterfactual
+  scoring, not extra observations; Lemma: flag TPR = FPR).
+- resolve-X and sentence-X reveal contract X.
+Per (unit, program, arm, configuration) the deployable policy flags when at least t of its valid readings flag (two
+scheduled; one if the other is exhausted). Its verified diagnosis is a target-discrepancy verified witness (valid
+input, in the class, judged against the contract's oracle) among its flagging readings.
+A unit's value is the equally weighted mean over the configurations of the arm; a unit missing any required cell
+is excluded from that contrast and counted, with best and worst bounds reported.
 
-    python benchmarks/code/icml/analyse_e6.py --split dev
+    python benchmarks/code/icml/analyse_e6.py --split dev [--kind det] [--allow-incomplete]
 """
 from __future__ import annotations
 
@@ -22,56 +25,70 @@ import e1
 import e6
 
 B, SEED = 10000, 20261113
+ALPHA_FPR = 0.05
 
 
-def table(split: str):
-    aud = [r for r in e1.load(e6.AUD) if r.get("ok") and r["split"] == split]
+def table(split: str) -> tuple[dict, dict]:
+    aud = [r for r in e1.load(e6.AUD) if r["split"] == split and r.get("protocol") == e6.PROTOCOL]
+    seen = set()
+    for r in aud:
+        if r.get("ok"):
+            k = tuple(r["key"])
+            if k in seen:
+                raise SystemExit(f"duplicate valid reading {k}")
+            seen.add(k)
+    us = e6.units(split)
     wit = {}
     for r in e1.load(e6.WIT):
         if not r.get("infra"):
-            wit[(tuple(r["key"]), r["contract"])] = r["verified_diagnosis"]
+            wit[r["input_sha256"]] = r
     cells: dict = {}
     for r in aud:
+        if not r.get("ok"):
+            continue
         pid, prog, arm, cfg, k = r["key"]
-        vd = {c: bool(r["flagged"] and wit.get((tuple(r["key"]), c), False)) for c in "ab"}
-        cells.setdefault((pid, prog, arm, cfg), []).append({"flag": bool(r["flagged"]), "vd": vd})
-    return cells
+        vd = {}
+        for c in "ab":
+            if r["flagged"] and r.get("witnesses"):
+                w = wit.get(e6.witness_key(r, us[pid], c))
+                if w is None:
+                    raise SystemExit(f"unscored witness set {r['key']} contract {c}")
+                vd[c] = bool(w["verified_diagnosis"])
+            else:
+                vd[c] = False
+        cells.setdefault((pid, prog, arm, cfg), []).append(
+            {"flag": bool(r["flagged"]), "vd": vd, "esc": bool(r.get("escalated"))})
+    return cells, us
 
 
 def policy(readings: list, t: int) -> tuple[bool, dict]:
-    flags = [x["flag"] for x in readings]
-    flag = sum(flags) >= t
-    vd = {c: flag and any(x["vd"][c] for x in readings) for c in "ab"}
-    return flag, vd
+    flag = sum(x["flag"] for x in readings) >= min(t, len(readings))
+    return flag, {c: flag and any(x["vd"][c] for x in readings) for c in "ab"}
 
 
-def unit_values(cells, units, arm_group: str, cfgs, t: int) -> dict:
-    """Per unit: tpr, fpr (flag), cov (verified diagnosis on defective cells), averaged over configurations."""
-    out = {}
-    for pid in units:
-        vals = []
-        for cfg in cfgs:
-            def cell(prog, arm):
-                rs = cells.get((pid, prog, arm, cfg))
-                return policy(rs, t) if rs else None
-            if arm_group == "resolve":
-                ca, cb = cell("a", "resolve-a"), cell("b", "resolve-b")      # correct programs
-                da, db = cell("b", "resolve-a"), cell("a", "resolve-b")      # defective programs
-                if None in (ca, cb, da, db):
-                    continue
-                vals.append({"tpr": (da[0] + db[0]) / 2, "fpr": (ca[0] + cb[0]) / 2,
-                             "cov": (da[1]["a"] + db[1]["b"]) / 2})
-            else:
-                pa, pb = cell("a", arm_group), cell("b", arm_group)
-                if None in (pa, pb):
-                    continue
-                f = (pa[0] + pb[0]) / 2
-                vals.append({"tpr": f, "fpr": f, "cov": (pa[1]["b"] + pb[1]["a"]) / 2,
-                             "r_b": float(pa[1]["b"]), "r_a": float(pb[1]["a"]),
-                             "flag_a": float(pa[0]), "flag_b": float(pb[0])})
-        if vals:
-            out[pid] = {k: statistics.mean(v[k] for v in vals) for k in vals[0]}
-    return out
+def unit_value(cells, pid, arm_group: str, cfgs, t: int) -> dict | None:
+    """Mean over configurations; None if any required cell is missing (registered complete-case rule)."""
+    vals = []
+    for cfg in cfgs:
+        def cell(prog, arm):
+            rs = cells.get((pid, prog, arm, cfg))
+            return policy(rs, t) if rs else None
+        if arm_group in ("resolve", "sentence"):
+            ca, cb = cell("a", f"{arm_group}-a"), cell("b", f"{arm_group}-b")     # correct programs
+            da, db = cell("b", f"{arm_group}-a"), cell("a", f"{arm_group}-b")     # defective programs
+            if None in (ca, cb, da, db):
+                return None
+            vals.append({"tpr": (da[0] + db[0]) / 2, "fpr": (ca[0] + cb[0]) / 2, "cov": (da[1]["a"] + db[1]["b"]) / 2,
+                         "any_clean_flag": float(ca[0] or cb[0])})
+        else:
+            pa, pb = cell("a", arm_group), cell("b", arm_group)
+            if None in (pa, pb):
+                return None
+            f = (pa[0] + pb[0]) / 2
+            vals.append({"tpr": f, "fpr": f, "cov": (pa[1]["b"] + pb[1]["a"]) / 2,
+                         "r_b": float(pa[1]["b"]), "r_a": float(pb[1]["a"]),
+                         "flag_a": float(pa[0]), "flag_b": float(pb[0]), "any_clean_flag": float(pa[0] or pb[0])})
+    return {k: statistics.mean(v[k] for v in vals) for k in vals[0]}
 
 
 def boot(values: dict, seed=SEED, b=B) -> dict | None:
@@ -85,86 +102,162 @@ def boot(values: dict, seed=SEED, b=B) -> dict | None:
             "sd_unit": 100 * (statistics.stdev(xs) if len(xs) > 1 else 0.0)}
 
 
+def cp_upper(k: int, n: int, conf: float = 0.95) -> float:
+    """One-sided exact (Clopper-Pearson) upper bound for k events in n, by bisection on the binomial tail."""
+    if n == 0:
+        return 1.0
+    if k >= n:
+        return 1.0
+    lo, hi = k / n, 1.0
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        tail = sum(math.comb(n, i) * mid ** i * (1 - mid) ** (n - i) for i in range(k + 1))
+        lo, hi = (mid, hi) if tail > 1 - conf else (lo, mid)
+    return hi
+
+
+def fpr_bound(uv: dict) -> dict:
+    """Registered boundary safeguard: the problem-level indicator of any clean-cell flag is a conservative upper
+    proxy for the mean clean-flag rate; its exact one-sided 95% bound must be below alpha."""
+    k = sum(1 for v in uv.values() if v["any_clean_flag"] > 0)
+    n = len(uv)
+    return {"units_with_any_clean_flag": k, "n": n, "upper95": 100 * cp_upper(k, n)}
+
+
 def population(split: str) -> list:
-    """Registered population: execution-admitted units with both judges' verdicts as required by the unit kind
-    (open: both rules compatible; det: RULE_A incompatible and RULE_B compatible)."""
+    """Registered population: v4-admitted units; both registered judges, by identity, rate the domain valid and (open)
+    both rules compatible or (det) RULE_A incompatible and RULE_B compatible."""
     want = ("compatible", "compatible") if e6.KIND == "open" else ("incompatible", "compatible")
     votes: dict = {}
     for r in e1.load(e6.JUDGE):
         if r.get("ok"):
-            votes.setdefault(r["problem_id"], {})[r["judge"]] = (r["a"], r["b"])
+            votes.setdefault(r["problem_id"], {})[r["judge"]] = (r.get("domain"), r["a"], r["b"])
     return sorted(pid for pid in e6.units(split)
-                  if len(votes.get(pid, {})) == len(e6.JUDGE_ROUTES)
-                  and all(v == want for v in votes[pid].values()))
+                  if all(votes.get(pid, {}).get(j) == ("valid",) + want for j in e6.JUDGE_ROUTES))
 
 
-def analyse_det(split: str) -> dict:
-    """E6-4: positive controls under contract B, none arm: TPR = flag on program a, FPR = flag on program b."""
-    cells = table(split)
+def contrast(cells, units, g1, g2, cfgs1, cfgs2, metric, t):
+    vals, missing = {}, 0
+    for pid in units:
+        x, y = unit_value(cells, pid, g1, cfgs1, t), unit_value(cells, pid, g2, cfgs2, t)
+        if x is None or y is None:
+            missing += 1
+            continue
+        vals[pid] = x[metric] - y[metric]
+    out = boot(vals)
+    if out:
+        out["excluded_missing"] = missing
+    return out
+
+
+def level(cells, units, g, cfgs, t):
+    uv = {pid: v for pid in units if (v := unit_value(cells, pid, g, cfgs, t)) is not None}
+    out = {m: boot({k: v[m] for k, v in uv.items()}) for m in ("tpr", "fpr", "cov")}
+    out["fpr_bound"] = fpr_bound(uv)
+    out["excluded_missing"] = len(units) - len(uv)
+    return out, uv
+
+
+def routing(cells, units, arm, cfg):
+    """Menu decision routing: share of readings that block, escalate, or neither (pass)."""
+    rs = [x for pid in units for prog in "ab" for x in cells.get((pid, prog, arm, cfg), [])]
+    n = len(rs) or 1
+    return {"n": len(rs), "block": sum(x["flag"] for x in rs) / n,
+            "escalate": sum(x["esc"] and not x["flag"] for x in rs) / n,
+            "pass": sum(not x["flag"] and not x["esc"] for x in rs) / n}
+
+
+def analyse(split: str, allow_incomplete: bool) -> dict:
+    status = None
+    try:
+        status = e6.completeness(split)
+    except SystemExit as err:
+        if not allow_incomplete:
+            raise
+        status = {"incomplete": str(err)}
+    cells, _ = table(split)
     units = population(split)
-    out = {}
+    C, S = e6.CONFIGS, e6.SENTENCE_CONFIGS
+    res = {"split": split, "protocol": e6.PROTOCOL, "n_units": len(units), "completeness": status}
+    t = 1
+    lv = {}
+    for name, cfgs in [("all", C)] + [(c, (c,)) for c in C]:
+        for g in ("none", "menu", "resolve"):
+            lv[f"{name}|{g}"] = level(cells, units, g, cfgs, t)[0]
+    for name, cfgs in [("sentence-configs", S)] + [(c, (c,)) for c in S]:
+        lv[f"{name}|sentence"] = level(cells, units, "sentence", cfgs, t)[0]
+        lv[f"{name}|resolve"] = level(cells, units, "resolve", cfgs, t)[0]
+    res["levels"] = lv
+    res["E6_1_cov_resolve_minus_menu"] = contrast(cells, units, "resolve", "menu", C, C, "cov", t)
+    res["E6_1_abs_resolve_cov"] = lv["all|resolve"]["cov"]
+    res["E6_1_abs_resolve_fpr_bound"] = lv["all|resolve"]["fpr_bound"]
+    _, nv = level(cells, units, "none", C, t)
+    res["E6_2_convention_advantage_none"] = boot({k: (v["r_b"] - v["r_a"]) / 2 for k, v in nv.items()})
+    res["E6_3_cov_high_minus_low_resolve"] = contrast(cells, units, "resolve", "resolve",
+                                                      [c for c in C if c.endswith("high")],
+                                                      [c for c in C if c.endswith("low")], "cov", t)
+    res["E6_5_cov_sentence_minus_none"] = contrast(cells, units, "sentence", "none", S, S, "cov", t)
+    res["sentence_minus_resolve_cov"] = contrast(cells, units, "sentence", "resolve", S, S, "cov", t)
+    res["check_unrevealed_J_none"] = boot({k: v["tpr"] - v["fpr"] for k, v in nv.items()})
+    res["flag_pref_a_minus_b_none"] = boot({k: v["flag_a"] - v["flag_b"] for k, v in nv.items()})
+    res["per_config"] = {c: {"E6_1": contrast(cells, units, "resolve", "menu", (c,), (c,), "cov", t),
+                             "E6_2": boot({k: (v["r_b"] - v["r_a"]) / 2
+                                           for k, v in level(cells, units, "none", (c,), t)[1].items()})}
+                         for c in C}
+    res["routing_menu"] = {c: routing(cells, units, "menu", c) for c in C}
+    res["routing_none"] = {c: routing(cells, units, "none", c) for c in C}
+    eq = res["E6_3_cov_high_minus_low_resolve"]
+    res["verdicts"] = {
+        "E6_1": bool(res["E6_1_cov_resolve_minus_menu"] and res["E6_1_cov_resolve_minus_menu"]["lo"] > 0
+                     and lv["all|resolve"]["cov"] and lv["all|resolve"]["cov"]["lo"] >= 50
+                     and lv["all|resolve"]["fpr"] and lv["all|resolve"]["fpr"]["hi"] < 100 * ALPHA_FPR
+                     and lv["all|resolve"]["fpr_bound"]["upper95"] < 100 * ALPHA_FPR),
+        "E6_2": bool(res["E6_2_convention_advantage_none"] and res["E6_2_convention_advantage_none"]["lo"] > 0),
+        "E6_3_equivalent_within_5": bool(eq and eq["lo"] > -5 and eq["hi"] < 5),
+    }
+    return res
+
+
+def analyse_det(split: str, allow_incomplete: bool) -> dict:
+    """E6-4: positive controls under contract B, none arm: TPR = flag on program a, FPR = flag on program b."""
+    try:
+        status = e6.completeness(split)
+    except SystemExit as err:
+        if not allow_incomplete:
+            raise
+        status = {"incomplete": str(err)}
+    cells, _ = table(split)
+    units = population(split)
+    out, missing = {}, 0
     for pid in units:
         vals = []
         for cfg in e6.CONFIGS:
             ra, rb = cells.get((pid, "a", "none", cfg)), cells.get((pid, "b", "none", cfg))
-            if ra and rb:
-                fa, va = policy(ra, 1)
-                fb, _ = policy(rb, 1)
-                vals.append({"j": fa - fb, "tpr": fa, "fpr": fb, "cov": va["b"]})
-        if vals:
-            out[pid] = {k: statistics.mean(v[k] for v in vals) for k in vals[0]}
-    return {"split": split, "n_units": len(units),
-            "E6_4_J_none": boot({k: v["j"] for k, v in out.items()}),
-            **{m: boot({k: v[m] for k, v in out.items()}) for m in ("tpr", "fpr", "cov")}}
-
-
-def analyse(split: str) -> dict:
-    cells = table(split)
-    units = population(split)
-    res = {"split": split, "n_units": len(units), "readings": sum(len(v) for v in cells.values())}
-    cfg_sets = {"all": e6.CONFIGS, **{c: (c,) for c in e6.CONFIGS}}
-    for t in (1, 2):
-        lv = {}
-        for name, cfgs in cfg_sets.items():
-            for arm in ("none", "menu", "resolve"):
-                uv = unit_values(cells, units, arm, cfgs, t)
-                for m in ("tpr", "fpr", "cov"):
-                    lv[f"t{t}|{name}|{arm}|{m}"] = boot({k: v[m] for k, v in uv.items()})
-        res[f"levels_t{t}"] = lv
-        r = unit_values(cells, units, "resolve", e6.CONFIGS, t)
-        m = unit_values(cells, units, "menu", e6.CONFIGS, t)
-        n = unit_values(cells, units, "none", e6.CONFIGS, t)
-        res[f"E6_1_cov_resolve_minus_menu_t{t}"] = boot({k: r[k]["cov"] - m[k]["cov"] for k in r if k in m})
-        res[f"J_resolve_t{t}"] = boot({k: r[k]["tpr"] - r[k]["fpr"] for k in r})
-        res[f"E6_2_convention_advantage_none_t{t}"] = boot({k: (v["r_b"] - v["r_a"]) / 2 for k, v in n.items()})
-        res[f"flag_pref_a_minus_b_none_t{t}"] = boot({k: v["flag_a"] - v["flag_b"] for k, v in n.items()})
-        hi = [c for c in e6.CONFIGS if c.endswith("high")]
-        lo = [c for c in e6.CONFIGS if c.endswith("low")]
-        rh, rl = unit_values(cells, units, "resolve", hi, t), unit_values(cells, units, "resolve", lo, t)
-        res[f"E6_3_cov_high_minus_low_resolve_t{t}"] = boot({k: rh[k]["cov"] - rl[k]["cov"] for k in rh if k in rl})
+            if not (ra and rb):
+                vals = None
+                break
+            fa, va = policy(ra, 1)
+            fb, _ = policy(rb, 1)
+            vals.append({"j": fa - fb, "tpr": fa, "fpr": fb, "cov": va["b"]})
+        if vals is None:
+            missing += 1
+            continue
+        out[pid] = {k: statistics.mean(v[k] for v in vals) for k in vals[0]}
+    res = {"split": split, "n_units": len(units), "excluded_missing": missing, "completeness": status,
+           "E6_4_J_none": boot({k: v["j"] for k, v in out.items()}),
+           **{m: boot({k: v[m] for k, v in out.items()}) for m in ("tpr", "fpr", "cov")}}
+    res["verdicts"] = {"E6_4": bool(res["E6_4_J_none"] and res["E6_4_J_none"]["lo"] > 0)}
     return res
-
-
-def power_table(sd_points: float) -> dict:
-    """Problems needed for 80% power, two-sided 5%, at effects of 10, 15 and 20 points (normal approximation)."""
-    z = 1.959964 + 0.841621
-    return {f"{d}pt": math.ceil((z * sd_points / d) ** 2) for d in (10, 15, 20)} if sd_points else {}
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", default="dev")
     ap.add_argument("--kind", choices=["open", "det"], default="open")
+    ap.add_argument("--allow-incomplete", action="store_true", help="development use only")
     a = ap.parse_args()
     e6.set_kind(a.kind)
-    if a.kind == "det":
-        out = analyse_det(a.split)
-        (e1.REC / f"e6det_results_{a.split}.json").write_text(json.dumps(out, indent=1))
-        print(json.dumps(out, indent=1))
-        raise SystemExit(0)
-    out = analyse(a.split)
-    for key in ("E6_1_cov_resolve_minus_menu_t1", "E6_2_convention_advantage_none_t1"):
-        if out.get(key):
-            out[f"power_{key}"] = power_table(out[key]["sd_unit"])
-    (e1.REC / f"e6_results_{a.split}.json").write_text(json.dumps(out, indent=1))
-    print(json.dumps({k: v for k, v in out.items() if not k.startswith("levels")}, indent=1))
+    out = (analyse_det if a.kind == "det" else analyse)(a.split, a.allow_incomplete)
+    name = "e6det" if a.kind == "det" else "e6"
+    (e1.REC / f"{name}_results_v4_{a.split}.json").write_text(json.dumps(out, indent=1))
+    print(json.dumps({k: v for k, v in out.items() if k not in ("levels", "per_config")}, indent=1))

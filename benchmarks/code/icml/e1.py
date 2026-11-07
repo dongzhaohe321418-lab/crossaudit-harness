@@ -1321,6 +1321,81 @@ def stage_witness(workers: int) -> None:
     run_pool(jobs, one, workers, "witness")
 
 
+# ---------------------------------------------------------------------------------------------
+# bridge (E6 <-> natural audits; GPT review P3, recommendation 1)
+# ---------------------------------------------------------------------------------------------
+BRIDGE_PATH = REC / "bridge_v4.jsonl"
+
+
+def bridge_witnesses(split: str) -> dict:
+    """Every distinct verified witness on a defective program in the original arm: (problem, call) -> evidence."""
+    problems = {p.problem_id: p for p in load_problems()}
+    items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
+    wits = {r["input_sha256"]: r for r in load(WIT_PATH) if not r.get("infra")}
+    out = {}
+    for r in load(AUD_PATH):
+        if not (r.get("ok") and r.get("witnesses") and r["arm"] == "orig" and r["kind"] == "defective"
+                and r.get("split") == split):
+            continue
+        item = items[r["item_id"]]
+        w = wits.get(witness_key(r, item, problems[item["problem_id"]]))
+        if not w:
+            continue
+        for wit, res in zip(r["witnesses"], w["results"]):
+            if res.get("verified_diagnosis"):
+                out.setdefault((r["item_id"], wit["call"]), wit)
+    return out
+
+
+def stage_bridge(split: str, workers: int) -> None:
+    """Classify the discrepancy each verified witness diagnoses with the taxonomy-v4 prompt and both adjudicators:
+    the witness input and the two programs' results on it replace the first failing input."""
+    problems = {p.problem_id: p for p in load_problems()}
+    items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
+    have = {(r["item_id"], r["call"], r["adjudicator"]) for r in load(BRIDGE_PATH) if r.get("ok")}
+    jobs = [(iid, call_src, adj) for (iid, call_src) in bridge_witnesses(split) for adj in ADJUDICATORS
+            if (iid, call_src, adj) not in have]
+
+    def one(job):
+        iid, call_src, adj = job
+        item = items[iid]
+        p = problems[item["problem_id"]]
+        args, kwargs = parse_call(call_src, p.entry_point)
+        j = judge_call(p, args, kwargs, candidate=item["defective_solution"])
+        if "infra" in j:
+            append(BRIDGE_PATH, {"item_id": iid, "call": call_src, "adjudicator": adj, "ok": False, "error": "infra"})
+            return
+        pseudo = {**item, "first_fail": {"args_repr": repr(tuple(args)), "reference": j["reference"],
+                                         "candidate": j["candidate"]}}
+        ff = pseudo["first_fail"]
+        flip = int(sha("tax2|" + json.dumps([item["problem_id"], ff["args_repr"], ff["reference"], ff["candidate"]],
+                                            sort_keys=True)), 16) % 2 == 1
+        payload = tax2_payload(p, pseudo, flip)
+        res = call(adj, payload)
+        obj = parse_json(res["text"]) if res["ok"] else None
+        ok = isinstance(obj, dict) and obj.get("class") in TAX2_CLASSES
+        append(BRIDGE_PATH, {"item_id": iid, "call": call_src, "adjudicator": adj, "ok": ok, "split": split,
+                             "evidence_sha256": sha(payload), "class": obj.get("class") if ok else None,
+                             "reason": (obj or {}).get("reason", ""), "error": "" if ok else res.get("error", "parse")})
+    run_pool(jobs, one, workers, f"bridge {split}")
+
+
+def bridge_classes() -> dict:
+    """(item, call) -> class both adjudicators give on the witness's evidence (pooled by identical evidence), else
+    DISPUTED. DETERMINED witnesses are contract-independent; every other class is convention-dependent."""
+    by_ev, key_ev = {}, {}
+    for r in load(BRIDGE_PATH):
+        if r.get("ok"):
+            by_ev.setdefault(r["evidence_sha256"], []).append(r["class"])
+            key_ev.setdefault((r["item_id"], r["call"]), {})[r["adjudicator"]] = r["evidence_sha256"]
+    out = {}
+    for k, ev in key_ev.items():
+        if len(ev) == len(ADJUDICATORS):
+            votes = [c for e in set(ev.values()) for c in by_ev[e]]
+            out[k] = votes[0] if len(set(votes)) == 1 else "DISPUTED"
+    return out
+
+
 def expected_universe(split: str, auditors: list[str] = PRIMARY_AUDITORS) -> list[tuple]:
     """Every reading the registered analysis needs, rebuilt from the frozen items and admissions rather than from
     whatever schedule files exist (A4 B5): all arms for admitted items, the original arm for the rest."""
@@ -1367,7 +1442,7 @@ def completeness(split: str) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("stage", choices=["generate", "oracle", "execute", "select", "construct", "adjudicate",
-                                      "taxonomy", "taxonomy2", "controls", "audit", "witness"])
+                                      "taxonomy", "taxonomy2", "controls", "bridge", "audit", "witness"])
     ap.add_argument("--orig-rest", action="store_true", help="original arm for the non-admitted items")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--split", default="dev", choices=["dev", "test"])
@@ -1378,7 +1453,7 @@ def main(argv=None) -> int:
      "execute": lambda: stage_execute(a.workers), "select": lambda: stage_select(a.force),
      "construct": lambda: stage_construct(a.workers), "adjudicate": lambda: stage_adjudicate(a.workers),
      "taxonomy": lambda: stage_taxonomy(a.workers), "taxonomy2": lambda: stage_taxonomy2(a.workers),
-     "controls": lambda: stage_controls(a.workers),
+     "controls": lambda: stage_controls(a.workers), "bridge": lambda: stage_bridge(a.split, a.workers),
      "audit": lambda: stage_audit(a.split, a.workers, a.auditors.split(","), a.orig_rest),
      "witness": lambda: stage_witness(a.workers)}[a.stage]()
     return 0

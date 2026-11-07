@@ -39,13 +39,15 @@ KIND = "open"            # "det": positive controls, where the task's words deci
 
 def set_kind(kind: str) -> None:
     """Point every stage at the record files of one unit kind."""
-    global KIND, PROPOSALS, IMPLS, UNITS, JUDGE, BEHAV, AUD, AUD_RAW, WIT, ARMS
+    global KIND, PROPOSALS, IMPLS, PROBES, UNITS, JUDGE, BEHAV, AUD, AUD_RAW, WIT, ARMS
     KIND = kind
     pre = "e6_" if kind == "open" else "e6det_"
-    PROPOSALS, IMPLS, UNITS = REC / f"{pre}proposals.jsonl", REC / f"{pre}impls.jsonl", REC / f"{pre}units.jsonl"
-    JUDGE, BEHAV = REC / f"{pre}judgements.jsonl", REC / f"{pre}behaviour.jsonl"
-    AUD, AUD_RAW, WIT = REC / f"{pre}audits.jsonl", REC / f"{pre}audits_raw.jsonl", REC / f"{pre}witnesses.jsonl"
-    ARMS = ("none", "menu", "resolve-a", "resolve-b") if kind == "open" else ("none",)
+    PROPOSALS, IMPLS = REC / f"{pre}proposals.jsonl", REC / f"{pre}impls.jsonl"
+    PROBES, UNITS = REC / f"{pre}probes.jsonl", REC / f"{pre}units4.jsonl"
+    JUDGE, BEHAV = REC / f"{pre}judgements2.jsonl", REC / f"{pre}behaviour4.jsonl"
+    AUD, AUD_RAW = REC / f"{pre}audits_v4.jsonl", REC / f"{pre}audits_raw_v4.jsonl"
+    WIT = REC / f"{pre}witnesses_v4.jsonl"
+    ARMS = OPEN_ARMS if kind == "open" else ("none",)
 PROPOSE_ROUTE = "con-gpt-astra"
 IMPL_ROUTES = ("adj-gpt-sol", "adj-claude-opus")     # two vendors, same prompt
 
@@ -181,13 +183,14 @@ rows = []
 for inp in inputs:
     out = {k: run(f, inp) for k, f in fns.items()}
     rows.append({"status": {k: v[0] for k, v in out.items()},
-                 "agree": {f"{a}~{b}": agrees(out[a], out[b]) for a, b in spec["pairs"]}})
+                 "agree": {f"{a}~{b}": agrees(out[a], out[b]) for a, b in spec["pairs"]},
+                 "value": {k: out[k][1] for k in spec.get("capture", []) if isinstance(out[k][1], bool)}})
 with open(spec["out"], "w") as fh:
     fh.write(json.dumps(rows))
 '''
 
 
-def multi_compare(p, programs: dict, pairs: list, inputs: list, limit: int = 5) -> dict:
+def multi_compare(p, programs: dict, pairs: list, inputs: list, limit: int = 5, capture: list = ()) -> dict:
     """Run every program on every input in one executor process; compare the given pairs with the suite's own
     assertion. Results come back through a file."""
     helpers, atol = suite_assertion(p)
@@ -195,7 +198,8 @@ def multi_compare(p, programs: dict, pairs: list, inputs: list, limit: int = 5) 
     with tempfile.TemporaryDirectory() as tmp:
         spec = {"helpers": helpers, "atol": float(e1.literal(atol)), "entry": p.entry_point, "limit": limit,
                 "inputs": base64.b64encode(pickle.dumps(inputs)).decode(), "pairs": pairs,
-                "programs": {k: pre + v for k, v in programs.items()}, "out": str(Path(tmp) / "out.json")}
+                "programs": {k: pre + v for k, v in programs.items()}, "out": str(Path(tmp) / "out.json"),
+                "capture": list(capture)}
         (Path(tmp) / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
         (Path(tmp) / "multi.py").write_text(MULTI, encoding="utf-8")
         try:
@@ -321,6 +325,173 @@ def stage_validate(split: str, workers: int) -> None:
 
 
 # ---------------------------------------------------------------------------------------------
+# independent probes and executable predicates (GPT review P3, blocker 1); admission v4
+# ---------------------------------------------------------------------------------------------
+PROBE_ROUTE = "adj-claude-opus"      # did not propose the rules
+PROBE_PROMPT = """You are writing test material for a study of code review. Below is a programming task (description and
+visible tests) and two rules that a task author might add for some inputs. Do not decide which rule is right.
+
+TASK:
+{spec}
+
+VISIBLE TESTS:
+{visible}
+
+RULE 1: {r1}
+RULE 2: {r2}
+
+Write, in Python with the standard library only:
+- a predicate `valid(*args)` that returns True exactly when the positional arguments are valid inputs for the task as
+  stated (types, ranges, preconditions such as "sorted", "positive", "same length", "1 to 12"), and False otherwise;
+- a predicate `in_class(*args)` that returns True exactly when the arguments are inputs to which the two rules apply
+  and on which they can lead to different results, and False otherwise;
+- 16 to 24 probe calls, each a Python literal tuple of positional arguments with the exact types the task uses
+  (one-argument calls written "(x,)"): at least 6 valid inputs inside the class including boundary cases, at least 6
+  valid inputs outside the class including near-boundary cases, and up to 4 invalid inputs.
+Both predicates must never raise. Reply with exactly one JSON object:
+{{"valid": "def valid(*args):\n    ...", "in_class": "def in_class(*args):\n    ...", "probes": ["(...)", ...]}}
+"""
+
+
+def stage_probe(split: str, workers: int) -> None:
+    props = proposals(split)
+    probs = {p.problem_id: p for p in problems(split)}
+    ok_ids = {u["problem_id"] for u in load(REC / ("e6_units.jsonl" if KIND == "open" else "e6det_units.jsonl"))
+              if u.get("admitted")}
+    have = {r["problem_id"] for r in load(PROBES) if r.get("ok")}
+    jobs = [pid for pid in props if pid in ok_ids and pid not in have]
+
+    def one(pid):
+        p, pr = probs[pid], props[pid]
+        a_first = int(sha("probe-order|" + pid), 16) % 2 == 0
+        r1, r2 = (pr["rule_a"], pr["rule_b"]) if a_first else (pr["rule_b"], pr["rule_a"])
+        payload = PROBE_PROMPT.format(spec=p.spec.rstrip(), visible=p.visible_tests_text(), r1=r1, r2=r2)
+        res = e1.call(PROBE_ROUTE, payload)
+        obj = e1.parse_json(res["text"]) if res["ok"] else None
+        ok = (isinstance(obj, dict) and isinstance(obj.get("valid"), str) and isinstance(obj.get("in_class"), str)
+              and "def valid" in obj["valid"] and "def in_class" in obj["in_class"]
+              and isinstance(obj.get("probes"), list))
+        probes = [literal_tuple(x) for x in obj["probes"]] if ok else []
+        ok = ok and len([x for x in probes if x is not None]) >= 12
+        append(PROBES, {"problem_id": pid, "split": split, "route": PROBE_ROUTE, "ok": ok, "prompt_sha256": sha(payload),
+                        **({"valid": obj["valid"], "in_class": obj["in_class"],
+                            "probes": [x for x in obj["probes"] if literal_tuple(x) is not None]} if ok else {}),
+                        "error": "" if ok else res.get("error", "parse")})
+    e1.run_pool(jobs, one, workers, f"e6 probe {split}")
+
+
+CLASSPRED_PROMPT = """Earlier you described a kind of input for the task below. Write a Python predicate
+`in_class(*args)` (standard library only, never raising) that returns True exactly when the positional arguments are
+an input of that kind, whether or not the two rules happen to give different results on that particular input, and
+False for every other input. It must return True on each CLASS input and False on each OTHER input listed.
+
+TASK:
+{spec}
+
+KIND OF INPUT: {cls}
+RULE 1: {r1}
+RULE 2: {r2}
+CLASS INPUTS: {ci}
+OTHER INPUTS: {oi}
+
+Reply with exactly one JSON object: {{"in_class": "def in_class(*args):\n    ..."}}
+"""
+
+
+def stage_classpred(split: str, workers: int) -> None:
+    """The class predicate comes from the proposer, which defined the class; `valid` and the probes stay independent."""
+    props = proposals(split)
+    probs = {p.problem_id: p for p in problems(split)}
+    rows = [r for r in load(PROBES) if r.get("ok")]
+    jobs = [r for r in rows if "in_class_proposer" not in r and r["problem_id"] in props]
+    have = {r["problem_id"] for r in load(PROBES) if r.get("in_class_proposer")}
+    jobs = [r for r in jobs if r["problem_id"] not in have]
+
+    def one(r):
+        pid = r["problem_id"]
+        pr = props[pid]
+        payload = CLASSPRED_PROMPT.format(spec=probs[pid].spec.rstrip(), cls=pr["class"], r1=pr["rule_a"],
+                                          r2=pr["rule_b"], ci=pr["class_inputs"], oi=pr["other_inputs"])
+        res = e1.call(PROPOSE_ROUTE, payload)
+        obj = e1.parse_json(res["text"]) if res["ok"] else None
+        if isinstance(obj, dict) and isinstance(obj.get("in_class"), str) and "def in_class" in obj["in_class"]:
+            append(PROBES, {**r, "in_class_proposer": obj["in_class"], "classpred_sha256": sha(payload)})
+    e1.run_pool(jobs, one, workers, f"e6 classpred {split}")
+
+
+def predicate_src(src: str, name: str, entry: str) -> str:
+    return src + f"\n\n{entry} = {name}\n"
+
+
+def stage_validate4(split: str, workers: int) -> None:
+    """Admission v4: on every valid input (by the executable `valid` predicate) among the hidden inputs, the proposer's
+    inputs and the independent probes, both B implementations agree with the reference; outside the class (by
+    `in_class`) all four implementations agree with the reference; inside it the two A implementations agree; A and B
+    differ on at least two valid class inputs; the proposer's class inputs are valid and in class and its other inputs
+    valid and out of class; the predicates never raise; all implementations pass the visible tests."""
+    props = proposals(split)
+    probs = {p.problem_id: p for p in problems(split)}
+    pr_rows = {r["problem_id"]: r for r in load(PROBES) if r.get("ok") and r.get("in_class_proposer")}
+    impls = {(r["problem_id"], r["contract"], r["route"]): r["code"] for r in load(IMPLS) if r.get("ok")}
+    done_ids = {r["problem_id"] for r in load(UNITS)}
+    jobs = [pid for pid in pr_rows if pid in props and pid not in done_ids]
+
+    def one(pid):
+        p, pr, pb = probs[pid], props[pid], pr_rows[pid]
+        g, c = IMPL_ROUTES
+        progs = {"ref": p.canonical_solution, "a1": impls[(pid, "a", g)], "a2": impls[(pid, "a", c)],
+                 "b1": impls[(pid, "b", g)], "b2": impls[(pid, "b", c)],
+                 "valid": predicate_src(pb["valid"], "valid", p.entry_point),
+                 "in_class": predicate_src(pb["in_class_proposer"], "in_class", p.entry_point)}
+        row = {"problem_id": pid, "split": split, "impl_sha256": {k: sha(v) for k, v in progs.items()},
+               "probe_sha256": sha(json.dumps(pb, sort_keys=True))}
+        vis = {k: execute.run_suite(p.visible_program(progs[k]), instrumented=p.visible_instrumented).passed
+               for k in ("a1", "a2", "b1", "b2")}
+        hidden = e1.hidden_inputs(p) or []
+        cls = [literal_tuple(x) for x in pr["class_inputs"]]
+        oth = [literal_tuple(x) for x in pr["other_inputs"]]
+        prb = [literal_tuple(x) for x in pb["probes"]]
+        inputs = list(hidden) + cls + oth + prb
+        pairs = [["ref", "b1"], ["ref", "b2"], ["a1", "a2"], ["ref", "a1"], ["ref", "a2"], ["a1", "b1"], ["a2", "b2"]]
+        res = multi_compare(p, progs, pairs, inputs, capture=["valid", "in_class"])
+        if "infra" in res:
+            append(UNITS, {**row, "admitted": False, "reason": "infra", "infra": res["infra"]})
+            return
+        rows = res["rows"]
+        pred_ok = all(r["status"]["valid"] == "ok" and r["status"]["in_class"] == "ok"
+                      and "valid" in r["value"] and "in_class" in r["value"] for r in rows)
+        bad = {"b_vs_ref": [], "outside_class": [], "a_disagree": []}
+        n_sep = 0
+        for i, r in enumerate(rows):
+            if not (r["value"].get("valid") and r["status"]["ref"] == "ok"):
+                continue
+            ag = r["agree"]
+            if not (ag["ref~b1"] and ag["ref~b2"]):
+                bad["b_vs_ref"].append(i)
+            if r["value"].get("in_class"):
+                if not ag["a1~a2"]:
+                    bad["a_disagree"].append(i)
+                if ag["a1~b1"] is False and ag["a2~b2"] is False:
+                    n_sep += 1
+            elif not (ag["ref~a1"] and ag["ref~a2"]):
+                bad["outside_class"].append(i)
+        nh, nc, no = len(hidden), len(cls), len(oth)
+        cls_rows, oth_rows = rows[nh:nh + nc], rows[nh + nc:nh + nc + no]
+        consistent = (all(r["value"].get("valid") and r["value"].get("in_class") for r in cls_rows)
+                      and all(r["value"].get("valid") and not r["value"].get("in_class") for r in oth_rows))
+        checks = {"visible": all(vis.values()), "predicates_total": pred_ok, "b_agree_ref": not bad["b_vs_ref"],
+                  "outside_class_agree": not bad["outside_class"], "a_impls_agree": not bad["a_disagree"],
+                  "separates_2": n_sep >= 2, "predicates_match_proposer": consistent}
+        admitted = all(checks.values())
+        append(UNITS, {**row, "admitted": admitted, "checks": checks, "n_inputs": len(inputs), "n_separating": n_sep,
+                       "n_valid": sum(1 for r in rows if r["value"].get("valid")),
+                       "n_in_class": sum(1 for r in rows if r["value"].get("valid") and r["value"].get("in_class")),
+                       "bad": {k: v[:20] for k, v in bad.items()},
+                       "reason": "ok" if admitted else ",".join(k for k, v in checks.items() if not v)})
+    e1.run_pool(jobs, one, workers, f"e6 validate4 {split}")
+
+
+# ---------------------------------------------------------------------------------------------
 # validation without human raters: a blind two-vendor judge panel and behavioural evidence
 # ---------------------------------------------------------------------------------------------
 JUDGE = REC / "e6_judgements.jsonl"
@@ -333,21 +504,25 @@ visible tests; do not run code.
 TASK (as given to a programmer):
 {spec}
 
-Consider inputs of this kind: {cls}
-Below are two rules for such inputs. For EACH rule separately, decide whether a careful programmer reading only the
-task and the visible tests could accept a function that follows it, given that the task says nothing more.
+VISIBLE TESTS:
+{visible}
+
+Below are two rules a task author might add. First decide whether the inputs the rules concern are valid inputs for
+the task as stated (types, ranges, preconditions). Then, for EACH rule separately, decide whether the task's words and
+visible tests allow a function that follows it. The absence of an example is not by itself permission: a rule is
+"incompatible" if the words, ordinary meaning (for example mathematical facts) or the visible tests rule it out.
 RULE 1: {r1}
 RULE 2: {r2}
 
-For each rule answer "compatible" (the task's words and visible tests allow it), "incompatible" (they rule it out;
-cite the words) or "unresolved". Reply with exactly one JSON object:
-{{"rule1": "compatible" | "incompatible" | "unresolved", "rule2": "...", "reason": "one or two sentences"}}
+Reply with exactly one JSON object:
+{{"domain": "valid" | "invalid" | "unresolved", "rule1": "compatible" | "incompatible" | "unresolved",
+  "rule2": "compatible" | "incompatible" | "unresolved", "reason": "one or two sentences citing the words"}}
 """
 
 
 def stage_judge(split: str, workers: int) -> None:
-    props = {pid: pr for pid, pr in proposals(split).items()
-             if any(u["problem_id"] == pid and u.get("admitted") for u in load(UNITS))}
+    adm = {u["problem_id"] for u in load(UNITS) if u.get("admitted")}
+    props = {pid: pr for pid, pr in proposals(split).items() if pid in adm}
     probs = {p.problem_id: p for p in problems(split)}
     have = {(r["problem_id"], r["judge"]) for r in load(JUDGE) if r.get("ok")}
     jobs = [(pid, j) for pid in props for j in JUDGE_ROUTES if (pid, j) not in have]
@@ -357,15 +532,17 @@ def stage_judge(split: str, workers: int) -> None:
         pr = props[pid]
         a_first = int(sha("judge-order|" + pid), 16) % 2 == 0
         r1, r2 = (pr["rule_a"], pr["rule_b"]) if a_first else (pr["rule_b"], pr["rule_a"])
-        payload = JUDGE_PROMPT.format(spec=probs[pid].spec.rstrip(), cls=pr["class"], r1=r1, r2=r2)
+        payload = JUDGE_PROMPT.format(spec=probs[pid].spec.rstrip(), visible=probs[pid].visible_tests_text(), r1=r1, r2=r2)
         res = e1.call(j, payload)
         obj = e1.parse_json(res["text"]) if res["ok"] else None
         vals = ("compatible", "incompatible", "unresolved")
-        ok = isinstance(obj, dict) and obj.get("rule1") in vals and obj.get("rule2") in vals
+        ok = (isinstance(obj, dict) and obj.get("rule1") in vals and obj.get("rule2") in vals
+              and obj.get("domain") in ("valid", "invalid", "unresolved"))
         row = {"problem_id": pid, "judge": j, "ok": ok, "prompt_sha256": sha(payload),
                "error": "" if ok else res.get("error", "parse")}
         if ok:
-            row.update({"a": obj["rule1"] if a_first else obj["rule2"], "b": obj["rule2"] if a_first else obj["rule1"],
+            row.update({"domain": obj["domain"],
+                        "a": obj["rule1"] if a_first else obj["rule2"], "b": obj["rule2"] if a_first else obj["rule1"],
                         "reason": str(obj.get("reason", ""))[:600]})
         append(JUDGE, row)
     e1.run_pool(jobs, one, workers, f"e6 judge {split}")
@@ -418,9 +595,12 @@ def stage_behaviour(split: str, workers: int) -> None:
 AUD = REC / "e6_audits.jsonl"
 AUD_RAW = REC / "e6_audits_raw.jsonl"
 WIT = REC / "e6_witnesses.jsonl"
-ARMS = ("none", "menu", "resolve-a", "resolve-b")
+OPEN_ARMS = ("none", "menu", "resolve-a", "resolve-b", "sentence-a", "sentence-b")
+ARMS = OPEN_ARMS
 CONFIGS = ("aud-gpt-terra-low", "aud-gpt-terra-high", "aud-claude-sonnet-low", "aud-claude-sonnet-high")
+SENTENCE_CONFIGS = ("aud-gpt-terra-low", "aud-claude-sonnet-low")   # ordinary-language reveal: one budget per vendor
 READINGS = 2
+PROTOCOL = "e6-v4"
 MAX_ATTEMPTS = 3
 
 
@@ -429,6 +609,8 @@ def units(split: str) -> dict:
     problem id; the oracle for each contract is the other vendor's implementation of it."""
     props = proposals(split)
     impls = {(r["problem_id"], r["contract"], r["route"]): r["code"] for r in load(IMPLS) if r.get("ok")}
+    probes = {r["problem_id"]: r for r in load(PROBES) if r.get("ok") and r.get("in_class_proposer")}
+    refs = {p.problem_id: p.canonical_solution for p in problems(split)}
     out = {}
     for u in load(UNITS):
         if not (u.get("admitted") and u["split"] == split):
@@ -437,30 +619,40 @@ def units(split: str) -> dict:
         shown = IMPL_ROUTES[int(sha(pid), 16) % 2]
         other = IMPL_ROUTES[1 - IMPL_ROUTES.index(shown)]
         first_a = int(sha("menu-order|" + pid), 16) % 2 == 0          # menu order, fixed per unit
+        # v4 oracles: contract B is the benchmark reference itself; contract A is the other vendor's A implementation
+        # (admission requires both A implementations to agree in class and to equal the reference outside it)
         out[pid] = {**props[pid], "shown_route": shown, "first_a": first_a,
                     "program": {c: impls[(pid, c, shown)] for c in "ab"},
-                    "oracle": {c: impls[(pid, c, other)] for c in "ab"}}
+                    "oracle": {"a": impls[(pid, "a", other)], "b": refs[pid]},
+                    "valid": probes[pid]["valid"], "in_class": probes[pid]["in_class_proposer"]}
     return out
 
 
 def arm_text(u: dict, arm: str) -> str:
-    """Text appended to the task. The menu bytes are identical in every arm that shows them and do not depend on
-    the contract; a resolving arm adds one selection sentence of equal form for either contract."""
+    """Text appended to the task. v4: no class description (rules carry their own condition). The menu bytes are
+    identical in every arm that shows them and do not depend on the contract; a resolving arm adds one selection
+    sentence of equal form; a sentence arm states one rule as an ordinary requirement, with no menu."""
     if arm == "none":
         return ""
+    if arm.startswith("sentence-"):
+        return "\n\nAdditional requirement: " + u["rule_" + arm.split("-")[1]].strip()
     first, second = ("a", "b") if u["first_a"] else ("b", "a")
-    menu = ("\n\nAdditional requirement. " + u["class"].strip().rstrip(".") + ": the function must follow exactly one "
-            "of these two rules, and the task author has fixed which.\n"
-            f"(1) {u['rule_' + first].strip()}\n(2) {u['rule_' + second].strip()}")
+    menu = ("\n\nAdditional requirement: the function must follow exactly one of these two rules, and the task "
+            f"author has fixed which.\n(1) {u['rule_' + first].strip()}\n(2) {u['rule_' + second].strip()}")
     if arm == "menu":
         return menu + "\nThe task does not say which of the two rules applies."
     chosen = arm.split("-")[1]
     return menu + f"\nThe function must follow rule ({1 if chosen == first else 2})."
 
 
+def configs_for(arm: str) -> tuple:
+    return SENTENCE_CONFIGS if arm.startswith("sentence-") else CONFIGS
+
+
 def schedule(split: str) -> list[tuple]:
+    """The required reading universe: every (unit, program, arm, configuration, reading)."""
     return [(pid, prog, arm, cfg, k) for pid in sorted(units(split)) for prog in "ab" for arm in ARMS
-            for cfg in CONFIGS for k in range(READINGS)]
+            for cfg in configs_for(arm) for k in range(READINGS)]
 
 
 def stage_audit(split: str, workers: int) -> None:
@@ -481,7 +673,7 @@ def stage_audit(split: str, workers: int) -> None:
         p, u = probs[pid], us[pid]
         payload = e1.audit_prompt(p, u["program"][prog], p.spec + arm_text(u, arm))
         res = e1.call(cfg, payload, timeout=900)
-        row = {"key": list(job), "split": split, "prompt_sha256": sha(payload), "wall_s": res["wall_s"],
+        row = {"key": list(job), "split": split, "protocol": PROTOCOL, "prompt_sha256": sha(payload), "wall_s": res["wall_s"],
                "usage": res.get("usage"), "attempt": tries.get(job, 0) + 1}
         append(AUD_RAW, {"key": list(job), "attempt": row["attempt"], "text": res["text"], "raw": res.get("raw", ""),
                          "error": res.get("error", "")})
@@ -499,40 +691,96 @@ def stage_audit(split: str, workers: int) -> None:
         witnesses = [{"call": c.strip(), "expected": e.strip()}
                      for f in blockers for c, e in e1._WIT.findall(f.get("observation", ""))]
         append(AUD, {**row, "ok": True, "flagged": bool(blockers), "n_findings": len(findings),
+                     "escalated": str(reply.get("verdict", "")).upper().startswith("ESCALATE"),
                      "n_blockers": len(blockers), "witnesses": witnesses[:6], "verdict": reply.get("verdict", ""),
                      "blocker_text": [str(f.get("observation", ""))[:600] for f in blockers][:6]})
     e1.run_pool(jobs, one, workers, f"e6 audit {split}")
 
 
+def witness_key(r: dict, u: dict, contract: str) -> str:
+    """Binds scorer version and source, the suite comparator, program, oracle, predicates, contract and witness text."""
+    prog = r["key"][1]
+    return sha(json.dumps([e1.SCORER, sha(e1.JUDGE), sha(MULTI), u["program"][prog], u["oracle"][contract],
+                           u["valid"], u["in_class"], contract, r["witnesses"]], sort_keys=True))
+
+
 def stage_witness(split: str, workers: int) -> None:
-    """Score each reading's witnesses under BOTH contracts (the oracle implementations): under contract X the shown
-    program is defective iff it implements the other contract."""
+    """Score each reading's witnesses under BOTH contracts. A witness counts only on a valid input (the executable
+    `valid` predicate); it is a target-discrepancy witness if the input is in the class (`in_class`)."""
     us = units(split)
     probs = {p.problem_id: p for p in problems(split)}
-    have = {(tuple(r["key"]), r["contract"]) for r in load(WIT) if not r.get("infra")}
+    have = {r["input_sha256"] for r in load(WIT) if not r.get("infra")}
     jobs = [(r, c) for r in load(AUD) if r.get("ok") and r.get("witnesses") and r["split"] == split
-            for c in "ab" if (tuple(r["key"]), c) not in have]
+            and r.get("protocol") == PROTOCOL for c in "ab"
+            if r["key"][0] in us and witness_key(r, us[r["key"][0]], c) not in have]
 
     def one(job):
         r, c = job
         pid, prog = r["key"][0], r["key"][1]
         p, u = probs[pid], us[pid]
-        res = [e1.judge_witness(p, u["program"][prog], w["call"], w["expected"], oracle=u["oracle"][c])
-               for w in r["witnesses"]]
-        append(WIT, {"key": r["key"], "contract": c, "scorer": e1.SCORER, "results": res,
-                     "infra": any(x["status"] == "infra" for x in res),
-                     "verified_diagnosis": any(x.get("verified_diagnosis") for x in res)})
+        out = []
+        for w in r["witnesses"]:
+            parsed = e1.parse_call(w["call"], p.entry_point)
+            if parsed is None or parsed[1]:
+                out.append({"status": "unparseable"})
+                continue
+            pr = multi_compare(p, {"valid": predicate_src(u["valid"], "valid", p.entry_point),
+                                   "in_class": predicate_src(u["in_class"], "in_class", p.entry_point)},
+                               [], [parsed[0]], capture=["valid", "in_class"])
+            if "infra" in pr:
+                out.append({"status": "infra", "detail": pr["infra"][:200]})
+                continue
+            val = pr["rows"][0]["value"]
+            if not val.get("valid"):
+                out.append({"status": "outside_domain", "predicate": True})
+                continue
+            res = e1.judge_witness(p, u["program"][prog], w["call"], w["expected"], oracle=u["oracle"][c])
+            out.append({**res, "in_class": bool(val.get("in_class"))})
+        append(WIT, {"key": r["key"], "contract": c, "input_sha256": witness_key(r, u, c), "scorer": e1.SCORER,
+                     "results": out, "infra": any(x["status"] == "infra" for x in out),
+                     "verified_diagnosis": any(x.get("verified_diagnosis") and x.get("in_class") for x in out),
+                     "verified_any": any(x.get("verified_diagnosis") for x in out)})
     e1.run_pool(jobs, one, workers, f"e6 witness {split}")
+
+
+def completeness(split: str) -> dict:
+    """Every required reading valid or exhausted; no duplicate valid reading; every flagged valid reading with
+    witnesses has a current, infrastructure-free score under both contracts. Raises otherwise."""
+    rows = [r for r in load(AUD) if r["split"] == split and r.get("protocol") == PROTOCOL]
+    need = set(schedule(split))
+    ok, tries = {}, {}
+    for r in rows:
+        k = tuple(r["key"])
+        if k not in need:
+            raise SystemExit(f"reading outside the required universe: {k}")
+        tries[k] = tries.get(k, 0) + 1
+        if r.get("ok"):
+            if k in ok:
+                raise SystemExit(f"duplicate valid reading: {k}")
+            ok[k] = r
+    unfinished = [k for k in need if k not in ok and tries.get(k, 0) < MAX_ATTEMPTS]
+    us = units(split)
+    have = {r["input_sha256"] for r in load(WIT) if not r.get("infra")}
+    unscored = [k for k, r in ok.items() if r.get("witnesses")
+                and any(witness_key(r, us[k[0]], c) not in have for c in "ab")]
+    if unfinished or unscored:
+        raise SystemExit(f"incomplete: {len(unfinished)} unfinished readings, {len(unscored)} unscored witness sets")
+    return {"required": len(need), "valid": len(ok), "exhausted": sorted(set(need) - set(ok))}
+
+
+set_kind("open")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=["propose", "implement", "validate", "judge", "behaviour", "audit", "witness"])
+    ap.add_argument("stage", choices=["propose", "implement", "validate", "probe", "classpred", "validate4", "judge", "behaviour",
+                                      "audit", "witness"])
     ap.add_argument("--split", default="dev")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--kind", choices=["open", "det"], default="open")
     a = ap.parse_args()
     set_kind(a.kind)
-    {"propose": stage_propose, "implement": stage_implement, "validate": stage_validate, "judge": stage_judge,
+    {"propose": stage_propose, "implement": stage_implement, "validate": stage_validate, "probe": stage_probe,
+     "classpred": stage_classpred, "validate4": stage_validate4, "judge": stage_judge,
      "behaviour": stage_behaviour, "audit": stage_audit,
      "witness": stage_witness}[a.stage](a.split, a.workers)
