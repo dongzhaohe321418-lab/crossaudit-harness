@@ -91,3 +91,26 @@ route. (2) Missing data: each auditor's value is the union over its valid readin
 mean over the auditors with at least one valid reading; an item is dropped only if no auditor has one.
 Missing readings are reported by mode and auditor. Hypotheses, thresholds, items, validators and the agentic
 arm are unchanged.
+
+## Amendment 2 (after Amendment 1's development rerun; before any test score)
+
+**What was seen.** The development scores after Amendment 1 (H1 +7.1 [+1.0, +16.1], H4 +3.6 [-2.7, +9.8])
+and, in the rerun, that the Codex reading route still invoked tools in 58 of 224 readings: on inspection,
+`web_search` calls looking for the original UCI files. No test score has been computed.
+
+**Why.** Web search let an auditor look up the clean source data, which no data team auditing a delivered
+table would be able to do for its own data, and it was available in the Codex agentic route too. The Claude
+agentic route allowed Bash without a network sandbox. Neither route kept a transcript of commands, so access
+to the network, or to files outside the item (including other items and the injection manifest), cannot be
+ruled out for any earlier reading.
+
+**Changes.** (1) Every Codex call runs with web search disabled (`-c web_search="disabled"`, checked); the
+reading route also disables the shell tools; the agentic route keeps the read-only sandbox, which has no
+network. (2) Claude's agentic route runs inside Claude Code's sandbox with no allowed network domains
+(checked: curl and Python HTTP both refused), with Bash and Read only, and emits a stream-json transcript.
+(3) Each agentic reading runs in a fresh temporary copy of the item holding only `data.csv` and `CARD.md`.
+(4) Every command and file read is stored; a reading whose commands name the network, a path outside its own
+copy (other temporary or user directories, the item store, the repository) or any non-shell tool is
+discarded as a failed attempt; raw transcripts are kept. (5) Every earlier E3 reading, on both splits and in
+both modes, is excluded by a route tag and kept in the records; all audits are rerun under the new routes.
+Hypotheses, thresholds, items, validators and Amendment 1's missing-data rule are unchanged.

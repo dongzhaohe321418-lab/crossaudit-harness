@@ -1,8 +1,10 @@
 """E3 model audits (PREREGISTRATION-E3.md): tool-using and reading-only auditors on the E3 data items.
 
-  agentic   the auditor runs in the item's directory (data.csv, CARD.md only) and may inspect the files with
-            the shell and Python; Codex (read-only sandbox, isolated CODEX_HOME, --json) or Claude Code
-            (Bash and Read allowed; Write and Edit denied). One reading per item and auditor.
+  agentic   the auditor runs in a fresh temporary copy of the item (data.csv, CARD.md only) and may inspect
+            the files with the shell and Python; Codex (read-only sandbox, isolated CODEX_HOME, --json, web
+            search disabled) or Claude Code (Bash and Read only, inside Claude Code's sandbox with no network,
+            stream-json transcript). One reading per item and auditor. Amendment 2: every command is kept, and
+            a reading whose commands reach the network or anything outside its own copy is discarded.
   reading   the same instructions with both files inlined and every tool disabled; 120-row items only; two
             readings per item and auditor. Codex runs with its shell tools disabled (amendment 1); a reading
             that invokes a tool is still discarded.
@@ -15,8 +17,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
+import re
+import shutil
 import subprocess
+import tempfile
 import sys
 import time
 from pathlib import Path
@@ -29,12 +35,31 @@ from build_e3 import ITEM_ROOT, REC  # noqa: E402
 from spec_e3 import FAULT_NAMES  # noqa: E402
 
 OUT = REC / "audits.jsonl"
-ROUTE = {("aud-gpt-terra", "reading"): "codex-notools"}   # amendment 1; other routes unchanged
+RAW = REC / "audits_raw.jsonl"
+ROUTE_VERSION = "isolated-v2"     # amendment 2: every route, both modes; earlier rows are archived
 
 
 def current(r: dict) -> bool:
-    """Rows made with the route version the study now uses (earlier Codex reading rows are archived)."""
-    return r.get("route", "") == ROUTE.get((r["auditor"], r["mode"]), "")
+    """Rows made with the route version the study now uses."""
+    return r.get("route", "") == ROUTE_VERSION
+
+
+SANDBOX = json.dumps({"sandbox": {"enabled": True, "autoAllowBashIfSandboxed": True,
+                                  "allowUnsandboxedCommands": False, "network": {"allowedDomains": []}}})
+_OUT_OF_SCOPE = re.compile(r"(\.\./|~/|/tmp/|/Users/|/private/|/var/|/home/|e3items|crossaudit|benchmarks|"
+                           r"items\.json|manifest|https?:|\bcurl\b|\bwget\b|urllib|import requests|socket|"
+                           r"http\.client|find\s+/|ls\s+/(?!usr|bin)|\blocate\s)", re.I)
+
+
+def scope_violations(commands: list[str], workdir: str) -> list[str]:
+    """Commands that reach the network or a path outside the auditor's own copy of the item."""
+    out = []
+    for c in commands:
+        for w in (os.path.realpath(workdir), workdir):
+            c = c.replace(w, "")
+        if _OUT_OF_SCOPE.search(c):
+            out.append(c[:300])
+    return out
 TYPES = sorted(set(FAULT_NAMES.values())) + ["other"]
 PROMPT = """You are auditing a dataset delivered for a scientific analysis before anyone uses it. {where}
 
@@ -59,10 +84,12 @@ def route_cmd(auditor: str, mode: str, item_dir: Path) -> tuple[str, list[str]]:
     if auditor == "aud-gpt-terra":
         notools = ["--disable", "shell_tool", "--disable", "unified_exec"] if mode == "reading" else []
         argv = ["codex", "exec", "--ignore-user-config", "--ignore-rules", "--ephemeral", "--json", *notools,
+                "-c", 'web_search="disabled"',
                 "-m", "gpt-5.6-terra", "-c", 'model_reasoning_effort="medium"', "--sandbox", "read-only",
                 "--skip-git-repo-check", "-C", str(item_dir if mode == "agentic" else e1.EMPTY), "-"]
         return "codex", argv
-    tools = ["--allowedTools", "Bash,Read", "--disallowedTools", "Write,Edit,NotebookEdit,WebFetch,WebSearch"] \
+    tools = ["--allowedTools", "Bash,Read", "--disallowedTools", "Write,Edit,NotebookEdit,WebFetch,WebSearch",
+             "--settings", SANDBOX, "--output-format", "stream-json", "--verbose"] \
         if mode == "agentic" else ["--tools", ""]
     argv = ["claude", "-p", "--model", "claude-sonnet-5-5", *tools, "--setting-sources", "",
             "--strict-mcp-config", "--disable-slash-commands", "--no-session-persistence",
@@ -71,25 +98,35 @@ def route_cmd(auditor: str, mode: str, item_dir: Path) -> tuple[str, list[str]]:
 
 
 def run(auditor: str, mode: str, item: dict, timeout: float = 1500.0) -> dict:
-    item_dir = ITEM_ROOT / item["item"]
+    src = ITEM_ROOT / item["item"]
+    work = Path(tempfile.mkdtemp(prefix="audit_"))
+    for name in ("data.csv", "CARD.md"):
+        shutil.copy2(src / name, work / name)
+    try:
+        return _run(auditor, mode, work, timeout)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def _run(auditor: str, mode: str, work: Path, timeout: float) -> dict:
     if mode == "agentic":
         payload = PROMPT.format(where=AGENTIC_WHERE, types=TYPES)
     else:
-        where = ("The card and the data follow.\n\nCARD.md:\n" + (item_dir / "CARD.md").read_text() +
-                 "\n\ndata.csv:\n" + (item_dir / "data.csv").read_text())
+        where = ("The card and the data follow.\n\nCARD.md:\n" + (work / "CARD.md").read_text() +
+                 "\n\ndata.csv:\n" + (work / "data.csv").read_text())
         payload = PROMPT.format(where=where, types=TYPES)
-    kind, argv = route_cmd(auditor, mode, item_dir)
+    kind, argv = route_cmd(auditor, mode, work)
     env = dict(e1.os.environ)
     if kind == "codex":
         env["CODEX_HOME"] = e1.iso_home(f"{auditor}-e3")
+    cwd = str(work if mode == "agentic" else e1.EMPTY)
     started = time.monotonic()
     try:
-        done = subprocess.run(argv, input=payload, cwd=str(item_dir if mode == "agentic" else e1.EMPTY),
-                              capture_output=True, text=True, timeout=timeout, env=env)
+        done = subprocess.run(argv, input=payload, cwd=cwd, capture_output=True, text=True, timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
-        return {"ok": False, "error": "timeout", "wall_s": round(time.monotonic() - started, 1)}
+        return {"ok": False, "error": "timeout", "wall_s": round(time.monotonic() - started, 1), "raw": ""}
     wall = round(time.monotonic() - started, 1)
-    raw, text, tools_used = done.stdout or "", done.stdout or "", 0
+    raw, text, tools_used, commands, other_tools = done.stdout or "", done.stdout or "", 0, [], []
     if kind == "codex":
         msgs = []
         for line in raw.splitlines():
@@ -100,16 +137,48 @@ def run(auditor: str, mode: str, item: dict, timeout: float = 1500.0) -> dict:
             it = ev.get("item") or {}
             if ev.get("type") == "item.completed" and it.get("type") in e1.NON_MESSAGE_ITEMS:
                 tools_used += 1
+                if it.get("type") == "command_execution":
+                    commands.append(str(it.get("command", "")))
+                else:
+                    other_tools.append(it.get("type"))
             if ev.get("type") == "item.completed" and it.get("type") == "agent_message":
                 msgs.append(it.get("text", ""))
         text = msgs[-1] if msgs else ""
+    elif mode == "agentic":
+        text = ""
+        for line in raw.splitlines():
+            try:
+                ev = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if ev.get("type") == "assistant":
+                for c in ev.get("message", {}).get("content", []):
+                    if isinstance(c, dict) and c.get("type") == "tool_use":
+                        tools_used += 1
+                        inp = c.get("input") or {}
+                        if c.get("name") == "Bash":
+                            commands.append(str(inp.get("command", "")))
+                        elif c.get("name") == "Read":
+                            commands.append("Read " + str(inp.get("file_path", "")))
+                        else:
+                            other_tools.append(c.get("name"))
+            if ev.get("type") == "result":
+                text = str(ev.get("result") or "")
     obj = e1.parse_json(text)
+    violations = scope_violations(commands, str(work)) if mode == "agentic" else []
     ok = done.returncode == 0 and isinstance(obj, dict) and isinstance(obj.get("findings"), list)
+    error = ""
     if mode == "reading" and tools_used:
-        ok = False
-    return {"ok": ok, "wall_s": wall, "tools_used": tools_used, "reply": obj if ok else None,
-            "text": text[:20000], "error": "" if ok else f"exit {done.returncode}; tools {tools_used}; "
-                                                       f"{(done.stderr or '')[-200:]}"}
+        ok, error = False, f"tools {tools_used}"
+    if other_tools:
+        ok, error = False, f"non-shell tools {other_tools[:5]}"
+    if violations:
+        ok, error = False, "out-of-scope access"
+    if not ok and not error:
+        error = f"exit {done.returncode}; {(done.stderr or '')[-200:]}"
+    return {"ok": ok, "wall_s": wall, "tools_used": tools_used, "commands": commands[:200],
+            "violations": violations[:20], "reply": obj if ok else None, "text": text[:20000],
+            "error": error, "raw": raw}
 
 
 def main() -> int:
@@ -136,8 +205,11 @@ def main() -> int:
     def one(job):
         item, au, k = job
         res = run(au, a.mode, item)
+        raw = res.pop("raw", "")
+        e1.append(RAW, {"item": item["item"], "mode": a.mode, "auditor": au, "reading": k, "route": ROUTE_VERSION,
+                        "raw": raw})
         e1.append(OUT, {"item": item["item"], "mode": a.mode, "auditor": au, "reading": k, "split": a.split,
-                        "route": ROUTE.get((au, a.mode), ""), **res})
+                        "route": ROUTE_VERSION, **res})
     e1.run_pool(jobs, one, a.workers, f"e3 {a.mode} {a.split}")
     return 0
 
