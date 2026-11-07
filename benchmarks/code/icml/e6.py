@@ -633,15 +633,15 @@ def conforms(inp, allowed: list) -> bool:
     return True
 
 
-def agreement_violations(rows: list) -> tuple[dict, int]:
+def agreement_violations(rows: list, inscope: list | None = None) -> tuple[dict, int]:
     """Admission agreement checks over executed rows (v4.2): on every input the reference evaluates, both B programs
     equal the reference; outside the class both A programs equal it; inside it the A programs agree. `valid` restricts
     witness credit only; separation counts valid class inputs."""
     bad = {"b_vs_ref": [], "outside_class": [], "a_disagree": []}
     n_sep = 0
     for i, r in enumerate(rows):
-        if r["status"]["ref"] != "ok":
-            continue
+        if r["status"]["ref"] != "ok" or (inscope is not None and not inscope[i]):
+            continue                         # v4.3 scope: inputs outside the interface belong to neither contract
         ag = r["agree"]
         if not (ag["ref~b1"] and ag["ref~b2"]):
             bad["b_vs_ref"].append(i)
@@ -704,7 +704,7 @@ def stage_validate4(split: str, workers: int) -> None:
         rows = res["rows"]
         pred_ok = all(r["status"]["valid"] == "ok" and r["status"]["in_class"] == "ok"
                       and "valid" in r["value"] and "in_class" in r["value"] for r in rows)
-        bad, n_sep = agreement_violations(rows)
+        bad, n_sep = agreement_violations(rows, [conforms(x, allowed) for x in inputs])
         nh, nc, no = len(hidden), len(cls), len(oth)
         cls_rows, oth_rows = rows[nh:nh + nc], rows[nh + nc:nh + nc + no]
         consistent = (all(r["value"].get("valid") and r["value"].get("in_class") for r in cls_rows)
@@ -949,7 +949,7 @@ PROTOCOL = "e6-v4"
 MAX_ATTEMPTS = 3
 
 
-def units(split: str) -> dict:
+def units(split: str, ungated: bool = False) -> dict:
     """Admitted units with their audited and oracle implementations. The audited vendor alternates by a hash of the
     problem id; the oracle for each contract is the other vendor's implementation of it."""
     props = proposals(split)
@@ -959,11 +959,16 @@ def units(split: str) -> dict:
     refs = {pid: p.canonical_solution for pid, p in pmap.items()}
     redteam = {r["problem_id"]: r for r in load(REDTEAM) if r.get("passed") is not None}
     out = {}
-    for u in load(UNITS):
+    rows = load(UNITS)
+    if ungated:      # every constructed unit with implementations and predicates (for rescoring old witnesses only)
+        rows = [{"problem_id": pid, "split": split, "admitted": True} for pid in probes
+                if pid in props and all((pid, c, r) in impls for c in "ab" for r in IMPL_ROUTES)]
+    for u in rows:
         if not (u.get("admitted") and u["split"] == split):
             continue
         pid = u["problem_id"]
-        if not redteam.get(pid, {}).get("passed"):         # v4.3: red-team admission
+        rt = redteam.get(pid, {})
+        if not ungated and not (rt.get("passed") and rt.get("n_inputs", 0) > 0):   # v4.3: red-team, >= 1 input
             continue
         shown = IMPL_ROUTES[int(sha(pid), 16) % 2]
         other = IMPL_ROUTES[1 - IMPL_ROUTES.index(shown)]
@@ -1086,6 +1091,7 @@ def stage_witness(split: str, workers: int) -> None:
         pid, prog = r["key"][0], r["key"][1]
         p, u = probs[pid], us[pid]
         out = []
+        allowed = interface_types(e1.hidden_inputs(p) or [])
         for w in r["witnesses"]:
             parsed = e1.parse_call(w["call"], p.entry_point)
             if parsed is None or parsed[1]:
@@ -1101,18 +1107,71 @@ def stage_witness(split: str, workers: int) -> None:
             row = pr["rows"][0]
             res = e1.judge_witness(p, u["program"][prog], w["call"], w["expected"], oracle=u["oracle"][c])
             out.append({**res, "valid": bool(row["value"].get("valid")), "in_class": bool(row["value"].get("in_class")),
-                        "oracles_differ": row["agree"]["oa~ob"] is False})
-        target = lambda x: (x.get("verified_diagnosis") and x.get("valid") and x.get("in_class")
-                            and x.get("oracles_differ"))
+                        "oracles_differ": row["agree"]["oa~ob"] is False,
+                        "in_interface": conforms(parsed[0], allowed)})
         append(WIT, {"key": r["key"], "contract": c, "input_sha256": witness_key(r, u, c, p), "scorer": e1.SCORER,
-                     "results": out, "infra": any(x["status"] == "infra" for x in out),
-                     "verified_diagnosis": any(target(x) for x in out),
-                     # sensitivity: the benchmark reference's own domain (it runs) instead of the `valid` predicate
-                     "verified_refdomain": any(x.get("verified_diagnosis") and x.get("in_class")
-                                               and x.get("oracles_differ") for x in out),
-                     "verified_offclass": any(x.get("verified_diagnosis") and x.get("valid")
-                                              and not x.get("in_class") for x in out)})
+                     "results": out, "infra": any(x["status"] == "infra" for x in out), **witness_flags(out)})
     e1.run_pool(jobs, one, workers, f"e6 witness {split}")
+
+
+def witness_flags(out: list) -> dict:
+    """Credit from scored witnesses. v4.3 scope (P7): every credit requires a witness inside the programs' interface
+    (the argument types of the benchmark's own inputs), the same scope that admission and red-teaming use."""
+    ok = [x for x in out if x.get("in_interface") and x.get("verified_diagnosis")]
+    return {"verified_diagnosis": any(x.get("valid") and x.get("in_class") and x.get("oracles_differ") for x in ok),
+            # sensitivity: the benchmark reference's own domain (it runs) instead of the `valid` predicate
+            "verified_refdomain": any(x.get("in_class") and x.get("oracles_differ") for x in ok),
+            "verified_offclass": any(x.get("valid") and not x.get("in_class") for x in ok)}
+
+
+def stage_rescope(split: str, workers: int) -> None:
+    """One-off, deterministic (no model call): add `in_interface` to witness results scored before the v4.3 scope
+    rule and recompute their credit. The previous file is archived as *_witnesses_v4_prescope.jsonl."""
+    old = load(WIT)
+    if any(w.get("rescoped") is not None for w in old):
+        print("e6 rescope: nothing to do")
+        return
+    probs = {p.problem_id: p for p in problems("dev") + problems("test")}
+    us = {**units("dev", ungated=True), **units("test", ungated=True)}
+    aud = {tuple(r["key"]): r for r in load(AUD) if r.get("ok") and r.get("protocol") == PROTOCOL}
+    allowed = {}
+    out_rows = []
+    for w in old:
+        r, p = aud.get(tuple(w["key"])), probs[w["key"][0]]
+        if r is None or len(r["witnesses"]) != len(w["results"]) or w.get("scorer") != e1.SCORER:
+            out_rows.append({**w, "rescoped": False})       # earlier protocol or scorer: kept as is, never used
+            continue
+        if p.problem_id not in allowed:
+            allowed[p.problem_id] = interface_types(e1.hidden_inputs(p) or [])
+        u = us.get(p.problem_id)
+        if u is None:                                      # unit no longer admitted: kept as is, never used
+            out_rows.append({**w, "rescoped": False})
+            continue
+        res = []
+        for wit, x in zip(r["witnesses"], w["results"]):
+            parsed = e1.parse_call(wit["call"], p.entry_point)
+            if x.get("status") not in ("unparseable", "infra") and parsed is not None and not parsed[1]:
+                x = {**x, "in_interface": conforms(parsed[0], allowed[p.problem_id])}
+                if "valid" not in x or "oracles_differ" not in x:
+                    # scored by an earlier witness stage: add the executable checks the current rule needs
+                    pr = multi_compare(p, {"valid": predicate_src(u["valid"], "valid", p.entry_point),
+                                           "in_class": predicate_src(u["in_class"], "in_class", p.entry_point),
+                                           "oa": u["oracle"]["a"], "ob": u["oracle"]["b"]},
+                                       [["oa", "ob"]], [parsed[0]], capture=["valid", "in_class"])
+                    if "infra" in pr:
+                        raise SystemExit(f"rescope executor failure: {w['key']}")
+                    row = pr["rows"][0]
+                    x = {**x, "valid": bool(row["value"].get("valid")), "in_class": bool(row["value"].get("in_class")),
+                         "oracles_differ": row["agree"]["oa~ob"] is False, "exec_added_by_rescope": True}
+            res.append(x)
+        if len(res) != len(w["results"]):
+            raise SystemExit(f"witness/result count mismatch: {w['key']}")
+        out_rows.append({**w, "results": res, **witness_flags(res), "rescoped": True})
+    WIT.rename(WIT.with_name(WIT.stem + "_prescope.jsonl"))
+    for row in out_rows:
+        append(WIT, row)
+    print(f"e6 rescope: {len(out_rows)} witness records rescored; "
+          f"{sum(a['verified_diagnosis'] != b['verified_diagnosis'] for a, b in zip(old, out_rows))} changed credit")
 
 
 PRE_MODEL_INFRA = ("refresh token", "auth.openai.com", "Not logged in", "Please run /login", "ECONNREFUSED")
@@ -1162,6 +1221,9 @@ def completeness(split: str, check_prompts: bool = True) -> dict:
     unfinished = [k for k in need if k not in ok and tries.get(k, 0) < MAX_ATTEMPTS]
     scores: dict = {}
     for w in load(WIT):
+        if w["key"][0] in registered and any(
+                x.get("status") not in ("unparseable", "infra") and "in_interface" not in x for x in w["results"]):
+            raise SystemExit(f"witness scored without the v4.3 interface rule: {w['key']}")
         if not w.get("infra"):
             val = tuple(w.get(f) for f in ("verified_diagnosis", "verified_refdomain", "verified_offclass"))
             prev = scores.get(w["input_sha256"])
@@ -1183,13 +1245,13 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("stage", choices=["propose", "implement", "validate", "probe", "classpred", "validate4", "redteam",
                                       "judge", "behaviour",
-                                      "audit", "witness"])
+                                      "audit", "witness", "rescope"])
     ap.add_argument("--split", default="dev")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--kind", choices=["open", "open2", "det"], default="open")
     a = ap.parse_args()
     set_kind(a.kind)
     {"propose": stage_propose, "implement": stage_implement, "validate": stage_validate, "probe": stage_probe,
-     "classpred": stage_classpred, "validate4": stage_validate4, "redteam": stage_redteam, "judge": stage_judge,
+     "classpred": stage_classpred, "validate4": stage_validate4, "redteam": stage_redteam, "rescope": stage_rescope, "judge": stage_judge,
      "behaviour": stage_behaviour, "audit": stage_audit,
      "witness": stage_witness}[a.stage](a.split, a.workers)

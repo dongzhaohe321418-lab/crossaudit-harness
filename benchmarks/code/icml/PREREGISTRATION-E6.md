@@ -79,6 +79,16 @@ One open unit and at most one positive-control unit per problem.
    outcome-blind. Two development pilots of this stage are archived and not used: one whose replies were empty after
    tool attempts (`e6_redteam_pilot.jsonl`, 14 units) and one without the interface rule (`e6_redteam_v43a.jsonl`;
    admissions `*_units4_v43a.jsonl`).
+   (v) *One scope everywhere (after P7).* The interface rule governs admission agreement and separation (a proposer
+   class input outside the interface neither counts toward the two separating inputs nor is checked), red-teaming,
+   and witness credit (every credit, primary and sensitivity, requires a witness inside the interface). A red-team
+   record must contain at least one interface input for the unit to pass. Admission was rerun under this rule (v4.3
+   admissions before it are archived as `*_units4_v43b.jsonl`). Witness records scored before the rule were rescored
+   deterministically (`stage_rescope`, no model call): the interface flag was added and, for records written by an
+   earlier witness stage that lacked the executable `valid`/`in_class`/oracle-difference checks, those checks were
+   executed and added; the previous files are archived as `*_witnesses_v4_prescope.jsonl`. Disclosure: development
+   results reported before this rescoring (including the v4.1 and first v4.3 summaries in section 1) used some
+   witness credits from that earlier stage; section 1 is updated with the rescored development results.
    (iv) *Executor.* A validation batch that has not finished after 900 s, or whose resident memory exceeds 1.5 GB,
    is rerun with each call in its own child process, killed at the per-call time limit or at 1 GB of resident memory;
    results differ from the default mode only on calls the per-call alarm cannot interrupt (long computations inside C
