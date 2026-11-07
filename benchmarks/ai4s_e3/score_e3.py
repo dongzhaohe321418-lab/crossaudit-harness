@@ -16,6 +16,7 @@ sys.path.insert(0, str(HERE.parent / "code" / "icml"))
 import e1  # noqa: E402
 from build_e3 import REC  # noqa: E402
 from spec_e3 import DATASETS, FAULT_NAMES  # noqa: E402
+from audit_e3 import current  # noqa: E402
 
 AUDITORS = ["aud-gpt-terra", "aud-claude-sonnet"]
 B, SEED = 10000, 20261112
@@ -65,25 +66,26 @@ def table(split: str):
     items = {i["item"]: i for i in json.loads((REC / "items.json").read_text())["items"] if i["split"] == split}
     reads: dict = {}
     for r in e1.load(REC / "audits.jsonl"):
-        if r.get("ok") and r["item"] in items:
+        if r.get("ok") and r["item"] in items and current(r):
             reads[(r["item"], r["mode"], r["auditor"], r["reading"])] = model_scores(r["reply"], items[r["item"]])
     return items, reads
 
 
 def per_item(items, reads, mode, metric, validator=None, auditors=AUDITORS):
-    """Item value: mean over auditors of (validator OR model union) on flag (0) or localised (1)."""
+    """Item value: mean over the auditors with at least one valid reading of (validator OR union over that
+    auditor's valid readings), on flag (0) or localised (1); amendment 1."""
     out = {}
     idx = 0 if metric == "flag" else 1
     for iid, it in items.items():
         vals = []
         for au in auditors:
-            keys = [(iid, mode, au, k) for k in range(1 if mode == "agentic" else 2)]
-            if any(k not in reads for k in keys):
-                break
+            keys = [k for k in ((iid, mode, au, r) for r in range(1 if mode == "agentic" else 2)) if k in reads]
+            if not keys:
+                continue
             m = any(reads[k][idx] for k in keys)
             v = validator_scores(it[validator], it)[idx] if validator else False
             vals.append(float(m or v))
-        else:
+        if vals:
             out[iid] = sum(vals) / len(vals)
     return out
 
@@ -119,6 +121,11 @@ def analyse(split: str) -> dict:
     faulty = {k: v for k, v in items.items() if v["fault"]}
     clean = {k: v for k, v in items.items() if not v["fault"]}
     res = {"split": split, "n_faulty": len(faulty), "n_clean": len(clean), "readings_ok": len(reads)}
+    expected = {(iid, m, au, r) for iid, it in items.items() for au in AUDITORS
+                for m, n in (("agentic", 1), ("reading", 2)) if m == "agentic" or it["size"] == 120
+                for r in range(n)}
+    res["missing_by_mode_auditor"] = {f"{m}|{au}": sum(1 for k in expected - set(reads) if k[1] == m and k[2] == au)
+                                      for m in ("agentic", "reading") for au in AUDITORS}
 
     def gain(sub, metric, mode="agentic", validator="profile_validator", auditors=AUDITORS):
         u = per_item(sub, reads, mode, metric, validator, auditors)

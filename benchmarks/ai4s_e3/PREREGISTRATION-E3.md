@@ -70,3 +70,24 @@ rows, evidence); each reading gets at most two attempts.
 
 H1 failing would mean that once the deterministic tier is strong, the model adds nothing localised on these
 faults; the paper would say so, and the A4S-3 complementarity would be a property of a weak validator.
+
+## Amendment 1 (after development-split audits and scoring; before any test-split reading-only audit)
+
+**What was seen.** All development-split audits (agentic and reading-only, both auditors) and the registered
+scores on the development split (H1 +7.1 [+1.0, +16.1]; H2 +4.8 [0.0, +11.3]; H3 not estimable on
+development tables; H4 +3.8 [0.0, +9.2]). Test-split agentic audits were in progress; no test score had been
+computed.
+
+**Why.** In reading-only mode the Codex route still exposed its shell tools: 80 of 224 development readings by
+gpt-5.6-terra invoked a tool and were discarded as registered, so whether a reading survived could depend on
+the item. Separately, `score_e3.py` dropped an item for an auditor unless every one of its readings was valid,
+and dropped the whole item if one auditor was missing; the registration did not state a missing-data rule.
+
+**Changes.** (1) Codex reading-only audits run with `--disable shell_tool --disable unified_exec`, which
+removes every tool from the session (checked: no tool events), matching the Claude reading route, which
+already ran with every tool disabled. All earlier Codex reading-only rows (development only) are kept in the
+records but excluded by a route tag; every Codex reading-only reading, on both splits, is made under the new
+route. (2) Missing data: each auditor's value is the union over its valid readings; an item's value is the
+mean over the auditors with at least one valid reading; an item is dropped only if no auditor has one.
+Missing readings are reported by mode and auditor. Hypotheses, thresholds, items, validators and the agentic
+arm are unchanged.

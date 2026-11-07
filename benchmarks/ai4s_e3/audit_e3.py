@@ -4,7 +4,8 @@
             the shell and Python; Codex (read-only sandbox, isolated CODEX_HOME, --json) or Claude Code
             (Bash and Read allowed; Write and Edit denied). One reading per item and auditor.
   reading   the same instructions with both files inlined and every tool disabled; 120-row items only; two
-            readings per item and auditor. A Codex reading that invokes a tool is discarded.
+            readings per item and auditor. Codex runs with its shell tools disabled (amendment 1); a reading
+            that invokes a tool is still discarded.
 
 Every reply is JSON with typed findings, scored by code against the injection manifest (score_e3.py).
 
@@ -28,6 +29,12 @@ from build_e3 import ITEM_ROOT, REC  # noqa: E402
 from spec_e3 import FAULT_NAMES  # noqa: E402
 
 OUT = REC / "audits.jsonl"
+ROUTE = {("aud-gpt-terra", "reading"): "codex-notools"}   # amendment 1; other routes unchanged
+
+
+def current(r: dict) -> bool:
+    """Rows made with the route version the study now uses (earlier Codex reading rows are archived)."""
+    return r.get("route", "") == ROUTE.get((r["auditor"], r["mode"]), "")
 TYPES = sorted(set(FAULT_NAMES.values())) + ["other"]
 PROMPT = """You are auditing a dataset delivered for a scientific analysis before anyone uses it. {where}
 
@@ -50,7 +57,8 @@ AGENTIC_WHERE = ("The current directory contains data.csv and CARD.md. You may i
 
 def route_cmd(auditor: str, mode: str, item_dir: Path) -> tuple[str, list[str]]:
     if auditor == "aud-gpt-terra":
-        argv = ["codex", "exec", "--ignore-user-config", "--ignore-rules", "--ephemeral", "--json",
+        notools = ["--disable", "shell_tool", "--disable", "unified_exec"] if mode == "reading" else []
+        argv = ["codex", "exec", "--ignore-user-config", "--ignore-rules", "--ephemeral", "--json", *notools,
                 "-m", "gpt-5.6-terra", "-c", 'model_reasoning_effort="medium"', "--sandbox", "read-only",
                 "--skip-git-repo-check", "-C", str(item_dir if mode == "agentic" else e1.EMPTY), "-"]
         return "codex", argv
@@ -115,7 +123,7 @@ def main() -> int:
     if a.mode == "reading":
         items = [i for i in items if i["size"] == 120]
     readings = 1 if a.mode == "agentic" else 2
-    rows = e1.load(OUT)
+    rows = [r for r in e1.load(OUT) if current(r)]
     done_keys = {(r["item"], r["mode"], r["auditor"], r["reading"]) for r in rows if r.get("ok")}
     tries: dict = {}
     for r in rows:
@@ -129,7 +137,7 @@ def main() -> int:
         item, au, k = job
         res = run(au, a.mode, item)
         e1.append(OUT, {"item": item["item"], "mode": a.mode, "auditor": au, "reading": k, "split": a.split,
-                        **res})
+                        "route": ROUTE.get((au, a.mode), ""), **res})
     e1.run_pool(jobs, one, a.workers, f"e3 {a.mode} {a.split}")
     return 0
 
