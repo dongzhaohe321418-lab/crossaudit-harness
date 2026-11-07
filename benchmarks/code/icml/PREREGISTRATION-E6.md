@@ -153,10 +153,13 @@ the same requirement are not used as a subset (no frozen rubric). Behavioural co
 
 ## 10. Precision and bundle
 
-Development problem-level SDs under e6-v4 (points): E6-1 16.3, E6-2 18.0, E6-3 9.8, E6-5 23.7 (bootstrap scale; the
-betting interval for E6-3 is wider: about +/-8 points is expected at 70 units). With n open test units the 95%
-half-width is about 1.96 SD / sqrt(n): at n = 60, about 4, 5, 2.5 and 6 points. If fewer than 30 open test units are
-admitted, all claims are reported as underpowered. No enlargement.
+Development problem-level SDs under e6-v4 (points): E6-1 16.3, E6-2 18.0, E6-3 9.8, E6-5 23.7. The registered open
+test population after the enlargement (section 4) has 40 units (32 first-attempt, 8 second-attempt; 40 problems), and
+the positive-control population 54. With n units the bootstrap 95% half-width is about 1.96 SD / sqrt(n): at n = 40,
+about 5, 5.5, 3 and 7.5 points. The betting interval for E6-3 is wider: simulated at the development SD it is about
++/-12 points at n = 40, so the E6-3 equivalence claim (margin 10) is expected to be inconclusive and is reported as
+such; the margin is not changed. If fewer than 30 open test units had been admitted, all claims would be reported
+as underpowered. No further enlargement.
 
 Bundle (checksummed, verified before the first test call): corpus and split; proposals, implementations, probes,
 predicates, admission records with exclusions; judge prompts, votes and reasons; behaviour records; frozen populations
