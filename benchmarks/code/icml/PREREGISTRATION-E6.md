@@ -63,6 +63,11 @@ One open unit and at most one positive-control unit per problem.
   contract pairs**. This is not human-validated ambiguity and not an estimate of ambiguity prevalence.
 - *Positive-control population*: admission-v4 positive-control units with both judges returning domain valid, RULE_A
   incompatible and RULE_B compatible. A separate confirmatory family (section 8), not a prerequisite.
+- *Enlargement (outcome-blind, before any test audit; added in v4.2 because only 32 first-attempt test units reached
+  the primary population):* every problem whose first-attempt open unit is not in the primary population receives
+  one second, independent construction attempt (kind `open2`, same prompts and stages, one attempt per stage). The
+  registered open population is the first-attempt primary units plus the second-attempt primary units of the
+  remaining problems (`analyse_e6.merged_open`); one unit per problem.
 - Frozen in the bundle by problem id, with every exclusion and its reason. No unit enters or leaves after the first
   test audit.
 

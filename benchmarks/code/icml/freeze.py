@@ -29,12 +29,15 @@ RECORDS = ["split.json", "items_v3.json", "oracles_v3.json", "executions_v3.json
            "e6_proposals.jsonl", "e6_impls.jsonl", "e6_units.jsonl", "e6_probes.jsonl", "e6_units4.jsonl",
            "e6_judgements2.jsonl", "e6_behaviour4.jsonl",
            "e6det_proposals.jsonl", "e6det_impls.jsonl", "e6det_units.jsonl", "e6det_probes.jsonl",
-           "e6det_units4.jsonl", "e6det_judgements2.jsonl"]
+           "e6det_units4.jsonl", "e6det_judgements2.jsonl",
+           "e6b_proposals.jsonl", "e6b_impls.jsonl", "e6b_units.jsonl", "e6b_probes.jsonl", "e6b_units4.jsonl",
+           "e6b_judgements2.jsonl", "e6b_behaviour4.jsonl", "e1_behaviour_v4.json"]
 CODE = ["e1.py", "e6.py", "analyse_e1.py", "analyse_e6.py", "isolate.py", "freeze.py",
         "PREREGISTRATION-E1.md", "PREREGISTRATION-E6.md"]
 BENCH = HERE.parent                                   # benchmarks/code: corpus, execution, prompts, data
 SRC = HERE.parents[2] / "src" / "crossaudit"         # auditor prompt, parser, validator, rulebook, checks
-REQUIRED = ("records", "code", "dependencies", "routes", "versions", "git_commit", "e1", "e6_open", "e6_det")
+REQUIRED = ("records", "code", "dependencies", "routes", "versions", "git_commit", "e1", "e6_open", "e6_open2",
+            "e6_det")
 
 
 def tree_sha(root: Path, patterns: tuple) -> dict:
@@ -111,7 +114,7 @@ def build() -> dict:
                      "executor_packages": subprocess.run([str(e1.execute.EXECUTOR), "-m", "pip", "freeze"],
                                                          capture_output=True, text=True).stdout},
         "git_commit": git, "git_dirty_icml": dirty,
-        "e1": e1_state(), "e6_open": e6_state("open"), "e6_det": e6_state("det"),
+        "e1": e1_state(), "e6_open": e6_state("open"), "e6_open2": e6_state("open2"), "e6_det": e6_state("det"),
     }
 
 
