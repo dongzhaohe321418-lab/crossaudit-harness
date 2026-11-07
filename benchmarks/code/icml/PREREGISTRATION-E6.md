@@ -197,7 +197,9 @@ unit, and `merged_open` takes a second-attempt unit only for problems without a 
 and the positive-control population 85. With n units the bootstrap 95% half-width is about 1.96 SD / sqrt(n): at
 n = 52, about 4.5, 5, 2.7 and 6.5 points. The betting interval for E6-3 is wider: simulated at the development SD
 it is about +/-9.4 points at n = 52, so the E6-3 equivalence claim (margin 10) may be inconclusive; the margin is
-not changed. If fewer than 30 open test units had been admitted, all claims would be reported as underpowered. No further enlargement.
+not changed. If fewer than 30 open test units had been admitted, all claims would be reported as underpowered. Audits are scheduled for the registered units only (`e6.registered_units`: 41 + 11 open units, 80 readings each; 85
+controls, 16 readings each; 5,520 held-out readings); readings of admitted units outside the registered population,
+which exist on development units only, are counted and not used. No further enlargement.
 
 Bundle (checksummed, verified before the first test call): corpus and split; proposals, implementations, probes,
 predicates, admission records with exclusions, red-team inputs and verdicts; judge prompts, votes and reasons; behaviour records; frozen populations

@@ -999,9 +999,20 @@ def configs_for(arm: str) -> tuple:
     return SENTENCE_CONFIGS if arm.startswith("sentence-") else CONFIGS
 
 
+def registered_units(split: str) -> list:
+    """The units the registered analysis uses: the kind's population; for open2, only problems without a
+    first-attempt primary unit (as in analyse_e6.merged_open). Audits are scheduled for these units only (v4.3)."""
+    import analyse_e6
+    pop = analyse_e6.population(split)
+    if KIND == "open2":
+        first = primary_first_attempt(split)
+        pop = [pid for pid in pop if pid not in first]
+    return sorted(pop)
+
+
 def schedule(split: str) -> list[tuple]:
-    """The required reading universe: every (unit, program, arm, configuration, reading)."""
-    return [(pid, prog, arm, cfg, k) for pid in sorted(units(split)) for prog in "ab" for arm in ARMS
+    """The required reading universe: every (unit, program, arm, configuration, reading) of the registered units."""
+    return [(pid, prog, arm, cfg, k) for pid in registered_units(split) for prog in "ab" for arm in ARMS
             for cfg in configs_for(arm) for k in range(READINGS)]
 
 
@@ -1123,16 +1134,20 @@ def completeness(split: str, check_prompts: bool = True) -> dict:
     """Every required reading valid or exhausted (pre-model infrastructure failures excluded); no duplicate valid
     reading; every valid reading's prompt hash equals the prompt rebuilt from the frozen unit; every flagged valid
     reading with witnesses has exactly one, infrastructure-free score under each contract. Readings of units outside
-    the current population (superseded by a later admission) are counted, not used. Raises otherwise."""
+    the current admission (superseded) or outside the registered population are counted, not used. Raises otherwise."""
     us = units(split)
     probs = {p.problem_id: p for p in problems(split)}
     rows = [r for r in load(AUD) if r["split"] == split and r.get("protocol") == PROTOCOL]
     need = set(schedule(split))
-    ok, tries, superseded, cache = {}, {}, 0, {}
+    registered = {k[0] for k in need}
+    ok, tries, superseded, unregistered, cache = {}, {}, 0, 0, {}
     for r in rows:
         k = tuple(r["key"])
         if k[0] not in us:
             superseded += 1
+            continue
+        if k[0] not in registered:          # admitted unit outside the registered population: counted, not used
+            unregistered += 1
             continue
         if k not in need:
             raise SystemExit(f"reading outside the required universe: {k}")
@@ -1158,7 +1173,7 @@ def completeness(split: str, check_prompts: bool = True) -> dict:
     if unfinished or unscored:
         raise SystemExit(f"incomplete: {len(unfinished)} unfinished readings, {len(unscored)} unscored witness sets")
     return {"required": len(need), "valid": len(ok), "superseded_readings": superseded,
-            "exhausted": sorted(set(need) - set(ok))}
+            "outside_registered_population": unregistered, "exhausted": sorted(set(need) - set(ok))}
 
 
 set_kind("open")
