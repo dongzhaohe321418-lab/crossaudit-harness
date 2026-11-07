@@ -282,6 +282,98 @@ def stage_validate(split: str, workers: int) -> None:
 
 
 # ---------------------------------------------------------------------------------------------
+# validation without human raters: a blind two-vendor judge panel and behavioural evidence
+# ---------------------------------------------------------------------------------------------
+JUDGE = REC / "e6_judgements.jsonl"
+BEHAV = REC / "e6_behaviour.jsonl"
+JUDGE_ROUTES = ("adj-claude-opus", "adj-gpt-sol")    # neither proposed the rules nor audits
+
+JUDGE_PROMPT = """You are checking material for a study of code review. Answer strictly from the task's words and
+visible tests; do not run code.
+
+TASK (as given to a programmer):
+{spec}
+
+Consider inputs of this kind: {cls}
+Below are two rules for such inputs. For EACH rule separately, decide whether a careful programmer reading only the
+task and the visible tests could accept a function that follows it, given that the task says nothing more.
+RULE 1: {r1}
+RULE 2: {r2}
+
+For each rule answer "compatible" (the task's words and visible tests allow it), "incompatible" (they rule it out;
+cite the words) or "unresolved". Reply with exactly one JSON object:
+{{"rule1": "compatible" | "incompatible" | "unresolved", "rule2": "...", "reason": "one or two sentences"}}
+"""
+
+
+def stage_judge(split: str, workers: int) -> None:
+    props = {pid: pr for pid, pr in proposals(split).items()
+             if any(u["problem_id"] == pid and u.get("admitted") for u in load(UNITS))}
+    probs = {p.problem_id: p for p in problems(split)}
+    have = {(r["problem_id"], r["judge"]) for r in load(JUDGE) if r.get("ok")}
+    jobs = [(pid, j) for pid in props for j in JUDGE_ROUTES if (pid, j) not in have]
+
+    def one(job):
+        pid, j = job
+        pr = props[pid]
+        a_first = int(sha("judge-order|" + pid), 16) % 2 == 0
+        r1, r2 = (pr["rule_a"], pr["rule_b"]) if a_first else (pr["rule_b"], pr["rule_a"])
+        payload = JUDGE_PROMPT.format(spec=probs[pid].spec.rstrip(), cls=pr["class"], r1=r1, r2=r2)
+        res = e1.call(j, payload)
+        obj = e1.parse_json(res["text"]) if res["ok"] else None
+        vals = ("compatible", "incompatible", "unresolved")
+        ok = isinstance(obj, dict) and obj.get("rule1") in vals and obj.get("rule2") in vals
+        row = {"problem_id": pid, "judge": j, "ok": ok, "prompt_sha256": sha(payload),
+               "error": "" if ok else res.get("error", "parse")}
+        if ok:
+            row.update({"a": obj["rule1"] if a_first else obj["rule2"], "b": obj["rule2"] if a_first else obj["rule1"],
+                        "reason": str(obj.get("reason", ""))[:600]})
+        append(JUDGE, row)
+    e1.run_pool(jobs, one, workers, f"e6 judge {split}")
+
+
+def stage_behaviour(split: str, workers: int) -> None:
+    """Which rule do independent solutions written from the task alone follow? Every E1 generation (two vendors,
+    six samples each) that passes the visible tests is run on the unit's class inputs where A and B differ."""
+    us = {u["problem_id"]: u for u in load(UNITS) if u.get("admitted") and u["split"] == split}
+    props = proposals(split)
+    probs = {p.problem_id: p for p in problems(split)}
+    impls = {(r["problem_id"], r["contract"], r["route"]): r["code"] for r in load(IMPLS) if r.get("ok")}
+    gens: dict = {}
+    for r in load(e1.GEN_PATH):
+        if r.get("ok") and r.get("solution") and r["problem_id"] in us:
+            gens.setdefault(r["problem_id"], []).append(r)
+    done = {r["problem_id"] for r in load(BEHAV)}
+    jobs = [pid for pid in us if pid not in done]
+
+    def one(pid):
+        p, pr = probs[pid], props[pid]
+        cls = [literal_tuple(x) for x in pr["class_inputs"]]
+        progs = {"A": impls[(pid, "a", IMPL_ROUTES[0])], "B": impls[(pid, "b", IMPL_ROUTES[0])]}
+        sols = []
+        for g in gens.get(pid, []):
+            if execute.run_suite(p.visible_program(g["solution"]), instrumented=p.visible_instrumented).passed:
+                key = f"g{len(sols)}"
+                progs[key] = g["solution"]
+                sols.append((key, g["generator"], g["sample"]))
+        pairs = [["A", "B"]] + [[k, x] for k, _, _ in sols for x in ("A", "B")]
+        res = multi_compare(p, progs, pairs, cls)
+        if "infra" in res:
+            append(BEHAV, {"problem_id": pid, "infra": res["infra"]})
+            return
+        diff = [i for i, r in enumerate(res["rows"]) if r["agree"]["A~B"] is False]
+        follows = []
+        for k, gen, smp in sols:
+            fa = all(res["rows"][i]["agree"][f"{k}~A"] for i in diff)
+            fb = all(res["rows"][i]["agree"][f"{k}~B"] for i in diff)
+            follows.append({"generator": gen, "sample": smp, "rule": "A" if fa else "B" if fb else "other"})
+        n = lambda x: sum(1 for f in follows if f["rule"] == x)
+        append(BEHAV, {"problem_id": pid, "n_visible_passing": len(sols), "n_diff_inputs": len(diff),
+                       "n_A": n("A"), "n_B": n("B"), "n_other": n("other"), "follows": follows})
+    e1.run_pool(jobs, one, workers, f"e6 behaviour {split}")
+
+
+# ---------------------------------------------------------------------------------------------
 # audits
 # ---------------------------------------------------------------------------------------------
 AUD = REC / "e6_audits.jsonl"
@@ -396,9 +488,10 @@ def stage_witness(split: str, workers: int) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=["propose", "implement", "validate", "audit", "witness"])
+    ap.add_argument("stage", choices=["propose", "implement", "validate", "judge", "behaviour", "audit", "witness"])
     ap.add_argument("--split", default="dev")
     ap.add_argument("--workers", type=int, default=6)
     a = ap.parse_args()
-    {"propose": stage_propose, "implement": stage_implement, "validate": stage_validate, "audit": stage_audit,
+    {"propose": stage_propose, "implement": stage_implement, "validate": stage_validate, "judge": stage_judge,
+     "behaviour": stage_behaviour, "audit": stage_audit,
      "witness": stage_witness}[a.stage](a.split, a.workers)

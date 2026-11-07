@@ -852,6 +852,112 @@ def stage_adjudicate(workers: int) -> None:
     run_pool(jobs, one, workers, "adjudicate")
 
 
+CTRL_PATH = REC / "controls_v4.jsonl"          # amendment 4: control-text rechecks and regenerations
+CTRL_PROMPT = """You are checking material for a study of code review. Answer strictly from the words.
+
+TASK (as given to a programmer):
+{spec}
+
+SENTENCE that may be added to the task: {sentence}
+
+On the input below, two programs return different results ("raises X" means the call raised exception X).
+INPUT (positional arguments): {args}
+RESULT 1: {out1}
+RESULT 2: {out2}
+
+Answer three questions about the task WITH the sentence added, compared with the task alone:
+q1: does the sentence rule out RESULT 1 on this input (a careful reader would now reject it)?
+q2: does the sentence rule out RESULT 2 on this input?
+q3: does the sentence say or imply which of the two results is required?
+
+Reply with exactly one JSON object: {{"q1": true|false, "q2": true|false, "q3": true|false, "note": "one sentence"}}
+"""
+REGEN_PROMPT = """Rewrite one sentence for a study of code review.
+
+TASK (as given to a programmer):
+{spec}
+
+The sentence below is meant to be a {role}. {role_def}
+It failed a check: {note}
+
+SENTENCE: {sentence}
+
+Write a replacement of about the same length that meets the definition and does not decide the behaviour on inputs
+like {args} in either direction. Reply with exactly one JSON object: {{"sentence": "..."}}
+"""
+ROLE_DEF = {
+    "placebo": "A PLACEBO reads like an ordinary line of a task description, does not change which outputs are correct "
+               "for any input, and says nothing related to the kind of input in question.",
+    "pointer": "A POINTER names the kind of input in question (so that a reader attends to it) without saying or "
+               "implying what the function should return on it.",
+}
+
+
+def control_text(iid: str, arm: str, con: dict) -> str:
+    """The control sentence in force: the latest regeneration that passed both checks, else the original."""
+    for r in reversed(load(CTRL_PATH)):
+        if r["item_id"] == iid and r["arm"] == arm and r.get("kind") == "regen" and r.get("passed"):
+            return r["sentence"]
+    return con[arm]
+
+
+def _ctrl_check(p, item, sentence: str) -> tuple[bool, list]:
+    ff = item["first_fail"]
+    show = lambda o: o["repr"] if o["status"] == "ok" else f"raises {o['repr'] or o['status']}"
+    flip = int(sha("ctrl|" + item["item_id"]), 16) % 2 == 1
+    ref, cand = show(ff["reference"]), show(ff["candidate"])
+    out1, out2 = (cand, ref) if flip else (ref, cand)
+    payload = CTRL_PROMPT.format(spec=p.spec.rstrip(), sentence=sentence, args=ff["args_repr"][:1500],
+                                 out1=out1[:800], out2=out2[:800])
+    votes = []
+    for adj in ADJUDICATORS:
+        res = call(adj, payload)
+        obj = parse_json(res["text"]) if res["ok"] else None
+        ok = isinstance(obj, dict) and all(isinstance(obj.get(q), bool) for q in ("q1", "q2", "q3"))
+        votes.append({"adjudicator": adj, "ok": ok, **({q: obj[q] for q in ("q1", "q2", "q3")} if ok else {}),
+                      "note": (obj or {}).get("note", "") if ok else res.get("error", "parse")})
+    passed = all(v["ok"] and not (v["q1"] or v["q2"] or v["q3"]) for v in votes)
+    return passed, votes
+
+
+def stage_controls(workers: int) -> None:
+    """Amendment 4 (A4 B2): recheck every admitted placebo and pointer; regenerate a failing one (up to three
+    times) and recheck it."""
+    items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
+    problems = {p.problem_id: p for p in load_problems()}
+    cons = admitted_constructions()
+    done = {(r["item_id"], r["arm"]) for r in load(CTRL_PATH) if r.get("final")}
+    jobs = [(iid, arm) for iid in cons for arm in ("placebo", "pointer") if (iid, arm) not in done]
+
+    def one(job):
+        iid, arm = job
+        item, con = items[iid], cons[iid]
+        p = problems[item["problem_id"]]
+        sentence = con[arm]
+        passed, votes = _ctrl_check(p, item, sentence)
+        append(CTRL_PATH, {"item_id": iid, "arm": arm, "kind": "check", "sentence": sentence, "passed": passed,
+                           "votes": votes, "final": passed})
+        for attempt in range(3):
+            if passed:
+                return
+            note = "; ".join(v["note"] for v in votes if v.get("note"))[:600]
+            res = call("con-gpt-astra", REGEN_PROMPT.format(spec=p.spec.rstrip(), role=arm.upper(), role_def=ROLE_DEF[arm],
+                                                      note=note, sentence=sentence, args=item["first_fail"]["args_repr"][:600]))
+            obj = parse_json(res["text"]) if res["ok"] else None
+            if not (isinstance(obj, dict) and isinstance(obj.get("sentence"), str)):
+                continue
+            new = obj["sentence"].strip()
+            lo, hi = 0.6 * len(con["clause"]), 1.5 * len(con["clause"])
+            if not lo <= len(new) <= hi:
+                note = f"length {len(new)} outside [{lo:.0f}, {hi:.0f}]"
+                continue
+            sentence = new
+            passed, votes = _ctrl_check(p, item, sentence)
+            append(CTRL_PATH, {"item_id": iid, "arm": arm, "kind": "regen", "attempt": attempt + 1, "sentence": sentence,
+                               "passed": passed, "votes": votes, "final": passed or attempt == 2})
+    run_pool(jobs, one, workers, "controls v4")
+
+
 def admitted_constructions() -> dict:
     cons = {r["item_id"]: r for r in load(CON_PATH) if r.get("admitted_by_execution")}
     votes: dict = {}
@@ -1040,7 +1146,8 @@ MAX_ATTEMPTS = 2
 def task_text(spec: str, arm: str, con: dict) -> str:
     if arm == "orig":
         return spec
-    sentence = con[arm]
+    # amendment 4: rechecked or regenerated control texts are in force for every audit made after it
+    sentence = control_text(con["item_id"], arm, con) if arm in ("placebo", "pointer") else con[arm]
     return spec.rstrip() + "\n\nAdditional requirement: " + sentence.strip() + "\n"
 
 
@@ -1260,7 +1367,7 @@ def completeness(split: str) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("stage", choices=["generate", "oracle", "execute", "select", "construct", "adjudicate",
-                                      "taxonomy", "taxonomy2", "audit", "witness"])
+                                      "taxonomy", "taxonomy2", "controls", "audit", "witness"])
     ap.add_argument("--orig-rest", action="store_true", help="original arm for the non-admitted items")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--split", default="dev", choices=["dev", "test"])
@@ -1271,6 +1378,7 @@ def main(argv=None) -> int:
      "execute": lambda: stage_execute(a.workers), "select": lambda: stage_select(a.force),
      "construct": lambda: stage_construct(a.workers), "adjudicate": lambda: stage_adjudicate(a.workers),
      "taxonomy": lambda: stage_taxonomy(a.workers), "taxonomy2": lambda: stage_taxonomy2(a.workers),
+     "controls": lambda: stage_controls(a.workers),
      "audit": lambda: stage_audit(a.split, a.workers, a.auditors.split(","), a.orig_rest),
      "witness": lambda: stage_witness(a.workers)}[a.stage]()
     return 0
