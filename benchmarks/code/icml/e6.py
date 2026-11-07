@@ -24,8 +24,11 @@ import ast
 import random
 import base64
 import json
+import os
 import pickle
+import signal
 import subprocess
+import time
 import tempfile
 from pathlib import Path
 
@@ -189,15 +192,24 @@ def run_forked(fn, inp):
         os._exit(0)
     os.close(w)
     chunks, deadline = [], spec["limit"] + 1
-    import time
+    import time, subprocess as sp
     end = time.monotonic() + deadline
+    cap_kb = spec.get("child_mem_mb", 1024) * 1024
     while True:
         left = end - time.monotonic()
-        if left <= 0 or not select.select([r], [], [], left)[0]:
+        if left <= 0:
             os.kill(pid, 9)
             os.waitpid(pid, 0)
             os.close(r)
             return "timeout", None
+        if not select.select([r], [], [], min(left, 0.2))[0]:
+            rss = sp.run(["ps", "-o", "rss=", "-p", str(pid)], capture_output=True, text=True).stdout.strip()
+            if rss.isdigit() and int(rss) > cap_kb:          # memory cap: the call is stopped, status "memory"
+                os.kill(pid, 9)
+                os.waitpid(pid, 0)
+                os.close(r)
+                return "memory", None
+            continue
         b = os.read(r, 1 << 20)
         if not b:
             break
@@ -236,6 +248,37 @@ with open(spec["out"], "w") as fh:
 '''
 
 
+BATCH_MEM_MB, CHILD_MEM_MB = 1536, 1024      # memory caps (the host has to run several batches at once)
+
+
+def run_watched(cmd: list, cwd: str, timeout: float, mem_mb: int):
+    """Run a batch in its own process group; kill the whole group if it exceeds the time limit or the memory cap
+    (resident memory summed over the group). Returns (CompletedProcess or None, reason or None)."""
+    proc = subprocess.Popen(cmd, cwd=cwd, env=e1.EXEC_ENV, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                            start_new_session=True)
+    end = time.monotonic() + timeout
+    why = None
+    while proc.poll() is None:
+        if time.monotonic() > end:
+            why = "timeout"
+        else:
+            ps = subprocess.run(["ps", "-A", "-o", "pgid=,rss="], capture_output=True, text=True).stdout
+            rss = sum(int(b) for a, b in (ln.split() for ln in ps.splitlines() if len(ln.split()) == 2)
+                      if a == str(proc.pid) and b.isdigit())
+            if rss > mem_mb * 1024:
+                why = "memory"
+        if why:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            proc.wait()
+            return None, why
+        time.sleep(0.25)
+    out, err = proc.communicate()
+    return subprocess.CompletedProcess(cmd, proc.returncode, out, err), None
+
+
 def multi_compare(p, programs: dict, pairs: list, inputs: list, limit: int = 5, capture: list = ()) -> dict:
     """Run every program on every input in one executor process; compare the given pairs with the suite's own
     assertion. Results come back through a file."""
@@ -249,18 +292,17 @@ def multi_compare(p, programs: dict, pairs: list, inputs: list, limit: int = 5, 
         (Path(tmp) / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
         (Path(tmp) / "multi.py").write_text(MULTI, encoding="utf-8")
         cmd = [execute.EXECUTOR, str(Path(tmp) / "multi.py"), str(Path(tmp) / "spec.json")]
-        try:
-            done = subprocess.run(cmd, capture_output=True, text=True, timeout=900, cwd=tmp, env=e1.EXEC_ENV)
-        except subprocess.TimeoutExpired:
-            # v4.3: a batch that stalls (a call the alarm cannot interrupt) is rerun with one killed child per call;
-            # results differ from the alarm mode only on such calls, which become timeouts
-            spec["hard"] = True
+        done, why = run_watched(cmd, tmp, timeout=900, mem_mb=BATCH_MEM_MB)
+        if why:
+            # v4.3: a batch that stalls (a call the alarm cannot interrupt) or exceeds the memory cap is rerun with one
+            # child per call, killed at the time limit or the per-call memory cap; results differ from the default
+            # mode only on such calls, which become "timeout" or "memory"
+            spec["hard"], spec["child_mem_mb"] = True, CHILD_MEM_MB
             (Path(tmp) / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
-            try:
-                done = subprocess.run(cmd, capture_output=True, text=True,
-                                      timeout=(limit + 2) * len(inputs) * len(programs) + 120, cwd=tmp, env=e1.EXEC_ENV)
-            except subprocess.TimeoutExpired:
-                return {"infra": "timeout"}
+            done, why = run_watched(cmd, tmp, timeout=(limit + 2) * len(inputs) * len(programs) + 120,
+                                    mem_mb=CHILD_MEM_MB + BATCH_MEM_MB)
+            if why:
+                return {"infra": why}
         try:
             return {"rows": json.loads((Path(tmp) / "out.json").read_text()), "hard": bool(spec.get("hard"))}
         except (OSError, json.JSONDecodeError):

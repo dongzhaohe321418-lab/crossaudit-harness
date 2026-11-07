@@ -74,9 +74,11 @@ One open unit and at most one positive-control unit per problem.
    outcome-blind. Two development pilots of this stage are archived and not used: one whose replies were empty after
    tool attempts (`e6_redteam_pilot.jsonl`, 14 units) and one without the interface rule (`e6_redteam_v43a.jsonl`;
    admissions `*_units4_v43a.jsonl`).
-   (iv) *Executor.* A validation batch that has not finished after 900 s is rerun with each call in its own child
-   process, killed after the per-call limit; results differ from the default mode only on calls the per-call alarm
-   cannot interrupt (long computations inside C code), which become timeouts. Rows record which mode ran.
+   (iv) *Executor.* A validation batch that has not finished after 900 s, or whose resident memory exceeds 1.5 GB,
+   is rerun with each call in its own child process, killed at the per-call time limit or at 1 GB of resident memory;
+   results differ from the default mode only on calls the per-call alarm cannot interrupt (long computations inside C
+   code) or that exhaust memory (huge allocations from large-integer stress inputs), which receive the status
+   "timeout" or "memory" and are treated like any other non-ok status. Rows record which mode ran.
    Finite testing still cannot prove the labels; the stated guarantee is agreement on the registered input set
    (hidden suite, proposer inputs, interface probes, interface stress inputs and interface red-team inputs). The v4.2
    admissions are archived (`*_units4_v42.jsonl`).
