@@ -138,6 +138,12 @@ def analyse(split: str) -> dict:
         sub = subset_items(items, g)
         sec[g] = {"H1": contrast(sub, table, "defective", "clause", 2, "placebo", 2, "vd"),
                   "H2": contrast(sub, table, "correct", "clause", 2, "placebo", 2, "flag")}
+    gen_ctl = {k: v for k, v in items.items() if v.get("control_source") in ("same", "other")}
+    sec["H2_generated_controls_only"] = contrast(gen_ctl, table, "correct", "clause", 2, "placebo", 2, "flag")
+    sec["correct_flag_by_control_source"] = {
+        src: cluster_boot(level_values({k: v for k, v in items.items() if v.get("control_source") == src},
+                                       table, "correct", "orig", 4, "flag", AUDITORS), items)
+        for src in ("same", "other", "reference")}
     res["secondary"] = sec
     # E2: operating characteristics on the original arm, exact subset averaging over K = 1..4
     e2 = {}
