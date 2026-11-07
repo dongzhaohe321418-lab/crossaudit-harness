@@ -104,11 +104,27 @@ def sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+_auth_lock = threading.Lock()
+
+
+def sync_auth(home: str, after: bool = False) -> None:
+    """Codex refresh tokens are single-use, so isolated homes must not drift from the user's login: before a call
+    the newer of the two auth files is copied into the isolated home; after it, a token the call refreshed is copied
+    back."""
+    main, iso = Path.home() / ".codex" / "auth.json", Path(home) / "auth.json"
+    with _auth_lock:
+        if not iso.exists():
+            iso.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(main, iso)
+        elif after and iso.stat().st_mtime > main.stat().st_mtime + 1:
+            shutil.copy2(iso, main)
+        elif not after and main.stat().st_mtime > iso.stat().st_mtime + 1:
+            shutil.copy2(main, iso)
+
+
 def iso_home(route: str) -> str:
     home = ISO_ROOT / route
-    if not (home / "auth.json").exists():
-        home.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(Path.home() / ".codex" / "auth.json", home / "auth.json")
+    sync_auth(str(home))
     return str(home)
 
 
@@ -125,6 +141,8 @@ def call(route: str, payload: str, timeout: float = 900.0) -> dict:
         return {"ok": False, "error": "timeout", "wall_s": round(time.monotonic() - started, 1),
                 "text": "", "raw": "", "tool_used": False}
     wall = round(time.monotonic() - started, 1)
+    if kind == "codex":
+        sync_auth(env["CODEX_HOME"], after=True)
     raw = done.stdout or ""
     text, tool_used, usage = raw, False, None
     if kind == "codex":

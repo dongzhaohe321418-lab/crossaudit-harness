@@ -27,7 +27,7 @@ from pathlib import Path
 
 HOME = Path.home().resolve()
 PROXY_PORT = 18777
-ALLOW_HOSTS = ("api.openai.com", "chatgpt.com", "ab.chatgpt.com", "api.anthropic.com", "statsig.anthropic.com",
+ALLOW_HOSTS = ("api.openai.com", "auth.openai.com", "chatgpt.com", "ab.chatgpt.com", "api.anthropic.com", "statsig.anthropic.com",
                "claude.ai", "console.anthropic.com", "mcp-proxy.anthropic.com")
 WORK_ROOT = Path("/private/tmp/caudit")
 TMP = Path(tempfile.gettempdir()).resolve()

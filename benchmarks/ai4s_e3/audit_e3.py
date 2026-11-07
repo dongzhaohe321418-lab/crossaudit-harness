@@ -134,6 +134,8 @@ def _run(auditor: str, mode: str, work: Path, timeout: float) -> dict:
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": "timeout", "wall_s": round(time.monotonic() - started, 1), "raw": ""}
     wall = round(time.monotonic() - started, 1)
+    if kind == "codex":
+        e1.sync_auth(env["CODEX_HOME"], after=True)
     raw, text, tools_used, commands, other_tools = done.stdout or "", done.stdout or "", 0, [], []
     if kind == "codex":
         msgs = []
@@ -205,6 +207,8 @@ def main() -> int:
     done_keys = {(r["item"], r["mode"], r["auditor"], r["reading"]) for r in rows if r.get("ok")}
     tries: dict = {}
     for r in rows:
+        if "auth.openai.com/oauth" in str(r.get("error", "")):
+            continue          # login refresh blocked by the egress allowlist (fixed): infrastructure, not an attempt
         k = (r["item"], r["mode"], r["auditor"], r["reading"])
         tries[k] = tries.get(k, 0) + 1
     jobs = [(i, au, k) for i in items for au in a.auditors.split(",") for k in range(readings)

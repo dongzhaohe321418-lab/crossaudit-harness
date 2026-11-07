@@ -124,6 +124,19 @@ def fpr_bound(uv: dict) -> dict:
     return {"units_with_any_clean_flag": k, "n": n, "upper95": 100 * cp_upper(k, n)}
 
 
+def fpr_compliant(level_row: dict) -> bool:
+    """Registered budget rule: the bootstrap upper bound of the resolved FPR is below alpha; when the bootstrap
+    interval collapses to [0, 0] (every unit's clean-cell flag rate is zero), the exact bound on the problem-level
+    any-clean-flag indicator must also be below alpha (boundary safeguard, GPT review P3). The exact bound is reported
+    in every case as a conservative sensitivity analysis."""
+    f = level_row["fpr"]
+    if not f or f["hi"] >= 100 * ALPHA_FPR:
+        return False
+    if f["hi"] == 0:
+        return level_row["fpr_bound"]["upper95"] < 100 * ALPHA_FPR
+    return True
+
+
 def population(split: str) -> list:
     """Registered population: v4-admitted units; both registered judges, by identity, rate the domain valid and (open)
     both rules compatible or (det) RULE_A incompatible and RULE_B compatible."""
@@ -210,11 +223,16 @@ def analyse(split: str, allow_incomplete: bool) -> dict:
     res["verdicts"] = {
         "E6_1": bool(res["E6_1_cov_resolve_minus_menu"] and res["E6_1_cov_resolve_minus_menu"]["lo"] > 0
                      and lv["all|resolve"]["cov"] and lv["all|resolve"]["cov"]["lo"] >= 50
-                     and lv["all|resolve"]["fpr"] and lv["all|resolve"]["fpr"]["hi"] < 100 * ALPHA_FPR
-                     and lv["all|resolve"]["fpr_bound"]["upper95"] < 100 * ALPHA_FPR),
+                     and fpr_compliant(lv["all|resolve"])),
         "E6_2": bool(res["E6_2_convention_advantage_none"] and res["E6_2_convention_advantage_none"]["lo"] > 0),
         "E6_3_equivalent_within_5": bool(eq and eq["lo"] > -5 and eq["hi"] < 5),
+        "E6_5": bool(res["E6_5_cov_sentence_minus_none"] and res["E6_5_cov_sentence_minus_none"]["lo"] > 0),
     }
+    # registered order: each claimed only if all earlier ones hold
+    v, chain = res["verdicts"], True
+    for k in ("E6_1", "E6_2", "E6_3_equivalent_within_5", "E6_5"):
+        chain = chain and v[k]
+        v[k + "_claimed"] = chain
     return res
 
 
