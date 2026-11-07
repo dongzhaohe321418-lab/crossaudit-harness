@@ -811,6 +811,74 @@ def admitted_constructions() -> dict:
 
 
 # ---------------------------------------------------------------------------------------------
+# taxonomy (amendment 3): what the task's words say about the first failing input, for every selected item
+# ---------------------------------------------------------------------------------------------
+TAX_PATH = REC / "taxonomy_v3.jsonl"
+TAX_PROMPT = """You are classifying items for a study of code review. Answer strictly from the task's words.
+
+TASK (as given to a programmer):
+{spec}
+
+VISIBLE TESTS:
+{visible}
+
+On the input below, the benchmark's reference solution and a submitted program return different values.
+
+INPUT (positional arguments): {args}
+REFERENCE OUTPUT: {ref_out}
+SUBMITTED PROGRAM'S OUTPUT: {cand_out}
+
+Classify the item as exactly one of:
+DETERMINED   the task's words and visible tests require the reference's output on this input, and the
+             submitted program's output violates them;
+OPEN         the task's words and visible tests are consistent with both outputs (the task leaves this
+             behaviour open);
+AT_ODDS      the reference's output is inconsistent with the task's words, or is an arbitrary artefact of
+             its implementation (for example floating-point noise or a loop's fall-through value) that the
+             task's author would not intend.
+
+Reply with exactly one JSON object: {{"class": "DETERMINED" | "OPEN" | "AT_ODDS", "reason": "one sentence"}}
+"""
+TAX_CLASSES = ("DETERMINED", "OPEN", "AT_ODDS")
+
+
+def stage_taxonomy(workers: int) -> None:
+    """Both adjudicator routes classify every selected item, blind to every audit and to the program text."""
+    problems = {p.problem_id: p for p in load_problems()}
+    items = json.loads(ITEMS_PATH.read_text())
+    have = {(r["item_id"], r["adjudicator"]) for r in load(TAX_PATH) if r.get("ok")}
+    jobs = [(i, a) for i in items for a in ADJUDICATORS if (i["item_id"], a) not in have]
+
+    def one(job):
+        item, adj = job
+        p = problems[item["problem_id"]]
+        ff = item["first_fail"]
+        payload = TAX_PROMPT.format(spec=p.spec.rstrip(), visible=p.visible_tests_text(),
+                                    args=ff["args_repr"][:1500], ref_out=ff["reference"]["repr"][:800],
+                                    cand_out=(ff["candidate"].get("repr") or ff["candidate"].get("status", ""))[:800])
+        for attempt in range(2):
+            res = call(adj, payload, timeout=900)
+            obj = parse_json(res["text"]) if res["ok"] else None
+            if obj and obj.get("class") in TAX_CLASSES:
+                append(TAX_PATH, {"item_id": item["item_id"], "adjudicator": adj, "ok": True, "class": obj["class"],
+                                  "reason": str(obj.get("reason", ""))[:500], "prompt_sha256": sha(payload),
+                                  "protocol": PROTOCOL})
+                return
+        append(TAX_PATH, {"item_id": item["item_id"], "adjudicator": adj, "ok": False, "protocol": PROTOCOL})
+    run_pool(jobs, one, workers, "taxonomy")
+
+
+def taxonomy() -> dict:
+    """Item class: the class both adjudicators gave, else DISPUTED."""
+    votes: dict = {}
+    for r in load(TAX_PATH):
+        if r.get("ok"):
+            votes.setdefault(r["item_id"], {})[r["adjudicator"]] = r["class"]
+    return {iid: (v[ADJUDICATORS[0]] if len(v) == 2 and len(set(v.values())) == 1 else "DISPUTED")
+            for iid, v in votes.items()}
+
+
+# ---------------------------------------------------------------------------------------------
 # audit
 # ---------------------------------------------------------------------------------------------
 AUD_PATH = REC / "audits_v3.jsonl"
@@ -856,21 +924,27 @@ def audit_prompt(problem: Problem, solution: str, task: str) -> str:
 _WIT = re.compile(r"WITNESS:\s*`?(.+?)`?\s*->\s*`?(.+?)`?\s*$", re.M)
 
 
-def schedule(split: str, auditors: list[str]) -> list[list]:
-    path = REC / f"schedule_v3_{split}.json"
+def schedule(split: str, auditors: list[str], orig_rest: bool = False) -> list[list]:
+    """The persisted schedule: every arm for admitted items, or (amendment 3, `orig_rest`) the original arm
+    for every selected item that was not admitted."""
+    path = REC / (f"schedule_v3_orig_{split}.json" if orig_rest else f"schedule_v3_{split}.json")
     if path.exists():
         return json.loads(path.read_text())
     items = [i for i in json.loads(ITEMS_PATH.read_text()) if i["split"] == split]
     cons = admitted_constructions()
-    jobs = [[i["item_id"], kind, arm, a, k] for i in items if i["item_id"] in cons
-            for kind in ("defective", "correct") for arm in ARMS for a in auditors
-            for k in range(READINGS[arm])]
+    if orig_rest:
+        jobs = [[i["item_id"], kind, "orig", a, k] for i in items if i["item_id"] not in cons
+                for kind in ("defective", "correct") for a in auditors for k in range(READINGS["orig"])]
+    else:
+        jobs = [[i["item_id"], kind, arm, a, k] for i in items if i["item_id"] in cons
+                for kind in ("defective", "correct") for arm in ARMS for a in auditors
+                for k in range(READINGS[arm])]
     random.Random(7).shuffle(jobs)
     path.write_text(json.dumps(jobs))
     return jobs
 
 
-def stage_audit(split: str, workers: int, auditors: list[str]) -> None:
+def stage_audit(split: str, workers: int, auditors: list[str], orig_rest: bool = False) -> None:
     from crossaudit.auditor.validate import known_rules, parse_reply, validate_reply
     problems = {p.problem_id: p for p in load_problems()}
     items = {i["item_id"]: i for i in json.loads(ITEMS_PATH.read_text())}
@@ -881,14 +955,14 @@ def stage_audit(split: str, workers: int, auditors: list[str]) -> None:
     for r in rows:
         k = (r["item_id"], r["kind"], r["arm"], r["auditor"], r["reading"])
         attempts[k] = attempts.get(k, 0) + 1
-    jobs = [tuple(j) for j in schedule(split, auditors)
+    jobs = [tuple(j) for j in schedule(split, auditors, orig_rest)
             if tuple(j) not in ok_keys and attempts.get(tuple(j), 0) < MAX_ATTEMPTS]
 
     def one(job):
         iid, kind, arm, auditor, k = job
         item = items[iid]
         p = problems[item["problem_id"]]
-        payload = audit_prompt(p, item[f"{kind}_solution"], task_text(p.spec, arm, cons[iid]))
+        payload = audit_prompt(p, item[f"{kind}_solution"], task_text(p.spec, arm, cons.get(iid)))
         res = call(auditor, payload, timeout=900)
         row = {"item_id": iid, "kind": kind, "arm": arm, "auditor": auditor, "reading": k, "split": split,
                "prompt_sha256": sha(payload), "wall_s": res["wall_s"], "tool_used": res["tool_used"],
@@ -990,7 +1064,8 @@ def completeness(split: str) -> dict:
     for r in rows:
         k = (r["item_id"], r["kind"], r["arm"], r["auditor"], r["reading"])
         tries[k] = tries.get(k, 0) + 1
-    sched = [tuple(j) for j in json.loads((REC / f"schedule_v3_{split}.json").read_text())]
+    sched = [tuple(j) for name in (f"schedule_v3_{split}.json", f"schedule_v3_orig_{split}.json")
+             if (REC / name).exists() for j in json.loads((REC / name).read_text())]
     unfinished = [k for k in sched if k not in ok and tries.get(k, 0) < MAX_ATTEMPTS]
     missing = [k for k in sched if k not in ok and tries.get(k, 0) >= MAX_ATTEMPTS]
     wits = {r["input_sha256"]: r for r in load(WIT_PATH) if not r.get("infra")}
@@ -1004,7 +1079,8 @@ def completeness(split: str) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("stage", choices=["generate", "oracle", "execute", "select", "construct", "adjudicate",
-                                      "audit", "witness"])
+                                      "taxonomy", "audit", "witness"])
+    ap.add_argument("--orig-rest", action="store_true", help="original arm for the non-admitted items")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--split", default="dev", choices=["dev", "test"])
     ap.add_argument("--auditors", default=",".join(PRIMARY_AUDITORS))
@@ -1013,7 +1089,8 @@ def main(argv=None) -> int:
     {"generate": lambda: stage_generate(a.workers), "oracle": lambda: stage_oracle(a.workers),
      "execute": lambda: stage_execute(a.workers), "select": lambda: stage_select(a.force),
      "construct": lambda: stage_construct(a.workers), "adjudicate": lambda: stage_adjudicate(a.workers),
-     "audit": lambda: stage_audit(a.split, a.workers, a.auditors.split(",")),
+     "taxonomy": lambda: stage_taxonomy(a.workers),
+     "audit": lambda: stage_audit(a.split, a.workers, a.auditors.split(","), a.orig_rest),
      "witness": lambda: stage_witness(a.workers)}[a.stage]()
     return 0
 

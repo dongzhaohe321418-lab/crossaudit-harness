@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
+import math
 import random
 import sys
 from pathlib import Path
@@ -26,12 +27,13 @@ AUDITORS = e1.PRIMARY_AUDITORS
 B, SEED = 10000, 20261110
 
 
-def readings_table(split: str):
+def readings_table(split: str, admitted_only: bool = True):
     status = e1.completeness(split)
     problems = {p.problem_id: p for p in e1.load_problems()}
     items = {i["item_id"]: i for i in json.loads(e1.ITEMS_PATH.read_text()) if i["split"] == split}
     cons = e1.admitted_constructions()
-    items = {k: v for k, v in items.items() if k in cons}
+    if admitted_only:
+        items = {k: v for k, v in items.items() if k in cons}
     wit = {r["input_sha256"]: r for r in e1.load(e1.WIT_PATH) if not r.get("infra")}
     table: dict = {}
     for r in e1.load(e1.AUD_PATH):
@@ -197,11 +199,91 @@ def analyse(split: str) -> dict:
     return res
 
 
+def two_group_boot(values: dict, groups: dict, g1: str, g2: str, items: dict, seed=SEED, b=B):
+    """mean(g1) - mean(g2) over items, resampling problems with all their items."""
+    by_problem: dict = {}
+    for iid, v in values.items():
+        if groups.get(iid) in (g1, g2):
+            by_problem.setdefault(items[iid]["problem_id"], []).append((groups[iid], v))
+
+    def diff(rows):
+        a = [v for g, v in rows if g == g1]
+        c = [v for g, v in rows if g == g2]
+        return None if not a or not c else sum(a) / len(a) - sum(c) / len(c)
+    allrows = [r for rs in by_problem.values() for r in rs]
+    est = diff(allrows)
+    if est is None:
+        return None
+    rng = random.Random(seed)
+    probs = list(by_problem)
+    draws = []
+    for _ in range(b):
+        d = diff([r for p in (rng.choice(probs) for _ in probs) for r in by_problem[p]])
+        if d is not None:
+            draws.append(d)
+    draws.sort()
+    n = len(draws)
+    return {"est": 100 * est, "lo": 100 * draws[int(0.025 * n)], "hi": 100 * draws[math.ceil(0.975 * n) - 1],
+            "n_g1": sum(1 for g, _ in allrows if g == g1), "n_g2": sum(1 for g, _ in allrows if g == g2),
+            "valid_draws": n}
+
+
+def analyse_taxonomy(split: str) -> dict:
+    """Amendment 3: original-arm rates by what the task's words say about the first failing input (all selected
+    items), and H6: four-reading verified diagnosis on DETERMINED items exceeds that on OPEN items."""
+    items, table, status = readings_table(split, admitted_only=False)
+    tax = e1.taxonomy()
+    items = {k: v for k, v in items.items() if k in tax}
+    cons = e1.admitted_constructions()
+    res = {"split": split, "n_items": len(items), "class_counts": {}, "completeness": status}
+    for c in e1.TAX_CLASSES + ("DISPUTED",):
+        res["class_counts"][c] = sum(1 for k in items if tax[k] == c)
+    res["admitted_by_class"] = {c: sum(1 for k in items if tax[k] == c and k in cons)
+                                for c in e1.TAX_CLASSES + ("DISPUTED",)}
+    votes: dict = {}
+    for r in e1.load(e1.TAX_PATH):
+        if r.get("ok") and r["item_id"] in items:
+            votes.setdefault(r["item_id"], {})[r["adjudicator"]] = r["class"]
+    pairs = [tuple(v[a] for a in e1.ADJUDICATORS) for v in votes.values() if len(v) == 2]
+    if pairs:
+        po = sum(x == y for x, y in pairs) / len(pairs)
+        pe = sum((sum(x == c for x, _ in pairs) / len(pairs)) * (sum(y == c for _, y in pairs) / len(pairs))
+                 for c in e1.TAX_CLASSES)
+        res["agreement"] = {"n": len(pairs), "observed": po, "kappa": (po - pe) / (1 - pe) if pe < 1 else None}
+    levels = {}
+    for c in e1.TAX_CLASSES + ("DISPUTED",):
+        sub = {k: v for k, v in items.items() if tax[k] == c}
+        for kind, metric in (("defective", "vd"), ("defective", "wd"), ("defective", "flag"), ("correct", "flag")):
+            levels[f"{c}|{kind}|{metric}|orig4"] = cluster_boot(
+                level_values(sub, table, kind, "orig", 4, metric, AUDITORS), sub)
+    res["levels"] = levels
+    vd = level_values(items, table, "defective", "orig", 4, "vd", AUDITORS)
+    fl = level_values(items, table, "defective", "orig", 4, "flag", AUDITORS)
+    res["H6_vd_orig4_determined_minus_open"] = two_group_boot(vd, tax, "DETERMINED", "OPEN", items)
+    res["verdicts"] = {"H6": bool(res["H6_vd_orig4_determined_minus_open"]
+                                  and res["H6_vd_orig4_determined_minus_open"]["lo"] > 0)}
+    res["secondary"] = {
+        "flag_orig4_determined_minus_open": two_group_boot(fl, tax, "DETERMINED", "OPEN", items),
+        "vd_orig4_determined_minus_at_odds": two_group_boot(vd, tax, "DETERMINED", "AT_ODDS", items),
+        "per_auditor": {au: two_group_boot(level_values(items, table, "defective", "orig", 4, "vd", [au]),
+                                           tax, "DETERMINED", "OPEN", items) for au in AUDITORS},
+    }
+    return res
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", default="test")
     ap.add_argument("--out", default="")
+    ap.add_argument("--taxonomy", action="store_true")
     a = ap.parse_args()
+    if a.taxonomy:
+        out = analyse_taxonomy(a.split)
+        (e1.REC / f"e1_taxonomy_{a.split}.json").write_text(json.dumps(out, indent=1))
+        print(json.dumps({k: out[k] for k in ("n_items", "class_counts", "admitted_by_class", "verdicts")},
+                         indent=1))
+        print(out["H6_vd_orig4_determined_minus_open"], out.get("agreement"))
+        raise SystemExit(0)
     out = analyse(a.split)
     path = Path(a.out) if a.out else e1.REC / f"e1_results_{a.split}.json"
     path.write_text(json.dumps(out, indent=1))

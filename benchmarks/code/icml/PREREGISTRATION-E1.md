@@ -192,3 +192,36 @@ diagnosis on defective items and for flags on test-passing controls.
 auditors and the sample. H2 remains a flag rate on test-passing controls, not a false-positive rate on
 known-correct programs. The paper will describe the intervention as failure-informed specification
 supplementation. The development split is rerun under e1-v3 as a pipeline check only.
+
+## Amendment 3 (after e1-v3 construction and adjudication; before any test audit)
+
+**What was seen.** The e1-v3 construction and adjudication funnel on both splits, with no audit output on
+either split: of 150 selected items, the candidate-blind constructor skipped 79 (its stated reasons: the
+task's words already determine the behaviour, or the reference's behaviour contradicts the task or is an
+implementation artefact), 7 failed the execution gates, 64 passed them, and 38 were admitted by both
+adjudicators (8 development, 30 test). Development-split e1-v3 audits were started as a pipeline check.
+
+**Why.** The skip rate means the clause intervention can only address a minority of hidden-test failures, and
+that the hidden-test definition of "defective" mixes three different situations. Measuring the auditors on
+all three is a direct test of the paper's account of what limits recall, and it uses items that are already
+frozen.
+
+**Changes.** (1) *Taxonomy.* Both adjudicator routes, blind to every audit and shown only the task, the
+visible tests, the first failing input and the two outputs (not the program text), classify every selected
+item as DETERMINED (the task's words require the reference's output and the program's output violates them),
+OPEN (both outputs are consistent with the task's words) or AT_ODDS (the reference's output contradicts the
+task's words or is an implementation artefact). An item's class is the class both give; otherwise DISPUTED.
+Agreement and Cohen's kappa are reported. (2) *Original-arm audits for every selected item.* Items not
+admitted to the intervention receive the original arm only (4 readings per kind and auditor, same prompt,
+auditors and validity rules) on a separate persisted schedule (seed 7); admitted items contribute their
+original-arm readings from the main schedule.
+
+**New hypothesis (test split, all selected items).** *H6.* Four-reading verified diagnosis on defective items
+is higher for DETERMINED items than for OPEN items: the difference of class means, with a problem-cluster
+bootstrap (10,000 draws, seed 20261110; draws in which either class is empty are discarded and counted).
+Supported if the lower bound exceeds 0. Secondary, without correction: the same for flags, DETERMINED minus
+AT_ODDS, per auditor, and every class's levels of flag, verified diagnosis and witnessed disagreement on
+defective items and flags on test-passing controls. DISPUTED items are reported but enter no contrast.
+
+**Unchanged.** H1-H5 and everything in Amendment 2. Sample size for H1-H5 is the 30 admitted test items; no
+items will be added to the intervention after test audits begin.
