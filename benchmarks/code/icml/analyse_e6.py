@@ -85,9 +85,42 @@ def boot(values: dict, seed=SEED, b=B) -> dict | None:
             "sd_unit": 100 * (statistics.stdev(xs) if len(xs) > 1 else 0.0)}
 
 
+def population(split: str) -> list:
+    """Registered population: execution-admitted units with both judges' verdicts as required by the unit kind
+    (open: both rules compatible; det: RULE_A incompatible and RULE_B compatible)."""
+    want = ("compatible", "compatible") if e6.KIND == "open" else ("incompatible", "compatible")
+    votes: dict = {}
+    for r in e1.load(e6.JUDGE):
+        if r.get("ok"):
+            votes.setdefault(r["problem_id"], {})[r["judge"]] = (r["a"], r["b"])
+    return sorted(pid for pid in e6.units(split)
+                  if len(votes.get(pid, {})) == len(e6.JUDGE_ROUTES)
+                  and all(v == want for v in votes[pid].values()))
+
+
+def analyse_det(split: str) -> dict:
+    """E6-4: positive controls under contract B, none arm: TPR = flag on program a, FPR = flag on program b."""
+    cells = table(split)
+    units = population(split)
+    out = {}
+    for pid in units:
+        vals = []
+        for cfg in e6.CONFIGS:
+            ra, rb = cells.get((pid, "a", "none", cfg)), cells.get((pid, "b", "none", cfg))
+            if ra and rb:
+                fa, va = policy(ra, 1)
+                fb, _ = policy(rb, 1)
+                vals.append({"j": fa - fb, "tpr": fa, "fpr": fb, "cov": va["b"]})
+        if vals:
+            out[pid] = {k: statistics.mean(v[k] for v in vals) for k in vals[0]}
+    return {"split": split, "n_units": len(units),
+            "E6_4_J_none": boot({k: v["j"] for k, v in out.items()}),
+            **{m: boot({k: v[m] for k, v in out.items()}) for m in ("tpr", "fpr", "cov")}}
+
+
 def analyse(split: str) -> dict:
     cells = table(split)
-    units = sorted(e6.units(split))
+    units = population(split)
     res = {"split": split, "n_units": len(units), "readings": sum(len(v) for v in cells.values())}
     cfg_sets = {"all": e6.CONFIGS, **{c: (c,) for c in e6.CONFIGS}}
     for t in (1, 2):
@@ -121,7 +154,14 @@ def power_table(sd_points: float) -> dict:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", default="dev")
+    ap.add_argument("--kind", choices=["open", "det"], default="open")
     a = ap.parse_args()
+    e6.set_kind(a.kind)
+    if a.kind == "det":
+        out = analyse_det(a.split)
+        (e1.REC / f"e6det_results_{a.split}.json").write_text(json.dumps(out, indent=1))
+        print(json.dumps(out, indent=1))
+        raise SystemExit(0)
     out = analyse(a.split)
     for key in ("E6_1_cov_resolve_minus_menu_t1", "E6_2_convention_advantage_none_t1"):
         if out.get(key):

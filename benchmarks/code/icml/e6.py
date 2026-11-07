@@ -34,6 +34,18 @@ from e1 import REC, execute, imports_of, load, append, sha, suite_assertion
 PROPOSALS = REC / "e6_proposals.jsonl"
 IMPLS = REC / "e6_impls.jsonl"
 UNITS = REC / "e6_units.jsonl"
+KIND = "open"            # "det": positive controls, where the task's words decide and RULE_A is a misreading
+
+
+def set_kind(kind: str) -> None:
+    """Point every stage at the record files of one unit kind."""
+    global KIND, PROPOSALS, IMPLS, UNITS, JUDGE, BEHAV, AUD, AUD_RAW, WIT, ARMS
+    KIND = kind
+    pre = "e6_" if kind == "open" else "e6det_"
+    PROPOSALS, IMPLS, UNITS = REC / f"{pre}proposals.jsonl", REC / f"{pre}impls.jsonl", REC / f"{pre}units.jsonl"
+    JUDGE, BEHAV = REC / f"{pre}judgements.jsonl", REC / f"{pre}behaviour.jsonl"
+    AUD, AUD_RAW, WIT = REC / f"{pre}audits.jsonl", REC / f"{pre}audits_raw.jsonl", REC / f"{pre}witnesses.jsonl"
+    ARMS = ("none", "menu", "resolve-a", "resolve-b") if kind == "open" else ("none",)
 PROPOSE_ROUTE = "con-gpt-astra"
 IMPL_ROUTES = ("adj-gpt-sol", "adj-claude-opus")     # two vendors, same prompt
 
@@ -58,6 +70,32 @@ positional arguments with the exact argument types the task uses (a one-argument
 
 If no such genuinely open behaviour exists, reply {{"skip": "<one sentence why>"}}. Otherwise reply with exactly one
 JSON object:
+{{"class": "<one sentence describing the kind of input>", "rule_a": "...", "rule_b": "...",
+  "class_inputs": ["(...)", ...], "other_inputs": ["(...)", ...]}}
+
+TASK:
+{spec}
+
+REFERENCE:
+```python
+{reference}
+```
+"""
+
+PROPOSE_DET_PROMPT = """You are preparing material for a study of code review. Below are a programming task as a
+programmer receives it (description and visible tests) and the benchmark's reference implementation.
+
+Find ONE kind of valid input on which the task's words DO decide the correct behaviour, but where a hurried programmer
+could plausibly get it wrong while still passing every visible test (a plausible misreading of the words). State two
+behavioural rules for that kind of input, each one sentence, equally specific, written as requirements:
+- RULE_B: the behaviour the task's words require (the reference follows it);
+- RULE_A: the plausible misreading, which passes the visible tests but which a careful reading of the words rules out.
+Neither rule may mention the reference, tests, or this study. Then give inputs, each a Python literal tuple of the
+positional arguments with the exact argument types the task uses (a one-argument call is written "(x,)"):
+- CLASS_INPUTS: 4 to 8 inputs of that kind, including inputs on which RULE_A and RULE_B give different outputs;
+- OTHER_INPUTS: 3 to 5 valid inputs of other kinds, on which both rules agree.
+
+If no such behaviour exists, reply {{"skip": "<one sentence why>"}}. Otherwise reply with exactly one JSON object:
 {{"class": "<one sentence describing the kind of input>", "rule_a": "...", "rule_b": "...",
   "class_inputs": ["(...)", ...], "other_inputs": ["(...)", ...]}}
 
@@ -190,7 +228,8 @@ def stage_propose(split: str, workers: int) -> None:
     jobs = [p for p in problems(split) if p.problem_id not in have]
 
     def one(p):
-        payload = PROPOSE_PROMPT.format(spec=p.spec, reference=p.canonical_solution)
+        payload = (PROPOSE_PROMPT if KIND == "open" else PROPOSE_DET_PROMPT).format(spec=p.spec,
+                                                                                  reference=p.canonical_solution)
         res = e1.call(PROPOSE_ROUTE, payload)
         obj = e1.parse_json(res["text"]) if res["ok"] else None
         row = {"problem_id": p.problem_id, "split": split, "route": PROPOSE_ROUTE, "prompt_sha256": sha(payload)}
@@ -491,7 +530,9 @@ if __name__ == "__main__":
     ap.add_argument("stage", choices=["propose", "implement", "validate", "judge", "behaviour", "audit", "witness"])
     ap.add_argument("--split", default="dev")
     ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--kind", choices=["open", "det"], default="open")
     a = ap.parse_args()
+    set_kind(a.kind)
     {"propose": stage_propose, "implement": stage_implement, "validate": stage_validate, "judge": stage_judge,
      "behaviour": stage_behaviour, "audit": stage_audit,
      "witness": stage_witness}[a.stage](a.split, a.workers)
