@@ -1304,7 +1304,8 @@ SCORER = "judge-v3.2"   # v3.1: expected None scored, non-finite literals; v3.2:
                         # comparator self-check, exception kinds kept
 
 
-def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str, oracle: str | None = None) -> dict:
+def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str, oracle: str | None = None,
+                  limit: int = 10, timeout_terminal: bool = False) -> dict:
     """Score one witness against the benchmark reference, or (E6) against a contract's oracle implementation; with an
     oracle, the input must still be in the benchmark's domain (the reference runs on it)."""
     parsed = parse_call(call_src, p.entry_point)
@@ -1323,11 +1324,13 @@ def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str, o
     except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
         expected, has_expected = None, False
     j = judge_call(p, args, kwargs, candidate=solution, expected=expected, has_expected=has_expected,
-                   reference=oracle)
+                   reference=oracle, limit=limit)
     if "infra" in j:
         return {"status": "infra", "detail": str(j["infra"])[:200]}
     ref, cand = j["reference"], j["candidate"]
     if ref["status"] == "timeout":
+        if timeout_terminal:             # Amendment 6: still timing out at the long limit -> outside the domain
+            return {"status": "outside_domain", "reference": "timeout_terminal"}
         return {"status": "infra", "detail": "reference timeout"}
     if ref["status"] != "ok":
         return {"status": "outside_domain", "reference": ref["status"]}
@@ -1363,10 +1366,19 @@ def stage_witness(workers: int) -> None:
             if witness_key(r, item, problems[item["problem_id"]]) not in have:
                 jobs.append(r)
 
+    timeouts: dict = {}
+    for w in load(WIT_PATH):
+        if w.get("infra") and any(x.get("detail") == "reference timeout" for x in w["results"]):
+            timeouts[w["input_sha256"]] = timeouts.get(w["input_sha256"], 0) + 1
+
     def one(r):
         item = items[r["item_id"]]
         p = problems[item["problem_id"]]
-        res = [judge_witness(p, item[f"{r['kind']}_solution"], w["call"], w["expected"]) for w in r["witnesses"]]
+        # Amendment 6: after two scorings in which the reference timed out at the 10 s limit, score once more at 60 s
+        # and treat a reference that still times out as outside its domain (no credit), decided by run time alone
+        late = timeouts.get(witness_key(r, item, p), 0) >= 2
+        res = [judge_witness(p, item[f"{r['kind']}_solution"], w["call"], w["expected"],
+                             limit=60 if late else 10, timeout_terminal=late) for w in r["witnesses"]]
         append(WIT_PATH, {"item_id": r["item_id"], "kind": r["kind"], "arm": r["arm"], "auditor": r["auditor"],
                           "reading": r["reading"], "input_sha256": witness_key(r, item, p), "scorer": SCORER,
                           "results": res, "infra": any(x["status"] == "infra" for x in res),

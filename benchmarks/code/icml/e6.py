@@ -1104,6 +1104,10 @@ def stage_witness(split: str, workers: int) -> None:
     probs = {p.problem_id: p for p in problems(split)}
     have = {r["input_sha256"] for r in load(WIT) if not r.get("infra")}
     allowed_by: dict = {}
+    timeouts: dict = {}                  # E1 Amendment 6, applied to E6: terminal treatment of reference timeouts
+    for w in load(WIT):
+        if w.get("infra") and any(x.get("detail") == "reference timeout" for x in w.get("results", [])):
+            timeouts[w["input_sha256"]] = timeouts.get(w["input_sha256"], 0) + 1
     jobs = [(r, c) for r in load(AUD) if r.get("ok") and r.get("witnesses") and r["split"] == split
             and r.get("protocol") == PROTOCOL for c in "ab"
             if r["key"][0] in us and witness_key(r, us[r["key"][0]], c, probs[r["key"][0]]) not in have]
@@ -1134,7 +1138,9 @@ def stage_witness(split: str, workers: int) -> None:
                 out.append({"status": "infra", "detail": pr["infra"][:200]})
                 continue
             row = pr["rows"][0]
-            res = e1.judge_witness(p, u["program"][prog], w["call"], w["expected"], oracle=u["oracle"][c])
+            late = timeouts.get(witness_key(r, u, c, p), 0) >= 2
+            res = e1.judge_witness(p, u["program"][prog], w["call"], w["expected"], oracle=u["oracle"][c],
+                                   limit=60 if late else 10, timeout_terminal=late)
             out.append({**res, "valid": bool(row["value"].get("valid")), "in_class": bool(row["value"].get("in_class")),
                         "oracles_differ": row["agree"]["oa~ob"] is False,
                         "in_interface": conforms(parsed[0], allowed)})

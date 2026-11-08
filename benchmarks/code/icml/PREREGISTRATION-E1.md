@@ -303,3 +303,13 @@ only on infrastructure metadata, never on a reading's content or score; developm
 (784 of 784 valid). The 333 readings are retried after the provider's quota resets; if any still fails after two
 calls that reached the model, the registered missing-data bounds apply. Only failure metadata (error strings, usage
 fields, durations) of held-out readings was inspected for this amendment; no held-out outcome or analysis was seen.
+
+## Amendment 6 (during the held-out run, 2026-11-08; before any held-out analysis)
+
+Five held-out witness sets (all on one problem, MBPP+ 160) could not be scored: on the auditor's witness input the
+benchmark reference exceeded the 10 s limit every time, and the scorer treats a reference timeout as infrastructure,
+so the sets stayed unscored and completeness could never pass. Rule, decided by run time alone: after two scorings
+in which the reference timed out at 10 s, the witness is scored once more with a 60 s limit; if the reference still
+times out, the input is treated as outside the reference's domain, exactly as when the reference raises (no
+credit). E6 applies the same rule. Only the scorer's infrastructure records (status and detail) were inspected; no
+held-out analysis has been run.
