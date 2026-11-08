@@ -42,3 +42,8 @@ problems, so intervals resample problems once and carry both values of a shared 
 directions (above or below 0; above or below 20 points). The held-out run verifies E6's freeze and an E8 freeze
 (`FREEZE8_test.json`: units and programs, prompts, routes, code) before work and on resumption. Development rerun with
 `e8.py`: D_open 96.9 [89.5, 100], D_control 88.3 [80.6, 95.3], S 8.5 [-2.1, 18.3], no terminal failure.
+
+## Revision after GPT review P9 (2026-11-08, before any held-out call)
+If either population has no unit with both readings complete, the primary estimate and verdicts are reported as not
+estimable, and the bounds are still reported. Bounds for D set terminal failures to 0 and to 1 in both populations;
+bounds for S set open failures to 0 and control failures to 1 (lower) and the reverse (upper), keeping problem pairing.

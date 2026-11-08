@@ -1313,9 +1313,11 @@ def judge_witness(p: Problem, solution: str, call_src: str, expected_src: str, o
         return {"status": "unparseable"}
     args, kwargs = parsed
     if oracle is not None:
-        dom = judge_call(p, args, kwargs)
+        dom = judge_call(p, args, kwargs, limit=limit)
         if "infra" in dom:
             return {"status": "infra", "detail": str(dom["infra"])[:200]}
+        if dom["reference"]["status"] == "timeout" and not timeout_terminal:
+            return {"status": "infra", "detail": "reference timeout"}     # Amendment 6 also governs this check (P9)
         if dom["reference"]["status"] != "ok":
             return {"status": "outside_domain", "reference": dom["reference"]["status"]}
     try:

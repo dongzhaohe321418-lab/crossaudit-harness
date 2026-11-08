@@ -146,37 +146,51 @@ def analyse(split: str) -> dict:
         g = "control" if kind == "det" else "open"
         by.setdefault((g, pid), []).append(rows[(kind, pid, prog)]["outcome"])
 
-    def values(fill):
-        return {k: statistics.mean([fill if o is None else float(o) for o in v]) for k, v in by.items()
-                if fill is not None or all(o is not None for o in v)}
+    def values(fill_open, fill_control):
+        """Unit values; with fills None, only units whose two readings are both complete."""
+        out = {}
+        for (g, pid), v in by.items():
+            fill = fill_open if g == "open" else fill_control
+            if fill is None and any(o is None for o in v):
+                continue
+            out[(g, pid)] = statistics.mean([fill if o is None else float(o) for o in v])
+        return out
 
     def summarise(vals):
+        o_all = [v for (g, _), v in vals.items() if g == "open"]
+        c_all = [v for (g, _), v in vals.items() if g == "control"]
+        res = {"n_open_units": len(o_all), "n_control_units": len(c_all)}
+        if not o_all or not c_all:               # a population without complete units: no estimate (P9)
+            res.update(D_open=None, D_control=None, S=None)
+            return res
         problems = sorted({p for _, p in vals})
         rng = random.Random(SEED)
         draws = []
-        for _ in range(B):                         # resample problems; shared problems carry both values
+        for _ in range(B):                       # resample problems; a shared problem carries both values
             pick = [rng.choice(problems) for _ in problems]
             o = [vals[("open", p)] for p in pick if ("open", p) in vals]
             c = [vals[("control", p)] for p in pick if ("control", p) in vals]
             if o and c:
                 draws.append((statistics.mean(o), statistics.mean(c)))
         q = lambda xs: (100 * sorted(xs)[int(0.025 * len(xs))], 100 * sorted(xs)[int(0.975 * len(xs)) - 1])
-        o_all = [v for (g, _), v in vals.items() if g == "open"]
-        c_all = [v for (g, _), v in vals.items() if g == "control"]
-        return {"D_open": {"est": 100 * statistics.mean(o_all), "ci": q([d[0] for d in draws])},
-                "D_control": {"est": 100 * statistics.mean(c_all), "ci": q([d[1] for d in draws])},
-                "S": {"est": 100 * (statistics.mean(o_all) - statistics.mean(c_all)),
-                      "ci": q([d[0] - d[1] for d in draws])},
-                "n_open_units": len(o_all), "n_control_units": len(c_all)}
+        res.update(D_open={"est": 100 * statistics.mean(o_all), "ci": q([d[0] for d in draws])},
+                   D_control={"est": 100 * statistics.mean(c_all), "ci": q([d[1] for d in draws])},
+                   S={"est": 100 * (statistics.mean(o_all) - statistics.mean(c_all)),
+                      "ci": q([d[0] - d[1] for d in draws])})
+        return res
 
     res = {"split": split, "n_readings": len(uni),
            "terminal_failures": sum(1 for v in by.values() for o in v if o is None),
-           "primary": summarise(values(None)),
-           "bound_missing_as_0": summarise(values(0.0)), "bound_missing_as_1": summarise(values(1.0))}
-    s = res["primary"]["S"]["ci"]
-    res["verdicts"] = {"E8_1": res["primary"]["D_open"]["ci"][0] > 50,
-                       "S_above_0": s[0] > 0, "S_below_0": s[1] < 0,
-                       "S_below_20": s[1] < 20, "S_above_20": s[0] > 20}
+           "primary": summarise(values(None, None)),
+           # bounds over the full universe: D at 0 and 1; S at its extremes (open 0 / control 1, and the reverse)
+           "D_bounds": {"missing_as_0": summarise(values(0.0, 0.0)), "missing_as_1": summarise(values(1.0, 1.0))},
+           "S_bounds": {"lower": summarise(values(0.0, 1.0))["S"], "upper": summarise(values(1.0, 0.0))["S"]}}
+    p = res["primary"]
+    s_ci = p["S"]["ci"] if p["S"] else None
+    res["verdicts"] = {"E8_1": bool(p["D_open"] and p["D_open"]["ci"][0] > 50),
+                       "S_above_0": bool(s_ci and s_ci[0] > 0), "S_below_0": bool(s_ci and s_ci[1] < 0),
+                       "S_below_20": bool(s_ci and s_ci[1] < 20), "S_above_20": bool(s_ci and s_ci[0] > 20),
+                       "estimable": bool(p["S"])}
     (REC / f"e8_results_{split}.json").write_text(json.dumps(res, indent=1))
     return res
 
