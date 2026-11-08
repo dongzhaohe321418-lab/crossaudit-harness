@@ -1242,6 +1242,8 @@ set_kind("open")
 
 
 if __name__ == "__main__":
+    import sys
+    sys.modules["e6"] = sys.modules[__name__]   # analyse_e6/freeze must see this module's KIND, not a second copy
     ap = argparse.ArgumentParser()
     ap.add_argument("stage", choices=["propose", "implement", "validate", "probe", "classpred", "validate4", "redteam",
                                       "judge", "behaviour",
