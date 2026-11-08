@@ -15,11 +15,12 @@ witness credit was tightened, and the budget and E6-3 rules were changed (sectio
 e6-v4.1 (24 open units in the registered population; 3,120 readings): unrevealed flags equal on defective and correct
 programs; resolved verified coverage 91.7%, resolved FPR 2.1% (betting bound 7.5%); E6-1 +91.7 [84.4, 97.4]; E6-2
 +13.5 [6.8, 21.4]; E6-5 +77.1 [67.7, 86.5]; sentence minus resolve -1.0 [-5.2, 3.1]; E6-3 0.0, bootstrap [-4.2, 4.2],
-betting [-28.9, 28.9]. (d) After P5 and P6, admission v4.2 and then v4.3 (section 3, item 5) were applied; under
-v4.3 the registered development population is 20 open units (16 first-attempt, 4 second-attempt) and 31 controls:
-unrevealed flag rates 18.1% on both defective and correct programs; resolved verified coverage 93.8%, resolved FPR
-0.6% (betting bound 18.3%); E6-1 +93.8 [86.2, 99.4]; E6-2 +14.4 [6.2, 23.1]; E6-5 +77.5 [66.2, 87.5]; sentence minus
-resolve -2.5 [-7.5, 2.5]; E6-3 0.0, bootstrap [-3.8, 3.8], betting [-21.9, 21.9]; E6-4 J 89.5 [79.8, 97.6]. Test
+betting [-28.9, 28.9]. (d) After P5, P6 and P7, admission v4.2 and then v4.3 (section 3, item 5) were applied and earlier witness records
+were rescored under the single interface scope; the registered development population is 16 open units (13
+first-attempt, 3 second-attempt) and 30 controls: unrevealed flag rates 18.0% on both defective and correct
+programs; resolved verified coverage 87.5%, resolved FPR 0.8% (betting bound 22.2%); E6-1 +87.5 [75.0, 97.7]; E6-2
++14.1 [5.5, 23.4]; E6-5 +71.9 [57.8, 85.9]; sentence minus resolve -3.1 [-9.4, 3.1]; E6-3 0.0, bootstrap
+[-4.7, 4.7], betting [-26.4, 26.4]; E6-4 J 89.2 [80.0, 97.5]. Test
 units were constructed
 before registration (proposal, implementation, admission, probes, predicates, judging, behaviour); no test audit
 exists.
@@ -201,15 +202,16 @@ the same requirement are not used as a subset (no frozen rubric). Behavioural co
 ## 10. Precision and bundle
 
 Development problem-level SDs under e6-v4 (points): E6-1 16.3, E6-2 18.0, E6-3 9.8, E6-5 23.7. The registered open
-test population under v4.3 (sections 3-4) has 52 units from 52 problems (41 first-attempt and 11 second-attempt
+test population under v4.3 (sections 3-4) has 41 units from 41 problems (34 first-attempt and 7 second-attempt
 primary units; the second attempt was constructed, under v4.2, for problems without a v4.2 first-attempt primary
 unit, and `merged_open` takes a second-attempt unit only for problems without a v4.3 first-attempt primary unit),
-and the positive-control population 85. With n units the bootstrap 95% half-width is about 1.96 SD / sqrt(n): at
-n = 52, about 4.5, 5, 2.7 and 6.5 points. The betting interval for E6-3 is wider: simulated at the development SD
-it is about +/-9.4 points at n = 52, so the E6-3 equivalence claim (margin 10) may be inconclusive; the margin is
-not changed. If fewer than 30 open test units had been admitted, all claims would be reported as underpowered. Audits are scheduled for the registered units only (`e6.registered_units`: 41 + 11 open units, 80 readings each; 85
-controls, 16 readings each; 5,520 held-out readings); readings of admitted units outside the registered population,
-which exist on development units only, are counted and not used. No further enlargement.
+and the positive-control population 78. With n units the bootstrap 95% half-width is about 1.96 SD / sqrt(n): at
+n = 41, about 5, 5.5, 3 and 7.3 points. The betting interval for E6-3 is wider: simulated at the development SD it is
+about +/-12 points at n = 41, so the E6-3 equivalence claim (margin 10) is expected to be inconclusive and is
+reported as such; the margin is not changed. If fewer than 30 open test units had been admitted, all claims would
+be reported as underpowered. Audits are scheduled for the registered units only (`e6.registered_units`: 34 + 7 open
+units, 80 readings each; 78 controls, 16 readings each; 4,528 held-out readings); readings of admitted units outside
+the registered population, which exist on development units only, are counted and not used. No further enlargement.
 
 Bundle (checksummed, verified before the first test call): corpus and split; proposals, implementations, probes,
 predicates, admission records with exclusions, red-team inputs and verdicts; judge prompts, votes and reasons; behaviour records; frozen populations
