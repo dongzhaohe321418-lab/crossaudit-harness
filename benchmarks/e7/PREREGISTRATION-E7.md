@@ -36,3 +36,15 @@ reported descriptively: expected n is too small for them. E7-4 (positive control
 Held-out audits run only if at least 12 open units pass admission, red team and both judges; otherwise the
 construction funnel is reported as a finding and E7 stops. A pre-test freeze (`freeze7.py`) and a review by a model
 from another vendor precede any held-out audit.
+
+## Construction result and decision (2026-11-08, before any E7 audit)
+Construction ran on all 121 tasks. A first pass coincided with a provider outage of about one hour in which every
+Claude call exited without a reply (all 54 probe calls and 206 positive-control implementation calls); as in E1
+Amendment 5, calls that never reached the model do not consume an attempt, so those records were archived
+(`records/*_infra_archive.jsonl`) and the stages rerun. Funnel (development / held out), open units: tasks 28 / 93,
+pre-admission 12 / 37, admitted (v4.3) 2 / 18, red team passed 0 / 7, both judges 0 / 5. Positive controls: 28 / 93,
+11 / 34, 5 / 9, 5 / 3, 5 / 2. The most common rejections were implementations that disagree with the reference outside
+the open class, or rule-B implementations that disagree with the reference. **Decision, by the registered go/no-go
+rule: no-go** (5 held-out open units, fewer than 12). No E7 audit was run; the funnel is reported as the finding.
+For comparison, E6 on HumanEval+/MBPP+ admitted 81 of 140 pre-admitted held-out units, of which 66 passed the red team
+and 34 both judges.
