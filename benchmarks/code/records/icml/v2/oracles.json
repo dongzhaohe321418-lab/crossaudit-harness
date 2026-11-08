@@ -1,0 +1,5422 @@
+{
+ "HumanEval/0": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/1": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/10": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/100": {
+  "hidden_mode": "binary",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/101": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/102": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/103": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/104": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/105": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/106": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/107": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/108": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/109": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/11": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/110": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/111": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/112": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/113": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/114": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/115": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/116": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/117": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/118": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/119": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/12": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/120": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/121": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/122": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/123": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/124": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/125": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/126": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/127": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/128": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/129": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/13": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/130": {
+  "hidden_mode": "binary",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/131": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/132": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/133": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/134": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/135": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/136": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/137": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/138": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/139": {
+  "hidden_mode": "binary",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/14": {
+  "hidden_mode": "binary",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/140": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/141": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/142": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/143": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/144": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/145": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/146": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/147": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/148": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/149": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/15": {
+  "hidden_mode": "binary",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/150": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/151": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/152": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/153": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/154": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/155": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/156": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/157": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/158": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/159": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/16": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/160": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/161": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/162": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/163": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/17": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/18": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/19": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/2": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/20": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/21": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/22": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/23": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/24": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/25": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/26": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/27": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/28": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/29": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/3": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/30": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/31": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/32": {
+  "hidden_mode": "vector",
+  "reference_hidden": false,
+  "reference_visible": true,
+  "valid": false,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/33": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/34": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/35": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/36": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/37": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/38": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/39": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/4": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/40": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/41": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/42": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/43": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/44": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/45": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/46": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/47": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/48": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/49": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/5": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/50": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/51": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/52": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/53": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/54": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/55": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/56": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/57": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/58": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/59": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/6": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/60": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/61": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/62": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/63": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/64": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/65": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/66": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/67": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/68": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/69": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/7": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/70": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/71": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/72": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/73": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/74": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/75": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/76": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/77": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/78": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/79": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/8": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/80": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/81": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/82": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/83": {
+  "hidden_mode": "binary",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/84": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/85": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/86": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/87": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/88": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/89": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/9": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/90": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/91": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/92": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/93": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/94": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/95": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/96": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/97": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/98": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "HumanEval/99": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/100": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/101": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/102": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/103": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/104": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/105": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/106": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/108": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/109": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/11": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/111": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/113": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/116": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/118": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/119": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/12": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/120": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/123": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/124": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/125": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/126": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/127": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/128": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/129": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/130": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/131": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/132": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/133": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/135": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/137": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/138": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/139": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/14": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/140": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/141": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/142": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/145": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/16": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/160": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/161": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/162": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/165": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/166": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/167": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/168": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/17": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/170": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/171": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/172": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/18": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/19": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/2": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/20": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/222": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/223": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/224": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/226": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/227": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/230": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/232": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/233": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/234": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/235": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/237": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/238": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/239": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/240": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/242": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/244": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/245": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/247": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/250": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/251": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/252": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/253": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/255": {
+  "hidden_mode": "binary",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/256": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/257": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/259": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/260": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/261": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/262": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/264": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/265": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/266": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/267": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/268": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/269": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/270": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/271": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/272": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/273": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/274": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/276": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/277": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/278": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/279": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/280": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/281": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/282": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/283": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/284": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/285": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/286": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/287": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/290": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/292": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/293": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/294": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/296": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/297": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/299": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/3": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/300": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/301": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/305": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/306": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/308": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/309": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/310": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/311": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/312": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/388": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/389": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/390": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/391": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/392": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/394": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/395": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/397": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/398": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/4": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/404": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/405": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/406": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/409": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/410": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/412": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/413": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/414": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/415": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/418": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/419": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/420": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/421": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/422": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/424": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/425": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/426": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/427": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/428": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/429": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/430": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/432": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/433": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/435": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/436": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/437": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/439": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/440": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/441": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/445": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/446": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/447": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/448": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/450": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/451": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/453": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/454": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/455": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/456": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/457": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/458": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/459": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/460": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/462": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/463": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/465": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/468": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/470": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/471": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/472": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/473": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/474": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/475": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/476": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/477": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/478": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/479": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/554": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/555": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/556": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/557": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/558": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/559": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/56": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/560": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/562": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/563": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/564": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/565": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/566": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/567": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/568": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/569": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/57": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/572": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/573": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/576": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/577": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/578": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/579": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/58": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/580": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/581": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/583": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/585": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/586": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/587": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/588": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/589": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/59": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/590": {
+  "hidden_mode": "vector",
+  "reference_hidden": false,
+  "reference_visible": true,
+  "valid": false,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/591": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/592": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/593": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/594": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/596": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/597": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/598": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/599": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/6": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/600": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/602": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/603": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/604": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/605": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/606": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/607": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/608": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/61": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/610": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/611": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/612": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/614": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/615": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/616": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/618": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/619": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/62": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/620": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/622": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/623": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/624": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/626": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/628": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/629": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/63": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/630": {
+  "hidden_mode": "binary",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/631": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/632": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/633": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/635": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/637": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/638": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/639": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/64": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/641": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/643": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/644": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/65": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/66": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/67": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/68": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/69": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/7": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/70": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/71": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/72": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/720": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/721": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/722": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/723": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/724": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/725": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/726": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/728": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/730": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/731": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/732": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/733": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/734": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/735": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/736": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/737": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": false,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": true
+  }
+ },
+ "Mbpp/739": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/74": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/740": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/741": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/742": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/743": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/744": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/745": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/748": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/749": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/75": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/750": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/751": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/752": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/753": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/754": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/755": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/757": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/758": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/759": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/760": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/762": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/763": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/764": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/765": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/766": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/767": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/769": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/77": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/770": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/771": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/772": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/773": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/775": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/777": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/778": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/780": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/781": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/782": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/784": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/785": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/786": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/787": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": false,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": true
+  }
+ },
+ "Mbpp/788": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/79": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/790": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/791": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/792": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/793": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/794": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": false,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": true
+  }
+ },
+ "Mbpp/796": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/797": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/798": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/799": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/8": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/80": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/800": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/801": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/803": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/804": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/805": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/806": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/807": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/808": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/809": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/82": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/84": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/85": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/86": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/87": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/88": {
+  "hidden_mode": "binary",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/89": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/9": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/90": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/91": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/92": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/93": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/94": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/95": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/96": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/97": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/98": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ },
+ "Mbpp/99": {
+  "hidden_mode": "vector",
+  "reference_hidden": true,
+  "reference_visible": true,
+  "valid": true,
+  "wrong_passes_hidden": {
+   "raises": false,
+   "returns_none": false
+  }
+ }
+}

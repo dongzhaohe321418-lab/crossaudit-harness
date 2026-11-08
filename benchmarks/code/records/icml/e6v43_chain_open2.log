@@ -1,0 +1,18 @@
+e6 validate4 dev: 25/39
+e6 validate4 dev: 39/39
+e6 validate4 test: 25/112
+e6 validate4 test: 50/112
+e6 validate4 test: 75/112
+e6 validate4 test: 100/112
+e6 validate4 dev: nothing to do
+e6 validate4 dev: nothing to do
+e6 validate4 dev: nothing to do
+e6 validate4 test: 2/2
+e6 redteam dev: 20/20
+e6 redteam test: 25/65
+e6 validate4 dev: nothing to do
+e6 validate4 test: nothing to do
+e6 redteam dev: nothing to do
+e6 redteam test: 25/38
+e6 redteam test: 38/38
+CHAIN_DONE open2

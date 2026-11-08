@@ -1,0 +1,77 @@
+e6 validate4 dev: 25/55
+e6 validate4 dev: 25/39
+e6 validate4 dev: 25/70
+e6 validate4 dev: 50/55
+e6 validate4 dev: 39/39
+e6 validate4 dev: 55/55
+e6 validate4 dev: 50/70
+e6 validate4 test: 25/112
+e6 validate4 test: 50/112
+e6 validate4 test: 75/112
+e6 validate4 test: 25/140
+e6 validate4 dev: 70/70
+e6 validate4 test: 25/221
+e6 validate4 test: 50/140
+e6 validate4 test: 75/140
+e6 validate4 test: 50/221
+e6 validate4 test: 100/140
+e6 validate4 test: 100/112
+e6 validate4 test: 75/221
+e6 validate4 test: 100/221
+e6 validate4 test: 125/221
+e6 validate4 test: 125/140
+e6 validate4 test: 150/221
+e6 validate4 test: 112/112
+e6 validate4 test: 175/221
+e6 validate4 test: 140/140
+e6 validate4 test: 200/221
+e6 validate4 test: 221/221
+VALIDATE_DONE
+e6 redteam dev: 1/1
+e6 redteam dev: 1/1
+e6 redteam dev: 1/1
+e6 redteam test: 2/2
+e6 redteam test: 3/3
+e6 redteam test: 7/7
+REDTEAM_DONE
+e6 rescope: 5504 witness records rescored; 363 changed credit
+e6 rescope: 854 witness records rescored; 83 changed credit
+e6 rescope: 1854 witness records rescored; 8 changed credit
+RESCOPE_DONE
+e6 judge dev: nothing to do
+e6 behaviour dev: nothing to do
+e6 judge test: 4/4
+e6 behaviour test: 2/2
+e6 judge dev: 2/2
+e6 behaviour dev: 1/1
+e6 judge test: 4/4
+e6 behaviour test: 2/2
+e6 judge dev: nothing to do
+e6 behaviour dev: 1/1
+e6 judge test: 14/14
+e6 behaviour test: 7/7
+e6 audit dev: nothing to do
+e6 witness dev: nothing to do
+e6 audit dev: nothing to do
+e6 witness dev: nothing to do
+Traceback (most recent call last):
+  File "/Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/crossaudit-harness/benchmarks/code/icml/e6.py", line 1254, in <module>
+    {"propose": stage_propose, "implement": stage_implement, "validate": stage_validate, "probe": stage_probe,
+  File "/Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/crossaudit-harness/benchmarks/code/icml/e6.py", line 1067, in stage_audit
+    e1.run_pool(jobs, one, workers, f"e6 audit {split}")
+  File "/Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/crossaudit-harness/benchmarks/code/icml/e1.py", line 208, in run_pool
+    future.result()
+  File "/opt/homebrew/Cellar/python@3.12/3.12.14/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.14/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/opt/homebrew/Cellar/python@3.12/3.12.14/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/crossaudit-harness/benchmarks/code/icml/e6.py", line 1043, in one
+    p, u = probs[pid], us[pid]
+                       ~~^^^^^
+KeyError: 'Mbpp/477'
+e6 witness dev: nothing to do
+V43C_DONE

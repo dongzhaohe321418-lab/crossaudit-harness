@@ -1,0 +1,4 @@
+usage: e6.py [-h] [--split SPLIT] [--workers WORKERS]
+             [--kind {open,open2,det}]
+             {propose,implement,validate,probe,classpred,validate4,redteam,judge,behaviour,audit,witness}
+e6.py: error: argument --workers: expected one argument

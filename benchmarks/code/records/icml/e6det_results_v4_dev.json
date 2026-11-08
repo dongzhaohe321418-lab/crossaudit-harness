@@ -1,0 +1,55 @@
+{
+ "split": "dev",
+ "n_units": 30,
+ "excluded_missing": 0,
+ "completeness": {
+  "required": 480,
+  "valid": 480,
+  "superseded_readings": 337,
+  "outside_registered_population": 80,
+  "exhausted": []
+ },
+ "E6_4_J_none": {
+  "est": 89.16666666666667,
+  "lo": 80.0,
+  "hi": 97.5,
+  "n": 30,
+  "sd_unit": 25.157549539861286,
+  "excluded_missing": 0,
+  "bound_low": 89.16666666666667,
+  "bound_high": 89.16666666666667
+ },
+ "tpr": {
+  "est": 90.0,
+  "lo": 80.83333333333333,
+  "hi": 98.33333333333333,
+  "n": 30,
+  "sd_unit": 25.086058774299048,
+  "excluded_missing": 0,
+  "bound_low": 90.0,
+  "bound_high": 90.0
+ },
+ "fpr": {
+  "est": 0.8333333333333334,
+  "lo": 0,
+  "hi": 2.5,
+  "n": 30,
+  "sd_unit": 4.564354645876384,
+  "excluded_missing": 0,
+  "bound_low": 0.8333333333333334,
+  "bound_high": 0.8333333333333334
+ },
+ "cov": {
+  "est": 84.16666666666667,
+  "lo": 72.5,
+  "hi": 94.16666666666667,
+  "n": 30,
+  "sd_unit": 31.815289464000813,
+  "excluded_missing": 0,
+  "bound_low": 84.16666666666667,
+  "bound_high": 84.16666666666667
+ },
+ "verdicts": {
+  "E6_4": true
+ }
+}

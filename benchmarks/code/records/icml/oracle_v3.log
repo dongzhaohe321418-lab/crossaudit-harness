@@ -1,0 +1,23 @@
+oracle: 25/542
+oracle: 50/542
+oracle: 75/542
+oracle: 100/542
+oracle: 125/542
+oracle: 150/542
+oracle: 175/542
+oracle: 200/542
+oracle: 225/542
+oracle: 250/542
+oracle: 275/542
+oracle: 300/542
+oracle: 325/542
+oracle: 350/542
+oracle: 375/542
+oracle: 400/542
+oracle: 425/542
+oracle: 450/542
+oracle: 475/542
+oracle: 500/542
+oracle: 525/542
+oracle: 542/542
+oracles: 537 valid, 5 invalid: ['HumanEval/32', 'Mbpp/590', 'Mbpp/737', 'Mbpp/787', 'Mbpp/794']

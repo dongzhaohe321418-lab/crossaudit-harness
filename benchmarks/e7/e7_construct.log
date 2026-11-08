@@ -1,0 +1,604 @@
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 propose dev: 25/28
+e6 propose dev: 28/28
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 propose test: 25/93
+e6 propose test: 50/93
+e6 propose test: 75/93
+e6 propose test: 93/93
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 propose dev: 25/28
+e6 propose dev: 28/28
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 propose test: 25/93
+e6 propose test: 50/93
+e6 propose test: 75/93
+e6 propose test: 93/93
+E7_STAGE_DONE propose Sun Nov 8 14:29:09 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 implement dev: 25/108
+e6 implement dev: 50/108
+e6 implement dev: 75/108
+e6 implement dev: 100/108
+e6 implement dev: 108/108
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 implement test: 25/352
+e6 implement test: 50/352
+e6 implement test: 75/352
+e6 implement test: 100/352
+e6 implement test: 125/352
+e6 implement test: 150/352
+e6 implement test: 175/352
+e6 implement test: 200/352
+e6 implement test: 225/352
+e6 implement test: 250/352
+e6 implement test: 275/352
+e6 implement test: 300/352
+e6 implement test: 325/352
+e6 implement test: 350/352
+e6 implement test: 352/352
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 implement dev: 25/112
+e6 implement dev: 50/112
+e6 implement dev: 75/112
+e6 implement dev: 100/112
+e6 implement dev: 112/112
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 implement test: 25/372
+e6 implement test: 50/372
+e6 implement test: 75/372
+e6 implement test: 100/372
+e6 implement test: 125/372
+e6 implement test: 150/372
+e6 implement test: 175/372
+e6 implement test: 200/372
+e6 implement test: 225/372
+e6 implement test: 250/372
+e6 implement test: 275/372
+e6 implement test: 300/372
+e6 implement test: 325/372
+e6 implement test: 350/372
+e6 implement test: 372/372
+E7_STAGE_DONE implement Sun Nov 8 15:54:02 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate dev: 25/27
+e6 validate dev: 27/27
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate test: 25/86
+e6 validate test: 50/86
+e6 validate test: 75/86
+e6 validate test: 86/86
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate dev: 18/18
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate test: nothing to do
+E7_STAGE_DONE validate Sun Nov 8 15:55:20 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 probe dev: 12/12
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 probe test: 25/37
+e6 probe test: 37/37
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 probe dev: 5/5
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 probe test: nothing to do
+E7_STAGE_DONE probe Sun Nov 8 15:55:49 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 classpred dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 classpred test: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 classpred dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 classpred test: nothing to do
+E7_STAGE_DONE classpred Sun Nov 8 15:55:50 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate4 dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate4 test: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate4 dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate4 test: nothing to do
+E7_STAGE_DONE validate4 Sun Nov 8 15:55:52 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 redteam dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 redteam test: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 redteam dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 redteam test: nothing to do
+E7_STAGE_DONE redteam Sun Nov 8 15:55:53 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 judge dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 judge test: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 judge dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 judge test: nothing to do
+E7_STAGE_DONE judge Sun Nov 8 15:55:54 GMT 2026
+E7_CONSTRUCT_DONE Sun Nov 8 15:55:55 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 propose dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 propose test: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 propose dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 propose test: nothing to do
+E7_STAGE_DONE propose Sun Nov 8 16:12:56 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 implement dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 implement test: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 implement dev: 20/20
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 implement test: 25/186
+e6 implement test: 50/186
+e6 implement test: 75/186
+e6 implement test: 100/186
+e6 implement test: 125/186
+e6 implement test: 150/186
+e6 implement test: 175/186
+e6 implement test: 186/186
+E7_STAGE_DONE implement Sun Nov 8 16:24:05 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate dev: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate test: nothing to do
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate dev: 10/10
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate test: 25/93
+e6 validate test: 50/93
+e6 validate test: 75/93
+e6 validate test: 93/93
+E7_STAGE_DONE validate Sun Nov 8 16:24:51 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 probe dev: 12/12
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 probe test: 25/37
+e6 probe test: 37/37
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 probe dev: 11/11
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 probe test: 25/34
+e6 probe test: 34/34
+E7_STAGE_DONE probe Sun Nov 8 16:36:54 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 classpred dev: 11/11
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 classpred test: 25/37
+e6 classpred test: 37/37
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 classpred dev: 10/10
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 classpred test: 25/33
+e6 classpred test: 33/33
+E7_STAGE_DONE classpred Sun Nov 8 17:03:03 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate4 dev: 6/6
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate4 test: 25/37
+e6 validate4 test: 37/37
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate4 dev: 10/10
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 validate4 test: 25/33
+e6 validate4 test: 33/33
+E7_STAGE_DONE validate4 Sun Nov 8 17:13:23 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 redteam dev: 2/2
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+/Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/.venv7/lib/python3.12/site-packages/pandas/io/formats/format.py:1486: RuntimeWarning: overflow encountered in cast
+  has_large_values = (abs_vals > 1e6).any()
+/Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/.venv7/lib/python3.12/site-packages/pandas/io/formats/format.py:1486: RuntimeWarning: overflow encountered in cast
+  has_large_values = (abs_vals > 1e6).any()
+/Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/.venv7/lib/python3.12/site-packages/pandas/io/formats/format.py:1486: RuntimeWarning: overflow encountered in cast
+  has_large_values = (abs_vals > 1e6).any()
+/Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/.venv7/lib/python3.12/site-packages/pandas/io/formats/format.py:1486: RuntimeWarning: overflow encountered in cast
+  has_large_values = (abs_vals > 1e6).any()
+e6 redteam test: 18/18
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 redteam dev: 5/5
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 redteam test: 9/9
+E7_STAGE_DONE redteam Sun Nov 8 17:29:07 GMT 2026
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 judge dev: 4/4
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 judge test: 25/36
+e6 judge test: 36/36
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 judge dev: 10/10
+<unknown>:46: SyntaxWarning: invalid escape sequence '\#'
+<unknown>:39: SyntaxWarning: invalid escape sequence '\d'
+<unknown>:43: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:76: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:89: SyntaxWarning: invalid escape sequence '\s'
+<unknown>:44: SyntaxWarning: invalid escape sequence '\.'
+<unknown>:33: SyntaxWarning: invalid escape sequence '\d'
+e6 judge test: 18/18
+E7_STAGE_DONE judge Sun Nov 8 17:33:22 GMT 2026
+E7_CONSTRUCT_DONE Sun Nov 8 17:33:22 GMT 2026

@@ -1,0 +1,23 @@
+e6 validate4 dev: 25/70
+e6 validate4 dev: 50/70
+e6 validate4 dev: 70/70
+e6 validate4 test: 25/221
+e6 validate4 test: 50/221
+e6 validate4 test: 75/221
+e6 validate4 dev: nothing to do
+e6 validate4 test: 25/133
+e6 validate4 test: 50/133
+e6 validate4 test: 75/133
+e6 validate4 dev: nothing to do
+e6 validate4 test: 25/49
+e6 validate4 dev: nothing to do
+e6 validate4 dev: nothing to do
+e6 validate4 test: 1/1
+e6 redteam dev: 25/38
+e6 redteam dev: 38/38
+e6 redteam test: 25/107
+e6 redteam test: 50/107
+e6 redteam test: 75/107
+e6 redteam test: 100/107
+e6 redteam test: 107/107
+CHAIN_DONE det

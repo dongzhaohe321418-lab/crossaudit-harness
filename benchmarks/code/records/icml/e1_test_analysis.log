@@ -1,0 +1,41 @@
+{
+ "n_items": 9,
+ "n_problems": 7,
+ "readings_valid": 360,
+ "verdicts": {
+  "H1": true,
+  "H1_substantive": true,
+  "H2": false,
+  "H3": true,
+  "H4": true,
+  "H5": true
+ }
+}
+H1_vd_clause_minus_placebo {'est': 88.88888888888889, 'lo': 62.5, 'hi': 100.0, 'n_items': 9, 'n_problems': 7}
+H2_flag_correct_clause_minus_placebo {'est': -5.555555555555555, 'lo': -33.33333333333333, 'hi': 22.22222222222222, 'n_items': 9, 'n_problems': 7}
+H3_vd_clause2_minus_orig4 {'est': 88.88888888888889, 'lo': 62.5, 'hi': 100.0, 'n_items': 9, 'n_problems': 7}
+H4_vd_placebo2_minus_orig2 {'est': 0.0, 'lo': 0.0, 'hi': 0.0, 'n_items': 9, 'n_problems': 7, 'exact_upper95_if_all_zero': 34.81636551311609}
+H5_vd_clause_minus_pointer {'est': 61.111111111111114, 'lo': 38.88888888888889, 'hi': 85.0, 'n_items': 9, 'n_problems': 7}
+{
+ "n_items": 107,
+ "class_counts": {
+  "OUT_OF_DOMAIN": 13,
+  "DETERMINED": 26,
+  "OPEN": 21,
+  "AT_ODDS": 22,
+  "NEITHER": 0,
+  "DISPUTED": 25
+ },
+ "admitted_by_class": {
+  "OUT_OF_DOMAIN": 0,
+  "DETERMINED": 0,
+  "OPEN": 9,
+  "AT_ODDS": 0,
+  "NEITHER": 0,
+  "DISPUTED": 0
+ },
+ "verdicts": {
+  "H6": false
+ }
+}
+{'est': 5.952380952380953, 'lo': -20.152505446623096, 'hi': 28.34448160535117, 'n_g1': 26, 'n_g2': 21, 'valid_draws': 10000} {'n': 107, 'observed': 0.7850467289719626, 'kappa': 0.7140367185684406}

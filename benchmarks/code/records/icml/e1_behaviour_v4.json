@@ -1,0 +1,902 @@
+{
+ "gen-claude-haiku45|HumanEval/124": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|HumanEval/125": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|HumanEval/132": {
+  "n_defective": 3,
+  "n_other": 0,
+  "n_reference": 1,
+  "n_visible_passing": 4
+ },
+ "gen-claude-haiku45|HumanEval/151": {
+  "n_defective": 9,
+  "n_other": 0,
+  "n_reference": 3,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|HumanEval/154": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 6,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|HumanEval/43": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|HumanEval/75": {
+  "n_defective": 5,
+  "n_other": 0,
+  "n_reference": 7,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|HumanEval/76": {
+  "n_defective": 9,
+  "n_other": 0,
+  "n_reference": 3,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|HumanEval/86": {
+  "n_defective": 3,
+  "n_other": 0,
+  "n_reference": 9,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|HumanEval/91": {
+  "n_defective": 10,
+  "n_other": 0,
+  "n_reference": 1,
+  "n_visible_passing": 11
+ },
+ "gen-claude-haiku45|HumanEval/95": {
+  "n_defective": 2,
+  "n_other": 0,
+  "n_reference": 10,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|HumanEval/99": {
+  "n_defective": 7,
+  "n_other": 0,
+  "n_reference": 5,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/102": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/103": {
+  "n_defective": 5,
+  "n_other": 0,
+  "n_reference": 5,
+  "n_visible_passing": 10
+ },
+ "gen-claude-haiku45|Mbpp/109": {
+  "n_defective": 1,
+  "n_other": 5,
+  "n_reference": 4,
+  "n_visible_passing": 10
+ },
+ "gen-claude-haiku45|Mbpp/113": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/118": {
+  "n_defective": 3,
+  "n_other": 0,
+  "n_reference": 9,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/119": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/125": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 9,
+  "n_visible_passing": 10
+ },
+ "gen-claude-haiku45|Mbpp/137": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/138": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 8,
+  "n_visible_passing": 9
+ },
+ "gen-claude-haiku45|Mbpp/14": {
+  "n_defective": 7,
+  "n_other": 0,
+  "n_reference": 5,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/142": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/16": {
+  "n_defective": 8,
+  "n_other": 0,
+  "n_reference": 4,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/160": {
+  "n_defective": 6,
+  "n_other": 1,
+  "n_reference": 1,
+  "n_visible_passing": 8
+ },
+ "gen-claude-haiku45|Mbpp/161": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 6,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/162": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/165": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/244": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/261": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 6,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/264": {
+  "n_defective": 5,
+  "n_other": 0,
+  "n_reference": 2,
+  "n_visible_passing": 7
+ },
+ "gen-claude-haiku45|Mbpp/278": {
+  "n_defective": 6,
+  "n_other": 6,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/286": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 8,
+  "n_visible_passing": 9
+ },
+ "gen-claude-haiku45|Mbpp/294": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/297": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 6,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/305": {
+  "n_defective": 11,
+  "n_other": 0,
+  "n_reference": 1,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/306": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/310": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 4,
+  "n_visible_passing": 10
+ },
+ "gen-claude-haiku45|Mbpp/311": {
+  "n_defective": 7,
+  "n_other": 0,
+  "n_reference": 5,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/391": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/398": {
+  "n_defective": 6,
+  "n_other": 6,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/410": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/415": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 6
+ },
+ "gen-claude-haiku45|Mbpp/427": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/433": {
+  "n_defective": 4,
+  "n_other": 0,
+  "n_reference": 8,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/435": {
+  "n_defective": 5,
+  "n_other": 0,
+  "n_reference": 7,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/440": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/445": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/448": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/451": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/459": {
+  "n_defective": 11,
+  "n_other": 0,
+  "n_reference": 1,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/465": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/468": {
+  "n_defective": 7,
+  "n_other": 1,
+  "n_reference": 0,
+  "n_visible_passing": 8
+ },
+ "gen-claude-haiku45|Mbpp/556": {
+  "n_defective": 4,
+  "n_other": 1,
+  "n_reference": 7,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/558": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 6,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/559": {
+  "n_defective": 3,
+  "n_other": 3,
+  "n_reference": 6,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/576": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/577": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/579": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 3,
+  "n_visible_passing": 4
+ },
+ "gen-claude-haiku45|Mbpp/589": {
+  "n_defective": 11,
+  "n_other": 0,
+  "n_reference": 1,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/593": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/597": {
+  "n_defective": 10,
+  "n_other": 0,
+  "n_reference": 2,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/6": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/604": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 11,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/620": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/622": {
+  "n_defective": 2,
+  "n_other": 0,
+  "n_reference": 10,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/638": {
+  "n_defective": 2,
+  "n_other": 1,
+  "n_reference": 6,
+  "n_visible_passing": 9
+ },
+ "gen-claude-haiku45|Mbpp/639": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/7": {
+  "n_defective": 7,
+  "n_other": 0,
+  "n_reference": 5,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/735": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/739": {
+  "n_defective": 4,
+  "n_other": 0,
+  "n_reference": 8,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/74": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/741": {
+  "n_defective": 2,
+  "n_other": 0,
+  "n_reference": 10,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/748": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/757": {
+  "n_defective": 5,
+  "n_other": 0,
+  "n_reference": 7,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/759": {
+  "n_defective": 3,
+  "n_other": 0,
+  "n_reference": 9,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/769": {
+  "n_defective": 3,
+  "n_other": 0,
+  "n_reference": 3,
+  "n_visible_passing": 6
+ },
+ "gen-claude-haiku45|Mbpp/771": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/785": {
+  "n_defective": 5,
+  "n_other": 3,
+  "n_reference": 4,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/790": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/792": {
+  "n_defective": 10,
+  "n_other": 0,
+  "n_reference": 2,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/800": {
+  "n_defective": 11,
+  "n_other": 0,
+  "n_reference": 1,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/806": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/92": {
+  "n_defective": 3,
+  "n_other": 0,
+  "n_reference": 9,
+  "n_visible_passing": 12
+ },
+ "gen-claude-haiku45|Mbpp/99": {
+  "n_defective": 11,
+  "n_other": 1,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|HumanEval/141": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 6,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|HumanEval/151": {
+  "n_defective": 9,
+  "n_other": 0,
+  "n_reference": 3,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|HumanEval/76": {
+  "n_defective": 7,
+  "n_other": 0,
+  "n_reference": 5,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|HumanEval/86": {
+  "n_defective": 3,
+  "n_other": 0,
+  "n_reference": 9,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|HumanEval/91": {
+  "n_defective": 10,
+  "n_other": 0,
+  "n_reference": 1,
+  "n_visible_passing": 11
+ },
+ "gen-gpt-terra|HumanEval/99": {
+  "n_defective": 7,
+  "n_other": 0,
+  "n_reference": 5,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/102": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/109": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 9,
+  "n_visible_passing": 10
+ },
+ "gen-gpt-terra|Mbpp/113": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/119": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/137": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/138": {
+  "n_defective": 3,
+  "n_other": 0,
+  "n_reference": 6,
+  "n_visible_passing": 9
+ },
+ "gen-gpt-terra|Mbpp/139": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 6,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/14": {
+  "n_defective": 7,
+  "n_other": 0,
+  "n_reference": 5,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/16": {
+  "n_defective": 8,
+  "n_other": 0,
+  "n_reference": 4,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/160": {
+  "n_defective": 1,
+  "n_other": 1,
+  "n_reference": 6,
+  "n_visible_passing": 8
+ },
+ "gen-gpt-terra|Mbpp/20": {
+  "n_defective": 2,
+  "n_other": 0,
+  "n_reference": 10,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/223": {
+  "n_defective": 4,
+  "n_other": 0,
+  "n_reference": 8,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/233": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 6,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/244": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/260": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 6,
+  "n_visible_passing": 7
+ },
+ "gen-gpt-terra|Mbpp/278": {
+  "n_defective": 1,
+  "n_other": 11,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/294": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/305": {
+  "n_defective": 11,
+  "n_other": 0,
+  "n_reference": 1,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/310": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 4,
+  "n_visible_passing": 10
+ },
+ "gen-gpt-terra|Mbpp/311": {
+  "n_defective": 7,
+  "n_other": 0,
+  "n_reference": 5,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/398": {
+  "n_defective": 6,
+  "n_other": 6,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/410": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/427": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/430": {
+  "n_defective": 2,
+  "n_other": 1,
+  "n_reference": 0,
+  "n_visible_passing": 3
+ },
+ "gen-gpt-terra|Mbpp/440": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/446": {
+  "n_defective": 3,
+  "n_other": 0,
+  "n_reference": 9,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/448": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/451": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/459": {
+  "n_defective": 11,
+  "n_other": 0,
+  "n_reference": 1,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/468": {
+  "n_defective": 7,
+  "n_other": 1,
+  "n_reference": 0,
+  "n_visible_passing": 8
+ },
+ "gen-gpt-terra|Mbpp/556": {
+  "n_defective": 10,
+  "n_other": 1,
+  "n_reference": 1,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/559": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/564": {
+  "n_defective": 5,
+  "n_other": 0,
+  "n_reference": 7,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/576": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/577": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/589": {
+  "n_defective": 11,
+  "n_other": 0,
+  "n_reference": 1,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/593": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/594": {
+  "n_defective": 3,
+  "n_other": 0,
+  "n_reference": 9,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/597": {
+  "n_defective": 3,
+  "n_other": 0,
+  "n_reference": 9,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/620": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/622": {
+  "n_defective": 1,
+  "n_other": 11,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/639": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/67": {
+  "n_defective": 1,
+  "n_other": 0,
+  "n_reference": 10,
+  "n_visible_passing": 11
+ },
+ "gen-gpt-terra|Mbpp/7": {
+  "n_defective": 7,
+  "n_other": 0,
+  "n_reference": 5,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/735": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/739": {
+  "n_defective": 6,
+  "n_other": 0,
+  "n_reference": 6,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/74": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/748": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/757": {
+  "n_defective": 5,
+  "n_other": 5,
+  "n_reference": 2,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/759": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/771": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/780": {
+  "n_defective": 4,
+  "n_other": 0,
+  "n_reference": 8,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/785": {
+  "n_defective": 3,
+  "n_other": 5,
+  "n_reference": 4,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/790": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/792": {
+  "n_defective": 10,
+  "n_other": 0,
+  "n_reference": 2,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/800": {
+  "n_defective": 11,
+  "n_other": 0,
+  "n_reference": 1,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/806": {
+  "n_defective": 12,
+  "n_other": 0,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/92": {
+  "n_defective": 8,
+  "n_other": 0,
+  "n_reference": 4,
+  "n_visible_passing": 12
+ },
+ "gen-gpt-terra|Mbpp/99": {
+  "n_defective": 11,
+  "n_other": 1,
+  "n_reference": 0,
+  "n_visible_passing": 12
+ }
+}

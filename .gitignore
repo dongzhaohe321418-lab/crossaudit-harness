@@ -18,7 +18,4 @@ benchmarks/code/data/
 benchmarks/expertlongbench/data
 benchmarks/expertlongbench/data/
 benchmarks/e7/data/
-benchmarks/e7/records/
-benchmarks/e7/hidden_inputs.json
-benchmarks/e7/feasibility.json
-benchmarks/e8/records/
+benchmarks/code/records/icml_e3/audits_raw.jsonl
