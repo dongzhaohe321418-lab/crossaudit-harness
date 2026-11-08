@@ -17,3 +17,4 @@ benchmarks/code/data/
 # The ExpertLongBench corpus (CC BY-NC-SA 4.0): never committed, neither the directory nor a symlink to it
 benchmarks/expertlongbench/data
 benchmarks/expertlongbench/data/
+benchmarks/e7/data/
