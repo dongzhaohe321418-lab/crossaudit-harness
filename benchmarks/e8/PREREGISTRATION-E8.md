@@ -30,3 +30,15 @@ will state whether the held-out interval excludes 20 points (substantial selecti
 One vendor for both elicitor and judge; a model judge decides what counts as targeting the behaviour; six questions
 per reading make broad lists cheap, so D_open partly measures breadth. Review by a model from another vendor precedes
 the held-out run.
+
+## Revision after GPT review P8 (2026-11-08, before any held-out call)
+Implemented in `e8.py` (the pilot script is kept as the development record). Universe: every registered unit x both
+programs (238 held-out readings). Each step (elicitor, judge) may make at most two calls that reached the model
+(`e1.reached_model`) and at most six calls in all; replies are validated strictly (questions must be a list of
+strings; `match` must be a JSON boolean and a match must name a listed question). An empty question list is a valid
+reply and a negative outcome. A reading whose step exhausts its attempts is a terminal failure: primary estimates use
+units with both readings complete, and bounds set terminal failures to 0 and to 1. Open and control populations share
+problems, so intervals resample problems once and carry both values of a shared problem. S is reported in both
+directions (above or below 0; above or below 20 points). The held-out run verifies E6's freeze and an E8 freeze
+(`FREEZE8_test.json`: units and programs, prompts, routes, code) before work and on resumption. Development rerun with
+`e8.py`: D_open 96.9 [89.5, 100], D_control 88.3 [80.6, 95.3], S 8.5 [-2.1, 18.3], no terminal failure.
