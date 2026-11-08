@@ -623,6 +623,8 @@ def conforms(inp, allowed: list) -> bool:
     """v4.3: an input is inside the programs' interface if it has the benchmark's arity and every type path of every
     argument occurs among the benchmark's own inputs at that position (an int is accepted where a float occurs; bool
     is distinct from int). Agreement is required only on such inputs; other types belong to neither contract."""
+    if isinstance(inp, list):            # hidden-suite inputs come as argument lists (review F1)
+        inp = tuple(inp)
     if not isinstance(inp, tuple) or len(inp) != len(allowed):
         return False
     for arg, ok in zip(inp, allowed):
@@ -692,6 +694,9 @@ def stage_validate4(split: str, workers: int) -> None:
         prb = [literal_tuple(x) for x in pb["probes"]]
         stress = stress_inputs(list(hidden) + cls + oth, seed=pid)
         allowed = interface_types(hidden)
+        if not allowed:
+            append(UNITS, {**row, "admitted": False, "reason": "infra", "infra": "no hidden inputs"})
+            return
         n_drop = len(prb) + len(stress)
         prb = [x for x in prb if conforms(x, allowed)]                  # v4.3: interface inputs only
         stress = [x for x in stress if conforms(x, allowed)]
@@ -702,11 +707,13 @@ def stage_validate4(split: str, workers: int) -> None:
             append(UNITS, {**row, "admitted": False, "reason": "infra", "infra": res["infra"]})
             return
         rows = res["rows"]
+        inscope = [conforms(x, allowed) for x in inputs]
         pred_ok = all(r["status"]["valid"] == "ok" and r["status"]["in_class"] == "ok"
-                      and "valid" in r["value"] and "in_class" in r["value"] for r in rows)
-        bad, n_sep = agreement_violations(rows, [conforms(x, allowed) for x in inputs])
+                      and "valid" in r["value"] and "in_class" in r["value"] for r, ok in zip(rows, inscope) if ok)
+        bad, n_sep = agreement_violations(rows, inscope)
         nh, nc, no = len(hidden), len(cls), len(oth)
-        cls_rows, oth_rows = rows[nh:nh + nc], rows[nh + nc:nh + nc + no]
+        cls_rows = [r for r, ok in zip(rows[nh:nh + nc], inscope[nh:nh + nc]) if ok]
+        oth_rows = [r for r, ok in zip(rows[nh + nc:nh + nc + no], inscope[nh + nc:nh + nc + no]) if ok]
         consistent = (all(r["value"].get("valid") and r["value"].get("in_class") for r in cls_rows)
                       and all(r["value"].get("valid") and not r["value"].get("in_class") for r in oth_rows))
         checks = {"visible": all(vis.values()), "predicates_total": pred_ok, "b_agree_ref": not bad["b_vs_ref"],
@@ -816,6 +823,7 @@ def stage_redteam(split: str, workers: int) -> None:
         row = {"problem_id": pid, "split": split, "route": REDTEAM_ROUTE, "prompt_sha256": sha(payload),
                "ok": res["ok"], "error": res.get("error", "") if not res["ok"] else "",
                "impl_sha256": {k: sha(v) for k, v in progs.items()}, "inputs": [repr(x) for x in inputs],
+               "inputs_b64": base64.b64encode(pickle.dumps(inputs)).decode(),
                "proposed": [repr(x) for x in parsed]}
         if not res["ok"] and not counts_as_attempt(row):
             append(REDTEAM, {**row, "passed": None})
@@ -828,7 +836,8 @@ def stage_redteam(split: str, workers: int) -> None:
             append(REDTEAM, {**row, "executor_infra": str(out["infra"])[:200], "passed": None})
             return
         rows = out["rows"]
-        pred_ok = all(r["status"]["valid"] == "ok" and r["status"]["in_class"] == "ok" for r in rows)
+        pred_ok = all(r["status"]["valid"] == "ok" and r["status"]["in_class"] == "ok"
+                      and "valid" in r["value"] and "in_class" in r["value"] for r in rows)
         bad, _ = agreement_violations(rows)
         passed = pred_ok and not any(bad.values())
         append(REDTEAM, {**row, "passed": passed, "n_inputs": len(inputs), "predicates_total": pred_ok,
@@ -1081,15 +1090,20 @@ def witness_key(r: dict, u: dict, contract: str, p=None) -> str:
     prog = r["key"][1]
     comp = sha(json.dumps(suite_assertion(p))) if p is not None else u.get("comparator_sha", "")
     return sha(json.dumps([e1.SCORER, sha(e1.JUDGE), sha(MULTI), comp, u["program"][prog], u["oracle"]["a"],
-                           u["oracle"]["b"], u["valid"], u["in_class"], contract, r["witnesses"]], sort_keys=True))
+                           u["oracle"]["b"], u["valid"], u["in_class"], contract, r["witnesses"], CREDIT_RULE_SHA],
+                          sort_keys=True))
 
 
 def stage_witness(split: str, workers: int) -> None:
     """Score each reading's witnesses under BOTH contracts. A witness counts only on a valid input (the executable
     `valid` predicate); it is a target-discrepancy witness if the input is in the class (`in_class`)."""
+    if split == "test":
+        import freeze
+        freeze.verify()
     us = units(split)
     probs = {p.problem_id: p for p in problems(split)}
     have = {r["input_sha256"] for r in load(WIT) if not r.get("infra")}
+    allowed_by: dict = {}
     jobs = [(r, c) for r in load(AUD) if r.get("ok") and r.get("witnesses") and r["split"] == split
             and r.get("protocol") == PROTOCOL for c in "ab"
             if r["key"][0] in us and witness_key(r, us[r["key"][0]], c, probs[r["key"][0]]) not in have]
@@ -1099,7 +1113,14 @@ def stage_witness(split: str, workers: int) -> None:
         pid, prog = r["key"][0], r["key"][1]
         p, u = probs[pid], us[pid]
         out = []
-        allowed = interface_types(e1.hidden_inputs(p) or [])
+        if pid not in allowed_by:
+            hidden = e1.hidden_inputs(p)
+            if not hidden:          # executor failure: retried later, never scored as outside the interface
+                append(WIT, {"key": r["key"], "contract": c, "input_sha256": witness_key(r, u, c, p),
+                             "scorer": e1.SCORER, "results": [], "infra": True, "detail": "hidden inputs unavailable"})
+                return
+            allowed_by[pid] = interface_types(hidden)
+        allowed = allowed_by[pid]
         for w in r["witnesses"]:
             parsed = e1.parse_call(w["call"], p.entry_point)
             if parsed is None or parsed[1]:
@@ -1118,8 +1139,14 @@ def stage_witness(split: str, workers: int) -> None:
                         "oracles_differ": row["agree"]["oa~ob"] is False,
                         "in_interface": conforms(parsed[0], allowed)})
         append(WIT, {"key": r["key"], "contract": c, "input_sha256": witness_key(r, u, c, p), "scorer": e1.SCORER,
-                     "results": out, "infra": any(x["status"] == "infra" for x in out), **witness_flags(out)})
+                     "results": out, "infra": any(x["status"] == "infra" for x in out),
+                     "interface_paths": sum(len(a) for a in allowed), **witness_flags(out)})
     e1.run_pool(jobs, one, workers, f"e6 witness {split}")
+
+
+def _credit_rule_sha() -> str:
+    import inspect
+    return sha("".join(inspect.getsource(f) for f in (witness_flags, conforms, interface_types, _type_paths)))
 
 
 def witness_flags(out: list) -> dict:
@@ -1229,8 +1256,8 @@ def completeness(split: str, check_prompts: bool = True) -> dict:
     unfinished = [k for k in need if k not in ok and tries.get(k, 0) < MAX_ATTEMPTS]
     scores: dict = {}
     for w in load(WIT):
-        if w["key"][0] in registered and any(
-                x.get("status") not in ("unparseable", "infra") and "in_interface" not in x for x in w["results"]):
+        if w["key"][0] in registered and not w.get("infra") and (w.get("interface_paths", 1) == 0 or any(
+                x.get("status") not in ("unparseable", "infra") and "in_interface" not in x for x in w["results"])):
             raise SystemExit(f"witness scored without the v4.3 interface rule: {w['key']}")
         if not w.get("infra"):
             val = tuple(w.get(f) for f in ("verified_diagnosis", "verified_refdomain", "verified_offclass"))
@@ -1246,6 +1273,7 @@ def completeness(split: str, check_prompts: bool = True) -> dict:
             "outside_registered_population": unregistered, "exhausted": sorted(set(need) - set(ok))}
 
 
+CREDIT_RULE_SHA = _credit_rule_sha()     # binds the credit rule into every witness key (review F3)
 set_kind("open")
 
 

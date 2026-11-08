@@ -94,6 +94,20 @@ One open unit and at most one positive-control unit per problem.
    inputs inside the interface on which A and B differ; when there is no such input the solutions are counted as
    undetermined (an earlier version counted them as following rule A). Behaviour records were regenerated
    (previous files archived as `*_behaviour4_v43b.jsonl`).
+   (vii) *After an independent pre-review (2026-11-08).* (a) Hidden-suite inputs are argument lists; v4.3 admission
+   had treated them as outside the interface, so the hidden suite was not checked. Fixed (`conforms` accepts argument
+   lists) and admission rerun; before the fix, a re-execution of the full hidden suites of all 119 registered held-out
+   units found no violation. (b) The witness stage computes the interface once per unit and records an executor
+   failure as infrastructure (retried), never as a witness outside the interface; completeness rejects records with an
+   empty interface. (c) Witness keys bind the source of the credit rule (`witness_flags`, `conforms`,
+   `interface_types`), so all development witnesses were rescored by execution under the current rule; the
+   held-out witness stage verifies the freeze. (d) Predicate checks in admission use interface inputs only; red-team
+   predicates must return booleans; red-team inputs are also stored pickled, because a few (complex infinities) do not
+   round-trip through their printed form (earlier records keep their executed verdicts). (e) Disclosures: pre-admission
+   (who receives probes) used the proposer's inputs without the interface rule; units rejected for an executor
+   failure in admission are not retried (four held-out units: Mbpp/589 open and open2, HumanEval/156 and Mbpp/286
+   controls); witness credit requires the two contract oracles to differ on the witness, so outside the registered
+   inputs a disagreement between the two rule-A implementations could mislabel which program is correct.
    (iv) *Executor.* A validation batch that has not finished after 900 s, or whose resident memory exceeds 1.5 GB,
    is rerun with each call in its own child process, killed at the per-call time limit or at 1 GB of resident memory;
    results differ from the default mode only on calls the per-call alarm cannot interrupt (long computations inside C
@@ -166,9 +180,11 @@ registered endpoint: contrasts, E6-2, E6-4 and levels.
 
 alpha_FPR = 10% (a budget, distinct from the 5% significance level). Compliance of the pooled resolved arm (claim
 E6-1b, reported separately and not gating Family 1): the one-sided 95% upper confidence bound for the mean
-problem-level resolved clean-flag rate, by the hedged capital-betting method for bounded means (Waudby-Smith and
-Ramdas, JRSS-B 2024, Theorem 3; bets capped at 0.75 / (1 - m) so that every capital factor stays positive;
-`betting_upper`, values in a seeded random order), is below 10%. History: v4 used a bootstrap rule that P4 showed to
+problem-level resolved clean-flag rate, by a one-sided capital-betting bound for bounded means in the framework of
+Waudby-Smith and Ramdas (JRSS-B 2024): an unhedged capital process testing that the mean is at least m, with
+predictable bets tuned to the fixed n and capped at 0.75 / (1 - m) so that every capital factor stays positive,
+inverted by bisection (`betting_upper`, values in a seeded random order); it must be below 10%. The worst-case
+missing-data bound (excluded units at a clean-flag rate of 1) is reported beside it. History: v4 used a bootstrap rule that P4 showed to
 be miscalibrated; v4.1's betting implementation capped bets by the wrong denominator (P5), which made it anti-
 conservative (dev bound 7.5%); corrected, the dev bound is about 17% on 24 units. The budget and method were chosen
 after seeing development data, which is disclosed. The exact bound on the problem-level any-clean-flag indicator and

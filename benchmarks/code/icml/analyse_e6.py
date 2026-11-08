@@ -227,6 +227,8 @@ def level(cells, units, g, cfgs, t):
            for m in ("tpr", "fpr", "cov")}
     out["fpr_bound"] = fpr_bound(uv)
     out["fpr_betting_upper95"] = 100 * betting_upper([v["fpr"] for v in uv.values()])
+    # registered missing-data bound (review F4): excluded units at the worst value, a clean-flag rate of 1
+    out["fpr_betting_upper95_worst_missing"] = 100 * betting_upper([v["fpr"] for v in uv.values()] + [1.0] * miss)
     out["excluded_missing"] = len(units) - len(uv)
     return out, uv
 
@@ -312,6 +314,8 @@ def analyse(split: str, allow_incomplete: bool) -> dict:
     both = [u for u in units if beh.get(u, {}).get("n_A", 0) >= 1 and beh.get(u, {}).get("n_B", 0) >= 1]
     res["behavioural_subset"] = {"n": len(both), "E6_1": contrast(cells, both, "resolve", "menu", C, C, "cov", t),
                                  "E6_2": convention(cells, both, C, t)}
+    res["behaviour_per_unit"] = {u: {k: beh.get(u, {}).get(k, 0) for k in ("n_A", "n_B", "n_other", "n_undetermined")}
+                                 for u in units}
     res["behaviour_counts"] = {k: sum(beh.get(u, {}).get(k, 0) for u in units) for k in ("n_A", "n_B", "n_other")}
     res["t2"] = {"E6_1": contrast(cells, units, "resolve", "menu", C, C, "cov", 2),
                  "resolve": level(cells, units, "resolve", C, 2)[0]}
@@ -328,6 +332,9 @@ def analyse(split: str, allow_incomplete: bool) -> dict:
                 ds.append(x["cov"] - y["cov"])
         bl, bu = betting_interval(ds)
         eq["betting_lo"], eq["betting_hi"] = 100 * bl, 100 * bu
+        miss = len(units) - len(ds)          # registered missing-data bounds (review F4): missing contrasts at -1, +1
+        eq["betting_bound_low"] = 100 * betting_interval(ds + [-1.0] * miss)[0]
+        eq["betting_bound_high"] = 100 * betting_interval(ds + [1.0] * miss)[1]
     res["verdicts"] = {
         "E6_1": bool(res["E6_1_cov_resolve_minus_menu"].get("lo") is not None
                      and res["E6_1_cov_resolve_minus_menu"]["lo"] > 0

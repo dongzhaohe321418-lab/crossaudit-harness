@@ -31,7 +31,7 @@ RECORDS = ["split.json", "items_v3.json", "oracles_v3.json", "executions_v3.json
            "e6det_proposals.jsonl", "e6det_impls.jsonl", "e6det_units.jsonl", "e6det_probes.jsonl",
            "e6det_units4.jsonl", "e6det_judgements2.jsonl",
            "e6b_proposals.jsonl", "e6b_impls.jsonl", "e6b_units.jsonl", "e6b_probes.jsonl", "e6b_units4.jsonl",
-           "e6b_judgements2.jsonl", "e6b_behaviour4.jsonl", "e1_behaviour_v4.json",
+           "e6b_judgements2.jsonl", "e6b_behaviour4.jsonl", "e6det_behaviour4.jsonl", "e1_behaviour_v4.json",
            "e6_redteam.jsonl", "e6b_redteam.jsonl", "e6det_redteam.jsonl", "bridge_v4.jsonl"]
 CODE = ["e1.py", "e6.py", "analyse_e1.py", "analyse_e6.py", "isolate.py", "freeze.py",
         "PREREGISTRATION-E1.md", "PREREGISTRATION-E6.md"]
@@ -82,7 +82,8 @@ def e6_state(kind: str) -> dict:
         if (pid, prog, arm) not in cache:
             cache[(pid, prog, arm)] = e6.expected_prompt_sha(units[pid], probs[pid], prog, arm, {})
     prompts = {"|".join(k): v for k, v in sorted(cache.items())}
-    out = {"admitted_units": sorted(units), "population": pop, "n_required_readings": len(sched),
+    out = {"admitted_units": sorted(units), "population": pop, "registered_units": e6.registered_units("test"),
+           "n_required_readings": len(sched),
            "schedule_sha256": hashlib.sha256(json.dumps(sched).encode()).hexdigest(),
            "prompt_sha256": prompts,
            "shown_vendor": {pid: u["shown_route"] for pid, u in units.items()},
