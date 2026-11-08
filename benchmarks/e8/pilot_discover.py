@@ -19,7 +19,7 @@ sys.path[:0] = [str(HERE.parent / "code"), str(HERE.parent / "code" / "icml")]
 import e1  # noqa: E402
 import e6  # noqa: E402
 
-OUT = HERE / "records" / "discover_dev.jsonl"
+OUT = HERE / "records" / "discover_dev.jsonl"      # set per split in main()
 AUDITOR, JUDGE = "aud-claude-sonnet-low", "adj-claude-opus"
 
 ELICIT = """You are reviewing a Python function written for the task below. Before judging correctness, list the
@@ -57,15 +57,19 @@ Reply with exactly one JSON object: {{"match": true or false, "question_index": 
 """
 
 
-def main() -> None:
+def main(split: str = "dev") -> None:
+    global OUT
+    OUT = HERE / "records" / f"discover_{split}.jsonl"
+    if split == "test" and not (HERE / "records" / "E8_RELEASED").exists():
+        raise SystemExit("E8 held-out run not released (needs cross-vendor review; create records/E8_RELEASED)")
     OUT.parent.mkdir(exist_ok=True)
     done = {(r["kind"], r["problem_id"], r["program"]) for r in e1.load(OUT)}
     jobs = []
     for kind in ("open", "open2", "det"):
         e6.set_kind(kind)
-        units = e6.units("dev")
-        probs = {p.problem_id: p for p in e6.problems("dev")}
-        for pid in e6.registered_units("dev"):
+        units = e6.units(split)
+        probs = {p.problem_id: p for p in e6.problems(split)}
+        for pid in e6.registered_units(split):
             for prog in "ab":
                 if (kind, pid, prog) not in done:
                     jobs.append((kind, pid, prog, units[pid], probs[pid]))
@@ -85,8 +89,8 @@ def main() -> None:
             jo = e1.parse_json(j["text"]) if j.get("text") else None
             match = bool(jo.get("match")) if isinstance(jo, dict) and "match" in jo else None
         e1.append(OUT, {"kind": kind, "problem_id": pid, "program": prog, "ok": res.get("ok", False),
-                        "questions": qs, "match": match})
-    e1.run_pool(jobs, one, 3, "e8 discover dev")
+                        "questions": qs, "match": match, "elicit_sha256": e6.sha(ELICIT), "match_sha256": e6.sha(MATCH)})
+    e1.run_pool(jobs, one, 3, f"e8 discover {split}")
     rows = e1.load(OUT)
     for kind in ("open", "open2", "det"):
         rs = [r for r in rows if r["kind"] == kind and r["match"] is not None]
@@ -94,4 +98,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1] if len(sys.argv) > 1 else "dev")
