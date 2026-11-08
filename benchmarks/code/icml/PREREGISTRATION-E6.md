@@ -90,6 +90,10 @@ One open unit and at most one positive-control unit per problem.
    executed and added; the previous files are archived as `*_witnesses_v4_prescope.jsonl`. Disclosure: development
    results reported before this rescoring (including the v4.1 and first v4.3 summaries in section 1) used some
    witness credits from that earlier stage; section 1 is updated with the rescored development results.
+   (vi) *Behaviour under the same scope.* Independent task-only solutions are classified only on proposer class
+   inputs inside the interface on which A and B differ; when there is no such input the solutions are counted as
+   undetermined (an earlier version counted them as following rule A). Behaviour records were regenerated
+   (previous files archived as `*_behaviour4_v43b.jsonl`).
    (iv) *Executor.* A validation batch that has not finished after 900 s, or whose resident memory exceeds 1.5 GB,
    is rerun with each call in its own child process, killed at the per-call time limit or at 1 GB of resident memory;
    results differ from the default mode only on calls the per-call alarm cannot interrupt (long computations inside C

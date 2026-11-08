@@ -909,7 +909,8 @@ def stage_behaviour(split: str, workers: int) -> None:
 
     def one(pid):
         p, pr = probs[pid], props[pid]
-        cls = [literal_tuple(x) for x in pr["class_inputs"]]
+        allowed = interface_types(e1.hidden_inputs(p) or [])
+        cls = [x for x in (literal_tuple(x) for x in pr["class_inputs"]) if x is not None and conforms(x, allowed)]
         progs = {"A": impls[(pid, "a", IMPL_ROUTES[0])], "B": impls[(pid, "b", IMPL_ROUTES[0])]}
         sols = []
         for g in gens.get(pid, []):
@@ -918,6 +919,10 @@ def stage_behaviour(split: str, workers: int) -> None:
                 progs[key] = g["solution"]
                 sols.append((key, g["generator"], g["sample"]))
         pairs = [["A", "B"]] + [[k, x] for k, _, _ in sols for x in ("A", "B")]
+        if not cls:
+            append(BEHAV, {"problem_id": pid, "n_visible_passing": len(sols), "n_diff_inputs": 0, "n_A": 0, "n_B": 0,
+                           "n_other": 0, "n_undetermined": len(sols), "follows": []})
+            return
         res = multi_compare(p, progs, pairs, cls)
         if "infra" in res:
             append(BEHAV, {"problem_id": pid, "infra": res["infra"]})
@@ -925,12 +930,15 @@ def stage_behaviour(split: str, workers: int) -> None:
         diff = [i for i, r in enumerate(res["rows"]) if r["agree"]["A~B"] is False]
         follows = []
         for k, gen, smp in sols:
-            fa = all(res["rows"][i]["agree"][f"{k}~A"] for i in diff)
-            fb = all(res["rows"][i]["agree"][f"{k}~B"] for i in diff)
-            follows.append({"generator": gen, "sample": smp, "rule": "A" if fa else "B" if fb else "other"})
+            fa = bool(diff) and all(res["rows"][i]["agree"][f"{k}~A"] for i in diff)
+            fb = bool(diff) and all(res["rows"][i]["agree"][f"{k}~B"] for i in diff)
+            # no interface class input separates A and B: the behaviour cannot be classified
+            follows.append({"generator": gen, "sample": smp,
+                            "rule": "undetermined" if not diff else "A" if fa else "B" if fb else "other"})
         n = lambda x: sum(1 for f in follows if f["rule"] == x)
         append(BEHAV, {"problem_id": pid, "n_visible_passing": len(sols), "n_diff_inputs": len(diff),
-                       "n_A": n("A"), "n_B": n("B"), "n_other": n("other"), "follows": follows})
+                       "n_A": n("A"), "n_B": n("B"), "n_other": n("other"), "n_undetermined": n("undetermined"),
+                       "follows": follows})
     e1.run_pool(jobs, one, workers, f"e6 behaviour {split}")
 
 
