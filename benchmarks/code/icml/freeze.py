@@ -46,6 +46,18 @@ def tree_sha(root: Path, patterns: tuple) -> dict:
             if f.is_file() and "__pycache__" not in f.parts}
 
 
+DEV_ONLY = {"bridge_v4.jsonl"}       # grows during the held-out run: only its development rows are pre-test inputs
+
+
+def dev_rows_sha(path: Path) -> str:
+    if not path.exists():
+        return "missing"
+    split = {i["item_id"]: i["split"] for i in json.loads(e1.ITEMS_PATH.read_text())}
+    rows = sorted(l for l in path.read_text(encoding="utf-8").splitlines()
+                  if l.strip() and split.get(json.loads(l).get("item_id")) == "dev")
+    return hashlib.sha256("\n".join(rows).encode()).hexdigest()
+
+
 def fsha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else "missing"
 
@@ -110,7 +122,7 @@ def build() -> dict:
     git = version(["git", "-C", str(HERE), "rev-parse", "HEAD"])
     dirty = version(["git", "-C", str(HERE), "status", "--porcelain", "--", str(HERE)])
     return {
-        "records": {f: fsha(e1.REC / f) for f in RECORDS},
+        "records": {f: (dev_rows_sha if f in DEV_ONLY else fsha)(e1.REC / f) for f in RECORDS},
         "code": {f: fsha(HERE / f) for f in CODE},
         "dependencies": {"benchmarks_code": tree_sha(BENCH, ("*.py",)), "corpus_data": tree_sha(BENCH / "data", ("*",)),
                          "crossaudit_src": tree_sha(SRC, ("*.py", "*.md", "*.yml", "*.yaml", "*.json")),
