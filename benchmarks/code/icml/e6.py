@@ -1209,12 +1209,11 @@ def stage_rescope(split: str, workers: int) -> None:
           f"{sum(a['verified_diagnosis'] != b['verified_diagnosis'] for a, b in zip(old, out_rows))} changed credit")
 
 
-PRE_MODEL_INFRA = ("refresh token", "auth.openai.com", "Not logged in", "Please run /login", "ECONNREFUSED")
-
-
 def counts_as_attempt(r: dict) -> bool:
     """A failure that never reached the model (login refresh, connection refused) does not consume an attempt."""
-    return (r.get("ok") or not any(m in str(r.get("error", "")) for m in PRE_MODEL_INFRA)) and e1.reached_model(r)
+    # P8: decided by transport metadata only (e1.reached_model): a call that succeeded, recorded model usage, timed out
+    # or failed for any reason other than a process exit always counts; text in an error or reply never exempts it
+    return e1.reached_model(r)
 
 
 def expected_prompt_sha(u: dict, p, prog: str, arm: str, cache: dict) -> str:
