@@ -1,7 +1,8 @@
 # E8 preregistration: can an auditor find the behaviour a task leaves open? (draft, 2026-11-08)
 
 Written after an exploratory development pilot (`pilot_discover.py`, records `records/discover_dev.jsonl`: open
-units 31 of 32 readings, positive controls 53 of 60) and before any held-out E8 call. E8 uses only construction
+units 31 of 32 readings, positive controls 53 of 60; by `analyse_e8.py`, D_open 96.9 [90.6, 100], D_control 88.3
+[80.0, 95.0], S 8.5 [-1.2, 18.3]) and before any held-out E8 call. E8 uses only construction
 records of E6 (protocol e6-v4.3: units, programs, rules) and new Claude calls; it reads no E6 audit and does not
 affect E6.
 
