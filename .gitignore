@@ -18,3 +18,6 @@ benchmarks/code/data/
 benchmarks/expertlongbench/data
 benchmarks/expertlongbench/data/
 benchmarks/e7/data/
+benchmarks/e7/records/
+benchmarks/e7/hidden_inputs.json
+benchmarks/e7/feasibility.json
