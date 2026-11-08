@@ -128,6 +128,13 @@ def iso_home(route: str) -> str:
     return str(home)
 
 
+def reached_model(r: dict) -> bool:
+    """Amendment 5: a failed call reached the model unless it exited without any recorded model usage (quota
+    exhausted, HTTP 403, connection or login failure before a turn). Timeouts and malformed replies count."""
+    return bool(r.get("ok") or r.get("usage") is not None or r.get("error") == "timeout"
+                or not str(r.get("error", "")).startswith("exit"))
+
+
 def call(route: str, payload: str, timeout: float = 900.0) -> dict:
     """One model call. A Codex login-refresh failure (single-use refresh tokens shared across isolated homes) never
     reaches the model: the home is resynchronised from the user's login and the call is made once more."""
@@ -1222,8 +1229,8 @@ def schedule(split: str, auditors: list[str], orig_rest: bool = False) -> list[l
     """The persisted schedule: every arm for admitted items, or (amendment 3, `orig_rest`) the original arm
     for every selected item that was not admitted."""
     path = REC / (f"schedule_v3_orig_{split}.json" if orig_rest else f"schedule_v3_{split}.json")
-    if path.exists():
-        return json.loads(path.read_text())
+    if path.exists():                    # the persisted schedule, restricted to the requested auditors
+        return [j for j in json.loads(path.read_text()) if j[3] in auditors]
     items = [i for i in json.loads(ITEMS_PATH.read_text()) if i["split"] == split]
     cons = admitted_constructions()
     if orig_rest:
@@ -1251,7 +1258,7 @@ def stage_audit(split: str, workers: int, auditors: list[str], orig_rest: bool =
     attempts: dict = {}
     for r in rows:
         k = (r["item_id"], r["kind"], r["arm"], r["auditor"], r["reading"])
-        attempts[k] = attempts.get(k, 0) + 1
+        attempts[k] = attempts.get(k, 0) + reached_model(r)
     jobs = [tuple(j) for j in schedule(split, auditors, orig_rest)
             if tuple(j) not in ok_keys and attempts.get(tuple(j), 0) < MAX_ATTEMPTS]
 
@@ -1535,7 +1542,7 @@ def completeness(split: str) -> dict:
     tries: dict = {}
     for r in rows:
         k = (r["item_id"], r["kind"], r["arm"], r["auditor"], r["reading"])
-        tries[k] = tries.get(k, 0) + 1
+        tries[k] = tries.get(k, 0) + reached_model(r)
     sched = expected_universe(split)
     dropped = set(admitted_constructions_v3()) - set(admitted_constructions())
     for name in (f"schedule_v3_{split}.json", f"schedule_v3_orig_{split}.json"):

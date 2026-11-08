@@ -284,3 +284,22 @@ failure modes (B4); a completeness check that trusts whatever schedule files exi
    verified diagnosis that have at least one contract-independent witness, the counts of every witness class, and the
    same by taxonomy-v4 class of the item; the development pilot (6 items, 23 witnesses: 5 items with a DETERMINED
    witness) is reported as such.
+
+## Amendment 5 (during the held-out run, 2026-11-08; written before any held-out outcome was analysed)
+
+*What happened.* After GPT review P7 released E1, the held-out audits ran (1,928 required readings). Between 00:01
+and 00:40 the GPT auditor's provider first refused connections (HTTP 403) and then reported that the account's
+usage limit was reached (until 2026-11-11). 333 GPT-auditor readings failed twice: once in the first pass and once
+in a retry pass that the operator started by mistake (the persisted schedule ignored the `--auditors` restriction,
+so a retry meant only for three Claude readings also re-ran the GPT readings while the quota was exhausted). None of
+these 666 failed calls recorded any model usage, all exited in under 15 s, and their errors are process exits or
+HTTP 403; one other GPT failure did record usage (a malformed reply) and counts as an attempt.
+
+*Change.* A failed call counts as an attempt only if it reached the model (`e1.reached_model`): it succeeded, or
+recorded model usage, or timed out, or failed for a reason other than a process exit. Calls that exit without any
+recorded usage (quota, HTTP 403, connection or login failure before a turn) do not consume an attempt. E6 applies the
+same rule (`e6.counts_as_attempt`). The persisted schedule is now filtered by the requested auditors. The rule depends
+only on infrastructure metadata, never on a reading's content or score; development completeness is unchanged
+(784 of 784 valid). The 333 readings are retried after the provider's quota resets; if any still fails after two
+calls that reached the model, the registered missing-data bounds apply. Only failure metadata (error strings, usage
+fields, durations) of held-out readings was inspected for this amendment; no held-out outcome or analysis was seen.

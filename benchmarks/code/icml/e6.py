@@ -1179,7 +1179,7 @@ PRE_MODEL_INFRA = ("refresh token", "auth.openai.com", "Not logged in", "Please 
 
 def counts_as_attempt(r: dict) -> bool:
     """A failure that never reached the model (login refresh, connection refused) does not consume an attempt."""
-    return r.get("ok") or not any(m in str(r.get("error", "")) for m in PRE_MODEL_INFRA)
+    return (r.get("ok") or not any(m in str(r.get("error", "")) for m in PRE_MODEL_INFRA)) and e1.reached_model(r)
 
 
 def expected_prompt_sha(u: dict, p, prog: str, arm: str, cache: dict) -> str:
