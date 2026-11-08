@@ -46,5 +46,5 @@ pre-admission 12 / 37, admitted (v4.3) 2 / 18, red team passed 0 / 7, both judge
 11 / 34, 5 / 9, 5 / 3, 5 / 2. The most common rejections were implementations that disagree with the reference outside
 the open class, or rule-B implementations that disagree with the reference. **Decision, by the registered go/no-go
 rule: no-go** (5 held-out open units, fewer than 12). No E7 audit was run; the funnel is reported as the finding.
-For comparison, E6 on HumanEval+/MBPP+ admitted 81 of 140 pre-admitted held-out units, of which 66 passed the red team
-and 34 both judges.
+For comparison, E6 on HumanEval+/MBPP+ (final frozen records) admitted 79 of 140 pre-admitted held-out first-attempt
+units, of which 66 passed the red team and 34 both judges.
