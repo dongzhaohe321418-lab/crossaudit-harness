@@ -123,8 +123,11 @@ def records(split: str) -> Path:
 
 def verify(split: str) -> None:
     if split == "test":
-        import freeze
-        freeze.verify()                   # E6's frozen bundle must be intact
+        import freeze                     # E6's frozen bundle (records, code, routes, versions, units) must be intact;
+        old, now = json.loads(freeze.MANIFEST.read_text()), freeze.build()   # the repository commit and the tree
+        diffs = [k for k in freeze.REQUIRED if k not in ("git_commit", "dependencies") and old.get(k) != now.get(k)]
+        if diffs:                         # hash of all benchmark code change with any later commit or new file
+            raise SystemExit(f"E6 freeze verification failed: {diffs}")
     m = manifest(split)
     if not m.exists():
         raise SystemExit(f"no E9 freeze for {split}")

@@ -73,7 +73,9 @@ Per-judge acceptance, exclusion and domain-validity rates; order stability per i
 open items; grounding of exclusions (found / meaning / not_found); Disc recomputed counting only grounded exclusions.
 
 ## Integrity
-Analysis verifies the E6 freeze and the E9 freeze for the held-out split, rejects duplicate or unexpected readings and
+Analysis verifies the E6 freeze (every field except the repository commit and the hash of all benchmark code, which
+change with any later commit or new file such as `e9.py`; E6's records, code, routes, versions and units are all
+checked) and the E9 freeze for the held-out split, rejects duplicate or unexpected readings and
 any reading whose stored prompt hash differs from the frozen prompt, and refuses to rewrite the held-out freeze once
 held-out records exist.
 
