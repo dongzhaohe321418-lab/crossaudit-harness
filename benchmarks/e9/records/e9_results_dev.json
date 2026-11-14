@@ -1,0 +1,184 @@
+{
+ "split": "dev",
+ "n_readings": 248,
+ "terminal_failures": 0,
+ "n_units": {
+  "open": 16,
+  "control": 30,
+  "resolved": 16
+ },
+ "Adm_open": {
+  "est": 85.9375,
+  "ci": [
+   76.66666666666667,
+   94.23076923076923
+  ]
+ },
+ "Adm_control": {
+  "est": 3.3333333333333335,
+  "ci": [
+   0.0,
+   7.758620689655173
+  ]
+ },
+ "Excl_A_open": {
+  "est": 9.375,
+  "ci": [
+   2.631578947368421,
+   17.5
+  ]
+ },
+ "Excl_A_control": {
+  "est": 95.0,
+  "ci": [
+   90.32258064516128,
+   99.0
+  ]
+ },
+ "Excl_B_open": {
+  "est": 3.125,
+  "ci": [
+   0.0,
+   7.6923076923076925
+  ]
+ },
+ "Disc": {
+  "est": 85.625,
+  "ci": [
+   76.66666666666666,
+   93.37606837606837
+  ]
+ },
+ "Excl_opp_resolved": {
+  "est": 68.75,
+  "ci": [
+   57.8125,
+   79.6875
+  ]
+ },
+ "Disc_resolved": {
+  "est": 65.625,
+  "ci": [
+   53.125,
+   78.125
+  ]
+ },
+ "Disc_grounded": {
+  "est": 85.625,
+  "ci": [
+   76.66666666666666,
+   93.37606837606837
+  ]
+ },
+ "Adm_open_worst": 85.9375,
+ "Disc_worst": 85.625,
+ "per_judge": {
+  "aud-claude-sonnet-high": {
+   "accept_open": 100,
+   "excl_A_open": 0,
+   "excl_A_control": 90.0,
+   "excl_opp_resolved": 37.5,
+   "domain_valid_open": 100
+  },
+  "aud-gpt-terra-high": {
+   "accept_open": 71.875,
+   "excl_A_open": 18.75,
+   "excl_A_control": 100,
+   "excl_opp_resolved": 100,
+   "domain_valid_open": 100
+  }
+ },
+ "order_stability": {
+  "open": 81.25,
+  "control": 93.33333333333333,
+  "resolved": 93.75
+ },
+ "cross_judge_agreement_open": 71.875,
+ "exclusion_grounding": {
+  "found": 110,
+  "meaning": 56,
+  "not_found": 0
+ },
+ "open_unit_acceptance": {
+  "HumanEval/134": 4,
+  "HumanEval/162": 4,
+  "HumanEval/98": 4,
+  "Mbpp/124": 4,
+  "Mbpp/130": 4,
+  "Mbpp/131": 4,
+  "Mbpp/142": 3,
+  "Mbpp/405": 3,
+  "Mbpp/446": 3,
+  "Mbpp/457": 4,
+  "Mbpp/477": 2,
+  "Mbpp/629": 2,
+  "Mbpp/754": 3,
+  "Mbpp/755": 4,
+  "Mbpp/8": 3,
+  "Mbpp/87": 4
+ },
+ "units_accepted_by_majority": 14,
+ "subsets": {
+  "majority": [
+   "HumanEval/134",
+   "HumanEval/162",
+   "HumanEval/98",
+   "Mbpp/124",
+   "Mbpp/130",
+   "Mbpp/131",
+   "Mbpp/142",
+   "Mbpp/405",
+   "Mbpp/446",
+   "Mbpp/457",
+   "Mbpp/754",
+   "Mbpp/755",
+   "Mbpp/8",
+   "Mbpp/87"
+  ],
+  "strict": [
+   "HumanEval/134",
+   "HumanEval/162",
+   "HumanEval/98",
+   "Mbpp/124",
+   "Mbpp/130",
+   "Mbpp/131",
+   "Mbpp/457",
+   "Mbpp/755",
+   "Mbpp/87"
+  ],
+  "by_aud-claude-sonnet-high": [
+   "HumanEval/134",
+   "HumanEval/162",
+   "HumanEval/98",
+   "Mbpp/124",
+   "Mbpp/130",
+   "Mbpp/131",
+   "Mbpp/142",
+   "Mbpp/405",
+   "Mbpp/446",
+   "Mbpp/457",
+   "Mbpp/477",
+   "Mbpp/629",
+   "Mbpp/754",
+   "Mbpp/755",
+   "Mbpp/8",
+   "Mbpp/87"
+  ],
+  "by_aud-gpt-terra-high": [
+   "HumanEval/134",
+   "HumanEval/162",
+   "HumanEval/98",
+   "Mbpp/124",
+   "Mbpp/130",
+   "Mbpp/131",
+   "Mbpp/457",
+   "Mbpp/755",
+   "Mbpp/87"
+  ]
+ },
+ "verdicts": {
+  "E9_1": true,
+  "E9_2": true,
+  "E9_2b": true
+ }
+}

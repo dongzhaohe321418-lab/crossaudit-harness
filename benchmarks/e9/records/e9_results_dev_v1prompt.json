@@ -1,0 +1,134 @@
+{
+ "split": "dev",
+ "n_readings": 184,
+ "terminal_failures": 0,
+ "Adm_open": {
+  "est": 92.1875,
+  "ci": [
+   83.92857142857143,
+   98.4375
+  ]
+ },
+ "Adm_control": {
+  "est": 5.833333333333333,
+  "ci": [
+   1.7857142857142856,
+   10.606060606060606
+  ]
+ },
+ "Excl_A_open": {
+  "est": 6.25,
+  "ci": [
+   0.0,
+   14.285714285714285
+  ]
+ },
+ "Excl_B_open": {
+  "est": 1.5625,
+  "ci": [
+   0.0,
+   5.357142857142857
+  ]
+ },
+ "Excl_A_control": {
+  "est": 92.5,
+  "ci": [
+   86.20689655172413,
+   97.65625
+  ]
+ },
+ "Excl_B_control": {
+  "est": 0.0,
+  "ci": [
+   0.0,
+   0.0
+  ]
+ },
+ "Disc": {
+  "est": 86.25,
+  "ci": [
+   76.48467432950191,
+   94.375
+  ]
+ },
+ "Adm_open_bounds": [
+  92.1875,
+  92.1875
+ ],
+ "Disc_bounds": [
+  86.25,
+  86.25
+ ],
+ "per_judge": {
+  "aud-claude-sonnet-high": {
+   "open": 100,
+   "control": 8.333333333333332
+  },
+  "aud-gpt-terra-high": {
+   "open": 84.375,
+   "control": 3.3333333333333335
+  }
+ },
+ "order_stability": 90.21739130434783,
+ "cross_judge_agreement_both_ok": 86.95652173913044,
+ "exclusion_grounding": {
+  "verbatim": 80,
+  "meaning": 36,
+  "ungrounded": 0
+ },
+ "open_unit_acceptance": {
+  "HumanEval/134": 3,
+  "HumanEval/162": 4,
+  "HumanEval/98": 4,
+  "Mbpp/124": 4,
+  "Mbpp/130": 4,
+  "Mbpp/131": 4,
+  "Mbpp/142": 3,
+  "Mbpp/405": 3,
+  "Mbpp/446": 4,
+  "Mbpp/457": 4,
+  "Mbpp/477": 2,
+  "Mbpp/629": 4,
+  "Mbpp/754": 4,
+  "Mbpp/755": 4,
+  "Mbpp/8": 4,
+  "Mbpp/87": 4
+ },
+ "subsets": {
+  "strict": [
+   "HumanEval/162",
+   "HumanEval/98",
+   "Mbpp/124",
+   "Mbpp/130",
+   "Mbpp/131",
+   "Mbpp/446",
+   "Mbpp/457",
+   "Mbpp/629",
+   "Mbpp/754",
+   "Mbpp/755",
+   "Mbpp/8",
+   "Mbpp/87"
+  ],
+  "majority": [
+   "HumanEval/134",
+   "HumanEval/162",
+   "HumanEval/98",
+   "Mbpp/124",
+   "Mbpp/130",
+   "Mbpp/131",
+   "Mbpp/142",
+   "Mbpp/405",
+   "Mbpp/446",
+   "Mbpp/457",
+   "Mbpp/629",
+   "Mbpp/754",
+   "Mbpp/755",
+   "Mbpp/8",
+   "Mbpp/87"
+  ]
+ },
+ "verdicts": {
+  "E9_1": true,
+  "E9_2": true
+ }
+}
