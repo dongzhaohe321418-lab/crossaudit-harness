@@ -95,7 +95,7 @@ def manifest(split: str) -> Path:
     return REC / f"FREEZE10_{split}.json"
 
 
-ADDED = re.compile(r"^(e9|e10)/|^code/icml/e6_exception_sensitivity\.py$")   # files added after E6's freeze
+ADDED = re.compile(r"^icml/e6_exception_sensitivity\.py$")   # added under benchmarks/code after E6's freeze
 
 
 def verify_e6_frozen() -> None:

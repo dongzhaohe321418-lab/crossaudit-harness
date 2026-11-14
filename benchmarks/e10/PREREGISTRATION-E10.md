@@ -70,7 +70,8 @@ within each kind; witness scoring follows each kind's audits.
 ## Integrity
 Before any held-out audit, witness scoring or analysis, `e10.py` verifies E6's freeze computed under E6's own
 configuration (every field except the repository commit; every frozen dependency file must match, and the benchmark
-tree may differ only by files added since: `e9/`, `e10/`, `code/icml/e6_exception_sensitivity.py`) and E10's freeze
+tree, `benchmarks/code`, may differ only by the one file added since, `icml/e6_exception_sensitivity.py`; E9 and E10
+lie outside it) and E10's freeze
 (this file, `e10.py`, E6's code, routes, units and every rendered arm text).
 
 ## Development pilot
