@@ -1,0 +1,52 @@
+# Constitution — evalplus-code-study
+
+Version this file in git. Every audit cites the commit that carried it. Rule
+changes take effect only between cycles, so work is never judged against a
+target that moved underneath it.
+
+Each rule has a stable ID and a decidable criterion. **BLOCKER** gates the
+increment when an objective requirement is not met. **ADVISORY** records
+judgement or an improvement opportunity and never gates admission.
+
+---
+
+### CA-TASK-001
+**BLOCKER.** When a committed `TASK.md` exists, the delivered work satisfies
+every objectively testable requirement it states, including requested scope,
+length, format, and number of deliverables. Substituting an unrequested format
+or creating extra deliverables that obscure the requested result is a defect.
+A length stated as exact must match exactly. A length stated approximately is
+a guide, not a threshold: note it as ADVISORY only if the work departs from it
+by more than a quarter of the stated length, and it is not a BLOCKER on its
+own; a departure so large that the deliverable is a different thing (a fraction
+or a multiple of what was asked) is materially noncompliant and blocks.
+
+### CA-CONTENT-001
+**BLOCKER.** The primary deliverable is complete, internally consistent, and
+contains no unresolved placeholder such as TODO, TBD, or sample text.
+
+### CA-CONTENT-002
+**BLOCKER.** Claims presented as facts do not contradict the supplied source
+material or other files in the audited increment.
+
+### CA-USABILITY-001
+**ADVISORY.** The deliverable should be easy for its intended reader to locate,
+open, and use without needing unrelated supporting files.
+<!-- brief -->
+
+---
+
+<!-- Add project-specific rules below. Keep the ID scheme CA-<AREA>-<NNN>, one
+     heading per rule, severity in the first line, and a decidable criterion.
+
+     A rule is read by the auditor. It is ALSO shown to the writer only if it
+     carries a `<!-- brief -->` line, which marks it as describing the SHAPE of
+     the deliverable — format, structure, length, which files exist. Leave the
+     marker off a rule that GRADES finished work: a writer shown a grading
+     checklist writes to the checklist instead of to the task. CA-TASK-001 is in
+     the brief without a marker, because it is what the deliverable must be. -->
+
+
+## Evidence for behavioural findings
+
+When you grade a finding about the program's behaviour as BLOCKER, end its observation with one line of the form `WITNESS: <call> -> <expected value>`, giving a concrete call of the function, written as a Python call whose arguments are literals or pandas (pd) / numpy (np) constructor expressions, on which you believe the program returns the wrong value, and the value it should return, written as a Python literal or such an expression.
