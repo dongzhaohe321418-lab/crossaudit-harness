@@ -8,7 +8,10 @@ comparator, constructor-expression arguments) and E6's frozen stages (validation
 admission, red team, judges, audits, witnesses). E11 starts from E7's frozen rule proposals and keeps its own records.
 
     python benchmarks/e11/e11.py <stage> --split dev|test [--kind open|det] [--workers N]
-    stages: implement (E11's edit stage), validate, probe, classpred, validate4, redteam, judge, construct (all of them)
+    stages: propose, implement (E11's edit stage), validate, probe, classpred, validate4, redteam, judge,
+            construct (all of them; the first attempt starts from E7's frozen proposals, so it skips propose)
+    kinds: open (first attempt), open2 (second, independent attempt on problems without a first-attempt primary unit,
+           as in E6), det (positive controls)
 
 Environment: as E7 (interpreter audit/.venv7, executor audit/.exec7, PYTHONPATH=crossaudit-harness/src).
 """
@@ -97,12 +100,13 @@ if __name__ == "__main__":
     import argparse
     install()
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=("implement",) + STAGES + ("construct",))
+    ap.add_argument("stage", choices=("propose", "implement") + STAGES + ("construct",))
     ap.add_argument("--split", default="dev")
     ap.add_argument("--workers", type=int, default=3)
-    ap.add_argument("--kind", choices=["open", "det"], default="open")
+    ap.add_argument("--kind", choices=["open", "open2", "det"], default="open")
     a = ap.parse_args()
     e6.set_kind(a.kind)
-    for stage in (("implement",) + STAGES if a.stage == "construct" else (a.stage,)):
+    first = ("propose",) if a.kind == "open2" else ()
+    for stage in (first + ("implement",) + STAGES if a.stage == "construct" else (a.stage,)):
         print(f"== {stage}", flush=True)
         getattr(e6, "stage_" + stage)(a.split, a.workers)
