@@ -1,0 +1,186 @@
+{
+ "note": "Exploratory sensitivity (not registered; added 2026-11-14 after a reviewer found it): the frozen E6 witness scorer\ncredits no diagnosis when the contract's oracle raises (e1.judge_witness returns outside_domain), so on held-out units\nwhose rule A requires an exception (Mbpp/93, Mbpp/623) verified diagnosis under contract A is zero by construction.\nThis script leaves the frozen results untouched and recomputes the registered estimands three ways:",
+ "affected_units": [
+  "Mbpp/93",
+  "Mbpp/623"
+ ],
+ "exception_credited_readings": 24,
+ "affected_flagging_readings": 24,
+ "frozen": {
+  "n_units": 41,
+  "verdicts": {
+   "E6_1": true,
+   "E6_1b_fpr_budget": false,
+   "E6_2": true,
+   "E6_3_equivalent_within_10": false,
+   "E6_5": true,
+   "E6_1_claimed": true,
+   "E6_2_claimed": true,
+   "E6_5_claimed": true,
+   "E6_3_equivalent_within_10_claimed": false
+  },
+  "E6_1_cov_resolve_minus_menu": {
+   "est": 91.15853658536585,
+   "lo": 82.92682926829268,
+   "hi": 97.5609756097561
+  },
+  "E6_1_abs_resolve_cov": {
+   "est": 91.15853658536585,
+   "lo": 82.92682926829268,
+   "hi": 97.5609756097561
+  },
+  "E6_2_convention_advantage_none": {
+   "est": 11.585365853658537,
+   "lo": 5.182926829268292,
+   "hi": 17.98780487804878
+  },
+  "E6_3_cov_high_minus_low_resolve": {
+   "est": 0.6097560975609756,
+   "lo": 0.0,
+   "hi": 1.8292682926829267
+  },
+  "E6_5_cov_sentence_minus_none": {
+   "est": 76.82926829268293,
+   "lo": 68.29268292682927,
+   "hi": 84.7560975609756
+  },
+  "flag_pref_a_minus_b_none": {
+   "est": 23.78048780487805,
+   "lo": 10.365853658536585,
+   "hi": 37.19512195121951
+  }
+ },
+ "exclude": {
+  "n_units": 39,
+  "verdicts": {
+   "E6_1": true,
+   "E6_1b_fpr_budget": false,
+   "E6_2": true,
+   "E6_3_equivalent_within_10": false,
+   "E6_5": true,
+   "E6_1_claimed": true,
+   "E6_2_claimed": true,
+   "E6_5_claimed": true,
+   "E6_3_equivalent_within_10_claimed": false
+  },
+  "E6_1_cov_resolve_minus_menu": {
+   "est": 93.26923076923077,
+   "lo": 84.61538461538461,
+   "hi": 99.67948717948718
+  },
+  "E6_1_abs_resolve_cov": {
+   "est": 93.26923076923077,
+   "lo": 84.61538461538461,
+   "hi": 99.67948717948718
+  },
+  "E6_2_convention_advantage_none": {
+   "est": 11.538461538461538,
+   "lo": 5.128205128205128,
+   "hi": 18.269230769230766
+  },
+  "E6_3_cov_high_minus_low_resolve": {
+   "est": 0.641025641025641,
+   "lo": 0.0,
+   "hi": 1.9230769230769231
+  },
+  "E6_5_cov_sentence_minus_none": {
+   "est": 78.84615384615384,
+   "lo": 69.87179487179486,
+   "hi": 86.53846153846155
+  },
+  "flag_pref_a_minus_b_none": {
+   "est": 23.717948717948715,
+   "lo": 9.615384615384617,
+   "hi": 37.82051282051282
+  }
+ },
+ "exception": {
+  "n_units": 41,
+  "verdicts": {
+   "E6_1": true,
+   "E6_1b_fpr_budget": false,
+   "E6_2": true,
+   "E6_3_equivalent_within_10": false,
+   "E6_5": true,
+   "E6_1_claimed": true,
+   "E6_2_claimed": true,
+   "E6_5_claimed": true,
+   "E6_3_equivalent_within_10_claimed": false
+  },
+  "E6_1_cov_resolve_minus_menu": {
+   "est": 93.59756097560977,
+   "lo": 85.97560975609755,
+   "hi": 99.6951219512195
+  },
+  "E6_1_abs_resolve_cov": {
+   "est": 93.59756097560977,
+   "lo": 85.97560975609755,
+   "hi": 99.6951219512195
+  },
+  "E6_2_convention_advantage_none": {
+   "est": 11.585365853658537,
+   "lo": 5.182926829268292,
+   "hi": 17.98780487804878
+  },
+  "E6_3_cov_high_minus_low_resolve": {
+   "est": 0.6097560975609756,
+   "lo": 0.0,
+   "hi": 1.8292682926829267
+  },
+  "E6_5_cov_sentence_minus_none": {
+   "est": 79.26829268292683,
+   "lo": 70.73170731707317,
+   "hi": 86.58536585365853
+  },
+  "flag_pref_a_minus_b_none": {
+   "est": 23.78048780487805,
+   "lo": 10.365853658536585,
+   "hi": 37.19512195121951
+  }
+ },
+ "upper": {
+  "n_units": 41,
+  "verdicts": {
+   "E6_1": true,
+   "E6_1b_fpr_budget": false,
+   "E6_2": true,
+   "E6_3_equivalent_within_10": false,
+   "E6_5": true,
+   "E6_1_claimed": true,
+   "E6_2_claimed": true,
+   "E6_5_claimed": true,
+   "E6_3_equivalent_within_10_claimed": false
+  },
+  "E6_1_cov_resolve_minus_menu": {
+   "est": 93.59756097560977,
+   "lo": 85.97560975609755,
+   "hi": 99.6951219512195
+  },
+  "E6_1_abs_resolve_cov": {
+   "est": 93.59756097560977,
+   "lo": 85.97560975609755,
+   "hi": 99.6951219512195
+  },
+  "E6_2_convention_advantage_none": {
+   "est": 11.585365853658537,
+   "lo": 5.182926829268292,
+   "hi": 17.98780487804878
+  },
+  "E6_3_cov_high_minus_low_resolve": {
+   "est": 0.6097560975609756,
+   "lo": 0.0,
+   "hi": 1.8292682926829267
+  },
+  "E6_5_cov_sentence_minus_none": {
+   "est": 79.26829268292683,
+   "lo": 70.73170731707317,
+   "hi": 86.58536585365853
+  },
+  "flag_pref_a_minus_b_none": {
+   "est": 23.78048780487805,
+   "lo": 10.365853658536585,
+   "hi": 37.19512195121951
+  }
+ },
+ "frozen_reproduces": true
+}
