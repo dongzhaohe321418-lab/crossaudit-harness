@@ -67,3 +67,15 @@
 {"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/1089", "prompt_sha256": "2af39130fbec3275c4d2700488617a11ac9269d9ef879a155ac7943a55e97cb5", "route": "con-gpt-astra", "split": "test"}
 {"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/1098", "prompt_sha256": "525c9680f2f4c97d6a7a7708b7c833518f6e7b407e291047b3e98c6508f923e1", "route": "con-gpt-astra", "split": "test"}
 {"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/1099", "prompt_sha256": "a95e654697af20fd6d2f7a8dcf2ce7e4951d51552b633339c57238e3b6006797", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/440", "prompt_sha256": "308c5545a95f76d231c7363186332e531ae5ac17a4d60f5d3a88c21014f41d68", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/458", "prompt_sha256": "e965b857259d04692592634b7c2225bceade09dcbbeeaa035ca3c171ef22d294", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/464", "prompt_sha256": "07677a11a0f32158863a9b11e403aead41d7b15e6720f48a56b408f75104d7d5", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/465", "prompt_sha256": "f45e5d391aa605c1db4528a33feb9659a58993908cfe2f2ca550abcdeb6afe2f", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/507", "prompt_sha256": "de8d8599ded2c523f381b3b6c06d946d23942da903f8c55917bbd26999c6b0a7", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/603", "prompt_sha256": "00654db86724b14052aa970f52b5be73cdfd2912688a38b42bd9df64e4fadcbe", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/600", "prompt_sha256": "aea739e43d8183e4448668fe5aa72ca9d17618be417034a9215375bddc74cc79", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/643", "prompt_sha256": "b24a6eb0665d3729a494c669b81bd6179b05cc37d861bec1c637bc7b0e0051be", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/928", "prompt_sha256": "8a6ffd971da5c2012c55dae73c00f3bae974e569a977c96f1c6c01fadd18085d", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/929", "prompt_sha256": "a364d15d38de2fba92aa50137c9e3966169107e5518d64b39a3e49371d2d4545", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/931", "prompt_sha256": "1518fb1e98379ee467d7d3f900007eb4678cf7177a9ba4137f211f6ec0102829", "route": "con-gpt-astra", "split": "test"}
+{"error": "exit 1: ", "ok": false, "problem_id": "BigCodeBench/935", "prompt_sha256": "e0854c2e27d2f220814c9871191f05b62e934cba3a14d6397c3fc03330de132c", "route": "con-gpt-astra", "split": "test"}
