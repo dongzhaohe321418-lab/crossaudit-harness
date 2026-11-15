@@ -82,7 +82,20 @@ class kind_of:
 
 
 def registered(split: str) -> dict:
-    """(kind, pid) -> E6 unit with its probes and red-team inputs, for E6's registered population of each kind."""
+    """(kind, pid) -> E6 unit with its probes and red-team inputs, for E6's registered population of each kind.
+    Computed with E6's original stages even while E13's are installed (E6's open2 population calls them)."""
+    patched, kind = {n: getattr(e6, n) for n in _orig}, e6.KIND
+    for n, f in _orig.items():
+        setattr(e6, n, f)
+    try:
+        return _registered(split)
+    finally:
+        for n, f in patched.items():
+            setattr(e6, n, f)
+        e6.set_kind(kind)                                        # re-point the record paths (E13's when patched)
+
+
+def _registered(split: str) -> dict:
     out = {}
     for kind in KINDS:
         with kind_of(kind):

@@ -70,5 +70,9 @@ Audits and analysis verify it; it cannot be rewritten once a held-out E13 audit 
 Held-out construction gave a checked B' for 40 of 41 units. For Mbpp/93 both edits returned byte-identical code, which
 differs from B on 1 of 239 inputs; the construction-completeness rule counted check rows rather than distinct edits,
 so it reported the unit as unfinished and the freeze refused. The rule now counts distinct edits (identical edits
-share one check). No check, criterion or analysis changes; Mbpp/93 is a missing unit under the registered bounds.
+share one check). No check, criterion or analysis changes; Mbpp/93 is a missing unit under the registered bounds. The first held-out
+audit call then refused to start (freeze verification failed, no reading taken): with E13's stages installed, E6's
+second-attempt population called them and dropped the unit without a B', and the record paths reverted to E6's
+files after that call. The population and the paths are now computed with E6's original stages and re-pointed to
+E13's records; the freeze was rewritten before any held-out reading.
 
