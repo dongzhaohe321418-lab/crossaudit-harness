@@ -38,7 +38,10 @@ def analyse(labels_path: str, write: bool) -> dict:
     items = {x["item"]: x for x in json.loads((HERE / "admissibility_items_test.json").read_text())}
     key = json.loads((HERE / "admissibility_key_test.json").read_text())
     raw = json.loads(Path(labels_path).read_text())
-    labels = {int(r["item"]): r for r in (raw if isinstance(raw, list) else raw.values())}
+    if isinstance(raw, dict) and "labels" in raw:              # the review pack's export format
+        raw = raw["labels"]
+    labels = {int(r["item"]): r for r in (raw if isinstance(raw, list) else raw.values())
+              if r.get("r1") and r.get("r2")}
     missing = sorted(set(items) - set(labels))
     if missing:
         raise SystemExit(f"labels missing for items {missing}")

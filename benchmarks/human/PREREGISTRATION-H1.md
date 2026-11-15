@@ -38,5 +38,5 @@ unit and has not seen the results by unit. Labelling is done in a standalone fil
 paper-level questions (subtitle, contribution type, sign-off on the AI disclosure) only after every item has both
 answers, so the rater labels before reading the paper's abstract. The file exports the answers as JSON
 ([{item, r1, r2, reason}] plus the paper-level answers), which is committed as received, before the key; the analysis
-(h1.py) is unchanged. The limitation in this file still applies: one rater, now a co-author.
+(h1.py) is unchanged except that it now also reads the pack's export format (labels under a "labels" key). The limitation in this file still applies: one rater, now a co-author.
 
