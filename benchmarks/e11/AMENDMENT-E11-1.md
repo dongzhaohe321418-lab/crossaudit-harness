@@ -14,3 +14,15 @@ construction holds a call that did not reach the model. Second attempt: 81 propo
 27 admitted, 10 past the red team, 6 past both judges. Gate: 18 units (12 + 6), met; no rendered pointer was refused.
 The first gate evaluation, run before the reruns, gave 12 (12 + 0); the registered gate is the one after construction
 is complete. Edit sizes are reported by `e11_report.py` (committed before any held-out audit).
+
+## Addendum (2026-11-15, after the held-out audits; review M3)
+- The archived proposal rows keep the error (`exit 1:` with empty output) but not usage or `reached`: E6's proposal
+  stage does not store them, and the isolated Codex home kept no transport log. The classification as calls that did
+  not reach the model therefore rests on the exit status, as `e1.reached_model` defines it. The archive holds 81 calls
+  on 69 distinct tasks; the repeats used identical prompts.
+- Gate reports before construction was complete were 12 (before the first rerun) and 17 (before the second); the
+  registered gate, 18, was evaluated after all eligible construction calls had completed.
+- E11-3's subset contrasts: E9's `subset_e6` reads E6's results, so E9's analysis failed on E11's units; the adapter
+  `e11_admissibility.py`, which computes E11-1 and E11-2 on E9's subsets with E6's frozen contrast code, was written
+  after the held-out audits. E11-3 is descriptive.
+- `e11_report.py` reported the upper median of edit sizes (4); the median is 3.5 (corrected).

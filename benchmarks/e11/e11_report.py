@@ -3,6 +3,7 @@ problem-level effects and leave-one-problem-out estimates for E11-1 and E11-2 (P
 interpretation). Reads frozen records only; on the held-out split it verifies the population freeze first."""
 import difflib
 import json
+import statistics
 import sys
 from pathlib import Path
 
@@ -38,7 +39,7 @@ def report(split: str) -> dict:
     S, t = e11.e6.SENTENCE_CONFIGS, 1
     res = {"split": split, "n_units": len(units), "edit_lines": edit_sizes(split)}
     sizes = sorted(v for d in res["edit_lines"].values() for v in d.values())
-    res["edit_lines_median"] = sizes[len(sizes) // 2] if sizes else None
+    res["edit_lines_median"] = statistics.median(sizes) if sizes else None   # was the upper median (review M3)
     res["edit_lines_max"] = sizes[-1] if sizes else None
     for name, other in (("E11_1", "none"), ("E11_2", "pointer")):
         per = {}
