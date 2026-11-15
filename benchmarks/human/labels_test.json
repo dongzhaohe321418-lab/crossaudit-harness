@@ -1,0 +1,259 @@
+{
+ "pack": "h1-v1",
+ "exported": "2026-11-15T19:03:58.931Z",
+ "rater": "co-author (name withheld in the public record)",
+ "complete": true,
+ "labels": [
+  {
+   "item": 1,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 2,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 3,
+   "r1": "yes",
+   "r2": "no",
+   "reason": ""
+  },
+  {
+   "item": 4,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 5,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 6,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 7,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 8,
+   "r1": "yes",
+   "r2": "unsure",
+   "reason": ""
+  },
+  {
+   "item": 9,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 10,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 11,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 12,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 13,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 14,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 15,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 16,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 17,
+   "r1": "yes",
+   "r2": "unsure",
+   "reason": ""
+  },
+  {
+   "item": 18,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 19,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 20,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 21,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 22,
+   "r1": "yes",
+   "r2": "no",
+   "reason": ""
+  },
+  {
+   "item": 23,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 24,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 25,
+   "r1": "no",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 26,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 27,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 28,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 29,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 30,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 31,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 32,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 33,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 34,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 35,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 36,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 37,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 38,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 39,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 40,
+   "r1": "no",
+   "r2": "yes",
+   "reason": ""
+  },
+  {
+   "item": 41,
+   "r1": "yes",
+   "r2": "yes",
+   "reason": ""
+  }
+ ],
+ "paper": {
+  "contribution_type": "deb",
+  "subtitle": "new",
+  "disclosure": "unsure"
+ }
+}
