@@ -53,10 +53,12 @@ If E13-1 finds no shape effect and E13-2 holds, the paper may say the preference
 shape effect is found, the paper reports that the preference partly tracks code shape.
 
 ## Development pilot (2026-11-15)
-15 of 16 development units received a checked B' (200-1,171 registered inputs each, 1-3 conditionals added; one unit
-added no conditional in two edits). 120 of 120 readings valid; E6's completeness check confirms every prompt hash.
-No B' reading flagged. flag(B') - flag(B) -1.7 [-5.0, 0.0]; flag(A) - flag(B') +36.7 [18.3, 56.7] (E6 on the same
-units +35.0).
+First version (archived in `records/pilot_v1/`, B' only, compared with E6's historical readings): 15 of 16 units with a
+checked B', 120 readings, flag(B') - flag(B) -1.7 [-5.0, 0.0]. After review P14 (current design, stricter check):
+15 of 16 units with a checked B' (200-1,171 registered inputs each, 1-3 conditionals added, no line of B removed; one
+unit added no conditional in two edits); 360 of 360 readings valid and E6's completeness check passes. E13-1 -1.7
+[-5.0, 0.0] (unit SD 6.5; bounds -7.8, 4.7); fresh flag preference A - B +28.3 [8.3, 48.3]; E13-2 A - B' +30.0
+[11.7, 50.0]; no B or B' reading flagged in the shape stratum with more conditionals in A (7 units).
 
 ## Integrity
 Freeze (`e13.py freeze`, after held-out construction, before any held-out audit) binds this file, `e13.py`, E6's code
