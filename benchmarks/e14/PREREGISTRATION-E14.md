@@ -21,9 +21,13 @@ exactly what B computes, identical character for character except inside the bod
 condition selects the class. Checks, by execution and parsing, no model:
 - M_A has A's status and value and M_B has B's on every registered admission input (E13's input set: hidden suite,
   proposer inputs, probes, stress and red-team inputs, interface inputs only); units without hidden inputs fail;
-- both parse, and every line on which they differ lies inside the body of one `if` whose header line is identical in
-  both; the programs are not identical. Since A and B differ on at least two valid class inputs (E6's admission),
-  the differing body is reached on those inputs;
+- both parse and are not identical; both contain an `if` at the same position in the syntax tree with the same,
+  non-constant condition and a body starting on a line after the condition; with that body masked the two syntax
+  trees are identical, and the source outside the body's lines is identical character for character (review P16:
+  a check on header lines alone accepted a changed multi-line condition);
+- M_A and M_B differ (status or value under E6's comparator) on at least two inputs that E6's frozen `valid` and
+  `in_class` predicates accept, so the differing body runs on class inputs (E6's comparator is tolerant, so this is
+  checked directly rather than inferred from A and B);
 - both pass the visible tests.
 Up to three pairs per unit (raised from two after the development pilot, before any held-out construction,
 because each missing unit weighs heavily under the worst-case rule below); calls that never reach the model and executor infrastructure failures consume no
@@ -44,14 +48,15 @@ needs the 95% lower limit of the worst-case bootstrap above 0.
   E13's code-shape strata, with registered and analysed counts.
 
 ## Interpretation
-The matched programs differ only in what the branch computes, so a positive E14-1 means the preference does not need
-differences in the surrounding code. Within the branch the two rules still differ, and M_B's branch often repeats
-what the general path computes, which a reader can notice (if anything this should draw flags to M_B). E14 varies
-the form of the code, not the rule; it cannot separate a convention the models share from a plain reading of the
-task. The pairs are written by the vendor that wrote A and B.
+The matched programs share all code outside one branch body, so a positive E14-1 means the preference persists with
+identical surrounding code. It does not remove differences in form inside the body (a loop against a single return,
+or work against `pass`), and the branch condition may also select some inputs outside the registered class; body
+sizes are reported. E14 varies the code around the rule, not the rule; it cannot separate a convention the models
+share from a plain reading of the task. The pairs are written by the vendor that wrote A and B.
 
 ## Development pilot (2026-11-15)
-Construction: 15 of 16 units with a checked pair in two attempts (one failed: M_A differed from A, then M_B from B).
+Construction (rechecked under the P16 rules; 15 pairs pass, separating 5-188 valid class inputs each, the failing
+unit failed a third attempt): 15 of 16 units with a checked pair (one failed: M_A differed from A, then M_B from B).
 Audits: 480 of 480 readings valid, completeness passes. E14-1 +26.7 [6.7, 48.3] (unit SD 42.7); with the missing
 unit at the worst value the bootstrap gives [-6.25, 43.75], so the development verdict would be negative; A - B in
 the same readings +25.0 [6.7, 45.0]; (M_A - M_B) - (A - B) +1.7 [-15.0, 20.0]; M_A - A +3.3, M_B - B +1.7. Power: at

@@ -59,29 +59,49 @@ CLASS: {cls}
 Reply with JSON only: {{"program_a": "<P_A>", "program_b": "<P_B>"}}"""
 
 
+def _ifs(tree) -> list:
+    """(path, node) for every If statement, the path being the chain of (field, index) from the module."""
+    out = []
+
+    def walk(node, path):
+        for field, value in ast.iter_fields(node):
+            items = value if isinstance(value, list) else [value]
+            for i, child in enumerate(items):
+                if isinstance(child, ast.AST):
+                    here = path + ((field, i),)
+                    if isinstance(child, ast.If):
+                        out.append((here, child))
+                    walk(child, here)
+    walk(tree, ())
+    return out
+
+
 def confined_to_one_if(pa: str, pb: str) -> tuple[bool, str]:
-    """Every differing line lies inside the body of one `if` whose header line is identical in both programs."""
+    """M_A and M_B are identical except for the body of one `if`: at the same position in both syntax trees, with the
+    same non-constant condition, its body starting on a line after the condition; with that body masked the two trees
+    are identical, and the source outside the body's lines is identical character for character (review P16)."""
     try:
         ta, tb = ast.parse(pa), ast.parse(pb)
     except SyntaxError:
         return False, "syntax"
-    la, lb = pa.splitlines(), pb.splitlines()
-    sm = difflib.SequenceMatcher(a=la, b=lb, autojunk=False)
-    da = {i + 1 for tag, i1, i2, _, _ in sm.get_opcodes() if tag != "equal" for i in range(i1, i2)}
-    db = {j + 1 for tag, _, _, j1, j2 in sm.get_opcodes() if tag != "equal" for j in range(j1, j2)}
-    if not da and not db:
+    if pa == pb:
         return False, "identical programs"
-
-    def bodies(tree, lines):
-        out = []
-        for n in ast.walk(tree):
-            if isinstance(n, ast.If) and n.body:
-                out.append((lines[n.lineno - 1].strip(), n.body[0].lineno, n.body[-1].end_lineno))
-        return out
-    for ha, sa, ea in bodies(ta, la):
-        for hb, sb, eb in bodies(tb, lb):
-            if ha == hb and all(sa <= x <= ea for x in da) and all(sb <= x <= eb for x in db):
-                return True, "ok"
+    la, lb = pa.splitlines(), pb.splitlines()
+    nodes_b = dict(_ifs(tb))
+    for path, na in _ifs(ta):
+        nb = nodes_b.get(path)
+        if nb is None or ast.dump(na.test) != ast.dump(nb.test) or isinstance(na.test, ast.Constant):
+            continue
+        if na.body[0].lineno <= na.test.end_lineno or nb.body[0].lineno <= nb.test.end_lineno:
+            continue                                        # one-line `if`: the body shares the condition's line
+        sa, ea, sb, eb = na.body[0].lineno, na.body[-1].end_lineno, nb.body[0].lineno, nb.body[-1].end_lineno
+        if la[:sa - 1] != lb[:sb - 1] or la[ea:] != lb[eb:]:
+            continue
+        ma, mb = ast.parse(pa), ast.parse(pb)
+        dict(_ifs(ma))[path].body = [ast.Pass()]
+        dict(_ifs(mb))[path].body = [ast.Pass()]
+        if ast.dump(ma) == ast.dump(mb):
+            return True, "ok"
     return False, "differences outside one if body"
 
 
@@ -141,21 +161,26 @@ def stage_check(split: str, workers: int) -> None:
         if not ed["ok"] or not hidden:
             e1.append(CHECKS, {**row, "passed": False, "reason": "no edit" if not ed["ok"] else "no hidden inputs"})
             return
-        progs = {"a": u["program"]["a"], "b": u["program"]["b"], "m": ed["program_a"], "n": ed["program_b"]}
-        res = e6.multi_compare(p, progs, [["a", "m"], ["b", "n"]], inputs)
+        progs = {"a": u["program"]["a"], "b": u["program"]["b"], "m": ed["program_a"], "n": ed["program_b"],
+                 "valid": e6.predicate_src(u["_probes"]["valid"], "valid", p.entry_point),
+                 "in_class": e6.predicate_src(u["_probes"]["in_class_proposer"], "in_class", p.entry_point)}
+        res = e6.multi_compare(p, progs, [["a", "m"], ["b", "n"], ["m", "n"]], inputs, capture=["valid", "in_class"])
         if "infra" in res:
             e1.append(CHECKS, {**row, "passed": None, "reason": "infra", "infra": res["infra"]})
             return
         same = lambda r, x, y: r["status"][x] == r["status"][y] and (r["status"][x] != "ok" or r["agree"][f"{x}~{y}"])
         da = [i for i, r in enumerate(res["rows"]) if not same(r, "a", "m")]
         db = [i for i, r in enumerate(res["rows"]) if not same(r, "b", "n")]
+        sep = sum(1 for r in res["rows"] if r["value"].get("valid") and r["value"].get("in_class")
+                  and not same(r, "m", "n"))                # M_A and M_B differ on valid class inputs (E6's predicates)
         vis = all(execute.run_suite(p.visible_program(progs[k]), instrumented=p.visible_instrumented).passed
                   for k in ("m", "n"))
         confined, why = confined_to_one_if(ed["program_a"], ed["program_b"])
         reasons = [m for m, bad in (("M_A differs from A", da), ("M_B differs from B", db),
-                                    ("visible tests", not vis), (why, not confined)) if bad]
+                                    ("visible tests", not vis), (why, not confined),
+                                    ("M_A and M_B separate fewer than two valid class inputs", sep < 2)) if bad]
         e1.append(CHECKS, {**row, "passed": not reasons, "reason": "; ".join(reasons) or "ok", "n_differ_a": len(da),
-                           "n_differ_b": len(db), "visible": vis, "confined": confined, "hard": res.get("hard", False)})
+                           "n_differ_b": len(db), "n_separating": sep, "visible": vis, "confined": confined, "hard": res.get("hard", False)})
     e1.run_pool(jobs, one, workers, f"e14 check {split}")
 
 
