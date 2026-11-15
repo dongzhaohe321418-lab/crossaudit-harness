@@ -1,0 +1,1562 @@
+[
+ {
+  "task_id": "BigCodeBench/3",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/26",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/52",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/54",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/56",
+  "split": "dev",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/84",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/85",
+  "split": "dev",
+  "suite_passes": false,
+  "n_calls": 8,
+  "unevaluable": 8,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/86",
+  "split": "test",
+  "suite_passes": false,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/87",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/88",
+  "split": "test",
+  "suite_passes": false,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/95",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 2,
+  "unevaluable": 0,
+  "ref_ok": 2,
+  "deterministic": 2,
+  "pickles": 2
+ },
+ {
+  "task_id": "BigCodeBench/117",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 3,
+  "unevaluable": 0,
+  "ref_ok": 2,
+  "deterministic": 2,
+  "pickles": 3
+ },
+ {
+  "task_id": "BigCodeBench/120",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 6,
+  "unevaluable": 2,
+  "ref_ok": 1,
+  "deterministic": 1,
+  "pickles": 4
+ },
+ {
+  "task_id": "BigCodeBench/121",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/126",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 1,
+  "ref_ok": 4,
+  "deterministic": 4,
+  "pickles": 4
+ },
+ {
+  "task_id": "BigCodeBench/141",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 6,
+  "unevaluable": 0,
+  "ref_ok": 3,
+  "deterministic": 3,
+  "pickles": 6
+ },
+ {
+  "task_id": "BigCodeBench/163",
+  "split": "dev",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/166",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/171",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/173",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/174",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 6,
+  "unevaluable": 6,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/177",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/183",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/185",
+  "split": "dev",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/187",
+  "split": "dev",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/193",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 3,
+  "ref_ok": 2,
+  "deterministic": 0,
+  "pickles": 2
+ },
+ {
+  "task_id": "BigCodeBench/199",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 1,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 1
+ },
+ {
+  "task_id": "BigCodeBench/236",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/240",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 1,
+  "ref_ok": 4,
+  "deterministic": 0,
+  "pickles": 4
+ },
+ {
+  "task_id": "BigCodeBench/243",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 4,
+  "unevaluable": 0,
+  "ref_ok": 4,
+  "deterministic": 0,
+  "pickles": 4
+ },
+ {
+  "task_id": "BigCodeBench/245",
+  "split": "test",
+  "suite_passes": false,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/247",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 2,
+  "deterministic": 0,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/249",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 2,
+  "unevaluable": 0,
+  "ref_ok": 2,
+  "deterministic": 0,
+  "pickles": 2
+ },
+ {
+  "task_id": "BigCodeBench/253",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/278",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/289",
+  "split": "dev",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/301",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 5,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/303",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 5,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/308",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 6,
+  "unevaluable": 0,
+  "ref_ok": 6,
+  "deterministic": 0,
+  "pickles": 6
+ },
+ {
+  "task_id": "BigCodeBench/309",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/311",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/316",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 4,
+  "unevaluable": 0,
+  "ref_ok": 4,
+  "deterministic": 0,
+  "pickles": 4
+ },
+ {
+  "task_id": "BigCodeBench/323",
+  "split": "test",
+  "suite_passes": false,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/332",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/334",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/340",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/349",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/351",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/353",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/361",
+  "split": "test",
+  "suite_passes": false,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/364",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/376",
+  "split": "dev",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/379",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 0,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/386",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 1,
+  "ref_ok": 4,
+  "deterministic": 2,
+  "pickles": 4
+ },
+ {
+  "task_id": "BigCodeBench/415",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 4,
+  "unevaluable": 2,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 2
+ },
+ {
+  "task_id": "BigCodeBench/434",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 7,
+  "unevaluable": 7,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/435",
+  "split": "test",
+  "suite_passes": false,
+  "n_calls": 13,
+  "unevaluable": 4,
+  "ref_ok": 7,
+  "deterministic": 1,
+  "pickles": 9
+ },
+ {
+  "task_id": "BigCodeBench/452",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 3,
+  "unevaluable": 0,
+  "ref_ok": 3,
+  "deterministic": 0,
+  "pickles": 3
+ },
+ {
+  "task_id": "BigCodeBench/462",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/478",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/479",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/480",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/481",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 4,
+  "unevaluable": 4,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/482",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/484",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 7,
+  "unevaluable": 2,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/486",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/488",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/495",
+  "split": "test",
+  "suite_passes": false,
+  "n_calls": 6,
+  "unevaluable": 3,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 3
+ },
+ {
+  "task_id": "BigCodeBench/516",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/517",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 9,
+  "unevaluable": 9,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/533",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/534",
+  "split": "dev",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/546",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/549",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/554",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 0,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/556",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/561",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 4,
+  "deterministic": 4,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/571",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 7,
+  "unevaluable": 3,
+  "ref_ok": 1,
+  "deterministic": 1,
+  "pickles": 2
+ },
+ {
+  "task_id": "BigCodeBench/573",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/575",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 2,
+  "ref_ok": 3,
+  "deterministic": 1,
+  "pickles": 3
+ },
+ {
+  "task_id": "BigCodeBench/576",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 3,
+  "unevaluable": 1,
+  "ref_ok": 2,
+  "deterministic": 2,
+  "pickles": 2
+ },
+ {
+  "task_id": "BigCodeBench/615",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 4,
+  "ref_ok": 1,
+  "deterministic": 1,
+  "pickles": 1
+ },
+ {
+  "task_id": "BigCodeBench/619",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/620",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 0,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/625",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/626",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 1,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/627",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/633",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/634",
+  "split": "test",
+  "suite_passes": false,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/638",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 1,
+  "unevaluable": 0,
+  "ref_ok": 1,
+  "deterministic": 0,
+  "pickles": 1
+ },
+ {
+  "task_id": "BigCodeBench/648",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 5,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/649",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/650",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 5,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/656",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/658",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/676",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/691",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/696",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 0,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/698",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/699",
+  "split": "dev",
+  "suite_passes": false,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/706",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/726",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/732",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/734",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/744",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/750",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/752",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 3,
+  "unevaluable": 3,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/758",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/760",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/770",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/772",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/774",
+  "split": "test",
+  "suite_passes": false,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/780",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 3,
+  "unevaluable": 1,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 2
+ },
+ {
+  "task_id": "BigCodeBench/782",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 1,
+  "unevaluable": 0,
+  "ref_ok": 1,
+  "deterministic": 1,
+  "pickles": 1
+ },
+ {
+  "task_id": "BigCodeBench/789",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 3,
+  "unevaluable": 0,
+  "ref_ok": 2,
+  "deterministic": 2,
+  "pickles": 3
+ },
+ {
+  "task_id": "BigCodeBench/793",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 1,
+  "ref_ok": 4,
+  "deterministic": 2,
+  "pickles": 4
+ },
+ {
+  "task_id": "BigCodeBench/799",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/802",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/805",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/806",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/808",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/811",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/825",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 5,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/827",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/835",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/837",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 3,
+  "unevaluable": 0,
+  "ref_ok": 3,
+  "deterministic": 0,
+  "pickles": 3
+ },
+ {
+  "task_id": "BigCodeBench/838",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/840",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/849",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/850",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 2,
+  "unevaluable": 2,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/856",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/859",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 5,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/866",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/875",
+  "split": "test",
+  "suite_passes": false,
+  "n_calls": 4,
+  "unevaluable": 4,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/878",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/880",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/881",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/883",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/885",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 4,
+  "unevaluable": 4,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/887",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/891",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/899",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 1,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 1
+ },
+ {
+  "task_id": "BigCodeBench/909",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 4,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/913",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/923",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 3,
+  "deterministic": 1,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/925",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/933",
+  "split": "dev",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/940",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/943",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/945",
+  "split": "test",
+  "suite_passes": false,
+  "n_calls": 4,
+  "unevaluable": 2,
+  "ref_ok": 1,
+  "deterministic": 0,
+  "pickles": 2
+ },
+ {
+  "task_id": "BigCodeBench/946",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 1,
+  "unevaluable": 0,
+  "ref_ok": 1,
+  "deterministic": 1,
+  "pickles": 1
+ },
+ {
+  "task_id": "BigCodeBench/947",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/948",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 5,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/949",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/950",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/951",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 5,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/952",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/975",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 2,
+  "unevaluable": 1,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 1
+ },
+ {
+  "task_id": "BigCodeBench/976",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/978",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 0,
+  "unevaluable": 0,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/979",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/981",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/1029",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 6,
+  "unevaluable": 0,
+  "ref_ok": 6,
+  "deterministic": 1,
+  "pickles": 6
+ },
+ {
+  "task_id": "BigCodeBench/1031",
+  "split": "dev",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/1055",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 1,
+  "ref_ok": 4,
+  "deterministic": 4,
+  "pickles": 4
+ },
+ {
+  "task_id": "BigCodeBench/1059",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 0,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/1070",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 4,
+  "ref_ok": 1,
+  "deterministic": 1,
+  "pickles": 1
+ },
+ {
+  "task_id": "BigCodeBench/1072",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/1074",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 5,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/1076",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 3,
+  "ref_ok": 1,
+  "deterministic": 1,
+  "pickles": 2
+ },
+ {
+  "task_id": "BigCodeBench/1077",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 7,
+  "unevaluable": 7,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ },
+ {
+  "task_id": "BigCodeBench/1086",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 0,
+  "ref_ok": 5,
+  "deterministic": 0,
+  "pickles": 5
+ },
+ {
+  "task_id": "BigCodeBench/1088",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 6,
+  "unevaluable": 5,
+  "ref_ok": 1,
+  "deterministic": 0,
+  "pickles": 1
+ },
+ {
+  "task_id": "BigCodeBench/1094",
+  "split": "test",
+  "suite_passes": false,
+  "error": "FileNotFoundError"
+ },
+ {
+  "task_id": "BigCodeBench/1107",
+  "split": "dev",
+  "suite_passes": true,
+  "n_calls": 6,
+  "unevaluable": 0,
+  "ref_ok": 6,
+  "deterministic": 6,
+  "pickles": 6
+ },
+ {
+  "task_id": "BigCodeBench/1139",
+  "split": "test",
+  "suite_passes": true,
+  "n_calls": 5,
+  "unevaluable": 5,
+  "ref_ok": 0,
+  "deterministic": 0,
+  "pickles": 0
+ }
+]
