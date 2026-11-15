@@ -1,0 +1,28 @@
+version: 1
+science_repo: evalplus-code-study
+constitution: AUDIT_RULES.md
+max_rounds: 1
+auditor:
+  vendor: openai
+  provider: openai_compat
+  model: gpt-5.6-terra
+  key_env: CROSSAUDIT_OPENAI_KEY
+generator:
+  vendor: anthropic
+  provider: anthropic
+  model: claude-haiku-4-5
+  key_env: CROSSAUDIT_ANTHROPIC_KEY
+isolation:
+  minimum:
+    parametric: true
+    contextual: true
+    permissive: false
+state:
+  dir: .crossaudit
+ledger:
+  dir: cycles
+scope:
+  dirs: [work]
+checks: general
+authority:
+  lone_model_blocker: block
