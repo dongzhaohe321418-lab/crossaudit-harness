@@ -65,3 +65,10 @@ Freeze (`e13.py freeze`, after held-out construction, before any held-out audit)
 (`e6.py`, `e1.py`, `analyse_e6.py`, `audit.py`, `execute.py`, `ceiling.py`), the product source tree, both
 interpreters' package lists, every held-out B' with its check, and every required reading with its prompt hash.
 Audits and analysis verify it; it cannot be rewritten once a held-out E13 audit record exists.
+
+## Amendment 1 (2026-11-15, after held-out construction, before the freeze and any held-out audit)
+Held-out construction gave a checked B' for 40 of 41 units. For Mbpp/93 both edits returned byte-identical code, which
+differs from B on 1 of 239 inputs; the construction-completeness rule counted check rows rather than distinct edits,
+so it reported the unit as unfinished and the freeze refused. The rule now counts distinct edits (identical edits
+share one check). No check, criterion or analysis changes; Mbpp/93 is a missing unit under the registered bounds.
+

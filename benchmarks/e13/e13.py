@@ -116,8 +116,9 @@ def stage_edit(split: str, workers: int) -> None:
         done = attempts(edits.get(key, []))
         if any(c.get("passed") for c in checks.get(key, [])) or len(done) >= MAX_EDITS:
             continue
-        if len([c for c in checks.get(key, []) if c.get("passed") is not None]) < len(done):
-            continue                                             # last edit not yet checked
+        judged = {c["edit_sha256"] for c in checks.get(key, []) if c.get("passed") is not None}
+        if any(e6.sha(e["code"] or "") not in judged for e in done):
+            continue                                             # an edit not yet checked (identical edits share one)
         jobs.append((key, u))
 
     def one(job):
@@ -303,8 +304,8 @@ def construction_gaps(split: str) -> list:
         if any(c.get("passed") for c in checks.get(key, [])):
             continue
         done = attempts(edits.get(key, []))
-        judged = [c for c in checks.get(key, []) if c.get("passed") is not None]
-        if len(done) < MAX_EDITS or len(judged) < len(done):
+        judged = {c["edit_sha256"] for c in checks.get(key, []) if c.get("passed") is not None}
+        if len(done) < MAX_EDITS or any(e6.sha(e["code"] or "") not in judged for e in done):
             gaps.append(f"{key[0]}|{key[1]}")
     return gaps
 
