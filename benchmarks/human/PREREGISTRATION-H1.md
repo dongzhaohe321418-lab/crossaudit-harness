@@ -44,8 +44,8 @@ answers, so the rater labels before reading the paper's abstract. The file expor
 After the first rater's results (85.4% admissible; all four rejections on the alternative rule), a second rater is
 added to measure agreement. The second rater is someone who did not construct, judge or inspect any unit, has not
 seen the first rater's answers or any result by unit, and is not the first author. They receive the same 41 items in
-the same order and the same instructions, in a pack with no paper questions (, pack
-id hc2-v1); their labels are committed as received before analysis. Analysis (, committed before the labels):
+the same order and the same instructions, in a pack with no paper questions (`human_review_pack_rater2.html`, pack
+id hc2-v1); their labels are committed as received before analysis. Analysis (`hc2.py`, committed before the labels):
 - inter-rater agreement on unit-level admissibility (both rules accepted): percent agreement and Cohen's kappa, and
   rule-level agreement on "no" answers;
 - the second rater's admissible share (Wilson 95%) and where their rejections fall (benchmark or alternative rule);
