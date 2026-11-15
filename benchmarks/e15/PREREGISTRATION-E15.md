@@ -16,7 +16,7 @@ import aliases must match; only expressions may differ); their token counts (Pyt
 differ by at most a factor of 1.5 or by at most 4 tokens. The prompt states both, numerically. Leading decorators of
 the first body statement count as part of the body. (Review P17: a first version compared statement kinds only and
 missed match cases and non-expression changes; the development pairs were rechecked under this rule and all 15 still
-pass.) Everything else is E14's: construction, checks (same AST position and non-constant condition, masked
+pass; they were built with the earlier prompt, which asked for similar length without the numeric allowance.) Everything else is E14's: construction, checks (same AST position and non-constant condition, masked
 trees identical, identical source outside the body, status and value equality with A and B on every registered
 admission input, separation on at least two valid class inputs, visible tests), up to three attempts, audits (A, B,
 M_A and M_B afresh and interleaved, task-alone arm, E6's four configurations, two readings per cell), completeness,
