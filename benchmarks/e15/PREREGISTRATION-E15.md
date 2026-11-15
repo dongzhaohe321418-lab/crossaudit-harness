@@ -10,10 +10,13 @@ E15's readings are new and held out. Its code is a copy of E14's (`e15.py`; `e14
 check and prompt line below.
 
 ## Added constraint
-Inside the differing `if` body, P_A and P_B use the same statements in the same order and of the same kinds
-(statement node types, nested blocks included), differing only in the expressions they compute; their token counts
-(Python tokenizer, no layout tokens) differ by at most a factor of 1.5 or by at most 4 tokens. The prompt asks for
-this explicitly. Everything else is E14's: construction, checks (same AST position and non-constant condition, masked
+Inside the differing `if` body, the two bodies' syntax trees are identical once every expression node is replaced by
+one placeholder (so statements, nesting, match cases and patterns, operators, augmented-assignment operators and
+import aliases must match; only expressions may differ); their token counts (Python tokenizer, no layout tokens)
+differ by at most a factor of 1.5 or by at most 4 tokens. The prompt states both, numerically. Leading decorators of
+the first body statement count as part of the body. (Review P17: a first version compared statement kinds only and
+missed match cases and non-expression changes; the development pairs were rechecked under this rule and all 15 still
+pass.) Everything else is E14's: construction, checks (same AST position and non-constant condition, masked
 trees identical, identical source outside the body, status and value equality with A and B on every registered
 admission input, separation on at least two valid class inputs, visible tests), up to three attempts, audits (A, B,
 M_A and M_B afresh and interleaved, task-alone arm, E6's four configurations, two readings per cell), completeness,
@@ -26,14 +29,15 @@ freeze and closure marker, and the worst-case missing-unit rule.
   code-shape strata with registered and analysed counts; body token counts.
 
 ## Interpretation
-With symmetric bodies, the two programs differ only in the expressions inside one branch, so a positive E15-1 means
-the preference does not need a difference in how much code each rule takes. The bodies still compute different
-values, which is the rule itself. E15 cannot separate a convention the models share from a plain reading of the task.
+A positive E15-1 means the preference persists when the two programs share all code outside one branch body and the
+bodies have matching statement skeletons with bounded token-count differences. It does not establish independence
+from implementation: equal token counts allow different computations, padding and long literals, and the bodies
+compute different values, which is the rule itself. Body token counts are reported per pair. E15 cannot separate a convention the models share from a plain reading of the task.
 
 ## Development pilot (2026-11-15)
 Construction: 15 of 16 units with a checked pair after three rounds (two attempts failed the body-form check).
 Audits: 480 of 480 readings valid, completeness passes. E15-1 +38.3 [21.7, 55.0] (unit SD 35.2); with the missing unit
-at the worst value [6.2, 51.6]; A - B in the same readings +25.0; M_A - A +13.3 [3.3, 23.3]; M_B - B 0.0; code-shape
+at the worst value [6.2, 51.6]; body token counts equal in 11 of 15 pairs, M_A longer in 2 (medians 6 and 6); A - B in the same readings +25.0; M_A - A +13.3 [3.3, 23.3]; M_B - B 0.0; code-shape
 strata +41.7 (6 of 7 units) and +36.1 (9 of 9).
 
 ## Integrity

@@ -22,6 +22,7 @@ import ast
 import difflib
 import json
 import random
+import statistics
 import sys
 import types
 from pathlib import Path
@@ -48,7 +49,8 @@ described under CLASS, where they follow different rules. Write two new programs
   selects the inputs described under CLASS; the condition itself and all other code are the same in both;
 - outside that `if` body, the shared code handles every other input in an ordinary way;
 - inside the body, P_A and P_B use the same statements in the same order (for example both a single `return`),
-  differing only in the expressions they compute, and of similar length.
+  differing only in the expressions they compute (same operators, names and patterns), and of similar length:
+  their token counts may differ by at most a factor of 1.5 or by at most 4 tokens.
 Do not add comments, prints or names that mention the class, the rules, this instruction or testing. Keep the
 function name and signature.
 
@@ -101,7 +103,8 @@ def confined_to_one_if(pa: str, pb: str) -> tuple[bool, str]:
             continue
         if na.body[0].lineno <= na.test.end_lineno or nb.body[0].lineno <= nb.test.end_lineno:
             continue                                        # one-line `if`: the body shares the condition's line
-        sa, ea, sb, eb = na.body[0].lineno, na.body[-1].end_lineno, nb.body[0].lineno, nb.body[-1].end_lineno
+        first = lambda st: min([st.lineno] + [d.lineno for d in getattr(st, "decorator_list", [])])
+        sa, ea, sb, eb = first(na.body[0]), na.body[-1].end_lineno, first(nb.body[0]), nb.body[-1].end_lineno
         if la[:sa - 1] != lb[:sb - 1] or la[ea:] != lb[eb:]:
             continue
         ma, mb = ast.parse(pa), ast.parse(pb)
@@ -114,16 +117,19 @@ def confined_to_one_if(pa: str, pb: str) -> tuple[bool, str]:
     return False, "differences outside one if body"
 
 
-def _shape(stmts) -> list:
-    """Statement kinds at depth 1 and below, in order, without expressions (the body's form)."""
-    out = []
-    for st in stmts:
-        out.append(type(st).__name__)
-        for field in ("body", "orelse", "handlers", "finalbody"):
-            sub = getattr(st, field, None)
-            if isinstance(sub, list) and sub and isinstance(sub[0], ast.AST):
-                out.append((field, tuple(_shape(sub))))
-    return out
+class _MaskExpr(ast.NodeTransformer):
+    """Replace every expression node by one placeholder, keeping statements, operators, aliases, patterns and the
+    rest of the tree (review P17: the earlier statement-kind list missed match cases and non-expression changes)."""
+    def visit(self, node):
+        if isinstance(node, ast.expr):
+            return ast.Name(id="_", ctx=ast.Load())
+        return self.generic_visit(node)
+
+
+def _shape(stmts) -> str:
+    import copy
+    masked = [_MaskExpr().visit(copy.deepcopy(st)) for st in stmts]
+    return ast.dump(ast.Module(body=masked, type_ignores=[]), annotate_fields=False)
 
 
 def _tokens(stmts, lines) -> int:
@@ -136,6 +142,19 @@ def _tokens(stmts, lines) -> int:
                                      tokenize.COMMENT, tokenize.ENDMARKER))
     except (tokenize.TokenError, IndentationError):
         return -1
+
+
+def body_tokens(pa: str, pb: str) -> tuple | None:
+    """Token counts of the differing body in M_A and M_B (reported, PREREGISTRATION-E15.md)."""
+    ta, tb = ast.parse(pa), ast.parse(pb)
+    nodes_b = dict(_ifs(tb))
+    for path, na in _ifs(ta):
+        nb = nodes_b.get(path)
+        if nb is not None and ast.dump(na.test) == ast.dump(nb.test) and confined_to_one_if(pa, pb)[0]:
+            ka, kb = _tokens(na.body, pa.splitlines()), _tokens(nb.body, pb.splitlines())
+            if ka >= 0 and kb >= 0 and symmetric_bodies(na.body, nb.body, pa.splitlines(), pb.splitlines()):
+                return ka, kb
+    return None
 
 
 def symmetric_bodies(ba, bb, la, lb) -> bool:
@@ -413,6 +432,11 @@ def analyse(split: str) -> dict:
                                      "bootstrap_with_missing": worst_case_boot(inter, miss, -2.0, 2.0)}
     res["strata"] = {name: {"n_registered": len(m), "n_analysed": len([p for p in m if p in d1]),
                             "E15_1": A.boot({p: d1[p] for p in m if p in d1})} for name, m in strata.items()}
+    toks = [t for t in (body_tokens(v["m"], v["n"]) for v in passed(split).values()) if t]
+    res["body_tokens"] = {"n": len(toks), "median_m_a": statistics.median(t[0] for t in toks) if toks else None,
+                          "median_m_b": statistics.median(t[1] for t in toks) if toks else None,
+                          "equal": sum(t[0] == t[1] for t in toks), "m_a_longer": sum(t[0] > t[1] for t in toks),
+                          "pairs": toks}
     w = res["E15_1_ma_minus_mb"]["bootstrap_with_missing"]["worst"]
     res["verdicts"] = {"E15_1": bool(w and w["lo"] > 0)}
     if split == "test":
