@@ -1,0 +1,151 @@
+{
+ "n": 36,
+ "equal": 29,
+ "m_a_longer": 6,
+ "per_pair": {
+  "open|HumanEval/140": [
+   18,
+   18
+  ],
+  "open|HumanEval/22": [
+   6,
+   5
+  ],
+  "open|HumanEval/62": [
+   32,
+   32
+  ],
+  "open|Mbpp/238": [
+   38,
+   38
+  ],
+  "open|Mbpp/280": [
+   9,
+   9
+  ],
+  "open|Mbpp/290": [
+   27,
+   27
+  ],
+  "open|Mbpp/299": [
+   15,
+   12
+  ],
+  "open|Mbpp/310": [
+   24,
+   24
+  ],
+  "open|Mbpp/418": [
+   7,
+   7
+  ],
+  "open|Mbpp/419": [
+   22,
+   22
+  ],
+  "open|Mbpp/425": [
+   20,
+   19
+  ],
+  "open|Mbpp/436": [
+   22,
+   22
+  ],
+  "open|Mbpp/450": [
+   22,
+   21
+  ],
+  "open|Mbpp/462": [
+   39,
+   39
+  ],
+  "open|Mbpp/475": [
+   52,
+   49
+  ],
+  "open|Mbpp/567": [
+   2,
+   2
+  ],
+  "open|Mbpp/576": [
+   6,
+   6
+  ],
+  "open|Mbpp/587": [
+   23,
+   23
+  ],
+  "open|Mbpp/602": [
+   2,
+   2
+  ],
+  "open|Mbpp/624": [
+   13,
+   13
+  ],
+  "open|Mbpp/628": [
+   29,
+   29
+  ],
+  "open|Mbpp/64": [
+   22,
+   22
+  ],
+  "open|Mbpp/730": [
+   5,
+   5
+  ],
+  "open|Mbpp/74": [
+   5,
+   5
+  ],
+  "open|Mbpp/75": [
+   5,
+   5
+  ],
+  "open|Mbpp/772": [
+   7,
+   7
+  ],
+  "open|Mbpp/778": [
+   5,
+   5
+  ],
+  "open|Mbpp/788": [
+   9,
+   9
+  ],
+  "open|Mbpp/805": [
+   10,
+   12
+  ],
+  "open|Mbpp/93": [
+   23,
+   23
+  ],
+  "open2|HumanEval/94": [
+   2,
+   2
+  ],
+  "open2|Mbpp/252": [
+   15,
+   15
+  ],
+  "open2|Mbpp/395": [
+   5,
+   5
+  ],
+  "open2|Mbpp/6": [
+   9,
+   7
+  ],
+  "open2|Mbpp/623": [
+   3,
+   3
+  ],
+  "open2|Mbpp/792": [
+   7,
+   7
+  ]
+ }
+}
