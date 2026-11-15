@@ -1,0 +1,232 @@
+{
+ "split": "test",
+ "per_vendor": {
+  "gpt": {
+   "configs": [
+    "aud-gpt-terra-low",
+    "aud-gpt-terra-high"
+   ],
+   "E13_1": {
+    "est": 2.5,
+    "lo": -2.5,
+    "hi": 7.5,
+    "n": 40,
+    "sd_unit": 15.811388300841896
+   },
+   "E13_2": {
+    "est": 16.25,
+    "lo": 2.5,
+    "hi": 31.25,
+    "n": 40,
+    "sd_unit": 47.214051580717644
+   }
+  },
+  "claude": {
+   "configs": [
+    "aud-claude-sonnet-low",
+    "aud-claude-sonnet-high"
+   ],
+   "E13_1": {
+    "est": -1.25,
+    "lo": -3.75,
+    "hi": 0.0,
+    "n": 40,
+    "sd_unit": 7.905694150420948
+   },
+   "E13_2": {
+    "est": 25.0,
+    "lo": 8.75,
+    "hi": 41.25,
+    "n": 40,
+    "sd_unit": 51.88745216627708
+   }
+  }
+ },
+ "strata_difference": {
+  "E13_1": {
+   "est": -1.1904761904761905,
+   "lo": -5.263157894736842,
+   "hi": 2.756892230576441,
+   "n": [
+    19,
+    21
+   ]
+  },
+  "E13_2": {
+   "est": 25.877192982456144,
+   "lo": 0.5639097744360888,
+   "hi": 52.130325814536334,
+   "n": [
+    19,
+    21
+   ]
+  }
+ },
+ "added": {
+  "per_unit": {
+   "open|HumanEval/22": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|HumanEval/140": {
+    "conditionals": 1,
+    "lines": 3
+   },
+   "open|HumanEval/62": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/238": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/280": {
+    "conditionals": 2,
+    "lines": 5
+   },
+   "open|Mbpp/299": {
+    "conditionals": 2,
+    "lines": 5
+   },
+   "open|Mbpp/290": {
+    "conditionals": 1,
+    "lines": 3
+   },
+   "open|Mbpp/419": {
+    "conditionals": 1,
+    "lines": 5
+   },
+   "open|Mbpp/310": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/425": {
+    "conditionals": 2,
+    "lines": 6
+   },
+   "open|Mbpp/418": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/301": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/436": {
+    "conditionals": 1,
+    "lines": 3
+   },
+   "open|Mbpp/450": {
+    "conditionals": 1,
+    "lines": 3
+   },
+   "open|Mbpp/475": {
+    "conditionals": 2,
+    "lines": 5
+   },
+   "open|Mbpp/462": {
+    "conditionals": 1,
+    "lines": 5
+   },
+   "open|Mbpp/472": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/587": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/567": {
+    "conditionals": 1,
+    "lines": 6
+   },
+   "open|Mbpp/602": {
+    "conditionals": 2,
+    "lines": 6
+   },
+   "open|Mbpp/624": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/576": {
+    "conditionals": 2,
+    "lines": 6
+   },
+   "open|Mbpp/628": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/64": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/74": {
+    "conditionals": 1,
+    "lines": 5
+   },
+   "open|Mbpp/730": {
+    "conditionals": 2,
+    "lines": 6
+   },
+   "open|Mbpp/75": {
+    "conditionals": 2,
+    "lines": 6
+   },
+   "open|Mbpp/740": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/772": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/788": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open|Mbpp/778": {
+    "conditionals": 2,
+    "lines": 8
+   },
+   "open|Mbpp/805": {
+    "conditionals": 2,
+    "lines": 5
+   },
+   "open|Mbpp/94": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open2|Mbpp/252": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open2|Mbpp/558": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open2|Mbpp/6": {
+    "conditionals": 1,
+    "lines": 3
+   },
+   "open2|HumanEval/94": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open2|Mbpp/395": {
+    "conditionals": 2,
+    "lines": 9
+   },
+   "open2|Mbpp/792": {
+    "conditionals": 1,
+    "lines": 2
+   },
+   "open2|Mbpp/623": {
+    "conditionals": 1,
+    "lines": 2
+   }
+  },
+  "conditionals_median": 1.0,
+  "lines_median": 2.5,
+  "lines_max": 9
+ }
+}
