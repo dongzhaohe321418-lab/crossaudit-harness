@@ -1,0 +1,272 @@
+{
+ "split": "test",
+ "n_readings": 144,
+ "terminal_failures": 0,
+ "n_units": {
+  "open": 18,
+  "control": 0,
+  "resolved": 18
+ },
+ "Adm_open": {
+  "est": 93.05555555555556,
+  "ci": [
+   86.11111111111111,
+   98.61111111111111
+  ]
+ },
+ "Adm_control": {
+  "est": null,
+  "ci": null
+ },
+ "Excl_A_open": {
+  "est": 4.166666666666666,
+  "ci": [
+   0.0,
+   11.11111111111111
+  ]
+ },
+ "Excl_A_control": {
+  "est": null,
+  "ci": null
+ },
+ "Excl_B_open": {
+  "est": 2.7777777777777777,
+  "ci": [
+   0.0,
+   6.944444444444445
+  ]
+ },
+ "Disc": {
+  "est": null,
+  "ci": null
+ },
+ "Excl_opp_resolved": {
+  "est": 73.61111111111111,
+  "ci": [
+   63.888888888888886,
+   83.33333333333334
+  ]
+ },
+ "Disc_resolved": {
+  "est": 68.05555555555556,
+  "ci": [
+   56.94444444444444,
+   79.16666666666666
+  ]
+ },
+ "Disc_grounded": {
+  "est": null,
+  "ci": null
+ },
+ "Adm_open_worst": 93.05555555555556,
+ "Disc_worst": null,
+ "per_judge": {
+  "aud-claude-sonnet-high": {
+   "accept_open": 100,
+   "excl_A_open": 0,
+   "excl_A_control": null,
+   "excl_opp_resolved": 47.22222222222222,
+   "domain_valid_open": 100
+  },
+  "aud-gpt-terra-high": {
+   "accept_open": 86.11111111111111,
+   "excl_A_open": 8.333333333333332,
+   "excl_A_control": null,
+   "excl_opp_resolved": 100,
+   "domain_valid_open": 100
+  }
+ },
+ "order_stability": {
+  "open": 91.66666666666666,
+  "control": null,
+  "resolved": 86.11111111111111
+ },
+ "cross_judge_agreement_open": 86.11111111111111,
+ "exclusion_grounding": {
+  "found": 58,
+  "meaning": 0,
+  "not_found": 0
+ },
+ "open_unit_acceptance": {
+  "BigCodeBench/1082": 4,
+  "BigCodeBench/1110": 4,
+  "BigCodeBench/299": 2,
+  "BigCodeBench/471": 4,
+  "BigCodeBench/55": 3,
+  "BigCodeBench/550": 4,
+  "BigCodeBench/666": 4,
+  "BigCodeBench/669": 4,
+  "BigCodeBench/687": 4,
+  "BigCodeBench/692": 4,
+  "BigCodeBench/718": 4,
+  "BigCodeBench/813": 3,
+  "BigCodeBench/854": 4,
+  "BigCodeBench/864": 4,
+  "BigCodeBench/872": 3,
+  "BigCodeBench/900": 4,
+  "BigCodeBench/932": 4,
+  "BigCodeBench/935": 4
+ },
+ "units_accepted_by_majority": 17,
+ "subsets": {
+  "majority": [
+   "BigCodeBench/1082",
+   "BigCodeBench/1110",
+   "BigCodeBench/471",
+   "BigCodeBench/55",
+   "BigCodeBench/550",
+   "BigCodeBench/666",
+   "BigCodeBench/669",
+   "BigCodeBench/687",
+   "BigCodeBench/692",
+   "BigCodeBench/718",
+   "BigCodeBench/813",
+   "BigCodeBench/854",
+   "BigCodeBench/864",
+   "BigCodeBench/872",
+   "BigCodeBench/900",
+   "BigCodeBench/932",
+   "BigCodeBench/935"
+  ],
+  "strict": [
+   "BigCodeBench/1082",
+   "BigCodeBench/1110",
+   "BigCodeBench/471",
+   "BigCodeBench/550",
+   "BigCodeBench/666",
+   "BigCodeBench/669",
+   "BigCodeBench/687",
+   "BigCodeBench/692",
+   "BigCodeBench/718",
+   "BigCodeBench/854",
+   "BigCodeBench/864",
+   "BigCodeBench/900",
+   "BigCodeBench/932",
+   "BigCodeBench/935"
+  ],
+  "by_aud-claude-sonnet-high": [
+   "BigCodeBench/1082",
+   "BigCodeBench/1110",
+   "BigCodeBench/299",
+   "BigCodeBench/471",
+   "BigCodeBench/55",
+   "BigCodeBench/550",
+   "BigCodeBench/666",
+   "BigCodeBench/669",
+   "BigCodeBench/687",
+   "BigCodeBench/692",
+   "BigCodeBench/718",
+   "BigCodeBench/813",
+   "BigCodeBench/854",
+   "BigCodeBench/864",
+   "BigCodeBench/872",
+   "BigCodeBench/900",
+   "BigCodeBench/932",
+   "BigCodeBench/935"
+  ],
+  "by_aud-gpt-terra-high": [
+   "BigCodeBench/1082",
+   "BigCodeBench/1110",
+   "BigCodeBench/471",
+   "BigCodeBench/550",
+   "BigCodeBench/666",
+   "BigCodeBench/669",
+   "BigCodeBench/687",
+   "BigCodeBench/692",
+   "BigCodeBench/718",
+   "BigCodeBench/854",
+   "BigCodeBench/864",
+   "BigCodeBench/900",
+   "BigCodeBench/932",
+   "BigCodeBench/935"
+  ]
+ },
+ "E9_3": {
+  "majority": {
+   "n_units": 17,
+   "estimable": true,
+   "E11_1_sentence_minus_none": {
+    "est": 60.29411764705882,
+    "lo": 42.64705882352941,
+    "hi": 76.47058823529412,
+    "n": 17,
+    "bound_low": 60.294117647058826,
+    "bound_high": 60.294117647058826
+   },
+   "E11_2_sentence_minus_pointer": {
+    "est": 50.0,
+    "lo": 35.294117647058826,
+    "hi": 64.70588235294117,
+    "n": 17,
+    "bound_low": 50.0,
+    "bound_high": 50.0
+   }
+  },
+  "strict": {
+   "n_units": 14,
+   "estimable": true,
+   "E11_1_sentence_minus_none": {
+    "est": 60.71428571428571,
+    "lo": 42.857142857142854,
+    "hi": 78.57142857142857,
+    "n": 14,
+    "bound_low": 60.714285714285715,
+    "bound_high": 60.714285714285715
+   },
+   "E11_2_sentence_minus_pointer": {
+    "est": 51.78571428571429,
+    "lo": 35.714285714285715,
+    "hi": 67.85714285714286,
+    "n": 14,
+    "bound_low": 51.785714285714285,
+    "bound_high": 51.785714285714285
+   }
+  },
+  "by_aud-claude-sonnet-high": {
+   "n_units": 18,
+   "estimable": true,
+   "E11_1_sentence_minus_none": {
+    "est": 58.333333333333336,
+    "lo": 41.66666666666667,
+    "hi": 73.61111111111111,
+    "n": 18,
+    "bound_low": 58.333333333333336,
+    "bound_high": 58.333333333333336
+   },
+   "E11_2_sentence_minus_pointer": {
+    "est": 48.61111111111111,
+    "lo": 34.72222222222222,
+    "hi": 62.5,
+    "n": 18,
+    "bound_low": 48.611111111111114,
+    "bound_high": 48.611111111111114
+   }
+  },
+  "by_aud-gpt-terra-high": {
+   "n_units": 14,
+   "estimable": true,
+   "E11_1_sentence_minus_none": {
+    "est": 60.71428571428571,
+    "lo": 42.857142857142854,
+    "hi": 78.57142857142857,
+    "n": 14,
+    "bound_low": 60.714285714285715,
+    "bound_high": 60.714285714285715
+   },
+   "E11_2_sentence_minus_pointer": {
+    "est": 51.78571428571429,
+    "lo": 35.714285714285715,
+    "hi": 67.85714285714286,
+    "n": 14,
+    "bound_low": 51.785714285714285,
+    "bound_high": 51.785714285714285
+   }
+  }
+ },
+ "verdicts": {
+  "E9_1": true,
+  "E9_2": false,
+  "E9_2b": true,
+  "E9_3_majority_registered_criteria": null
+ }
+}

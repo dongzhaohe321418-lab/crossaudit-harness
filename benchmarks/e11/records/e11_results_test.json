@@ -1,0 +1,265 @@
+{
+ "split": "test",
+ "protocol": "e11-v1",
+ "n_units": 18,
+ "units": [
+  "BigCodeBench/1082",
+  "BigCodeBench/1110",
+  "BigCodeBench/299",
+  "BigCodeBench/471",
+  "BigCodeBench/55",
+  "BigCodeBench/550",
+  "BigCodeBench/666",
+  "BigCodeBench/669",
+  "BigCodeBench/687",
+  "BigCodeBench/692",
+  "BigCodeBench/718",
+  "BigCodeBench/813",
+  "BigCodeBench/854",
+  "BigCodeBench/864",
+  "BigCodeBench/872",
+  "BigCodeBench/900",
+  "BigCodeBench/932",
+  "BigCodeBench/935"
+ ],
+ "completeness": {
+  "open": {
+   "required": 384,
+   "valid": 384,
+   "superseded_readings": 0,
+   "outside_registered_population": 0,
+   "exhausted": []
+  },
+  "open2": {
+   "required": 192,
+   "valid": 192,
+   "superseded_readings": 0,
+   "outside_registered_population": 0,
+   "exhausted": []
+  }
+ },
+ "levels": {
+  "none": {
+   "tpr": {
+    "est": 37.5,
+    "lo": 20.833333333333336,
+    "hi": 55.55555555555556,
+    "n": 18,
+    "sd_unit": 39.528470752104745,
+    "excluded_missing": 0,
+    "bound_low": 37.5,
+    "bound_high": 37.5
+   },
+   "fpr": {
+    "est": 37.5,
+    "lo": 20.833333333333336,
+    "hi": 55.55555555555556,
+    "n": 18,
+    "sd_unit": 39.528470752104745,
+    "excluded_missing": 0,
+    "bound_low": 37.5,
+    "bound_high": 37.5
+   },
+   "cov": {
+    "est": 8.333333333333332,
+    "lo": 2.7777777777777777,
+    "hi": 13.88888888888889,
+    "n": 18,
+    "sd_unit": 12.126781251816649,
+    "excluded_missing": 0,
+    "bound_low": 8.333333333333334,
+    "bound_high": 8.333333333333334
+   }
+  },
+  "pointer": {
+   "tpr": {
+    "est": 43.05555555555556,
+    "lo": 26.38888888888889,
+    "hi": 59.72222222222222,
+    "n": 18,
+    "sd_unit": 36.183311431429146,
+    "excluded_missing": 0,
+    "bound_low": 43.05555555555556,
+    "bound_high": 43.05555555555556
+   },
+   "fpr": {
+    "est": 43.05555555555556,
+    "lo": 26.38888888888889,
+    "hi": 59.72222222222222,
+    "n": 18,
+    "sd_unit": 36.183311431429146,
+    "excluded_missing": 0,
+    "bound_low": 43.05555555555556,
+    "bound_high": 43.05555555555556
+   },
+   "cov": {
+    "est": 18.055555555555554,
+    "lo": 11.11111111111111,
+    "hi": 25.0,
+    "n": 18,
+    "sd_unit": 16.72782895171721,
+    "excluded_missing": 0,
+    "bound_low": 18.055555555555557,
+    "bound_high": 18.055555555555557
+   }
+  },
+  "sentence": {
+   "tpr": {
+    "est": 100.0,
+    "lo": 100.0,
+    "hi": 100.0,
+    "n": 18,
+    "sd_unit": 0.0,
+    "excluded_missing": 0,
+    "bound_low": 100.0,
+    "bound_high": 100.0
+   },
+   "fpr": {
+    "est": 26.38888888888889,
+    "lo": 11.11111111111111,
+    "hi": 43.05555555555556,
+    "n": 18,
+    "sd_unit": 34.80219548329554,
+    "excluded_missing": 0,
+    "bound_low": 26.38888888888889,
+    "bound_high": 26.38888888888889
+   },
+   "cov": {
+    "est": 66.66666666666666,
+    "lo": 50.0,
+    "hi": 81.94444444444444,
+    "n": 18,
+    "sd_unit": 35.35533905932738,
+    "excluded_missing": 0,
+    "bound_low": 66.66666666666667,
+    "bound_high": 66.66666666666667
+   }
+  }
+ },
+ "fpr_sentence_betting_upper95": 46.00576598703709,
+ "E11_1_sentence_minus_none": {
+  "est": 58.333333333333336,
+  "lo": 41.66666666666667,
+  "hi": 73.61111111111111,
+  "n": 18,
+  "sd_unit": 36.38034375544994,
+  "excluded_missing": 0,
+  "bound_low": 58.333333333333336,
+  "bound_high": 58.333333333333336
+ },
+ "E11_2_sentence_minus_pointer": {
+  "est": 48.61111111111111,
+  "lo": 34.72222222222222,
+  "hi": 62.5,
+  "n": 18,
+  "sd_unit": 32.62106661236117,
+  "excluded_missing": 0,
+  "bound_low": 48.611111111111114,
+  "bound_high": 48.611111111111114
+ },
+ "pointer_minus_none": {
+  "est": 9.722222222222223,
+  "lo": 2.7777777777777777,
+  "hi": 16.666666666666664,
+  "n": 18,
+  "sd_unit": 15.192124722854642,
+  "excluded_missing": 0,
+  "bound_low": 9.722222222222221,
+  "bound_high": 9.722222222222221
+ },
+ "flag_pref": {
+  "none": {
+   "est": 13.88888888888889,
+   "lo": -2.7777777777777777,
+   "hi": 30.555555555555557,
+   "n": 18,
+   "sd_unit": 37.5951950761059,
+   "excluded_missing": 0,
+   "bound_low": 13.88888888888889,
+   "bound_high": 13.88888888888889
+  },
+  "pointer": {
+   "est": 19.444444444444446,
+   "lo": -2.7777777777777777,
+   "hi": 41.66666666666667,
+   "n": 18,
+   "sd_unit": 51.84504312595396,
+   "excluded_missing": 0,
+   "bound_low": 19.444444444444443,
+   "bound_high": 19.444444444444443
+  }
+ },
+ "convention_advantage": {
+  "none": {
+   "est": 8.333333333333332,
+   "lo": 2.7777777777777777,
+   "hi": 13.88888888888889,
+   "n": 18,
+   "sd_unit": 12.126781251816649,
+   "excluded_missing": 0,
+   "bound_low": 8.333333333333334,
+   "bound_high": 8.333333333333334
+  },
+  "pointer": {
+   "est": 12.5,
+   "lo": 2.7777777777777777,
+   "hi": 22.22222222222222,
+   "n": 18,
+   "sd_unit": 21.437323142813604,
+   "excluded_missing": 0,
+   "bound_low": 12.5,
+   "bound_high": 12.5
+  }
+ },
+ "per_config": {
+  "aud-gpt-terra-low": {
+   "E11_1": {
+    "est": 55.55555555555556,
+    "lo": 33.33333333333333,
+    "hi": 77.77777777777779,
+    "n": 18,
+    "sd_unit": 48.16909214328724,
+    "excluded_missing": 0,
+    "bound_low": 55.55555555555556,
+    "bound_high": 55.55555555555556
+   },
+   "E11_2": {
+    "est": 41.66666666666667,
+    "lo": 22.22222222222222,
+    "hi": 61.111111111111114,
+    "n": 18,
+    "sd_unit": 42.87464628562721,
+    "excluded_missing": 0,
+    "bound_low": 41.666666666666664,
+    "bound_high": 41.666666666666664
+   }
+  },
+  "aud-claude-sonnet-low": {
+   "E11_1": {
+    "est": 61.111111111111114,
+    "lo": 44.44444444444444,
+    "hi": 77.77777777777779,
+    "n": 18,
+    "sd_unit": 36.60422490704798,
+    "excluded_missing": 0,
+    "bound_low": 61.111111111111114,
+    "bound_high": 61.111111111111114
+   },
+   "E11_2": {
+    "est": 55.55555555555556,
+    "lo": 41.66666666666667,
+    "hi": 69.44444444444444,
+    "n": 18,
+    "sd_unit": 33.81997707972616,
+    "excluded_missing": 0,
+    "bound_low": 55.55555555555556,
+    "bound_high": 55.55555555555556
+   }
+  }
+ },
+ "verdicts": {
+  "E11_1": true,
+  "E11_2": true,
+  "E11_2_claimed": true
+ }
+}
