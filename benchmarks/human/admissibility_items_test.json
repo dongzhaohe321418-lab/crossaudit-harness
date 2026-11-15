@@ -1,0 +1,289 @@
+[
+ {
+  "item": 1,
+  "problem_id": "HumanEval/22",
+  "task": "from typing import List, Any\n\n\ndef filter_integers(values: List[Any]) -> List[int]:\n    \"\"\" Filter given list of any python values only for integers\n    >>> filter_integers(['a', 3.14, 5])\n    [5]\n    >>> filter_integers([1, 2, 3, 'abc', {}, []])\n    [1, 2, 3]\n    \"\"\"",
+  "rule_1": "Retain Boolean values unchanged as integers, alongside ordinary integers.",
+  "rule_2": "Exclude Boolean values as non-integers, while retaining ordinary integers."
+ },
+ {
+  "item": 2,
+  "problem_id": "Mbpp/64",
+  "task": "Write a function to sort a list of tuples using the second value of each tuple.\n\nYour code must satisfy these tests:\nassert subject_marks([('English', 88), ('Science', 90), ('Maths', 97), ('Social sciences', 82)])==[('Social sciences', 82), ('English', 88), ('Science', 90), ('Maths', 97)]\nassert subject_marks([('Telugu',49),('Hindhi',54),('Social',33)])==([('Social',33),('Telugu',49),('Hindhi',54)])\nassert subject_marks([('Physics',96),('Chemistry',97),('Biology',45)])==([('Biology',45),('Physics',96),('Chemistry',97)])",
+  "rule_1": "When tuples have equal second values, order those tuples by their first values in ascending order.",
+  "rule_2": "When tuples have equal second values, preserve their original relative order."
+ },
+ {
+  "item": 3,
+  "problem_id": "Mbpp/788",
+  "task": "Write a function to create a new tuple from the given string and list.\n\nYour code must satisfy these tests:\nassert new_tuple([\"WEB\", \"is\"], \"best\") == ('WEB', 'is', 'best')\nassert new_tuple([\"We\", \"are\"], \"Developers\") == ('We', 'are', 'Developers')\nassert new_tuple([\"Part\", \"is\"], \"Wrong\") == ('Part', 'is', 'Wrong')",
+  "rule_1": "If the given string already occurs in the list, return the list's elements as a tuple in their original order with one additional occurrence appended.",
+  "rule_2": "If the given string already occurs in the list, return the list's elements as a tuple in their original order without appending another occurrence."
+ },
+ {
+  "item": 4,
+  "problem_id": "HumanEval/94",
+  "task": "def skjkasdkd(lst):\n    \"\"\"You are given a list of integers.\n    You need to find the largest prime value and return the sum of its digits.\n\n    Examples:\n    For lst = [0,3,2,1,3,5,7,4,5,5,5,2,181,32,4,32,3,2,32,324,4,3] the output should be 10\n    For lst = [1,0,1,8,2,4597,2,1,3,40,1,2,1,2,4,2,5,1] the output should be 25\n    For lst = [1,3,1,32,5107,34,83278,109,163,23,2323,32,30,1,9,3] the output should be 13\n    For lst = [0,724,32,71,99,32,6,0,5,91,83,0,5,6] the output should be 11\n    For lst = [0,81,12,3,1,21] the output should be 3\n    For lst = [0,8,1,2,1,7] the output should be 7\n    \"\"\"",
+  "rule_1": "If the list contains no prime values, return None.",
+  "rule_2": "If the list contains no prime values, return 0."
+ },
+ {
+  "item": 5,
+  "problem_id": "Mbpp/805",
+  "task": "Write a function that returns the list in a list of lists whose sum of elements is the highest.\n\nYour code must satisfy these tests:\nassert max_sum_list([[1,2,3], [4,5,6], [10,11,12], [7,8,9]])==[10, 11, 12]\nassert max_sum_list([[3,2,1], [6,5,4], [12,11,10]])==[12,11,10]\nassert max_sum_list([[2,3,1]])==[2,3,1]",
+  "rule_1": "If multiple inner lists share the highest sum, return the last such list in input order.",
+  "rule_2": "If multiple inner lists share the highest sum, return the first such list in input order."
+ },
+ {
+  "item": 6,
+  "problem_id": "Mbpp/395",
+  "task": "Write a python function to find the first non-repeated character in a given string.\n\nYour code must satisfy these tests:\nassert first_non_repeating_character(\"abcabc\") == None\nassert first_non_repeating_character(\"abc\") == \"a\"\nassert first_non_repeating_character(\"ababc\") == \"c\"",
+  "rule_1": "Treat every Unicode code point individually as one character and return the first character occurring exactly once, or None if none exists.",
+  "rule_2": "Treat each base letter together with its following combining marks as one character, treating all remaining code points individually, and return the first character occurring exactly once, or None if none exists."
+ },
+ {
+  "item": 7,
+  "problem_id": "Mbpp/778",
+  "task": "Write a function to pack consecutive duplicates of a given list elements into sublists.\n\nYour code must satisfy these tests:\nassert pack_consecutive_duplicates([0, 0, 1, 2, 3, 4, 4, 5, 6, 6, 6, 7, 8, 9, 4, 4])==[[0, 0], [1], [2], [3], [4, 4], [5], [6, 6, 6], [7], [8], [9], [4, 4]]\nassert pack_consecutive_duplicates([10, 10, 15, 19, 18, 18, 17, 26, 26, 17, 18, 10])==[[10, 10], [15], [19], [18, 18], [17], [26, 26], [17], [18], [10]]\nassert pack_consecutive_duplicates(['a', 'a', 'b', 'c', 'd', 'd'])==[['a', 'a'], ['b'], ['c'], ['d', 'd']]",
+  "rule_1": "Consecutive elements are duplicates if they compare equal and have the same Python type.",
+  "rule_2": "Consecutive elements are duplicates if they compare equal, regardless of their Python types."
+ },
+ {
+  "item": 8,
+  "problem_id": "Mbpp/624",
+  "task": "Write a python function to convert a given string to uppercase.\n\nYour code must satisfy these tests:\nassert is_upper(\"person\") ==\"PERSON\"\nassert is_upper(\"final\") == \"FINAL\"\nassert is_upper(\"Valid\") == \"VALID\"",
+  "rule_1": "Convert each '\u00df' to '\u1e9e', and uppercase all other characters normally.",
+  "rule_2": "Convert each '\u00df' to 'SS', and uppercase all other characters normally."
+ },
+ {
+  "item": 9,
+  "problem_id": "Mbpp/628",
+  "task": "Write a function to replace all spaces in the given string with '%20'.\n\nYour code must satisfy these tests:\nassert replace_spaces(\"My Name is Dawood\") == 'My%20Name%20is%20Dawood'\nassert replace_spaces(\"I am a Programmer\") == 'I%20am%20a%20Programmer'\nassert replace_spaces(\"I love Coding\") == 'I%20love%20Coding'",
+  "rule_1": "Replace only U+0020 space characters with '%20', leaving other Unicode space-separator characters unchanged.",
+  "rule_2": "Replace every Unicode space-separator character (category Zs), including U+0020, with '%20'."
+ },
+ {
+  "item": 10,
+  "problem_id": "Mbpp/290",
+  "task": "Write a function to find the list of maximum length in a list of lists.\n\nYour code must satisfy these tests:\nassert max_length([[0], [1, 3], [5, 7], [9, 11], [13, 15, 17]])==(3, [13, 15, 17])\nassert max_length([[1], [5, 7], [10, 12, 14,15]])==(4, [10, 12, 14,15])\nassert max_length([[5], [15,20,25]])==(3, [15,20,25])",
+  "rule_1": "If several inner lists have the maximum length, return a tuple containing that length and the first such list in input order.",
+  "rule_2": "If several inner lists have the maximum length, return a tuple containing that length and the last such list in input order."
+ },
+ {
+  "item": 11,
+  "problem_id": "Mbpp/602",
+  "task": "Write a python function to find the first repeated character in a given string.\n\nYour code must satisfy these tests:\nassert first_repeated_char(\"abcabc\") == \"a\"\nassert first_repeated_char(\"abc\") == None\nassert first_repeated_char(\"123123\") == \"1\"",
+  "rule_1": "If multiple characters repeat, return the character whose first occurrence is earliest in the string.",
+  "rule_2": "If multiple characters repeat, return the character whose second occurrence is earliest in the string."
+ },
+ {
+  "item": 12,
+  "problem_id": "Mbpp/74",
+  "task": "Write a function to check whether it follows the sequence given in the patterns array.\n\nYour code must satisfy these tests:\nassert is_samepatterns([\"red\",\"green\",\"green\"], [\"a\", \"b\", \"b\"])==True\nassert is_samepatterns([\"red\",\"green\",\"greenn\"], [\"a\",\"b\",\"b\"])==False\nassert is_samepatterns([\"red\",\"green\",\"greenn\"], [\"a\",\"b\"])==False",
+  "rule_1": "For equal-length arrays, return true exactly when each pattern symbol consistently maps to one color, allowing different pattern symbols to map to the same color.",
+  "rule_2": "For equal-length arrays, return true exactly when each pattern symbol consistently maps to one color and different pattern symbols map to different colors."
+ },
+ {
+  "item": 13,
+  "problem_id": "Mbpp/93",
+  "task": "Write a function to calculate the value of 'a' to the power 'b'.\n\nYour code must satisfy these tests:\nassert power(3,4) == 81\nassert power(2,3) == 8\nassert power(5,5) == 3125",
+  "rule_1": "If both the base and exponent are zero, raise ValueError to indicate that the power is undefined.",
+  "rule_2": "If both the base and exponent are zero, return the numeric value 1."
+ },
+ {
+  "item": 14,
+  "problem_id": "Mbpp/425",
+  "task": "Write a function to count the number of sublists containing a particular element.\n\nYour code must satisfy these tests:\nassert count_element_in_list([[1, 3], [5, 7], [1, 11], [1, 15, 7]],1)==3\nassert count_element_in_list([['A', 'B'], ['A', 'C'], ['A', 'D', 'E'], ['B', 'C', 'D']],'A')==3\nassert count_element_in_list([['A', 'B'], ['A', 'C'], ['A', 'D', 'E'], ['B', 'C', 'D']],'E')==1",
+  "rule_1": "For an integer target of 0 or 1, Boolean False and True must count as matches, respectively.",
+  "rule_2": "For an integer target of 0 or 1, Boolean False and True must not count as matches, respectively."
+ },
+ {
+  "item": 15,
+  "problem_id": "Mbpp/587",
+  "task": "Write a function to convert a list to a tuple.\n\nYour code must satisfy these tests:\nassert list_tuple([5, 10, 7, 4, 15, 3])==(5, 10, 7, 4, 15, 3)\nassert list_tuple([2, 4, 5, 6, 2, 3, 4, 4, 7])==(2, 4, 5, 6, 2, 3, 4, 4, 7)\nassert list_tuple([58,44,56])==(58,44,56)",
+  "rule_1": "Convert the outer list and every nested list recursively to tuples, preserving element order.",
+  "rule_2": "Convert only the outer list to a tuple, leaving nested lists unchanged and preserving element order."
+ },
+ {
+  "item": 16,
+  "problem_id": "HumanEval/62",
+  "task": "def derivative(xs: list):\n    \"\"\" xs represent coefficients of a polynomial.\n    xs[0] + xs[1] * x + xs[2] * x^2 + ....\n     Return derivative of this polynomial in the same form.\n    >>> derivative([3, 1, 2, 4, 5])\n    [1, 4, 12, 20]\n    >>> derivative([1, 2, 3])\n    [2, 6]\n    \"\"\"",
+  "rule_1": "For coefficient lists with trailing zeros and a nonzero coefficient of positive degree, remove all trailing zero coefficients from the returned derivative.",
+  "rule_2": "For coefficient lists with trailing zeros and a nonzero coefficient of positive degree, retain all trailing zero coefficients in the returned derivative."
+ },
+ {
+  "item": 17,
+  "problem_id": "Mbpp/419",
+  "task": "Write a function to round every number of a given list of numbers and print the total sum multiplied by the length of the list.\n\nYour code must satisfy these tests:\nassert round_and_sum([22.4, 4.0, -16.22, -9.10, 11.00, -12.22, 14.20, -5.20, 17.50])==243\nassert round_and_sum([5,2,9,24.3,29])==345\nassert round_and_sum([25.0,56.7,89.2])==513",
+  "rule_1": "When a number is exactly halfway between two consecutive integers, round it to the integer farther from zero before summing and multiplying by the list length.",
+  "rule_2": "When a number is exactly halfway between two consecutive integers, round it to the even integer before summing and multiplying by the list length."
+ },
+ {
+  "item": 18,
+  "problem_id": "Mbpp/252",
+  "task": "Write a python function to convert complex numbers to polar coordinates.\n\nYour code must satisfy these tests:\nassert convert(1) == (1.0, 0.0)\nassert convert(4) == (4.0,0.0)\nassert convert(5) == (5.0,0.0)",
+  "rule_1": "For inputs with a negative imaginary part, return the magnitude and the principal polar angle in radians in the interval (-\u03c0, 0).",
+  "rule_2": "For inputs with a negative imaginary part, return the magnitude and the equivalent polar angle in radians in the interval (\u03c0, 2\u03c0)."
+ },
+ {
+  "item": 19,
+  "problem_id": "Mbpp/301",
+  "task": "Write a function to find the depth of a dictionary.\n\nYour code must satisfy these tests:\nassert dict_depth({'a':1, 'b': {'c': {'d': {}}}})==4\nassert dict_depth({'a':1, 'b': {'c':'python'}})==2\nassert dict_depth({1: 'Sun', 2: {3: {4:'Mon'}}})==3",
+  "rule_1": "When computing dictionary depth, treat list values as leaves and do not count dictionaries inside them as additional dictionary levels.",
+  "rule_2": "When computing dictionary depth, traverse list values recursively and count dictionaries inside them as additional dictionary levels, without counting the lists themselves."
+ },
+ {
+  "item": 20,
+  "problem_id": "Mbpp/740",
+  "task": "Write a function to convert the given tuple to a key-value dictionary using adjacent elements. https://www.geeksforgeeks.org/python-convert-tuple-to-adjacent-pair-dictionary/\n\nYour code must satisfy these tests:\nassert tuple_to_dict((1, 5, 7, 10, 13, 5)) == {1: 5, 7: 10, 13: 5}\nassert tuple_to_dict((1, 2, 3, 4, 5, 6)) == {1: 2, 3: 4, 5: 6}\nassert tuple_to_dict((7, 8, 9, 10, 11, 12)) == {7: 8, 9: 10, 11: 12}",
+  "rule_1": "If multiple pairs have the same key, retain the value from the last such pair.",
+  "rule_2": "If multiple pairs have the same key, retain the value from the first such pair."
+ },
+ {
+  "item": 21,
+  "problem_id": "Mbpp/730",
+  "task": "Write a function to remove consecutive duplicates of a given list.\n\nYour code must satisfy these tests:\nassert consecutive_duplicates([0, 0, 1, 2, 3, 4, 4, 5, 6, 6, 6, 7, 8, 9, 4, 4 ])==[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 4]\nassert consecutive_duplicates([10, 10, 15, 19, 18, 18, 17, 26, 26, 17, 18, 10])==[10, 15, 19, 18, 17, 26, 17, 18, 10]\nassert consecutive_duplicates(['a', 'a', 'b', 'c', 'd', 'd'])==['a', 'b', 'c', 'd']\nassert consecutive_duplicates(['a', 'a', 'b', 'c', 'd', 'd', 'a', 'a'])==['a', 'b', 'c', 'd', 'a']",
+  "rule_1": "Collapse consecutive numeric elements only when both their values and their types match, retaining the first element of each run.",
+  "rule_2": "Collapse consecutive numeric elements whenever their values compare equal regardless of their types, retaining the first element of each run."
+ },
+ {
+  "item": 22,
+  "problem_id": "Mbpp/436",
+  "task": "Write a python function to return the negative numbers in a list.\n\nYour code must satisfy these tests:\nassert neg_nos([-1,4,5,-6]) == [-1,-6]\nassert neg_nos([-1,-2,3,4]) == [-1,-2]\nassert neg_nos([-7,-6,8,9]) == [-7,-6]",
+  "rule_1": "Return every occurrence of each negative number, preserving its order in the input.",
+  "rule_2": "Return each distinct negative number only once, preserving the order of its first occurrence."
+ },
+ {
+  "item": 23,
+  "problem_id": "HumanEval/140",
+  "task": "def fix_spaces(text):\n    \"\"\"\n    Given a string text, replace all spaces in it with underscores, \n    and if a string has more than 2 consecutive spaces, \n    then replace all consecutive spaces with - \n    \n    fix_spaces(\"Example\") == \"Example\"\n    fix_spaces(\"Example 1\") == \"Example_1\"\n    fix_spaces(\" Example 2\") == \"_Example_2\"\n    fix_spaces(\" Example   3\") == \"_Example-3\"\n    \"\"\"",
+  "rule_1": "If a string contains at least three consecutive spaces, replace every maximal run of three or more spaces with one hyphen and every remaining space with an underscore.",
+  "rule_2": "If a string contains at least three consecutive spaces, replace every maximal run of two or more spaces with one hyphen and every remaining space with an underscore."
+ },
+ {
+  "item": 24,
+  "problem_id": "Mbpp/418",
+  "task": "Write a python function to find the element of a list having maximum length.\n\nYour code must satisfy these tests:\nassert Find_Max([['A'],['A','B'],['A','B','C']]) == ['A','B','C']\nassert Find_Max([[1],[1,2],[1,2,3]]) == [1,2,3]\nassert Find_Max([[1,1],[1,2,3],[1,5,6,1]]) == [1,5,6,1]",
+  "rule_1": "If multiple elements have the maximum length, return the first of them.",
+  "rule_2": "If multiple elements have the maximum length, return the last of them."
+ },
+ {
+  "item": 25,
+  "problem_id": "Mbpp/450",
+  "task": "Write a function to extract specified size of strings from a given list of string values.\n\nYour code must satisfy these tests:\nassert extract_string(['Python', 'list', 'exercises', 'practice', 'solution'] ,8)==['practice', 'solution']\nassert extract_string(['Python', 'list', 'exercises', 'practice', 'solution'] ,6)==['Python']\nassert extract_string(['Python', 'list', 'exercises', 'practice', 'solution'] ,9)==['exercises']",
+  "rule_1": "Return matching strings in their original order, including only the first occurrence of each distinct string.",
+  "rule_2": "Return matching strings in their original order, including every occurrence of each string."
+ },
+ {
+  "item": 26,
+  "problem_id": "Mbpp/772",
+  "task": "Write a function to remove all the words with k length in the given string.\n\nYour code must satisfy these tests:\nassert remove_length('The person is most value tet', 3) == 'person is most value'\nassert remove_length('If you told me about this ok', 4) == 'If you me about ok'\nassert remove_length('Forces of darkeness is come into the play', 4) == 'Forces of darkeness is the'",
+  "rule_1": "If no word has length k, return the words joined by single spaces, removing leading and trailing whitespace.",
+  "rule_2": "If no word has length k, return the original string unchanged, preserving all whitespace."
+ },
+ {
+  "item": 27,
+  "problem_id": "Mbpp/280",
+  "task": "Write a function that takes in an array and element and returns a tuple containing a boolean that indicates if the element is in the array and the index position of the element (or -1 if the element is not found).\n\nYour code must satisfy these tests:\nassert sequential_search([11,23,58,31,56,77,43,12,65,19],31) == (True, 3)\nassert sequential_search([12, 32, 45, 62, 35, 47, 44, 61],61) == (True, 7)\nassert sequential_search([9, 10, 17, 19, 22, 39, 48, 56],48) == (True, 6)",
+  "rule_1": "If the element occurs more than once, return True and the zero-based index of its last occurrence.",
+  "rule_2": "If the element occurs more than once, return True and the zero-based index of its first occurrence."
+ },
+ {
+  "item": 28,
+  "problem_id": "Mbpp/462",
+  "task": "Write a function to find all possible combinations of the elements of a given list.\n\nYour code must satisfy these tests:\nassert combinations_list(['orange', 'red', 'green', 'blue'])==[[], ['orange'], ['red'], ['red', 'orange'], ['green'], ['green', 'orange'], ['green', 'red'], ['green', 'red', 'orange'], ['blue'], ['blue', 'orange'], ['blue', 'red'], ['blue', 'red', 'orange'], ['blue', 'green'], ['blue', 'green', 'orange'], ['blue', 'green', 'red'], ['blue', 'green', 'red', 'orange']]\nassert combinations_list(['red', 'green', 'blue', 'white', 'black', 'orange'])==[[], ['red'], ['green'], ['green', 'red'], ['blue'], ['blue', 'red'], ['blue', 'green'], ['blue', 'green', 'red'], ['white'], ['white', 'red'], ['white', 'green'], ['white', 'green', 'red'], ['white', 'blue'], ['white', 'blue', 'red'], ['white', 'blue', 'green'], ['white', 'blue', 'green', 'red'], ['black'], ['black', 'red'], ['black', 'green'], ['black', 'green', 'red'], ['black', 'blue'], ['black', 'blue', 'red'], ['black', 'blue', 'green'], ['black', 'blue', 'green', 'red'], ['black', 'white'], ['black', 'white', 'red'], ['black', 'white', 'green'], ['black', 'white', 'green', 'red'], ['black', 'white', 'blue'], ['black', 'white', 'blue', 'red'], ['black', 'white', 'blue', 'green'], ['black', 'white', 'blue', 'green', 'red'], ['orange'], ['orange', 'red'], ['orange', 'green'], ['orange', 'green', 'red'], ['orange', 'blue'], ['orange', 'blue', 'red'], ['orange', 'blue', 'green'], ['orange', 'blue', 'green', 'red'], ['orange', 'white'], ['orange', 'white', 'red'], ['orange', 'white', 'green'], ['orange', 'white', 'green', 'red'], ['orange', 'white', 'blue'], ['orange', 'white', 'blue', 'red'], ['orange', 'white', 'blue', 'green'], ['orange', 'white', 'blue', 'green', 'red'], ['orange', 'black'], ['orange', 'black', 'red'], ['orange', 'black', 'green'], ['orange', 'black', 'green', 'red'], ['orange', 'black', 'blue'], ['orange', 'black', 'blue', 'red'], ['orange', 'black', 'blue', 'green'], ['orange', 'black', 'blue', 'green', 'red'], ['orange', 'black', 'white'], ['orange', 'black', 'white', 'red'], ['orange', 'black', 'white', 'green'], ['orange', 'black', 'white', 'green', 'red'], ['orange', 'black', 'white', 'blue'], ['orange', 'black', 'white', 'blue', 'red'], ['orange', 'black', 'white', 'blue', 'green'], ['orange', 'black', 'white', 'blue', 'green', 'red']]\nassert combinations_list(['red', 'green', 'black', 'orange'])==[[], ['red'], ['green'], ['green', 'red'], ['black'], ['black', 'red'], ['black', 'green'], ['black', 'green', 'red'], ['orange'], ['orange', 'red'], ['orange', 'green'], ['orange', 'green', 'red'], ['orange', 'black'], ['orange', 'black', 'red'], ['orange', 'black', 'green'], ['orange', 'black', 'green', 'red']]",
+  "rule_1": "When input elements repeat, include each identical combination list only once, preserving the order of first occurrence.",
+  "rule_2": "When input elements repeat, include each identical combination list once per selection of input positions that produces it, preserving the enumeration order."
+ },
+ {
+  "item": 29,
+  "problem_id": "Mbpp/472",
+  "task": "Write a python function to check whether the given list contains consecutive numbers or not.\n\nYour code must satisfy these tests:\nassert check_Consecutive([1,2,3,4,5]) == True\nassert check_Consecutive([1,2,3,5,6]) == False\nassert check_Consecutive([1,2,1]) == False",
+  "rule_1": "If a list contains distinct integers forming a contiguous interval, return True regardless of their order.",
+  "rule_2": "If a list contains distinct integers forming a contiguous interval, return True only if they appear in ascending order."
+ },
+ {
+  "item": 30,
+  "problem_id": "Mbpp/623",
+  "task": "Write a function to compute the n-th power of each number in a list.\n\nYour code must satisfy these tests:\nassert nth_nums([1, 2, 3, 4, 5, 6, 7, 8, 9, 10],2)==[1, 4, 9, 16, 25, 36, 49, 64, 81, 100]\nassert nth_nums([10,20,30],3)==([1000, 8000, 27000])\nassert nth_nums([12,15],5)==([248832, 759375])",
+  "rule_1": "If the exponent is zero and the list contains zero, raise ValueError because zero to the zeroth power is undefined.",
+  "rule_2": "If the exponent is zero and the list contains zero, return one for every element, defining zero to the zeroth power as one."
+ },
+ {
+  "item": 31,
+  "problem_id": "Mbpp/576",
+  "task": "Write a python function to check whether a list is sublist of another or not.\n\nYour code must satisfy these tests:\nassert is_Sub_Array([1,4,3,5],[1,2]) == False\nassert is_Sub_Array([1,2,1],[1,2,1]) == True\nassert is_Sub_Array([1,0,2,2],[2,2,0]) ==False",
+  "rule_1": "Return True if and only if the second list occurs in the first list in the same order at strictly increasing positions, with gaps permitted.",
+  "rule_2": "Return True if and only if the second list occurs in the first list in the same order at consecutive positions."
+ },
+ {
+  "item": 32,
+  "problem_id": "Mbpp/75",
+  "task": "Write a function to find tuples which have all elements divisible by k from the given list of tuples.\n\nYour code must satisfy these tests:\nassert find_tuples([(6, 24, 12), (7, 9, 6), (12, 18, 21)], 6) == [(6, 24, 12)]\nassert find_tuples([(5, 25, 30), (4, 2, 3), (7, 8, 9)], 5) == [(5, 25, 30)]\nassert find_tuples([(7, 9, 16), (8, 16, 4), (19, 17, 18)], 4) == [(8, 16, 4)]",
+  "rule_1": "Return qualifying tuples in their original input order, retaining duplicate occurrences.",
+  "rule_2": "Return qualifying tuples in lexicographic order, retaining duplicate occurrences."
+ },
+ {
+  "item": 33,
+  "problem_id": "Mbpp/94",
+  "task": "Given a list of tuples, write a function that returns the first value of the tuple with the smallest second value.\n\nYour code must satisfy these tests:\nassert index_minimum([('Rash', 143), ('Manjeet', 200), ('Varsha', 100)]) == 'Varsha'\nassert index_minimum([('Yash', 185), ('Dawood', 125), ('Sanya', 175)]) == 'Dawood'\nassert index_minimum([('Sai', 345), ('Salman', 145), ('Ayesha', 96)]) == 'Ayesha'",
+  "rule_1": "If several tuples share the smallest second value, return the first value of the first such tuple in the list.",
+  "rule_2": "If several tuples share the smallest second value, return the first value of the last such tuple in the list."
+ },
+ {
+  "item": 34,
+  "problem_id": "Mbpp/299",
+  "task": "Write a function to calculate the maximum aggregate from the list of tuples.\n\nYour code must satisfy these tests:\nassert max_aggregate([('Juan Whelan',90),('Sabah Colley',88),('Peter Nichols',7),('Juan Whelan',122),('Sabah Colley',84)])==('Juan Whelan', 212)\nassert max_aggregate([('Juan Whelan',50),('Sabah Colley',48),('Peter Nichols',37),('Juan Whelan',22),('Sabah Colley',14)])==('Juan Whelan', 72)\nassert max_aggregate([('Juan Whelan',10),('Sabah Colley',20),('Peter Nichols',30),('Juan Whelan',40),('Sabah Colley',50)])==('Sabah Colley', 70)",
+  "rule_1": "If several names tie for the highest aggregate score, return the tied name that first appears in the input and its aggregate score.",
+  "rule_2": "If several names tie for the highest aggregate score, return the lexicographically smallest tied name and its aggregate score."
+ },
+ {
+  "item": 35,
+  "problem_id": "Mbpp/567",
+  "task": "Write a function to check whether a specified list is sorted or not.\n\nYour code must satisfy these tests:\nassert issort_list([1,2,4,6,8,10,12,14,16,17])==True\nassert issort_list([1, 2, 4, 6, 8, 10, 12, 14, 20, 17])==False\nassert issort_list([1, 2, 4, 6, 8, 10,15,14,20])==False",
+  "rule_1": "If a list is in nonincreasing order and contains at least two distinct values, return True.",
+  "rule_2": "If a list is in nonincreasing order and contains at least two distinct values, return False."
+ },
+ {
+  "item": 36,
+  "problem_id": "Mbpp/310",
+  "task": "Write a function to convert a given string to a tuple of characters.\n\nYour code must satisfy these tests:\nassert string_to_tuple(\"python 3.0\")==('p', 'y', 't', 'h', 'o', 'n', '3', '.', '0')\nassert string_to_tuple(\"item1\")==('i', 't', 'e', 'm', '1')\nassert string_to_tuple(\"15.10\")==('1', '5', '.', '1', '0')",
+  "rule_1": "Omit all whitespace characters from the resulting tuple, including ordinary spaces, tabs, and line breaks.",
+  "rule_2": "Omit ordinary spaces (U+0020) from the resulting tuple, but retain all other whitespace characters."
+ },
+ {
+  "item": 37,
+  "problem_id": "Mbpp/558",
+  "task": "Write a python function to find the sum of the per-digit difference between two integers.\n\nYour code must satisfy these tests:\nassert digit_distance_nums(1,2) == 1\nassert digit_distance_nums(23,56) == 6\nassert digit_distance_nums(123,256) == 7",
+  "rule_1": "If two nonnegative integers have different numbers of decimal digits, align their digits from the right and sum the absolute differences of paired digits, ignoring unmatched digits.",
+  "rule_2": "If two nonnegative integers have different numbers of decimal digits, align their digits from the left and sum the absolute differences of paired digits, ignoring unmatched digits."
+ },
+ {
+  "item": 38,
+  "problem_id": "Mbpp/6",
+  "task": "Write a python function to check whether the two numbers differ at one bit position only or not.\n\nYour code must satisfy these tests:\nassert differ_At_One_Bit_Pos(13,9) == True\nassert differ_At_One_Bit_Pos(15,8) == False\nassert differ_At_One_Bit_Pos(2,4) == False\nassert differ_At_One_Bit_Pos(2, 3) == True\nassert differ_At_One_Bit_Pos(5, 1) == True\nassert differ_At_One_Bit_Pos(1, 5) == True",
+  "rule_1": "If both numbers are negative, return True exactly when their two\u2019s-complement representations, sign-extended to a common sufficient width, differ at exactly one bit position.",
+  "rule_2": "If both numbers are negative, return True exactly when their absolute values, written in binary and padded with leading zeros to equal length, differ at exactly one bit position."
+ },
+ {
+  "item": 39,
+  "problem_id": "Mbpp/475",
+  "task": "Write a function to sort a dictionary by value.\n\nYour code must satisfy these tests:\nassert sort_counter({'Math':81, 'Physics':83, 'Chemistry':87})==[('Chemistry', 87), ('Physics', 83), ('Math', 81)]\nassert sort_counter({'Math':400, 'Physics':300, 'Chemistry':250})==[('Math', 400), ('Physics', 300), ('Chemistry', 250)]\nassert sort_counter({'Math':900, 'Physics':1000, 'Chemistry':1250})==[('Chemistry', 1250), ('Physics', 1000), ('Math', 900)]",
+  "rule_1": "When entries with string keys have equal values, preserve those entries' dictionary insertion order.",
+  "rule_2": "When entries with string keys have equal values, order those entries by key in ascending lexicographic order."
+ },
+ {
+  "item": 40,
+  "problem_id": "Mbpp/238",
+  "task": "Write a python function to count the number of non-empty substrings of a given string.\n\nYour code must satisfy these tests:\nassert number_of_substrings(\"abc\") == 6\nassert number_of_substrings(\"abcd\") == 10\nassert number_of_substrings(\"abcde\") == 15",
+  "rule_1": "Count non-empty substrings by distinct string value, so equal substrings at different positions contribute only once.",
+  "rule_2": "Count non-empty substrings by their start and end positions, so equal substrings at different positions contribute separately."
+ },
+ {
+  "item": 41,
+  "problem_id": "Mbpp/792",
+  "task": "Write a python function to count the number of lists in a given number of lists.\n\nYour code must satisfy these tests:\nassert count_list([[1, 3], [5, 7], [9, 11], [13, 15, 17]]) == 4\nassert count_list([[1,2],[2,3],[4,5]]) == 3\nassert count_list([[1,0],[2,0]]) == 2",
+  "rule_1": "Count every list occurring at any nesting depth within the supplied list, excluding the supplied list itself.",
+  "rule_2": "Count only lists occurring as immediate elements of the supplied list, excluding the supplied list itself."
+ }
+]
