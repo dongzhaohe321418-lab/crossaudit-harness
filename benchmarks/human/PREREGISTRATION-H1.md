@@ -30,3 +30,13 @@ Labels are recorded before the key is opened; the labels file is committed first
 ## Limits
 A single rater, who is also the author, is not a panel; H1 tests whether the units survive one careful human reading,
 not population agreement. Reported either way.
+
+## Amendment 1 (2026-11-15, before any label)
+The rater is a co-author of the paper, not the first author: a person who did not construct, judge or inspect any
+unit and has not seen the results by unit. Labelling is done in a standalone file
+(audit-ceiling-paper/plan/icml2027/human_review/human_review_pack.html) that shows the 41 items first and unlocks the
+paper-level questions (subtitle, contribution type, sign-off on the AI disclosure) only after every item has both
+answers, so the rater labels before reading the paper's abstract. The file exports the answers as JSON
+([{item, r1, r2, reason}] plus the paper-level answers), which is committed as received, before the key; the analysis
+(h1.py) is unchanged. The limitation in this file still applies: one rater, now a co-author.
+
