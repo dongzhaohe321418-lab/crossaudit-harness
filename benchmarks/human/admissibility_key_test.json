@@ -1,0 +1,125 @@
+{
+ "HumanEval/22": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/64": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/788": {
+  "rule_1_is": "b"
+ },
+ "HumanEval/94": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/805": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/395": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/778": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/624": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/628": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/290": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/602": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/74": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/93": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/425": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/587": {
+  "rule_1_is": "a"
+ },
+ "HumanEval/62": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/419": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/252": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/301": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/740": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/730": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/436": {
+  "rule_1_is": "b"
+ },
+ "HumanEval/140": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/418": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/450": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/772": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/280": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/462": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/472": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/623": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/576": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/75": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/94": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/299": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/567": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/310": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/558": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/6": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/475": {
+  "rule_1_is": "b"
+ },
+ "Mbpp/238": {
+  "rule_1_is": "a"
+ },
+ "Mbpp/792": {
+  "rule_1_is": "a"
+ }
+}
