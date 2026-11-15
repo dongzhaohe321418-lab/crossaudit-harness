@@ -52,3 +52,7 @@ id hc2-v1); their labels are committed as received before analysis. Analysis (`h
 - E6-5, E6-2 and the flag preference on the units both raters accept, with E6's frozen code.
 Reported either way. In the paper the human check becomes "two raters"; the first rater's results stay as reported.
 
+
+## Note (2026-11-16): amendment 2 not run
+No second rater was available, so no second-rater labels were collected and `hc2.py` was not run on any. The paper
+reports one human rater, as before amendment 2; the pack and the analysis script stay in the repository unused.
