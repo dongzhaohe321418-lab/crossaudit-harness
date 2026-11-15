@@ -1,0 +1,27 @@
+**Do not start the held-out run yet.** The development arithmetic, four configurations and E6’s `t=1` cell policy match. Audit/witness outputs are directed to E13. However, there are blocking implementation defects.
+
+1. **Held-out verification redirects `open2` to `open`.** Every E6 test audit/witness stage calls `verify()`, whose `state()` finishes by selecting `open`. Consequently, the second iteration runs `open` again, omitting the seven registered `open2` units. I reproduced this with the actual stage functions and mocked I/O. See [e13.py:196](</Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/crossaudit-harness/benchmarks/e13/e13.py:196>) and `state():287`.
+
+2. **Missing B′ cells silently become old B cells.** `merged = {**cells6, **cells13}` retains E6’s B wherever B′ lacks a configuration. E13 also skips `completeness()`, accepting unfinished readings and unchecked prompt hashes. A synthetic case with **one of eight** B′ readings returned “no shape effect detected” and E13-2 true. This permits outcome-dependent stopping/population selection. See [e13.py:219](</Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/crossaudit-harness/benchmarks/e13/e13.py:219>).
+
+3. **The freeze does not bind the full experiment.** It hashes passing B′ code and scheduled prompts, but not checks, failed constructions, the full denominator, E6 baseline readings/witnesses, or all admission/scoring inputs. Changing an E6 baseline flag—or removing an excluded construction from E6’s population—can leave the manifest unchanged. CLI/interpreter versions are also unbound; package lists are insufficient. See [e13.py:264](</Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/crossaudit-harness/benchmarks/e13/e13.py:264>).
+
+4. **Construction checks do not enforce the registered intervention.** Threaded `registered_inputs()` mutates shared E6 paths, risking wrong-kind probes/red-team inputs. Missing hidden inputs can produce a vacuous comparison; different exceptions/timeouts pass when both programs fail. Conditional counts do not establish class coverage or unchanged surrounding code: passing pilot `Mbpp/8` adds preprocessing and `try/except` outside the branch. See [e13.py:97](</Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/crossaudit-harness/benchmarks/e13/e13.py:97>).
+
+5. **Missing-data bounds do not govern conclusions.** Verdicts use complete-case bootstrap limits only; convention calculations omit absent B′ units before calculating missingness. Seven omitted units alone permit ±17.1 percentage points under the registered bounds, yet equivalence could still be declared. See [e13.py:236](</Users/ericdong/Library/Application Support/Claude/scratch-workspaces/74ef214a-bb0b-45f3-a0dd-dab068ffcbe9/c2cff56f-cccf-49f5-bf0f-c2a959dccdde/scratch-2026-11-02-a4ee54/audit/crossaudit-harness/benchmarks/e13/e13.py:236>).
+
+For the design and decision rules:
+
+- **This is an added-branch intervention, not demonstrated shape matching.** Pilot examples have three conditionals in A versus one in B′. A null result cannot exclude effects of other structural features. Historical B versus later B′ also confounds the intervention with run-time/model drift.
+- **±10 points needs substantive justification.** It permits an effect around 42% of E6’s observed 23.8-point preference. Requiring a 95% interval inside the margin is conservative relative to conventional 90%-interval equivalence testing. At \(n=41\), approximate equivalence power at true zero is 79% with paired SD 20 points, but only 14% with SD 30 points. Thus adequacy depends on paired variability; sparse percentile-bootstrap intervals also need scrutiny.
+- **E13-2 establishes residual preference, not its cause.** On identical units, \(A-B'=(A-B)-(B'-B)\); it is not independent confirmation of convention.
+- **The original 20-unit “A has more conditionals” stratum better targets the reviewer’s explanation.** Prespecify its B′−B effect and residual preference, retaining the pooled estimate and stratum interaction. Precision will be worse. Per-vendor estimates are useful secondary checks, but do not increase the number of independent problems. These promised breakdowns are currently absent from `analyse()`.
+
+Concrete fixes before freezing:
+
+- Preserve/restore state; use explicit per-kind inputs and immutable `(kind, problem)` mappings. Enforce completeness and remove old B cells before inserting B′.
+- Freeze all 41 units, construction attempts/checks/input hashes, E6 baseline records and execution versions.
+- Enforce structural and behavioural checks; reject missing input suites and retry infrastructure failures without consuming edits.
+- Prespecify missingness-aware verdicts, precision calculations and subgroup outputs; preferably interleave fresh B and B′ readings.
+
+No files were modified.
