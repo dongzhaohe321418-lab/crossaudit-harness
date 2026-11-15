@@ -40,3 +40,15 @@ answers, so the rater labels before reading the paper's abstract. The file expor
 ([{item, r1, r2, reason}] plus the paper-level answers), which is committed as received, before the key; the analysis
 (h1.py) is unchanged except that it now also reads the pack's export format (labels under a "labels" key). The limitation in this file still applies: one rater, now a co-author.
 
+## Amendment 2 (2026-11-16, before any second-rater label): a second rater
+After the first rater's results (85.4% admissible; all four rejections on the alternative rule), a second rater is
+added to measure agreement. The second rater is someone who did not construct, judge or inspect any unit, has not
+seen the first rater's answers or any result by unit, and is not the first author. They receive the same 41 items in
+the same order and the same instructions, in a pack with no paper questions (, pack
+id hc2-v1); their labels are committed as received before analysis. Analysis (, committed before the labels):
+- inter-rater agreement on unit-level admissibility (both rules accepted): percent agreement and Cohen's kappa, and
+  rule-level agreement on "no" answers;
+- the second rater's admissible share (Wilson 95%) and where their rejections fall (benchmark or alternative rule);
+- E6-5, E6-2 and the flag preference on the units both raters accept, with E6's frozen code.
+Reported either way. In the paper the human check becomes "two raters"; the first rater's results stay as reported.
+
