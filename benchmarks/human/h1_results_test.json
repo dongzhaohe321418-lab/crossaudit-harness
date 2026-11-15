@@ -1,0 +1,358 @@
+{
+ "n_units": 41,
+ "H1_1_admissible": {
+  "k": 35,
+  "share": 85.36585365853658,
+  "wilson95": [
+   71.55654182993241,
+   93.11575189888808
+  ]
+ },
+ "rule_no": {
+  "benchmark_rule": 0,
+  "alternative_rule": 4
+ },
+ "answers": {
+  "rule_a": {
+   "yes": 37,
+   "no": 4,
+   "unsure": 0
+  },
+  "rule_b": {
+   "yes": 39,
+   "no": 0,
+   "unsure": 2
+  }
+ },
+ "agreement_with_E9_majority": {
+  "agree": 33,
+  "n": 41,
+  "kappa": 0.21904761904761927
+ },
+ "H1_2_E6_on_admissible_subset": {
+  "n_units": 35,
+  "estimable": true,
+  "E6_1_abs_resolve_cov": {
+   "est": 89.64285714285715,
+   "lo": 80.0,
+   "hi": 97.14285714285714,
+   "n": 35,
+   "bound_low": 89.64285714285714,
+   "bound_high": 89.64285714285714
+  },
+  "E6_1_cov_resolve_minus_menu": {
+   "est": 89.64285714285715,
+   "lo": 80.0,
+   "hi": 97.14285714285714,
+   "n": 35,
+   "bound_low": 89.64285714285714,
+   "bound_high": 89.64285714285714
+  },
+  "E6_2_convention_advantage_none": {
+   "est": 7.142857142857142,
+   "lo": 1.4285714285714286,
+   "hi": 12.857142857142856,
+   "n": 35,
+   "bound_low": 7.142857142857143,
+   "bound_high": 7.142857142857143
+  },
+  "E6_5_cov_sentence_minus_none": {
+   "est": 79.28571428571428,
+   "lo": 69.28571428571428,
+   "hi": 87.85714285714286,
+   "n": 35,
+   "bound_low": 79.28571428571429,
+   "bound_high": 79.28571428571429
+  },
+  "flag_pref_a_minus_b_none": {
+   "est": 15.0,
+   "lo": 2.142857142857143,
+   "hi": 27.857142857142858,
+   "n": 35
+  },
+  "registered_criteria": {
+   "E6_1": true,
+   "E6_2": true,
+   "E6_5": true,
+   "flag_pref_above_0": true
+  },
+  "per_vendor": {
+   "gpt": {
+    "E6_1": {
+     "est": 90.71428571428571,
+     "lo": 81.42857142857143,
+     "hi": 97.85714285714285
+    },
+    "E6_2": {
+     "est": 5.714285714285714,
+     "lo": 0.7142857142857143,
+     "hi": 11.428571428571429
+    }
+   },
+   "claude": {
+    "E6_1": {
+     "est": 88.57142857142857,
+     "lo": 77.14285714285715,
+     "hi": 97.14285714285714
+    },
+    "E6_2": {
+     "est": 8.571428571428571,
+     "lo": 0.7142857142857143,
+     "hi": 16.428571428571427
+    }
+   }
+  }
+ },
+ "verdicts": {
+  "E6_5_holds": true,
+  "E6_2_holds": true
+ },
+ "per_unit": {
+  "HumanEval/22": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/64": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/788": {
+   "rule_a": "no",
+   "rule_b": "yes",
+   "admissible": false,
+   "reason": ""
+  },
+  "HumanEval/94": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/805": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/395": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/778": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/624": {
+   "rule_a": "yes",
+   "rule_b": "unsure",
+   "admissible": false,
+   "reason": ""
+  },
+  "Mbpp/628": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/290": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/602": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/74": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/93": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/425": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/587": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "HumanEval/62": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/419": {
+   "rule_a": "yes",
+   "rule_b": "unsure",
+   "admissible": false,
+   "reason": ""
+  },
+  "Mbpp/252": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/301": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/740": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/730": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/436": {
+   "rule_a": "no",
+   "rule_b": "yes",
+   "admissible": false,
+   "reason": ""
+  },
+  "HumanEval/140": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/418": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/450": {
+   "rule_a": "no",
+   "rule_b": "yes",
+   "admissible": false,
+   "reason": ""
+  },
+  "Mbpp/772": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/280": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/462": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/472": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/623": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/576": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/75": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/94": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/299": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/567": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/310": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/558": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/6": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/475": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  },
+  "Mbpp/238": {
+   "rule_a": "no",
+   "rule_b": "yes",
+   "admissible": false,
+   "reason": ""
+  },
+  "Mbpp/792": {
+   "rule_a": "yes",
+   "rule_b": "yes",
+   "admissible": true,
+   "reason": ""
+  }
+ }
+}
