@@ -3,10 +3,16 @@ advantage concentrated where program A's code looks different from B's? Units ar
 conditionals (ast If/IfExp nodes) than B; the registered estimands are recomputed on each stratum with E6's frozen
 analysis code. Writes records/icml/e6_code_shape_test.json. Reads frozen records only.
 
-    PYTHONPATH=src CROSSAUDIT_BENCH_EXECUTOR=... python benchmarks/code/icml/e6_code_shape.py
+    PYTHONPATH=src CROSSAUDIT_BENCH_EXECUTOR=... python benchmarks/exploratory/e6_code_shape.py
+
+Kept outside benchmarks/code so that the E6, E9 and E10 freezes, which bind that tree, still verify.
 """
 import ast
 import json
+import sys
+from pathlib import Path
+
+sys.path[:0] = [str(Path(__file__).resolve().parents[1] / "code" / "icml")]
 
 import analyse_e6 as A
 import e1
